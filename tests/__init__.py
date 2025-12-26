@@ -1,0 +1,1 @@
+# Asset-Aware MCP Tests

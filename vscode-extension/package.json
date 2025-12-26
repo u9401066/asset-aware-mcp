@@ -1,0 +1,177 @@
+{
+    "name": "asset-aware-mcp",
+    "displayName": "Asset-Aware MCP",
+    "description": "Medical RAG MCP Server with precise document asset retrieval - tables, figures, sections from PDFs",
+    "version": "0.1.0",
+    "publisher": "asset-aware",
+    "engines": {
+        "vscode": "^1.99.0"
+    },
+    "categories": [
+        "AI",
+        "Chat",
+        "Data Science"
+    ],
+    "keywords": [
+        "mcp",
+        "rag",
+        "medical",
+        "pdf",
+        "documents",
+        "knowledge-graph"
+    ],
+    "icon": "resources/icon.png",
+    "activationEvents": [],
+    "main": "./out/extension.js",
+    "contributes": {
+        "mcpServerDefinitionProviders": [
+            {
+                "id": "asset-aware-mcp.servers",
+                "label": "Asset-Aware Medical RAG"
+            }
+        ],
+        "commands": [
+            {
+                "command": "assetAwareMcp.setupWizard",
+                "title": "Asset-Aware MCP: Setup Wizard"
+            },
+            {
+                "command": "assetAwareMcp.openSettings",
+                "title": "Asset-Aware MCP: Open Settings Panel"
+            },
+            {
+                "command": "assetAwareMcp.showStatus",
+                "title": "Asset-Aware MCP: Show Status"
+            },
+            {
+                "command": "assetAwareMcp.checkConnection",
+                "title": "Asset-Aware MCP: Check Ollama Connection"
+            },
+            {
+                "command": "assetAwareMcp.editEnv",
+                "title": "Asset-Aware MCP: Edit .env Configuration"
+            },
+            {
+                "command": "assetAwareMcp.refreshStatus",
+                "title": "Asset-Aware MCP: Refresh Status"
+            }
+        ],
+        "configuration": {
+            "title": "Asset-Aware MCP",
+            "properties": {
+                "assetAwareMcp.llmBackend": {
+                    "type": "string",
+                    "default": "ollama",
+                    "enum": ["ollama", "openai"],
+                    "description": "LLM backend to use (ollama for local, openai for cloud)"
+                },
+                "assetAwareMcp.ollamaHost": {
+                    "type": "string",
+                    "default": "http://localhost:11434",
+                    "description": "Ollama server URL"
+                },
+                "assetAwareMcp.ollamaModel": {
+                    "type": "string",
+                    "default": "qwen2.5:7b",
+                    "description": "Ollama LLM model name"
+                },
+                "assetAwareMcp.ollamaEmbeddingModel": {
+                    "type": "string",
+                    "default": "nomic-embed-text",
+                    "description": "Ollama embedding model name"
+                },
+                "assetAwareMcp.openaiApiKey": {
+                    "type": "string",
+                    "default": "",
+                    "description": "OpenAI API Key (required if using openai backend)"
+                },
+                "assetAwareMcp.openaiModel": {
+                    "type": "string",
+                    "default": "gpt-4o-mini",
+                    "description": "OpenAI model name"
+                },
+                "assetAwareMcp.dataDir": {
+                    "type": "string",
+                    "default": "./data",
+                    "description": "Directory for storing processed documents"
+                }
+            }
+        },
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "assetAwareMcp",
+                    "title": "Asset-Aware MCP",
+                    "icon": "resources/icon.svg"
+                }
+            ]
+        },
+        "views": {
+            "assetAwareMcp": [
+                {
+                    "id": "assetAwareMcp.status",
+                    "name": "Status"
+                },
+                {
+                    "id": "assetAwareMcp.documents",
+                    "name": "Documents"
+                }
+            ]
+        },
+        "walkthroughs": [
+            {
+                "id": "assetAwareMcp.welcome",
+                "title": "Get Started with Asset-Aware MCP",
+                "description": "Set up your Medical RAG MCP Server",
+                "steps": [
+                    {
+                        "id": "assetAwareMcp.setup",
+                        "title": "Run Setup Wizard",
+                        "description": "Configure your environment and check dependencies.\n[Run Setup Wizard](command:assetAwareMcp.setupWizard)",
+                        "media": {
+                            "markdown": "resources/walkthrough/setup.md"
+                        }
+                    },
+                    {
+                        "id": "assetAwareMcp.configure",
+                        "title": "Configure Settings",
+                        "description": "Set up your LLM backend and API keys.\n[Open Settings](command:assetAwareMcp.openSettings)",
+                        "media": {
+                            "markdown": "resources/walkthrough/configure.md"
+                        }
+                    },
+                    {
+                        "id": "assetAwareMcp.start",
+                        "title": "Start Using",
+                        "description": "Begin ingesting documents and querying.\n[Open Copilot Chat](command:workbench.action.chat.open)",
+                        "media": {
+                            "markdown": "resources/walkthrough/start.md"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "pretest": "npm run compile",
+        "lint": "eslint src --ext ts",
+        "package": "vsce package"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "@types/vscode": "^1.99.0",
+        "@typescript-eslint/eslint-plugin": "^7.0.0",
+        "@typescript-eslint/parser": "^7.0.0",
+        "eslint": "^8.56.0",
+        "typescript": "^5.3.0",
+        "@vscode/vsce": "^2.24.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/your-username/asset-aware-mcp"
+    },
+    "license": "Apache-2.0"
+}
