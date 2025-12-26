@@ -87,9 +87,10 @@ async def ollama_embedding(
         **kwargs: Additional arguments (model, host, etc.)
         
     Returns:
-        List of embedding vectors
+        NumPy array of embedding vectors (required by LightRAG)
     """
     import httpx
+    import numpy as np
     
     model = kwargs.get("model", settings.ollama_embedding_model)
     host = kwargs.get("host", settings.ollama_host)
@@ -109,7 +110,8 @@ async def ollama_embedding(
             result = response.json()
             embeddings.append(result.get("embedding", []))
     
-    return embeddings
+    # LightRAG expects numpy array
+    return np.array(embeddings)
 
 
 class LightRAGAdapter(KnowledgeGraphInterface):
@@ -163,6 +165,11 @@ class LightRAGAdapter(KnowledgeGraphInterface):
                         max_token_size=8192,
                         func=ollama_embedding,
                     ),
+                    # Tuning for smaller local models
+                    entity_extract_max_gleaning=0,  # Reduce extraction passes
+                    max_parallel_insert=1,  # Sequential processing for stability
+                    llm_model_max_async=1,  # One LLM call at a time
+                    chunk_token_size=800,  # Smaller chunks for better extraction
                 )
             else:
                 # Use OpenAI
@@ -173,6 +180,9 @@ class LightRAGAdapter(KnowledgeGraphInterface):
                     llm_model_func=openai_complete_if_cache,
                     embedding_func=openai_embedding,
                 )
+            
+            # IMPORTANT: Initialize storages (required by LightRAG)
+            await self._rag.initialize_storages()
             
             self._initialized = True
             return self._rag

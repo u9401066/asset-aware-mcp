@@ -7,6 +7,7 @@ FastMCP server with tools and resources for document operations.
 from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ImageContent, TextContent
 
 from src.application.asset_service import AssetService
 from src.application.document_service import DocumentService
@@ -185,7 +186,7 @@ async def fetch_document_asset(
     doc_id: str,
     asset_type: str,
     asset_id: str = "full",
-) -> str:
+) -> list[TextContent | ImageContent]:
     """
     Fetch specific content from a document with precision.
 
@@ -202,8 +203,8 @@ async def fetch_document_asset(
                   Use "full" for full_text type
 
     Returns:
-        For figures: Image in base64 format with metadata (page number for verification)
-        For others: Text content in markdown format
+        For figures: ImageContent that vision AI can directly analyze
+        For others: TextContent in markdown format
 
     Example:
         # Get Table 1 from document
@@ -215,20 +216,26 @@ async def fetch_document_asset(
     result = await _asset_service.fetch_asset(doc_id, asset_type, asset_id)
 
     if not result.success:
-        return f"Error: {result.error}"
+        return [TextContent(type="text", text=f"Error: {result.error}")]
 
     # Format response based on content type
     if result.image_base64:
-        # For figures, include metadata for verification
-        lines = [
-            f"## Figure: {result.asset_id}",
-            f"**Page:** {result.page or 'Unknown'}",
-            f"**Size:** {result.width}×{result.height}",
-            f"**Format:** {result.image_media_type}",
-            "",
-            f"![{result.asset_id}](data:{result.image_media_type};base64,{result.image_base64})",
+        # Return ImageContent for vision AI to analyze
+        # Also include metadata as TextContent
+        metadata = (
+            f"## Figure: {result.asset_id}\n"
+            f"**Page:** {result.page or 'Unknown'}\n"
+            f"**Size:** {result.width}×{result.height}\n"
+            f"**Format:** {result.image_media_type}"
+        )
+        return [
+            TextContent(type="text", text=metadata),
+            ImageContent(
+                type="image",
+                data=result.image_base64,
+                mimeType=result.image_media_type or "image/png",
+            ),
         ]
-        return "\n".join(lines)
     else:
         # For text content (tables, sections, full_text)
         lines = [f"## {asset_type.title()}: {result.asset_id}"]
@@ -236,7 +243,7 @@ async def fetch_document_asset(
             lines.append(f"**Page:** {result.page}")
         lines.append("")
         lines.append(result.text_content or "")
-        return "\n".join(lines)
+        return [TextContent(type="text", text="\n".join(lines))]
 
 
 @mcp.tool()

@@ -116,14 +116,18 @@ class DocumentService:
 
             # Step 5: Extract entities from knowledge graph (if available)
             entities = []
+            lightrag_error = None
             if self.knowledge_graph and self.knowledge_graph.is_available:
                 try:
                     # Index the document
                     await self.knowledge_graph.insert(doc_id.value, markdown)
                     # Extract entities
                     entities = await self.knowledge_graph.extract_entities(markdown)
-                except Exception:
-                    pass  # Non-critical
+                except Exception as e:
+                    lightrag_error = str(e)
+                    # Log but don't fail - LightRAG is optional
+                    import logging
+                    logging.warning(f"LightRAG indexing failed: {e}")
 
             # Step 6: Generate manifest
             manifest = self.manifest_generator.generate(

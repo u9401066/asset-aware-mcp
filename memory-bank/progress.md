@@ -3,19 +3,18 @@
 ## Done
 
 - MCP 系統 5 工具全部實作完成
-- Nobel Prize PDF 測試成功 (10頁, 6圖)
-- 建立 mcp-operator skill
-- 發現圖片返回格式問題 (markdown string vs ImageContent)
-- 確認 mcp.types.ImageContent 類別存在
-- 55 個測試全部通過
+- ImageContent 格式修復 - Vision AI 可看圖
+- GitHub 發布 v0.2.0
+- LightRAG 初始化修復 (initialize_storages)
+- LightRAG Embedding 格式修復 (numpy array)
+- LLM 模型切換 qwen2.5:7b → llama3.1:8b
+- 新增 debug_lightrag.py 測試腳本
 
 ## Doing
 
-- 準備 Git 初始提交
-- 建立 GitHub repo
+- 測試 LightRAG 知識圖譜（等待 MCP 重啟）
 
 ## Next
 
-- 修復 server.py 返回 ImageContent 讓視覺 AI 可看圖
-- 實作 figure caption 解析 (fig_2_1 -> Figure 1)
-- Knowledge Graph 重新索引測試
+- 驗證 LightRAG 跨文件查詢
+- 實作 figure caption 解析

@@ -37,7 +37,7 @@ class Settings(BaseSettings):
         description="Ollama server URL"
     )
     ollama_model: str = Field(
-        default="qwen2.5:7b",
+        default="llama3.1:8b",
         description="Ollama model for LLM tasks"
     )
     ollama_embedding_model: str = Field(
