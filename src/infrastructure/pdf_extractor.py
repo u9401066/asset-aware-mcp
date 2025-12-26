@@ -20,6 +20,7 @@ from .config import settings
 @dataclass
 class ExtractedImage:
     """Data class for extracted image information."""
+
     page: int  # 1-indexed page number
     image_bytes: bytes
     ext: str
@@ -106,7 +107,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                         text = f"### {text}"
 
                     # Detect bold (flag bit 2^4 = 16)
-                    if flags & 16 and not text.startswith('#'):
+                    if flags & 16 and not text.startswith("#"):
                         text = f"**{text}**"
 
                     line_text += text
@@ -143,14 +144,16 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                     try:
                         image_data = self._extract_single_image(doc, img)
                         if image_data:
-                            images.append({
-                                "page": page_num + 1,  # 1-indexed
-                                "image_bytes": image_data["image"],
-                                "ext": image_data["ext"],
-                                "width": image_data["width"],
-                                "height": image_data["height"],
-                                "index_on_page": img_index + 1,
-                            })
+                            images.append(
+                                {
+                                    "page": page_num + 1,  # 1-indexed
+                                    "image_bytes": image_data["image"],
+                                    "ext": image_data["ext"],
+                                    "width": image_data["width"],
+                                    "height": image_data["height"],
+                                    "index_on_page": img_index + 1,
+                                }
+                            )
                     except Exception:
                         # Skip problematic images
                         continue
@@ -196,3 +199,92 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             return doc.metadata or {}
         finally:
             doc.close()
+
+    def extract_tables(self, pdf_path: Path) -> list[dict]:
+        """
+        Extract tables from PDF using PyMuPDF's find_tables().
+
+        Note: This is a heuristic-based approach, not as accurate as
+        Docling's TableFormer model. Works best for simple grid tables.
+
+        Args:
+            pdf_path: Path to PDF file
+
+        Returns:
+            List of dicts with table info
+        """
+        doc = fitz.open(str(pdf_path))
+        tables = []
+        table_index = 0
+
+        try:
+            for page_num, page in enumerate(doc):
+                try:
+                    # PyMuPDF's experimental table finder
+                    page_tables = page.find_tables()
+
+                    for tab in page_tables:
+                        table_index += 1
+
+                        # Extract table data
+                        try:
+                            # Get table as pandas DataFrame if available
+                            if hasattr(tab, "to_pandas"):
+                                df = tab.to_pandas()
+                                markdown = df.to_markdown(index=False)
+                                row_count = len(df)
+                                col_count = len(df.columns)
+                            else:
+                                # Fallback: extract cells manually
+                                markdown = self._table_to_markdown(tab)
+                                row_count = tab.row_count if hasattr(tab, "row_count") else 0
+                                col_count = tab.col_count if hasattr(tab, "col_count") else 0
+
+                            tables.append({
+                                "id": f"tab_{table_index}",
+                                "page": page_num + 1,
+                                "markdown": markdown,
+                                "caption": "",  # PyMuPDF doesn't detect captions
+                                "row_count": row_count,
+                                "col_count": col_count,
+                                "preview": markdown[:100] if markdown else "",
+                                "has_header": True,
+                                "source": "pymupdf",
+                            })
+                        except Exception:
+                            continue
+
+                except Exception:
+                    # find_tables() may not be available in older versions
+                    continue
+
+        finally:
+            doc.close()
+
+        return tables
+
+    def _table_to_markdown(self, table) -> str:
+        """Convert PyMuPDF table to markdown format."""
+        if not hasattr(table, "extract"):
+            return ""
+
+        try:
+            cells = table.extract()
+            if not cells:
+                return ""
+
+            lines = []
+            for i, row in enumerate(cells):
+                # Clean cells
+                clean_row = [str(cell).strip() if cell else "" for cell in row]
+                lines.append("| " + " | ".join(clean_row) + " |")
+
+                # Add header separator after first row
+                if i == 0:
+                    separator = "| " + " | ".join(["---"] * len(clean_row)) + " |"
+                    lines.append(separator)
+
+            return "\n".join(lines)
+
+        except Exception:
+            return ""

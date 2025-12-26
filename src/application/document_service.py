@@ -15,6 +15,7 @@ from src.domain.entities import (
     DocumentSummary,
     FigureAsset,
     IngestResult,
+    TableAsset,
 )
 from src.domain.repositories import (
     DocumentRepository,
@@ -37,6 +38,10 @@ class DocumentService:
     2. Generate document manifest
     3. Index in knowledge graph (optional)
     4. Save to repository
+
+    Supports multiple PDF backends:
+    - Docling (recommended, MIT licensed, high quality)
+    - PyMuPDF (fallback, AGPL licensed)
     """
 
     def __init__(
@@ -111,12 +116,14 @@ class DocumentService:
             # Step 3: Extract and save images
             figures = await self._extract_and_save_images(doc_id.value, path)
 
+            # Step 3.5: Extract tables (Docling enhanced)
+            tables = await self._extract_tables(path)
+
             # Step 4: Get page count
             page_count = self.pdf_extractor.get_page_count(path)
 
             # Step 5: Extract entities from knowledge graph (if available)
             entities = []
-            lightrag_error = None
             if self.knowledge_graph and self.knowledge_graph.is_available:
                 try:
                     # Index the document
@@ -124,9 +131,9 @@ class DocumentService:
                     # Extract entities
                     entities = await self.knowledge_graph.extract_entities(markdown)
                 except Exception as e:
-                    lightrag_error = str(e)
                     # Log but don't fail - LightRAG is optional
                     import logging
+
                     logging.warning(f"LightRAG indexing failed: {e}")
 
             # Step 6: Generate manifest
@@ -135,6 +142,7 @@ class DocumentService:
                 filename=path.name,
                 markdown=markdown,
                 figures=figures,
+                tables=tables,  # Pass Docling-extracted tables
                 page_count=page_count,
                 markdown_path=str(markdown_path),
                 lightrag_entities=entities,
@@ -167,14 +175,17 @@ class DocumentService:
             )
 
     async def _extract_and_save_images(
-        self,
-        doc_id: str,
-        pdf_path: Path
+        self, doc_id: str, pdf_path: Path
     ) -> list[FigureAsset]:
         """Extract images from PDF and save them."""
         figures = []
 
         raw_images = self.pdf_extractor.extract_images(pdf_path)
+
+        # Detect source from extractor type
+        source = "pymupdf"
+        if hasattr(self.pdf_extractor, "config"):
+            source = "docling"
 
         for img_data in raw_images:
             # Generate figure ID: fig_{page}_{index}
@@ -188,17 +199,66 @@ class DocumentService:
                 ext=img_data["ext"],
             )
 
-            figures.append(FigureAsset(
-                id=fig_id,
-                page=img_data["page"],
-                path=str(image_path),
-                ext=img_data["ext"],
-                width=img_data["width"],
-                height=img_data["height"],
-                caption="",  # Caption detection TODO
-            ))
+            # Get caption from Docling if available
+            caption = img_data.get("caption", "")
+
+            figures.append(
+                FigureAsset(
+                    id=fig_id,
+                    page=img_data["page"],
+                    path=str(image_path),
+                    ext=img_data["ext"],
+                    width=img_data["width"],
+                    height=img_data["height"],
+                    caption=caption,
+                    source=source,
+                )
+            )
 
         return figures
+
+    async def _extract_tables(self, pdf_path: Path) -> list[TableAsset]:
+        """
+        Extract tables from PDF.
+
+        Supports:
+        - PyMuPDF: find_tables() - heuristic, good for simple grid tables
+        - Docling (optional): TableFormer - AI-based, better for complex tables
+        """
+        # Check if extractor supports table extraction
+        if not hasattr(self.pdf_extractor, "extract_tables"):
+            return []  # Will fall back to markdown parsing
+
+        # Detect source from extractor type
+        source = "pymupdf"
+        if hasattr(self.pdf_extractor, "config"):
+            source = "docling"
+
+        try:
+            raw_tables = self.pdf_extractor.extract_tables(pdf_path)
+
+            tables = []
+            for tab_data in raw_tables:
+                tables.append(
+                    TableAsset(
+                        id=tab_data.get("id", f"tab_{len(tables) + 1}"),
+                        page=tab_data.get("page", 1),
+                        caption=tab_data.get("caption", ""),
+                        preview=tab_data.get("preview", ""),
+                        markdown=tab_data.get("markdown", ""),
+                        row_count=tab_data.get("row_count", 0),
+                        col_count=tab_data.get("col_count", 0),
+                        has_header=tab_data.get("has_header", True),
+                        source=source,
+                    )
+                )
+            return tables
+
+        except Exception as e:
+            import logging
+
+            logging.warning(f"Table extraction failed: {e}")
+            return []
 
     async def list_documents(self) -> list[DocumentSummary]:
         """List all processed documents."""

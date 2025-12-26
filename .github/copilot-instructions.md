@@ -90,9 +90,9 @@ uv add --dev pytest ruff
 | code-reviewer | 程式碼審查 | `CR`, `review`, `審查` |
 | test-generator | 測試生成 | `TG`, `test`, `測試` |
 | project-init | 專案初始化 | `init`, `new`, `新專案` |
-| **mcp-operator** | **MCP 工具操作** | `MCP`, `ingest`, `fetch`, `圖片` |
+| **pdf-asset-extractor** | **PDF→圖文分解+知識圖譜** | `PDF`, `ingest`, `figure`, `table`, `知識圖譜` |
 
-> ⚠️ **mcp-operator 注意**：圖片 base64 非常大，一次只處理一張！
+> ⚠️ **pdf-asset-extractor 注意**：圖片 base64 非常大，一次只處理一張！
 
 ---
 

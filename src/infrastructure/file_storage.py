@@ -56,10 +56,7 @@ class FileStorage(DocumentRepository):
         # Update manifest path
         manifest.manifest_path = str(manifest_path)
 
-        manifest_path.write_text(
-            manifest.model_dump_json(indent=2),
-            encoding="utf-8"
-        )
+        manifest_path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
 
     def load_manifest(self, doc_id: str) -> DocumentManifest | None:
         """Load document manifest by ID."""
@@ -124,22 +121,24 @@ class FileStorage(DocumentRepository):
                 continue
 
             # Skip special directories
-            if doc_dir.name.startswith('.') or doc_dir.name == 'lightrag_db':
+            if doc_dir.name.startswith(".") or doc_dir.name == "lightrag_db":
                 continue
 
             manifest = self.load_manifest(doc_dir.name)
             if manifest:
                 asset_summary = manifest.get_asset_summary()
-                documents.append(DocumentSummary(
-                    doc_id=manifest.doc_id,
-                    filename=manifest.filename,
-                    title=manifest.title,
-                    page_count=manifest.page_count,
-                    table_count=asset_summary.get("tables", 0),
-                    figure_count=asset_summary.get("figures", 0),
-                    section_count=asset_summary.get("sections", 0),
-                    created_at=manifest.created_at,
-                ))
+                documents.append(
+                    DocumentSummary(
+                        doc_id=manifest.doc_id,
+                        filename=manifest.filename,
+                        title=manifest.title,
+                        page_count=manifest.page_count,
+                        table_count=asset_summary.get("tables", 0),
+                        figure_count=asset_summary.get("figures", 0),
+                        section_count=asset_summary.get("sections", 0),
+                        created_at=manifest.created_at,
+                    )
+                )
 
         return documents
 

@@ -13,6 +13,7 @@ from typing import Any
 
 class AssetType(str, Enum):
     """Asset types in a document."""
+
     TABLE = "table"
     FIGURE = "figure"
     SECTION = "section"
@@ -40,7 +41,7 @@ class DocId:
         if not value:
             return False
         # Must start with 'doc_' and contain only alphanumeric + underscore
-        return bool(re.match(r'^doc_[a-z0-9_]+$', value))
+        return bool(re.match(r"^doc_[a-z0-9_]+$", value))
 
     @classmethod
     def generate(cls, filename: str, unique_suffix: str) -> DocId:
@@ -48,7 +49,7 @@ class DocId:
         import hashlib
 
         # Clean filename
-        name = re.sub(r'[^a-z0-9]', '_', filename.lower())[:30]
+        name = re.sub(r"[^a-z0-9]", "_", filename.lower())[:30]
         # Add hash for uniqueness
         hash_suffix = hashlib.md5(unique_suffix.encode()).hexdigest()[:6]
         return cls(f"doc_{name}_{hash_suffix}")
@@ -76,6 +77,7 @@ class DocId:
 
 class ImageMediaType(str, Enum):
     """Supported image MIME types."""
+
     PNG = "image/png"
     JPEG = "image/jpeg"
     GIF = "image/gif"

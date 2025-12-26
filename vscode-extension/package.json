@@ -3,7 +3,7 @@
     "displayName": "Asset-Aware MCP",
     "description": "Medical RAG MCP Server with precise document asset retrieval - tables, figures, sections from PDFs",
     "version": "0.1.0",
-    "publisher": "asset-aware",
+    "publisher": "u9401066",
     "engines": {
         "vscode": "^1.99.0"
     },
@@ -18,9 +18,22 @@
         "medical",
         "pdf",
         "documents",
-        "knowledge-graph"
+        "knowledge-graph",
+        "copilot",
+        "ai"
     ],
     "icon": "resources/icon.png",
+    "galleryBanner": {
+        "color": "#1e1e1e",
+        "theme": "dark"
+    },
+    "badges": [
+        {
+            "url": "https://img.shields.io/pypi/v/asset-aware-mcp",
+            "href": "https://pypi.org/project/asset-aware-mcp/",
+            "description": "PyPI Version"
+        }
+    ],
     "activationEvents": [],
     "main": "./out/extension.js",
     "contributes": {
@@ -171,7 +184,11 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/your-username/asset-aware-mcp"
+        "url": "https://github.com/u9401066/asset-aware-mcp"
     },
+    "bugs": {
+        "url": "https://github.com/u9401066/asset-aware-mcp/issues"
+    },
+    "homepage": "https://github.com/u9401066/asset-aware-mcp#readme",
     "license": "Apache-2.0"
 }

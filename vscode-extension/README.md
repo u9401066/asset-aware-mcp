@@ -1,89 +1,97 @@
-# Asset-Aware MCP VS Code Extension
+# Asset-Aware MCP
 
-VS Code Extension for Medical RAG MCP Server with precise document asset retrieval.
+> 🏥 Medical RAG MCP Server - Precise PDF asset retrieval for AI Agents
 
-## Features
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/u9401066.asset-aware-mcp)](https://marketplace.visualstudio.com/items?itemName=u9401066.asset-aware-mcp)
+[![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-- 🔌 **MCP Native**: Built with VS Code MCP API for seamless AI integration
-- ⚙️ **Settings Panel**: Visual configuration with .env file management
-- 📊 **Status View**: Real-time status of Ollama connection and documents
-- 📁 **Document Browser**: View ingested documents and their assets
+## 🌟 Features
 
-## Installation
+- **📄 Precise Asset Retrieval**: Extract tables, figures, and sections from PDFs with page-level accuracy
+- **🧠 Knowledge Graph**: Cross-document queries powered by LightRAG
+- **🤖 MCP Native**: Seamless integration with VS Code Copilot Chat
+- **🏠 Local-First**: Works with Ollama (no cloud required) or OpenAI
 
-1. Clone or download the extension
-2. Install dependencies:
-   ```bash
-   cd vscode-extension
-   npm install
-   ```
-3. Compile TypeScript:
-   ```bash
-   npm run compile
-   ```
-4. Press F5 in VS Code to launch Extension Development Host
+## 🚀 Quick Start
 
-## Usage
+### 1. Install Prerequisites
 
-### Setup Wizard
+```bash
+# Install Ollama (for local LLM)
+curl -fsSL https://ollama.com/install.sh | sh
 
-Run `Asset-Aware MCP: Setup Wizard` command to:
-- Create .env configuration
-- Check Ollama connection
-- Initialize MCP server
+# Pull required models
+ollama pull qwen2.5:7b
+ollama pull nomic-embed-text
+```
 
-### Settings Panel
+### 2. Install Extension
 
-Run `Asset-Aware MCP: Open Settings Panel` to configure:
-- LLM backend (Ollama/OpenAI)
-- Ollama host and models
-- OpenAI API key
-- Storage directories
+1. Open VS Code
+2. Go to Extensions (Ctrl+Shift+X)
+3. Search for "Asset-Aware MCP"
+4. Click Install
 
-### Status View
+### 3. Run Setup Wizard
 
-The sidebar shows:
-- Configuration status
-- Ollama connection
-- Ingested documents count
+1. Open Command Palette (Ctrl+Shift+P)
+2. Run `Asset-Aware MCP: Setup Wizard`
+3. Follow the prompts
 
-## Extension Settings
+## 📖 Usage
+
+### Ingest Documents
+
+In Copilot Chat, use the MCP tool:
+
+```
+@workspace Use ingest_documents to process /path/to/paper.pdf
+```
+
+### Query Documents
+
+```
+@workspace What are the main findings in Table 1?
+@workspace Fetch figure 2 from doc_abc123
+@workspace Compare sedation outcomes across all papers
+```
+
+## ⚙️ Configuration
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `assetAwareMcp.llmBackend` | `ollama` | LLM backend (ollama/openai) |
-| `assetAwareMcp.ollamaHost` | `http://localhost:11434` | Ollama server URL |
-| `assetAwareMcp.ollamaModel` | `qwen2.5:7b` | Ollama LLM model |
-| `assetAwareMcp.ollamaEmbeddingModel` | `nomic-embed-text` | Embedding model |
-| `assetAwareMcp.dataDir` | `./data` | Document storage directory |
+| `assetAwareMcp.llmBackend` | `ollama` | LLM backend |
+| `assetAwareMcp.ollamaHost` | `http://localhost:11434` | Ollama URL |
+| `assetAwareMcp.ollamaModel` | `qwen2.5:7b` | LLM model |
+| `assetAwareMcp.dataDir` | `./data` | Storage directory |
 
-## Commands
+## 🔧 Commands
 
 | Command | Description |
 |---------|-------------|
-| `Asset-Aware MCP: Setup Wizard` | Run initial setup |
-| `Asset-Aware MCP: Open Settings Panel` | Configure settings |
-| `Asset-Aware MCP: Show Status` | View detailed status |
-| `Asset-Aware MCP: Check Ollama Connection` | Test Ollama |
-| `Asset-Aware MCP: Edit .env Configuration` | Open .env file |
-| `Asset-Aware MCP: Refresh Status` | Refresh status view |
+| `Setup Wizard` | Initial configuration |
+| `Open Settings Panel` | Visual settings editor |
+| `Check Ollama Connection` | Test Ollama status |
+| `Refresh Status` | Update status view |
 
-## Development
+## 📚 MCP Tools
 
-```bash
-# Install dependencies
-npm install
+| Tool | Description |
+|------|-------------|
+| `ingest_documents` | Process PDF files |
+| `list_documents` | List all documents |
+| `inspect_document_manifest` | View document structure |
+| `fetch_document_asset` | Get table/figure/section |
+| `consult_knowledge_graph` | Cross-document queries |
 
-# Compile
-npm run compile
+## 🔗 Links
 
-# Watch mode
-npm run watch
+- [GitHub Repository](https://github.com/u9401066/asset-aware-mcp)
+- [PyPI Package](https://pypi.org/project/asset-aware-mcp/)
+- [Documentation](https://github.com/u9401066/asset-aware-mcp#readme)
+- [Issues](https://github.com/u9401066/asset-aware-mcp/issues)
 
-# Package
-npm run package
-```
-
-## License
+## 📝 License
 
 Apache-2.0

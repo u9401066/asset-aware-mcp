@@ -1,4 +1,8 @@
 {
+    // Asset-Aware MCP Server Configuration
+    // 
+    // 如果需要覆蓋預設設定，請建立 .env 檔案（參考 .env.example）
+    // 或直接修改下方的 env 設定
     "servers": {
         "assetAwareMcp": {
             "type": "stdio",
@@ -18,8 +22,9 @@
                 "OLLAMA_EMBEDDING_MODEL": "nomic-embed-text",
                 "ENABLE_LIGHTRAG": "true",
                 "DATA_DIR": "${workspaceFolder}/data"
-            },
-            "envFile": "${workspaceFolder}/.env"
+            }
+            // 移除 envFile 設定 - 如果需要使用 .env 檔案，請取消下行註解：
+            // "envFile": "${workspaceFolder}/.env"
         }
     },
     "inputs": []

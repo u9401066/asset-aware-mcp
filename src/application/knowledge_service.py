@@ -36,10 +36,7 @@ class KnowledgeService:
     @property
     def is_available(self) -> bool:
         """Check if knowledge graph is available."""
-        return (
-            self.knowledge_graph is not None
-            and self.knowledge_graph.is_available
-        )
+        return self.knowledge_graph is not None and self.knowledge_graph.is_available
 
     async def query(self, query: str, mode: str = "hybrid") -> str:
         """
@@ -52,8 +49,10 @@ class KnowledgeService:
         Returns:
             Query result as string
         """
-        if not self.is_available:
-            return "Knowledge graph is not available. Please enable LightRAG in settings."
+        if not self.is_available or self.knowledge_graph is None:
+            return (
+                "Knowledge graph is not available. Please enable LightRAG in settings."
+            )
 
         try:
             result = await self.knowledge_graph.query(query, mode=mode)

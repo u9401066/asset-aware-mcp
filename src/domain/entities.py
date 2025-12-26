@@ -19,8 +19,10 @@ from .value_objects import AssetType, ImageMediaType
 # Asset Entities
 # ============================================================================
 
+
 class TableAsset(BaseModel):
     """Table asset extracted from document."""
+
     id: str = Field(..., description="Unique table ID, e.g., 'tab_1'")
     page: int = Field(..., description="Page number (1-indexed)")
     caption: str = Field("", description="Table caption if detected")
@@ -29,9 +31,14 @@ class TableAsset(BaseModel):
     row_count: int = Field(0, description="Number of rows")
     col_count: int = Field(0, description="Number of columns")
 
+    # Enhanced fields from Docling
+    has_header: bool = Field(True, description="Whether table has header row")
+    source: str = Field("pymupdf", description="Extraction source: docling/pymupdf")
+
 
 class FigureAsset(BaseModel):
     """Figure/image asset extracted from document."""
+
     id: str = Field(..., description="Unique figure ID, e.g., 'fig_1_1'")
     page: int = Field(..., description="Page number (1-indexed)")
     path: str = Field(..., description="Local file path to the image")
@@ -39,6 +46,10 @@ class FigureAsset(BaseModel):
     caption: str = Field("", description="Figure caption if detected")
     width: int = Field(0, description="Image width in pixels")
     height: int = Field(0, description="Image height in pixels")
+
+    # Enhanced fields from Docling
+    figure_type: str = Field("", description="Figure type: chart/diagram/photo/etc.")
+    source: str = Field("pymupdf", description="Extraction source: docling/pymupdf")
 
     def to_base64(self) -> str:
         """Convert image to base64 string."""
@@ -63,6 +74,7 @@ class FigureAsset(BaseModel):
 
 class SectionAsset(BaseModel):
     """Section/heading asset extracted from document."""
+
     id: str = Field(..., description="Unique section ID, e.g., 'sec_introduction'")
     title: str = Field(..., description="Section heading text")
     level: int = Field(1, description="Heading level (1=H1, 2=H2, etc.)")
@@ -76,8 +88,10 @@ class SectionAsset(BaseModel):
 # Aggregate: Document Assets
 # ============================================================================
 
+
 class DocumentAssets(BaseModel):
     """All assets in a document (Aggregate)."""
+
     tables: list[TableAsset] = Field(default_factory=list)
     figures: list[FigureAsset] = Field(default_factory=list)
     sections: list[SectionAsset] = Field(default_factory=list)
@@ -117,6 +131,7 @@ class DocumentAssets(BaseModel):
 # Aggregate Root: Document Manifest
 # ============================================================================
 
+
 class DocumentManifest(BaseModel):
     """
     Document Manifest - The Map for AI Agent.
@@ -124,6 +139,7 @@ class DocumentManifest(BaseModel):
     This is the Aggregate Root that contains all information
     about a processed document.
     """
+
     doc_id: str = Field(..., description="Unique document identifier")
     filename: str = Field(..., description="Original PDF filename")
     title: str = Field("", description="Document title if detected")
@@ -136,8 +152,7 @@ class DocumentManifest(BaseModel):
 
     # LightRAG enrichment
     lightrag_entities: list[str] = Field(
-        default_factory=list,
-        description="Top entities extracted by LightRAG"
+        default_factory=list, description="Top entities extracted by LightRAG"
     )
 
     # Metadata
@@ -163,8 +178,10 @@ class DocumentManifest(BaseModel):
 # Result Objects (for use case responses)
 # ============================================================================
 
+
 class IngestResult(BaseModel):
     """Result of document ingestion."""
+
     doc_id: str
     filename: str
     title: str = ""
@@ -182,6 +199,7 @@ class IngestResult(BaseModel):
 
 class FetchResult(BaseModel):
     """Result of fetching an asset."""
+
     doc_id: str
     asset_type: AssetType
     asset_id: str
@@ -215,6 +233,7 @@ class FetchResult(BaseModel):
 
 class DocumentSummary(BaseModel):
     """Summary of a document for listing."""
+
     doc_id: str
     filename: str
     title: str = ""

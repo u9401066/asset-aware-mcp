@@ -54,3 +54,11 @@ data/
 
 # LightRAG
 lightrag_db/
+
+# Test data (large PDF files)
+test_data/
+test_pdfs/
+
+# VS Code extension build outputs
+vscode-extension/out/
+vscode-extension/*.vsix

@@ -1,7 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-  <path d="M8 7h8"/>
-  <path d="M8 11h8"/>
-  <path d="M8 15h4"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4f46e5"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="128" height="128" rx="24" fill="url(#bg)"/>
+  <!-- Document Icon -->
+  <g transform="translate(24, 16)">
+    <!-- Document body -->
+    <path d="M0 8 C0 3.58 3.58 0 8 0 L52 0 L80 28 L80 88 C80 92.42 76.42 96 72 96 L8 96 C3.58 96 0 92.42 0 88 Z" fill="white" fill-opacity="0.95"/>
+    <!-- Folded corner -->
+    <path d="M52 0 L52 20 C52 24.42 55.58 28 60 28 L80 28 Z" fill="white" fill-opacity="0.7"/>
+    <!-- Lines (representing table/content) -->
+    <rect x="12" y="40" width="56" height="4" rx="2" fill="#4f46e5" fill-opacity="0.8"/>
+    <rect x="12" y="52" width="48" height="4" rx="2" fill="#4f46e5" fill-opacity="0.6"/>
+    <rect x="12" y="64" width="52" height="4" rx="2" fill="#4f46e5" fill-opacity="0.6"/>
+    <rect x="12" y="76" width="36" height="4" rx="2" fill="#4f46e5" fill-opacity="0.4"/>
+  </g>
+  <!-- MCP Badge -->
+  <circle cx="100" cy="100" r="24" fill="#10b981"/>
+  <text x="100" y="106" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white" text-anchor="middle">MCP</text>
 </svg>

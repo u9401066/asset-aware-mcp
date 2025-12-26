@@ -68,7 +68,14 @@ export class SettingsPanel {
 
     private async _update(): Promise<void> {
         const env = await this._envManager.readEnv();
-        this._panel.webview.html = this._getHtmlContent(env);
+        // Convert EnvConfig to Record<string, string> (filter out undefined values)
+        const envRecord: Record<string, string> = {};
+        for (const [key, value] of Object.entries(env)) {
+            if (value !== undefined) {
+                envRecord[key] = value;
+            }
+        }
+        this._panel.webview.html = this._getHtmlContent(envRecord);
     }
 
     private async _saveSettings(settings: Record<string, string>): Promise<void> {

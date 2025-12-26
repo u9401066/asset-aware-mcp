@@ -6,9 +6,11 @@ Use cases for fetching document assets.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from src.domain.entities import FetchResult
+from src.domain.image_processor import DEFAULT_MAX_SIZE, process_image
 from src.domain.repositories import DocumentRepository
 from src.domain.services import AssetExtractor
 from src.domain.value_objects import AssetType
@@ -23,7 +25,7 @@ class AssetService:
 
     Provides precise data fetching:
     - Tables (markdown)
-    - Figures (base64 with page info for verification)
+    - Figures (base64 with smart resizing)
     - Sections (text content)
     - Full text
     """
@@ -43,6 +45,7 @@ class AssetService:
         doc_id: str,
         asset_type: str,
         asset_id: str,
+        max_size: int | None = None,
     ) -> FetchResult:
         """
         Fetch a specific asset from a document.
@@ -51,6 +54,8 @@ class AssetService:
             doc_id: Document identifier
             asset_type: Type of asset ("table", "figure", "section", "full_text")
             asset_id: Asset identifier (e.g., "tab_1", "fig_1_1", "sec_introduction")
+            max_size: For figures - max longest edge in pixels
+                      Default 1024, set to 0 for original size
 
         Returns:
             FetchResult with content or error
@@ -81,7 +86,7 @@ class AssetService:
         if atype == AssetType.TABLE:
             return await self._fetch_table(doc_id, asset_id)
         elif atype == AssetType.FIGURE:
-            return await self._fetch_figure(doc_id, asset_id)
+            return await self._fetch_figure(doc_id, asset_id, max_size)
         elif atype == AssetType.SECTION:
             return await self._fetch_section(doc_id, asset_id)
         elif atype == AssetType.FULL_TEXT:
@@ -127,13 +132,24 @@ class AssetService:
             page=table.page,
         )
 
-    async def _fetch_figure(self, doc_id: str, figure_id: str) -> FetchResult:
+    async def _fetch_figure(
+        self,
+        doc_id: str,
+        figure_id: str,
+        max_size: int | None = None,
+    ) -> FetchResult:
         """
         Fetch a figure by ID as base64.
 
-        Returns image with metadata for verification:
-        - page number
-        - dimensions
+        Smart resizing:
+        - Default: 1024px longest edge (good for most VLMs)
+        - Custom: specify max_size (e.g., 512 for smaller models)
+        - Original: set max_size=0
+
+        Args:
+            doc_id: Document ID
+            figure_id: Figure ID (e.g., "fig_1_1")
+            max_size: Max longest edge in pixels (default 1024, 0=original)
         """
         manifest = self.repository.load_manifest(doc_id)
         if not manifest:
@@ -156,31 +172,74 @@ class AssetService:
                 error=f"Figure not found: {figure_id}",
             )
 
-        # Load image and convert to base64
+        # Load and process image
         try:
-            image_base64 = figure.to_base64()
-            media_type = figure.get_media_type().value
+            image_path = Path(figure.path)
+            if not image_path.exists():
+                raise FileNotFoundError(f"Image not found: {figure.path}")
+
+            with open(image_path, "rb") as f:
+                original_bytes = f.read()
+
+            # Use default or custom max_size
+            target_size = max_size if max_size is not None else DEFAULT_MAX_SIZE
+
+            # Process image (resize + compress)
+            result = process_image(original_bytes, max_size=target_size)
+
+            # Build info text
+            info = f"Page {figure.page}"
+            if figure.caption:
+                info += f" | {figure.caption}"
+            if result.resized:
+                info += f" | Resized: {result.original_width}x{result.original_height} → {result.width}x{result.height}"
+                info += f" | {result.size_reduction_percent:.0f}% smaller"
 
             return FetchResult(
                 doc_id=doc_id,
                 asset_type=AssetType.FIGURE,
                 asset_id=figure_id,
                 success=True,
-                image_base64=image_base64,
-                image_media_type=media_type,
+                image_base64=result.base64,
+                image_media_type="image/jpeg",
                 page=figure.page,
-                width=figure.width,
-                height=figure.height,
+                width=result.width,
+                height=result.height,
+                text_content=info,
             )
 
-        except FileNotFoundError:
+        except FileNotFoundError as e:
             return FetchResult(
                 doc_id=doc_id,
                 asset_type=AssetType.FIGURE,
                 asset_id=figure_id,
                 success=False,
-                error=f"Image file not found: {figure.path}",
+                error=str(e),
             )
+        except ImportError:
+            # PIL not installed - return original
+            try:
+                image_base64 = figure.to_base64()
+                return FetchResult(
+                    doc_id=doc_id,
+                    asset_type=AssetType.FIGURE,
+                    asset_id=figure_id,
+                    success=True,
+                    image_base64=image_base64,
+                    image_media_type=figure.get_media_type().value,
+                    page=figure.page,
+                    width=figure.width,
+                    height=figure.height,
+                    text_content=f"Page {figure.page} (unprocessed - PIL not available)",
+                )
+            except Exception as e:
+                return FetchResult(
+                    doc_id=doc_id,
+                    asset_type=AssetType.FIGURE,
+                    asset_id=figure_id,
+                    success=False,
+                    error=str(e),
+                )
 
     async def _fetch_section(self, doc_id: str, section_id: str) -> FetchResult:
         """Fetch a section by ID or title."""

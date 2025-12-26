@@ -2,19 +2,22 @@
 
 ## Done
 
-- MCP 系統 5 工具全部實作完成
-- ImageContent 格式修復 - Vision AI 可看圖
-- GitHub 發布 v0.2.0
-- LightRAG 初始化修復 (initialize_storages)
-- LightRAG Embedding 格式修復 (numpy array)
-- LLM 模型切換 qwen2.5:7b → llama3.1:8b
-- 新增 debug_lightrag.py 測試腳本
+- PyMuPDF 設為核心依賴
+- Docling 設為可選依賴
+- server.py 直接使用 PyMuPDFExtractor
+- document_service.py 動態表格來源偵測
+- ROADMAP.md 記錄設計決策
+- PDF 摘要測試成功 (23頁, 6圖, 25節)
+- 圖片壓縮功能測試成功 (4501×5482→840×1024)
+- 86 測試全部通過
+- Git commit 準備完成
 
 ## Doing
 
-- 測試 LightRAG 知識圖譜（等待 MCP 重啟）
+
 
 ## Next
 
-- 驗證 LightRAG 跨文件查詢
-- 實作 figure caption 解析
+- 測試表格萃取 (需找有表格的 PDF)
+- 測試 LightRAG 知識圖譜功能
+- 發布 v0.2.0

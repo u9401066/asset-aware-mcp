@@ -38,7 +38,23 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
         const mcpServerDir = this.findMcpServerDir();
         
         if (mcpServerDir) {
-            const envPath = path.join(this.workspaceRoot, '.env');
+            // Use path.join for cross-platform compatibility (Linux/Windows)
+            const envPath = path.join(mcpServerDir, '.env');
+            
+            // Default environment variables (used when .env doesn't exist)
+            const defaultEnv: Record<string, string> = {
+                LLM_BACKEND: 'ollama',
+                OLLAMA_HOST: 'http://localhost:11434',
+                OLLAMA_MODEL: 'qwen2.5:7b',
+                OLLAMA_EMBEDDING_MODEL: 'nomic-embed-text',
+                ENABLE_LIGHTRAG: 'true',
+                DATA_DIR: path.join(mcpServerDir, 'data')
+            };
+            
+            // Merge default env with .env file if it exists
+            const envVars = fs.existsSync(envPath) 
+                ? { ...defaultEnv, ...this.parseEnvFile(envPath) }
+                : defaultEnv;
             
             servers.push({
                 label: 'Asset-Aware MCP',
@@ -48,10 +64,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
                     '--directory', mcpServerDir,
                     'python', '-m', 'src.server'
                 ],
-                env: {
-                    // Pass environment variables from .env if it exists
-                    ...(fs.existsSync(envPath) ? this.parseEnvFile(envPath) : {})
-                }
+                env: envVars
             });
         }
         

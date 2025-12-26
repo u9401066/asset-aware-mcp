@@ -7,7 +7,6 @@ Supports both Ollama (local) and OpenAI backends.
 
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING
 
 from src.domain.repositories import KnowledgeGraphInterface
@@ -19,44 +18,44 @@ if TYPE_CHECKING:
 
 from lightrag.base import EmbeddingFunc
 
-
 # ============================================================================
 # Ollama LLM Functions for LightRAG
 # ============================================================================
 
+
 async def ollama_model_complete(
     prompt: str,
     system_prompt: str | None = None,
-    history_messages: list | None = None,
-    **kwargs,
+    history_messages: list[dict[str, str]] | None = None,
+    **kwargs: str | int | float,
 ) -> str:
     """
     Ollama completion function for LightRAG.
-    
+
     Args:
         prompt: The user prompt
         system_prompt: Optional system prompt
         history_messages: Optional conversation history
         **kwargs: Additional arguments (model, host, etc.)
-        
+
     Returns:
         Generated text response
     """
     import httpx
-    
-    model = kwargs.get("model", settings.ollama_model)
-    host = kwargs.get("host", settings.ollama_host)
-    
+
+    model = str(kwargs.get("model", settings.ollama_model))
+    host = str(kwargs.get("host", settings.ollama_host))
+
     messages = []
-    
+
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
-    
+
     if history_messages:
         messages.extend(history_messages)
-    
+
     messages.append({"role": "user", "content": prompt})
-    
+
     async with httpx.AsyncClient(timeout=120.0) as client:
         response = await client.post(
             f"{host}/api/chat",
@@ -72,31 +71,32 @@ async def ollama_model_complete(
         )
         response.raise_for_status()
         result = response.json()
-        return result.get("message", {}).get("content", "")
+        content: str = result.get("message", {}).get("content", "")
+        return content
 
 
 async def ollama_embedding(
     texts: list[str],
-    **kwargs,
-) -> list[list[float]]:
+    **kwargs: str | int | float,
+) -> "np.ndarray":
     """
     Ollama embedding function for LightRAG.
-    
+
     Args:
         texts: List of texts to embed
         **kwargs: Additional arguments (model, host, etc.)
-        
+
     Returns:
         NumPy array of embedding vectors (required by LightRAG)
     """
     import httpx
     import numpy as np
-    
-    model = kwargs.get("model", settings.ollama_embedding_model)
-    host = kwargs.get("host", settings.ollama_host)
-    
+
+    model = str(kwargs.get("model", settings.ollama_embedding_model))
+    host = str(kwargs.get("host", settings.ollama_host))
+
     embeddings = []
-    
+
     async with httpx.AsyncClient(timeout=60.0) as client:
         for text in texts:
             response = await client.post(
@@ -109,8 +109,8 @@ async def ollama_embedding(
             response.raise_for_status()
             result = response.json()
             embeddings.append(result.get("embedding", []))
-    
-    # LightRAG expects numpy array
+
+    # LightRAG requires numpy array with .size attribute
     return np.array(embeddings)
 
 
@@ -174,16 +174,16 @@ class LightRAGAdapter(KnowledgeGraphInterface):
             else:
                 # Use OpenAI
                 from lightrag.llm import openai_complete_if_cache, openai_embedding
-                
+
                 self._rag = LightRAG(
                     working_dir=str(working_dir),
                     llm_model_func=openai_complete_if_cache,
                     embedding_func=openai_embedding,
                 )
-            
+
             # IMPORTANT: Initialize storages (required by LightRAG)
             await self._rag.initialize_storages()
-            
+
             self._initialized = True
             return self._rag
 
@@ -222,10 +222,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
 
         from lightrag import QueryParam
 
-        result = await rag.aquery(
-            query,
-            param=QueryParam(mode=mode)
-        )
+        result = await rag.aquery(query, param=QueryParam(mode=mode))
 
         return str(result) if result else ""
 
@@ -252,7 +249,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
             result = await rag.aquery(
                 f"List the top {limit} most important entities (people, organizations, "
                 f"medical terms, drugs, diseases) mentioned in this context.",
-                param=QueryParam(mode="local")
+                param=QueryParam(mode="local"),
             )
 
             if not result:
@@ -270,7 +267,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
             entities.extend(quoted)
 
             # Also find capitalized multi-word terms
-            caps = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', str(result))
+            caps = re.findall(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b", str(result))
             for cap in caps:
                 if cap not in entities and cap not in ["The", "This", "These", "What"]:
                     entities.append(cap)
@@ -288,6 +285,155 @@ class LightRAGAdapter(KnowledgeGraphInterface):
         except Exception:
             return []
 
+    async def export_graph(
+        self,
+        format: str = "summary",
+        limit: int = 50,
+        entity_types: list[str] | None = None,
+    ) -> dict[str, object]:
+        """
+        Export knowledge graph data in various formats.
+
+        Args:
+            format: Output format - "summary", "json", or "mermaid"
+            limit: Maximum number of nodes to include
+            entity_types: Filter by entity types (e.g., ["PERSON", "ORGANIZATION"])
+
+        Returns:
+            Dict with graph data in requested format
+        """
+        import xml.etree.ElementTree as ET  # noqa: N817
+
+        graph_file = settings.lightrag_working_dir / "graph_chunk_entity_relation.graphml"
+
+        if not graph_file.exists():
+            return {
+                "format": format,
+                "error": "Knowledge graph not found. Please ingest documents first.",
+                "nodes": [],
+                "edges": [],
+            }
+
+        # Parse GraphML
+        tree = ET.parse(graph_file)
+        root = tree.getroot()
+        ns = {"g": "http://graphml.graphdrawing.org/xmlns"}
+
+        # Extract nodes
+        nodes: list[dict[str, str]] = []
+        node_ids: set[str] = set()
+
+        for node in root.findall(".//g:node", ns):
+            node_id = node.get("id", "")
+            entity_type = ""
+            description = ""
+
+            for data in node.findall("g:data", ns):
+                key = data.get("key", "")
+                text = data.text or ""
+                if key == "d1":  # entity_type
+                    entity_type = text
+                elif key == "d2":  # description
+                    # Truncate long descriptions
+                    description = text[:200] + "..." if len(text) > 200 else text
+
+            # Filter by entity type if specified
+            if entity_types and entity_type not in entity_types:
+                continue
+
+            if len(nodes) < limit:
+                nodes.append({
+                    "id": node_id,
+                    "type": entity_type,
+                    "description": description,
+                })
+                node_ids.add(node_id)
+
+        # Extract edges (only between included nodes)
+        edges: list[dict[str, str]] = []
+        for edge in root.findall(".//g:edge", ns):
+            source = edge.get("source", "")
+            target = edge.get("target", "")
+
+            if source not in node_ids or target not in node_ids:
+                continue
+
+            keywords = ""
+            weight = "1.0"
+            for data in edge.findall("g:data", ns):
+                key = data.get("key", "")
+                text = data.text or ""
+                if key == "d9":  # keywords
+                    keywords = text
+                elif key == "d7":  # weight
+                    weight = text
+
+            edges.append({
+                "source": source,
+                "target": target,
+                "keywords": keywords,
+                "weight": weight,
+            })
+
+        # Format output
+        if format == "summary":
+            # Return statistics and top entities
+            type_counts: dict[str, int] = {}
+            for n in nodes:
+                t = n.get("type", "unknown")
+                type_counts[t] = type_counts.get(t, 0) + 1
+
+            return {
+                "format": "summary",
+                "total_nodes": len(nodes),
+                "total_edges": len(edges),
+                "entity_types": type_counts,
+                "sample_nodes": nodes[:10],
+                "sample_edges": edges[:10],
+            }
+
+        elif format == "json":
+            return {
+                "format": "json",
+                "nodes": nodes,
+                "edges": edges,
+            }
+
+        elif format == "mermaid":
+            # Generate Mermaid flowchart
+            mermaid_lines = ["graph TD"]
+
+            # Sanitize node IDs for Mermaid (remove special chars)
+            def sanitize_id(s: str) -> str:
+                return "".join(c if c.isalnum() else "_" for c in s)[:30]
+
+            node_map: dict[str, str] = {}
+            for i, node in enumerate(nodes[:30]):  # Limit for readability
+                safe_id = f"N{i}"
+                node_map[node["id"]] = safe_id
+                label = node["id"][:25]
+                mermaid_lines.append(f'    {safe_id}["{label}"]')
+
+            for edge in edges:
+                src = node_map.get(edge["source"])
+                tgt = node_map.get(edge["target"])
+                if src and tgt:
+                    kw = edge.get("keywords", "")[:15]
+                    if kw:
+                        mermaid_lines.append(f"    {src} -->|{kw}| {tgt}")
+                    else:
+                        mermaid_lines.append(f"    {src} --> {tgt}")
+
+            return {
+                "format": "mermaid",
+                "diagram": "\n".join(mermaid_lines),
+                "node_count": len(nodes[:30]),
+                "edge_count": len([e for e in edges if node_map.get(e["source"]) and node_map.get(e["target"])]),
+            }
+
+        else:
+            return {"format": format, "error": f"Unknown format: {format}"}
+
     @property
     def is_available(self) -> bool:
         """Check if LightRAG is available and enabled."""
@@ -296,6 +442,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
 
         try:
             import lightrag  # noqa: F401
+
             return True
         except ImportError:
             return False

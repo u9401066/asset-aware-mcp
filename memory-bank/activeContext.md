@@ -4,46 +4,48 @@
 
 ## 🎯 當前焦點
 
-- **調試 LightRAG 知識圖譜索引問題**
-- MCP 系統 5 工具全部實作完成
-- 55 個測試全數通過
-- GitHub 已發布: https://github.com/u9401066/asset-aware-mcp
+- **PyMuPDF 輕量級 PDF 後端完成測試**
+- 86 個測試全數通過
+- 圖片壓縮功能驗證成功
+- GitHub: https://github.com/u9401066/asset-aware-mcp
 
 ## Current Goals
 
-1. ✅ ~~建立 GitHub repository 並 push~~
-2. ✅ ~~修復圖片返回格式（ImageContent vs markdown string）~~
-3. 修復 LightRAG 索引問題
-4. 實作 figure caption 解析
+1. ✅ PyMuPDF 設為核心依賴（輕量）
+2. ✅ Docling 設為可選依賴（重量級）
+3. ✅ 圖片壓縮功能 (4501×5482 → 840×1024)
+4. ✅ 86 測試全部通過
+5. 測試表格萃取（需找有表格的 PDF）
+6. 測試 LightRAG 知識圖譜
 
-## 📝 已完成的變更
+## 📝 本次變更
 
 | 檔案/目錄 | 變更內容 |
 |-----------|----------|
-| `src/domain/` | Entities, Value Objects, Services, Repositories |
-| `src/application/` | DocumentService, AssetService, KnowledgeService |
-| `src/infrastructure/` | FileStorage, PDFExtractor, LightRAGAdapter, Config |
-| `src/presentation/server.py` | MCP Server (5 Tools) + ImageContent 修復 |
-| `tests/` | 55 個測試（unit + integration） |
-| `.claude/skills/mcp-operator/` | MCP 操作指南 skill |
-| `CONSTITUTION.md` | 專案憲法 |
-| `AGENTS.md` | Agent Mode 入口 |
-| `CHANGELOG.md` | v0.2.0 發布紀錄 |
+| `pyproject.toml` | PyMuPDF 核心, Docling 可選 |
+| `src/presentation/server.py` | 直接使用 PyMuPDFExtractor |
+| `src/application/document_service.py` | 動態表格來源偵測 |
+| `src/domain/image_processor.py` | 圖片壓縮處理器 |
+| `ROADMAP.md` | 新增「設計決策」章節 |
+| `tests/` | 86 個測試全通過 |
 
 ## ⚠️ 待解決
 
-1. ✅ ~~**圖片格式問題**：已修復，Vision AI 可看圖~~
-2. **Figure caption 對應**：`fig_2_1` 不等於 "Figure 1"，需解析 PDF 中的 caption
-3. **Knowledge Graph**：LightRAG 索引失敗，目錄為空
+1. **表格萃取**：測試 PDF 無表格（可能是圖片式）
+2. **Knowledge Graph**：待測試 LightRAG 索引
+3. **Figure caption**：`fig_2_1` 對應問題
 
-## 💡 重要決定
+## 💡 重要決定 (2025-12-26)
 
-- 使用 PyMuPDF 作為主要 PDF 解析 (保留頁碼資訊)
-- Base64 傳輸圖片，附帶頁碼供驗證
-- Manifest First 設計原則
-- Local-first 儲存策略
-- 使用 Ollama 本地 LLM（預設）
-- 返回 `list[TextContent | ImageContent]` 讓 Vision AI 可分析
+### PDF 後端選擇
+- **PyMuPDF**（核心）：輕量、快速、50MB
+- **Docling**（可選）：需 PyTorch + CUDA，~2GB
+- 原因：「我們是輕量級旁支專案！」
+
+### 圖片處理
+- max_size: 1024px
+- JPEG 品質: 85%
+- 4501×5482 → 840×1024 壓縮成功
 
 ## 📁 專案結構
 
