@@ -23,7 +23,7 @@ graph TD
     end
 
     subgraph Infrastructure
-        DL[Docling Adapter]
+        PA[PyMuPDF Adapter]
         LR[LightRAG Adapter]
         FS[File Storage]
     end
@@ -54,12 +54,12 @@ graph TD
 ### 4. Infrastructure Layer (基礎設施層)
 - **位置**: `src/infrastructure/`
 - **職責**: 外部技術實作，如 PDF 解析、向量資料庫、檔案系統。
-- **技術**: **Docling** (PDF 解析), **LightRAG** (知識圖譜), **PyMuPDF** (輔助解析)。
+- **技術**: **PyMuPDF** (PDF 解析), **LightRAG** (知識圖譜)。
 
 ## ETL 流程 (Asset-Aware)
 
 1. **Ingestion**: 接收 PDF 路徑，啟動非同步 Job。
-2. **Decomposition**: 使用 Docling 將 PDF 分解為 Markdown、表格與圖片。
+2. **Decomposition**: 使用 PyMuPDF 將 PDF 分解為 Markdown、表格與圖片。
 3. **Manifest Generation**: 建立 `manifest.json` 作為文件的「地圖」。
 4. **Indexing**: 將 Markdown 內容餵入 LightRAG 建立知識圖譜與向量索引。
 5. **Storage**: 將所有資產存儲於本地 `./data/doc_{id}/` 目錄。

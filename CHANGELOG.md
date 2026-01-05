@@ -5,12 +5,21 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 專案遵循 [語義化版本](https://semver.org/lang/zh-TW/)。
 
-## [Unreleased]
+## [0.1.1] - 2026-01-05
 
-### Known Issues
-- 圖片返回格式為 markdown string，尚未支援 MCP ImageContent（視覺 AI 無法看圖）
-- Figure caption 對應需要實作（fig_2_1 不等於 "Figure 1"）
-- Knowledge Graph 索引需要時間才會有查詢結果
+### Added
+- 🚀 **輕量化 ETL 引擎**：完全移除 Docling (2GB+ 依賴)，改用 **PyMuPDF (fitz)** 作為核心解析引擎。
+- 🛠️ **型別安全與品質提升**：修復了 187+ 個 Ruff lint 錯誤與 29+ 個 MyPy 型別錯誤。
+- 📦 **uv 整合優化**：更新所有指令使用 `uv run`，確保環境隔離。
+- 🧩 **VS Code 擴充功能安全性更新**：升級 TypeScript 5.7.2 與 ESLint 9。
+
+### Changed
+- 移除 `docling` 相關 adapter 與依賴。
+- 更新 `README`、`spec.md` 與 `ARCHITECTURE.md` 以反映 PyMuPDF 架構。
+
+### Fixed
+- 修復 `TableAsset` 屬性名稱不一致問題 (`description` -> `caption`)。
+- 修復 `ChunkingStrategy` 抽象類別實作問題。
 
 ## [0.2.0] - 2025-12-26
 

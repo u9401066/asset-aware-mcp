@@ -11,7 +11,11 @@
 
 ## Current Goals
 
-- 已完成專案架構簡化與程式碼品質檢查。README 已更新為最新的 uv 指令。準備進行 Git 提交。
+- 已完成 VS Code 擴充功能的安全性更新與打包。
+- - TypeScript 已更新至 5.7.2，ESLint 已更新至 9.x 並切換至 flat config (eslint.config.mjs)。
+- - 已生成最新的 `asset-aware-mcp-0.1.1.vsix`。
+- - 已完成 Git 提交與推送。
+- 下一步：考慮更新 PyPI 套件以保持 Python 核心與擴充功能同步，隨後開始 A2T 開發。
 
 ## 📝 本次變更
 
