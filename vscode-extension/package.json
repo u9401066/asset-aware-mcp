@@ -1,8 +1,8 @@
 {
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
-    "description": "Medical RAG MCP Server with precise document asset retrieval - tables, figures, sections from PDFs",
-    "version": "0.1.0",
+    "description": "Medical RAG MCP Server with precise document asset retrieval - tables, figures, sections from PDFs (PyMuPDF powered)",
+    "version": "0.1.1",
     "publisher": "u9401066",
     "engines": {
         "vscode": "^1.99.0"

@@ -12,13 +12,13 @@ This extension provides a sophisticated **ETL (Extract, Transform, Load) Pipelin
 
 ### The Workflow:
 1.  **📥 Ingest (ETL)**: Agent provides a local PDF path.
-2.  **⚙️ Process**: MCP Server reads the file using **Docling**, separating **Text**, **Tables**, and **Figures** (with page numbers).
+2.  **⚙️ Process**: MCP Server reads the file using **PyMuPDF**, separating **Text**, **Tables**, and **Figures** (with page numbers).
 3.  **🗺️ Manifest**: Generates a structured JSON "Map" of all assets.
 4.  **📤 Fetch**: Agent "looks at the map" and fetches specific objects (e.g., "Table 1" or "Figure 2") as clean Markdown or Base64 images.
 
 ## ✨ Features
 
-- **📄 Asset-Aware ETL**: PDF → Markdown + Image extraction with page-level accuracy using **Docling**.
+- **📄 Asset-Aware ETL**: PDF → Markdown + Image extraction with page-level accuracy using **PyMuPDF**.
 - **🔄 Async Jobs**: Track progress for large document batches with Job IDs.
 - **🗺️ Document Manifest**: A structured index that lets Agents "see" document structure before reading.
 - **🖼️ Visual Assets**: Extract figures as Base64 images for Vision-capable Agents.
