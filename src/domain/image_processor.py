@@ -75,7 +75,7 @@ def process_image(
     from PIL import Image
 
     # Load image
-    img = Image.open(io.BytesIO(image_bytes))
+    img: Image.Image = Image.open(io.BytesIO(image_bytes))
     original_width, original_height = img.size
     original_bytes = len(image_bytes)
 

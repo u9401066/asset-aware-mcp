@@ -8,11 +8,12 @@
 
 ## ✨ Features
 
-- 📄 **Asset-Aware ETL** - PDF → Markdown，自動識別表格、章節、圖片
-- 🗺️ **Document Manifest** - 結構化清單，Agent 可先「看地圖」再取資料
-- 🧠 **LightRAG Integration** - 知識圖譜 + 向量索引，跨文獻比較
-- 🔌 **MCP Server** - 透過 FastMCP 暴露工具給 Copilot/Claude
-- 🏥 **Medical Research Focus** - 針對醫學文獻優化
+- 📄 **Asset-Aware ETL** - PDF → Markdown, using **PyMuPDF** to automatically identify tables, sections, and images
+- 🔄 **Async Job Pipeline** - Supports asynchronous task processing, tracking progress for large documents
+- 🗺️ **Document Manifest** - Structured list, allowing Agents to "see the map" before precisely accessing data
+- 🧠 **LightRAG Integration** - Knowledge Graph + Vector Index, supporting cross-document comparison and reasoning
+- 🔌 **MCP Server** - Exposes tools and resources to Copilot/Claude via FastMCP
+- 🏥 **Medical Research Focus** - Optimized for medical literature, supporting Base64 image transmission for Vision AI analysis
 
 ## 🏗️ Architecture
 
@@ -20,7 +21,7 @@
 ┌─────────────────────────────────────────────────────────┐
 │                    AI Agent (Copilot)                   │
 └─────────────────────┬───────────────────────────────────┘
-                      │ MCP Protocol
+                      │ MCP Protocol (Tools & Resources)
 ┌─────────────────────▼───────────────────────────────────┐
 │                 MCP Server (server.py)                  │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────────┐   │
@@ -33,59 +34,62 @@
 └─────────────────────┬───────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────┐
-│                  ETL Pipeline (etl.py)                  │
+│                  ETL Pipeline (DDD)                     │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐              │
-│  │ Mistral  │  │  Asset   │  │ LightRAG │              │
-│  │   OCR    │→ │  Parser  │→ │  Index   │              │
+│  │ PyMuPDF  │  │  Asset   │  │ LightRAG │              │
+│  │ Adapter  │→ │  Parser  │→ │  Index   │              │
 │  └──────────┘  └──────────┘  └──────────┘              │
 └─────────────────────┬───────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────┐
 │                   Local Storage                         │
 │  ./data/                                                │
-│  ├── {doc_id}_full.md      # Raw Markdown              │
-│  ├── {doc_id}_manifest.json # Asset Map                │
-│  └── lightrag_db/          # Knowledge Graph           │
+│  ├── doc_{id}/                                          │
+│  │   ├── full.md          # Markdown Content            │
+│  │   ├── manifest.json    # Asset Map                   │
+│  │   └── images/          # Extracted Figures           │
+│  └── lightrag/            # Knowledge Graph             │
 └─────────────────────────────────────────────────────────┘
 ```
 
-## 📁 Project Structure
+## 📁 Project Structure (DDD)
 
 ```
 asset-aware-mcp/
 ├── src/
-│   ├── etl.py               # ETL Pipeline
-│   ├── server.py            # MCP Server
-│   └── utils/               # Utilities
-├── data/                    # Document Storage
+│   ├── domain/              # 🔵 Domain: Entities, Value Objects, Interfaces
+│   ├── application/         # 🟢 Application: Doc Service, Job Service, Asset Service
+│   ├── infrastructure/      # 🟠 Infrastructure: PyMuPDF, LightRAG, File Storage
+│   └── presentation/        # 🔴 Presentation: MCP Server (FastMCP)
+├── data/                    # Document and Asset Storage
 ├── docs/
 │   └── spec.md              # Technical Specification
-├── tests/
-├── memory-bank/             # 🧠 Project Memory
-├── .claude/skills/          # 🤖 Claude Skills
-└── pyproject.toml
+├── tests/                   # Unit and Integration Tests
+├── vscode-extension/        # VS Code Management Extension
+└── pyproject.toml           # uv Project Config
 ```
 
 ## 🚀 Quick Start
 
 ```bash
-# Install dependencies
+# Install dependencies (using uv)
 uv sync
 
 # Run MCP Server
-python src/server.py
+uv run python -m src.presentation.server
 
-# Or use with VS Code MCP extension
+# Or use the VS Code extension for graphical management
 ```
 
 ## 🔌 MCP Tools
 
 | Tool | Purpose |
 |------|---------|
-| `ingest_documents` | 匯入 PDF，觸發 ETL pipeline |
-| `list_documents` | 列出已處理的文件 |
-| `inspect_document_manifest` | 查看文件結構地圖 |
-| `fetch_document_asset` | 精準取得表格/章節/圖片/全文 |
+| `ingest_documents` | 匯入 PDF，觸發 ETL pipeline (支援 async) |
+| `get_job_status` | 檢查 ETL 任務進度 |
+| `list_documents` | 列出所有已處理的文件 |
+| `inspect_document_manifest` | 查看文件結構地圖 (表格/圖片/章節) |
+| `fetch_document_asset` | 精準取得表格 (MD) / 圖片 (B64) / 章節 |
 | `consult_knowledge_graph` | 知識圖譜查詢，跨文獻比較 |
 
 ## 🔧 Tech Stack
@@ -93,10 +97,10 @@ python src/server.py
 | Category | Technology |
 |----------|------------|
 | Language | Python 3.10+ |
-| OCR | Mistral AI SDK |
+| ETL | **PyMuPDF** (fitz) |
 | RAG | LightRAG (lightrag-hku) |
 | MCP | FastMCP |
-| Storage | Local filesystem (JSON/Markdown) |
+| Storage | Local filesystem (JSON/Markdown/PNG) |
 
 ## 📋 Documentation
 

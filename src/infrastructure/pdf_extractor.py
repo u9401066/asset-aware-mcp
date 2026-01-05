@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
-import fitz  # PyMuPDF
+import fitz  # type: ignore # PyMuPDF
 
 from src.domain.repositories import PDFExtractorInterface
 
@@ -263,7 +264,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
 
         return tables
 
-    def _table_to_markdown(self, table) -> str:
+    def _table_to_markdown(self, table: Any) -> str:
         """Convert PyMuPDF table to markdown format."""
         if not hasattr(table, "extract"):
             return ""

@@ -103,3 +103,66 @@
 ---
 *Last updated: 2025-12-15*
 
+
+
+## Architectural Decisions
+
+- 採用 Docling 作為主要 ETL 引擎以獲得高品質的表格與章節識別
+- 使用 FastMCP 簡化 MCP Server 開發流程
+- 本地優先存儲策略，所有資產保留在 ./data 目錄下
+
+
+
+## Design Considerations
+
+- 採用 DDD 架構確保業務邏輯與技術細節分離
+- 使用非同步 Job 處理大型 PDF 以避免 MCP 逾時
+- Manifest-first 策略：Agent 應先讀取清單再精準取用資產
+- 支援 Base64 圖片傳輸以配合 Vision AI 分析能力
+
+
+
+## Components
+
+### Presentation Layer (FastMCP)
+
+實作 MCP 協議，定義 Tools 與 Resources。使用 FastMCP 框架。
+
+**Responsibilities:**
+
+- 定義 ingest_documents, fetch_document_asset 等工具
+- 提供 document://{id}/outline 等動態資源
+- 處理 MCP 請求與回應格式轉換
+
+### Application Layer (Services)
+
+協調領域對象執行業務流程。處理非同步 Job 狀態。
+
+**Responsibilities:**
+
+- DocumentService: 協調 ETL 流程
+- JobService: 管理非同步任務狀態
+- AssetService: 檢索與過濾文件資產
+
+### Domain Layer (Core)
+
+核心業務邏輯與實體定義。定義 Repository 介面。
+
+**Responsibilities:**
+
+- 定義 DocumentManifest 實體與 Asset 值物件
+- 定義 PDFExtractorInterface 與 KnowledgeGraphInterface 介面
+- 實作 ManifestGenerator 領域服務
+
+### Infrastructure Layer (Adapters)
+
+外部技術實作。包含 PDF 解析與知識圖譜。
+
+**Responsibilities:**
+
+- DoclingAdapter: 使用 IBM Docling 進行高精度 PDF 解析
+- LightRAGAdapter: 實作知識圖譜索引與查詢
+- FileStorage: 處理本地檔案系統的讀寫與圖片儲存
+
+
+

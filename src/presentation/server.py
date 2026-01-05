@@ -7,6 +7,8 @@ Supports async ETL jobs for long-running document processing.
 
 from __future__ import annotations
 
+from typing import cast
+
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ImageContent, TextContent
 
@@ -533,17 +535,17 @@ async def export_knowledge_graph(
             "",
             "### Entity Types",
         ]
-        for etype, count in result.get("entity_types", {}).items():
+        for etype, count in cast(dict[str, int], result.get("entity_types", {})).items():
             lines.append(f"- {etype}: {count}")
 
         lines.append("\n### Sample Nodes")
-        for node in result.get("sample_nodes", [])[:5]:
+        for node in cast(list[dict[str, str]], result.get("sample_nodes", []))[:5]:
             lines.append(f"- **{node['id']}** ({node['type']})")
             if node.get("description"):
                 lines.append(f"  _{node['description'][:100]}_")
 
         lines.append("\n### Sample Relationships")
-        for edge in result.get("sample_edges", [])[:5]:
+        for edge in cast(list[dict[str, str]], result.get("sample_edges", []))[:5]:
             lines.append(f"- {edge['source']} → {edge['target']}")
             if edge.get("keywords"):
                 lines.append(f"  _Keywords: {edge['keywords']}_")
@@ -630,7 +632,7 @@ async def resource_document_tables(doc_id: str) -> str:
     ]
 
     for tab in manifest.assets.tables:
-        desc = (tab.description[:50] + "...") if tab.description and len(tab.description) > 50 else (tab.description or "-")
+        desc = (tab.caption[:50] + "...") if tab.caption and len(tab.caption) > 50 else (tab.caption or "-")
         lines.append(f"| `{tab.id}` | {tab.page or '-'} | {desc} |")
 
     lines.extend([
@@ -729,7 +731,7 @@ async def resource_document_outline(doc_id: str) -> str:
     lines.append(f"## 📊 Tables ({len(manifest.assets.tables)})")
     if manifest.assets.tables:
         for tab in manifest.assets.tables[:5]:
-            desc = f": {tab.description[:30]}..." if tab.description else ""
+            desc = f": {tab.caption[:30]}..." if tab.caption else ""
             lines.append(f"- `{tab.id}` (P.{tab.page or '?'}){desc}")
         if len(manifest.assets.tables) > 5:
             lines.append(f"- _...and {len(manifest.assets.tables) - 5} more_")
@@ -785,12 +787,12 @@ async def resource_knowledge_graph_summary() -> str:
         "## Entity Types",
     ]
 
-    for etype, count in result.get("entity_types", {}).items():
+    for etype, count in cast(dict[str, int], result.get("entity_types", {})).items():
         lines.append(f"- **{etype}:** {count}")
 
     lines.append("\n## Sample Entities")
-    for node in result.get("sample_nodes", [])[:8]:
-        lines.append(f"- {node['id']} ({node['type']})")
+    for node in cast(list[dict[str, str]], result.get("sample_nodes", []))[:8]:
+        lines.append(f"- {node['id']} ({node['type']})")  # type: ignore
 
     lines.extend([
         "",

@@ -237,7 +237,7 @@ class DocumentService:
         try:
             raw_tables = self.pdf_extractor.extract_tables(pdf_path)
 
-            tables = []
+            tables: list[TableAsset] = []
             for tab_data in raw_tables:
                 tables.append(
                     TableAsset(

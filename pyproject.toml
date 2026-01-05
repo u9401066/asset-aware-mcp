@@ -41,12 +41,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Docling - high quality but heavy (~2GB with dependencies)
-# Reserved for future use when advanced table/OCR needed
-docling = [
-    "onnxruntime>=1.7.0,<2.0.0",  # CPU only
-    "docling>=2.60.0",
-]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.24.0",
@@ -94,7 +88,6 @@ known-first-party = ["src"]
 [tool.mypy]
 python_version = "3.10"
 warn_return_any = true
-warn_unused_ignores = true
 disallow_untyped_defs = true
 plugins = ["pydantic.mypy"]
 

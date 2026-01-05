@@ -11,7 +11,6 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Iterator
 
 
 class DocumentType(str, Enum):
@@ -216,7 +215,7 @@ class SemanticChunker(ChunkingStrategy):
             section_start = int(section["start"])
             section_end = int(section["end"])
             section_heading = str(section.get("heading", ""))
-            
+
             # If section is small enough, keep as one chunk
             if len(section_text) <= config.chunk_size:
                 if len(section_text) >= config.min_chunk_size:
@@ -235,7 +234,7 @@ class SemanticChunker(ChunkingStrategy):
                 para_chunks = self._split_by_paragraphs(
                     section_text, section_start, config
                 )
-                
+
                 # If paragraph splitting didn't work well, use basic chunking
                 if len(para_chunks) == 1 and para_chunks[0].size > config.chunk_size:
                     basic_chunks = BasicChunker().chunk(section_text, config)
@@ -482,7 +481,7 @@ def get_chunker(strategy: str = "semantic") -> ChunkingStrategy:
     Returns:
         ChunkingStrategy instance
     """
-    strategies = {
+    strategies: dict[str, type[ChunkingStrategy]] = {
         "basic": BasicChunker,
         "semantic": SemanticChunker,
         "page_aware": PageAwareChunker,

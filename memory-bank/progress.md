@@ -1,16 +1,13 @@
-# Progress (Updated: 2025-12-26)
+# Progress (Updated: 2026-01-05)
 
 ## Done
 
-- PyMuPDF 設為核心依賴
-- Docling 設為可選依賴
-- server.py 直接使用 PyMuPDFExtractor
-- document_service.py 動態表格來源偵測
-- ROADMAP.md 記錄設計決策
-- PDF 摘要測試成功 (23頁, 6圖, 25節)
-- 圖片壓縮功能測試成功 (4501×5482→840×1024)
-- 86 測試全部通過
-- Git commit 準備完成
+- 移除 Docling 引擎並切換至 PyMuPDF (fitz)
+- 更新 README.md, README.zh-TW.md, spec.md, ARCHITECTURE.md 以反映架構變更
+- 修復所有 Ruff lint 錯誤 (187+ 個)
+- 修復所有 MyPy 型別檢查錯誤 (29+ 個)
+- 清理 pyproject.toml 移除 docling 依賴
+- 同步 README 快速開始指令 (使用 uv run)
 
 ## Doing
 
@@ -18,6 +15,6 @@
 
 ## Next
 
-- 測試表格萃取 (需找有表格的 PDF)
-- 測試 LightRAG 知識圖譜功能
-- 發布 v0.2.0
+- 執行整合測試驗證 PyMuPDF 提取效果
+- 測試 LightRAG 知識圖譜查詢功能
+- 準備發布 v0.1.0 版本

@@ -2,7 +2,6 @@
 Unit tests for chunking strategies.
 """
 
-import pytest
 
 from src.domain.chunking import (
     BasicChunker,

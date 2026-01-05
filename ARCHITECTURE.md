@@ -1,57 +1,69 @@
 # Architecture
 
-專案架構說明文檔。
+本專案採用 **Domain-Driven Design (DDD)** 架構，並透過 **Model Context Protocol (MCP)** 暴露功能給 AI Agent。
 
-## 系統概覽
+## 系統架構圖
 
+```mermaid
+graph TD
+    subgraph Presentation
+        MCP[MCP Server / FastMCP]
+    end
+
+    subgraph Application
+        DS[Document Service]
+        JS[Job Service]
+        AS[Asset Service]
+    end
+
+    subgraph Domain
+        DE[Entities / Manifest]
+        DSV[Domain Services]
+        DI[Interfaces / Repositories]
+    end
+
+    subgraph Infrastructure
+        DL[Docling Adapter]
+        LR[LightRAG Adapter]
+        FS[File Storage]
+    end
+
+    Presentation --> Application
+    Application --> Domain
+    Infrastructure -.-> Domain
+    Application --> Infrastructure
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    VS Code Editor                        │
-├─────────────────────────────────────────────────────────┤
-│                  GitHub Copilot Chat                     │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  │
-│  │ Agent Mode  │  │Claude Skills│  │ Custom Instruct │  │
-│  └──────┬──────┘  └──────┬──────┘  └────────┬────────┘  │
-│         │                │                   │           │
-│         └────────────────┼───────────────────┘           │
-│                          ▼                               │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │                   Memory Bank                        ││
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐            ││
-│  │  │ Context  │ │ Progress │ │ Decisions│            ││
-│  │  └──────────┘ └──────────┘ └──────────┘            ││
-│  └─────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────┘
-```
 
-## 組件說明
+## 分層說明
 
-### 1. Claude Skills (`.claude/skills/`)
-自定義 AI 技能模組，可被 Copilot Chat 自動載入使用。
+### 1. Presentation Layer (表現層)
+- **位置**: `src/presentation/`
+- **職責**: 實作 MCP 協議，定義 Tools (工具) 與 Resources (資源)。
+- **技術**: FastMCP。
 
-**目前技能：**
-- `git-doc-updater` - Git 提交前文檔更新
+### 2. Application Layer (應用層)
+- **位置**: `src/application/`
+- **職責**: 協調領域對象執行業務流程（如 Ingestion 流程、Job 狀態追蹤）。
+- **組件**: `DocumentService`, `JobService`, `AssetService`。
 
-### 2. Memory Bank (`memory-bank/`)
-跨對話的專案記憶系統，保持上下文連續性。
+### 3. Domain Layer (領域層)
+- **位置**: `src/domain/`
+- **職責**: 核心業務邏輯、實體定義與介面規範。
+- **組件**: `DocumentManifest`, `IngestResult`, `PDFExtractorInterface`。
 
-| 文件 | 用途 |
-|------|------|
-| `activeContext.md` | 當前工作焦點 |
-| `progress.md` | 進度追蹤 |
-| `decisionLog.md` | 決策記錄 |
-| `productContext.md` | 專案上下文 |
-| `projectBrief.md` | 專案簡介 |
-| `systemPatterns.md` | 系統模式 |
-| `architect.md` | 架構設計 |
+### 4. Infrastructure Layer (基礎設施層)
+- **位置**: `src/infrastructure/`
+- **職責**: 外部技術實作，如 PDF 解析、向量資料庫、檔案系統。
+- **技術**: **Docling** (PDF 解析), **LightRAG** (知識圖譜), **PyMuPDF** (輔助解析)。
 
-### 3. VS Code 設定 (`.vscode/`)
-編輯器設定，包含 Copilot 相關配置。
+## ETL 流程 (Asset-Aware)
 
-## 資料流
+1. **Ingestion**: 接收 PDF 路徑，啟動非同步 Job。
+2. **Decomposition**: 使用 Docling 將 PDF 分解為 Markdown、表格與圖片。
+3. **Manifest Generation**: 建立 `manifest.json` 作為文件的「地圖」。
+4. **Indexing**: 將 Markdown 內容餵入 LightRAG 建立知識圖譜與向量索引。
+5. **Storage**: 將所有資產存儲於本地 `./data/doc_{id}/` 目錄。
 
-1. 用戶在 Chat 中輸入請求
-2. Copilot 檢測是否匹配 Skill
-3. 載入相關 Skill 定義
-4. 結合 Memory Bank 上下文
-5. 執行操作並更新文檔
+## VS Code 整合
+
+- **vscode-extension**: 提供圖形化介面管理 MCP Server 狀態、查看已處理文件列表，並自動配置環境變數。

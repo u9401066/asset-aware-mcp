@@ -7,16 +7,18 @@ Supports both Ollama (local) and OpenAI backends.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+import numpy as np
 
 from src.domain.repositories import KnowledgeGraphInterface
 
 from .config import settings
 
 if TYPE_CHECKING:
-    from lightrag import LightRAG
+    from lightrag import LightRAG  # type: ignore
 
-from lightrag.base import EmbeddingFunc
+from lightrag.base import EmbeddingFunc  # type: ignore
 
 # ============================================================================
 # Ollama LLM Functions for LightRAG
@@ -78,7 +80,7 @@ async def ollama_model_complete(
 async def ollama_embedding(
     texts: list[str],
     **kwargs: str | int | float,
-) -> "np.ndarray":
+) -> np.ndarray:
     """
     Ollama embedding function for LightRAG.
 
@@ -90,7 +92,6 @@ async def ollama_embedding(
         NumPy array of embedding vectors (required by LightRAG)
     """
     import httpx
-    import numpy as np
 
     model = str(kwargs.get("model", settings.ollama_embedding_model))
     host = str(kwargs.get("host", settings.ollama_host))
@@ -143,7 +144,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
             raise RuntimeError("LightRAG is disabled in settings")
 
         try:
-            from lightrag import LightRAG
+            from lightrag import LightRAG  # type: ignore
 
             # Ensure working directory exists
             working_dir = settings.lightrag_working_dir
@@ -173,7 +174,10 @@ class LightRAGAdapter(KnowledgeGraphInterface):
                 )
             else:
                 # Use OpenAI
-                from lightrag.llm import openai_complete_if_cache, openai_embedding
+                from lightrag.llm import (  # type: ignore
+                    openai_complete_if_cache,
+                    openai_embedding,
+                )
 
                 self._rag = LightRAG(
                     working_dir=str(working_dir),
@@ -220,7 +224,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
         """
         rag = await self._ensure_initialized()
 
-        from lightrag import QueryParam
+        from lightrag import QueryParam  # type: ignore
 
         result = await rag.aquery(query, param=QueryParam(mode=mode))
 
@@ -244,7 +248,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
 
         try:
             # Use local mode for entity-focused extraction
-            from lightrag import QueryParam
+            from lightrag import QueryParam  # type: ignore
 
             result = await rag.aquery(
                 f"List the top {limit} most important entities (people, organizations, "
@@ -323,11 +327,13 @@ class LightRAGAdapter(KnowledgeGraphInterface):
         nodes: list[dict[str, str]] = []
         node_ids: set[str] = set()
 
+        node: Any
         for node in root.findall(".//g:node", ns):
             node_id = node.get("id", "")
             entity_type = ""
             description = ""
 
+            data: Any
             for data in node.findall("g:data", ns):
                 key = data.get("key", "")
                 text = data.text or ""
@@ -351,6 +357,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
 
         # Extract edges (only between included nodes)
         edges: list[dict[str, str]] = []
+        edge: Any
         for edge in root.findall(".//g:edge", ns):
             source = edge.get("source", "")
             target = edge.get("target", "")
@@ -441,7 +448,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
             return False
 
         try:
-            import lightrag  # noqa: F401
+            import lightrag  # type: ignore # noqa: F401
 
             return True
         except ImportError:

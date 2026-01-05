@@ -7,8 +7,8 @@ Provides reusable fixtures for unit, integration, and E2E tests.
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 import pytest
 
