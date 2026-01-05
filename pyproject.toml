@@ -1,6 +1,6 @@
 [project]
 name = "asset-aware-mcp"
-version = "0.2.4"
+version = "0.2.5"
 description = "Medical RAG with Asset-Aware MCP - Precise PDF asset retrieval (tables, figures, sections) for AI Agents"
 readme = "README.md"
 license = { text = "Apache-2.0" }

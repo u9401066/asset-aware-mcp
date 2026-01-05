@@ -121,6 +121,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
     def extract_images(self, pdf_path: Path) -> list[dict]:
         """
         Extract all images from PDF with page numbers.
+        Also detects and renders vector graphics (drawings) as images.
 
         Args:
             pdf_path: Path to PDF file
@@ -139,7 +140,9 @@ class PyMuPDFExtractor(PDFExtractorInterface):
 
         try:
             for page_num, page in enumerate(doc):
+                # 1. Extract XObject images (standard)
                 page_images = page.get_images(full=True)
+                found_xobjects = False
 
                 for img_index, img in enumerate(page_images):
                     try:
@@ -147,7 +150,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                         if image_data:
                             images.append(
                                 {
-                                    "page": page_num + 1,  # 1-indexed
+                                    "page": page_num + 1,
                                     "image_bytes": image_data["image"],
                                     "ext": image_data["ext"],
                                     "width": image_data["width"],
@@ -155,13 +158,80 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                                     "index_on_page": img_index + 1,
                                 }
                             )
+                            found_xobjects = True
                     except Exception:
-                        # Skip problematic images
                         continue
+
+                # 2. Fallback: Extract vector graphics if no images found or many drawings exist
+                # This handles cases where figures are composed of vector paths
+                try:
+                    vector_image = self._extract_vector_graphics(page)
+                    if vector_image:
+                        # If we already found XObjects, only add vector if it's "significant"
+                        # or if it's likely a separate figure.
+                        # For now, we add it as a separate "image" with a special index.
+                        images.append(
+                            {
+                                "page": page_num + 1,
+                                "image_bytes": vector_image["image"],
+                                "ext": vector_image["ext"],
+                                "width": vector_image["width"],
+                                "height": vector_image["height"],
+                                "index_on_page": 999,  # Special index for vector graphics
+                            }
+                        )
+                except Exception:
+                    continue
+
         finally:
             doc.close()
 
         return images
+
+    def _extract_vector_graphics(self, page: fitz.Page) -> dict | None:
+        """
+        Detect and render vector graphics (drawings) as an image.
+        Useful for PDFs where figures are not stored as XObject images.
+        """
+        drawings = page.get_drawings()
+        # Threshold for "significant" graphics (e.g., more than 20 paths)
+        if not drawings or len(drawings) < 20:
+            return None
+
+        # Calculate bounding box of all drawings
+        bbox = None
+        for d in drawings:
+            # Skip very small or thin lines that might be artifacts
+            r = d["rect"]
+            if r.width < 1 and r.height < 1:
+                continue
+            if bbox is None:
+                bbox = r
+            else:
+                bbox = bbox | r
+
+        # If bbox is too small or empty, skip
+        if not bbox or bbox.is_empty or bbox.width < 50 or bbox.height < 50:
+            return None
+
+        # Render the area with a reasonable resolution (zoom=2 for 144 DPI)
+        zoom = 2.0
+        mat = fitz.Matrix(zoom, zoom)
+        pix = page.get_pixmap(matrix=mat, clip=bbox, alpha=False)
+
+        image_bytes = pix.tobytes("png")
+
+        # Check size limit
+        size_mb = len(image_bytes) / (1024 * 1024)
+        if size_mb > self.max_image_size_mb:
+            return None
+
+        return {
+            "image": image_bytes,
+            "ext": "png",
+            "width": pix.width,
+            "height": pix.height,
+        }
 
     def _extract_single_image(self, doc: fitz.Document, img: tuple) -> dict | None:
         """Extract a single image from document."""
