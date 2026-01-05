@@ -42,7 +42,8 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 - 🗺️ **Document Manifest** - Provides a structured "map" of the document for precise data access by Agents.
 - 🧠 **LightRAG Integration** - Knowledge Graph + Vector Index, supporting cross-document comparison and reasoning.
 - 📊 **A2T (Anything to Table)** - Automatically orchestrate information extracted by Agents into professional Excel tables, supporting CRUD, **Drafting**, and **Token-efficient resumption**.
-- 🔌 **MCP Server** - Exposes tools and resources to Copilot/Claude via FastMCP.
+- �️ **VS Code Management Extension** - Graphical interface for monitoring server status, ingested documents, and **A2T tables/drafts** with one-click Excel export.
+- �🔌 **MCP Server** - Exposes tools and resources to Copilot/Claude via FastMCP.
 - 🏥 **Medical Research Focus** - Optimized for medical literature, supporting Base64 image transmission for Vision AI analysis.
 
 ## 🏗️ Architecture

@@ -35,11 +35,31 @@ const DEFAULT_ENV: EnvConfig = {
 
 export class EnvManager {
     private workspaceRoot: string;
+    private projectRoot: string;
     private envPath: string;
     
     constructor(workspaceRoot: string) {
         this.workspaceRoot = workspaceRoot;
-        this.envPath = path.join(workspaceRoot, '.env');
+        this.projectRoot = this.findProjectRoot(workspaceRoot);
+        this.envPath = path.join(this.projectRoot, '.env');
+    }
+
+    /**
+     * Find the project root by looking for pyproject.toml or src/server.py
+     */
+    private findProjectRoot(startPath: string): string {
+        let current = startPath;
+        const root = path.parse(current).root;
+
+        while (current !== root) {
+            if (fs.existsSync(path.join(current, 'pyproject.toml')) || 
+                fs.existsSync(path.join(current, 'src', 'server.py'))) {
+                return current;
+            }
+            current = path.dirname(current);
+        }
+
+        return startPath;
     }
     
     /**
@@ -176,7 +196,10 @@ export class EnvManager {
     getDataDir(): string {
         const env = this.readEnvSync();
         const dataDir = env.DATA_DIR || './data';
-        return path.resolve(this.workspaceRoot, dataDir);
+        if (path.isAbsolute(dataDir)) {
+            return dataDir;
+        }
+        return path.resolve(this.projectRoot, dataDir);
     }
     
     /**
@@ -226,6 +249,86 @@ export class EnvManager {
         }
         
         return documents;
+    }
+
+    /**
+     * List A2T tables from tables directory
+     */
+    listTables(): { id: string; title: string; path: string; mdPath: string }[] {
+        const dataDir = this.getDataDir();
+        const tablesDir = path.join(dataDir, 'tables');
+        const tables: { id: string; title: string; path: string; mdPath: string }[] = [];
+
+        if (!fs.existsSync(tablesDir)) {
+            return tables;
+        }
+
+        try {
+            const entries = fs.readdirSync(tablesDir, { withFileTypes: true });
+            for (const entry of entries) {
+                if (entry.isFile() && entry.name.endsWith('.json') && entry.name.startsWith('tbl_')) {
+                    const tableId = entry.name.replace('.json', '');
+                    const jsonPath = path.join(tablesDir, entry.name);
+                    const mdPath = path.join(tablesDir, `${tableId}.md`);
+                    
+                    try {
+                        const content = fs.readFileSync(jsonPath, 'utf-8');
+                        const data = JSON.parse(content);
+                        tables.push({
+                            id: tableId,
+                            title: data.title || tableId,
+                            path: jsonPath,
+                            mdPath: fs.existsSync(mdPath) ? mdPath : ''
+                        });
+                    } catch {
+                        // Skip invalid JSON
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error listing tables:', error);
+        }
+
+        return tables;
+    }
+
+    /**
+     * List A2T drafts from drafts directory
+     */
+    listDrafts(): { id: string; title: string; path: string }[] {
+        const dataDir = this.getDataDir();
+        const draftsDir = path.join(dataDir, 'tables', 'drafts');
+        const drafts: { id: string; title: string; path: string }[] = [];
+
+        if (!fs.existsSync(draftsDir)) {
+            return drafts;
+        }
+
+        try {
+            const entries = fs.readdirSync(draftsDir, { withFileTypes: true });
+            for (const entry of entries) {
+                if (entry.isFile() && entry.name.endsWith('.json') && entry.name.startsWith('draft_')) {
+                    const draftId = entry.name.replace('.json', '');
+                    const jsonPath = path.join(draftsDir, entry.name);
+                    
+                    try {
+                        const content = fs.readFileSync(jsonPath, 'utf-8');
+                        const data = JSON.parse(content);
+                        drafts.push({
+                            id: draftId,
+                            title: data.title || draftId,
+                            path: jsonPath
+                        });
+                    } catch {
+                        // Skip invalid JSON
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error listing drafts:', error);
+        }
+
+        return drafts;
     }
     
     /**

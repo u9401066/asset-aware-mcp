@@ -142,7 +142,6 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             for page_num, page in enumerate(doc):
                 # 1. Extract XObject images (standard)
                 page_images = page.get_images(full=True)
-                found_xobjects = False
 
                 for img_index, img in enumerate(page_images):
                     try:
@@ -158,7 +157,6 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                                     "index_on_page": img_index + 1,
                                 }
                             )
-                            found_xobjects = True
                     except Exception:
                         continue
 

@@ -11,22 +11,23 @@
 
 ## Current Goals
 
-- ## 當前焦點：v0.2.1 發布
+- ## 當前焦點：v0.2.6 修復與增強 (已完成)
 - ### 本次修復內容
-- - VS Code 擴充功能啟動失敗問題
-- - TypeScript 編譯錯誤（重複 `let mcpProvider` 宣告）
-- - `@types/vscode` 版本從 ^1.99.0 修正為 ^1.96.0
-- - 移除不必要的 `enabledApiProposals`
-- - 新增 OutputChannel 診斷日誌
-- - 新增 `assetAwareMcp.showOutput` 命令
+- - **路徑解析修復**：修正 `EnvManager` 在擴充功能位於子目錄時無法正確找到 `.env` 與 `data` 目錄的問題（解決「明明有資料卻顯示 not found」）。
+- - **跨用戶可見性**：透過顯示解析後的 `DATA_DIR` 路徑，讓用戶能確認擴充功能是否指向正確的共享目錄。
+- - **新增表格視圖**：新增「Tables & Drafts」側邊欄視圖，直接顯示 A2T 生成的表格與草稿。
+- - **Excel 整合**：新增「Open in Excel」右鍵選單，方便用戶快速開啟渲染後的專業報表。
+- - **程式碼品質**：修復 `pdf_extractor.py` 中的未使用變數並通過 Ruff 檢查。
 - ### 修改的檔案
-- - `vscode-extension/src/extension.ts` - 完全重寫修復
-- - `vscode-extension/src/mcpProvider.ts` - 新增 logging
-- - `vscode-extension/package.json` - 版本、依賴修正
-- - `pyproject.toml` - 版本 0.2.1
-- - `CHANGELOG.md` - 新增 0.2.1 條目
+- - `vscode-extension/src/envManager.ts` - 增強路徑解析邏輯
+- - `vscode-extension/src/tableTreeProvider.ts` - 新增表格樹狀提供者
+- - `vscode-extension/src/extension.ts` - 註冊新視圖與命令
+- - `vscode-extension/src/statusTreeProvider.ts` - 顯示資料目錄路徑
+- - `vscode-extension/package.json` - 註冊視圖、圖示與選單
+- - `src/infrastructure/pdf_extractor.py` - 修復未使用變數
+- - `CHANGELOG.md`, `README.md`, `README.zh-TW.md`, `ROADMAP.md` - 更新文檔
 - ### 下一步
-- - 完成 Git commit + tag + push
+- - 執行 Git commit + push
 
 ## 📝 本次變更
 

@@ -12,7 +12,7 @@
 - [x] Excel 自動美化渲染
 - [x] 輕量化 ETL 引擎 (PyMuPDF)
 - [x] Ruff 程式碼品質修復
-- [x] VS Code Extension 升級
+- [x] VS Code Extension 升級 (v0.2.6: 新增表格視圖與路徑修復)
 
 ### v0.1.1 (2025-12-26) - 正式發布
 - [x] 專案初始化

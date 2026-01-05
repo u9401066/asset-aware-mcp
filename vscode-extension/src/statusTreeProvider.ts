@@ -73,6 +73,15 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
             vscode.TreeItemCollapsibleState.None,
             openaiConfigured ? 'check' : 'dash'
         ));
+
+        // Data Directory
+        const dataDir = this.envManager.getDataDir();
+        items.push(new StatusItem(
+            'Data Directory',
+            dataDir,
+            vscode.TreeItemCollapsibleState.None,
+            'folder'
+        ));
         
         // Documents count
         const documents = this.envManager.listDocuments();

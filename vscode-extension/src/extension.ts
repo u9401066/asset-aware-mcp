@@ -18,6 +18,7 @@ import { SettingsPanel } from './settingsPanel';
 import { EnvManager } from './envManager';
 import { StatusTreeProvider } from './statusTreeProvider';
 import { DocumentTreeProvider } from './documentTreeProvider';
+import { TableTreeProvider } from './tableTreeProvider';
 
 const execAsync = promisify(exec);
 
@@ -27,6 +28,7 @@ let statusBar: StatusBarManager;
 let envManager: EnvManager;
 let statusTreeProvider: StatusTreeProvider;
 let documentTreeProvider: DocumentTreeProvider;
+let tableTreeProvider: TableTreeProvider;
 let extensionContext: vscode.ExtensionContext;
 let outputChannel: vscode.OutputChannel;
 
@@ -272,9 +274,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         log('Step 4: Initializing tree providers...');
         statusTreeProvider = new StatusTreeProvider(envManager);
         documentTreeProvider = new DocumentTreeProvider(envManager);
+        tableTreeProvider = new TableTreeProvider(envManager);
         
         vscode.window.registerTreeDataProvider('assetAwareMcp.status', statusTreeProvider);
         vscode.window.registerTreeDataProvider('assetAwareMcp.documents', documentTreeProvider);
+        vscode.window.registerTreeDataProvider('assetAwareMcp.tables', tableTreeProvider);
         
         // Step 5: Register MCP server provider (with error handling)
         log('Step 5: Registering MCP server provider...');
@@ -404,6 +408,7 @@ function registerCommands(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('assetAwareMcp.refreshStatus', async () => {
             await statusTreeProvider.refresh();
             await documentTreeProvider.refresh();
+            await tableTreeProvider.refresh();
             await checkAndUpdateOllamaStatus();
             vscode.window.showInformationMessage('Status refreshed!');
         })
@@ -418,6 +423,29 @@ function registerCommands(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.showOutput', () => {
             outputChannel.show();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('assetAwareMcp.openTableExcel', async (item: any) => {
+            if (item && item.value) {
+                const dataDir = envManager.getDataDir();
+                const tablesDir = path.join(dataDir, 'tables');
+                
+                // Find the most recent Excel file for this table
+                const files = fs.readdirSync(tablesDir);
+                const excelFiles = files.filter(f => f.startsWith(item.value) && f.endsWith('.xlsx'));
+                
+                if (excelFiles.length > 0) {
+                    // Sort by name (which includes timestamp) and get the last one
+                    excelFiles.sort();
+                    const latestExcel = excelFiles[excelFiles.length - 1];
+                    const excelPath = path.join(tablesDir, latestExcel);
+                    vscode.env.openExternal(vscode.Uri.file(excelPath));
+                } else {
+                    vscode.window.showWarningMessage('No Excel file found for this table. Use "render_table" tool to generate one.');
+                }
+            }
         })
     );
 }

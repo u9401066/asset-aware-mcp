@@ -5,6 +5,16 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 專案遵循 [語義化版本](https://semver.org/lang/zh-TW/)。
 
+## [0.2.6] - 2026-01-05
+
+### Fixed
+- 🔧 **VS Code 擴充功能路徑解析修復**：修正 `EnvManager` 在擴充功能位於子目錄時無法正確找到 `.env` 與 `data` 目錄的問題。
+- 📂 **資料目錄可見性**：在 Status 視圖中顯示解析後的 `DATA_DIR` 絕對路徑，方便確認共享目錄設定。
+
+### Added
+- 📊 **A2T 表格視圖**：新增「Tables & Drafts」側邊欄視圖，直接顯示 A2T 生成的表格與草稿。
+- 📗 **Excel 快速開啟**：新增「Open in Excel」右鍵選單，方便快速開啟渲染後的專業報表。
+
 ## [0.2.5] - 2026-01-05
 
 ### Added

@@ -2,7 +2,7 @@
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
     "description": "Medical RAG MCP Server with precise document asset retrieval - tables, figures, sections from PDFs (PyMuPDF powered)",
-    "version": "0.2.5",
+    "version": "0.2.6",
     "publisher": "u9401066",
     "engines": {
         "vscode": "^1.96.0"
@@ -77,6 +77,10 @@
             {
                 "command": "assetAwareMcp.showOutput",
                 "title": "Asset-Aware MCP: Show Output Log"
+            },
+            {
+                "command": "assetAwareMcp.openTableExcel",
+                "title": "Asset-Aware MCP: Open in Excel"
             }
         ],
         "configuration": {
@@ -136,11 +140,27 @@
             "assetAwareMcp": [
                 {
                     "id": "assetAwareMcp.status",
-                    "name": "Status"
+                    "name": "Status",
+                    "icon": "$(info)"
                 },
                 {
                     "id": "assetAwareMcp.documents",
-                    "name": "Documents"
+                    "name": "Documents",
+                    "icon": "$(file-pdf)"
+                },
+                {
+                    "id": "assetAwareMcp.tables",
+                    "name": "Tables & Drafts",
+                    "icon": "$(table)"
+                }
+            ]
+        },
+        "menus": {
+            "view/item/context": [
+                {
+                    "command": "assetAwareMcp.openTableExcel",
+                    "when": "view == assetAwareMcp.tables && viewItem == table-item",
+                    "group": "inline"
                 }
             ]
         },

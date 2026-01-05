@@ -2,19 +2,18 @@
 
 ## Done
 
-- v0.2.0 A2T 2.0 功能發布
-- VS Code 擴充功能啟動問題修復
-- TypeScript 編譯錯誤修正
-- @types/vscode 版本修正為 ^1.96.0
-- 新增 OutputChannel 診斷日誌
-- v0.2.1 版本號更新
-- CHANGELOG 更新
+- Improved .env and DATA_DIR resolution in EnvManager.
+- Added TableTreeProvider to show A2T tables and drafts.
+- Registered Tables view and provider in package.json and extension.ts.
+- Added "Open in Excel" command for tables.
+- Updated CHANGELOG.md, README.md, and README.zh-TW.md for v0.2.6.
+- Fixed unused variable in pdf_extractor.py and ran ruff.
+- Updated ROADMAP.md.
 
 ## Doing
 
-- v0.2.1 發布流程 - Git commit, tag, push
+
 
 ## Next
 
-- VS Code 擴充功能發布到 Marketplace
-- 測試擴充功能在乾淨環境的完整流程
+- Final Git commit and push.

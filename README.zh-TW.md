@@ -42,7 +42,8 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 🗺️ **文件清單 (Manifest)** - 為 Agent 提供結構化的文件「地圖」，實現精確數據存取。
 - 🧠 **LightRAG 整合** - 知識圖譜 + 向量索引，支援跨文件對比與推理。
 - 📊 **A2T (Anything to Table)** - 自動將 Agent 提取的資訊編排為專業 Excel 表格，支援 CRUD、**草稿機制**與**節省 Token 的續作模式**。
-- 🔌 **MCP 伺服器** - 透過 FastMCP 向 Copilot/Claude 開放工具與資源。
+- �️ **VS Code 管理擴充功能** - 提供圖形化介面監控伺服器狀態、已匯入文件，以及 **A2T 表格與草稿**，支援一鍵開啟 Excel。
+- �🔌 **MCP 伺服器** - 透過 FastMCP 向 Copilot/Claude 開放工具與資源。
 - 🏥 **醫療研究優化** - 針對醫療文獻優化，支援 Base64 圖片傳輸供 Vision AI 分析。
 
 ## 🏗️ 架構
