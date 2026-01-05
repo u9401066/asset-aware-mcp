@@ -10,7 +10,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { exec, spawn } from 'child_process';
+import { exec } from 'child_process';
 import { promisify } from 'util';
 import { AssetAwareMcpProvider } from './mcpProvider';
 import { StatusBarManager } from './statusBar';
@@ -45,21 +45,69 @@ function log(message: string): void {
 }
 
 /**
- * Check if uv is installed
+ * Get potential uv binary paths based on platform
  */
-async function isUvInstalled(): Promise<boolean> {
-    try {
-        await execAsync('uv --version');
-        return true;
-    } catch {
-        return false;
+function getUvPaths(): string[] {
+    const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+    const platform = process.platform;
+    
+    if (platform === 'win32') {
+        return [
+            'uv',  // In PATH
+            path.join(homeDir, 'AppData', 'Local', 'uv', 'bin', 'uv.exe'),
+            path.join(homeDir, '.local', 'bin', 'uv.exe'),
+            path.join(homeDir, '.cargo', 'bin', 'uv.exe'),
+            'C:\\Program Files\\uv\\uv.exe',
+        ];
+    } else {
+        return [
+            'uv',  // In PATH
+            path.join(homeDir, '.local', 'bin', 'uv'),
+            path.join(homeDir, '.cargo', 'bin', 'uv'),
+            '/usr/local/bin/uv',
+            '/opt/homebrew/bin/uv',
+        ];
     }
+}
+
+/**
+ * Find the actual uv binary path
+ */
+async function findUvPath(): Promise<string | null> {
+    const paths = getUvPaths();
+    
+    for (const uvPath of paths) {
+        try {
+            if (uvPath === 'uv') {
+                // Check if in PATH
+                await execAsync('uv --version');
+                log('Found uv in PATH');
+                return 'uv';
+            } else if (fs.existsSync(uvPath)) {
+                // Verify it works
+                await execAsync(`"${uvPath}" --version`);
+                log('Found uv at: ' + uvPath);
+                return uvPath;
+            }
+        } catch {
+            // Continue to next path
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * Check if uv is installed and return its path
+ */
+async function isUvInstalled(): Promise<string | null> {
+    return await findUvPath();
 }
 
 /**
  * Install uv automatically based on platform
  */
-async function installUv(): Promise<boolean> {
+async function installUv(): Promise<string | null> {
     const platform = process.platform;
     log(`Installing uv on ${platform}...`);
     
@@ -91,23 +139,29 @@ async function installUv(): Promise<boolean> {
                 
                 progress.report({ message: 'Verifying installation...' });
                 
-                // Add common paths to PATH for this session
-                const homeDir = process.env.HOME || process.env.USERPROFILE || '';
-                const uvPaths = [
-                    path.join(homeDir, '.local', 'bin'),
-                    path.join(homeDir, '.cargo', 'bin'),
-                    path.join(homeDir, 'AppData', 'Local', 'uv', 'bin'),
-                ];
-                process.env.PATH = uvPaths.join(path.delimiter) + path.delimiter + process.env.PATH;
+                // Wait a moment for filesystem to sync
+                await new Promise(resolve => setTimeout(resolve, 1000));
                 
-                // Verify installation
-                const installed = await isUvInstalled();
-                if (installed) {
-                    log('uv installed successfully!');
-                    vscode.window.showInformationMessage('✅ uv installed successfully!');
-                    return true;
+                // Find the installed uv path
+                const uvPath = await findUvPath();
+                
+                if (uvPath) {
+                    log('uv installed successfully at: ' + uvPath);
+                    
+                    // Ask user to reload VS Code for PATH to take effect
+                    const choice = await vscode.window.showInformationMessage(
+                        '✅ uv installed! Please reload VS Code to complete setup.',
+                        'Reload Now',
+                        'Later'
+                    );
+                    
+                    if (choice === 'Reload Now') {
+                        vscode.commands.executeCommand('workbench.action.reloadWindow');
+                    }
+                    
+                    return uvPath;
                 } else {
-                    throw new Error('uv installation completed but uv command not found');
+                    throw new Error('uv installation completed but binary not found. Please reload VS Code.');
                 }
             } catch (error) {
                 const errorMsg = error instanceof Error ? error.message : String(error);
@@ -122,25 +176,30 @@ async function installUv(): Promise<boolean> {
                     }
                 });
                 
-                return false;
+                return null;
             }
         }
     );
 }
 
 /**
- * Ensure uv is installed, install if not
+ * Ensure uv is installed, install if not. Returns the uv path or null.
  */
-async function ensureUvInstalled(): Promise<boolean> {
+async function ensureUvInstalled(): Promise<string | null> {
     log('Checking if uv is installed...');
     
-    if (await isUvInstalled()) {
+    const existingPath = await isUvInstalled();
+    if (existingPath) {
         try {
-            const { stdout } = await execAsync('uv --version');
+            const cmd = existingPath === 'uv' ? 'uv --version' : `"${existingPath}" --version`;
+            const { stdout } = await execAsync(cmd);
             log('uv is already installed: ' + stdout.trim());
-            return true;
+            
+            // Store the path for mcpProvider to use
+            extensionContext.globalState.update('uvPath', existingPath);
+            return existingPath;
         } catch {
-            return true;
+            return existingPath;
         }
     }
     
@@ -154,13 +213,17 @@ async function ensureUvInstalled(): Promise<boolean> {
     );
     
     if (choice === 'Install uv') {
-        return await installUv();
+        const installedPath = await installUv();
+        if (installedPath) {
+            extensionContext.globalState.update('uvPath', installedPath);
+        }
+        return installedPath;
     } else if (choice === 'Install Manually') {
         vscode.env.openExternal(vscode.Uri.parse('https://docs.astral.sh/uv/getting-started/installation/'));
-        return false;
+        return null;
     }
     
-    return false;
+    return null;
 }
 
 /**
@@ -185,8 +248,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // Step 2: Ensure uv is installed (required for running MCP server)
         log('Step 2: Checking uv installation...');
         statusBar.setStatus('initializing', 'Asset-Aware MCP: Checking uv...');
-        const uvReady = await ensureUvInstalled();
-        if (!uvReady) {
+        const uvPath = await ensureUvInstalled();
+        if (!uvPath) {
             log('uv not available - MCP server will not function');
             statusBar.setStatus('warning', 'Asset-Aware MCP: uv not installed');
             vscode.window.showWarningMessage(
@@ -197,6 +260,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                     installUv();
                 }
             });
+        } else {
+            log('uv path: ' + uvPath);
         }
         
         // Step 3: Initialize env manager
@@ -213,7 +278,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         
         // Step 5: Register MCP server provider (with error handling)
         log('Step 5: Registering MCP server provider...');
-        mcpProvider = new AssetAwareMcpProvider(getWorkspaceRoot(), outputChannel);
+        mcpProvider = new AssetAwareMcpProvider(getWorkspaceRoot(), outputChannel, context);
         
         // Check if MCP API is available (it's a proposed API)
         if (typeof vscode.lm?.registerMcpServerDefinitionProvider === 'function') {
@@ -383,7 +448,7 @@ async function checkSystemDependencies(): Promise<void> {
     depChannel.appendLine('=== Checking MCP Server ===');
     
     try {
-        const { stdout } = await execAsync('uvx --help', { timeout: 5000 });
+        await execAsync('uvx --help', { timeout: 5000 });
         depChannel.appendLine('✅ uvx: available');
         
         // Check if asset-aware-mcp is accessible via uvx

@@ -5,6 +5,25 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 專案遵循 [語義化版本](https://semver.org/lang/zh-TW/)。
 
+## [0.2.4] - 2026-01-05
+
+### Fixed
+- 🔧 **修復 uv 路徑問題**：使用完整路徑執行 uv/uvx，不再依賴 PATH 環境變數
+  - 自動搜尋常見安裝位置（Windows: AppData, Unix: ~/.local/bin, ~/.cargo/bin）
+  - 儲存已找到的 uv 路徑供後續使用
+- 🔄 **安裝後提示重新載入**：uv 安裝完成後會提示使用者重新載入 VS Code
+
+### Added
+- 📦 **VS Code Extension 測試框架**：新增 Mocha 測試套件
+  - 擴充功能啟動測試
+  - 命令註冊測試
+  - 設定預設值測試
+  - 工具函數測試
+
+### Changed
+- mcpProvider 支援使用 context 傳遞的 uvPath
+- 改進依賴檢查命令的輸出資訊
+
 ## [0.2.3] - 2026-01-05
 
 ### Added

@@ -2,7 +2,7 @@
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
     "description": "Medical RAG MCP Server with precise document asset retrieval - tables, figures, sections from PDFs (PyMuPDF powered)",
-    "version": "0.2.3",
+    "version": "0.2.4",
     "publisher": "u9401066",
     "engines": {
         "vscode": "^1.96.0"
@@ -184,15 +184,19 @@
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile",
         "lint": "eslint .",
+        "test": "npm run compile && node ./out/test/runTest.js",
         "package": "vsce package"
     },
     "devDependencies": {
+        "@types/mocha": "^10.0.10",
         "@types/node": "^20.0.0",
         "@types/vscode": "^1.96.0",
         "@typescript-eslint/eslint-plugin": "^8.18.0",
         "@typescript-eslint/parser": "^8.18.0",
+        "@vscode/test-electron": "^2.5.2",
         "@vscode/vsce": "^3.2.1",
         "eslint": "^9.16.0",
+        "mocha": "^10.8.2",
         "typescript": "^5.7.2",
         "typescript-eslint": "^8.51.0"
     },

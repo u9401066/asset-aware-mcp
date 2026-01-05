@@ -19,15 +19,70 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
     
     private workspaceRoot: string;
     private outputChannel?: vscode.OutputChannel;
+    private context?: vscode.ExtensionContext;
     
-    constructor(workspaceRoot: string, outputChannel?: vscode.OutputChannel) {
+    constructor(workspaceRoot: string, outputChannel?: vscode.OutputChannel, context?: vscode.ExtensionContext) {
         this.workspaceRoot = workspaceRoot;
         this.outputChannel = outputChannel;
+        this.context = context;
     }
     
     private log(message: string): void {
         this.outputChannel?.appendLine('[MCP Provider] ' + message);
         console.log('[MCP Provider] ' + message);
+    }
+    
+    /**
+     * Get the uv/uvx command path
+     */
+    private getUvCommand(): string {
+        // Try to get stored path from context
+        const storedPath = this.context?.globalState.get<string>('uvPath');
+        if (storedPath && storedPath !== 'uv') {
+            this.log('Using stored uv path: ' + storedPath);
+            return storedPath;
+        }
+        
+        // Fallback: try common paths
+        const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+        const platform = process.platform;
+        
+        const possiblePaths = platform === 'win32' 
+            ? [
+                path.join(homeDir, 'AppData', 'Local', 'uv', 'bin', 'uv.exe'),
+                path.join(homeDir, '.local', 'bin', 'uv.exe'),
+            ]
+            : [
+                path.join(homeDir, '.local', 'bin', 'uv'),
+                path.join(homeDir, '.cargo', 'bin', 'uv'),
+                '/usr/local/bin/uv',
+            ];
+        
+        for (const p of possiblePaths) {
+            if (fs.existsSync(p)) {
+                this.log('Found uv at: ' + p);
+                return p;
+            }
+        }
+        
+        // Default to hoping it's in PATH
+        this.log('Using uv from PATH');
+        return 'uv';
+    }
+    
+    /**
+     * Get uvx command (uv tool run)
+     */
+    private getUvxCommand(): { command: string; args: string[] } {
+        const uvPath = this.getUvCommand();
+        
+        // uvx is actually "uv tool run"
+        if (uvPath === 'uv') {
+            return { command: 'uvx', args: [] };
+        } else {
+            // Use full path with tool run
+            return { command: uvPath, args: ['tool', 'run'] };
+        }
     }
     
     /**
@@ -73,6 +128,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
             this.log('Development Mode: Using local source at ' + mcpServerDir);
             
             const envPath = path.join(mcpServerDir, '.env');
+            const uvCommand = this.getUvCommand();
             
             // Set DATA_DIR relative to project
             envVars['DATA_DIR'] = path.join(mcpServerDir, 'data');
@@ -84,11 +140,11 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
                 this.log('Merged .env file settings');
             }
             
-            this.log('Command: uv run --directory ' + mcpServerDir + ' python -m src.server');
+            this.log('Command: ' + uvCommand + ' run --directory ' + mcpServerDir + ' python -m src.server');
             
             servers.push({
                 label: 'Asset-Aware MCP (Dev)',
-                command: 'uv',
+                command: uvCommand,
                 args: [
                     'run',
                     '--directory', mcpServerDir,
@@ -108,13 +164,17 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
                 envVars['DATA_DIR'] = path.join(this.workspaceRoot, dataDir);
             }
             
-            this.log('Command: uvx asset-aware-mcp');
+            // Get uvx command (handles full path if needed)
+            const uvx = this.getUvxCommand();
+            const args = [...uvx.args, 'asset-aware-mcp'];
+            
+            this.log('Command: ' + uvx.command + ' ' + args.join(' '));
             this.log('DATA_DIR: ' + envVars['DATA_DIR']);
             
             servers.push({
                 label: 'Asset-Aware MCP',
-                command: 'uvx',
-                args: ['asset-aware-mcp'],
+                command: uvx.command,
+                args: args,
                 env: envVars
             });
         }
