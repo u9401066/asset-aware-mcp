@@ -5,6 +5,18 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 專案遵循 [語義化版本](https://semver.org/lang/zh-TW/)。
 
+## [0.2.2] - 2026-01-05
+
+### Added
+- 🚀 **一鍵即用**：VS Code 擴充功能現在使用 `uvx asset-aware-mcp` 從 PyPI 直接運行，無需手動安裝或 clone 專案。
+- 🔧 **雙模式支援**：
+  - **生產模式**（預設）：使用 `uvx` 從 PyPI 自動安裝並運行
+  - **開發模式**：如果在 workspace 中偵測到本地原始碼，會自動切換使用本地版本
+
+### Changed
+- 環境變數現在完全從 VS Code 設定面板讀取，無需手動編輯 `.env` 檔案
+- `DATA_DIR` 預設為工作區的 `./data` 目錄
+
 ## [0.2.1] - 2026-01-06
 
 ### Fixed
