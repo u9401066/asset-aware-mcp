@@ -86,7 +86,24 @@ The agent retrieves exactly what it needs:
 | `Setup Wizard` | Initial configuration & dependency check |
 | `Open Settings Panel` | Visual editor for `.env` settings |
 | `Check Ollama Connection` | Test if local LLM is accessible |
+| `Check System Dependencies` | Verify `uv`, `python`, and `pip` are installed |
 | `Refresh Status` | Update the Status and Documents tree views |
+
+## 🛠️ Troubleshooting & Debugging
+
+If the extension fails to start or the MCP server doesn't appear:
+
+1.  **Check VS Code Version**: Ensure you are using VS Code **1.96.0** or newer.
+2.  **Check Dependencies**: Run `Asset-Aware MCP: Check System Dependencies` from the command palette.
+3.  **Inspect Logs**:
+    *   Open **Output** panel (`Ctrl+Shift+U`).
+    *   Select **Asset-Aware MCP** from the dropdown to see extension logs.
+    *   Select **Asset-Aware MCP Dependencies** to see dependency check results.
+4.  **Development Mode**:
+    *   Clone the repo.
+    *   Open `vscode-extension` folder.
+    *   Run `npm install`.
+    *   Press `F5` to launch the **Extension Development Host**.
 
 ## 📚 MCP Tools
 

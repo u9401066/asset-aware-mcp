@@ -11,14 +11,22 @@
 
 ## Current Goals
 
-- 維護 v0.2.0 穩定性並收集用戶回饋。
-- 準備下一階段的功能開發（如 E2E 測試強化）。
-- 支援：
-- 1. **Draft/Commit 模式**：持久化 WIP 狀態，支援長表格分批寫入。
-- 2. **Token 優化**：`resume_draft` 僅回傳最小上下文；`get_section_content` 支援精準讀取。
-- 3. **AI 規劃工具**：`plan_table_schema` 協助 Agent 發想表格結構。
-- 4. **精準編輯**：`update_cell` 支援單元格級別的 CRUD。
-- 5. **版本發布**：全專案（含 Extension）已升級至 v0.2.0。
+- ## 當前焦點：v0.2.1 發布
+- ### 本次修復內容
+- - VS Code 擴充功能啟動失敗問題
+- - TypeScript 編譯錯誤（重複 `let mcpProvider` 宣告）
+- - `@types/vscode` 版本從 ^1.99.0 修正為 ^1.96.0
+- - 移除不必要的 `enabledApiProposals`
+- - 新增 OutputChannel 診斷日誌
+- - 新增 `assetAwareMcp.showOutput` 命令
+- ### 修改的檔案
+- - `vscode-extension/src/extension.ts` - 完全重寫修復
+- - `vscode-extension/src/mcpProvider.ts` - 新增 logging
+- - `vscode-extension/package.json` - 版本、依賴修正
+- - `pyproject.toml` - 版本 0.2.1
+- - `CHANGELOG.md` - 新增 0.2.1 條目
+- ### 下一步
+- - 完成 Git commit + tag + push
 
 ## 📝 本次變更
 

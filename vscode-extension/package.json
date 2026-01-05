@@ -2,10 +2,10 @@
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
     "description": "Medical RAG MCP Server with precise document asset retrieval - tables, figures, sections from PDFs (PyMuPDF powered)",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "publisher": "u9401066",
     "engines": {
-        "vscode": "^1.99.0"
+        "vscode": "^1.96.0"
     },
     "categories": [
         "AI",
@@ -34,7 +34,9 @@
             "description": "PyPI Version"
         }
     ],
-    "activationEvents": [],
+    "activationEvents": [
+        "onStartupFinished"
+    ],
     "main": "./out/extension.js",
     "contributes": {
         "mcpServerDefinitionProviders": [
@@ -67,6 +69,14 @@
             {
                 "command": "assetAwareMcp.refreshStatus",
                 "title": "Asset-Aware MCP: Refresh Status"
+            },
+            {
+                "command": "assetAwareMcp.checkDependencies",
+                "title": "Asset-Aware MCP: Check System Dependencies"
+            },
+            {
+                "command": "assetAwareMcp.showOutput",
+                "title": "Asset-Aware MCP: Show Output Log"
             }
         ],
         "configuration": {
@@ -178,7 +188,7 @@
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
-        "@types/vscode": "^1.99.0",
+        "@types/vscode": "^1.96.0",
         "@typescript-eslint/eslint-plugin": "^8.18.0",
         "@typescript-eslint/parser": "^8.18.0",
         "@vscode/vsce": "^3.2.1",

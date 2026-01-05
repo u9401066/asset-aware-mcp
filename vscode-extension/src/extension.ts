@@ -8,6 +8,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { AssetAwareMcpProvider } from './mcpProvider';
 import { StatusBarManager } from './statusBar';
 import { SettingsPanel } from './settingsPanel';
@@ -15,12 +17,16 @@ import { EnvManager } from './envManager';
 import { StatusTreeProvider } from './statusTreeProvider';
 import { DocumentTreeProvider } from './documentTreeProvider';
 
+const execAsync = promisify(exec);
+
+// Module-level variables
 let mcpProvider: AssetAwareMcpProvider;
 let statusBar: StatusBarManager;
 let envManager: EnvManager;
 let statusTreeProvider: StatusTreeProvider;
 let documentTreeProvider: DocumentTreeProvider;
 let extensionContext: vscode.ExtensionContext;
+let outputChannel: vscode.OutputChannel;
 
 // Context keys
 const CONTEXT_READY = 'assetAwareMcp.ready';
@@ -28,56 +34,93 @@ const CONTEXT_OLLAMA_CONNECTED = 'assetAwareMcp.ollamaConnected';
 const FIRST_ACTIVATION_KEY = 'assetAwareMcp.firstActivation';
 
 /**
+ * Log message to output channel
+ */
+function log(message: string): void {
+    const timestamp = new Date().toISOString();
+    outputChannel?.appendLine(`[${timestamp}] ${message}`);
+    console.log(`[Asset-Aware MCP] ${message}`);
+}
+
+/**
  * Extension activation
  */
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-    console.log('Asset-Aware MCP extension is activating...');
+    // Create output channel first for logging
+    outputChannel = vscode.window.createOutputChannel('Asset-Aware MCP');
+    context.subscriptions.push(outputChannel);
+    
+    log('Extension is activating...');
     
     extensionContext = context;
     
     try {
         // Step 1: Initialize status bar
+        log('Step 1: Initializing status bar...');
         statusBar = new StatusBarManager();
         context.subscriptions.push(statusBar);
         statusBar.setStatus('initializing', 'Asset-Aware MCP: Initializing...');
         
         // Step 2: Initialize env manager
+        log('Step 2: Initializing env manager...');
         envManager = new EnvManager(getWorkspaceRoot());
         
         // Step 3: Initialize tree providers
+        log('Step 3: Initializing tree providers...');
         statusTreeProvider = new StatusTreeProvider(envManager);
         documentTreeProvider = new DocumentTreeProvider(envManager);
         
         vscode.window.registerTreeDataProvider('assetAwareMcp.status', statusTreeProvider);
         vscode.window.registerTreeDataProvider('assetAwareMcp.documents', documentTreeProvider);
         
-        // Step 4: Register MCP server provider
-        mcpProvider = new AssetAwareMcpProvider(getWorkspaceRoot());
-        const providerDisposable = vscode.lm.registerMcpServerDefinitionProvider(
-            'asset-aware-mcp.servers',
-            mcpProvider
-        );
-        context.subscriptions.push(providerDisposable);
+        // Step 4: Register MCP server provider (with error handling)
+        log('Step 4: Registering MCP server provider...');
+        mcpProvider = new AssetAwareMcpProvider(getWorkspaceRoot(), outputChannel);
+        
+        // Check if MCP API is available (it's a proposed API)
+        if (typeof vscode.lm?.registerMcpServerDefinitionProvider === 'function') {
+            const providerDisposable = vscode.lm.registerMcpServerDefinitionProvider(
+                'asset-aware-mcp.servers',
+                mcpProvider
+            );
+            context.subscriptions.push(providerDisposable);
+            log('MCP server provider registered successfully');
+        } else {
+            log('WARNING: vscode.lm.registerMcpServerDefinitionProvider is not available.');
+            log('This might be because:');
+            log('  1. VS Code version is too old (need 1.96+)');
+            log('  2. The MCP proposed API is not enabled');
+            log('  3. GitHub Copilot extension is not installed');
+        }
         
         // Step 5: Register commands
+        log('Step 5: Registering commands...');
         registerCommands(context);
         
-        // Step 6: Check Ollama connection
-        await checkAndUpdateOllamaStatus();
+        // Step 6: Check Ollama connection (non-blocking)
+        log('Step 6: Checking Ollama connection...');
+        checkAndUpdateOllamaStatus().catch(err => {
+            log('Ollama check failed (non-critical): ' + String(err));
+        });
         
         // Step 7: Update status
+        log('Step 7: Updating status to ready...');
         statusBar.setStatus('ready', 'Asset-Aware MCP: Ready');
         await vscode.commands.executeCommand('setContext', CONTEXT_READY, true);
         
         // Show walkthrough on first activation
         showFirstTimeWalkthrough(context);
         
-        console.log('Asset-Aware MCP extension activated successfully');
+        log('Extension activated successfully!');
         
     } catch (error) {
-        console.error('Asset-Aware MCP activation error:', error);
-        statusBar.setStatus('error', 'Asset-Aware MCP: Activation failed');
-        vscode.window.showErrorMessage(`Asset-Aware MCP activation failed: ${error}`);
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        log('ACTIVATION ERROR: ' + errorMsg);
+        if (error instanceof Error && error.stack) {
+            log('Stack trace: ' + error.stack);
+        }
+        statusBar?.setStatus('error', 'Asset-Aware MCP: Activation failed');
+        vscode.window.showErrorMessage('Asset-Aware MCP activation failed: ' + errorMsg + '. Check Output panel for details.');
     }
 }
 
@@ -89,7 +132,6 @@ function getWorkspaceRoot(): string {
     if (workspaceFolder) {
         return workspaceFolder.uri.fsPath;
     }
-    // Fall back to extension path if no workspace
     return extensionContext.extensionPath;
 }
 
@@ -97,36 +139,29 @@ function getWorkspaceRoot(): string {
  * Register extension commands
  */
 function registerCommands(context: vscode.ExtensionContext): void {
-    // Setup Wizard
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.setupWizard', async () => {
             await runSetupWizard();
         })
     );
     
-    // Open Settings Panel
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.openSettings', async () => {
             SettingsPanel.createOrShow(context.extensionUri, envManager);
         })
     );
     
-    // Edit .env file
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.editEnv', async () => {
             const envPath = envManager.getEnvPath();
-            
-            // Ensure .env exists
             if (!fs.existsSync(envPath)) {
                 await envManager.createDefaultEnv();
             }
-            
             const doc = await vscode.workspace.openTextDocument(envPath);
             await vscode.window.showTextDocument(doc);
         })
     );
     
-    // Show Status
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.showStatus', async () => {
             const status = await getExtensionStatus();
@@ -140,7 +175,6 @@ function registerCommands(context: vscode.ExtensionContext): void {
         })
     );
     
-    // Check Ollama Connection
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.checkConnection', async () => {
             statusBar.setStatus('initializing', 'Checking Ollama...');
@@ -163,7 +197,6 @@ function registerCommands(context: vscode.ExtensionContext): void {
         })
     );
     
-    // Refresh Status
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.refreshStatus', async () => {
             await statusTreeProvider.refresh();
@@ -172,12 +205,87 @@ function registerCommands(context: vscode.ExtensionContext): void {
             vscode.window.showInformationMessage('Status refreshed!');
         })
     );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('assetAwareMcp.checkDependencies', async () => {
+            await checkSystemDependencies();
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('assetAwareMcp.showOutput', () => {
+            outputChannel.show();
+        })
+    );
 }
 
 /**
- * Run setup wizard
+ * Check system dependencies
  */
+async function checkSystemDependencies(): Promise<void> {
+    const depChannel = vscode.window.createOutputChannel('Asset-Aware MCP Dependencies');
+    depChannel.show();
+    depChannel.appendLine('=== Checking System Dependencies ===');
+    depChannel.appendLine('');
+
+    const checks = [
+        { name: 'uv', command: 'uv --version', required: true },
+        { name: 'python', command: 'python3 --version', required: true },
+        { name: 'pip', command: 'pip3 --version', required: false }
+    ];
+
+    let allOk = true;
+
+    for (const check of checks) {
+        try {
+            const { stdout } = await execAsync(check.command);
+            depChannel.appendLine('✅ ' + check.name + ': ' + stdout.trim());
+        } catch {
+            if (check.required) {
+                depChannel.appendLine('❌ ' + check.name + ': NOT FOUND (required)');
+                allOk = false;
+            } else {
+                depChannel.appendLine('⚠️ ' + check.name + ': not found (optional)');
+            }
+        }
+    }
+    
+    depChannel.appendLine('');
+    depChannel.appendLine('=== Checking MCP Server ===');
+    
+    const workspaceRoot = getWorkspaceRoot();
+    const serverPath = path.join(workspaceRoot, 'src', 'server.py');
+    const parentServerPath = path.join(path.dirname(workspaceRoot), 'src', 'server.py');
+    
+    if (fs.existsSync(serverPath)) {
+        depChannel.appendLine('✅ MCP Server found at: ' + serverPath);
+    } else if (fs.existsSync(parentServerPath)) {
+        depChannel.appendLine('✅ MCP Server found at: ' + parentServerPath);
+    } else {
+        depChannel.appendLine('❌ MCP Server NOT FOUND');
+        depChannel.appendLine('   Searched: ' + serverPath);
+        depChannel.appendLine('   Searched: ' + parentServerPath);
+        allOk = false;
+    }
+    
+    depChannel.appendLine('');
+    depChannel.appendLine('=== VS Code Info ===');
+    depChannel.appendLine('VS Code Version: ' + vscode.version);
+    depChannel.appendLine('MCP API Available: ' + String(typeof vscode.lm?.registerMcpServerDefinitionProvider === 'function'));
+
+    depChannel.appendLine('');
+    if (allOk) {
+        depChannel.appendLine('✅ All required dependencies are met!');
+        vscode.window.showInformationMessage('✅ All system dependencies are met!');
+    } else {
+        depChannel.appendLine('❌ Some dependencies are missing. See above for details.');
+        vscode.window.showErrorMessage('❌ Some dependencies are missing. Check output for details.');
+    }
+}
+
 async function runSetupWizard(): Promise<void> {
+    log('Running setup wizard...');
+    
     const result = await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
@@ -185,7 +293,6 @@ async function runSetupWizard(): Promise<void> {
             cancellable: false
         },
         async (progress) => {
-            // Step 1: Check .env file
             progress.report({ message: 'Checking configuration...', increment: 0 });
             
             if (!fs.existsSync(envManager.getEnvPath())) {
@@ -195,7 +302,6 @@ async function runSetupWizard(): Promise<void> {
                 progress.report({ message: '.env exists ✓', increment: 25 });
             }
             
-            // Step 2: Check Ollama
             progress.report({ message: 'Checking Ollama connection...', increment: 25 });
             const ollamaOk = await checkAndUpdateOllamaStatus();
             
@@ -214,8 +320,6 @@ async function runSetupWizard(): Promise<void> {
             }
             
             progress.report({ message: 'Connection check ✓', increment: 25 });
-            
-            // Step 3: Refresh MCP provider
             progress.report({ message: 'Refreshing MCP server...', increment: 25 });
             mcpProvider.refresh();
             
@@ -236,34 +340,28 @@ async function runSetupWizard(): Promise<void> {
     }
 }
 
-/**
- * Check Ollama connection
- */
 async function checkOllamaConnection(): Promise<boolean> {
     const config = vscode.workspace.getConfiguration('assetAwareMcp');
     const host = config.get<string>('ollamaHost', 'http://localhost:11434');
     
     try {
-        const response = await fetch(`${host}/api/tags`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const response = await fetch(host + '/api/tags', { signal: controller.signal });
+        clearTimeout(timeoutId);
         return response.ok;
     } catch {
         return false;
     }
 }
 
-/**
- * Check Ollama and update context
- */
 async function checkAndUpdateOllamaStatus(): Promise<boolean> {
     const connected = await checkOllamaConnection();
     await vscode.commands.executeCommand('setContext', CONTEXT_OLLAMA_CONNECTED, connected);
-    await statusTreeProvider.refresh();
+    await statusTreeProvider?.refresh();
     return connected;
 }
 
-/**
- * Show walkthrough on first activation
- */
 function showFirstTimeWalkthrough(context: vscode.ExtensionContext): void {
     const isFirstActivation = context.globalState.get<boolean>(FIRST_ACTIVATION_KEY, true);
     
@@ -271,15 +369,12 @@ function showFirstTimeWalkthrough(context: vscode.ExtensionContext): void {
         context.globalState.update(FIRST_ACTIVATION_KEY, false);
         vscode.commands.executeCommand(
             'workbench.action.openWalkthrough',
-            'asset-aware.asset-aware-mcp#assetAwareMcp.welcome',
+            'u9401066.asset-aware-mcp#assetAwareMcp.welcome',
             false
         );
     }
 }
 
-/**
- * Extension status interface
- */
 interface ExtensionStatus {
     envExists: boolean;
     envPath: string;
@@ -290,21 +385,22 @@ interface ExtensionStatus {
     openaiConfigured: boolean;
     dataDir: string;
     documentCount: number;
+    vscodeVersion: string;
+    mcpApiAvailable: boolean;
 }
 
-/**
- * Get extension status
- */
 async function getExtensionStatus(): Promise<ExtensionStatus> {
     const config = vscode.workspace.getConfiguration('assetAwareMcp');
     const env = await envManager.readEnv();
     const dataDir = path.resolve(getWorkspaceRoot(), env.DATA_DIR || './data');
     
-    // Count documents
     let documentCount = 0;
     if (fs.existsSync(dataDir)) {
         const files = fs.readdirSync(dataDir);
-        documentCount = files.filter(f => fs.statSync(path.join(dataDir, f)).isDirectory()).length;
+        documentCount = files.filter(f => {
+            try { return fs.statSync(path.join(dataDir, f)).isDirectory(); }
+            catch { return false; }
+        }).length;
     }
     
     return {
@@ -316,13 +412,12 @@ async function getExtensionStatus(): Promise<ExtensionStatus> {
         ollamaConnected: await checkOllamaConnection(),
         openaiConfigured: !!(env.OPENAI_API_KEY),
         dataDir: dataDir,
-        documentCount: documentCount
+        documentCount: documentCount,
+        vscodeVersion: vscode.version,
+        mcpApiAvailable: typeof vscode.lm?.registerMcpServerDefinitionProvider === 'function'
     };
 }
 
-/**
- * Generate status webview HTML
- */
 function getStatusWebviewContent(status: ExtensionStatus): string {
     const checkmark = '✅';
     const cross = '❌';
@@ -335,132 +430,53 @@ function getStatusWebviewContent(status: ExtensionStatus): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Asset-Aware MCP Status</title>
     <style>
-        body {
-            font-family: var(--vscode-font-family);
-            padding: 20px;
-            color: var(--vscode-foreground);
-            background: var(--vscode-editor-background);
-        }
-        h1 { 
-            color: var(--vscode-titleBar-activeForeground);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .section {
-            background: var(--vscode-editor-inactiveSelectionBackground);
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-        }
-        .section h2 {
-            margin-top: 0;
-            font-size: 14px;
-            color: var(--vscode-descriptionForeground);
-        }
-        .item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid var(--vscode-panel-border);
-        }
+        body { font-family: var(--vscode-font-family); padding: 20px; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
+        h1 { color: var(--vscode-titleBar-activeForeground); display: flex; align-items: center; gap: 10px; }
+        .section { background: var(--vscode-editor-inactiveSelectionBackground); padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .section h2 { margin-top: 0; font-size: 14px; color: var(--vscode-descriptionForeground); }
+        .item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--vscode-panel-border); }
         .item:last-child { border-bottom: none; }
         .status { font-weight: bold; }
         .ok { color: #4caf50; }
         .error { color: #f44336; }
         .warning { color: #ff9800; }
         .info { color: #2196f3; }
-        code {
-            background: var(--vscode-textCodeBlock-background);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-        .actions {
-            margin-top: 20px;
-        }
-        .btn {
-            background: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-right: 10px;
-        }
-        .btn:hover {
-            background: var(--vscode-button-hoverBackground);
-        }
+        code { background: var(--vscode-textCodeBlock-background); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
     </style>
 </head>
 <body>
     <h1>📚 Asset-Aware MCP Status</h1>
-    
+    <div class="section">
+        <h2>VS Code Environment</h2>
+        <div class="item"><span>VS Code Version:</span><span class="info">${status.vscodeVersion}</span></div>
+        <div class="item"><span>MCP API Available:</span><span class="status ${status.mcpApiAvailable ? 'ok' : 'error'}">${status.mcpApiAvailable ? checkmark + ' Yes' : cross + ' No (Need VS Code 1.96+ & Copilot)'}</span></div>
+    </div>
     <div class="section">
         <h2>Configuration</h2>
-        <div class="item">
-            <span>.env File:</span>
-            <span class="status ${status.envExists ? 'ok' : 'error'}">
-                ${status.envExists ? checkmark + ' Exists' : cross + ' Missing'}
-            </span>
-        </div>
-        <div class="item">
-            <span>Path:</span>
-            <code>${status.envPath}</code>
-        </div>
-        <div class="item">
-            <span>LLM Backend:</span>
-            <span class="info">${status.llmBackend.toUpperCase()}</span>
-        </div>
+        <div class="item"><span>.env File:</span><span class="status ${status.envExists ? 'ok' : 'error'}">${status.envExists ? checkmark + ' Exists' : cross + ' Missing'}</span></div>
+        <div class="item"><span>Path:</span><code>${status.envPath}</code></div>
+        <div class="item"><span>LLM Backend:</span><span class="info">${status.llmBackend.toUpperCase()}</span></div>
     </div>
-    
     <div class="section">
         <h2>Ollama Connection</h2>
-        <div class="item">
-            <span>Host:</span>
-            <code>${status.ollamaHost}</code>
-        </div>
-        <div class="item">
-            <span>Model:</span>
-            <span>${status.ollamaModel}</span>
-        </div>
-        <div class="item">
-            <span>Status:</span>
-            <span class="status ${status.ollamaConnected ? 'ok' : 'error'}">
-                ${status.ollamaConnected ? checkmark + ' Connected' : cross + ' Disconnected'}
-            </span>
-        </div>
+        <div class="item"><span>Host:</span><code>${status.ollamaHost}</code></div>
+        <div class="item"><span>Model:</span><span>${status.ollamaModel}</span></div>
+        <div class="item"><span>Status:</span><span class="status ${status.ollamaConnected ? 'ok' : 'error'}">${status.ollamaConnected ? checkmark + ' Connected' : cross + ' Disconnected'}</span></div>
     </div>
-    
     <div class="section">
         <h2>OpenAI</h2>
-        <div class="item">
-            <span>API Key:</span>
-            <span class="status ${status.openaiConfigured ? 'ok' : 'warning'}">
-                ${status.openaiConfigured ? checkmark + ' Configured' : warning + ' Not configured'}
-            </span>
-        </div>
+        <div class="item"><span>API Key:</span><span class="status ${status.openaiConfigured ? 'ok' : 'warning'}">${status.openaiConfigured ? checkmark + ' Configured' : warning + ' Not configured'}</span></div>
     </div>
-    
     <div class="section">
         <h2>Documents</h2>
-        <div class="item">
-            <span>Data Directory:</span>
-            <code>${status.dataDir}</code>
-        </div>
-        <div class="item">
-            <span>Ingested Documents:</span>
-            <span class="info">${status.documentCount}</span>
-        </div>
+        <div class="item"><span>Data Directory:</span><code>${status.dataDir}</code></div>
+        <div class="item"><span>Ingested Documents:</span><span class="info">${status.documentCount}</span></div>
     </div>
 </body>
 </html>`;
 }
 
-/**
- * Extension deactivation
- */
 export function deactivate(): void {
-    console.log('Asset-Aware MCP extension is deactivating...');
+    log('Extension is deactivating...');
     statusBar?.dispose();
 }

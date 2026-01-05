@@ -14,15 +14,23 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
     readonly onDidChangeMcpServerDefinitions = this._onDidChangeMcpServerDefinitions.event;
     
     private workspaceRoot: string;
+    private outputChannel?: vscode.OutputChannel;
     
-    constructor(workspaceRoot: string) {
+    constructor(workspaceRoot: string, outputChannel?: vscode.OutputChannel) {
         this.workspaceRoot = workspaceRoot;
+        this.outputChannel = outputChannel;
+    }
+    
+    private log(message: string): void {
+        this.outputChannel?.appendLine('[MCP Provider] ' + message);
+        console.log('[MCP Provider] ' + message);
     }
     
     /**
      * Refresh MCP server definitions
      */
     refresh(): void {
+        this.log('Refreshing MCP server definitions...');
         this._onDidChangeMcpServerDefinitions.fire();
     }
     
@@ -36,12 +44,12 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
         
         // Find the MCP server directory
         const mcpServerDir = this.findMcpServerDir();
+        this.log('MCP Server directory search result: ' + (mcpServerDir || 'NOT FOUND'));
         
         if (mcpServerDir) {
-            // Use path.join for cross-platform compatibility (Linux/Windows)
             const envPath = path.join(mcpServerDir, '.env');
             
-            // Default environment variables (used when .env doesn't exist)
+            // Default environment variables
             const defaultEnv: Record<string, string> = {
                 LLM_BACKEND: 'ollama',
                 OLLAMA_HOST: 'http://localhost:11434',
@@ -56,6 +64,8 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
                 ? { ...defaultEnv, ...this.parseEnvFile(envPath) }
                 : defaultEnv;
             
+            this.log('Creating server definition with command: uv run --directory ' + mcpServerDir + ' python -m src.server');
+            
             servers.push({
                 label: 'Asset-Aware MCP',
                 command: 'uv',
@@ -66,6 +76,8 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
                 ],
                 env: envVars
             });
+        } else {
+            this.log('WARNING: No MCP server directory found. Server will not be available.');
         }
         
         return servers;
@@ -78,7 +90,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
         server: vscode.McpStdioServerDefinition,
         _token: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.McpStdioServerDefinition> {
-        console.log(`Resolving MCP server: ${server.label}`);
+        this.log('Resolving MCP server: ' + server.label);
         return server;
     }
     
@@ -90,12 +102,16 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
         const possiblePaths = [
             this.workspaceRoot,  // Root directory
             path.join(this.workspaceRoot, 'mcp-server'),
-            path.dirname(this.workspaceRoot),  // Parent directory
+            path.dirname(this.workspaceRoot),  // Parent directory (for vscode-extension subfolder)
         ];
+        
+        this.log('Searching for MCP server in: ' + possiblePaths.join(', '));
         
         for (const basePath of possiblePaths) {
             const serverPath = path.join(basePath, 'src', 'server.py');
+            this.log('  Checking: ' + serverPath);
             if (fs.existsSync(serverPath)) {
+                this.log('  Found!');
                 return basePath;
             }
         }
@@ -106,7 +122,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
             return path.dirname(this.workspaceRoot);
         }
         
-        console.warn('Could not find MCP server directory');
+        this.log('Could not find MCP server directory');
         return undefined;
     }
     
@@ -139,7 +155,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
                 }
             }
         } catch (error) {
-            console.error('Error parsing .env file:', error);
+            this.log('Error parsing .env file: ' + String(error));
         }
         
         return env;

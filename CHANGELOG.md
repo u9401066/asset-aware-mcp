@@ -5,6 +5,14 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 專案遵循 [語義化版本](https://semver.org/lang/zh-TW/)。
 
+## [0.2.1] - 2026-01-06
+
+### Fixed
+- 🐛 **VS Code 擴充功能啟動修復**：修復 TypeScript 編譯錯誤（重複宣告問題）與 `@types/vscode` 版本不匹配。
+- 🔧 **移除不必要的 API 提案**：MCP API 在 VS Code 1.96+ 已是穩定 API，移除 `enabledApiProposals`。
+- 📝 **新增診斷日誌**：擴充功能現在會輸出詳細的啟動日誌到 Output Channel，方便除錯。
+- ➕ **新增 Show Output 命令**：使用者可透過命令面板顯示擴充功能日誌。
+
 ## [0.2.0] - 2026-01-05
 
 ### Added
