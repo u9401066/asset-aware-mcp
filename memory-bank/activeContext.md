@@ -4,34 +4,30 @@
 
 ## 🎯 當前焦點
 
-- **發布 v0.2.0：A2T 2.0 與 PyMuPDF 輕量化整合**
-- 實作了 Draft/Commit 模式以優化 Token 使用。
-- 支援 AI 驅動的表格規劃 (`plan_table_schema`)。
-- 支援持久化草稿與斷點續作 (`resume_draft`)。
-- 完成 Ruff 程式碼品質修復與格式化。
-- 同步更新 VS Code Extension 版本至 0.2.0。
+- **v0.2.0 發布完成：A2T 2.0 與 PyMuPDF 輕量化整合**
+- 成功實作 Draft/Commit 模式、AI 規劃工具與 Token 優化。
+- 完成全專案品質修復 (Ruff/MyPy) 與 CI/CD 優化。
+- 完成 README i18n 清理（中英文分離）。
 
 ## Current Goals
 
-- 已完成 A2T 2.0 模組的完整實作、文檔更新與版本發布。
-- 目前支援：
+- 維護 v0.2.0 穩定性並收集用戶回饋。
+- 準備下一階段的功能開發（如 E2E 測試強化）。
+- 支援：
 - 1. **Draft/Commit 模式**：持久化 WIP 狀態，支援長表格分批寫入。
 - 2. **Token 優化**：`resume_draft` 僅回傳最小上下文；`get_section_content` 支援精準讀取。
 - 3. **AI 規劃工具**：`plan_table_schema` 協助 Agent 發想表格結構。
 - 4. **精準編輯**：`update_cell` 支援單元格級別的 CRUD。
-- 5. **版本發布**：全專案（含 Extension）升級至 v0.2.0。
+- 5. **版本發布**：全專案（含 Extension）已升級至 v0.2.0。
 
 ## 📝 本次變更
 
 | 檔案/目錄 | 變更內容 |
 |-----------|----------|
-| `src/domain/table_entities.py` | 新增 `TableDraft`, `TableSchema`, Token 估算邏輯 |
-| `src/application/table_service.py` | 實作 Draft 管理、單元格更新、持久化邏輯 |
-| `src/presentation/server.py` | 註冊 A2T 2.0 MCP Tools 與 Resources |
-| `docs/spec.md` | 更新 A2T 2.0 技術規格 |
-| `ROADMAP.md` | 標記 v0.3.0 (A2T 2.0) 為已完成 |
-| `README.md` / `README.zh-TW.md` | 更新功能列表、架構圖與工具說明 |
-| `ARCHITECTURE.md` | 更新 DDD 組件說明與 A2T 工作流 |
+| `README.md` / `README.zh-TW.md` | **i18n 清理**：確保中英文內容完全分離，無混用。 |
+| `memory-bank/` | **同步更新**：更新所有記憶文件以反映 v0.2.0 最終狀態。 |
+| `src/presentation/server.py` | **型別修復**：解決 MyPy 報錯，提升代碼健壯性。 |
+| `scripts/release.sh` | **路徑修復**：確保發布腳本在不同環境下皆可正確執行。 |
 
 ## ⚠️ 待解決
 

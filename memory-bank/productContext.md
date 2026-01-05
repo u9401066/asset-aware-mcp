@@ -65,3 +65,66 @@ Local Storage
 
 ---
 *Last updated: 2025-12-26*
+
+
+## Project Description
+
+Medical RAG with Asset-Aware MCP - Precise PDF asset retrieval (tables, figures, sections) and Knowledge Graph for AI Agents. Featuring A2T (Anything to Table) 2.0 for professional data orchestration.
+
+
+
+## Architecture
+
+┌─────────────────────────────────────────────────────────┐
+│                    AI Agent (Copilot)                   │
+└─────────────────────┬───────────────────────────────────┘
+                      │ MCP Protocol (Tools & Resources)
+┌─────────────────────▼───────────────────────────────────┐
+│                 MCP Server (server.py)                  │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────┐   │
+│  │   ingest    │ │  inspect    │ │     fetch       │   │
+│  │  documents  │ │  manifest   │ │     asset       │   │
+│  └─────────────┘ └─────────────┘ └─────────────────┘   │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │          A2T (Anything to Table) Workflow       │   │
+│  │  [Plan] → [Draft] → [Batch Add] → [Commit]      │   │
+│  └─────────────────────────────────────────────────┘   │
+└─────────────────────┬───────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────┐
+│                  ETL Pipeline (DDD)                     │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐              │
+│  │ PyMuPDF  │  │  Asset   │  │ LightRAG │              │
+│  │ Adapter  │→ │  Parser  │→ │  Index   │              │
+│  └──────────┘  └──────────┘  └──────────┘              │
+└─────────────────────┬───────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────┐
+│                   Local Storage                         │
+│  ./data/                                                │
+│  ├── doc_{id}/        # Document Assets                 │
+│  ├── tables/          # A2T Tables (JSON/MD/XLSX)       │
+│  │   └── drafts/      # Table Drafts (Persistence)      │
+│  └── lightrag/        # Knowledge Graph                 │
+└─────────────────────────────────────────────────────────┘
+
+
+
+## Technologies
+
+- Python 3.10+
+- DDD (Domain-Driven Design)
+- MCP (Model Context Protocol)
+- RAG (Retrieval-Augmented Generation)
+- Knowledge Graph (LightRAG)
+
+
+
+## Libraries and Dependencies
+
+- PyMuPDF (fitz)
+- LightRAG (lightrag-hku)
+- FastMCP
+- XlsxWriter
+- uv
+

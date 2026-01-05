@@ -1,6 +1,6 @@
 # asset-aware-mcp
 
-> 🏥 Medical RAG with Asset-Aware MCP - 讓 AI Agent 精準存取 PDF 文獻中的表格、章節與知識圖譜
+> 🏥 Medical RAG with Asset-Aware MCP - Precise PDF asset retrieval (tables, figures, sections) and Knowledge Graph for AI Agents.
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -8,42 +8,42 @@
 
 ## 🎯 Why Asset-Aware MCP?
 
-**AI 無法直接讀取你電腦裡的圖片檔案。** 這是一個常見的誤解。
+**AI cannot directly read image files on your computer.** This is a common misconception.
 
-| 方式 | AI 能分析圖片內容？ | 說明 |
+| Method | Can AI analyze image content? | Description |
 |------|:-------------------:|------|
-| ❌ 給 PNG 路徑 | 否 | AI 無法存取本地檔案系統 |
-| ✅ **Asset-Aware MCP** | **是** | 透過 MCP 取得 Base64，AI 視覺能力可直接理解 |
+| ❌ Provide PNG path | No | AI cannot access the local file system |
+| ✅ **Asset-Aware MCP** | **Yes** | Retrieves Base64 via MCP, allowing AI vision to understand directly |
 
-### 實際效果
+### Real-world Effect
 
 ```
-# 透過 MCP 取得圖片後，AI 可以直接分析：
+# After retrieving the image via MCP, the AI can analyze it directly:
 
-User: 這張圖在講什麼？
+User: What is this figure about?
 
-AI: 這是 Scaled Dot-Product Attention 的架構圖：
-    1. 輸入 Q (Query)、K (Key)、V (Value)
-    2. Q 和 K 做 MatMul（矩陣乘法）
-    3. 經過 Scale（縮放 1/√dₖ）
-    4. 可選的 Mask（用於 decoder）
-    5. SoftMax 歸一化
-    6. 與 V 做最後一次 MatMul 得到輸出
+AI: This is the architecture diagram for Scaled Dot-Product Attention:
+    1. Inputs: Q (Query), K (Key), V (Value)
+    2. MatMul of Q and K
+    3. Scale (1/√dₖ)
+    4. Optional Mask (for decoder)
+    5. SoftMax normalization
+    6. Final MatMul with V to get the output
 ```
 
-**這就是 Asset-Aware MCP 的價值** - 讓 AI Agent 真正「看懂」你的 PDF 文獻中的圖表。
+**This is the value of Asset-Aware MCP** - enabling AI Agents to truly "see" and understand charts and tables in your PDF literature.
 
 ---
 
 ## ✨ Features
 
-- 📄 **Asset-Aware ETL** - PDF → Markdown, using **PyMuPDF** to automatically identify tables, sections, and images
-- 🔄 **Async Job Pipeline** - Supports asynchronous task processing, tracking progress for large documents
-- 🗺️ **Document Manifest** - Structured list, allowing Agents to "see the map" before precisely accessing data
-- 🧠 **LightRAG Integration** - Knowledge Graph + Vector Index, supporting cross-document comparison and reasoning
+- 📄 **Asset-Aware ETL** - PDF → Markdown, using **PyMuPDF** to automatically identify tables, sections, and images.
+- 🔄 **Async Job Pipeline** - Supports asynchronous task processing and progress tracking for large documents.
+- 🗺️ **Document Manifest** - Provides a structured "map" of the document for precise data access by Agents.
+- 🧠 **LightRAG Integration** - Knowledge Graph + Vector Index, supporting cross-document comparison and reasoning.
 - 📊 **A2T (Anything to Table)** - Automatically orchestrate information extracted by Agents into professional Excel tables, supporting CRUD, **Drafting**, and **Token-efficient resumption**.
-- �🔌 **MCP Server** - Exposes tools and resources to Copilot/Claude via FastMCP
-- 🏥 **Medical Research Focus** - Optimized for medical literature, supporting Base64 image transmission for Vision AI analysis
+- 🔌 **MCP Server** - Exposes tools and resources to Copilot/Claude via FastMCP.
+- 🏥 **Medical Research Focus** - Optimized for medical literature, supporting Base64 image transmission for Vision AI analysis.
 
 ## 🏗️ Architecture
 
@@ -137,9 +137,9 @@ uv run python -m src.presentation.server
 
 ## 📋 Documentation
 
-- [Technical Spec](docs/spec.md) - 詳細技術規格
-- [Architecture](ARCHITECTURE.md) - 系統架構
-- [Constitution](CONSTITUTION.md) - 專案原則
+- [Technical Spec](docs/spec.md) - Detailed technical specification
+- [Architecture](ARCHITECTURE.md) - System architecture
+- [Constitution](CONSTITUTION.md) - Project principles
 
 ## 📄 License
 

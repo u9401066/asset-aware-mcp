@@ -1,4 +1,4 @@
-# Project Brief
+# Asset-Aware Medical RAG MCP (A2T 2.0)
 
 > 📌 此檔案描述專案的高層級目標和範圍，建立後很少更改。
 
@@ -37,3 +37,27 @@
 
 ---
 *Created: 2025-12-26*
+
+
+## Project Summary
+
+A Local-first MCP Server designed for medical research, enabling AI Agents to precisely navigate and extract assets from PDF literature, orchestrate findings into professional tables, and perform cross-document reasoning via Knowledge Graphs.
+
+
+
+## Goals
+
+- Precise PDF asset retrieval (Tables, Figures, Sections) via PyMuPDF
+- Structured Document Manifest for AI Agent navigation
+- A2T (Anything to Table) 2.0 for professional data orchestration
+- Cross-document reasoning via LightRAG Knowledge Graph
+- VS Code Extension for graphical management and status tracking
+
+
+
+## Constraints
+
+- Local-first (No Docker/Milvus required)
+- Privacy-focused (Local processing)
+- Token-efficient (A2T 2.0 Draft/Commit pattern)
+
