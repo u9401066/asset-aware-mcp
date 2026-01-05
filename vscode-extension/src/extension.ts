@@ -3,12 +3,14 @@
  * 
  * Provides Medical RAG capabilities with precise document asset retrieval.
  * Integrates with Ollama (local) or OpenAI for LLM backend.
+ * 
+ * Auto-installs uv if not present, then uses uvx to run from PyPI.
  */
 
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { AssetAwareMcpProvider } from './mcpProvider';
 import { StatusBarManager } from './statusBar';
@@ -43,6 +45,125 @@ function log(message: string): void {
 }
 
 /**
+ * Check if uv is installed
+ */
+async function isUvInstalled(): Promise<boolean> {
+    try {
+        await execAsync('uv --version');
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Install uv automatically based on platform
+ */
+async function installUv(): Promise<boolean> {
+    const platform = process.platform;
+    log(`Installing uv on ${platform}...`);
+    
+    return vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: 'Installing uv (Python package manager)',
+            cancellable: false
+        },
+        async (progress) => {
+            try {
+                progress.report({ message: 'Downloading uv...' });
+                
+                if (platform === 'win32') {
+                    // Windows: Use PowerShell
+                    log('Using PowerShell installer for Windows');
+                    await execAsync(
+                        'powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"',
+                        { timeout: 120000 }
+                    );
+                } else {
+                    // Linux/macOS: Use curl
+                    log('Using curl installer for Unix');
+                    await execAsync(
+                        'curl -LsSf https://astral.sh/uv/install.sh | sh',
+                        { timeout: 120000 }
+                    );
+                }
+                
+                progress.report({ message: 'Verifying installation...' });
+                
+                // Add common paths to PATH for this session
+                const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+                const uvPaths = [
+                    path.join(homeDir, '.local', 'bin'),
+                    path.join(homeDir, '.cargo', 'bin'),
+                    path.join(homeDir, 'AppData', 'Local', 'uv', 'bin'),
+                ];
+                process.env.PATH = uvPaths.join(path.delimiter) + path.delimiter + process.env.PATH;
+                
+                // Verify installation
+                const installed = await isUvInstalled();
+                if (installed) {
+                    log('uv installed successfully!');
+                    vscode.window.showInformationMessage('✅ uv installed successfully!');
+                    return true;
+                } else {
+                    throw new Error('uv installation completed but uv command not found');
+                }
+            } catch (error) {
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                log('uv installation failed: ' + errorMsg);
+                
+                vscode.window.showErrorMessage(
+                    `Failed to install uv: ${errorMsg}`,
+                    'Install Manually'
+                ).then(choice => {
+                    if (choice === 'Install Manually') {
+                        vscode.env.openExternal(vscode.Uri.parse('https://docs.astral.sh/uv/getting-started/installation/'));
+                    }
+                });
+                
+                return false;
+            }
+        }
+    );
+}
+
+/**
+ * Ensure uv is installed, install if not
+ */
+async function ensureUvInstalled(): Promise<boolean> {
+    log('Checking if uv is installed...');
+    
+    if (await isUvInstalled()) {
+        try {
+            const { stdout } = await execAsync('uv --version');
+            log('uv is already installed: ' + stdout.trim());
+            return true;
+        } catch {
+            return true;
+        }
+    }
+    
+    log('uv not found, prompting for installation...');
+    
+    const choice = await vscode.window.showInformationMessage(
+        'Asset-Aware MCP requires "uv" (Python package manager). Install now?',
+        'Install uv',
+        'Install Manually',
+        'Cancel'
+    );
+    
+    if (choice === 'Install uv') {
+        return await installUv();
+    } else if (choice === 'Install Manually') {
+        vscode.env.openExternal(vscode.Uri.parse('https://docs.astral.sh/uv/getting-started/installation/'));
+        return false;
+    }
+    
+    return false;
+}
+
+/**
  * Extension activation
  */
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
@@ -61,20 +182,37 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         context.subscriptions.push(statusBar);
         statusBar.setStatus('initializing', 'Asset-Aware MCP: Initializing...');
         
-        // Step 2: Initialize env manager
-        log('Step 2: Initializing env manager...');
+        // Step 2: Ensure uv is installed (required for running MCP server)
+        log('Step 2: Checking uv installation...');
+        statusBar.setStatus('initializing', 'Asset-Aware MCP: Checking uv...');
+        const uvReady = await ensureUvInstalled();
+        if (!uvReady) {
+            log('uv not available - MCP server will not function');
+            statusBar.setStatus('warning', 'Asset-Aware MCP: uv not installed');
+            vscode.window.showWarningMessage(
+                'Asset-Aware MCP requires uv to run. Please install uv and reload.',
+                'Install uv'
+            ).then(choice => {
+                if (choice === 'Install uv') {
+                    installUv();
+                }
+            });
+        }
+        
+        // Step 3: Initialize env manager
+        log('Step 3: Initializing env manager...');
         envManager = new EnvManager(getWorkspaceRoot());
         
-        // Step 3: Initialize tree providers
-        log('Step 3: Initializing tree providers...');
+        // Step 4: Initialize tree providers
+        log('Step 4: Initializing tree providers...');
         statusTreeProvider = new StatusTreeProvider(envManager);
         documentTreeProvider = new DocumentTreeProvider(envManager);
         
         vscode.window.registerTreeDataProvider('assetAwareMcp.status', statusTreeProvider);
         vscode.window.registerTreeDataProvider('assetAwareMcp.documents', documentTreeProvider);
         
-        // Step 4: Register MCP server provider (with error handling)
-        log('Step 4: Registering MCP server provider...');
+        // Step 5: Register MCP server provider (with error handling)
+        log('Step 5: Registering MCP server provider...');
         mcpProvider = new AssetAwareMcpProvider(getWorkspaceRoot(), outputChannel);
         
         // Check if MCP API is available (it's a proposed API)
@@ -93,18 +231,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             log('  3. GitHub Copilot extension is not installed');
         }
         
-        // Step 5: Register commands
-        log('Step 5: Registering commands...');
+        // Step 6: Register commands
+        log('Step 6: Registering commands...');
         registerCommands(context);
         
-        // Step 6: Check Ollama connection (non-blocking)
-        log('Step 6: Checking Ollama connection...');
+        // Step 7: Check Ollama connection (non-blocking)
+        log('Step 7: Checking Ollama connection...');
         checkAndUpdateOllamaStatus().catch(err => {
             log('Ollama check failed (non-critical): ' + String(err));
         });
         
-        // Step 7: Update status
-        log('Step 7: Updating status to ready...');
+        // Step 8: Update status
+        log('Step 8: Updating status to ready...');
         statusBar.setStatus('ready', 'Asset-Aware MCP: Ready');
         await vscode.commands.executeCommand('setContext', CONTEXT_READY, true);
         
@@ -228,44 +366,43 @@ async function checkSystemDependencies(): Promise<void> {
     depChannel.appendLine('=== Checking System Dependencies ===');
     depChannel.appendLine('');
 
-    const checks = [
-        { name: 'uv', command: 'uv --version', required: true },
-        { name: 'python', command: 'python3 --version', required: true },
-        { name: 'pip', command: 'pip3 --version', required: false }
-    ];
-
     let allOk = true;
 
-    for (const check of checks) {
-        try {
-            const { stdout } = await execAsync(check.command);
-            depChannel.appendLine('✅ ' + check.name + ': ' + stdout.trim());
-        } catch {
-            if (check.required) {
-                depChannel.appendLine('❌ ' + check.name + ': NOT FOUND (required)');
-                allOk = false;
-            } else {
-                depChannel.appendLine('⚠️ ' + check.name + ': not found (optional)');
-            }
-        }
+    // Check uv
+    try {
+        const { stdout } = await execAsync('uv --version');
+        depChannel.appendLine('✅ uv: ' + stdout.trim());
+    } catch {
+        depChannel.appendLine('❌ uv: NOT FOUND (required)');
+        depChannel.appendLine('   Run "Asset-Aware MCP: Setup Wizard" to install');
+        allOk = false;
     }
-    
+
+    // Check uvx can find asset-aware-mcp
     depChannel.appendLine('');
     depChannel.appendLine('=== Checking MCP Server ===');
     
+    try {
+        const { stdout } = await execAsync('uvx --help', { timeout: 5000 });
+        depChannel.appendLine('✅ uvx: available');
+        
+        // Check if asset-aware-mcp is accessible via uvx
+        depChannel.appendLine('   Will use: uvx asset-aware-mcp');
+        depChannel.appendLine('   (Package will be auto-installed from PyPI on first use)');
+    } catch {
+        depChannel.appendLine('⚠️ uvx: not available (uv may need update)');
+    }
+    
+    // Check for local development source
     const workspaceRoot = getWorkspaceRoot();
     const serverPath = path.join(workspaceRoot, 'src', 'server.py');
-    const parentServerPath = path.join(path.dirname(workspaceRoot), 'src', 'server.py');
+    const pyprojectPath = path.join(workspaceRoot, 'pyproject.toml');
     
-    if (fs.existsSync(serverPath)) {
-        depChannel.appendLine('✅ MCP Server found at: ' + serverPath);
-    } else if (fs.existsSync(parentServerPath)) {
-        depChannel.appendLine('✅ MCP Server found at: ' + parentServerPath);
-    } else {
-        depChannel.appendLine('❌ MCP Server NOT FOUND');
-        depChannel.appendLine('   Searched: ' + serverPath);
-        depChannel.appendLine('   Searched: ' + parentServerPath);
-        allOk = false;
+    if (fs.existsSync(serverPath) && fs.existsSync(pyprojectPath)) {
+        depChannel.appendLine('');
+        depChannel.appendLine('📁 Local development source detected:');
+        depChannel.appendLine('   ' + workspaceRoot);
+        depChannel.appendLine('   (Will use local source instead of PyPI)');
     }
     
     depChannel.appendLine('');

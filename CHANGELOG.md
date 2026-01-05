@@ -5,6 +5,19 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 專案遵循 [語義化版本](https://semver.org/lang/zh-TW/)。
 
+## [0.2.3] - 2026-01-05
+
+### Added
+- 🔧 **自動安裝 uv**：擴充功能啟動時會自動檢測並安裝 `uv`（支援 Windows PowerShell 和 Unix curl）
+- 🚀 **真正的一鍵即用**：使用者只需安裝擴充功能，無需任何手動設定：
+  1. 擴充功能自動安裝 `uv`
+  2. `uvx asset-aware-mcp` 自動從 PyPI 安裝並運行 MCP server
+  3. 不需要 clone 專案、不需要手動安裝 Python 套件
+
+### Changed
+- 依賴檢查更新：不再要求本地有 MCP server 原始碼
+- 安裝狀態提示更清晰
+
 ## [0.2.2] - 2026-01-05
 
 ### Added
