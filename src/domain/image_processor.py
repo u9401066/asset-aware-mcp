@@ -146,4 +146,3 @@ def process_to_base64(
     """
     result = process_image(image_bytes, max_size, quality)
     return result.base64, result.width, result.height
-

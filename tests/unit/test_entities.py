@@ -117,15 +117,55 @@ class TestDocumentAssets:
         """Create sample assets for testing."""
         return DocumentAssets(
             tables=[
-                TableAsset(id="tab_1", page=2, caption="", preview="", markdown="| A | B |", row_count=2, col_count=2),
-                TableAsset(id="tab_2", page=4, caption="", preview="", markdown="| C | D |", row_count=3, col_count=2),
+                TableAsset(
+                    id="tab_1",
+                    page=2,
+                    caption="",
+                    preview="",
+                    markdown="| A | B |",
+                    row_count=2,
+                    col_count=2,
+                ),
+                TableAsset(
+                    id="tab_2",
+                    page=4,
+                    caption="",
+                    preview="",
+                    markdown="| C | D |",
+                    row_count=3,
+                    col_count=2,
+                ),
             ],
             figures=[
-                FigureAsset(id="fig_1_1", page=3, path="fig1.png", ext="png", caption="", width=100, height=100),
+                FigureAsset(
+                    id="fig_1_1",
+                    page=3,
+                    path="fig1.png",
+                    ext="png",
+                    caption="",
+                    width=100,
+                    height=100,
+                ),
             ],
             sections=[
-                SectionAsset(id="sec_intro", title="Introduction", level=1, page=1, start_line=0, end_line=20, preview=""),
-                SectionAsset(id="sec_methods", title="Methods", level=1, page=2, start_line=21, end_line=50, preview=""),
+                SectionAsset(
+                    id="sec_intro",
+                    title="Introduction",
+                    level=1,
+                    page=1,
+                    start_line=0,
+                    end_line=20,
+                    preview="",
+                ),
+                SectionAsset(
+                    id="sec_methods",
+                    title="Methods",
+                    level=1,
+                    page=2,
+                    start_line=21,
+                    end_line=50,
+                    preview="",
+                ),
             ],
         )
 

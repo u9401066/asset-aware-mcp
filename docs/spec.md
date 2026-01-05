@@ -19,21 +19,22 @@ Build a local-first Model Context Protocol (MCP) server tailored for medical res
 │                   Application Layer                          │
 │                   (Use Cases / Services)                     │
 │  DocumentService, AssetService, JobService, KnowledgeService │
+│  TableService (A2T - Anything to Table)                      │
 └─────────────────────┬───────────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────────┐
 │                     Domain Layer                             │
 │                   (Core Business Logic)                      │
 │  Entities: Document, Manifest, Table, Figure, Section, Job   │
+│  A2T Entities: TableContext, TableDraft, TableSchema         │
 │  Value Objects: AssetType, DocId, JobStatus                 │
-│  Domain Services: ManifestGenerator, Chunking               │
 └─────────────────────┬───────────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────────┐
 │                 Infrastructure Layer                         │
 │                 (External Dependencies)                      │
 │  PyMuPDFExtractor (Core ETL), LightRAGAdapter,               │
-│  FileStorage, FileJobStore                                   │
+│  FileStorage, FileJobStore, ExcelRenderer                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -45,10 +46,18 @@ Build a local-first Model Context Protocol (MCP) server tailored for medical res
 - **Knowledge Graph**: Uses LightRAG to build a dual-index (Vector + Graph) for cross-document reasoning.
 - **Document Manifest**: Generates a `manifest.json` for each document, acting as a "map" for the AI Agent.
 
-### 2.3 MCP Server: "The Interface"
+### 2.3 A2T (Anything to Table) Workflow: "The Orchestrator"
 
-- **Tools**: Exposes tools for ingestion, job tracking, manifest inspection, and precise asset fetching.
-- **Resources**: Provides dynamic URI-based access to document outlines, tables, figures, and knowledge graph summaries.
+- **Schema Planning**: `plan_table_schema` allows Agents to design table structures before creation.
+- **Drafting System**: `TableDraft` provides persistent storage for work-in-progress tables, enabling resumption across sessions.
+- **Batch Streaming**: `add_rows_to_draft` supports incremental data accumulation for long tables.
+- **Token Efficiency**: `resume_draft` and `get_section_content` minimize context window usage.
+- **Excel Rendering**: Professional output with auto-beautification based on table intent.
+
+### 2.4 MCP Server: "The Interface"
+
+- **Tools**: Exposes tools for ingestion, job tracking, manifest inspection, precise asset fetching, and A2T orchestration.
+- **Resources**: Provides dynamic URI-based access to document outlines, tables, figures, and A2T table/draft states.
 - **Vision Support**: Figures are transmitted as **Base64 images** within `ImageContent` for direct analysis by Vision-capable LLMs.
 
 ## 3. Tech Stack

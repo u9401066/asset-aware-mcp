@@ -19,7 +19,9 @@ class TestManifestGenerator:
         """Create a ManifestGenerator instance."""
         return ManifestGenerator()
 
-    def test_generate_manifest(self, generator: ManifestGenerator, sample_markdown: str):
+    def test_generate_manifest(
+        self, generator: ManifestGenerator, sample_markdown: str
+    ):
         """Test generating a complete manifest."""
         manifest = generator.generate(
             doc_id="doc_test_abc123",
@@ -103,7 +105,9 @@ class TestAssetExtractor:
         """Create an AssetExtractor instance."""
         return AssetExtractor()
 
-    def test_extract_section_content(self, extractor: AssetExtractor, sample_markdown: str):
+    def test_extract_section_content(
+        self, extractor: AssetExtractor, sample_markdown: str
+    ):
         """Test extracting section content."""
         from src.domain.entities import SectionAsset
 
@@ -131,7 +135,9 @@ class TestAssetExtractor:
         assert "Column A" in table_content
         assert "Value 1" in table_content
 
-    def test_extract_nonexistent_table(self, extractor: AssetExtractor, sample_markdown: str):
+    def test_extract_nonexistent_table(
+        self, extractor: AssetExtractor, sample_markdown: str
+    ):
         """Test extracting non-existent table returns None."""
         table_content = extractor.extract_table_by_id(sample_markdown, "tab_999")
 

@@ -2,7 +2,6 @@
 Unit tests for chunking strategies.
 """
 
-
 from src.domain.chunking import (
     BasicChunker,
     Chunk,
@@ -145,7 +144,10 @@ These are the results of our study.
         # Should create separate chunks for each section
         assert len(chunks) >= 3
         # First chunk should contain Introduction heading
-        assert "Introduction" in chunks[0].metadata.get("heading", "") or "Introduction" in chunks[0].text
+        assert (
+            "Introduction" in chunks[0].metadata.get("heading", "")
+            or "Introduction" in chunks[0].text
+        )
 
     def test_paragraph_splitting(self) -> None:
         """Test splitting by paragraphs."""
@@ -308,11 +310,14 @@ class TestSmartChunk:
 
     def test_medical_document_config(self) -> None:
         """Test medical document gets appropriate config."""
-        text = """
+        text = (
+            """
         The patient diagnosis requires treatment.
         Clinical examination showed disease symptoms.
         Drug dosage set at 50mg twice daily.
-        """ * 50
+        """
+            * 50
+        )
         chunks = smart_chunk(text, filename="clinical_notes.pdf")
         # Should use medical config (chunk_size=1000, overlap=250)
         assert len(chunks) >= 1

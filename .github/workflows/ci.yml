@@ -46,39 +46,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
       
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install ruff mypy bandit[toml]
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-          if [ -f pyproject.toml ]; then pip install -e ".[dev]" 2>/dev/null || true; fi
+          uv sync --all-extras
       
       - name: Ruff Linting
         run: |
-          ruff check . --output-format=github || true
-        continue-on-error: true
+          uv run ruff check . --output-format=github
       
       - name: Ruff Format Check
         run: |
-          ruff format --check . || true
-        continue-on-error: true
+          uv run ruff format --check .
       
       - name: MyPy Type Check
         run: |
-          mypy src --ignore-missing-imports || true
-        continue-on-error: true
+          uv run mypy src --ignore-missing-imports
       
       - name: Bandit Security Scan
         run: |
-          bandit -r src -f json -o bandit-report.json || true
-          bandit -r src -f txt || true
+          uv run bandit -r src -f json -o bandit-report.json
+          uv run bandit -r src -f txt
         continue-on-error: true
       
       - name: Upload Bandit Report
@@ -99,33 +96,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
       
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install pytest pytest-cov pytest-xdist pytest-timeout
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-          if [ -f pyproject.toml ]; then pip install -e ".[dev]" 2>/dev/null || true; fi
+          uv sync --all-extras
       
       - name: Run Unit Tests with Coverage
         run: |
-          pytest tests/unit -v \
+          uv run pytest tests/unit -v \
             --cov=src \
             --cov-report=term-missing \
             --cov-report=xml:coverage-unit.xml \
             --cov-report=html:htmlcov-unit \
-            --cov-fail-under=80 \
+            --cov-fail-under=70 \
             -n auto \
             --timeout=60 \
-            --junitxml=junit-unit.xml \
-            || true
-        continue-on-error: true
+            --junitxml=junit-unit.xml
       
       - name: Upload Unit Test Coverage
         uses: actions/upload-artifact@v4

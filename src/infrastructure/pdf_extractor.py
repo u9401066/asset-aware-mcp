@@ -238,20 +238,26 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                             else:
                                 # Fallback: extract cells manually
                                 markdown = self._table_to_markdown(tab)
-                                row_count = tab.row_count if hasattr(tab, "row_count") else 0
-                                col_count = tab.col_count if hasattr(tab, "col_count") else 0
+                                row_count = (
+                                    tab.row_count if hasattr(tab, "row_count") else 0
+                                )
+                                col_count = (
+                                    tab.col_count if hasattr(tab, "col_count") else 0
+                                )
 
-                            tables.append({
-                                "id": f"tab_{table_index}",
-                                "page": page_num + 1,
-                                "markdown": markdown,
-                                "caption": "",  # PyMuPDF doesn't detect captions
-                                "row_count": row_count,
-                                "col_count": col_count,
-                                "preview": markdown[:100] if markdown else "",
-                                "has_header": True,
-                                "source": "pymupdf",
-                            })
+                            tables.append(
+                                {
+                                    "id": f"tab_{table_index}",
+                                    "page": page_num + 1,
+                                    "markdown": markdown,
+                                    "caption": "",  # PyMuPDF doesn't detect captions
+                                    "row_count": row_count,
+                                    "col_count": col_count,
+                                    "preview": markdown[:100] if markdown else "",
+                                    "has_header": True,
+                                    "source": "pymupdf",
+                                }
+                            )
                         except Exception:
                             continue
 

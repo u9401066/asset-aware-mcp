@@ -30,7 +30,9 @@ async def test_job_system():
     # 1. Test list_jobs (empty)
     print("\n📋 1. Testing list_jobs (should be empty or have old jobs)...")
     result = await list_jobs(active_only=False)
-    print(f"   Result: {result[:200]}..." if len(result) > 200 else f"   Result: {result}")
+    print(
+        f"   Result: {result[:200]}..." if len(result) > 200 else f"   Result: {result}"
+    )
 
     # 2. Test ingest_documents with async mode (non-existent file to test job creation)
     print("\n📄 2. Testing ingest_documents (async mode)...")
@@ -47,7 +49,8 @@ async def test_job_system():
         # Extract job_id from result
         if "job_" in result:
             import re
-            match = re.search(r'(job_\d{8}_\d{6}_[a-f0-9]+)', result)
+
+            match = re.search(r"(job_\d{8}_\d{6}_[a-f0-9]+)", result)
             if match:
                 job_id = match.group(1)
                 print(f"   📌 Job ID: {job_id}")
@@ -56,12 +59,20 @@ async def test_job_system():
                 print(f"\n⏳ 3. Testing get_job_status({job_id})...")
                 await asyncio.sleep(0.5)  # Wait a bit for job to start
                 status = await get_job_status(job_id=job_id)
-                print(f"   Status: {status[:300]}..." if len(status) > 300 else f"   Status: {status}")
+                print(
+                    f"   Status: {status[:300]}..."
+                    if len(status) > 300
+                    else f"   Status: {status}"
+                )
 
                 # 4. Test list_jobs again
                 print("\n📋 4. Testing list_jobs (should show the job)...")
                 jobs = await list_jobs(active_only=False)
-                print(f"   Jobs: {jobs[:300]}..." if len(jobs) > 300 else f"   Jobs: {jobs}")
+                print(
+                    f"   Jobs: {jobs[:300]}..."
+                    if len(jobs) > 300
+                    else f"   Jobs: {jobs}"
+                )
 
                 # 5. Test cancel_job (if still running)
                 print(f"\n🚫 5. Testing cancel_job({job_id})...")
@@ -78,7 +89,9 @@ async def test_job_system():
     # 6. Test list_documents
     print("\n📚 6. Testing list_documents...")
     docs = await list_documents()
-    print(f"   Documents: {docs[:200]}..." if len(docs) > 200 else f"   Documents: {docs}")
+    print(
+        f"   Documents: {docs[:200]}..." if len(docs) > 200 else f"   Documents: {docs}"
+    )
 
     print("\n" + "=" * 60)
     print("✅ MCP Tools Test Complete!")

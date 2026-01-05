@@ -49,6 +49,7 @@ async def test_lightrag():
     except Exception as e:
         print(f"   ❌ Insert failed: {e}")
         import traceback
+
         traceback.print_exc()
         return
 
@@ -60,6 +61,7 @@ async def test_lightrag():
     except Exception as e:
         print(f"   ❌ Query failed: {e}")
         import traceback
+
         traceback.print_exc()
 
     # Test entity extraction
@@ -70,6 +72,7 @@ async def test_lightrag():
     except Exception as e:
         print(f"   ❌ Entity extraction failed: {e}")
         import traceback
+
         traceback.print_exc()
 
     print("\n" + "=" * 60)

@@ -4,60 +4,56 @@
 
 ## 🎯 當前焦點
 
-- **PyMuPDF 輕量級 PDF 後端完成測試**
-- 86 個測試全數通過
-- 圖片壓縮功能驗證成功
-- GitHub: https://github.com/u9401066/asset-aware-mcp
+- **發布 v0.2.0：A2T 2.0 與 PyMuPDF 輕量化整合**
+- 實作了 Draft/Commit 模式以優化 Token 使用。
+- 支援 AI 驅動的表格規劃 (`plan_table_schema`)。
+- 支援持久化草稿與斷點續作 (`resume_draft`)。
+- 完成 Ruff 程式碼品質修復與格式化。
+- 同步更新 VS Code Extension 版本至 0.2.0。
 
 ## Current Goals
 
-- 已完成 VS Code 擴充功能的安全性更新與打包。
-- - TypeScript 已更新至 5.7.2，ESLint 已更新至 9.x 並切換至 flat config (eslint.config.mjs)。
-- - 已生成最新的 `asset-aware-mcp-0.1.1.vsix`。
-- - 已完成 Git 提交與推送。
-- 下一步：考慮更新 PyPI 套件以保持 Python 核心與擴充功能同步，隨後開始 A2T 開發。
+- 已完成 A2T 2.0 模組的完整實作、文檔更新與版本發布。
+- 目前支援：
+- 1. **Draft/Commit 模式**：持久化 WIP 狀態，支援長表格分批寫入。
+- 2. **Token 優化**：`resume_draft` 僅回傳最小上下文；`get_section_content` 支援精準讀取。
+- 3. **AI 規劃工具**：`plan_table_schema` 協助 Agent 發想表格結構。
+- 4. **精準編輯**：`update_cell` 支援單元格級別的 CRUD。
+- 5. **版本發布**：全專案（含 Extension）升級至 v0.2.0。
 
 ## 📝 本次變更
 
 | 檔案/目錄 | 變更內容 |
 |-----------|----------|
-| `pyproject.toml` | PyMuPDF 核心, Docling 可選 |
-| `src/presentation/server.py` | 直接使用 PyMuPDFExtractor |
-| `src/application/document_service.py` | 動態表格來源偵測 |
-| `src/domain/image_processor.py` | 圖片壓縮處理器 |
-| `ROADMAP.md` | 新增「設計決策」章節 |
-| `tests/` | 86 個測試全通過 |
+| `src/domain/table_entities.py` | 新增 `TableDraft`, `TableSchema`, Token 估算邏輯 |
+| `src/application/table_service.py` | 實作 Draft 管理、單元格更新、持久化邏輯 |
+| `src/presentation/server.py` | 註冊 A2T 2.0 MCP Tools 與 Resources |
+| `docs/spec.md` | 更新 A2T 2.0 技術規格 |
+| `ROADMAP.md` | 標記 v0.3.0 (A2T 2.0) 為已完成 |
+| `README.md` / `README.zh-TW.md` | 更新功能列表、架構圖與工具說明 |
+| `ARCHITECTURE.md` | 更新 DDD 組件說明與 A2T 工作流 |
 
 ## ⚠️ 待解決
 
-1. **表格萃取**：測試 PDF 無表格（可能是圖片式）
-2. **Knowledge Graph**：待測試 LightRAG 索引
-3. **Figure caption**：`fig_2_1` 對應問題
+1. **E2E 測試**：撰寫針對 A2T 2.0 工作流的整合測試。
+2. **Knowledge Graph**：優化 LightRAG 與 A2T 的自動化整合。
 
-## 💡 重要決定 (2025-12-26)
+## 💡 重要決定 (2026-01-05)
 
-### PDF 後端選擇
-- **PyMuPDF**（核心）：輕量、快速、50MB
-- **Docling**（可選）：需 PyTorch + CUDA，~2GB
-- 原因：「我們是輕量級旁支專案！」
-
-### 圖片處理
-- max_size: 1024px
-- JPEG 品質: 85%
-- 4501×5482 → 840×1024 壓縮成功
+### A2T 2.0 設計
+- **Draft 模式**：為了解決長表格導致的 Token 爆炸問題，引入持久化草稿。
+- **Resume 邏輯**：Agent 續作時只需讀取最後 2 列，而非整張表。
+- **Planning 工具**：在建表前增加一個「發想」階段，提升 AI 產出品質。
 
 ## 📁 專案結構
 
 ```
 src/
-├── domain/          # 🔵 核心業務邏輯
-├── application/     # 🟢 使用案例
-├── infrastructure/  # 🟠 外部依賴實作
-└── presentation/    # 🔴 MCP Server
-tests/
-├── unit/            # ✅ 單元測試
-└── integration/     # ✅ 整合測試
+├── domain/          # 🔵 核心業務邏輯 (新增 TableDraft)
+├── application/     # 🟢 使用案例 (新增 TableService Draft 邏輯)
+├── infrastructure/  # 🟠 外部依賴實作 (Excel 渲染)
+└── presentation/    # 🔴 MCP Server (A2T 2.0 Tools)
 ```
 
 ---
-*Last updated: 2025-12-26*
+*Last updated: 2026-01-05*

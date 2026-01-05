@@ -4,24 +4,26 @@
 
 ## 已完成 ✅
 
-### v0.2.0 (2025-12-26) - 正式發布
+### v0.2.0 (2026-01-05) - A2T 2.0 & PyMuPDF 輕量化
+- [x] A2T (Anything to Table) 核心實作
+- [x] Draft 草稿系統（斷點續傳）
+- [x] Token 估算工具
+- [x] Section-level 快取讀取
+- [x] Excel 自動美化渲染
+- [x] 輕量化 ETL 引擎 (PyMuPDF)
+- [x] Ruff 程式碼品質修復
+- [x] VS Code Extension 升級
+
+### v0.1.1 (2025-12-26) - 正式發布
 - [x] 專案初始化
 - [x] Memory Bank 系統建立
 - [x] DDD 分層架構實作
-  - [x] Domain Layer (Entities, Value Objects, Services)
-  - [x] Application Layer (Document, Asset, Knowledge Services)
-  - [x] Infrastructure Layer (FileStorage, PDFExtractor, LightRAG)
-  - [x] Presentation Layer (MCP Server)
-- [x] 單元測試 + 整合測試 (55 tests)
 - [x] MCP Server 5 Tools 實作
 - [x] ImageContent 修復 (Vision AI 可看圖)
-- [x] GitHub 發布
-- [x] README 完整安裝指南
-- [x] 多 PDF 測試 (Nobel Prize 2024/2025, Attention Paper)
 
 ## 進行中 🚧
 
-### v0.3.0 - 知識圖譜強化
+### v0.3.0 - 知識圖譜強化 & 跨文件分析
 - [ ] LightRAG 索引問題修復
 - [ ] 跨文件知識查詢
 - [ ] Figure Caption 自動提取

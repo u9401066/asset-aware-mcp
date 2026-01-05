@@ -2,13 +2,15 @@
 
 ## Done
 
-- 移除 Docling 引擎並切換至 PyMuPDF (fitz)
-- 更新 README.md, README.zh-TW.md, spec.md, ARCHITECTURE.md 以反映架構變更
-- 修復所有 Ruff lint 錯誤 (187+ 個) 與 MyPy 型別錯誤 (29+ 個)
-- 更新 VS Code 擴充功能版本 (0.1.1) 與說明文件
-- 建立 A2T (Anything to Table) 技術規格書 (a2t_spec.md)
-- 更新 VS Code 擴充功能開發依賴 (TypeScript 5.7.2, ESLint 9) 並修復安全性漏洞
-- 打包 VS Code 擴充功能 v0.1.1 (VSIX)
+- 環境配置與依賴安裝 (xlsxwriter, pydantic-settings)
+- 實作 A2T Domain Entities (TableDraft, TableSchema, TableContext)
+- 實作 TableService (支援 Draft 持久化、單元格更新、Token 估算)
+- 實作 ExcelRenderer (XlsxWriter 封裝)
+- 註冊 A2T 2.0 MCP Tools (plan, draft, resume, update_cell, etc.)
+- 完成單元測試並驗證 A2T 2.0 工作流
+- 更新所有專案文檔 (README, Spec, Roadmap, Architecture) 以反映 A2T 2.0 功能
+- 執行 Ruff 程式碼品質檢查與格式化修復
+- 發布版本 v0.2.0 (包含 A2T 2.0 與 PyMuPDF 輕量化)
 
 ## Doing
 
@@ -16,5 +18,5 @@
 
 ## Next
 
-- 更新 PyPI 套件版本並發布 (Python 核心)
-- 實作 A2T Phase 1: 核心骨架 (SessionContext, DuckDB 連線)
+- 撰寫 E2E 整合測試場景 (探索 -> 提取 -> 建表 -> 輸出)
+- 優化 LightRAG 查詢與 A2T 的整合流程

@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     data_dir: Path = Field(
         default=Path("./data"), description="Directory for storing processed documents"
     )
+    table_output_dir: Path = Field(
+        default=Path("./data/tables"), description="Directory for A2T generated tables"
+    )
 
     # Mistral API (optional, for OCR)
     mistral_api_key: str = Field(
@@ -83,6 +86,7 @@ class Settings(BaseSettings):
     def ensure_directories(self) -> None:
         """Create necessary directories if they don't exist."""
         self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.table_output_dir.mkdir(parents=True, exist_ok=True)
         if self.enable_lightrag:
             self.lightrag_working_dir.mkdir(parents=True, exist_ok=True)
 

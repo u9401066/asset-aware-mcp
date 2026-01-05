@@ -24,10 +24,7 @@ def get_pdf_extractor() -> PyMuPDFExtractor:
     if _HAS_PYMUPDF:
         return PyMuPDFExtractor()
     else:
-        raise ImportError(
-            "No PDF extractor available. Install with:\n"
-            "  uv add PyMuPDF"
-        )
+        raise ImportError("No PDF extractor available. Install with:\n  uv add PyMuPDF")
 
 
 __all__ = [

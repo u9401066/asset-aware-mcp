@@ -269,12 +269,14 @@ class SemanticChunker(ChunkingStrategy):
             start = match.start()
             end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
 
-            sections.append({
-                "text": text[start:end],
-                "start": start,
-                "end": end,
-                "heading": match.group().strip()[:50],
-            })
+            sections.append(
+                {
+                    "text": text[start:end],
+                    "start": start,
+                    "end": end,
+                    "heading": match.group().strip()[:50],
+                }
+            )
 
         # Don't forget text before first heading
         if matches[0].start() > 0:
@@ -322,7 +324,9 @@ class SemanticChunker(ChunkingStrategy):
                 if config.chunk_overlap > 0 and current_text:
                     overlap_text = current_text[-config.chunk_overlap :]
                     current_text = overlap_text + "\n\n" + para
-                    current_start = current_start + len(current_text) - len(overlap_text)
+                    current_start = (
+                        current_start + len(current_text) - len(overlap_text)
+                    )
                 else:
                     current_text = para
                     current_start += len(current_text) + 2

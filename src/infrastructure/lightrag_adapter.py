@@ -308,7 +308,9 @@ class LightRAGAdapter(KnowledgeGraphInterface):
         """
         import xml.etree.ElementTree as ET  # noqa: N817
 
-        graph_file = settings.lightrag_working_dir / "graph_chunk_entity_relation.graphml"
+        graph_file = (
+            settings.lightrag_working_dir / "graph_chunk_entity_relation.graphml"
+        )
 
         if not graph_file.exists():
             return {
@@ -348,11 +350,13 @@ class LightRAGAdapter(KnowledgeGraphInterface):
                 continue
 
             if len(nodes) < limit:
-                nodes.append({
-                    "id": node_id,
-                    "type": entity_type,
-                    "description": description,
-                })
+                nodes.append(
+                    {
+                        "id": node_id,
+                        "type": entity_type,
+                        "description": description,
+                    }
+                )
                 node_ids.add(node_id)
 
         # Extract edges (only between included nodes)
@@ -375,12 +379,14 @@ class LightRAGAdapter(KnowledgeGraphInterface):
                 elif key == "d7":  # weight
                     weight = text
 
-            edges.append({
-                "source": source,
-                "target": target,
-                "keywords": keywords,
-                "weight": weight,
-            })
+            edges.append(
+                {
+                    "source": source,
+                    "target": target,
+                    "keywords": keywords,
+                    "weight": weight,
+                }
+            )
 
         # Format output
         if format == "summary":
@@ -435,7 +441,13 @@ class LightRAGAdapter(KnowledgeGraphInterface):
                 "format": "mermaid",
                 "diagram": "\n".join(mermaid_lines),
                 "node_count": len(nodes[:30]),
-                "edge_count": len([e for e in edges if node_map.get(e["source"]) and node_map.get(e["target"])]),
+                "edge_count": len(
+                    [
+                        e
+                        for e in edges
+                        if node_map.get(e["source"]) and node_map.get(e["target"])
+                    ]
+                ),
             }
 
         else:
