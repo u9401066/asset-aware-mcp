@@ -9,6 +9,7 @@
 - Updated CHANGELOG.md, README.md, and README.zh-TW.md for v0.2.6.
 - Fixed unused variable in pdf_extractor.py and ran ruff.
 - Updated ROADMAP.md.
+- Git commit, tag (v0.2.6), and push to origin master.
 
 ## Doing
 
@@ -16,4 +17,4 @@
 
 ## Next
 
-- Final Git commit and push.
+- Await user feedback on the new A2T table view.
