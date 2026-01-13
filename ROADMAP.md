@@ -4,6 +4,11 @@
 
 ## 已完成 ✅
 
+### v0.2.7 (2026-01-06) - 圖片擷取策略優化
+- [x] 三層級圖片擷取策略 (XObject, Vector Clustering, Grid Scanning)
+- [x] VS Code Extension 路徑修復
+- [x] A2T 表格視圖與 Excel 導出
+
 ### v0.2.0 (2026-01-05) - A2T 2.0 & PyMuPDF 輕量化
 - [x] A2T (Anything to Table) 核心實作
 - [x] Draft 草稿系統（斷點續傳）
@@ -23,11 +28,35 @@
 
 ## 進行中 🚧
 
-### v0.3.0 - 知識圖譜強化 & 跨文件分析
-- [ ] LightRAG 索引問題修復
-- [ ] 跨文件知識查詢
-- [ ] Figure Caption 自動提取
-- [ ] 表格偵測優化
+### v0.3.0 - Asset-Centric Architecture（架構重構）
+> 🚨 **重大重構**：解決三大功能耦合問題
+
+**核心問題**：
+- ❌ 做表功能被迫依賴 PDF 拆解
+- ❌ 已存在的圖片需重新拆解才能使用
+- ❌ 三個功能（做表/拆解/重送）互相影響
+
+**Phase 1: Asset Registry（資產註冊中心）**
+- [ ] 新增 `AssetRegistry` 類別
+- [ ] 啟動時掃描 `data/` 目錄建立索引
+- [ ] 追蹤所有已存在資產（MD、圖片、表格）
+
+**Phase 2: TableService 擴展**
+- [ ] 新增 `create_table_from_text()` - 直接從文字建表
+- [ ] 新增 `create_table_from_files()` - 從 MD 檔案建表
+- [ ] 支援多檔案合併彙整
+
+**Phase 3: 新增 MCP Tools**
+- [ ] `list_available_assets` - 列出所有已存在資產
+- [ ] `get_existing_image` - 直接讀取已存在圖片
+- [ ] `create_table_from_markdown` - 從 MD 建表
+- [ ] `create_table_from_text` - 從文字建表
+
+**Phase 4: Asset Bundle**
+- [ ] `get_asset_bundle` - 批次獲取多種資產
+- [ ] Token 消耗優化
+
+**詳見**: [docs/ARCHITECTURE_REFACTOR_PROPOSAL.md](docs/ARCHITECTURE_REFACTOR_PROPOSAL.md)
 
 ## 設計決策 💡
 
@@ -51,18 +80,24 @@ uv sync -E docling   # 進階：+ Docling (~2GB)
 
 ## 計劃中 📋
 
-### 短期目標 (v0.4.0)
+### v0.4.0 - 知識圖譜強化
+- [ ] LightRAG 索引問題修復
+- [ ] 跨文件知識查詢
+- [ ] Figure Caption 自動提取
+- [ ] 表格偵測優化
+
+### v0.5.0 - 進階功能
 - [ ] Mistral OCR 整合 (高保真度解析)
 - [ ] CI/CD 流程建立
 - [ ] 醫學術語 NER
 - [ ] 效能優化
 
-### 中期目標 (v0.5.0)
+### v0.6.0 - 批量與報告
 - [ ] 多文件比較功能
 - [ ] 自動報告生成
 - [ ] 批量處理優化
 
-### 長期目標 (v1.0.0)
+### v1.0.0 - 正式版
 - [ ] 完整醫學文獻 RAG 系統
 - [ ] 多語言支援
 - [ ] Docker 部署
