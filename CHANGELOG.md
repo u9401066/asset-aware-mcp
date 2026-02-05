@@ -5,6 +5,17 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 專案遵循 [語義化版本](https://semver.org/lang/zh-TW/)。
 
+## [0.2.8] - 2026-02-05
+
+### Added
+- 🌲 **動態章節導航工具**：支援任意深度的章節階層結構，完美適應不同書籍的目錄格式
+  - `list_section_tree`: 顯示完整章節樹狀結構
+  - `get_section_detail`: 取得特定章節詳細資訊（頁碼範圍、區塊數量、子章節）
+  - `get_section_blocks`: 提取指定章節的所有內容區塊（含頁碼與 bbox）
+  - `search_sections`: 搜尋章節標題
+- 🏗️ **Domain 層模型**：新增 `SectionNode` 與 `SectionTree` 資料結構，遵循 DDD 架構
+- ⚡ **快取機制**：`SectionService` 實作章節樹快取，避免重複解析
+
 ## [0.2.7] - 2026-01-06
 
 ### Added

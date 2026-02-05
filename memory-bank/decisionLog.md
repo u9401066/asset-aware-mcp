@@ -43,3 +43,4 @@
 | 2026-01-05 | 捨棄 Docling 引擎，改以 PyMuPDF 作為核心 ETL 引擎 | Docling 雖然精度高但依賴過重（約 2GB，需 PyTorch/CUDA），不符合專案輕量化的需求。PyMuPDF (fitz) 速度快、體積小，且已實作表格與圖片提取功能，足以滿足當前 Asset-Aware ETL 的核心需求。 |
 | 2026-01-12 | **🚨 架構重構：Asset-Centric Architecture** | 用戶反映三大功能存在耦合問題：(1) 做表被迫依賴 PDF 拆解、(2) 已存在的圖片需重新拆解、(3) 功能間互相影響。決定引入 AssetRegistry 作為資產索引中心，實現真正的功能獨立。詳見 `docs/ARCHITECTURE_REFACTOR_PROPOSAL.md`。 |
 | 2026-02-03 | **Marker 整合到標準 ingest 流程** | 為支援精確來源追蹤（頁碼+bbox），將 Marker 整合到 `ingest_documents` tool 中。新增 `use_marker=True` 參數，可選擇：(1) PyMuPDF（預設、快速）或 (2) Marker（結構化、含 blocks.json）。Marker 採用 lazy-load 避免啟動延遲。研究 Unstructured.io (13.9k stars) 作為未來備選方案，但目前 Marker 已足夠。 |
+| 2026-02-05 | **Section Navigation Tools (動態層級)** | 為支援任意深度的書籍章節結構，實作 SectionNode/SectionTree domain model 和 SectionService。新增 4 個 MCP tools: `list_section_tree`, `get_section_detail`, `get_section_blocks`, `search_sections`。不 hardcode 層級數，從 blocks.json 動態建構 section hierarchy。 |

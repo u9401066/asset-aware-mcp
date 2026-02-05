@@ -114,11 +114,28 @@ uv run python -m src.presentation.server
 
 ## 🔌 MCP Tools
 
+### Document & Asset Tools
+
 | Tool | Purpose |
 |------|---------|
+| `ingest_documents` | Process PDF files with optional Marker backend (`use_marker=True` for blocks.json) |
 | `fetch_document_asset` | Precisely retrieve tables (MD) / figures (B64) / sections |
 | `consult_knowledge_graph` | Knowledge graph query, cross-document comparison |
-| `plan_table_schema` | AI-driven schema planning & brainstorming (🆕) |
+
+### Section Navigation Tools (Dynamic Hierarchy)
+
+| Tool | Purpose |
+|------|---------|
+| `list_section_tree` | Display complete section hierarchy tree (supports any depth) |
+| `get_section_detail` | Get detailed info for a specific section |
+| `get_section_blocks` | Extract all blocks from a section with page + bbox |
+| `search_sections` | Search section titles |
+
+### A2T (Anything to Table) Tools
+
+| Tool | Purpose |
+|------|---------|
+| `plan_table_schema` | AI-driven schema planning & brainstorming |
 | `create_table_draft` | Start a persistent draft session (Token-efficient) |
 | `add_rows_to_draft` | Batch add data to draft |
 | `commit_draft_to_table` | Finalize draft into a formal table |
