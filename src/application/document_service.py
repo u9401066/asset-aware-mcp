@@ -2,10 +2,12 @@
 Application Layer - Document Service
 
 Use cases for document ingestion and management.
+Supports multiple PDF backends for flexible extraction.
 """
 
 from __future__ import annotations
 
+import json
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -15,6 +17,7 @@ from src.domain.entities import (
     DocumentSummary,
     FigureAsset,
     IngestResult,
+    SectionAsset,
     TableAsset,
 )
 from src.domain.repositories import (
@@ -26,7 +29,7 @@ from src.domain.services import ManifestGenerator
 from src.domain.value_objects import DocId
 
 if TYPE_CHECKING:
-    pass
+    from src.infrastructure.marker_adapter import MarkerPDFExtractor
 
 
 class DocumentService:
@@ -40,8 +43,8 @@ class DocumentService:
     4. Save to repository
 
     Supports multiple PDF backends:
-    - Docling (recommended, MIT licensed, high quality)
-    - PyMuPDF (fallback, AGPL licensed)
+    - PyMuPDF (default, fast, no models)
+    - Marker (optional, use_marker=True, produces blocks.json with bbox/section_hierarchy)
     """
 
     def __init__(
@@ -49,26 +52,37 @@ class DocumentService:
         repository: DocumentRepository,
         pdf_extractor: PDFExtractorInterface,
         knowledge_graph: KnowledgeGraphInterface | None = None,
+        marker_extractor: "MarkerPDFExtractor | None" = None,
     ):
         """
         Initialize document service with dependencies.
 
         Args:
             repository: Document storage repository
-            pdf_extractor: PDF extraction implementation
+            pdf_extractor: PDF extraction implementation (PyMuPDF)
             knowledge_graph: Optional knowledge graph for indexing
+            marker_extractor: Optional Marker PDF extractor for structured parsing
         """
         self.repository = repository
         self.pdf_extractor = pdf_extractor
         self.knowledge_graph = knowledge_graph
+        self.marker_extractor = marker_extractor
         self.manifest_generator = ManifestGenerator()
 
-    async def ingest(self, file_paths: list[str]) -> list[IngestResult]:
+    async def ingest(
+        self,
+        file_paths: list[str],
+        use_marker: bool = False,
+    ) -> list[IngestResult]:
         """
         Ingest multiple PDF files.
 
         Args:
             file_paths: List of paths to PDF files
+            use_marker: If True, use Marker for structured parsing (slower but richer)
+                        - Produces blocks.json with bbox and section_hierarchy
+                        - Better TOC and figure caption extraction
+                        - Requires Marker models (~1GB first run)
 
         Returns:
             List of IngestResult for each file
@@ -76,7 +90,10 @@ class DocumentService:
         results = []
 
         for file_path in file_paths:
-            result = await self._ingest_single(file_path)
+            if use_marker and self.marker_extractor:
+                result = await self._ingest_single_with_marker(file_path)
+            else:
+                result = await self._ingest_single(file_path)
             results.append(result)
 
         return results
@@ -174,6 +191,233 @@ class DocumentService:
                 error=str(e),
             )
 
+    async def _ingest_single_with_marker(self, file_path: str) -> IngestResult:
+        """
+        Ingest a single PDF file using Marker for structured parsing.
+
+        This provides richer structure than PyMuPDF:
+        - blocks.json with bbox and section_hierarchy
+        - Better TOC extraction
+        - Figure caption association
+        """
+        start_time = time.time()
+        path = Path(file_path)
+
+        # Validate file exists
+        if not path.exists():
+            return IngestResult(
+                doc_id="",
+                filename=path.name,
+                success=False,
+                error=f"File not found: {path}",
+            )
+
+        if not path.suffix.lower() == ".pdf":
+            return IngestResult(
+                doc_id="",
+                filename=path.name,
+                success=False,
+                error=f"Not a PDF file: {path}",
+            )
+
+        if self.marker_extractor is None:
+            return IngestResult(
+                doc_id="",
+                filename=path.name,
+                success=False,
+                error="Marker extractor not available",
+            )
+
+        try:
+            # Generate unique doc_id
+            doc_id = DocId.generate(path.stem, str(path.absolute()))
+
+            # Step 1: Parse PDF with Marker (rich structure)
+            parse_result = self.marker_extractor.parse(path)
+
+            # Step 2: Save markdown
+            markdown_path = self.repository.save_markdown(doc_id.value, parse_result.markdown)
+
+            # Step 3: Save blocks.json (structured data)
+            blocks_data = self._convert_blocks_to_json(parse_result.blocks)
+            self._save_blocks_json(doc_id.value, blocks_data)
+
+            # Step 4: Extract and save images from Marker result
+            figures = await self._save_marker_images(doc_id.value, parse_result)
+
+            # Step 5: Convert Marker blocks to TableAsset
+            tables = self._extract_tables_from_blocks(parse_result.blocks)
+
+            # Step 6: Convert TOC to SectionAsset
+            sections = self._extract_sections_from_toc(parse_result.toc)
+
+            # Step 7: Get page count
+            page_count = parse_result.page_count or self.pdf_extractor.get_page_count(path)
+
+            # Step 8: Index in knowledge graph (if available)
+            entities = []
+            if self.knowledge_graph and self.knowledge_graph.is_available:
+                try:
+                    await self.knowledge_graph.insert(doc_id.value, parse_result.markdown)
+                    entities = await self.knowledge_graph.extract_entities(parse_result.markdown)
+                except Exception as e:
+                    import logging
+                    logging.warning(f"LightRAG indexing failed: {e}")
+
+            # Step 9: Generate manifest (with richer data)
+            # Note: sections are parsed from markdown by ManifestGenerator
+            manifest = self.manifest_generator.generate(
+                doc_id=doc_id.value,
+                filename=path.name,
+                markdown=parse_result.markdown,
+                figures=figures,
+                tables=tables,
+                page_count=page_count,
+                markdown_path=str(markdown_path),
+                lightrag_entities=entities,
+            )
+
+            # Step 10: Save manifest
+            self.repository.save_manifest(manifest)
+
+            processing_time = time.time() - start_time
+
+            return IngestResult(
+                doc_id=doc_id.value,
+                filename=path.name,
+                title=manifest.title or parse_result.metadata.get("title", ""),
+                success=True,
+                manifest=manifest,
+                pages_processed=page_count,
+                tables_found=len(tables),
+                figures_found=len(figures),
+                sections_found=len(sections),
+                processing_time_seconds=processing_time,
+                backend="marker",  # Indicate which backend was used
+            )
+
+        except Exception as e:
+            import traceback
+            return IngestResult(
+                doc_id="",
+                filename=path.name,
+                success=False,
+                error=f"Marker parsing failed: {str(e)}\n{traceback.format_exc()}",
+            )
+
+    def _convert_blocks_to_json(self, blocks: list) -> list[dict]:
+        """Convert MarkerBlock objects to JSON-serializable dicts."""
+        return [
+            {
+                "block_id": b.block_id,
+                "block_type": b.block_type,
+                "page": b.page,
+                "text": b.text[:500] if b.text else "",  # Truncate to avoid huge files
+                "bbox": b.bbox,
+                "polygon": b.polygon,
+                "section_hierarchy": b.section_hierarchy,
+                "metadata": b.metadata,
+            }
+            for b in blocks
+        ]
+
+    def _save_blocks_json(self, doc_id: str, blocks_data: list[dict]) -> Path:
+        """Save blocks.json to repository."""
+        # Get the document directory from repository
+        doc_dir = self.repository.get_doc_dir(doc_id)
+        doc_dir.mkdir(parents=True, exist_ok=True)
+
+        blocks_path = doc_dir / "blocks.json"
+        blocks_path.write_text(
+            json.dumps(blocks_data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return blocks_path
+
+    async def _save_marker_images(self, doc_id: str, parse_result) -> list[FigureAsset]:
+        """Save images from Marker parse result."""
+        figures = []
+
+        for idx, (img_name, img_bytes) in enumerate(parse_result.images.items(), 1):
+            ext = img_name.split(".")[-1] if "." in img_name else "png"
+            fig_id = f"fig_{idx}"
+
+            # Save image
+            image_path = self.repository.save_image(
+                doc_id=doc_id,
+                image_id=fig_id,
+                data=img_bytes,
+                ext=ext,
+            )
+
+            # Find corresponding Figure block for page/caption
+            page = 1
+            caption = ""
+            for block in parse_result.blocks:
+                if block.block_type == "Figure":
+                    page = block.page
+                    caption = block.metadata.get("caption", "")
+                    break
+
+            figures.append(
+                FigureAsset(
+                    id=fig_id,
+                    page=page,
+                    path=str(image_path),
+                    ext=ext,
+                    width=0,  # Marker doesn't provide dimensions directly
+                    height=0,
+                    caption=caption,
+                    figure_type="",
+                    source="marker",
+                )
+            )
+
+        return figures
+
+    def _extract_tables_from_blocks(self, blocks: list) -> list[TableAsset]:
+        """Extract tables from Marker blocks."""
+        tables = []
+        table_idx = 0
+
+        for block in blocks:
+            if block.block_type == "Table":
+                table_idx += 1
+                tables.append(
+                    TableAsset(
+                        id=f"tab_{table_idx}",
+                        page=block.page,
+                        caption="",
+                        preview=block.text[:100] if block.text else "",
+                        markdown=block.text or "",
+                        row_count=0,  # Could parse from markdown
+                        col_count=0,
+                        has_header=True,
+                        source="marker",
+                    )
+                )
+
+        return tables
+
+    def _extract_sections_from_toc(self, toc: list[dict]) -> list[SectionAsset]:
+        """Convert Marker TOC to SectionAsset list."""
+        sections = []
+
+        for idx, item in enumerate(toc, 1):
+            sections.append(
+                SectionAsset(
+                    id=f"sec_{idx}",
+                    title=item.get("title", ""),
+                    level=item.get("level", 1),
+                    page=item.get("page", 0),
+                    start_line=0,
+                    end_line=0,
+                    preview="",
+                )
+            )
+
+        return sections
+
     async def _extract_and_save_images(
         self, doc_id: str, pdf_path: Path
     ) -> list[FigureAsset]:
@@ -211,6 +455,7 @@ class DocumentService:
                     width=img_data["width"],
                     height=img_data["height"],
                     caption=caption,
+                    figure_type="",
                     source=source,
                 )
             )

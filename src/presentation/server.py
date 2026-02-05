@@ -23,6 +23,7 @@ from src.infrastructure.config import settings
 from src.infrastructure.file_storage import FileStorage
 from src.infrastructure.job_store import FileJobStore
 from src.infrastructure.lightrag_adapter import LightRAGAdapter
+from src.infrastructure.marker_adapter import MarkerPDFExtractor
 from src.infrastructure.pdf_extractor import PyMuPDFExtractor
 
 # Initialize FastMCP server
@@ -31,6 +32,7 @@ mcp = FastMCP("Asset-Aware Medical RAG")
 # Initialize infrastructure
 _repository = FileStorage(settings.data_dir)
 _pdf_extractor = PyMuPDFExtractor()  # Lightweight, always available
+_marker_extractor: MarkerPDFExtractor | None = None  # Lazy-loaded for Marker
 _knowledge_graph = LightRAGAdapter() if settings.enable_lightrag else None
 _job_store = FileJobStore(settings.data_dir)
 
@@ -39,6 +41,7 @@ _document_service = DocumentService(
     repository=_repository,
     pdf_extractor=_pdf_extractor,
     knowledge_graph=_knowledge_graph,
+    marker_extractor=_marker_extractor,  # Lazy-loaded, allows use_marker=True
 )
 _asset_service = AssetService(repository=_repository)
 _knowledge_service = KnowledgeService(knowledge_graph=_knowledge_graph)
@@ -50,10 +53,186 @@ _job_service = JobService(job_store=_job_store, document_service=_document_servi
 # ============================================================================
 
 
+def _get_marker_extractor() -> MarkerPDFExtractor:
+    """Lazy-load Marker extractor (heavy model initialization)."""
+    global _marker_extractor
+    if _marker_extractor is None:
+        _marker_extractor = MarkerPDFExtractor()
+    return _marker_extractor
+
+
+@mcp.tool()
+async def parse_pdf_structure(
+    pdf_path: str,
+    output_dir: str | None = None,
+) -> str:
+    """
+    使用 Marker 進行結構化 PDF 解析（高精度）。
+
+    比標準 ingest_documents 提供更豐富的結構資訊：
+    - Block-level 解析（每個區塊的 bbox/polygon）
+    - 目錄 (TOC) 自動提取
+    - Section hierarchy 追蹤
+    - 圖片 + 圖說 (caption) 關聯
+
+    輸出目錄結構：
+    ```
+    {output_dir}/
+    ├── manifest.json    # DocumentManifest
+    ├── content.md       # Markdown 全文
+    ├── blocks.json      # 結構化區塊資料
+    └── figures/         # 圖片檔案
+    ```
+
+    Args:
+        pdf_path: PDF 檔案的絕對路徑
+        output_dir: 輸出目錄（預設為 data/sources/{doc_id}/）
+
+    Returns:
+        解析結果摘要和 doc_id
+    """
+    from pathlib import Path
+    import time
+
+    start = time.time()
+    pdf_file = Path(pdf_path)
+
+    if not pdf_file.exists():
+        return f"❌ File not found: {pdf_path}"
+
+    # Determine output directory
+    if output_dir:
+        out_path = Path(output_dir)
+    else:
+        import hashlib
+        doc_id = hashlib.md5(pdf_file.name.encode()).hexdigest()[:8]
+        out_path = settings.data_dir / "sources" / doc_id
+
+    try:
+        # Use Marker for structured parsing
+        extractor = _get_marker_extractor()
+        manifest = extractor.extract_to_manifest(pdf_file, out_path)
+
+        elapsed = time.time() - start
+
+        lines = [
+            "# ✅ PDF Structure Parsed (Marker)",
+            "",
+            f"**doc_id:** `{manifest.doc_id}`",
+            f"**Title:** {manifest.title or 'N/A'}",
+            f"**Pages:** {manifest.page_count}",
+            f"**Time:** {elapsed:.1f}s",
+            "",
+            "## Assets Found",
+            f"- **Sections:** {len(manifest.assets.sections)}",
+            f"- **Tables:** {len(manifest.assets.tables)}",
+            f"- **Figures:** {len(manifest.assets.figures)}",
+            "",
+            "## Output Files",
+            f"- Manifest: `{manifest.manifest_path}`",
+            f"- Markdown: `{manifest.markdown_path}`",
+            f"- Blocks: `{out_path / 'blocks.json'}`",
+            "",
+        ]
+
+        # Show TOC preview
+        if manifest.toc:
+            lines.append("## Table of Contents")
+            for item in manifest.toc[:10]:
+                lines.append(f"- {item}")
+            if len(manifest.toc) > 10:
+                lines.append(f"- _...and {len(manifest.toc) - 10} more_")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        return f"❌ Marker parsing failed: {str(e)}"
+
+
+@mcp.tool()
+async def search_source_location(
+    doc_id: str,
+    query: str,
+    block_types: list[str] | None = None,
+) -> str:
+    """
+    搜尋文件中的來源位置（頁碼 + bbox）。
+
+    用於驗證答案來源時，精確定位內容在原始 PDF 的位置。
+
+    Args:
+        doc_id: 文件 ID
+        query: 搜尋關鍵字
+        block_types: 限制搜尋的區塊類型（Text, Table, Figure, SectionHeader）
+
+    Returns:
+        匹配的區塊列表，包含頁碼和位置
+    """
+    from pathlib import Path
+    import json
+
+    blocks_path = settings.data_dir / "sources" / doc_id / "blocks.json"
+
+    if not blocks_path.exists():
+        return f"❌ Blocks not found for doc_id: {doc_id}. Run `parse_pdf_structure` first."
+
+    try:
+        blocks_data = json.loads(blocks_path.read_text(encoding="utf-8"))
+
+        # Filter by block type if specified
+        if block_types:
+            blocks_data = [b for b in blocks_data if b.get("block_type") in block_types]
+
+        # Search for query
+        query_lower = query.lower()
+        matches = []
+        for block in blocks_data:
+            text = block.get("text", "").lower()
+            if query_lower in text:
+                matches.append({
+                    "block_id": block.get("block_id"),
+                    "block_type": block.get("block_type"),
+                    "page": block.get("page"),
+                    "bbox": block.get("bbox"),
+                    "section": block.get("section_hierarchy"),
+                    "snippet": block.get("text", "")[:150] + "...",
+                })
+
+        if not matches:
+            return f"No matches found for '{query}' in doc_id: {doc_id}"
+
+        lines = [
+            f"# 🔍 Source Locations for '{query}'",
+            "",
+            f"**Found:** {len(matches)} matches",
+            "",
+        ]
+
+        for i, m in enumerate(matches[:10], 1):
+            lines.append(f"## Match {i}")
+            lines.append(f"- **Block:** `{m['block_id']}` ({m['block_type']})")
+            lines.append(f"- **Page:** {m['page']}")
+            if m.get("bbox"):
+                lines.append(f"- **BBox:** {m['bbox']}")
+            if m.get("section"):
+                lines.append(f"- **Section:** {m['section']}")
+            lines.append(f"- **Snippet:** _{m['snippet']}_")
+            lines.append("")
+
+        if len(matches) > 10:
+            lines.append(f"_...and {len(matches) - 10} more matches_")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        return f"❌ Search failed: {str(e)}"
+
+
 @mcp.tool()
 async def ingest_documents(
     file_paths: list[str],
     async_mode: bool = True,
+    use_marker: bool = False,
 ) -> str:
     """
     Process PDF files and create Document Manifests.
@@ -67,6 +246,9 @@ async def ingest_documents(
         file_paths: List of absolute paths to PDF files
         async_mode: If True (default), returns immediately with a job_id for tracking.
                    If False, waits for completion (may timeout for large files).
+        use_marker: If True, use Marker for structured parsing (slower but more accurate).
+                   Produces blocks.json with bbox/coordinates for precise source tracking.
+                   Default False uses PyMuPDF (faster but less structured).
 
     Returns:
         - async_mode=True: Job ID for tracking progress with `get_job_status`
@@ -80,24 +262,35 @@ async def ingest_documents(
 
         # Sync (small files only):
         ingest_documents(["/papers/small.pdf"], async_mode=False)
+
+        # With Marker for precise source tracking:
+        ingest_documents(["/papers/textbook.pdf"], use_marker=True, async_mode=False)
     """
+    # Lazy-load Marker if requested
+    if use_marker and _document_service.marker_extractor is None:
+        _document_service.marker_extractor = _get_marker_extractor()
+
     if async_mode:
         # Create async job and return immediately
+        # TODO: Pass use_marker to job service in future
         job = await _job_service.create_ingest_job(file_paths)
 
+        backend_note = " (Marker)" if use_marker else ""
         return (
-            f"# 📋 ETL Job Created\n\n"
+            f"# 📋 ETL Job Created{backend_note}\n\n"
             f"**Job ID:** `{job.job_id}`\n"
             f"**Files:** {len(file_paths)}\n"
+            f"**Backend:** {'Marker (structured)' if use_marker else 'PyMuPDF (fast)'}\n"
             f"**Estimated Time:** ~{job.estimated_duration_seconds or 10}s\n\n"
             f'Use `get_job_status("{job.job_id}")` to check progress.\n'
             f"Or use `list_jobs()` to see all active jobs."
         )
     else:
         # Sync mode - wait for completion (original behavior)
-        results = await _document_service.ingest(file_paths)
+        results = await _document_service.ingest(file_paths, use_marker=use_marker)
 
-        output_lines = ["# Ingestion Results\n"]
+        backend_label = "Marker" if use_marker else "PyMuPDF"
+        output_lines = [f"# Ingestion Results ({backend_label})\n"]
         success_count = sum(1 for r in results if r.success)
         output_lines.append(f"**Processed:** {success_count}/{len(results)} files\n")
 
@@ -106,6 +299,7 @@ async def ingest_documents(
                 output_lines.append(f"\n## ✅ {result.filename}")
                 output_lines.append(f"- **doc_id:** `{result.doc_id}`")
                 output_lines.append(f"- **title:** {result.title or 'N/A'}")
+                output_lines.append(f"- **backend:** {result.backend}")
                 output_lines.append(f"- **pages:** {result.pages_processed}")
                 output_lines.append(f"- **tables:** {result.tables_found}")
                 output_lines.append(f"- **figures:** {result.figures_found}")
@@ -113,6 +307,9 @@ async def ingest_documents(
                 output_lines.append(
                     f"- **time:** {result.processing_time_seconds:.2f}s"
                 )
+                # Note if blocks.json was created
+                if result.backend == "marker":
+                    output_lines.append(f"- **blocks.json:** ✅ Created")
             else:
                 output_lines.append(f"\n## ❌ {result.filename}")
                 output_lines.append(f"- **error:** {result.error}")

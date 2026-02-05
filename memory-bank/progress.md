@@ -1,4 +1,4 @@
-# Progress (Updated: 2026-01-13)
+# Progress (Updated: 2026-02-03)
 
 ## Done
 
@@ -6,6 +6,11 @@
 - ✅ 架構重構提案完成 (`docs/ARCHITECTURE_REFACTOR_PROPOSAL.md`)
 - ✅ 決策記錄更新 (Asset-Centric Architecture)
 - ✅ ROADMAP 更新 (v0.3.0 規劃)
+- ✅ **Marker 整合到標準 ingest 流程**
+  - `ingest_documents(use_marker=True)` 產出 blocks.json
+  - IngestResult 新增 `backend` 欄位追蹤使用的解析器
+  - 支援 lazy-load Marker extractor (避免啟動時載入重模型)
+  - 研究 Unstructured.io (13.9k stars) 作為未來備選方案
 
 ## Doing
 

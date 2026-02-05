@@ -196,6 +196,9 @@ class IngestResult(BaseModel):
     sections_found: int = 0
     processing_time_seconds: float = 0.0
 
+    # Backend info
+    backend: str = "pymupdf"  # "pymupdf" or "marker"
+
 
 class FetchResult(BaseModel):
     """Result of fetching an asset."""
