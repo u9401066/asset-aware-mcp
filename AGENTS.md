@@ -12,7 +12,8 @@
 
 - **MCP Server** - Asset-Aware Medical RAG
 - **語言**: Python 3.10+
-- **框架**: FastMCP, LightRAG, PyMuPDF
+- **框架**: FastMCP, LightRAG, PyMuPDF, marker-pdf
+- **策略**: 雙引擎 PDF 解析（PyMuPDF 快速 + Marker 高精度）
 
 ### 關鍵規則
 
@@ -29,6 +30,15 @@
 | `CONSTITUTION.md` | 專案憲法（最高原則） |
 | `memory-bank/` | 專案記憶庫 |
 | `docs/spec.md` | 技術規格 |
+| `docs/marker-etl-spec.md` | Marker ETL 規格書 |
+
+### 核心功能
+
+- 📄 **PDF ETL** — 雙引擎文件拆解（圖片、表格、章節）
+- 📊 **A2T** — Anything to Table 表格建立
+- 🧭 **Section Navigation** — 動態層級章節導航（4 Tools）
+- 🔍 **Knowledge Graph** — 跨文獻知識圖譜（LightRAG）
+- 🖼️ **Vision AI** — 圖片分析（base64 返回）
 
 ### LLM 後端
 

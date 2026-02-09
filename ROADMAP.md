@@ -4,6 +4,20 @@
 
 ## 已完成 ✅
 
+### v0.2.9 (2026-02-09) - Marker ETL 規格書與缺陷修復
+- [x] Marker ETL 完整規格書 (`docs/marker-etl-spec.md`)
+- [x] 171 個單元測試全部通過
+- [x] 修復 3 個 ETL 缺陷 (Figure-Block 匹配、Table row/col、圖片尺寸)
+- [x] 路徑慣例統一 (`data/{doc_id}/`)
+- [x] 指令與技能文件全面更新
+- [x] Presentation 層重構骨架 (mcp_app.py, dependencies.py, tools/, resources/)
+
+### v0.2.8 (2026-02-05) - 動態章節導航
+- [x] Section Navigation 4 工具 (list_section_tree, get_section_detail, get_section_blocks, search_sections)
+- [x] SectionNode/SectionTree Domain Model
+- [x] SectionService 快取機制
+- [x] Marker 整合到標準 ingest 流程 (`use_marker=True`)
+
 ### v0.2.7 (2026-01-06) - 圖片擷取策略優化
 - [x] 三層級圖片擷取策略 (XObject, Vector Clustering, Grid Scanning)
 - [x] VS Code Extension 路徑修復

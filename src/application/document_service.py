@@ -334,9 +334,28 @@ class DocumentService:
         )
         return blocks_path
 
+    @staticmethod
+    def _get_image_dimensions(img_bytes: bytes) -> tuple[int, int]:
+        """Read image dimensions from bytes using PIL."""
+        try:
+            import io
+
+            from PIL import Image
+
+            img = Image.open(io.BytesIO(img_bytes))
+            return img.size  # (width, height)
+        except Exception:
+            return (0, 0)
+
     async def _save_marker_images(self, doc_id: str, parse_result) -> list[FigureAsset]:
         """Save images from Marker parse result."""
         figures = []
+
+        # Collect all Figure blocks for 1:1 matching with images
+        figure_blocks = [
+            block for block in parse_result.blocks
+            if block.block_type == "Figure"
+        ]
 
         for idx, (img_name, img_bytes) in enumerate(parse_result.images.items(), 1):
             ext = img_name.split(".")[-1] if "." in img_name else "png"
@@ -350,14 +369,16 @@ class DocumentService:
                 ext=ext,
             )
 
-            # Find corresponding Figure block for page/caption
+            # Match corresponding Figure block by index (1:1 mapping)
             page = 1
             caption = ""
-            for block in parse_result.blocks:
-                if block.block_type == "Figure":
-                    page = block.page
-                    caption = block.metadata.get("caption", "")
-                    break
+            if idx - 1 < len(figure_blocks):
+                matched_block = figure_blocks[idx - 1]
+                page = matched_block.page
+                caption = matched_block.metadata.get("caption", "")
+
+            # Read actual image dimensions
+            width, height = self._get_image_dimensions(img_bytes)
 
             figures.append(
                 FigureAsset(
@@ -365,8 +386,8 @@ class DocumentService:
                     page=page,
                     path=str(image_path),
                     ext=ext,
-                    width=0,  # Marker doesn't provide dimensions directly
-                    height=0,
+                    width=width,
+                    height=height,
                     caption=caption,
                     figure_type="",
                     source="marker",
@@ -374,6 +395,23 @@ class DocumentService:
             )
 
         return figures
+
+    @staticmethod
+    def _parse_table_dimensions(markdown: str) -> tuple[int, int]:
+        """Parse row_count and col_count from markdown table text."""
+        if not markdown:
+            return (0, 0)
+        lines = [line.strip() for line in markdown.strip().splitlines() if line.strip()]
+        # Filter out separator lines like |---|---|
+        data_lines = [line for line in lines if not all(c in "-| :" for c in line)]
+        row_count = len(data_lines)
+        col_count = 0
+        if data_lines:
+            # Count columns from first data line
+            col_count = data_lines[0].count("|") - 1
+            if col_count < 0:
+                col_count = 0
+        return (row_count, col_count)
 
     def _extract_tables_from_blocks(self, blocks: list) -> list[TableAsset]:
         """Extract tables from Marker blocks."""
@@ -383,6 +421,7 @@ class DocumentService:
         for block in blocks:
             if block.block_type == "Table":
                 table_idx += 1
+                row_count, col_count = self._parse_table_dimensions(block.text)
                 tables.append(
                     TableAsset(
                         id=f"tab_{table_idx}",
@@ -390,8 +429,8 @@ class DocumentService:
                         caption="",
                         preview=block.text[:100] if block.text else "",
                         markdown=block.text or "",
-                        row_count=0,  # Could parse from markdown
-                        col_count=0,
+                        row_count=row_count,
+                        col_count=col_count,
                         has_header=True,
                         source="marker",
                     )

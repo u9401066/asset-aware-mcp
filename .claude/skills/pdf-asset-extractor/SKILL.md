@@ -11,9 +11,10 @@ description: MCP tools for PDF ingestion → extract figures, tables, sections �
 將 PDF 文件分解為可查詢的資產（圖片、表格、章節），並建立跨文獻知識圖譜。
 
 **核心能力**：
-- 📄 **PDF 匯入** → 自動提取圖片、表格、文字
+- 📄 **PDF 匯入** → 雙引擎（PyMuPDF 快速 / Marker 高精度）自動提取圖片、表格、文字
 - 🖼️ **圖片提取** → 以 base64 返回，支援 Vision AI 分析
 - 📊 **表格提取** → 轉換為 Markdown 格式
+- 🧭 **章節導航** → 動態層級 Section Tree（支援任意深度）
 - 🔍 **知識圖譜** → 跨文獻關係查詢 (LightRAG)
 - 📈 **圖譜視覺化** → 導出 Mermaid 圖表
 
@@ -24,6 +25,20 @@ description: MCP tools for PDF ingestion → extract figures, tables, sections �
 - 「取得圖片」、「fetch figure」、「拿表格」、「extract」
 - 「知識圖譜」、「cross-document」、「比較文獻」、「RAG」
 - 「視覺化圖譜」、「export graph」、「mermaid」
+- 「章節」、「section」、「導航」、「樹狀結構」
+
+---
+
+## 🔧 雙引擎策略
+
+| 引擎 | 強項 | 弱項 | 觸發方式 |
+|------|------|------|----------|
+| **PyMuPDF** (預設) | 快速、輕量 (~50MB) | 版面分析精度較低 | `ingest_documents()` |
+| **Marker** (高精度) | 精確 bbox、section hierarchy | 重模型 (~1GB)、較慢 | `ingest_documents(use_marker=True)` 或 `parse_pdf_structure()` |
+
+### Marker 產出額外資料
+- `blocks.json` — 結構化區塊（含 bbox、polygon、section_hierarchy）
+- 支援 Section Navigation 動態層級導航
 
 ---
 
@@ -55,7 +70,8 @@ description: MCP tools for PDF ingestion → extract figures, tables, sections �
 
 | Tool | 用途 | 參數 |
 |------|------|------|
-| `ingest_documents` | 匯入 PDF（ETL 流程） | `file_paths: list[str]`, `async_mode: bool` |
+| `ingest_documents` | 匯入 PDF（ETL 流程） | `file_paths: list[str]`, `async_mode: bool`, `use_marker: bool` |
+| `parse_pdf_structure` | Marker 結構化解析（單檔） | `file_path: str` |
 | `get_job_status` | 查詢 ETL 進度 | `job_id: str` |
 | `list_jobs` | 列出所有工作 | `active_only: bool` |
 | `cancel_job` | 取消 ETL 工作 | `job_id: str` |
@@ -67,6 +83,21 @@ description: MCP tools for PDF ingestion → extract figures, tables, sections �
 | `list_documents` | 列出所有已處理文件 | 無 |
 | `inspect_document_manifest` | 查看文件結構（圖/表/章節清單） | `doc_id: str` |
 | `fetch_document_asset` | 取得特定資產 | `doc_id`, `asset_type`, `asset_id` |
+
+### Section Navigation 🧭 (需 Marker blocks.json)
+
+| Tool | 用途 | 參數 |
+|------|------|------|
+| `list_section_tree` | 顯示完整 section hierarchy 樹狀結構 | `doc_id: str` |
+| `get_section_detail` | 取得特定 section 的詳細資訊 | `doc_id: str`, `section_path: str` |
+| `get_section_blocks` | 提取特定 section 的所有 blocks | `doc_id: str`, `section_path: str` |
+| `search_sections` | 搜尋 section 名稱 | `doc_id: str`, `query: str` |
+
+### 區塊搜尋 (Marker blocks)
+
+| Tool | 用途 | 參數 |
+|------|------|------|
+| `search_source_location` | 在 blocks.json 中搜尋特定內容 | `doc_id: str`, `query: str`, `block_types: list` |
 
 ### 知識圖譜
 

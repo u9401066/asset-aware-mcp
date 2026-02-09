@@ -7,11 +7,19 @@
 
 ## 專案概述
 
-這是一個 **AI 輔助開發專案模板**，整合了：
+這是一個 **MCP Server — Asset-Aware Medical RAG**，用於：
+- 📄 PDF 文件拆解（圖片、表格、章節提取）
+- 📊 A2T（Anything to Table）表格建立
+- 🔍 跨文獻知識圖譜（LightRAG）
+- 🖼️ Vision AI 圖片分析
+
+**技術架構**：
 - 憲法-子法層級規則系統
 - Claude Skills 模組化技能
 - Memory Bank 專案記憶
 - DDD + DAL 獨立架構
+- 雙引擎 PDF 解析：PyMuPDF（快速）+ Marker（高精度）
+- Section Navigation：動態層級章節導航
 
 ## 法規層級
 
@@ -71,16 +79,19 @@ uv add --dev pytest ruff mypy
 | Skill | 用途 |
 |-------|------|
 | `git-precommit` | Git 提交前編排器 |
+| `git-doc-updater` | Git 提交前文檔同步 |
 | `ddd-architect` | DDD 架構輔助 |
 | `code-refactor` | 主動重構與模組化 |
 | `memory-updater` | Memory Bank 同步 |
 | `memory-checkpoint` | 記憶檢查點（Summarize 前外部化） |
 | `readme-updater` | README 智能更新 |
+| `readme-i18n` | README 多語言同步（中英對照） |
 | `changelog-updater` | CHANGELOG 自動更新 |
 | `roadmap-updater` | ROADMAP 狀態追蹤 |
 | `code-reviewer` | 程式碼審查 |
 | `test-generator` | 測試生成（Unit/Integration/E2E） |
 | `project-init` | 專案初始化 |
+| `pdf-asset-extractor` | PDF→圖文分解+知識圖譜 |
 
 ## 💸 Memory Checkpoint 規則
 
@@ -115,10 +126,28 @@ uv add --dev pytest ruff mypy
 
 ```
 src/
-├── Domain/           # 核心領域（無外部依賴）
-├── Application/      # 應用層（用例編排）
-├── Infrastructure/   # 基礎設施（DAL、外部服務）
-└── Presentation/     # 呈現層（API、UI）
+├── domain/           # 核心領域（純業務邏輯，無外部依賴）
+│   ├── entities.py        # Document, Asset, Section 等核心實體
+│   ├── table_entities.py  # A2T 表格相關實體
+│   ├── section_tree.py    # SectionTree 章節樹結構
+│   ├── chunking.py        # 文本分塊策略
+│   └── repositories.py    # Repository 介面定義
+├── application/      # 應用層（用例編排）
+│   ├── document_service.py  # ETL 文件處理（雙引擎）
+│   ├── table_service.py     # A2T 表格服務
+│   ├── section_service.py   # 章節導航服務
+│   ├── asset_service.py     # 資產查詢服務
+│   ├── knowledge_service.py # 知識圖譜服務
+│   └── job_service.py       # 非同步工作管理
+├── infrastructure/   # 基礎設施（DAL、外部服務）
+│   ├── file_storage.py      # 檔案儲存 Repository 實作
+│   ├── pdf_extractor.py     # PyMuPDF 快速提取
+│   ├── marker_adapter.py    # Marker 高精度提取
+│   ├── excel_renderer.py    # Excel 渲染
+│   ├── lightrag_adapter.py  # LightRAG 知識圖譜
+│   └── config.py            # 配置管理
+└── presentation/     # 呈現層（MCP Server）
+    └── server.py            # FastMCP 工具/資源註冊
 ```
 
 ## 注意事項

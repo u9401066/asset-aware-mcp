@@ -28,18 +28,18 @@ class SectionService:
         初始化 Section Service。
         
         Args:
-            data_dir: 資料目錄（包含 sources/）
+            data_dir: 資料目錄（data/{doc_id}/ 結構）
         """
         self.data_dir = data_dir
         self._tree_cache: dict[str, SectionTree] = {}
     
     def _get_blocks_path(self, doc_id: str) -> Path:
         """取得 blocks.json 路徑。"""
-        return self.data_dir / "sources" / doc_id / "blocks.json"
+        return self.data_dir / doc_id / "blocks.json"
     
     def _get_manifest_path(self, doc_id: str) -> Path:
         """取得 manifest.json 路徑。"""
-        return self.data_dir / "sources" / doc_id / "manifest.json"
+        return self.data_dir / doc_id / f"{doc_id}_manifest.json"
     
     def _load_tree(self, doc_id: str) -> SectionTree | None:
         """

@@ -37,7 +37,10 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 
 ## ✨ 特色
 
-- 📄 **資產感知 ETL** - PDF → Markdown，使用 **PyMuPDF** 自動識別表格、章節與圖片。
+- 📄 **資產感知 ETL** - PDF → Markdown，**雙引擎** PDF 解析：
+  - **PyMuPDF**（預設）- 快速提取（~50MB）
+  - **Marker**（可選，`use_marker=True`）- 高精度結構化解析，產出含 bbox 座標的 `blocks.json`
+- 🧭 **章節導航** - 動態層級章節樹，提供 4 個工具：瀏覽、搜尋、詳情、區塊提取，支援任意深度的標題層級。
 - 🔄 **非同步任務流水線** - 支援大型文件的非同步處理與進度追蹤。
 - 🗺️ **文件清單 (Manifest)** - 為 Agent 提供結構化的文件「地圖」，實現精確數據存取。
 - 🧠 **LightRAG 整合** - 知識圖譜 + 向量索引，支援跨文件對比與推理。

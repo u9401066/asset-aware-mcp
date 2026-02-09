@@ -80,11 +80,13 @@ uv add --dev pytest ruff
 | Skill | 功能 | 觸發詞 |
 |-------|------|--------|
 | git-precommit | Git 提交前編排器 | `GIT`, `commit`, `push` |
+| git-doc-updater | Git 提交前文檔同步 | `docs`, `文檔`, `sync docs` |
 | ddd-architect | DDD 架構輔助 | `DDD`, `arch`, `新功能` |
 | code-refactor | 主動重構與模組化 | `RF`, `refactor`, `重構` |
 | memory-updater | Memory Bank 同步 | `MB`, `memory`, `記憶` |
 | memory-checkpoint | 記憶檢查點 | `CP`, `checkpoint`, `存檔` |
 | readme-updater | README 智能更新 | `readme`, `說明` |
+| readme-i18n | README 多語言同步 | `i18n`, `翻譯`, `translate` |
 | changelog-updater | CHANGELOG 自動更新 | `CL`, `changelog` |
 | roadmap-updater | ROADMAP 狀態追蹤 | `RM`, `roadmap` |
 | code-reviewer | 程式碼審查 | `CR`, `review`, `審查` |

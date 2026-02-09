@@ -79,7 +79,7 @@ async def parse_pdf_structure(
 
     輸出目錄結構：
     ```
-    {output_dir}/
+    data/{doc_id}/
     ├── manifest.json    # DocumentManifest
     ├── content.md       # Markdown 全文
     ├── blocks.json      # 結構化區塊資料
@@ -88,7 +88,7 @@ async def parse_pdf_structure(
 
     Args:
         pdf_path: PDF 檔案的絕對路徑
-        output_dir: 輸出目錄（預設為 data/sources/{doc_id}/）
+        output_dir: 輸出目錄（預設為 data/{doc_id}/）
 
     Returns:
         解析結果摘要和 doc_id
@@ -102,13 +102,13 @@ async def parse_pdf_structure(
     if not pdf_file.exists():
         return f"❌ File not found: {pdf_path}"
 
-    # Determine output directory
+    # Determine output directory (same convention as ingest_documents)
     if output_dir:
         out_path = Path(output_dir)
     else:
-        import hashlib
-        doc_id = hashlib.md5(pdf_file.name.encode()).hexdigest()[:8]
-        out_path = settings.data_dir / "sources" / doc_id
+        from src.domain.value_objects import DocId
+        doc_id_obj = DocId.generate(pdf_file.stem, str(pdf_file.absolute()))
+        out_path = settings.data_dir / doc_id_obj.value
 
     try:
         # Use Marker for structured parsing
@@ -173,10 +173,10 @@ async def search_source_location(
     from pathlib import Path
     import json
 
-    blocks_path = settings.data_dir / "sources" / doc_id / "blocks.json"
+    blocks_path = settings.data_dir / doc_id / "blocks.json"
 
     if not blocks_path.exists():
-        return f"❌ Blocks not found for doc_id: {doc_id}. Run `parse_pdf_structure` first."
+        return f"❌ Blocks not found for doc_id: {doc_id}. Run `ingest_documents` with `use_marker=True` first."
 
     try:
         blocks_data = json.loads(blocks_path.read_text(encoding="utf-8"))

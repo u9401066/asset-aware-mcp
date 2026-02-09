@@ -37,7 +37,10 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 
 ## ✨ Features
 
-- 📄 **Asset-Aware ETL** - PDF → Markdown, using **PyMuPDF** to automatically identify tables, sections, and images.
+- 📄 **Asset-Aware ETL** - PDF → Markdown with **dual-engine** PDF parsing:
+  - **PyMuPDF** (default) - Fast extraction (~50MB)
+  - **Marker** (optional, `use_marker=True`) - High-precision structured parsing with `blocks.json` (bbox/coordinates)
+- 🧭 **Section Navigation** - Dynamic hierarchy section tree with 4 tools: browse, search, detail, and block extraction for any depth of headings.
 - 🔄 **Async Job Pipeline** - Supports asynchronous task processing and progress tracking for large documents.
 - 🗺️ **Document Manifest** - Provides a structured "map" of the document for precise data access by Agents.
 - 🧠 **LightRAG Integration** - Knowledge Graph + Vector Index, supporting cross-document comparison and reasoning.
@@ -148,7 +151,7 @@ uv run python -m src.presentation.server
 | Category | Technology |
 |----------|------------|
 | Language | Python 3.10+ |
-| ETL | **PyMuPDF** (fitz) |
+| ETL | **PyMuPDF** (fitz) + **Marker** (optional, high-precision) |
 | RAG | LightRAG (lightrag-hku) |
 | MCP | FastMCP |
 | Storage | Local filesystem (JSON/Markdown/PNG) |

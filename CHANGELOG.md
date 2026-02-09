@@ -5,6 +5,31 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 專案遵循 [語義化版本](https://semver.org/lang/zh-TW/)。
 
+## [0.2.9] - 2026-02-09
+
+### Added
+- 📋 **Marker ETL 規格書** (`docs/marker-etl-spec.md`)：完整定義 PDF 結構化拆分的輸入/輸出契約、品質要求、驗收標準
+  - 10 類品質指標 (QM/QF/QT/QI/QS/QB/QG/QST/QMT/QE)
+  - 三層測試策略 (Unit → Integration → Benchmark)
+  - Block Type 對照表與 Definition of Done 清單
+- 🧪 **171 個單元測試全部通過**：
+  - `test_marker_blocks.py`: MarkerBlock/MarkerParseResult 模型驗證 (10 項)
+  - `test_marker_conversion.py`: Block→Asset 轉換與缺陷修復驗證 (27 項)
+  - `test_section_tree.py`: SectionTree 結構建構與查詢 (27 項)
+  - `test_section_service.py`: SectionService 服務層 (15 項)
+  - `test_marker_etl.py`: Integration test 骨架（需 Marker 模型）
+
+### Fixed
+- 🐛 **Figure-Block 匹配 bug**：修復所有圖片都匹配到第一個 Figure block 的問題，改為 index-based 1:1 匹配
+- 🐛 **Table row/col 未解析**：從 markdown 表格文字自動解析 `row_count` 和 `col_count`（原本固定為 0）
+- 🐛 **圖片尺寸為 0x0**：使用 PIL 讀取實際圖片尺寸（`width`/`height`），同時修復了 `document_service.py` 和 `marker_adapter.py`
+- 🔧 **路徑慣例統一**：修正 `SectionService` 和 `server.py` 使用 `data/sources/{doc_id}/` 與 `FileStorage` 使用 `data/{doc_id}/` 不一致問題，統一為 `data/{doc_id}/`
+- 🔧 **DocId 一致性**：修正 `marker_adapter.py` 使用原始 `hashlib.md5` 生成 doc_id，改為統一使用 `DocId.generate()`
+
+### Changed
+- 📝 **指令與技能文件更新**：同步更新 `copilot-instructions.md`、`CLAUDE.md`、`AGENTS.md`、`pdf-asset-extractor/SKILL.md` 以反映雙引擎 PDF 解析、Section Navigation 等新功能
+- 🏗️ **Presentation 層重構骨架**：新增 `mcp_app.py`（FastMCP 實例）、`dependencies.py`（Composition Root）、`tools/`、`resources/` 子模組結構（WIP）
+
 ## [0.2.8] - 2026-02-05
 
 ### Added
