@@ -4,6 +4,14 @@
 
 ## 已完成 ✅
 
+### v0.2.10 (2026-02-09) - Presentation 層模組化完成
+- [x] server.py 從 2122 行瘦身為 31 行 thin entry point
+- [x] 34 tools 分佈在 5 個模組 (document, section, job, knowledge, table)
+- [x] 12 resources 分佈在 2 個模組 (document, table)
+- [x] 修復 C2: use_marker 傳遞到 async job
+- [x] 修復 H1: list_documents 跳過 tables/jobs
+- [x] 修復 H4: _overlaps_existing_images 重疊檢測
+
 ### v0.2.9 (2026-02-09) - Marker ETL 規格書與缺陷修復
 - [x] Marker ETL 完整規格書 (`docs/marker-etl-spec.md`)
 - [x] 171 個單元測試全部通過

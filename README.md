@@ -57,14 +57,14 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 └─────────────────────┬───────────────────────────────────┘
                       │ MCP Protocol (Tools & Resources)
 ┌─────────────────────▼───────────────────────────────────┐
-│                 MCP Server (server.py)                  │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────┐   │
-│  │   ingest    │ │  inspect    │ │     fetch       │   │
-│  │  documents  │ │  manifest   │ │     asset       │   │
-│  └─────────────┘ └─────────────┘ └─────────────────┘   │
+│            MCP Server (Modular Presentation)            │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │          A2T (Anything to Table) Workflow       │   │
-│  │  [Plan] → [Draft] → [Batch Add] → [Commit]      │   │
+│  │ tools/: 34 tools in 5 modules                   │   │
+│  │   document (5) │ section (4) │ job (4)          │   │
+│  │   knowledge (2) │ table (19)                    │   │
+│  └─────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ resources/: 12 resources in 2 modules           │   │
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────┬───────────────────────────────────┘
                       │
