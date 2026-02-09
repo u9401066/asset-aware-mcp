@@ -6,6 +6,13 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
+## 🆕 What's New in v0.2.10
+
+- **Modular Architecture**: Server refactored from 2122 → 31 lines (thin entry point)
+- **34 MCP Tools** across 5 modules (Document, Section, Job, Knowledge, Table)
+- **12 MCP Resources** across 2 modules (Document, Table)
+- **Bug Fixes**: `use_marker` async mode, `list_documents` filtering, image overlap detection
+
 ## 🌟 Core Concept: Asset-Aware ETL
 
 This extension provides a sophisticated **ETL (Extract, Transform, Load) Pipeline** for AI Agents. Instead of feeding raw text to an LLM, it decomposes documents into a structured "Map" (Manifest), allowing Agents to precisely retrieve what they need.
@@ -18,10 +25,14 @@ This extension provides a sophisticated **ETL (Extract, Transform, Load) Pipelin
 
 ## ✨ Features
 
-- **📄 Asset-Aware ETL**: PDF → Markdown + Image extraction with page-level accuracy using **PyMuPDF**.
+- **📄 Dual-Engine PDF ETL**: 
+  - **PyMuPDF** (default) - Fast extraction (~50MB dependency)
+  - **Marker** (optional, `use_marker=True`) - High-precision with `blocks.json` containing bbox coordinates
+- **🧭 Section Navigation**: Dynamic hierarchy section tree with 4 tools for browsing, searching, and block extraction
 - **🔄 Async Jobs**: Track progress for large document batches with Job IDs.
 - **🗺️ Document Manifest**: A structured index that lets Agents "see" document structure before reading.
 - **🖼️ Visual Assets**: Extract figures as Base64 images for Vision-capable Agents.
+- **📊 A2T (Anything to Table)**: 19 tools for creating, editing, and exporting professional Excel tables
 - **🧠 Knowledge Graph**: Cross-document insights powered by LightRAG.
 - **🔌 MCP Native**: Seamless integration with VS Code Copilot Chat and Claude.
 - **🏠 Local-First**: Optimized for Ollama (local LLM) but supports OpenAI.
