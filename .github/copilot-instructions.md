@@ -1,10 +1,42 @@
 # Copilot 自定義指令
 
+> 📌 此檔案為 VS Code GitHub Copilot Agent Mode 與 Claude Code 的統一指引。
+
+---
+
+## 專案概述
+
+**MCP Server — Asset-Aware Medical RAG**
+
+| 項目 | 說明 |
+|------|------|
+| 語言 | Python 3.10+ |
+| 框架 | FastMCP, LightRAG, PyMuPDF, marker-pdf |
+| 策略 | 雙引擎 PDF 解析（PyMuPDF 快速 + Marker 高精度） |
+
+### 核心功能
+
+- 📄 **PDF ETL** — 雙引擎文件拆解（圖片、表格、章節）
+- 📊 **A2T** — Anything to Table 表格建立
+- 🧭 **Section Navigation** — 動態層級章節導航（4 Tools）
+- 🔍 **Knowledge Graph** — 跨文獻知識圖譜（LightRAG）
+- 🖼️ **Vision AI** — 圖片分析（base64 返回）
+
+### LLM 後端
+
+- **預設**: Ollama (本地) — `qwen2.5:7b` + `nomic-embed-text`
+- **備選**: OpenAI (需 API Key)
+
+---
+
 ## 開發哲學 💡
 
 > **「想要寫文件的時候，就更新 Memory Bank 吧！」**
 > 
 > **「想要零散測試的時候，就寫測試檔案進 tests/ 資料夾吧！」**
+
+- 不要另開檔案寫筆記，直接寫進 Memory Bank
+- 今天的零散測試，就是明天的回歸測試
 
 ---
 
@@ -129,3 +161,57 @@ uv add --dev pytest ruff
 - 提供清晰的步驟說明
 - 引用相關法規條文
 - 執行操作後更新 Memory Bank
+
+---
+
+## 目錄結構約定
+
+```
+src/
+├── domain/           # 核心領域（純業務邏輯，無外部依賴）
+│   ├── entities.py        # Document, Asset, Section 等核心實體
+│   ├── table_entities.py  # A2T 表格相關實體
+│   ├── section_tree.py    # SectionTree 章節樹結構
+│   ├── chunking.py        # 文本分塊策略
+│   └── repositories.py    # Repository 介面定義
+├── application/      # 應用層（用例編排）
+│   ├── document_service.py  # ETL 文件處理（雙引擎）
+│   ├── table_service.py     # A2T 表格服務
+│   ├── section_service.py   # 章節導航服務
+│   ├── asset_service.py     # 資產查詢服務
+│   ├── knowledge_service.py # 知識圖譜服務
+│   └── job_service.py       # 非同步工作管理
+├── infrastructure/   # 基礎設施（DAL、外部服務）
+│   ├── file_storage.py      # 檔案儲存 Repository 實作
+│   ├── pdf_extractor.py     # PyMuPDF 快速提取
+│   ├── marker_adapter.py    # Marker 高精度提取
+│   ├── excel_renderer.py    # Excel 渲染
+│   ├── lightrag_adapter.py  # LightRAG 知識圖譜
+│   └── config.py            # 配置管理
+└── presentation/     # 呈現層（MCP Server, 模組化）
+    ├── server.py            # Thin entry point (31 行)
+    ├── mcp_app.py           # FastMCP 單一實例
+    ├── dependencies.py      # Composition Root
+    ├── tools/               # 34 tools (5 模組)
+    │   ├── document_tools.py   # ETL (5)
+    │   ├── section_tools.py    # Navigation (4)
+    │   ├── job_tools.py        # Job management (4)
+    │   ├── knowledge_tools.py  # KG (2)
+    │   └── table_tools.py      # A2T (19)
+    └── resources/           # 12 resources (2 模組)
+        ├── document_resources.py  # Documents (7)
+        └── table_resources.py     # Tables (5)
+```
+
+---
+
+## 重要檔案參考
+
+| 檔案 | 用途 |
+|------|------|
+| `CONSTITUTION.md` | 專案憲法（最高原則） |
+| `memory-bank/` | 專案記憶庫 |
+| `docs/spec.md` | 技術規格 |
+| `docs/marker-etl-spec.md` | Marker ETL 規格書 |
+| `.github/bylaws/*.md` | 子法細則 |
+| `.claude/skills/*/SKILL.md` | 技能操作程序 |
