@@ -101,6 +101,10 @@ uv add --dev pytest ruff
 3. 📋 CHANGELOG 更新（如需要）
 4. 🗺️ ROADMAP 標記（如需要）
 
+**⚠️ PUSH 後必須檢查 CI 狀態！**
+- 推送完成後立即檢查 GitHub Actions 是否通過
+- 如有失敗，優先修復 CI 問題再繼續開發
+
 參見子法：`.github/bylaws/git-workflow.md`
 
 ---
