@@ -105,16 +105,49 @@ If the extension fails to start or the MCP server doesn't appear:
     *   Run `npm install`.
     *   Press `F5` to launch the **Extension Development Host**.
 
-## 📚 MCP Tools
+## 📚 MCP Tools (34 total)
 
+### Document ETL (5)
 | Tool | Description |
 |------|-------------|
-| `ingest_documents` | **ETL**: Process PDF files into structured assets |
-| `get_job_status` | **Status**: Track progress of ingestion jobs |
-| `list_documents` | List all ingested documents and their IDs |
-| `inspect_document_manifest` | **Map**: View the structure (Tables/Figures/Sections) |
-| `fetch_document_asset` | **Fetcher**: Get specific Table/Figure/Section content |
-| `consult_knowledge_graph` | **Brain**: Cross-document RAG queries |
+| `ingest_documents` | Process PDF files into structured assets |
+| `list_documents` | List all ingested documents |
+| `inspect_document_manifest` | View document structure (Tables/Figures/Sections) |
+| `fetch_document_asset` | Get specific Table/Figure/Section content |
+| `parse_pdf_structure` | Parse PDF structure without full ingestion |
+
+### Section Navigation (4)
+| Tool | Description |
+|------|-------------|
+| `list_section_tree` | Browse document section hierarchy |
+| `get_section_detail` | Get section metadata and stats |
+| `get_section_blocks` | Extract blocks from a section |
+| `search_sections` | Search sections by keyword |
+
+### Job Management (4)
+| Tool | Description |
+|------|-------------|
+| `get_job_status` | Track progress of ingestion jobs |
+| `list_jobs` | List all jobs |
+| `cancel_job` | Cancel a running job |
+| `search_source_location` | Find source location in documents |
+
+### Knowledge Graph (2)
+| Tool | Description |
+|------|-------------|
+| `consult_knowledge_graph` | Cross-document RAG queries |
+| `export_knowledge_graph` | Export knowledge graph data |
+
+### A2T - Anything to Table (19)
+| Tool | Description |
+|------|-------------|
+| `plan_table_schema` | AI-driven schema planning |
+| `create_table_draft` | Start a new draft |
+| `add_rows_to_draft` | Batch add rows to draft |
+| `commit_draft_to_table` | Finalize draft to table |
+| `resume_draft` / `resume_table` | Resume work with minimal context |
+| `create_table` / `add_rows` / `update_row` / `delete_row` | Direct CRUD |
+| `render_table` | Export to Excel with formatting |
 
 ## 🔗 Links
 
