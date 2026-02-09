@@ -84,7 +84,20 @@ class PyMuPDFExtractor(PDFExtractorInterface):
     _MIN_HEADING_LENGTH = 3
     # Patterns that should never be headings (figure labels, page markers, etc.)
     _HEADING_NOISE_RE = re.compile(
-        r"^(?:[a-z]|OPEN|www\.|http|\d+|[A-Z]{1,2})$", re.IGNORECASE
+        r"^(?:"
+        r"[a-z]$"            # single lowercase letter
+        r"|OPEN$"            # "OPEN" label
+        r"|www\."            # URLs
+        r"|http"             # URLs
+        r"|\d+$"             # pure numbers
+        r"|[A-Z]{1,2}$"     # 1-2 uppercase letters
+        r"|arXiv:\S+"        # arXiv identifiers like "arXiv:1512.03385v1"
+        r"|layers$"          # table column headers
+        r"|filters$"
+        r"|params$"
+        r"|output size$"
+        r")",
+        re.IGNORECASE,
     )
     # Minimum dimensions for figures (skip tiny icons/logos)
     _MIN_FIGURE_PX = 50
@@ -104,6 +117,30 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         r"^\s*(?:Figure|FIGURE|Fig\.?)\s+(\d+)\s*[.:,]?\s*(.*)",
         re.IGNORECASE | re.MULTILINE,
     )
+    # Numbered section heading pattern for bold text detection
+    # Matches: "1. Introduction", "3.1. Methods", "A.2 Appendix Detail"
+    _NUMBERED_SECTION_RE = re.compile(
+        r"^(?:[A-Z]?\d+\.(?:\d+\.)*)\s+\S",
+    )
+    # Standalone section keywords (bold, as heading even without numbers)
+    _SECTION_KEYWORDS = frozenset({
+        "abstract", "introduction", "conclusion", "conclusions",
+        "references", "acknowledgements", "acknowledgments",
+        "appendix", "supplementary",
+    })
+
+    @staticmethod
+    def _section_level_from_number(text: str) -> int:
+        """Determine heading level from numbered section prefix.
+
+        "1. Intro" → 1, "3.1. Methods" → 2, "3.1.1. Detail" → 3
+        """
+        m = re.match(r"^[A-Z]?(\d+(?:\.\d+)*)", text)
+        if not m:
+            return 1
+        parts = m.group(1).split(".")
+        depth = len([p for p in parts if p])  # count non-empty parts
+        return min(depth, 3)  # cap at H3
 
     def _extract_page_text(self, page: fitz.Page) -> str:
         """Extract text from a single page with basic formatting."""
@@ -124,6 +161,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
 
                     font_size = span.get("size", 12)
                     flags = span.get("flags", 0)
+                    is_bold = bool(flags & 16)
                     stripped = text.strip()
 
                     # Detect headings by font size
@@ -133,16 +171,33 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                         and not self._HEADING_NOISE_RE.match(stripped)
                     )
 
+                    heading_applied = False
                     if is_heading_candidate:
                         if font_size > 16:
                             text = f"# {text}"
+                            heading_applied = True
                         elif font_size > 14:
                             text = f"## {text}"
+                            heading_applied = True
                         elif font_size > 12:
                             text = f"### {text}"
+                            heading_applied = True
+
+                    # Strategy 2: Bold numbered section headings
+                    # (catches double-column papers where headings are same
+                    #  font size as body text, just bold)
+                    if not heading_applied and is_bold and is_heading_candidate:
+                        if self._NUMBERED_SECTION_RE.match(stripped):
+                            level = self._section_level_from_number(stripped)
+                            prefix = "#" * min(level + 1, 4)  # +1 since title is H1/H2
+                            text = f"{prefix} {text}"
+                            heading_applied = True
+                        elif stripped.lower() in self._SECTION_KEYWORDS:
+                            text = f"## {text}"
+                            heading_applied = True
 
                     # Detect bold (flag bit 2^4 = 16)
-                    if flags & 16 and not text.startswith("#"):
+                    if is_bold and not heading_applied:
                         text = f"**{text}**"
 
                     line_text += text

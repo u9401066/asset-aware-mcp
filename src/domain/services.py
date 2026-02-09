@@ -35,6 +35,20 @@ class ManifestGenerator:
         re.IGNORECASE,
     )
 
+    # Section titles that are noise (table column headers, etc.)
+    # "# layers" means "number of layers", not a heading
+    _SECTION_NOISE_RE = re.compile(
+        r"^(?:"
+        r"layers|filters|ﬁlters|params|output size"  # table column headers
+        r"|output map size"
+        r"|method|error"
+        r"|[a-z]"          # single lowercase letter
+        r"|\d+$"           # pure numbers
+        r"|[A-Z]{1,2}$"   # 1-2 uppercase letters only
+        r")$",
+        re.IGNORECASE,
+    )
+
     def generate(
         self,
         doc_id: str,
@@ -162,8 +176,19 @@ class ManifestGenerator:
                 if not title:
                     continue
 
-                # Generate section ID
-                sec_id = f"sec_{re.sub(r'[^a-z0-9]', '_', title.lower())[:30]}"
+                # Skip noise headings (table column headers like "# layers")
+                if self._SECTION_NOISE_RE.match(title):
+                    continue
+
+                # Generate section ID (deduplicate with counter)
+                base_id = f"sec_{re.sub(r'[^a-z0-9]', '_', title.lower())[:30]}"
+                sec_id = base_id
+                existing_ids = {s.id for s in sections}
+                if sec_id in existing_ids:
+                    counter = 2
+                    while f"{base_id}_{counter}" in existing_ids:
+                        counter += 1
+                    sec_id = f"{base_id}_{counter}"
 
                 # Find section end (next header of same or higher level)
                 end_line = len(lines)
@@ -202,39 +227,59 @@ class ManifestGenerator:
             page = int(match.group(1))
         return page
 
+    # Patterns that are NOT valid titles (arXiv stamps, noise, etc.)
+    _TITLE_NOISE_RE = re.compile(
+        r"^(?:"
+        r"arXiv:\S+"  # arXiv identifiers
+        r"|OPEN$"     # Noise label
+        r"|\d+$"      # Pure numbers
+        r")",
+        re.IGNORECASE,
+    )
+
     def _detect_title(self, markdown: str) -> str:
         """
         Detect document title from markdown.
 
         Strategy:
         1. Merge consecutive H1 headings (often split across lines in PDFs)
-        2. Fallback to first non-empty line
+        2. If no H1, try consecutive H2 headings
+        3. Fallback to first non-empty line
         """
         lines = markdown.split("\n")
-        h1_titles: list[str] = []
-        collecting = False
 
-        for line in lines:
-            stripped = line.strip()
-            if not stripped or stripped.startswith("<!--"):
-                continue
+        # Try H1 first, then H2
+        for target_level in ("#", "##"):
+            titles: list[str] = []
+            collecting = False
 
-            header_match = re.match(r"^#\s+(.+)$", stripped)
-            if header_match:
-                title_text = header_match.group(1).strip()
-                # Skip noise headings
-                if len(title_text) < 3 or title_text in ("OPEN",):
-                    if collecting:
-                        break  # Stop collecting after noise
+            for line in lines:
+                stripped = line.strip()
+                if not stripped or stripped.startswith("<!--"):
                     continue
-                h1_titles.append(title_text)
-                collecting = True
-            elif collecting:
-                # Stop collecting when we hit non-H1 content
-                break
 
-        if h1_titles:
-            return " ".join(h1_titles)
+                header_match = re.match(
+                    rf"^{re.escape(target_level)}\s+(.+)$", stripped
+                )
+                if header_match:
+                    title_text = header_match.group(1).strip()
+                    # Skip noise headings
+                    if (
+                        len(title_text) < 3
+                        or self._TITLE_NOISE_RE.match(title_text)
+                        or self._SECTION_NOISE_RE.match(title_text)
+                    ):
+                        if collecting:
+                            break  # Stop collecting after noise
+                        continue
+                    titles.append(title_text)
+                    collecting = True
+                elif collecting:
+                    # Stop collecting when we hit non-target content
+                    break
+
+            if titles:
+                return " ".join(titles)
 
         # Fallback: first non-empty line
         for line in markdown.split("\n"):

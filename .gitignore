@@ -17,6 +17,11 @@ build/
 *.egg-info/
 *.egg
 
+# Python caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
 # 編輯器
 *.swp
 *.swo

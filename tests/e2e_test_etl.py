@@ -2,11 +2,13 @@
 End-to-end ETL test: Ingest multiple real PDFs and validate extraction quality.
 
 Tests:
-1. 41598_2018_Article_27126.pdf  - Music playschool (Scientific Reports, 10 pages)
-2. attention_is_all_you_need.pdf - Transformer paper (arXiv, 15 pages)
-3. nobel_chemistry_2024.pdf      - Nobel Prize report
-4. docling_paper.pdf             - Docling Technical Report
-5. gpt4_medical.pdf              - GPT-4 Medical paper
+1. 41598_2018_Article_27126.pdf       - Music playschool (Scientific Reports, 10 pages)
+2. attention_is_all_you_need.pdf      - Transformer paper (arXiv, 15 pages)
+3. nobel_chemistry_2024.pdf           - Nobel Prize report
+4. docling_paper.pdf                  - Docling Technical Report
+5. gpt4_medical.pdf                   - GPT-4 Medical paper
+6. resnet_deep_residual_learning.pdf  - ResNet (arXiv, 12p, double-column, vector graphics)
+7. bert_pretraining.pdf               - BERT (arXiv, 16p, double-column, table-heavy)
 
 Usage:
     uv run pytest tests/e2e_test_etl.py -v
@@ -462,6 +464,167 @@ class TestGPT4Medical:
         sections = self.data["sections"]
         noise = [s for s in sections if len(s["title"].strip()) <= 2]
         assert len(noise) == 0, f"Found noise: {[s['title'] for s in noise]}"
+
+
+# ---------------------------------------------------------------------------
+# Test 6: ResNet (Deep Residual Learning, arXiv 2015)
+# ---------------------------------------------------------------------------
+
+
+class TestResNet:
+    """ResNet paper - double-column, 12 pages, vector graphics, many comparison tables."""
+
+    @pytest.fixture(autouse=True, scope="class")
+    def ingest(self, service):
+        for d in DATA_DIR.glob("doc_resnet*"):
+            shutil.rmtree(d, ignore_errors=True)
+
+        data = _clean_and_ingest(service, "resnet_deep_residual_learning.pdf")
+        _print_summary(data, "ResNet (Deep Residual Learning, arXiv 2015)")
+        self.__class__._data = data
+
+    @property
+    def data(self):
+        return self.__class__._data
+
+    def test_title_detected(self):
+        """Title should contain 'deep residual' or 'image recognition'."""
+        title = self.data["result"].title.lower()
+        assert "deep residual" in title or "image recognition" in title or "resnet" in title, (
+            f"Bad title: {self.data['result'].title}"
+        )
+
+    def test_sections_exist(self):
+        """Should have sections from font-size heuristics (no PDF TOC)."""
+        sections = self.data["sections"]
+        assert len(sections) >= 3, f"Expected >=3 sections, got {len(sections)}"
+
+    def test_key_sections_present(self):
+        """Should have key sections like Introduction, Related Work, etc."""
+        titles = [s["title"].lower() for s in self.data["sections"]]
+        expected_any = ["introduction", "related work", "deep residual", "experiment", "imagenet"]
+        found = [e for e in expected_any if any(e in t for t in titles)]
+        assert len(found) >= 2, f"Expected key sections, found: {found}"
+
+    def test_tables_present(self):
+        """ResNet has many comparison tables (CIFAR, ImageNet results)."""
+        tables = self.data["tables"]
+        assert len(tables) >= 3, f"Expected >=3 tables, got {len(tables)}"
+
+    def test_no_noise_tables(self):
+        """Tables should not be empty or single-column."""
+        tables = self.data["tables"]
+        noise = [t for t in tables if t.get("row_count", 0) < 1 or t.get("col_count", 0) < 2]
+        assert len(noise) == 0, f"Noise tables: {[t['id'] for t in noise]}"
+
+    def test_table_captions(self):
+        """At least some tables should have captions."""
+        tables = self.data["tables"]
+        captioned = [t for t in tables if t.get("caption")]
+        print(f"  Tables with captions: {len(captioned)}/{len(tables)}")
+        for t in captioned:
+            print(f"    {t['id']}: {t['caption'][:60]}")
+
+    def test_no_noise_headings(self):
+        """Should NOT have single-letter noise headings."""
+        sections = self.data["sections"]
+        noise = [s for s in sections if len(s["title"].strip()) <= 2]
+        assert len(noise) == 0, f"Found noise headings: {[s['title'] for s in noise]}"
+
+    def test_markdown_complete(self):
+        """Full markdown should contain key content."""
+        md = self.data["markdown"].lower()
+        assert "residual" in md
+        assert len(self.data["markdown"]) > 5000
+
+
+# ---------------------------------------------------------------------------
+# Test 7: BERT (Pre-training of Deep Bidirectional Transformers, arXiv 2019)
+# ---------------------------------------------------------------------------
+
+
+class TestBERT:
+    """BERT paper - double-column, 16 pages, tables with results, figures."""
+
+    @pytest.fixture(autouse=True, scope="class")
+    def ingest(self, service):
+        for d in DATA_DIR.glob("doc_bert*"):
+            shutil.rmtree(d, ignore_errors=True)
+
+        data = _clean_and_ingest(service, "bert_pretraining.pdf")
+        _print_summary(data, "BERT (Pre-training Transformers, arXiv 2019)")
+        self.__class__._data = data
+
+    @property
+    def data(self):
+        return self.__class__._data
+
+    def test_title_detected(self):
+        """Title should contain 'BERT' or 'pre-training'."""
+        title = self.data["result"].title.lower()
+        assert "bert" in title or "pre-training" in title, (
+            f"Bad title: {self.data['result'].title}"
+        )
+
+    def test_sections_exist(self):
+        """Should have sections from font-size heuristics (no PDF TOC)."""
+        sections = self.data["sections"]
+        assert len(sections) >= 3, f"Expected >=3 sections, got {len(sections)}"
+
+    def test_key_sections_present(self):
+        """Should have key sections like Introduction, BERT, Experiments, etc."""
+        titles = [s["title"].lower() for s in self.data["sections"]]
+        expected_any = ["introduction", "bert", "experiment", "related work", "fine-tuning", "conclusion"]
+        found = [e for e in expected_any if any(e in t for t in titles)]
+        assert len(found) >= 2, f"Expected key sections, found: {found}"
+
+    def test_tables_present(self):
+        """BERT paper has many benchmark comparison tables."""
+        tables = self.data["tables"]
+        assert len(tables) >= 3, f"Expected >=3 tables, got {len(tables)}"
+
+    def test_no_noise_tables(self):
+        """Tables should not be empty or single-column."""
+        tables = self.data["tables"]
+        noise = [t for t in tables if t.get("row_count", 0) < 1 or t.get("col_count", 0) < 2]
+        assert len(noise) == 0, f"Noise tables: {[t['id'] for t in noise]}"
+
+    def test_table_captions(self):
+        """At least some tables should have captions."""
+        tables = self.data["tables"]
+        captioned = [t for t in tables if t.get("caption")]
+        print(f"  Tables with captions: {len(captioned)}/{len(tables)}")
+        for t in captioned:
+            print(f"    {t['id']}: {t['caption'][:60]}")
+
+    def test_figures_present(self):
+        """BERT paper has figures (architecture diagrams, etc.)."""
+        figures = self.data["figures"]
+        assert len(figures) >= 1, f"Expected >=1 figure, got {len(figures)}"
+
+    def test_figure_captions(self):
+        """Figures with captions should have meaningful text."""
+        figures = self.data["figures"]
+        captioned = [f for f in figures if f.get("caption")]
+        if captioned:
+            print(f"  Figures with captions: {len(captioned)}/{len(figures)}")
+            for f_ in captioned[:3]:
+                print(f"    {f_['id']}: {f_['caption'][:60]}")
+            for f_ in captioned:
+                cap = f_["caption"]
+                assert len(cap) > 20, f"Caption too short (false positive?): {cap}"
+
+    def test_no_noise_headings(self):
+        """Should NOT have single-letter noise headings."""
+        sections = self.data["sections"]
+        noise = [s for s in sections if len(s["title"].strip()) <= 2]
+        assert len(noise) == 0, f"Found noise headings: {[s['title'] for s in noise]}"
+
+    def test_markdown_complete(self):
+        """Full markdown should contain key content."""
+        md = self.data["markdown"].lower()
+        assert "bert" in md
+        assert len(self.data["markdown"]) > 5000
 
 
 # ---------------------------------------------------------------------------
