@@ -13,7 +13,6 @@ Document Tools - ETL + 文件管理 MCP 工具
 from __future__ import annotations
 
 import json
-from typing import Literal
 
 from mcp.types import ImageContent, TextContent
 

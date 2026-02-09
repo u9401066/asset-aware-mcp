@@ -12,7 +12,6 @@ Infrastructure Layer - Marker PDF Adapter
 
 from __future__ import annotations
 
-import hashlib
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -344,8 +343,8 @@ class MarkerPDFExtractor:
                 # Parse row/col counts from markdown
                 row_count, col_count = 0, 0
                 if block.text:
-                    lines = [l.strip() for l in block.text.strip().splitlines() if l.strip()]
-                    data_lines = [l for l in lines if not all(c in "-| :" for c in l)]
+                    lines = [line.strip() for line in block.text.strip().splitlines() if line.strip()]
+                    data_lines = [line for line in lines if not all(c in "-| :" for c in line)]
                     row_count = len(data_lines)
                     if data_lines:
                         col_count = max(data_lines[0].count("|") - 1, 0)

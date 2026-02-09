@@ -14,7 +14,6 @@ from src.application.document_service import DocumentService
 from src.application.job_service import JobService
 from src.application.knowledge_service import KnowledgeService
 from src.application.section_service import SectionService
-from src.application.table_service import table_service
 from src.infrastructure.config import settings
 from src.infrastructure.file_storage import FileStorage
 from src.infrastructure.job_store import FileJobStore
