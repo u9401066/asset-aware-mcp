@@ -40,11 +40,11 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 📄 **資產感知 ETL** - PDF → Markdown，**雙引擎** PDF 解析：
   - **PyMuPDF**（預設）- 快速提取（~50MB）
   - **Marker**（可選，`use_marker=True`）- 高精度結構化解析，產出含 bbox 座標的 `blocks.json`
-- 🧭 **章節導航** - 動態層級章節樹，提供 4 個工具：瀏覽、搜尋、詳情、區塊提取，支援任意深度的標題層級。
+- 🧭 **章節導航** - 動態層級章節樹，提供 5 個工具：瀏覽、搜尋、詳情、內容讀取、區塊提取，支援任意深度的標題層級。
 - 🔄 **非同步任務流水線** - 支援大型文件的非同步處理與進度追蹤。
 - 🗺️ **文件清單 (Manifest)** - 為 Agent 提供結構化的文件「地圖」，實現精確數據存取。
 - 🧠 **LightRAG 整合** - 知識圖譜 + 向量索引，支援跨文件對比與推理。
-- 📊 **A2T (Anything to Table)** - 自動將 Agent 提取的資訊編排為專業 Excel 表格，支援 CRUD、**草稿機制**與**節省 Token 的續作模式**。
+- 📊 **A2T (Anything to Table)** - 7 個 operation-based 工具，從**任意來源**（PDF 資產、知識圖譜、URL、使用者輸入）建立專業表格。支援：**引用管理** (AssetRef)、**變更審計**、**Schema 演進**、**模板**、**草稿機制**與**節省 Token 的續作模式**。
 - 🖥️ **VS Code 管理擴充功能** - 提供圖形化介面監控伺服器狀態、已匯入文件，以及 **A2T 表格與草稿**，支援一鍵開啟 Excel。
 - 🔌 **MCP 伺服器** - 透過 FastMCP 向 Copilot/Claude 開放工具與資源。
 - 🏥 **醫療研究優化** - 針對醫療文獻優化，支援 Base64 圖片傳輸供 Vision AI 分析。
@@ -59,9 +59,9 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP 伺服器 (模組化 Presentation 層)          │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 39 工具，6 個模組                       │   │
-│  │   document (6) │ section (4) │ job (3)          │   │
-│  │   knowledge (2) │ table (19) │ profile (5)      │   │
+│  │ tools/: 28 工具，6 個模組                       │   │
+│  │   document (6) │ section (5) │ job (3)          │   │
+│  │   knowledge (2) │ table (7)  │ profile (5)      │   │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │ resources/: 12 資源，2 個模組                   │   │
@@ -133,18 +133,22 @@ uv run python -m src.presentation.server
 | `get_section_detail` | 取得特定章節的詳細資訊 |
 | `get_section_blocks` | 提取章節內所有區塊（含頁碼 + bbox） |
 | `search_sections` | 搜尋章節標題 |
+| `get_section_content` | 讀取章節內容 |
 
-### A2T (Anything to Table) 工具
+### A2T (Anything to Table) 工具 — 7 個 Operation-Based 工具
 
-| 工具 | 用途 |
-|------|------|
-| `plan_table_schema` | AI 驅動的表格結構規劃與腦力激盪 |
-| `create_table_draft` | 開啟持久化草稿階段（節省 Token）|
-| `add_rows_to_draft` | 批量向草稿新增數據 |
-| `commit_draft_to_table` | 將草稿正式轉為表格檔案 |
-| `resume_draft` / `resume_table` | 以極小上下文恢復工作（節省 Token）|
-| `update_cell` | 精確的儲存格等級編輯 |
-| `render_table` | 渲染為專業 Excel 檔案（含條件格式）|
+> Agent-friendly 設計：每個工具透過 `operation` 參數處理多種操作。
+> 表格接受**任意來源** — PDF 資產、KG 實體、外部 URL 或使用者輸入。
+
+| 工具 | 操作 | 用途 |
+|------|------|------|
+| `plan_table` | `schema` / `templates` / `from_template` | 規劃表格結構、瀏覽 4 個內建模板、從模板建表 |
+| `table_manage` | `create` / `delete` / `list` / `preview` / `resume` / `render` / `add_column` / `remove_column` / `rename_column` | 表格生命週期 + Schema 演進 |
+| `table_data` | `add_rows` / `get_row` / `update_row` / `delete_row` / `get_cell` / `update_cell` / `clear_cell` | 資料列與儲存格 CRUD |
+| `table_cite` | `add` / `get` / `remove` / `cell_history` | 引用管理（AssetRef 7 種來源類型） |
+| `table_history` | `changes` / `tokens` | 變更審計軌跡 + Token 估算 |
+| `table_draft` | `create` / `update` / `add_rows` / `resume` / `commit` / `list` / `delete` | 草稿工作流（持久化、斷點續傳） |
+| `discover_sources` | — | 跨文件資料來源探索（sections、tables、figures、KG） |
 
 ### ETL Profile 工具
 

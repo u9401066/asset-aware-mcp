@@ -11,14 +11,9 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.presentation.server import (
-    cancel_job,
-    get_job_status,
-    ingest_documents,
-    list_documents,
-    list_jobs,
-    mcp,
-)
+from src.presentation.server import mcp  # noqa: F401 — registers all tools
+from src.presentation.tools.document_tools import ingest_documents, list_documents
+from src.presentation.tools.job_tools import cancel_job, get_job_status, list_jobs
 
 
 async def test_job_system():

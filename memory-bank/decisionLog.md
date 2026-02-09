@@ -2,6 +2,11 @@
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-02-10 | A2T 工具合併 19→7 (operation-based) | 減少工具總量 28%，降低 Agent 認知負擔，用 Literal type 統一入口 |
+| 2026-02-10 | AssetRef 支援 7 種來源類型 | 做表 ≠ 拆解，表格應接受任意來源（PDF/KG/URL/口述） |
+| 2026-02-10 | Citation 作為平行附加層 | 不改變 rows list[dict] 結構，用 dict[str, CellCitation] 側掛 |
+| 2026-02-10 | ChangeEntry 自動審計 | 所有寫入操作自動記錄，支援 cell-level 歷史追溯 |
+| 2026-02-10 | get_section_content 移至 section_tools | 語意上屬於 section 導航，不應在 table_tools |
 | 2025-12-15 | 採用憲法-子法層級架構 | 類似 speckit 的規則層級，可擴展且清晰 |
 | 2025-12-15 | DDD + DAL 獨立架構 | 業務邏輯與資料存取分離，提高可測試性 |
 | 2025-12-15 | Skills 模組化拆分 | 單一職責，可組合使用，易於維護 |

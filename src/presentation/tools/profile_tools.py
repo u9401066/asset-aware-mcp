@@ -7,7 +7,7 @@ Allows users to list, view, and switch between profiles for different document f
 
 from __future__ import annotations
 
-from src.domain.etl_profile import ETLProfile, ETLProfileRegistry
+from src.domain.etl_profile import ETLProfileRegistry
 from src.presentation.mcp_app import mcp
 
 

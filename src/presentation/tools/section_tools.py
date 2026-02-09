@@ -6,13 +6,14 @@ Section Tools - Section 動態層級導航 MCP 工具
 - get_section_detail: 取得 section 詳情
 - get_section_blocks: 取得 section 的 blocks
 - search_sections: 搜尋 section 名稱
+- get_section_content: 讀取章節內容（省 Token 的精確讀取）
 """
 
 from __future__ import annotations
 
 from typing import Literal
 
-from src.presentation.dependencies import section_service
+from src.presentation.dependencies import asset_service, section_service
 from src.presentation.mcp_app import mcp
 
 
@@ -154,3 +155,42 @@ async def search_sections(
            - Pages: 2980-2982
     """
     return await section_service.search_sections(doc_id, query, fuzzy)
+
+
+@mcp.tool()
+async def get_section_content(
+    doc_id: str,
+    section_id: str,
+) -> str:
+    """
+    📖 Section-level 快取：直接讀取特定章節內容。
+
+    比讀取全文更省 Token！從 manifest 的 sections 直接讀取
+    特定行範圍，不需要載入整份文件。
+
+    Args:
+        doc_id: 文件 ID
+        section_id: 章節 ID（從 manifest 獲取）
+
+    Returns:
+        章節內容（Markdown 格式）
+    """
+    result = await asset_service.fetch_asset(doc_id, "section", section_id)
+
+    if not result.success:
+        return f"❌ Error: {result.error}"
+
+    content = result.text_content or ""
+    est_tokens = len(content) // 4
+
+    lines = [
+        f"## Section: {section_id}",
+        f"**Page:** {result.page or 'Unknown'}",
+        f"**Est. Tokens:** ~{est_tokens}",
+        "",
+        "---",
+        "",
+        content,
+    ]
+
+    return "\n".join(lines)

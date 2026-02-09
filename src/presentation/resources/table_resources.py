@@ -15,14 +15,23 @@ import json
 
 from src.presentation.dependencies import table_service
 from src.presentation.mcp_app import mcp
-from src.presentation.tools.table_tools import list_drafts, list_tables
 
 
 @mcp.resource("tables://list")
 async def resource_table_list() -> str:
     """Dynamic resource listing all A2T tables."""
-    result: str = await list_tables()
-    return result
+    tables = table_service.list_tables()
+    if not tables:
+        return "No tables found."
+    lines = ["# 📊 Tables\n"]
+    lines.append("| ID | Title | Intent | Rows | Created |")
+    lines.append("|----|-------|--------|------|---------|")
+    for t in tables:
+        lines.append(
+            f"| `{t['id']}` | {t['title']} | {t['intent']} "
+            f"| {t['rows']} | {t['created_at']} |"
+        )
+    return "\n".join(lines)
 
 
 @mcp.resource("table://{table_id}/content")
@@ -67,8 +76,19 @@ async def resource_table_status(table_id: str) -> str:
 @mcp.resource("drafts://list")
 async def resource_draft_list() -> str:
     """Dynamic resource listing all A2T drafts."""
-    result: str = await list_drafts()
-    return result
+    drafts = table_service.list_drafts()
+    if not drafts:
+        return "No drafts found."
+    lines = ["# 📝 Drafts\n"]
+    lines.append("| ID | Title | Intent | Columns | Pending | Status |")
+    lines.append("|----|-------|--------|---------|---------|--------|")
+    for d in drafts:
+        status = "✅ Has Table" if d["has_table"] else "⏳ Planning"
+        lines.append(
+            f"| `{d['id']}` | {d['title']} | {d['intent'] or '-'} "
+            f"| {d['columns_planned']} | {d['pending_rows']} | {status} |"
+        )
+    return "\n".join(lines)
 
 
 @mcp.resource("draft://{draft_id}/content")

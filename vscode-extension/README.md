@@ -6,12 +6,14 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-## 🆕 What's New in v0.2.10
+## 🆕 What's New in v0.2.14
 
-- **Modular Architecture**: Server refactored from 2122 → 31 lines (thin entry point)
-- **39 MCP Tools** across 6 modules (Document, Section, Job, Knowledge, Table, Profile)
-- **12 MCP Resources** across 2 modules (Document, Table)
-- **Bug Fixes**: `use_marker` async mode, `list_documents` filtering, image overlap detection
+- **A2T Tool Consolidation**: 19 → 7 operation-based tools (total: 39 → 28 tools)
+- **Citation System**: AssetRef with 7 source types + CellCitation parallel layer
+- **Audit Trail**: Automatic change tracking for all table operations
+- **Schema Evolution**: Add/remove/rename columns dynamically
+- **4 Built-in Templates**: drug_comparison, study_summary, citation_extract, pico_analysis
+- **Source Discovery**: Cross-document search returning AssetRef for citations
 
 ## 🌟 Core Concept: Asset-Aware ETL
 
@@ -28,11 +30,11 @@ This extension provides a sophisticated **ETL (Extract, Transform, Load) Pipelin
 - **📄 Dual-Engine PDF ETL**: 
   - **PyMuPDF** (default) - Fast extraction (~50MB dependency)
   - **Marker** (optional, `use_marker=True`) - High-precision with `blocks.json` containing bbox coordinates
-- **🧭 Section Navigation**: Dynamic hierarchy section tree with 4 tools for browsing, searching, and block extraction
+- **🧭 Section Navigation**: Dynamic hierarchy section tree with 5 tools for browsing, searching, content reading, and block extraction
 - **🔄 Async Jobs**: Track progress for large document batches with Job IDs.
 - **🗺️ Document Manifest**: A structured index that lets Agents "see" document structure before reading.
 - **🖼️ Visual Assets**: Extract figures as Base64 images for Vision-capable Agents.
-- **📊 A2T (Anything to Table)**: 19 tools for creating, editing, and exporting professional Excel tables
+- **📊 A2T (Anything to Table)**: 7 operation-based tools for creating tables from any source with citations, audit trail, and Excel export
 - **🧠 Knowledge Graph**: Cross-document insights powered by LightRAG.
 - **🔌 MCP Native**: Seamless integration with VS Code Copilot Chat and Claude.
 - **🏠 Local-First**: Optimized for Ollama (local LLM) but supports OpenAI.
@@ -116,7 +118,7 @@ If the extension fails to start or the MCP server doesn't appear:
     *   Run `npm install`.
     *   Press `F5` to launch the **Extension Development Host**.
 
-## 📚 MCP Tools (39 total)
+## 📚 MCP Tools (28 total)
 
 ### Document ETL (6)
 | Tool | Description |
@@ -127,21 +129,21 @@ If the extension fails to start or the MCP server doesn't appear:
 | `fetch_document_asset` | Get specific Table/Figure/Section content |
 | `parse_pdf_structure` | Parse PDF structure without full ingestion |
 
-### Section Navigation (4)
+### Section Navigation (5)
 | Tool | Description |
 |------|-------------|
 | `list_section_tree` | Browse document section hierarchy |
 | `get_section_detail` | Get section metadata and stats |
 | `get_section_blocks` | Extract blocks from a section |
 | `search_sections` | Search sections by keyword |
+| `get_section_content` | Read section content via asset service |
 
-### Job Management (4)
+### Job Management (3)
 | Tool | Description |
 |------|-------------|
 | `get_job_status` | Track progress of ingestion jobs |
 | `list_jobs` | List all jobs |
 | `cancel_job` | Cancel a running job |
-| `search_source_location` | Find source location in documents |
 
 ### Knowledge Graph (2)
 | Tool | Description |
@@ -149,16 +151,25 @@ If the extension fails to start or the MCP server doesn't appear:
 | `consult_knowledge_graph` | Cross-document RAG queries |
 | `export_knowledge_graph` | Export knowledge graph data |
 
-### A2T - Anything to Table (19)
+### A2T — Anything to Table (7 operation-based)
+| Tool | Operations | Description |
+|------|-----------|-------------|
+| `plan_table` | `schema` / `templates` / `from_template` | Schema planning & template management |
+| `table_manage` | `create` / `delete` / `list` / `preview` / `resume` / `render` / `add_column` / `remove_column` / `rename_column` | Table lifecycle + schema evolution |
+| `table_data` | `add_rows` / `get_row` / `update_row` / `delete_row` / `get_cell` / `update_cell` / `clear_cell` | Row & cell CRUD |
+| `table_cite` | `add` / `get` / `remove` / `cell_history` | Citation management (AssetRef, 7 source types) |
+| `table_history` | `changes` / `tokens` | Audit trail & token estimation |
+| `table_draft` | `create` / `update` / `add_rows` / `resume` / `commit` / `list` / `delete` | Draft workflow with persistence |
+| `discover_sources` | — | Cross-document source discovery |
+
+### ETL Profile (5)
 | Tool | Description |
 |------|-------------|
-| `plan_table_schema` | AI-driven schema planning |
-| `create_table_draft` | Start a new draft |
-| `add_rows_to_draft` | Batch add rows to draft |
-| `commit_draft_to_table` | Finalize draft to table |
-| `resume_draft` / `resume_table` | Resume work with minimal context |
-| `create_table` / `add_rows` / `update_row` / `delete_row` | Direct CRUD |
-| `render_table` | Export to Excel with formatting |
+| `list_etl_profiles` | List available profiles |
+| `get_etl_profile` | Get profile configuration |
+| `get_current_etl_profile` | Show active profile |
+| `set_etl_profile` | Switch profile |
+| `load_etl_profile_from_json` | Load custom profile |
 
 ## 🔗 Links
 

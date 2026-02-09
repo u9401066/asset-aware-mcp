@@ -14,9 +14,7 @@ from pathlib import Path
 
 import pytest
 
-
 from src.application.section_service import SectionService
-
 
 # ============================================================================
 # Fixtures

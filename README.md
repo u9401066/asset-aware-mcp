@@ -40,11 +40,11 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 - 📄 **Asset-Aware ETL** - PDF → Markdown with **dual-engine** PDF parsing:
   - **PyMuPDF** (default) - Fast extraction (~50MB)
   - **Marker** (optional, `use_marker=True`) - High-precision structured parsing with `blocks.json` (bbox/coordinates)
-- 🧭 **Section Navigation** - Dynamic hierarchy section tree with 4 tools: browse, search, detail, and block extraction for any depth of headings.
+- 🧭 **Section Navigation** - Dynamic hierarchy section tree with 5 tools: browse, search, detail, content reading, and block extraction for any depth of headings.
 - 🔄 **Async Job Pipeline** - Supports asynchronous task processing and progress tracking for large documents.
 - 🗺️ **Document Manifest** - Provides a structured "map" of the document for precise data access by Agents.
 - 🧠 **LightRAG Integration** - Knowledge Graph + Vector Index, supporting cross-document comparison and reasoning.
-- 📊 **A2T (Anything to Table)** - Automatically orchestrate information extracted by Agents into professional Excel tables, supporting CRUD, **Drafting**, and **Token-efficient resumption**.
+- 📊 **A2T (Anything to Table)** - 7 operation-based tools for building professional tables from **any source** (PDF assets, Knowledge Graph, URLs, user input). Features: **Citations** (AssetRef), **Audit Trail**, **Schema Evolution**, **Templates**, **Drafting**, and **Token-efficient resumption**.
 - 🖥️ **VS Code Management Extension** - Graphical interface for monitoring server status, ingested documents, and **A2T tables/drafts** with one-click Excel export.
 - 🔌 **MCP Server** - Exposes tools and resources to Copilot/Claude via FastMCP.
 - 🏥 **Medical Research Focus** - Optimized for medical literature, supporting Base64 image transmission for Vision AI analysis.
@@ -59,9 +59,9 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP Server (Modular Presentation)            │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 39 tools in 6 modules                   │   │
-│  │   document (6) │ section (4) │ job (3)          │   │
-│  │   knowledge (2) │ table (19) │ profile (5)      │   │
+│  │ tools/: 28 tools in 6 modules                   │   │
+│  │   document (6) │ section (5) │ job (3)          │   │
+│  │   knowledge (2) │ table (7)  │ profile (5)      │   │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │ resources/: 12 resources in 2 modules           │   │
@@ -133,18 +133,22 @@ uv run python -m src.presentation.server
 | `get_section_detail` | Get detailed info for a specific section |
 | `get_section_blocks` | Extract all blocks from a section with page + bbox |
 | `search_sections` | Search section titles |
+| `get_section_content` | Read section content via asset service |
 
-### A2T (Anything to Table) Tools
+### A2T (Anything to Table) Tools — 7 Operation-Based Tools
 
-| Tool | Purpose |
-|------|---------|
-| `plan_table_schema` | AI-driven schema planning & brainstorming |
-| `create_table_draft` | Start a persistent draft session (Token-efficient) |
-| `add_rows_to_draft` | Batch add data to draft |
-| `commit_draft_to_table` | Finalize draft into a formal table |
-| `resume_draft` / `resume_table` | Resume work with minimal context (Save tokens) |
-| `update_cell` | Precise cell-level editing |
-| `render_table` | Render to professional Excel file (with conditional formatting) |
+> Agent-friendly design: each tool handles multiple operations via `operation` parameter.
+> Tables accept **any source** — PDF assets, KG entities, external URLs, or user input.
+
+| Tool | Operations | Purpose |
+|------|-----------|----------|
+| `plan_table` | `schema` / `templates` / `from_template` | Schema planning, browse 4 built-in templates, create from template |
+| `table_manage` | `create` / `delete` / `list` / `preview` / `resume` / `render` / `add_column` / `remove_column` / `rename_column` | Table lifecycle + Schema evolution |
+| `table_data` | `add_rows` / `get_row` / `update_row` / `delete_row` / `get_cell` / `update_cell` / `clear_cell` | Row & cell CRUD |
+| `table_cite` | `add` / `get` / `remove` / `cell_history` | Citation management with AssetRef (7 source types) |
+| `table_history` | `changes` / `tokens` | Audit trail & token estimation |
+| `table_draft` | `create` / `update` / `add_rows` / `resume` / `commit` / `list` / `delete` | Draft workflow with persistence |
+| `discover_sources` | — | Cross-document source discovery (sections, tables, figures, KG) |
 
 ### ETL Profile Tools
 

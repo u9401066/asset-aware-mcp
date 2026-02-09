@@ -7,6 +7,27 @@
 
 ## [Unreleased]
 
+## [0.2.14] - 2026-02-10
+
+### Added
+
+- **A2T 工具合併 (19 → 7)**：`plan_table`, `table_manage`, `table_data`, `table_cite`, `table_history`, `table_draft`, `discover_sources`
+- **AssetRef** frozen dataclass — 統一資產引用，支援 7 種來源類型 (section, figure, table, full_text, kg_entity, external, user_input)
+- **CellCitation** — 儲存格級引用管理，作為表格資料的平行附加層
+- **ChangeEntry + TableChangeLog** — 自動變更審計軌跡
+- **TableTemplate** — 4 內建模板 (drug_comparison, study_summary, citation_extract, pico_analysis)
+- **Schema Evolution** — add_column, remove_column, rename_column 欄位動態演進
+- **Cell-level CRUD** — get_row, get_cell, clear_cell 精細資料操作
+- **discover_sources** — 跨文件資料來源探索，整合 Documents + Knowledge Graph
+- `get_section_content` 從 table_tools 移至 section_tools (5 section tools)
+- 68 新測試 (test_asset_ref.py: 22, test_citation_audit.py: 46)
+
+### Changed
+
+- 總工具數：39 → **28**（↓28%，功能反而增加）
+- table_resources.py 改為直接呼叫 service 而非 import tool functions
+- test_mcp_tools.py 修正 import 路徑
+
 ## [0.2.11] - 2026-02-09
 
 ### Added

@@ -10,15 +10,14 @@ Unit Tests — Marker Block 轉換邏輯
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
 from src.application.document_service import DocumentService
-from src.domain.entities import IngestResult, TableAsset, SectionAsset, FigureAsset
-from src.infrastructure.marker_adapter import MarkerBlock, MarkerParseResult
+from src.domain.entities import IngestResult
+from src.infrastructure.marker_adapter import MarkerBlock
 
 
 @pytest.fixture
@@ -294,8 +293,9 @@ class TestGetImageDimensions:
 
     def test_valid_png(self):
         """有效 PNG 圖片可讀取尺寸。"""
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         img = Image.new("RGB", (200, 100))
         buf = io.BytesIO()
@@ -342,8 +342,9 @@ class TestSaveMarkerImagesFigureMatching:
     @pytest.mark.asyncio
     async def test_multiple_figures_matched_correctly(self, service_with_mock: DocumentService):
         """每張圖片匹配到對應的 Figure block（不是全部匹配第一個）。"""
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         # 建立 3 張假圖片
         images = {}
@@ -376,8 +377,9 @@ class TestSaveMarkerImagesFigureMatching:
     @pytest.mark.asyncio
     async def test_image_dimensions_populated(self, service_with_mock: DocumentService):
         """圖片尺寸被正確讀取（不再是 0x0）。"""
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         img = Image.new("RGB", (320, 240))
         buf = io.BytesIO()
@@ -397,8 +399,9 @@ class TestSaveMarkerImagesFigureMatching:
     @pytest.mark.asyncio
     async def test_more_images_than_figure_blocks(self, service_with_mock: DocumentService):
         """圖片多於 Figure blocks 時，多餘的用 page=1, caption=''。"""
-        from PIL import Image
         import io
+
+        from PIL import Image
 
         images = {}
         for i in range(1, 4):

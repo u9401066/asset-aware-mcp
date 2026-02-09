@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import pytest
 
-from src.domain.section_tree import SectionNode, SectionTree, build_section_tree_from_blocks
-
+from src.domain.section_tree import (
+    SectionNode,
+    build_section_tree_from_blocks,
+)
 
 # ============================================================================
 # Fixtures

@@ -9,8 +9,6 @@ Unit Tests — Marker Block 資料模型
 
 from __future__ import annotations
 
-import pytest
-
 from src.infrastructure.marker_adapter import MarkerBlock, MarkerParseResult
 
 

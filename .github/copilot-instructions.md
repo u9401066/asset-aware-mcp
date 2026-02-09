@@ -18,7 +18,7 @@
 
 - 📄 **PDF ETL** — 雙引擎文件拆解（圖片、表格、章節）
 - 📊 **A2T** — Anything to Table 表格建立
-- 🧭 **Section Navigation** — 動態層級章節導航（4 Tools）
+- 🧭 **Section Navigation** — 動態層級章節導航（5 Tools）
 - 🔍 **Knowledge Graph** — 跨文獻知識圖譜（LightRAG）
 - 🖼️ **Vision AI** — 圖片分析（base64 返回）
 
@@ -201,13 +201,13 @@ src/
     ├── server.py            # Thin entry point (31 行)
     ├── mcp_app.py           # FastMCP 單一實例
     ├── dependencies.py      # Composition Root
-    ├── tools/               # 39 tools (6 模組)
+    ├── tools/               # 28 tools (6 模組)
     │   ├── document_tools.py   # ETL (6)
-    │   ├── section_tools.py    # Navigation (4)
+    │   ├── section_tools.py    # Navigation (5)
     │   ├── job_tools.py        # Job management (3)
     │   ├── knowledge_tools.py  # KG (2)
     │   ├── profile_tools.py    # Profile (5)
-    │   └── table_tools.py      # A2T (19)
+    │   └── table_tools.py      # A2T (7) — operation-based
     └── resources/           # 12 resources (2 模組)
         ├── document_resources.py  # Documents (7)
         └── table_resources.py     # Tables (5)

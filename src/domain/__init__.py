@@ -22,9 +22,24 @@ from .entities import (
     SectionAsset,
     TableAsset,
 )
-from .etl_profile import ETLProfile, ETLProfileRegistry, FontThresholds, FigureTableFilter
+from .etl_profile import (
+    ETLProfile,
+    ETLProfileRegistry,
+    FigureTableFilter,
+    FontThresholds,
+)
 from .job import Job, JobProgress, JobStatus, JobSummary, JobType
-from .value_objects import AssetType, DocId, ImageMediaType
+from .table_entities import (
+    CellCitation,
+    ChangeEntry,
+    ColumnDef,
+    TableChangeLog,
+    TableContext,
+    TableDraft,
+    TableSchema,
+    TableTemplate,
+)
+from .value_objects import AssetRef, AssetType, DocId, ImageMediaType, SourceType
 
 __all__ = [
     # Chunking
@@ -58,8 +73,19 @@ __all__ = [
     "JobStatus",
     "JobSummary",
     "JobType",
+    # Table Entities
+    "CellCitation",
+    "ChangeEntry",
+    "ColumnDef",
+    "TableChangeLog",
+    "TableContext",
+    "TableDraft",
+    "TableSchema",
+    "TableTemplate",
     # Value Objects
+    "AssetRef",
     "AssetType",
     "DocId",
     "ImageMediaType",
+    "SourceType",
 ]

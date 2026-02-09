@@ -1,7 +1,8 @@
 """
 Application Layer - Table Service
 
-Orchestrates table creation, data accumulation, and rendering.
+Orchestrates table creation, data accumulation, rendering,
+citation management, audit trail, and schema evolution.
 """
 
 import json
@@ -11,7 +12,16 @@ from pathlib import Path
 from typing import Any, Literal
 
 from src.domain.repositories import TableRendererInterface
-from src.domain.table_entities import ColumnDef, TableContext, TableDraft
+from src.domain.table_entities import (
+    CellCitation,
+    ChangeEntry,
+    ColumnDef,
+    TableChangeLog,
+    TableContext,
+    TableDraft,
+    TableTemplate,
+)
+from src.domain.value_objects import AssetRef
 
 
 class TableService:
@@ -42,12 +52,20 @@ class TableService:
 
     def _load_existing_tables(self) -> None:
         """Load table metadata from disk on startup."""
-        for json_file in self.storage_dir.glob("*.json"):
+        for json_file in self.storage_dir.glob("tbl_*.json"):
             try:
                 with open(json_file, encoding="utf-8") as f:
                     data = json.load(f)
                     # Reconstruct TableContext
                     col_defs = [ColumnDef(**c) for c in data["columns"]]
+                    # Reconstruct citations
+                    citations: dict[str, CellCitation] = {}
+                    for key, cite_data in data.get("citations", {}).items():
+                        citations[key] = CellCitation.from_dict(cite_data)
+                    # Reconstruct change log
+                    change_log = None
+                    if "change_log" in data:
+                        change_log = TableChangeLog.from_dict(data["change_log"])
                     context = TableContext(
                         id=data["id"],
                         intent=data["intent"],
@@ -56,6 +74,8 @@ class TableService:
                         rows=data["rows"],
                         source_description=data.get("source_description", ""),
                         created_at=data.get("created_at", ""),
+                        citations=citations,
+                        change_log=change_log,
                     )
                     self._tables[context.id] = context
             except Exception:
@@ -65,7 +85,7 @@ class TableService:
         """Persist table state to JSON and Markdown."""
         # Save JSON state
         json_path = self.storage_dir / f"{context.id}.json"
-        state = {
+        state: dict[str, Any] = {
             "id": context.id,
             "intent": context.intent,
             "title": context.title,
@@ -84,6 +104,15 @@ class TableService:
             if isinstance(context.created_at, datetime)
             else context.created_at,
         }
+        # Persist citations
+        if context.citations:
+            state["citations"] = {
+                key: cite.to_dict() for key, cite in context.citations.items()
+            }
+        # Persist change log
+        if context.change_log and context.change_log.entries:
+            state["change_log"] = context.change_log.to_dict()
+
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(state, f, indent=2, ensure_ascii=False)
 
@@ -121,15 +150,18 @@ class TableService:
         )
 
         self._tables[table_id] = context
+        self._record_change(
+            context,
+            "create",
+            "table",
+            new_value={"title": title, "intent": intent},
+        )
         self._save_table(context)
         return table_id
 
     def add_rows(self, table_id: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
         """Add rows to an existing table and update persistence."""
-        if table_id not in self._tables:
-            raise ValueError(f"Table not found: {table_id}")
-
-        context = self._tables[table_id]
+        context = self._get_context(table_id)
         added_count = 0
         errors = []
 
@@ -142,6 +174,9 @@ class TableService:
                 added_count += 1
 
         if added_count > 0:
+            self._record_change(
+                context, "add_rows", "table", new_value={"count": added_count}
+            )
             self._save_table(context)
 
         return {
@@ -155,10 +190,7 @@ class TableService:
         self, table_id: str, index: int, row: dict[str, Any]
     ) -> dict[str, Any]:
         """Update an existing row by index."""
-        if table_id not in self._tables:
-            raise ValueError(f"Table not found: {table_id}")
-
-        context = self._tables[table_id]
+        context = self._get_context(table_id)
         if index < 0 or index >= len(context.rows):
             raise ValueError(f"Invalid row index: {index}")
 
@@ -166,22 +198,51 @@ class TableService:
         if row_errors:
             return {"success": False, "errors": row_errors}
 
+        old_row = dict(context.rows[index])
         context.rows[index] = row
+        self._record_change(
+            context, "update_row", f"row:{index}", old_value=old_row, new_value=row
+        )
         self._save_table(context)
         return {"success": True}
 
     def delete_row(self, table_id: str, index: int) -> dict[str, Any]:
         """Delete a row by index."""
-        if table_id not in self._tables:
-            raise ValueError(f"Table not found: {table_id}")
-
-        context = self._tables[table_id]
+        context = self._get_context(table_id)
         if index < 0 or index >= len(context.rows):
             raise ValueError(f"Invalid row index: {index}")
 
+        old_row = dict(context.rows[index])
         context.rows.pop(index)
+        # Shift citation keys for rows after deleted row
+        self._shift_citation_keys(context, index)
+        self._record_change(
+            context, "delete_row", f"row:{index}", old_value=old_row
+        )
         self._save_table(context)
         return {"success": True, "total_rows": context.row_count}
+
+    def _shift_citation_keys(self, context: TableContext, deleted_index: int) -> None:
+        """After deleting a row, shift citation keys for rows above it."""
+        # Remove citations for deleted row
+        to_remove = [
+            k
+            for k in context.citations
+            if k.startswith(f"{deleted_index}:")
+        ]
+        for k in to_remove:
+            del context.citations[k]
+
+        # Shift keys for rows after deleted index
+        new_citations: dict[str, CellCitation] = {}
+        for k, v in context.citations.items():
+            row_str, col = k.split(":", 1)
+            row_idx = int(row_str)
+            if row_idx > deleted_index:
+                new_citations[f"{row_idx - 1}:{col}"] = v
+            else:
+                new_citations[k] = v
+        context.citations = new_citations
 
     def delete_table(self, table_id: str) -> bool:
         """Delete a table and its files."""
@@ -203,6 +264,8 @@ class TableService:
                 "title": t.title,
                 "intent": t.intent,
                 "rows": t.row_count,
+                "columns": t.column_names,
+                "citations": len(t.citations),
                 "created_at": str(t.created_at),
             }
             for t in self._tables.values()
@@ -212,21 +275,19 @@ class TableService:
         self, table_id: str, row_index: int, column_name: str, value: Any
     ) -> dict[str, Any]:
         """Update a single cell in the table."""
-        if table_id not in self._tables:
-            raise ValueError(f"Table not found: {table_id}")
-
-        context = self._tables[table_id]
-        if row_index < 0 or row_index >= len(context.rows):
-            raise ValueError(f"Invalid row index: {row_index}")
-
-        # Verify column exists
-        col_names = {col.name for col in context.columns}
-        if column_name not in col_names:
-            raise ValueError(f"Unknown column: '{column_name}'")
+        context = self._get_context(table_id)
+        self._validate_cell_address(context, row_index, column_name)
 
         # Update the cell
         old_value = context.rows[row_index].get(column_name)
         context.rows[row_index][column_name] = value
+        self._record_change(
+            context,
+            "update_cell",
+            f"row:{row_index}/col:{column_name}",
+            old_value=old_value,
+            new_value=value,
+        )
         self._save_table(context)
 
         return {
@@ -239,10 +300,7 @@ class TableService:
 
     def get_table_status(self, table_id: str) -> dict[str, Any]:
         """Get compact status of a table for resumption."""
-        if table_id not in self._tables:
-            raise ValueError(f"Table not found: {table_id}")
-
-        context = self._tables[table_id]
+        context = self._get_context(table_id)
         col_names = [col.name for col in context.columns]
 
         return {
@@ -251,6 +309,7 @@ class TableService:
             "intent": context.intent,
             "columns": col_names,
             "row_count": context.row_count,
+            "citation_count": len(context.citations),
             "source_description": context.source_description,
             "created_at": str(context.created_at),
             # Compact: only show last 2 rows to save tokens
@@ -259,8 +318,7 @@ class TableService:
 
     def preview_table(self, table_id: str, limit: int = 10) -> str:
         """Generate a Markdown preview of the table."""
-        if table_id not in self._tables:
-            raise ValueError(f"Table not found: {table_id}")
+        context = self._get_context(table_id)
 
         context = self._tables[table_id]
         if not context.columns:
@@ -288,9 +346,7 @@ class TableService:
 
     def get_table_context(self, table_id: str) -> TableContext:
         """Retrieve the full table context."""
-        if table_id not in self._tables:
-            raise ValueError(f"Table not found: {table_id}")
-        return self._tables[table_id]
+        return self._get_context(table_id)
 
     async def render_table(
         self,
@@ -299,8 +355,7 @@ class TableService:
         filename: str = "output",
     ) -> dict[str, Any]:
         """Render the table to the specified format."""
-        if table_id not in self._tables:
-            raise ValueError(f"Table not found: {table_id}")
+        context = self._get_context(table_id)
 
         context = self._tables[table_id]
         if context.row_count == 0:
@@ -324,6 +379,402 @@ class TableService:
             }
         else:
             raise NotImplementedError(f"Format '{format}' is not yet supported.")
+
+    # =========================================================================
+    # Audit Trail Recording
+    # =========================================================================
+
+    def _record_change(
+        self,
+        context: TableContext,
+        operation: str,
+        target: str,
+        old_value: Any = None,
+        new_value: Any = None,
+        citations: list[AssetRef] | None = None,
+    ) -> None:
+        """Record a change entry in the table's change log."""
+        if context.change_log is None:
+            context.change_log = TableChangeLog(table_id=context.id)
+        entry = ChangeEntry(
+            timestamp=datetime.now(),
+            operation=operation,
+            target=target,
+            old_value=old_value,
+            new_value=new_value,
+            citations=citations or [],
+        )
+        context.change_log.add(entry)
+
+    def get_change_history(
+        self, table_id: str, limit: int = 20
+    ) -> list[dict[str, Any]]:
+        """Get recent change history for a table."""
+        context = self._get_context(table_id)
+        if context.change_log is None:
+            return []
+        return [e.to_dict() for e in context.change_log.get_recent(limit)]
+
+    def get_cell_history(
+        self, table_id: str, row_index: int, column_name: str
+    ) -> list[dict[str, Any]]:
+        """Get change history for a specific cell."""
+        context = self._get_context(table_id)
+        if context.change_log is None:
+            return []
+        return [
+            e.to_dict()
+            for e in context.change_log.get_by_cell(row_index, column_name)
+        ]
+
+    # =========================================================================
+    # Citation Management
+    # =========================================================================
+
+    def add_citation(
+        self,
+        table_id: str,
+        row_index: int,
+        column_name: str,
+        refs: list[dict[str, Any]],
+        confidence: float | None = None,
+        notes: str = "",
+    ) -> dict[str, Any]:
+        """Add or update citation for a specific cell."""
+        context = self._get_context(table_id)
+        self._validate_cell_address(context, row_index, column_name)
+
+        asset_refs = [AssetRef.from_dict(r) for r in refs]
+
+        existing = context.get_citation(row_index, column_name)
+        if existing:
+            for ref in asset_refs:
+                existing.add_ref(ref)
+            if confidence is not None:
+                existing.confidence = confidence
+            if notes:
+                existing.notes = notes
+        else:
+            context.set_citation(
+                row_index,
+                column_name,
+                CellCitation(refs=asset_refs, confidence=confidence, notes=notes),
+            )
+
+        self._record_change(
+            context,
+            "add_citation",
+            f"row:{row_index}/col:{column_name}",
+            new_value={"refs_count": len(asset_refs)},
+            citations=asset_refs,
+        )
+        self._save_table(context)
+
+        return {
+            "success": True,
+            "cell": f"row:{row_index}/col:{column_name}",
+            "total_refs": len(
+                context.get_citation(row_index, column_name).refs  # type: ignore[union-attr]
+            ),
+        }
+
+    def get_citations(
+        self,
+        table_id: str,
+        row_index: int | None = None,
+        column_name: str | None = None,
+    ) -> dict[str, Any]:
+        """Get citations for a cell, row, or entire table."""
+        context = self._get_context(table_id)
+
+        if row_index is not None and column_name is not None:
+            cite = context.get_citation(row_index, column_name)
+            if cite:
+                return {
+                    "cell": f"row:{row_index}/col:{column_name}",
+                    "citation": cite.to_dict(),
+                }
+            return {"cell": f"row:{row_index}/col:{column_name}", "citation": None}
+
+        if row_index is not None:
+            row_cites = context.get_row_citations(row_index)
+            return {
+                "row": row_index,
+                "citations": {k: v.to_dict() for k, v in row_cites.items()},
+            }
+
+        # All citations
+        return {
+            "table_id": table_id,
+            "total_citations": len(context.citations),
+            "citations": {k: v.to_dict() for k, v in context.citations.items()},
+        }
+
+    def remove_citation(
+        self,
+        table_id: str,
+        row_index: int,
+        column_name: str,
+        ref_index: int | None = None,
+    ) -> dict[str, Any]:
+        """Remove a citation or a specific ref from a cell."""
+        context = self._get_context(table_id)
+        self._validate_cell_address(context, row_index, column_name)
+
+        cite = context.get_citation(row_index, column_name)
+        if cite is None:
+            return {"success": False, "error": "No citation found for this cell"}
+
+        if ref_index is not None:
+            removed = cite.remove_ref(ref_index)
+            if removed is None:
+                return {"success": False, "error": f"Invalid ref index: {ref_index}"}
+            self._record_change(
+                context,
+                "remove_citation_ref",
+                f"row:{row_index}/col:{column_name}",
+                old_value=removed.to_dict(),
+            )
+        else:
+            context.remove_citation(row_index, column_name)
+            self._record_change(
+                context,
+                "remove_citation",
+                f"row:{row_index}/col:{column_name}",
+                old_value=cite.to_dict(),
+            )
+
+        self._save_table(context)
+        return {"success": True}
+
+    # =========================================================================
+    # Schema Evolution
+    # =========================================================================
+
+    def add_column(
+        self,
+        table_id: str,
+        name: str,
+        col_type: str = "text",
+        required: bool = False,
+        default_value: Any = None,
+        enum_values: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Add a new column to the table."""
+        context = self._get_context(table_id)
+
+        if any(c.name == name for c in context.columns):
+            return {"success": False, "error": f"Column '{name}' already exists"}
+
+        col_def = ColumnDef(
+            name=name,
+            type=col_type,  # type: ignore[arg-type]
+            required=required,
+            enum_values=enum_values,
+        )
+        context.add_column(col_def, default_value)
+        self._record_change(
+            context,
+            "add_column",
+            "table",
+            new_value={"name": name, "type": col_type},
+        )
+        self._save_table(context)
+        return {"success": True, "columns": context.column_names}
+
+    def remove_column(self, table_id: str, column_name: str) -> dict[str, Any]:
+        """Remove a column from the table."""
+        context = self._get_context(table_id)
+
+        if not context.remove_column(column_name):
+            return {"success": False, "error": f"Column '{column_name}' not found"}
+
+        self._record_change(
+            context, "remove_column", "table", old_value={"name": column_name}
+        )
+        self._save_table(context)
+        return {"success": True, "columns": context.column_names}
+
+    def rename_column(
+        self, table_id: str, old_name: str, new_name: str
+    ) -> dict[str, Any]:
+        """Rename a column."""
+        context = self._get_context(table_id)
+
+        if not context.rename_column(old_name, new_name):
+            return {"success": False, "error": f"Column '{old_name}' not found"}
+
+        self._record_change(
+            context,
+            "rename_column",
+            "table",
+            old_value={"name": old_name},
+            new_value={"name": new_name},
+        )
+        self._save_table(context)
+        return {"success": True, "columns": context.column_names}
+
+    # =========================================================================
+    # Cell-level Operations
+    # =========================================================================
+
+    def get_row(self, table_id: str, row_index: int) -> dict[str, Any]:
+        """Get a single row with its citations."""
+        context = self._get_context(table_id)
+        row = context.get_row(row_index)
+        if row is None:
+            raise ValueError(f"Invalid row index: {row_index}")
+
+        row_cites = context.get_row_citations(row_index)
+        return {
+            "row_index": row_index,
+            "data": row,
+            "citations": {k: v.to_dict() for k, v in row_cites.items()}
+            if row_cites
+            else None,
+        }
+
+    def get_cell(
+        self, table_id: str, row_index: int, column_name: str
+    ) -> dict[str, Any]:
+        """Get a single cell value with its citation."""
+        context = self._get_context(table_id)
+        self._validate_cell_address(context, row_index, column_name)
+
+        value = context.get_cell(row_index, column_name)
+        cite = context.get_citation(row_index, column_name)
+
+        return {
+            "row_index": row_index,
+            "column": column_name,
+            "value": value,
+            "citation": cite.to_dict() if cite else None,
+        }
+
+    def clear_cell(
+        self, table_id: str, row_index: int, column_name: str
+    ) -> dict[str, Any]:
+        """Clear a cell value (set to None) and remove its citation."""
+        context = self._get_context(table_id)
+        self._validate_cell_address(context, row_index, column_name)
+
+        old_value = context.rows[row_index].get(column_name)
+        context.rows[row_index][column_name] = None
+        context.remove_citation(row_index, column_name)
+
+        self._record_change(
+            context,
+            "clear_cell",
+            f"row:{row_index}/col:{column_name}",
+            old_value=old_value,
+        )
+        self._save_table(context)
+        return {"success": True, "old_value": old_value}
+
+    # =========================================================================
+    # Template Management
+    # =========================================================================
+
+    def list_templates(self) -> list[dict[str, Any]]:
+        """List available table templates."""
+        templates = self._get_builtin_templates()
+        return [t.to_dict() for t in templates]
+
+    def create_from_template(
+        self, template_name: str, title_override: str = ""
+    ) -> str:
+        """Create a table from a named template."""
+        templates = {t.name: t for t in self._get_builtin_templates()}
+        if template_name not in templates:
+            available = ", ".join(templates.keys())
+            raise ValueError(
+                f"Template '{template_name}' not found. Available: {available}"
+            )
+
+        tpl = templates[template_name]
+        params = tpl.to_create_params(title_override)
+        return self.create_table(**params)
+
+    @staticmethod
+    def _get_builtin_templates() -> list[TableTemplate]:
+        """Return built-in table templates."""
+        return [
+            TableTemplate(
+                name="drug_comparison",
+                title="Drug Comparison Table",
+                intent="comparison",
+                description="Compare multiple drugs: mechanism, dosing, side effects",
+                columns=[
+                    ColumnDef(name="Drug", type="text"),
+                    ColumnDef(name="Mechanism", type="text"),
+                    ColumnDef(name="Dose", type="text"),
+                    ColumnDef(name="Route", type="enum", enum_values=["IV", "IM", "PO", "SC"]),
+                    ColumnDef(name="Side_Effects", type="text"),
+                    ColumnDef(name="Notes", type="text", required=False),
+                ],
+            ),
+            TableTemplate(
+                name="study_summary",
+                title="Study Summary Table",
+                intent="summary",
+                description="Summarize key findings from multiple studies",
+                columns=[
+                    ColumnDef(name="Study", type="text"),
+                    ColumnDef(name="Year", type="number"),
+                    ColumnDef(name="Design", type="text"),
+                    ColumnDef(name="Participants", type="number"),
+                    ColumnDef(name="Intervention", type="text"),
+                    ColumnDef(name="Outcome", type="text"),
+                ],
+            ),
+            TableTemplate(
+                name="citation_extract",
+                title="Citation Extraction Table",
+                intent="citation",
+                description="Extract structured data from cited sources",
+                columns=[
+                    ColumnDef(name="Source", type="text"),
+                    ColumnDef(name="Claim", type="text"),
+                    ColumnDef(name="Evidence", type="text"),
+                    ColumnDef(name="Page", type="number", required=False),
+                    ColumnDef(name="Confidence", type="text", required=False),
+                ],
+            ),
+            TableTemplate(
+                name="pico_analysis",
+                title="PICO Analysis Table",
+                intent="comparison",
+                description="PICO framework analysis for clinical questions",
+                columns=[
+                    ColumnDef(name="Study", type="text"),
+                    ColumnDef(name="Population", type="text"),
+                    ColumnDef(name="Intervention", type="text"),
+                    ColumnDef(name="Comparator", type="text"),
+                    ColumnDef(name="Outcome", type="text"),
+                    ColumnDef(name="Result", type="text"),
+                ],
+            ),
+        ]
+
+    # =========================================================================
+    # Helper Methods
+    # =========================================================================
+
+    def _get_context(self, table_id: str) -> TableContext:
+        """Get table context or raise ValueError."""
+        if table_id not in self._tables:
+            raise ValueError(f"Table not found: {table_id}")
+        return self._tables[table_id]
+
+    def _validate_cell_address(
+        self, context: TableContext, row_index: int, column_name: str
+    ) -> None:
+        """Validate that a cell address is valid."""
+        if row_index < 0 or row_index >= len(context.rows):
+            raise ValueError(f"Invalid row index: {row_index}")
+        col_names = {col.name for col in context.columns}
+        if column_name not in col_names:
+            raise ValueError(f"Unknown column: '{column_name}'")
 
     # =========================================================================
     # Draft Management (for token-efficient workflows)
@@ -496,8 +947,7 @@ class TableService:
 
     def estimate_table_tokens(self, table_id: str) -> dict[str, int]:
         """Estimate token usage for a table."""
-        if table_id not in self._tables:
-            raise ValueError(f"Table not found: {table_id}")
+        context = self._get_context(table_id)
 
         context = self._tables[table_id]
         content_tokens = context.estimate_tokens()

@@ -26,7 +26,7 @@ import pytest
 # ============================================================================
 
 try:
-    from src.infrastructure.marker_adapter import MarkerPDFExtractor, MarkerBlock
+    from src.infrastructure.marker_adapter import MarkerPDFExtractor
     MARKER_AVAILABLE = True
 except ImportError:
     MARKER_AVAILABLE = False
@@ -66,7 +66,7 @@ skip_no_pdf = pytest.mark.skipif(
 
 
 @pytest.fixture
-def marker_extractor() -> "MarkerPDFExtractor":
+def marker_extractor() -> MarkerPDFExtractor:
     """建立 MarkerPDFExtractor 實例。"""
     return MarkerPDFExtractor()
 
@@ -115,7 +115,7 @@ class TestMarkerParsing:
     def test_blocks_have_required_fields(self, parse_result):
         """IT-03: 每個 block 都有必要欄位。"""
         for block in parse_result.blocks:
-            assert block.block_id, f"block missing block_id"
+            assert block.block_id, "block missing block_id"
             assert block.block_type, f"block {block.block_id} missing block_type"
             assert block.page >= 1, f"block {block.block_id} has invalid page: {block.page}"
 
@@ -288,8 +288,8 @@ class TestMarkerFallback:
     async def test_marker_unavailable_error(self, temp_dir):
         """IT-11: Marker 不可用時回傳明確錯誤。"""
         from src.application.document_service import DocumentService
-        from src.infrastructure.pdf_extractor import PyMuPDFExtractor
         from src.infrastructure.file_storage import FileStorage
+        from src.infrastructure.pdf_extractor import PyMuPDFExtractor
 
         service = DocumentService(
             repository=FileStorage(base_dir=temp_dir),
