@@ -29,6 +29,12 @@ class ManifestGenerator:
     that allows AI Agents to navigate its structure.
     """
 
+    # TOC entries that are figure/table captions, not real sections
+    _TOC_CAPTION_RE = re.compile(
+        r"^(?:Figure|Fig\.?|Table|Tab\.?)\s+\d+",
+        re.IGNORECASE,
+    )
+
     def generate(
         self,
         doc_id: str,
@@ -257,6 +263,10 @@ class ManifestGenerator:
         for level, title, page in pdf_toc:
             title = title.strip()
             if not title:
+                continue
+
+            # Skip figure/table captions masquerading as TOC entries
+            if self._TOC_CAPTION_RE.match(title):
                 continue
 
             # Generate section ID

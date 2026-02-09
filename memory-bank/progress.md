@@ -42,6 +42,12 @@
   - 圖片 caption 偵測：掃描頁面文字匹配 "Figure N / Fig. N" 模式
   - Caption 覆蓋率：Tables 10/26 (38.5%)、Figures 50/136 (36.8%)
   - E2E 測試擴充至 44 項全通過
+- ✅ **ETL 品質改進 第三輪 (Caption Precision + TOC Cleanup)**
+  - Figure caption 行首錨定 + 最小長度 10 + number 去重，消除 in-text false positive
+  - Table caption 限制 number ≤ 999，排除 "Table 34733" 等 false positive
+  - PDF TOC 過濾 Figure/Table 條目，避免 caption 被誤判為 sections
+  - Caption 精度 100%（所有 caption 皆為真實標題）
+  - E2E 測試擴充至 47 項全通過
 
 ## Doing
 

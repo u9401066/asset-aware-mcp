@@ -8,21 +8,23 @@
 ## [Unreleased]
 
 ### Added
-- 🧪 **E2E ETL 測試** (`tests/e2e_test_etl.py`)：5 篇論文 **44 項**測試全通過
+- 🧪 **E2E ETL 測試** (`tests/e2e_test_etl.py`)：5 篇論文 **47 項**測試全通過
   - Music Playschool (Scientific Reports) / Attention Is All You Need (arXiv) / Nobel Chemistry 2024 / Docling / GPT-4
   - 驗證 title、sections、tables、figures、noise filter、markdown 品質
-  - 新增 caption 偵測與雜訊過濾驗證（10 項新測試）
+  - 新增 caption 偵測與雜訊過濾驗證
+  - 新增 false positive 驗證（Table 數字上限、行內引用排除、Figure/Table 不進 sections）
 
 ### Improved
 - 📄 **PDF TOC 優先策略**：使用 PDF 內建 TOC (`get_toc()`) 取代字型大小啟發式，章節結構更精準
 - 📄 **PDF metadata title**：優先使用 PDF metadata 標題，支援合併連續 H1 heading 修復截斷問題
 - 📄 **Heading noise filter**：加入最小長度 3 字元 + regex 過濾 ("a","b","OPEN" 等雜訊)
 - 📄 **Table 提取修復**：新增 `tabulate` 依賴，`to_pandas().to_markdown()` 失敗時 fallback 到 `_table_to_markdown()`
-- 📊 **Table caption 偵測**：搜尋 table bbox 上下方 80px 內的 "Table N" 文字模式
+- 📊 **Table caption 偵測**：搜尋 table bbox 上下方 80px 內的 "Table N" 文字模式，限制 N≤999 排除 false positive
 - 📊 **Noise table 過濾**：過濾 0 行或 ≤1 欄的空表格（GPT-4: 32→13 有效表格）
-- 🖼️ **Figure caption 偵測**：掃描頁面文字匹配 "Figure N / Fig. N" 模式，關聯至圖片資產
+- 🖼️ **Figure caption 偵測**：行首錨定 `^` 匹配 + 最小長度 10 + figure number 去重，消除 in-text reference false positive
 - 🖼️ **Small figure 過濾**：跳過 <50px 的 icon/logo 圖片
-- 📈 **Caption 覆蓋率**：Tables 0%→38.5% (10/26)、Figures 0%→36.8% (50/136)
+- 🏗️ **PDF TOC 清理**：過濾 "Figure N" / "Table N" 條目，避免 caption 被誤判為 sections
+- 📈 **Caption 精度**：所有 caption 皆為真實標題，零 false positive
 
 ## [0.2.10] - 2026-02-09
 

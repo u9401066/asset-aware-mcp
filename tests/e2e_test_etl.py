@@ -97,19 +97,19 @@ def _print_summary(data: dict, label: str):
     print(f"  Time:      {r.processing_time_seconds:.2f}s")
 
     if sections:
-        print(f"\n  --- Sections ---")
+        print("\n  --- Sections ---")
         for s in sections:
             indent = "  " * s.get("level", 1)
             print(f"  {indent}[L{s['level']}] {s['title'][:60]} (p.{s.get('page', '?')})")
 
     if tables:
-        print(f"\n  --- Tables ---")
+        print("\n  --- Tables ---")
         for t in tables:
             cap = t.get("caption", "")[:60] or "(no caption)"
             print(f"    {t['id']}: p.{t.get('page', '?')} {t.get('row_count', '?')}x{t.get('col_count', '?')} {cap}")
 
     if figures:
-        print(f"\n  --- Figures (with captions) ---")
+        print("\n  --- Figures (with captions) ---")
         captioned = [f for f in figures if f.get("caption")]
         print(f"    {len(captioned)}/{len(figures)} have captions")
         for f_ in captioned[:5]:
@@ -149,7 +149,7 @@ class TestMusicPlayschool:
     def test_sections_from_pdf_toc(self):
         """Should have structured sections from PDF built-in TOC."""
         sections = self.data["sections"]
-        assert len(sections) >= 10, f"Expected >=10 sections, got {len(sections)}"
+        assert len(sections) >= 5, f"Expected >=5 sections, got {len(sections)}"
 
         # Check hierarchical structure
         titles = [s["title"].lower() for s in sections]
@@ -160,6 +160,14 @@ class TestMusicPlayschool:
         # Check multi-level hierarchy
         levels = {s["level"] for s in sections}
         assert len(levels) >= 2, f"Expected >=2 heading levels, got {levels}"
+
+    def test_no_figure_table_in_sections(self):
+        """PDF TOC should NOT include Figure/Table captions as sections."""
+        import re
+        sections = self.data["sections"]
+        caption_re = re.compile(r"^(?:Figure|Fig\.?|Table|Tab\.?)\s+\d+", re.IGNORECASE)
+        bad = [s for s in sections if caption_re.match(s["title"])]
+        assert len(bad) == 0, f"Figure/Table entries in sections: {[s['title'] for s in bad]}"
 
     def test_no_noise_headings(self):
         """Should NOT have single-letter noise like 'a', 'b', 'c', 'd'."""
@@ -200,10 +208,14 @@ class TestMusicPlayschool:
         assert len(small) == 0, f"Found small figures: {[f['id'] for f in small]}"
 
     def test_figure_captions(self):
-        """At least some figures should have captions."""
+        """At least some figures should have captions, with no in-text false positives."""
         figures = self.data["figures"]
         captioned = [f for f in figures if f.get("caption")]
         assert len(captioned) >= 1, "Expected at least 1 figure with caption"
+        # No false-positive fragments from in-text references
+        for f_ in captioned:
+            cap = f_["caption"]
+            assert len(cap) > 20, f"Caption too short (likely false positive): {cap}"
 
     def test_markdown_generated(self):
         """Full markdown should be non-empty and substantial."""
@@ -286,13 +298,17 @@ class TestAttentionPaper:
         assert len(figures) >= 1, f"Expected >=1 figure, got {len(figures)}"
 
     def test_figure_captions(self):
-        """Attention paper figures should have captions."""
+        """Attention paper figures should have captions, no false-positive fragments."""
         figures = self.data["figures"]
         captioned = [f for f in figures if f.get("caption")]
         if captioned:
             print(f"  Figures with captions: {len(captioned)}/{len(figures)}")
             for f_ in captioned[:3]:
                 print(f"    {f_['id']}: {f_['caption'][:60]}")
+            # Every caption should be meaningful (not a fragment)
+            for f_ in captioned:
+                cap = f_["caption"]
+                assert len(cap) > 20, f"Caption too short (false positive?): {cap}"
 
     def test_no_noise_headings(self):
         """Should NOT have single-letter or noise headings."""
@@ -527,6 +543,32 @@ class TestCrossDocument:
                 f"Small figures in {m['doc_id']}: {[f['id'] for f in small]}"
             )
 
+    def test_no_false_positive_table_captions(self):
+        """No table caption should have an implausible number (e.g. Table 34733)."""
+        for m in self.manifests:
+            tables = m["assets"].get("tables", [])
+            for t in tables:
+                cap = t.get("caption", "")
+                if cap:
+                    import re
+                    num_match = re.search(r"Table\s+(\d+)", cap)
+                    if num_match:
+                        num = int(num_match.group(1))
+                        assert num <= 999, (
+                            f"False positive table caption in {m['doc_id']}: {cap}"
+                        )
+
+    def test_no_figure_table_in_sections_globally(self):
+        """No document should have Figure/Table captions as sections."""
+        import re
+        caption_re = re.compile(r"^(?:Figure|Fig\.?|Table|Tab\.?)\s+\d+", re.IGNORECASE)
+        for m in self.manifests:
+            sections = m["assets"].get("sections", [])
+            bad = [s for s in sections if caption_re.match(s["title"])]
+            assert len(bad) == 0, (
+                f"Caption entries in sections of {m['doc_id']}: {[s['title'] for s in bad]}"
+            )
+
     def test_caption_coverage_summary(self):
         """Print caption coverage summary across all documents."""
         total_tables = 0
@@ -542,6 +584,6 @@ class TestCrossDocument:
             captioned_tables += len([t for t in tables if t.get("caption")])
             captioned_figures += len([f for f in figures if f.get("caption")])
 
-        print(f"\n  === Caption Coverage ===")
+        print("\n  === Caption Coverage ===")
         print(f"  Tables:  {captioned_tables}/{total_tables} have captions")
         print(f"  Figures: {captioned_figures}/{total_figures} have captions")
