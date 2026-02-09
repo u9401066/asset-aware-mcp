@@ -105,6 +105,11 @@ uv add --dev pytest ruff
 - 推送完成後立即檢查 GitHub Actions 是否通過
 - 如有失敗，優先修復 CI 問題再繼續開發
 
+**📊 更新工具數量時必須使用 Script**
+- 執行 `./scripts/count_tools.sh` 統計實際數量
+- 不可手動計算或猜測工具數量
+- 確保 README、copilot-instructions、VSCode extension README 三處同步
+
 參見子法：`.github/bylaws/git-workflow.md`
 
 ---
@@ -196,11 +201,12 @@ src/
     ├── server.py            # Thin entry point (31 行)
     ├── mcp_app.py           # FastMCP 單一實例
     ├── dependencies.py      # Composition Root
-    ├── tools/               # 34 tools (5 模組)
-    │   ├── document_tools.py   # ETL (5)
+    ├── tools/               # 39 tools (6 模組)
+    │   ├── document_tools.py   # ETL (6)
     │   ├── section_tools.py    # Navigation (4)
-    │   ├── job_tools.py        # Job management (4)
+    │   ├── job_tools.py        # Job management (3)
     │   ├── knowledge_tools.py  # KG (2)
+    │   ├── profile_tools.py    # Profile (5)
     │   └── table_tools.py      # A2T (19)
     └── resources/           # 12 resources (2 模組)
         ├── document_resources.py  # Documents (7)

@@ -9,7 +9,7 @@
 ## 🆕 What's New in v0.2.10
 
 - **Modular Architecture**: Server refactored from 2122 → 31 lines (thin entry point)
-- **34 MCP Tools** across 5 modules (Document, Section, Job, Knowledge, Table)
+- **39 MCP Tools** across 6 modules (Document, Section, Job, Knowledge, Table, Profile)
 - **12 MCP Resources** across 2 modules (Document, Table)
 - **Bug Fixes**: `use_marker` async mode, `list_documents` filtering, image overlap detection
 
@@ -116,9 +116,9 @@ If the extension fails to start or the MCP server doesn't appear:
     *   Run `npm install`.
     *   Press `F5` to launch the **Extension Development Host**.
 
-## 📚 MCP Tools (34 total)
+## 📚 MCP Tools (39 total)
 
-### Document ETL (5)
+### Document ETL (6)
 | Tool | Description |
 |------|-------------|
 | `ingest_documents` | Process PDF files into structured assets |
