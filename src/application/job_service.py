@@ -14,10 +14,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from src.domain.job import Job, JobProgress, JobStatus, JobSummary, JobType
+from src.domain.repositories import JobStoreInterface
 
 if TYPE_CHECKING:
     from src.application.document_service import DocumentService
-    from src.infrastructure.job_store import JobStoreInterface
 
 logger = logging.getLogger(__name__)
 

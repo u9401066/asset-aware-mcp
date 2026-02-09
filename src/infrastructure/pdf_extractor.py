@@ -14,6 +14,7 @@ from typing import Any
 
 import fitz  # type: ignore # PyMuPDF
 
+from src.domain.etl_profile import ETLProfile
 from src.domain.repositories import PDFExtractorInterface
 
 from .config import settings
@@ -39,16 +40,29 @@ class PyMuPDFExtractor(PDFExtractorInterface):
     - Text extraction with formatting hints
     - Image extraction with page number tracking
     - Page comments in markdown for traceability
+    - Configurable via ETLProfile (font thresholds, noise filters, etc.)
     """
 
-    def __init__(self, max_image_size_mb: float | None = None):
+    def __init__(
+        self,
+        profile: ETLProfile | None = None,
+        max_image_size_mb: float | None = None,
+    ):
         """
         Initialize extractor.
 
         Args:
+            profile: ETL extraction profile (default: ETLProfile.default())
             max_image_size_mb: Maximum image size to extract (default from settings)
         """
+        self.profile = profile or ETLProfile.default()
         self.max_image_size_mb = max_image_size_mb or settings.max_image_size_mb
+
+        # Pre-compile regexes from profile (once, at init)
+        self._heading_noise_re = self.profile.compile_heading_noise_re()
+        self._table_caption_re = self.profile.compile_table_caption_re()
+        self._figure_caption_re = self.profile.compile_figure_caption_re()
+        self._numbered_section_re = self.profile.compile_numbered_section_re()
 
     def extract_text(self, pdf_path: Path) -> str:
         """
@@ -79,55 +93,6 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             doc.close()
 
         return "\n".join(text_parts)
-
-    # Minimum length for heading text (filters figure sub-labels like "a", "b", "OPEN")
-    _MIN_HEADING_LENGTH = 3
-    # Patterns that should never be headings (figure labels, page markers, etc.)
-    _HEADING_NOISE_RE = re.compile(
-        r"^(?:"
-        r"[a-z]$"            # single lowercase letter
-        r"|OPEN$"            # "OPEN" label
-        r"|www\."            # URLs
-        r"|http"             # URLs
-        r"|\d+$"             # pure numbers
-        r"|[A-Z]{1,2}$"     # 1-2 uppercase letters
-        r"|arXiv:\S+"        # arXiv identifiers like "arXiv:1512.03385v1"
-        r"|layers$"          # table column headers
-        r"|filters$"
-        r"|params$"
-        r"|output size$"
-        r")",
-        re.IGNORECASE,
-    )
-    # Minimum dimensions for figures (skip tiny icons/logos)
-    _MIN_FIGURE_PX = 50
-    # Table noise thresholds
-    _MIN_TABLE_ROWS = 1  # Exclude tables with 0 data rows
-    _MIN_TABLE_COLS = 2  # Exclude single-column "tables"
-    # Caption detection limits
-    _MAX_CAPTION_NUMBER = 999  # Reject "Table 34733" false positives
-    _MIN_CAPTION_BODY_LEN = 10  # Require meaningful text after "Figure N."
-    # Caption detection patterns
-    _TABLE_CAPTION_RE = re.compile(
-        r"(?:Table|TABLE|Tab\.?)\s+(\d+)\s*[.:,]?\s*(.*)",
-        re.IGNORECASE,
-    )
-    # Figure captions must start at the beginning of a line (not in-text references)
-    _FIGURE_CAPTION_RE = re.compile(
-        r"^\s*(?:Figure|FIGURE|Fig\.?)\s+(\d+)\s*[.:,]?\s*(.*)",
-        re.IGNORECASE | re.MULTILINE,
-    )
-    # Numbered section heading pattern for bold text detection
-    # Matches: "1. Introduction", "3.1. Methods", "A.2 Appendix Detail"
-    _NUMBERED_SECTION_RE = re.compile(
-        r"^(?:[A-Z]?\d+\.(?:\d+\.)*)\s+\S",
-    )
-    # Standalone section keywords (bold, as heading even without numbers)
-    _SECTION_KEYWORDS = frozenset({
-        "abstract", "introduction", "conclusion", "conclusions",
-        "references", "acknowledgements", "acknowledgments",
-        "appendix", "supplementary",
-    })
 
     @staticmethod
     def _section_level_from_number(text: str) -> int:
@@ -165,21 +130,21 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                     stripped = text.strip()
 
                     # Detect headings by font size
-                    # Filter: must be >= _MIN_HEADING_LENGTH and not noise
+                    # Filter: must be >= min_heading_length and not noise
                     is_heading_candidate = (
-                        len(stripped) >= self._MIN_HEADING_LENGTH
-                        and not self._HEADING_NOISE_RE.match(stripped)
+                        len(stripped) >= self.profile.min_heading_length
+                        and not self._heading_noise_re.match(stripped)
                     )
 
                     heading_applied = False
                     if is_heading_candidate:
-                        if font_size > 16:
+                        if font_size > self.profile.font_thresholds.h1:
                             text = f"# {text}"
                             heading_applied = True
-                        elif font_size > 14:
+                        elif font_size > self.profile.font_thresholds.h2:
                             text = f"## {text}"
                             heading_applied = True
-                        elif font_size > 12:
+                        elif font_size > self.profile.font_thresholds.h3:
                             text = f"### {text}"
                             heading_applied = True
 
@@ -187,12 +152,12 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                     # (catches double-column papers where headings are same
                     #  font size as body text, just bold)
                     if not heading_applied and is_bold and is_heading_candidate:
-                        if self._NUMBERED_SECTION_RE.match(stripped):
+                        if self._numbered_section_re.match(stripped):
                             level = self._section_level_from_number(stripped)
                             prefix = "#" * min(level + 1, 4)  # +1 since title is H1/H2
                             text = f"{prefix} {text}"
                             heading_applied = True
-                        elif stripped.lower() in self._SECTION_KEYWORDS:
+                        elif stripped.lower() in self.profile.section_keywords:
                             text = f"## {text}"
                             heading_applied = True
 
@@ -680,8 +645,8 @@ class PyMuPDFExtractor(PDFExtractorInterface):
 
                             # Filter noise tables (empty or single-column)
                             if (
-                                row_count < self._MIN_TABLE_ROWS
-                                or col_count < self._MIN_TABLE_COLS
+                                row_count < self.profile.filters.min_table_rows
+                                or col_count < self.profile.filters.min_table_cols
                             ):
                                 table_index -= 1  # Don't count filtered tables
                                 continue
@@ -751,11 +716,11 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             text = page.get_text("text", clip=region).strip()
             if not text:
                 continue
-            match = self._TABLE_CAPTION_RE.search(text)
+            match = self._table_caption_re.search(text)
             if match:
                 cap_num = match.group(1)
                 # Reject implausible table numbers (e.g. "Table 34733")
-                if int(cap_num) > self._MAX_CAPTION_NUMBER:
+                if int(cap_num) > self.profile.filters.max_caption_number:
                     continue
                 cap_text = match.group(2).strip()
                 # Take first line only (caption may bleed into body text)
@@ -778,20 +743,20 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         try:
             for page_num, page in enumerate(doc):
                 text = page.get_text("text")
-                matches = self._FIGURE_CAPTION_RE.finditer(text)
+                matches = self._figure_caption_re.finditer(text)
                 page_captions: list[dict] = []
                 seen_numbers: set[str] = set()  # dedup by figure number
                 for m in matches:
                     fig_num = m.group(1)
                     # Reject implausible figure numbers
-                    if int(fig_num) > self._MAX_CAPTION_NUMBER:
+                    if int(fig_num) > self.profile.filters.max_caption_number:
                         continue
                     # Dedup: keep only the first occurrence of each figure number per page
                     if fig_num in seen_numbers:
                         continue
                     fig_text = m.group(2).strip().split("\n")[0].rstrip(".")
                     # Require minimum body length (filter fragments)
-                    if len(fig_text) < self._MIN_CAPTION_BODY_LEN:
+                    if len(fig_text) < self.profile.filters.min_caption_body_len:
                         continue
                     seen_numbers.add(fig_num)
                     page_captions.append(

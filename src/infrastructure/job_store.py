@@ -8,54 +8,16 @@ from __future__ import annotations
 
 import json
 import logging
-from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+from src.domain.repositories import JobStoreInterface
 
 if TYPE_CHECKING:
     from src.domain.job import Job, JobSummary
 
 logger = logging.getLogger(__name__)
-
-
-class JobStoreInterface(ABC):
-    """Abstract interface for job storage."""
-
-    @abstractmethod
-    async def create(self, job: Job) -> Job:
-        """Create a new job."""
-        ...
-
-    @abstractmethod
-    async def get(self, job_id: str) -> Job | None:
-        """Get a job by ID."""
-        ...
-
-    @abstractmethod
-    async def update(self, job: Job) -> Job:
-        """Update an existing job."""
-        ...
-
-    @abstractmethod
-    async def delete(self, job_id: str) -> bool:
-        """Delete a job."""
-        ...
-
-    @abstractmethod
-    async def list_all(self, limit: int = 50) -> list[JobSummary]:
-        """List all jobs (most recent first)."""
-        ...
-
-    @abstractmethod
-    async def list_active(self) -> list[JobSummary]:
-        """List active (non-terminal) jobs."""
-        ...
-
-    @abstractmethod
-    async def cleanup_old(self, max_age_hours: int = 24) -> int:
-        """Delete old completed/failed jobs. Returns count deleted."""
-        ...
 
 
 class FileJobStore(JobStoreInterface):

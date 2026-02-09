@@ -28,8 +28,7 @@ from __future__ import annotations
 import json
 from typing import Any, Literal
 
-from src.application.table_service import table_service
-from src.presentation.dependencies import asset_service, document_service
+from src.presentation.dependencies import asset_service, document_service, table_service
 from src.presentation.mcp_app import mcp
 
 

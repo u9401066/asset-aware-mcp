@@ -35,6 +35,9 @@ export class SettingsPanel {
                     case 'refresh':
                         await this._update();
                         break;
+                    case 'setProfile':
+                        await this._setEtlProfile(message.profile);
+                        break;
                 }
             },
             null,
@@ -117,6 +120,20 @@ export class SettingsPanel {
         } catch {
             vscode.window.showWarningMessage('❌ Cannot connect to Ollama');
             this._panel.webview.postMessage({ command: 'ollamaStatus', connected: false });
+        }
+    }
+
+    private async _setEtlProfile(profileName: string): Promise<void> {
+        try {
+            // This will be called via MCP tool when the server is running
+            // For now, just save to .env for next server restart
+            await this._envManager.updateEnv('ETL_PROFILE', profileName);
+            vscode.window.showInformationMessage(`✅ ETL Profile set to: ${profileName}`);
+            
+            // Notify to refresh MCP server
+            vscode.commands.executeCommand('assetAwareMcp.refreshStatus');
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to set ETL profile: ${error}`);
         }
     }
 
@@ -295,6 +312,23 @@ export class SettingsPanel {
             </div>
         </div>
         
+        <div class="section">
+            <h2>📄 ETL Profile</h2>
+            
+            <div class="form-group">
+                <label for="etlProfile">Document Format Profile</label>
+                <p class="description">Different journals/formats need different extraction settings. Choose a profile that matches your documents.</p>
+                <select id="etlProfile" name="ETL_PROFILE" onchange="setProfile(this.value)">
+                    <option value="default" ${env['ETL_PROFILE'] === 'default' || !env['ETL_PROFILE'] ? 'selected' : ''}>Default (General purpose)</option>
+                    <option value="arxiv" ${env['ETL_PROFILE'] === 'arxiv' ? 'selected' : ''}>arXiv (Double-column preprints)</option>
+                    <option value="nature" ${env['ETL_PROFILE'] === 'nature' ? 'selected' : ''}>Nature/Scientific Reports</option>
+                    <option value="ieee" ${env['ETL_PROFILE'] === 'ieee' ? 'selected' : ''}>IEEE (Roman numeral sections)</option>
+                    <option value="elsevier" ${env['ETL_PROFILE'] === 'elsevier' ? 'selected' : ''}>Elsevier Journals</option>
+                </select>
+                <p class="hint">Profile affects: heading detection thresholds, noise filtering, caption patterns, section keywords</p>
+            </div>
+        </div>
+        
         <div class="section" id="ollamaSection">
             <h2>🦙 Ollama Settings</h2>
             
@@ -413,6 +447,11 @@ export class SettingsPanel {
             document.getElementById('ollamaStatus').className = 'status-badge status-unknown';
             document.getElementById('ollamaStatus').textContent = 'Testing...';
             vscode.postMessage({ command: 'testOllama', host });
+        }
+        
+        // Set ETL Profile
+        function setProfile(profileName) {
+            vscode.postMessage({ command: 'setProfile', profile: profileName });
         }
         
         // Toggle password visibility

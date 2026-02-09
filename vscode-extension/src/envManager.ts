@@ -18,6 +18,7 @@ export interface EnvConfig {
     OPENAI_EMBEDDING_MODEL?: string;
     DATA_DIR?: string;
     LIGHTRAG_DIR?: string;
+    ETL_PROFILE?: string;
     [key: string]: string | undefined;
 }
 
@@ -30,7 +31,8 @@ const DEFAULT_ENV: EnvConfig = {
     OPENAI_MODEL: 'gpt-4o-mini',
     OPENAI_EMBEDDING_MODEL: 'text-embedding-3-small',
     DATA_DIR: './data',
-    LIGHTRAG_DIR: './data/lightrag'
+    LIGHTRAG_DIR: './data/lightrag',
+    ETL_PROFILE: 'default'
 };
 
 export class EnvManager {
@@ -164,6 +166,12 @@ export class EnvManager {
             '# ============================================',
             '# Options: "ollama" (local) or "openai" (cloud)',
             `LLM_BACKEND=${env.LLM_BACKEND || 'ollama'}`,
+            '',
+            '# ============================================',
+            '# ETL Profile (Document Extraction Settings)',
+            '# ============================================',
+            '# Options: "default", "arxiv", "nature", "ieee", "elsevier"',
+            `ETL_PROFILE=${env.ETL_PROFILE || 'default'}`,
             '',
             '# ============================================',
             '# Ollama Settings (for local LLM)',

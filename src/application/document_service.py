@@ -20,6 +20,7 @@ from src.domain.entities import (
     SectionAsset,
     TableAsset,
 )
+from src.domain.etl_profile import ETLProfile
 from src.domain.repositories import (
     DocumentRepository,
     KnowledgeGraphInterface,
@@ -53,6 +54,7 @@ class DocumentService:
         pdf_extractor: PDFExtractorInterface,
         knowledge_graph: KnowledgeGraphInterface | None = None,
         marker_extractor: MarkerPDFExtractor | None = None,
+        profile: ETLProfile | None = None,
     ):
         """
         Initialize document service with dependencies.
@@ -62,12 +64,22 @@ class DocumentService:
             pdf_extractor: PDF extraction implementation (PyMuPDF)
             knowledge_graph: Optional knowledge graph for indexing
             marker_extractor: Optional Marker PDF extractor for structured parsing
+            profile: Optional ETL profile (auto-detected from pdf_extractor if not provided)
         """
         self.repository = repository
         self.pdf_extractor = pdf_extractor
         self.knowledge_graph = knowledge_graph
         self.marker_extractor = marker_extractor
-        self.manifest_generator = ManifestGenerator()
+
+        # Resolve profile: explicit > from extractor > default
+        if profile is not None:
+            resolved_profile = profile
+        elif hasattr(pdf_extractor, "profile"):
+            resolved_profile = pdf_extractor.profile
+        else:
+            resolved_profile = ETLProfile.default()
+
+        self.manifest_generator = ManifestGenerator(profile=resolved_profile)
 
     async def ingest(
         self,
@@ -493,7 +505,11 @@ class DocumentService:
             h = img_data["height"]
 
             # Filter small images (icons, logos, decorations)
-            min_px = getattr(self.pdf_extractor, "_MIN_FIGURE_PX", 50)
+            min_px = 50
+            if hasattr(self.pdf_extractor, "profile"):
+                min_px = self.pdf_extractor.profile.filters.min_figure_px
+            elif hasattr(self.pdf_extractor, "_MIN_FIGURE_PX"):
+                min_px = self.pdf_extractor._MIN_FIGURE_PX
             if w < min_px or h < min_px:
                 continue
 

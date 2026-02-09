@@ -1,0 +1,64 @@
+{
+  "name": "default",
+  "description": "General-purpose profile for most PDF documents",
+  "font_thresholds": {
+    "h1": 16.0,
+    "h2": 14.0,
+    "h3": 12.0
+  },
+  "min_heading_length": 3,
+  "heading_noise_patterns": [
+    "[a-z]$",
+    "OPEN$",
+    "www\\.",
+    "http",
+    "\\d+$",
+    "[A-Z]{1,2}$",
+    "arXiv:\\S+",
+    "layers$",
+    "filters$",
+    "params$",
+    "output size$"
+  ],
+  "numbered_section_pattern": "^(?:[A-Z]?\\d+\\.(?:\\d+\\.)*)\\ +\\S",
+  "section_keywords": [
+    "abstract",
+    "acknowledgements",
+    "acknowledgments",
+    "appendix",
+    "conclusion",
+    "conclusions",
+    "introduction",
+    "references",
+    "supplementary"
+  ],
+  "table_caption_pattern": "(?:Table|TABLE|Tab\\.?)\\s+(\\d+)\\s*[.:,]?\\s*(.*)",
+  "figure_caption_pattern": "^\\s*(?:Figure|FIGURE|Fig\\.?)\\s+(\\d+)\\s*[.:,]?\\s*(.*)",
+  "figure_caption_require_line_start": true,
+  "filters": {
+    "min_figure_px": 50,
+    "min_table_rows": 1,
+    "min_table_cols": 2,
+    "max_caption_number": 999,
+    "min_caption_body_len": 10
+  },
+  "section_noise_patterns": [
+    "layers",
+    "filters",
+    "ﬁlters",
+    "params",
+    "output size",
+    "output map size",
+    "method",
+    "error",
+    "[a-z]",
+    "\\d+$",
+    "[A-Z]{1,2}$"
+  ],
+  "title_noise_patterns": [
+    "arXiv:\\S+",
+    "OPEN$",
+    "\\d+$"
+  ],
+  "toc_caption_pattern": "^(?:Figure|Fig\\.?|Table|Tab\\.?)\\s+\\d+"
+}

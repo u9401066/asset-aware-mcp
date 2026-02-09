@@ -47,6 +47,12 @@ class Settings(BaseSettings):
         default="ollama", description="LLM backend: 'ollama' or 'openai'"
     )
 
+    # ETL Profile selection
+    etl_profile: str = Field(
+        default="default",
+        description="ETL extraction profile: 'default', 'arxiv', 'nature', 'ieee', 'elsevier'"
+    )
+
     # OpenAI settings (optional, if using OpenAI backend)
     openai_api_key: str = Field(
         default="", description="OpenAI API key (only if llm_backend='openai')"

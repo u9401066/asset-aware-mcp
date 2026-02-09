@@ -13,8 +13,7 @@ from __future__ import annotations
 
 import json
 
-from src.application.table_service import table_service
-from src.infrastructure.config import settings
+from src.presentation.dependencies import table_service
 from src.presentation.mcp_app import mcp
 from src.presentation.tools.table_tools import list_drafts, list_tables
 
@@ -36,7 +35,7 @@ async def resource_table_content(table_id: str) -> str:
     """
     try:
         # Read from saved MD file directly
-        md_path = settings.table_output_dir / f"{table_id}.md"
+        md_path = table_service.storage_dir / f"{table_id}.md"
         if md_path.exists():
             return md_path.read_text(encoding="utf-8")
         else:

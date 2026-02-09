@@ -7,6 +7,7 @@ Presentation Layer - MCP Tools
 - job_tools: 非同步 Job 管理工具
 - knowledge_tools: 知識圖譜工具
 - table_tools: A2T 表格工具
+- profile_tools: ETL Profile 設定工具
 """
 
 # Import all tools to register them with mcp
@@ -26,6 +27,13 @@ from src.presentation.tools.job_tools import (
 from src.presentation.tools.knowledge_tools import (
     consult_knowledge_graph,
     export_knowledge_graph,
+)
+from src.presentation.tools.profile_tools import (
+    get_current_etl_profile,
+    get_etl_profile,
+    list_etl_profiles,
+    load_etl_profile_from_json,
+    set_etl_profile,
 )
 from src.presentation.tools.section_tools import (
     get_section_blocks,
@@ -75,6 +83,12 @@ __all__ = [
     # Knowledge tools
     "consult_knowledge_graph",
     "export_knowledge_graph",
+    # Profile tools
+    "list_etl_profiles",
+    "get_etl_profile",
+    "get_current_etl_profile",
+    "set_etl_profile",
+    "load_etl_profile_from_json",
     # Table tools
     "plan_table_schema",
     "get_section_content",

@@ -49,11 +49,45 @@
   - Caption 精度 100%（所有 caption 皆為真實標題）
   - E2E 測試擴充至 47 項全通過
 
+- ✅ **ETL 品質改進 第四輪 (Bold Section Detection + ResNet/BERT)**
+  - 新增 ResNet + BERT 測試論文（雙欄格式）
+  - 修復 arXiv stamp 被當成標題、table column header 被當 section、重複 section ID
+  - 新增 bold numbered section heading 偵測 (`_NUMBERED_SECTION_RE` + `_SECTION_KEYWORDS`)
+  - 階層式 section level 推斷 (`_section_level_from_number()`)
+  - Title 偵測 H1→H2 fallback 機制
+  - E2E 測試擴充至 65 項全通過（commit `5ffaf31`）
+- ✅ **ETL Profile 設定模組化 + MCP Tools + VSCode 整合**
+  - 新增 `src/domain/etl_profile.py`：`ETLProfile` (frozen dataclass) + `ETLProfileRegistry` (5 presets)
+  - 5 內建預設：default, arxiv, nature, ieee, elsevier
+  - 支援 JSON 檔案覆蓋與繼承（`from_json()`, `from_dict()`, `base` 欄位）
+  - 重構 `pdf_extractor.py`：所有 class constants → `ETLProfile` 參數
+  - 重構 `services.py`：`ManifestGenerator` 接受 `ETLProfile`
+  - DI 鏈更新：`dependencies.py` 共享 `etl_profile`（從 `settings.etl_profile` 載入）
+  - 新增 `profiles/default.json` + `profiles/arxiv.json` 範例
+  - 新增 32 個 ETLProfile 單元測試
+  - **新增 5 個 MCP Profile Tools**：
+    - `list_etl_profiles` — 列出所有可用 profiles
+    - `get_etl_profile` — 取得 profile 詳細配置
+    - `get_current_etl_profile` — 顯示目前使用的 profile
+    - `set_etl_profile` — 切換 profile（動態重建 services）
+    - `load_etl_profile_from_json` — 從 JSON 檔案載入自訂 profile
+  - **VSCode Extension 整合**：
+    - `settingsPanel.ts` — ETL Profile 下拉選單
+    - `envManager.ts` — `ETL_PROFILE` 環境變數支援
+    - `config.py` — 新增 `etl_profile` 設定欄位
+  - 工具數量更新：34 → 39 tools in 6 modules
+  - 全部 268 測試通過（203 unit + 65 E2E）
+
 ## Doing
 
-- 🚧 ETL 拆解品質持續改進（第三輪）
 - 🚧 v0.3.0 架構重構：Asset-Centric Architecture
   - Phase 1: Asset Registry（資產註冊中心）
+
+---
+
+## Released
+
+- ✅ **v0.2.11**: ETL Profile + DDD 架構修復 (2026-02-09)
 
 ## Next
 

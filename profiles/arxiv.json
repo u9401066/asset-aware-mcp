@@ -1,0 +1,32 @@
+{
+  "base": "default",
+  "name": "arxiv",
+  "description": "arXiv preprints: double-column, bold numbered sections, no PDF TOC",
+  "heading_noise_patterns": [
+    "[a-z]$",
+    "OPEN$",
+    "www\\.",
+    "http",
+    "\\d+$",
+    "[A-Z]{1,2}$",
+    "arXiv:\\S+",
+    "layers$",
+    "filters$",
+    "params$",
+    "output size$",
+    "Ensemble\\b",
+    "Single\\b"
+  ],
+  "section_keywords": [
+    "abstract",
+    "introduction",
+    "conclusion",
+    "conclusions",
+    "references",
+    "acknowledgements",
+    "acknowledgments",
+    "appendix",
+    "supplementary",
+    "related work"
+  ]
+}

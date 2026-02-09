@@ -22,6 +22,7 @@ from .entities import (
     SectionAsset,
     TableAsset,
 )
+from .etl_profile import ETLProfile, ETLProfileRegistry, FontThresholds, FigureTableFilter
 from .job import Job, JobProgress, JobStatus, JobSummary, JobType
 from .value_objects import AssetType, DocId, ImageMediaType
 
@@ -46,6 +47,11 @@ __all__ = [
     "IngestResult",
     "SectionAsset",
     "TableAsset",
+    # ETL Profile
+    "ETLProfile",
+    "ETLProfileRegistry",
+    "FigureTableFilter",
+    "FontThresholds",
     # Job
     "Job",
     "JobProgress",

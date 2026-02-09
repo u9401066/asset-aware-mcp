@@ -9,10 +9,11 @@ from pathlib import Path
 
 import xlsxwriter
 
+from src.domain.repositories import TableRendererInterface
 from src.domain.table_entities import TableContext
 
 
-class ExcelRenderer:
+class ExcelRenderer(TableRendererInterface):
     """Renderer for professional Excel tables."""
 
     def __init__(self, output_dir: Path) -> None:

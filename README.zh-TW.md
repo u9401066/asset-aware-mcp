@@ -59,9 +59,9 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP 伺服器 (模組化 Presentation 層)          │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 34 工具，5 個模組                       │   │
-│  │   document (5) │ section (4) │ job (4)          │   │
-│  │   knowledge (2) │ table (19)                    │   │
+│  │ tools/: 39 工具，6 個模組                       │   │
+│  │   document (6) │ section (4) │ job (3)          │   │
+│  │   knowledge (2) │ table (19) │ profile (5)      │   │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │ resources/: 12 資源，2 個模組                   │   │
@@ -145,6 +145,18 @@ uv run python -m src.presentation.server
 | `resume_draft` / `resume_table` | 以極小上下文恢復工作（節省 Token）|
 | `update_cell` | 精確的儲存格等級編輯 |
 | `render_table` | 渲染為專業 Excel 檔案（含條件格式）|
+
+### ETL Profile 工具
+
+不同期刊/文件格式需要不同的提取設定，使用這些工具切換 Profile。
+
+| 工具 | 用途 |
+|------|------|
+| `list_etl_profiles` | 列出所有可用的 Profile（default, arxiv, nature, ieee, elsevier）|
+| `get_etl_profile` | 取得特定 Profile 的詳細配置 |
+| `get_current_etl_profile` | 顯示目前使用的 Profile |
+| `set_etl_profile` | 切換後續文件處理使用的 Profile |
+| `load_etl_profile_from_json` | 從 JSON 檔案載入自訂 Profile |
 
 ## 🔧 技術棧
 

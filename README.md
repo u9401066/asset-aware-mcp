@@ -59,9 +59,9 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP Server (Modular Presentation)            │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 34 tools in 5 modules                   │   │
-│  │   document (5) │ section (4) │ job (4)          │   │
-│  │   knowledge (2) │ table (19)                    │   │
+│  │ tools/: 39 tools in 6 modules                   │   │
+│  │   document (6) │ section (4) │ job (3)          │   │
+│  │   knowledge (2) │ table (19) │ profile (5)      │   │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │ resources/: 12 resources in 2 modules           │   │
@@ -145,6 +145,18 @@ uv run python -m src.presentation.server
 | `resume_draft` / `resume_table` | Resume work with minimal context (Save tokens) |
 | `update_cell` | Precise cell-level editing |
 | `render_table` | Render to professional Excel file (with conditional formatting) |
+
+### ETL Profile Tools
+
+Different journals/formats need different extraction settings. Use these tools to switch profiles.
+
+| Tool | Purpose |
+|------|---------|
+| `list_etl_profiles` | List all available profiles (default, arxiv, nature, ieee, elsevier) |
+| `get_etl_profile` | Get detailed configuration of a specific profile |
+| `get_current_etl_profile` | Show currently active profile |
+| `set_etl_profile` | Switch profile for subsequent document ingestion |
+| `load_etl_profile_from_json` | Load custom profile from JSON file |
 
 ## 🔧 Tech Stack
 

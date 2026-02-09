@@ -7,24 +7,37 @@
 
 ## [Unreleased]
 
+## [0.2.11] - 2026-02-09
+
 ### Added
-- 🧪 **E2E ETL 測試** (`tests/e2e_test_etl.py`)：5 篇論文 **47 項**測試全通過
-  - Music Playschool (Scientific Reports) / Attention Is All You Need (arXiv) / Nobel Chemistry 2024 / Docling / GPT-4
-  - 驗證 title、sections、tables、figures、noise filter、markdown 品質
-  - 新增 caption 偵測與雜訊過濾驗證
-  - 新增 false positive 驗證（Table 數字上限、行內引用排除、Figure/Table 不進 sections）
+- 🎛️ **ETL Profile 設定系統**：所有 PDF 提取參數現可透過 Profile 設定
+  - `ETLProfile` frozen dataclass + `ETLProfileRegistry` 管理器
+  - **5 內建預設**：default, arxiv, nature, ieee, elsevier
+  - **JSON 覆蓋支援**：`profiles/*.json` 可自訂期刊設定並繼承基底 profile
+- 🔧 **5 個 MCP Profile Tools**：
+  - `list_etl_profiles` — 列出所有可用 profiles
+  - `get_etl_profile` — 取得 profile 詳細配置
+  - `get_current_etl_profile` — 顯示目前使用的 profile
+  - `set_etl_profile` — 切換 profile（動態重建 services）
+  - `load_etl_profile_from_json` — 從 JSON 檔案載入自訂 profile
+- 🧪 **32 個 ETL Profile 單元測試**：完整測試 profile 繼承、JSON 載入、registry 功能
+- 🖥️ **VSCode Extension 整合**：
+  - `settingsPanel.ts` — ETL Profile 下拉選單
+  - `envManager.ts` — `ETL_PROFILE` 環境變數支援
+
+### Changed
+- 🏗️ **DDD 架構修復**：
+  - `JobStoreInterface` 從 infrastructure 移至 `domain/repositories.py`
+  - 新增 `TableRendererInterface` 抽象介面
+  - `TableService` 重構為依賴注入建構子（移除 global singleton）
+  - `rebuild_for_profile()` 封裝 profile 切換邏輯於 `dependencies.py`
+- 📊 **工具數量更新**：34 → 39 tools in 6 modules
 
 ### Improved
-- 📄 **PDF TOC 優先策略**：使用 PDF 內建 TOC (`get_toc()`) 取代字型大小啟發式，章節結構更精準
-- 📄 **PDF metadata title**：優先使用 PDF metadata 標題，支援合併連續 H1 heading 修復截斷問題
-- 📄 **Heading noise filter**：加入最小長度 3 字元 + regex 過濾 ("a","b","OPEN" 等雜訊)
-- 📄 **Table 提取修復**：新增 `tabulate` 依賴，`to_pandas().to_markdown()` 失敗時 fallback 到 `_table_to_markdown()`
-- 📊 **Table caption 偵測**：搜尋 table bbox 上下方 80px 內的 "Table N" 文字模式，限制 N≤999 排除 false positive
-- 📊 **Noise table 過濾**：過濾 0 行或 ≤1 欄的空表格（GPT-4: 32→13 有效表格）
-- 🖼️ **Figure caption 偵測**：行首錨定 `^` 匹配 + 最小長度 10 + figure number 去重，消除 in-text reference false positive
-- 🖼️ **Small figure 過濾**：跳過 <50px 的 icon/logo 圖片
-- 🏗️ **PDF TOC 清理**：過濾 "Figure N" / "Table N" 條目，避免 caption 被誤判為 sections
-- 📈 **Caption 精度**：所有 caption 皆為真實標題，零 false positive
+- 🧪 **E2E ETL 測試** (`tests/e2e_test_etl.py`)：5 篇論文 **65 項**測試全通過
+- 📄 **PDF TOC 優先策略**：使用 PDF 內建 TOC (`get_toc()`) 取代字型大小啟發式
+- 📊 **Table/Figure caption 偵測**：精準匹配 "Table N" / "Figure N" 模式
+- 🖼️ **Noise filtering**：過濾空表格、小圖 (<50px)
 
 ## [0.2.10] - 2026-02-09
 

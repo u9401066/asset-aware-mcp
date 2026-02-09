@@ -10,10 +10,10 @@ from src.application.table_service import TableService
 @pytest.fixture
 def table_service(tmp_path):
     # Use tmp_path for storage during tests
-    from src.infrastructure.config import settings
+    from src.infrastructure.excel_renderer import ExcelRenderer
 
-    settings.table_output_dir = tmp_path
-    return TableService()
+    renderer = ExcelRenderer(tmp_path)
+    return TableService(table_output_dir=tmp_path, table_renderer=renderer)
 
 
 def test_create_table(table_service, tmp_path):
@@ -43,7 +43,9 @@ def test_add_rows_persistence(table_service, tmp_path):
     table_service.add_rows(table_id, [{"Drug": "Remimazolam"}])
 
     # Reload service to check persistence
-    new_service = TableService()
+    from src.infrastructure.excel_renderer import ExcelRenderer as _ER
+
+    new_service = TableService(table_output_dir=tmp_path, table_renderer=_ER(tmp_path))
     context = new_service.get_table_context(table_id)
     assert len(context.rows) == 1
     assert context.rows[0]["Drug"] == "Remimazolam"
@@ -113,9 +115,7 @@ def test_preview_table(table_service):
 
 @pytest.mark.asyncio
 async def test_render_table_excel(table_service, tmp_path):
-    # Override output dir for test
-    table_service._excel_renderer.output_dir = tmp_path
-
+    # Output dir is already tmp_path from fixture
     columns = [{"name": "Drug", "type": "text"}, {"name": "Dose", "type": "number"}]
     table_id = table_service.create_table("comparison", "Test", columns)
     table_service.add_rows(table_id, [{"Drug": "A", "Dose": 1}])

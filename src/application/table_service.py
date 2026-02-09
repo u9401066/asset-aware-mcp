@@ -7,25 +7,36 @@ Orchestrates table creation, data accumulation, and rendering.
 import json
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Literal
 
+from src.domain.repositories import TableRendererInterface
 from src.domain.table_entities import ColumnDef, TableContext, TableDraft
-from src.infrastructure.config import settings
-from src.infrastructure.excel_renderer import ExcelRenderer
 
 
 class TableService:
     """Service for managing A2T (Anything to Table) workflows with persistence."""
 
-    def __init__(self) -> None:
-        self.storage_dir = settings.table_output_dir
+    def __init__(
+        self,
+        table_output_dir: Path,
+        table_renderer: TableRendererInterface,
+    ) -> None:
+        """
+        Initialize table service with dependencies.
+
+        Args:
+            table_output_dir: Directory for storing table files
+            table_renderer: Renderer for generating output files (Excel, etc.)
+        """
+        self.storage_dir = table_output_dir
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         self.draft_dir = self.storage_dir / "drafts"
         self.draft_dir.mkdir(parents=True, exist_ok=True)
         # In-memory cache
         self._tables: dict[str, TableContext] = {}
         self._drafts: dict[str, TableDraft] = {}
-        self._excel_renderer = ExcelRenderer(self.storage_dir)
+        self._table_renderer = table_renderer
         self._load_existing_tables()
         self._load_existing_drafts()
 
@@ -296,7 +307,7 @@ class TableService:
             raise ValueError("Cannot render an empty table. Add rows first.")
 
         if format == "excel":
-            file_path = self._excel_renderer.render(context, filename)
+            file_path = self._table_renderer.render(context, filename)
             return {
                 "success": True,
                 "format": "excel",
@@ -502,7 +513,3 @@ class TableService:
             "row_count": context.row_count,
             "tokens_per_row": content_tokens // max(context.row_count, 1),
         }
-
-
-# Global instance
-table_service = TableService()

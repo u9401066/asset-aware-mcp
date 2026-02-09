@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .entities import DocumentManifest, DocumentSummary
+    from .job import Job, JobSummary
+    from .table_entities import TableContext
 
 
 class DocumentRepository(ABC):
@@ -127,4 +129,60 @@ class KnowledgeGraphInterface(ABC):
     @abstractmethod
     async def extract_entities(self, text: str, limit: int = 5) -> list[str]:
         """Extract top entities from text."""
+        ...
+
+
+class JobStoreInterface(ABC):
+    """
+    Abstract interface for job storage.
+
+    Infrastructure layer will implement with FileJobStore or InMemoryJobStore.
+    """
+
+    @abstractmethod
+    async def create(self, job: Job) -> Job:
+        """Create a new job."""
+        ...
+
+    @abstractmethod
+    async def get(self, job_id: str) -> Job | None:
+        """Get a job by ID."""
+        ...
+
+    @abstractmethod
+    async def update(self, job: Job) -> Job:
+        """Update an existing job."""
+        ...
+
+    @abstractmethod
+    async def delete(self, job_id: str) -> bool:
+        """Delete a job."""
+        ...
+
+    @abstractmethod
+    async def list_all(self, limit: int = 50) -> list[JobSummary]:
+        """List all jobs (most recent first)."""
+        ...
+
+    @abstractmethod
+    async def list_active(self) -> list[JobSummary]:
+        """List active (non-terminal) jobs."""
+        ...
+
+    @abstractmethod
+    async def cleanup_old(self, max_age_hours: int = 24) -> int:
+        """Delete old completed/failed jobs. Returns count deleted."""
+        ...
+
+
+class TableRendererInterface(ABC):
+    """
+    Abstract interface for table rendering.
+
+    Infrastructure layer will implement with ExcelRenderer.
+    """
+
+    @abstractmethod
+    def render(self, context: TableContext, filename: str) -> Path:
+        """Render a table context to a file. Returns path to generated file."""
         ...

@@ -16,6 +16,7 @@ from .entities import (
     SectionAsset,
     TableAsset,
 )
+from .etl_profile import ETLProfile
 
 if TYPE_CHECKING:
     pass
@@ -27,27 +28,22 @@ class ManifestGenerator:
 
     Responsible for creating the "map" of a document
     that allows AI Agents to navigate its structure.
+    Configurable via ETLProfile.
     """
 
-    # TOC entries that are figure/table captions, not real sections
-    _TOC_CAPTION_RE = re.compile(
-        r"^(?:Figure|Fig\.?|Table|Tab\.?)\s+\d+",
-        re.IGNORECASE,
-    )
+    def __init__(self, profile: ETLProfile | None = None):
+        """
+        Initialize with an ETL profile.
 
-    # Section titles that are noise (table column headers, etc.)
-    # "# layers" means "number of layers", not a heading
-    _SECTION_NOISE_RE = re.compile(
-        r"^(?:"
-        r"layers|filters|ﬁlters|params|output size"  # table column headers
-        r"|output map size"
-        r"|method|error"
-        r"|[a-z]"          # single lowercase letter
-        r"|\d+$"           # pure numbers
-        r"|[A-Z]{1,2}$"   # 1-2 uppercase letters only
-        r")$",
-        re.IGNORECASE,
-    )
+        Args:
+            profile: ETL extraction profile (default: ETLProfile.default())
+        """
+        self.profile = profile or ETLProfile.default()
+
+        # Pre-compile regexes from profile (once, at init)
+        self._toc_caption_re = self.profile.compile_toc_caption_re()
+        self._section_noise_re = self.profile.compile_section_noise_re()
+        self._title_noise_re = self.profile.compile_title_noise_re()
 
     def generate(
         self,
@@ -177,7 +173,7 @@ class ManifestGenerator:
                     continue
 
                 # Skip noise headings (table column headers like "# layers")
-                if self._SECTION_NOISE_RE.match(title):
+                if self._section_noise_re.match(title):
                     continue
 
                 # Generate section ID (deduplicate with counter)
@@ -227,16 +223,6 @@ class ManifestGenerator:
             page = int(match.group(1))
         return page
 
-    # Patterns that are NOT valid titles (arXiv stamps, noise, etc.)
-    _TITLE_NOISE_RE = re.compile(
-        r"^(?:"
-        r"arXiv:\S+"  # arXiv identifiers
-        r"|OPEN$"     # Noise label
-        r"|\d+$"      # Pure numbers
-        r")",
-        re.IGNORECASE,
-    )
-
     def _detect_title(self, markdown: str) -> str:
         """
         Detect document title from markdown.
@@ -266,8 +252,8 @@ class ManifestGenerator:
                     # Skip noise headings
                     if (
                         len(title_text) < 3
-                        or self._TITLE_NOISE_RE.match(title_text)
-                        or self._SECTION_NOISE_RE.match(title_text)
+                        or self._title_noise_re.match(title_text)
+                        or self._section_noise_re.match(title_text)
                     ):
                         if collecting:
                             break  # Stop collecting after noise
@@ -311,7 +297,7 @@ class ManifestGenerator:
                 continue
 
             # Skip figure/table captions masquerading as TOC entries
-            if self._TOC_CAPTION_RE.match(title):
+            if self._toc_caption_re.match(title):
                 continue
 
             # Generate section ID
