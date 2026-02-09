@@ -45,8 +45,8 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 🗺️ **文件清單 (Manifest)** - 為 Agent 提供結構化的文件「地圖」，實現精確數據存取。
 - 🧠 **LightRAG 整合** - 知識圖譜 + 向量索引，支援跨文件對比與推理。
 - 📊 **A2T (Anything to Table)** - 自動將 Agent 提取的資訊編排為專業 Excel 表格，支援 CRUD、**草稿機制**與**節省 Token 的續作模式**。
-- �️ **VS Code 管理擴充功能** - 提供圖形化介面監控伺服器狀態、已匯入文件，以及 **A2T 表格與草稿**，支援一鍵開啟 Excel。
-- �🔌 **MCP 伺服器** - 透過 FastMCP 向 Copilot/Claude 開放工具與資源。
+- 🖥️ **VS Code 管理擴充功能** - 提供圖形化介面監控伺服器狀態、已匯入文件，以及 **A2T 表格與草稿**，支援一鍵開啟 Excel。
+- 🔌 **MCP 伺服器** - 透過 FastMCP 向 Copilot/Claude 開放工具與資源。
 - 🏥 **醫療研究優化** - 針對醫療文獻優化，支援 Base64 圖片傳輸供 Vision AI 分析。
 
 ## 🏗️ 架構
@@ -82,7 +82,7 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 │  ├── doc_{id}/        # 文件資產 (Markdown/圖片)        │
 │  ├── tables/          # A2T 表格 (JSON/MD/XLSX)         │
 │  │   └── drafts/      # 表格草稿 (持久化)               │
-│  └── lightrag/        # 知識圖譜資料庫                  │
+│  └── lightrag_db/     # 知識圖譜資料庫                  │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -117,24 +117,41 @@ uv run python -m src.presentation.server
 
 ## 🔌 MCP 工具
 
+### 文件與資產工具
+
 | 工具 | 用途 |
 |------|------|
+| `ingest_documents` | 處理 PDF 檔案，可選用 Marker 後端 (`use_marker=True` 產出 blocks.json) |
 | `fetch_document_asset` | 精確獲取表格 (MD) / 圖片 (B64) / 章節內容 |
-| `consult_knowledge_graph` | 知識圖譜查詢，支援跨文件對比 |
-| `plan_table_schema` | AI 驅動的表格結構規劃與腦力激盪 (🆕) |
-| `create_table_draft` | 開啟持久化草稿階段 (節省 Token) |
+| `consult_knowledge_graph` | 知識圖譜查詢，跨文件對比推理 |
+
+### 章節導航工具（動態層級）
+
+| 工具 | 用途 |
+|------|------|
+| `list_section_tree` | 顯示完整章節樹狀結構（支援任意深度） |
+| `get_section_detail` | 取得特定章節的詳細資訊 |
+| `get_section_blocks` | 提取章節內所有區塊（含頁碼 + bbox） |
+| `search_sections` | 搜尋章節標題 |
+
+### A2T (Anything to Table) 工具
+
+| 工具 | 用途 |
+|------|------|
+| `plan_table_schema` | AI 驅動的表格結構規劃與腦力激盪 |
+| `create_table_draft` | 開啟持久化草稿階段（節省 Token）|
 | `add_rows_to_draft` | 批量向草稿新增數據 |
 | `commit_draft_to_table` | 將草稿正式轉為表格檔案 |
-| `resume_draft` / `resume_table` | 以極小上下文恢復工作 (節省 Token) |
+| `resume_draft` / `resume_table` | 以極小上下文恢復工作（節省 Token）|
 | `update_cell` | 精確的儲存格等級編輯 |
-| `render_table` | 渲染為專業 Excel 檔案 (含條件格式) |
+| `render_table` | 渲染為專業 Excel 檔案（含條件格式）|
 
 ## 🔧 技術棧
 
 | 類別 | 技術 |
 |----------|------------|
 | 語言 | Python 3.10+ |
-| ETL | **PyMuPDF** (fitz) |
+| ETL | **PyMuPDF** (fitz) + **Marker** (可選，高精度) |
 | RAG | LightRAG (lightrag-hku) |
 | MCP | FastMCP |
 | 儲存 | 本地檔案系統 (JSON/Markdown/PNG) |
