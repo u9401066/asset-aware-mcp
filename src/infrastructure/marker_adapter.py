@@ -41,7 +41,7 @@ class MarkerBlock:
     bbox: list[float] = field(default_factory=list)  # [x0, y0, x1, y1]
     polygon: list[list[float]] = field(default_factory=list)  # [[x,y], ...]
     section_hierarchy: dict[str, str] = field(default_factory=dict)  # {"1": "Ch1", "2": "1.1"}
-    children: list["MarkerBlock"] = field(default_factory=list)
+    children: list[MarkerBlock] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -127,7 +127,7 @@ class MarkerPDFExtractor:
         blocks: list[MarkerBlock] = []
         block_counter = 0
 
-        def traverse_node(node: Any, page_num: int = 1, section_hierarchy: dict | None = None):
+        def traverse_node(node: Any, page_num: int = 1, section_hierarchy: dict | None = None) -> None:
             nonlocal block_counter
             section_hierarchy = section_hierarchy or {}
 
@@ -303,6 +303,7 @@ class MarkerPDFExtractor:
             width, height = 0, 0
             try:
                 import io
+
                 from PIL import Image
                 img = Image.open(io.BytesIO(img_bytes))
                 width, height = img.size

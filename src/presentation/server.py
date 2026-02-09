@@ -12,14 +12,15 @@ Structure:
 
 from __future__ import annotations
 
+# Register all tools (side-effect imports)
+# Register all resources (side-effect imports)
+from src.presentation import (
+    resources,  # noqa: F401
+    tools,  # noqa: F401
+)
+
 # Import mcp instance
 from src.presentation.mcp_app import mcp
-
-# Register all tools (side-effect imports)
-from src.presentation import tools  # noqa: F401
-
-# Register all resources (side-effect imports)
-from src.presentation import resources  # noqa: F401
 
 
 def main() -> None:

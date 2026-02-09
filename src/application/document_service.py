@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from src.domain.entities import (
     DocumentManifest,
@@ -52,7 +52,7 @@ class DocumentService:
         repository: DocumentRepository,
         pdf_extractor: PDFExtractorInterface,
         knowledge_graph: KnowledgeGraphInterface | None = None,
-        marker_extractor: "MarkerPDFExtractor | None" = None,
+        marker_extractor: MarkerPDFExtractor | None = None,
     ):
         """
         Initialize document service with dependencies.
@@ -347,7 +347,7 @@ class DocumentService:
         except Exception:
             return (0, 0)
 
-    async def _save_marker_images(self, doc_id: str, parse_result) -> list[FigureAsset]:
+    async def _save_marker_images(self, doc_id: str, parse_result: Any) -> list[FigureAsset]:
         """Save images from Marker parse result."""
         figures = []
 

@@ -7,8 +7,9 @@ Domain Layer - Section Tree
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any, Iterator
+from typing import Any
 
 
 @dataclass
@@ -30,7 +31,7 @@ class SectionNode:
     """
 
     title: str
-    path: "list[str]" = field(default_factory=list)
+    path: list[str] = field(default_factory=list)
     depth: int = 1
 
     # 統計資訊
@@ -41,10 +42,10 @@ class SectionNode:
     text_length: int = 0
 
     # 子節點 (title -> SectionNode)
-    children: "dict[str, SectionNode]" = field(default_factory=dict)
+    children: dict[str, SectionNode] = field(default_factory=dict)
 
     # 該節點直屬的 block IDs
-    block_ids: "list[str]" = field(default_factory=list)
+    block_ids: list[str] = field(default_factory=list)
 
     def add_block(self, block_id: str, page: int, text_len: int = 0) -> None:
         """新增 block 到此節點。"""
@@ -59,11 +60,11 @@ class SectionNode:
         if self.page_end is None or page > self.page_end:
             self.page_end = page
 
-    def get_child(self, title: str) -> "SectionNode | None":
+    def get_child(self, title: str) -> SectionNode | None:
         """取得子節點。"""
         return self.children.get(title)
 
-    def get_or_create_child(self, title: str) -> "SectionNode":
+    def get_or_create_child(self, title: str) -> SectionNode:
         """取得或建立子節點。"""
         if title not in self.children:
             self.children[title] = SectionNode(
@@ -95,7 +96,7 @@ class SectionNode:
             result.extend(child.get_all_block_ids())
         return result
 
-    def find_by_path(self, path: list[str]) -> "SectionNode | None":
+    def find_by_path(self, path: list[str]) -> SectionNode | None:
         """根據路徑找到節點。"""
         if not path:
             return self
@@ -109,7 +110,7 @@ class SectionNode:
             return child
         return child.find_by_path(rest)
 
-    def iter_all(self, max_depth: int | None = None) -> Iterator["SectionNode"]:
+    def iter_all(self, max_depth: int | None = None) -> Iterator[SectionNode]:
         """遍歷所有節點（含自己）。"""
         yield self
         if max_depth is None or self.depth < max_depth:

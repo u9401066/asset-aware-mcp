@@ -437,7 +437,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         variance = sum((b - mean_val) ** 2 for b in sample_bytes) / len(sample_bytes)
 
         # If variance is too low, it's probably blank
-        return variance > 100  # Threshold for "interesting" content
+        return bool(variance > 100)  # Threshold for "interesting" content
 
     def _overlaps_existing_images(
         self, bbox: fitz.Rect, existing_images: list[dict]

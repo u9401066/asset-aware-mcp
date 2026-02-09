@@ -54,7 +54,7 @@ section_service = SectionService(data_dir=settings.data_dir)
 # ============================================================================
 
 
-def get_marker_extractor() -> "MarkerPDFExtractor":
+def get_marker_extractor() -> MarkerPDFExtractor:
     """Lazy-load Marker extractor (heavy model initialization, ~1GB)."""
     global marker_extractor
     if marker_extractor is None:
