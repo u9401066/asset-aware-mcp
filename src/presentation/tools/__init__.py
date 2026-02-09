@@ -8,3 +8,91 @@ Presentation Layer - MCP Tools
 - knowledge_tools: 知識圖譜工具
 - table_tools: A2T 表格工具
 """
+
+# Import all tools to register them with mcp
+from src.presentation.tools.document_tools import (
+    fetch_document_asset,
+    ingest_documents,
+    inspect_document_manifest,
+    list_documents,
+    parse_pdf_structure,
+    search_source_location,
+)
+from src.presentation.tools.job_tools import (
+    cancel_job,
+    get_job_status,
+    list_jobs,
+)
+from src.presentation.tools.knowledge_tools import (
+    consult_knowledge_graph,
+    export_knowledge_graph,
+)
+from src.presentation.tools.section_tools import (
+    get_section_blocks,
+    get_section_detail,
+    list_section_tree,
+    search_sections,
+)
+from src.presentation.tools.table_tools import (
+    add_rows,
+    add_rows_to_draft,
+    commit_draft_to_table,
+    create_table,
+    create_table_draft,
+    delete_row,
+    delete_table,
+    estimate_tokens,
+    get_section_content,
+    list_drafts,
+    list_tables,
+    plan_table_schema,
+    preview_table,
+    render_table,
+    resume_draft,
+    resume_table,
+    update_cell,
+    update_row,
+    update_table_draft,
+)
+
+__all__ = [
+    # Document tools
+    "parse_pdf_structure",
+    "search_source_location",
+    "ingest_documents",
+    "list_documents",
+    "inspect_document_manifest",
+    "fetch_document_asset",
+    # Section tools
+    "list_section_tree",
+    "get_section_detail",
+    "get_section_blocks",
+    "search_sections",
+    # Job tools
+    "get_job_status",
+    "list_jobs",
+    "cancel_job",
+    # Knowledge tools
+    "consult_knowledge_graph",
+    "export_knowledge_graph",
+    # Table tools
+    "plan_table_schema",
+    "get_section_content",
+    "create_table_draft",
+    "update_table_draft",
+    "add_rows_to_draft",
+    "commit_draft_to_table",
+    "list_drafts",
+    "resume_draft",
+    "estimate_tokens",
+    "create_table",
+    "add_rows",
+    "update_row",
+    "delete_row",
+    "delete_table",
+    "list_tables",
+    "update_cell",
+    "resume_table",
+    "preview_table",
+    "render_table",
+]

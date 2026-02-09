@@ -5,3 +5,38 @@ Presentation Layer - MCP Resources
 - document_resources: 文件 + 知識圖譜 Resources
 - table_resources: A2T 表格 + 草稿 Resources
 """
+
+# Import all resources to register them with mcp
+from src.presentation.resources.document_resources import (
+    resource_document_figures,
+    resource_document_list,
+    resource_document_manifest,
+    resource_document_outline,
+    resource_document_sections,
+    resource_document_tables,
+    resource_knowledge_graph_summary,
+)
+from src.presentation.resources.table_resources import (
+    resource_draft_content,
+    resource_draft_list,
+    resource_table_content,
+    resource_table_list,
+    resource_table_status,
+)
+
+__all__ = [
+    # Document resources
+    "resource_document_list",
+    "resource_document_manifest",
+    "resource_document_figures",
+    "resource_document_tables",
+    "resource_document_sections",
+    "resource_document_outline",
+    "resource_knowledge_graph_summary",
+    # Table resources
+    "resource_table_list",
+    "resource_table_content",
+    "resource_table_status",
+    "resource_draft_list",
+    "resource_draft_content",
+]

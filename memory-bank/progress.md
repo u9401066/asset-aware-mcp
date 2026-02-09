@@ -21,16 +21,21 @@
   - 更新 4 個指令/技能文件 (copilot-instructions, CLAUDE, AGENTS, SKILL)
   - 更新 README/CHANGELOG/ROADMAP 反映雙引擎 + Section Navigation
   - Presentation 層重構骨架：`mcp_app.py`, `dependencies.py`, `tools/`, `resources/`
+- ✅ **v0.2.10: Presentation 層模組化完成 + Bug 修復**
+  - server.py 從 2122 行瘦身為 31 行 thin entry point
+  - 34 tools 分佈在 5 個模組 (tools/)
+  - 12 resources 分佈在 2 個模組 (resources/)
+  - 修復 C2: `use_marker` 現在正確傳遞到 async job
+  - 修復 H1: `list_documents` 跳過 tables/jobs 目錄
+  - 修復 H4: `_overlaps_existing_images` 實作 >50% bbox 重疊檢測
 
 ## Doing
 
 - 🚧 v0.3.0 架構重構：Asset-Centric Architecture
   - Phase 1: Asset Registry（資產註冊中心）
-- 🚧 P0 server.py 模組化拆分（2122 行 → 子模組，骨架已建立，待完成）
 
 ## Next
 
-- 完成 server.py 拆分（tools/ 5 模組 + resources/ 2 模組 + 瘦入口）
 - P1: 抽取共用 asset utils（消除 document_service ↔ marker_adapter 重複）
 - Phase 1: 建立 `AssetRegistry` 類別
 - Phase 2: TableService 支援 `create_table_from_*` 方法

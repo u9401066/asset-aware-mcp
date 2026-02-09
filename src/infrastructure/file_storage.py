@@ -116,12 +116,15 @@ class FileStorage(DocumentRepository):
         """List all processed documents."""
         documents = []
 
+        # Special directories that should not be listed as documents
+        skip_dirs = {"lightrag_db", "jobs", "tables"}
+
         for doc_dir in self.base_dir.iterdir():
             if not doc_dir.is_dir():
                 continue
 
             # Skip special directories
-            if doc_dir.name.startswith(".") or doc_dir.name == "lightrag_db":
+            if doc_dir.name.startswith(".") or doc_dir.name in skip_dirs:
                 continue
 
             manifest = self.load_manifest(doc_dir.name)

@@ -5,6 +5,20 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 專案遵循 [語義化版本](https://semver.org/lang/zh-TW/)。
 
+## [0.2.10] - 2026-02-09
+
+### Changed
+- 🏗️ **Presentation 層模組化完成**：`server.py` 從 2122 行瘦身為 31 行 thin entry point
+  - `tools/` 目錄：5 個模組共 34 tools (document, section, job, knowledge, table)
+  - `resources/` 目錄：2 個模組共 12 resources (document, table)
+  - `mcp_app.py`：單一 FastMCP 實例
+  - `dependencies.py`：Composition Root / DI 容器
+
+### Fixed
+- 🐛 **C2: Async mode ignore use_marker**：`JobService._process_ingest_job()` 現在正確從 `job.parameters` 讀取並傳遞 `use_marker` 參數
+- 🐛 **H1: list_documents 誤列特殊目錄**：`FileStorage.list_documents()` 現在跳過 `tables`、`jobs` 目錄
+- 🐛 **H4: _overlaps_existing_images 空實作**：實作 >50% bbox 重疊檢測演算法，正確過濾重複圖片
+
 ## [0.2.9] - 2026-02-09
 
 ### Added

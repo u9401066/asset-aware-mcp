@@ -190,7 +190,10 @@ class JobService:
 
                 # Actually process the document (ingest() takes a list)
                 try:
-                    results = await self.document_service.ingest([file_path])
+                    use_marker = job.parameters.get("use_marker", False)
+                    results = await self.document_service.ingest(
+                        [file_path], use_marker=use_marker
+                    )
                     result = results[0] if results else None
 
                     if result is not None and result.success:

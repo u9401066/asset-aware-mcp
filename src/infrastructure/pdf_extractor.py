@@ -445,13 +445,40 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         """
         Check if a bounding box overlaps significantly with existing images.
         Used to avoid duplicate extractions.
-        """
-        for _img in existing_images:
-            # We don't have bbox info for XObject images, so we skip this check
-            # In practice, XObject images are usually separate from vector graphics
-            pass
 
-        # For now, assume no overlap (conservative approach)
+        Overlap threshold: >50% of smaller area means significant overlap.
+        """
+        if not existing_images:
+            return False
+
+        new_area = bbox.width * bbox.height
+        if new_area <= 0:
+            return False
+
+        for img in existing_images:
+            # Check if existing image has bbox info
+            if "bbox" not in img:
+                # XObject images don't have bbox, skip overlap check for them
+                continue
+
+            existing_bbox = img["bbox"]
+            # Handle both fitz.Rect and tuple/list formats
+            if isinstance(existing_bbox, (list, tuple)):
+                existing_bbox = fitz.Rect(existing_bbox)
+
+            # Calculate intersection
+            intersection = bbox & existing_bbox
+            if intersection.is_empty:
+                continue
+
+            intersection_area = intersection.width * intersection.height
+            existing_area = existing_bbox.width * existing_bbox.height
+
+            # Overlap ratio based on smaller of the two areas
+            min_area = min(new_area, existing_area)
+            if min_area > 0 and intersection_area / min_area > 0.5:
+                return True
+
         return False
 
     def _extract_single_image(self, doc: fitz.Document, img: tuple) -> dict | None:
