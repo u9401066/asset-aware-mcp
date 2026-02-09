@@ -39,6 +39,8 @@ class ManifestGenerator:
         markdown_path: str,
         lightrag_entities: list[str] | None = None,
         tables: list[TableAsset] | None = None,
+        pdf_toc: list[tuple[int, str, int]] | None = None,
+        pdf_title: str = "",
     ) -> DocumentManifest:
         """
         Generate a complete document manifest.
@@ -52,6 +54,8 @@ class ManifestGenerator:
             markdown_path: Path to saved markdown
             lightrag_entities: Optional entities from LightRAG
             tables: Optional pre-extracted tables (from Docling)
+            pdf_toc: Optional PDF built-in TOC [(level, title, page), ...]
+            pdf_title: Optional title from PDF metadata
 
         Returns:
             Complete DocumentManifest
@@ -62,14 +66,17 @@ class ManifestGenerator:
         else:
             parsed_tables = self._parse_tables(markdown)
 
-        # Parse sections from markdown
-        sections = self._parse_sections(markdown)
+        # Parse sections: prefer PDF built-in TOC over font-size heuristics
+        if pdf_toc:
+            sections = self._sections_from_pdf_toc(pdf_toc)
+        else:
+            sections = self._parse_sections(markdown)
 
         # Build TOC from sections
         toc = [s.title for s in sections if s.level <= 2]
 
-        # Detect title
-        title = self._detect_title(markdown)
+        # Detect title: prefer PDF metadata > merge consecutive H1 > first heading
+        title = pdf_title or self._detect_title(markdown)
 
         return DocumentManifest(
             doc_id=doc_id,
@@ -190,11 +197,38 @@ class ManifestGenerator:
         return page
 
     def _detect_title(self, markdown: str) -> str:
-        """Detect document title from first heading."""
-        # Try first H1 heading
-        match = re.search(r"^#\s+(.+)$", markdown, re.MULTILINE)
-        if match:
-            return match.group(1).strip()
+        """
+        Detect document title from markdown.
+
+        Strategy:
+        1. Merge consecutive H1 headings (often split across lines in PDFs)
+        2. Fallback to first non-empty line
+        """
+        lines = markdown.split("\n")
+        h1_titles: list[str] = []
+        collecting = False
+
+        for line in lines:
+            stripped = line.strip()
+            if not stripped or stripped.startswith("<!--"):
+                continue
+
+            header_match = re.match(r"^#\s+(.+)$", stripped)
+            if header_match:
+                title_text = header_match.group(1).strip()
+                # Skip noise headings
+                if len(title_text) < 3 or title_text in ("OPEN",):
+                    if collecting:
+                        break  # Stop collecting after noise
+                    continue
+                h1_titles.append(title_text)
+                collecting = True
+            elif collecting:
+                # Stop collecting when we hit non-H1 content
+                break
+
+        if h1_titles:
+            return " ".join(h1_titles)
 
         # Fallback: first non-empty line
         for line in markdown.split("\n"):
@@ -203,6 +237,45 @@ class ManifestGenerator:
                 return line[:100]
 
         return ""
+
+    def _sections_from_pdf_toc(
+        self, pdf_toc: list[tuple[int, str, int]]
+    ) -> list[SectionAsset]:
+        """
+        Convert PDF built-in TOC to SectionAsset list.
+
+        PDF TOC is much more reliable than font-size heuristics.
+
+        Args:
+            pdf_toc: List of (level, title, page) from PyMuPDF get_toc()
+
+        Returns:
+            List of SectionAsset
+        """
+        sections = []
+
+        for level, title, page in pdf_toc:
+            title = title.strip()
+            if not title:
+                continue
+
+            # Generate section ID
+            clean_title = re.sub(r"[^a-z0-9]", "_", title.lower())[:30]
+            sec_id = f"sec_{clean_title}"
+
+            sections.append(
+                SectionAsset(
+                    id=sec_id,
+                    title=title,
+                    level=level,
+                    page=page,
+                    start_line=0,  # PDF TOC doesn't have line numbers
+                    end_line=0,
+                    preview="",
+                )
+            )
+
+        return sections
 
 
 class AssetExtractor:

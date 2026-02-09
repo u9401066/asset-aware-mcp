@@ -5,6 +5,19 @@
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，
 專案遵循 [語義化版本](https://semver.org/lang/zh-TW/)。
 
+## [Unreleased]
+
+### Added
+- 🧪 **E2E ETL 測試** (`tests/e2e_test_etl.py`)：5 篇論文 34 項測試全通過
+  - Music Playschool (Scientific Reports) / Attention Is All You Need (arXiv) / Nobel Chemistry 2024 / Docling / GPT-4
+  - 驗證 title、sections、tables、figures、noise filter、markdown 品質
+
+### Improved
+- 📄 **PDF TOC 優先策略**：使用 PDF 內建 TOC (`get_toc()`) 取代字型大小啟發式，章節結構更精準
+- 📄 **PDF metadata title**：優先使用 PDF metadata 標題，支援合併連續 H1 heading 修復截斷問題
+- 📄 **Heading noise filter**：加入最小長度 3 字元 + regex 過濾 ("a","b","OPEN" 等雜訊)
+- 📄 **Table 提取修復**：新增 `tabulate` 依賴，`to_pandas().to_markdown()` 失敗時 fallback 到 `_table_to_markdown()`
+
 ## [0.2.10] - 2026-02-09
 
 ### Changed

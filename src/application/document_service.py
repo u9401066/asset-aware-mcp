@@ -139,6 +139,14 @@ class DocumentService:
             # Step 4: Get page count
             page_count = self.pdf_extractor.get_page_count(path)
 
+            # Step 4.5: Get PDF built-in TOC and metadata title (if available)
+            pdf_toc: list[tuple[int, str, int]] = []
+            pdf_title = ""
+            if hasattr(self.pdf_extractor, "get_toc"):
+                pdf_toc = self.pdf_extractor.get_toc(path)
+            if hasattr(self.pdf_extractor, "get_title"):
+                pdf_title = self.pdf_extractor.get_title(path)
+
             # Step 5: Extract entities from knowledge graph (if available)
             entities = []
             if self.knowledge_graph and self.knowledge_graph.is_available:
@@ -163,6 +171,8 @@ class DocumentService:
                 page_count=page_count,
                 markdown_path=str(markdown_path),
                 lightrag_entities=entities,
+                pdf_toc=pdf_toc,
+                pdf_title=pdf_title,
             )
 
             # Step 7: Save manifest

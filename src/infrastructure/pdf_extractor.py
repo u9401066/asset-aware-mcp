@@ -7,6 +7,7 @@ Key feature: Extracts images WITH page numbers for verification.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -79,6 +80,13 @@ class PyMuPDFExtractor(PDFExtractorInterface):
 
         return "\n".join(text_parts)
 
+    # Minimum length for heading text (filters figure sub-labels like "a", "b", "OPEN")
+    _MIN_HEADING_LENGTH = 3
+    # Patterns that should never be headings (figure labels, page markers, etc.)
+    _HEADING_NOISE_RE = re.compile(
+        r"^(?:[a-z]|OPEN|www\.|http|\d+|[A-Z]{1,2})$", re.IGNORECASE
+    )
+
     def _extract_page_text(self, page: fitz.Page) -> str:
         """Extract text from a single page with basic formatting."""
         blocks = page.get_text("dict")["blocks"]
@@ -98,14 +106,22 @@ class PyMuPDFExtractor(PDFExtractorInterface):
 
                     font_size = span.get("size", 12)
                     flags = span.get("flags", 0)
+                    stripped = text.strip()
 
                     # Detect headings by font size
-                    if font_size > 16:
-                        text = f"# {text}"
-                    elif font_size > 14:
-                        text = f"## {text}"
-                    elif font_size > 12:
-                        text = f"### {text}"
+                    # Filter: must be >= _MIN_HEADING_LENGTH and not noise
+                    is_heading_candidate = (
+                        len(stripped) >= self._MIN_HEADING_LENGTH
+                        and not self._HEADING_NOISE_RE.match(stripped)
+                    )
+
+                    if is_heading_candidate:
+                        if font_size > 16:
+                            text = f"# {text}"
+                        elif font_size > 14:
+                            text = f"## {text}"
+                        elif font_size > 12:
+                            text = f"### {text}"
 
                     # Detect bold (flag bit 2^4 = 16)
                     if flags & 16 and not text.startswith("#"):
@@ -519,6 +535,30 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         finally:
             doc.close()
 
+    def get_toc(self, pdf_path: Path) -> list[tuple[int, str, int]]:
+        """
+        Get PDF built-in Table of Contents (bookmark outline).
+
+        Returns:
+            List of (level, title, page_number) tuples.
+            Much more reliable than font-size heuristics.
+        """
+        doc = fitz.open(str(pdf_path))
+        try:
+            return doc.get_toc()  # [(level, title, page), ...]
+        finally:
+            doc.close()
+
+    def get_title(self, pdf_path: Path) -> str:
+        """
+        Get document title from PDF metadata.
+
+        Returns:
+            Title string, or empty string if not available.
+        """
+        meta = self.get_metadata(pdf_path)
+        return (meta.get("title") or "").strip()
+
     def extract_tables(self, pdf_path: Path) -> list[dict]:
         """
         Extract tables from PDF using PyMuPDF's find_tables().
@@ -549,19 +589,21 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                         try:
                             # Get table as pandas DataFrame if available
                             if hasattr(tab, "to_pandas"):
-                                df = tab.to_pandas()
-                                markdown = df.to_markdown(index=False)
-                                row_count = len(df)
-                                col_count = len(df.columns)
+                                try:
+                                    df = tab.to_pandas()
+                                    markdown = df.to_markdown(index=False)
+                                    row_count = len(df)
+                                    col_count = len(df.columns)
+                                except Exception:
+                                    # Fallback when tabulate is missing
+                                    markdown = self._table_to_markdown(tab)
+                                    row_count = getattr(tab, "row_count", 0)
+                                    col_count = getattr(tab, "col_count", 0)
                             else:
                                 # Fallback: extract cells manually
                                 markdown = self._table_to_markdown(tab)
-                                row_count = (
-                                    tab.row_count if hasattr(tab, "row_count") else 0
-                                )
-                                col_count = (
-                                    tab.col_count if hasattr(tab, "col_count") else 0
-                                )
+                                row_count = getattr(tab, "row_count", 0)
+                                col_count = getattr(tab, "col_count", 0)
 
                             tables.append(
                                 {

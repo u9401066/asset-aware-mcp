@@ -4,8 +4,8 @@
 
 ## 🎯 當前焦點
 
-- **v0.2.9 已完成**：ETL 缺陷修復、路徑統一、文件同步
-- **🚧 P0 server.py 模組化拆分**：2122 行 → 子模組（骨架已建立）
+- **ETL 品質改進已完成**：PDF TOC、Table 提取、Title 偵測、Noise Filter
+- **🚧 繼續完善拆解品質**：改進 caption 偵測、小圖過濾等
 - **🚧 v0.3.0 架構重構**：Asset-Centric Architecture
 
 ## 已完成的工作 (v0.2.9)
