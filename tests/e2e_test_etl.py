@@ -105,8 +105,15 @@ def _print_summary(data: dict, label: str):
     if tables:
         print(f"\n  --- Tables ---")
         for t in tables:
-            cap = t.get("caption", "")[:50] or "(no caption)"
+            cap = t.get("caption", "")[:60] or "(no caption)"
             print(f"    {t['id']}: p.{t.get('page', '?')} {t.get('row_count', '?')}x{t.get('col_count', '?')} {cap}")
+
+    if figures:
+        print(f"\n  --- Figures (with captions) ---")
+        captioned = [f for f in figures if f.get("caption")]
+        print(f"    {len(captioned)}/{len(figures)} have captions")
+        for f_ in captioned[:5]:
+            print(f"    {f_['id']}: p.{f_.get('page', '?')} {f_.get('caption', '')[:60]}")
 
     print(f"{'='*70}\n")
 
@@ -168,10 +175,35 @@ class TestMusicPlayschool:
         main_table = tables[0]
         assert main_table.get("row_count", 0) > 5 or main_table.get("col_count", 0) > 2
 
+    def test_no_noise_tables(self):
+        """Should NOT have tables with 0 rows or <=1 column."""
+        tables = self.data["tables"]
+        noise = [t for t in tables if t.get("row_count", 0) < 1 or t.get("col_count", 0) < 2]
+        assert len(noise) == 0, f"Found noise tables: {[t['id'] for t in noise]}"
+
+    def test_table_has_caption(self):
+        """At least the main table should have a caption."""
+        tables = self.data["tables"]
+        captioned = [t for t in tables if t.get("caption")]
+        assert len(captioned) >= 1, "Expected at least 1 table with caption"
+        assert "table" in captioned[0]["caption"].lower()
+
     def test_figures_extracted(self):
         """Should have figures (images from PDF)."""
         figures = self.data["figures"]
         assert len(figures) >= 3, f"Expected >=3 figures, got {len(figures)}"
+
+    def test_no_small_figures(self):
+        """Should NOT have tiny icon figures (<50px)."""
+        figures = self.data["figures"]
+        small = [f for f in figures if f.get("width", 0) < 50 or f.get("height", 0) < 50]
+        assert len(small) == 0, f"Found small figures: {[f['id'] for f in small]}"
+
+    def test_figure_captions(self):
+        """At least some figures should have captions."""
+        figures = self.data["figures"]
+        captioned = [f for f in figures if f.get("caption")]
+        assert len(captioned) >= 1, "Expected at least 1 figure with caption"
 
     def test_markdown_generated(self):
         """Full markdown should be non-empty and substantial."""
@@ -233,10 +265,34 @@ class TestAttentionPaper:
         assert isinstance(tables, list)
         print(f"  Tables found: {len(tables)}")
 
+    def test_no_noise_tables(self):
+        """Tables should not be empty or single-column."""
+        tables = self.data["tables"]
+        noise = [t for t in tables if t.get("row_count", 0) < 1 or t.get("col_count", 0) < 2]
+        assert len(noise) == 0, f"Noise tables: {[t['id'] for t in noise]}"
+
+    def test_table_captions(self):
+        """Table 3 and Table 4 should have captions."""
+        tables = self.data["tables"]
+        captioned = [t for t in tables if t.get("caption")]
+        if tables:
+            print(f"  Tables with captions: {len(captioned)}/{len(tables)}")
+            for t in captioned:
+                print(f"    {t['id']}: {t['caption'][:60]}")
+
     def test_figures_present(self):
         """Should have figures (architecture diagrams)."""
         figures = self.data["figures"]
         assert len(figures) >= 1, f"Expected >=1 figure, got {len(figures)}"
+
+    def test_figure_captions(self):
+        """Attention paper figures should have captions."""
+        figures = self.data["figures"]
+        captioned = [f for f in figures if f.get("caption")]
+        if captioned:
+            print(f"  Figures with captions: {len(captioned)}/{len(figures)}")
+            for f_ in captioned[:3]:
+                print(f"    {f_['id']}: {f_['caption'][:60]}")
 
     def test_no_noise_headings(self):
         """Should NOT have single-letter or noise headings."""
@@ -446,3 +502,46 @@ class TestCrossDocument:
             assert len(noise) == 0, (
                 f"Noise sections in {m['doc_id']}: {[s['title'] for s in noise]}"
             )
+
+    def test_no_noise_tables_globally(self):
+        """No document should have empty/single-column noise tables."""
+        for m in self.manifests:
+            tables = m["assets"].get("tables", [])
+            noise = [
+                t for t in tables
+                if t.get("row_count", 0) < 1 or t.get("col_count", 0) < 2
+            ]
+            assert len(noise) == 0, (
+                f"Noise tables in {m['doc_id']}: {[t['id'] for t in noise]}"
+            )
+
+    def test_no_small_figures_globally(self):
+        """No document should have tiny icon figures."""
+        for m in self.manifests:
+            figures = m["assets"].get("figures", [])
+            small = [
+                f for f in figures
+                if f.get("width", 0) < 50 or f.get("height", 0) < 50
+            ]
+            assert len(small) == 0, (
+                f"Small figures in {m['doc_id']}: {[f['id'] for f in small]}"
+            )
+
+    def test_caption_coverage_summary(self):
+        """Print caption coverage summary across all documents."""
+        total_tables = 0
+        captioned_tables = 0
+        total_figures = 0
+        captioned_figures = 0
+
+        for m in self.manifests:
+            tables = m["assets"].get("tables", [])
+            figures = m["assets"].get("figures", [])
+            total_tables += len(tables)
+            total_figures += len(figures)
+            captioned_tables += len([t for t in tables if t.get("caption")])
+            captioned_figures += len([f for f in figures if f.get("caption")])
+
+        print(f"\n  === Caption Coverage ===")
+        print(f"  Tables:  {captioned_tables}/{total_tables} have captions")
+        print(f"  Figures: {captioned_figures}/{total_figures} have captions")

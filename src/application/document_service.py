@@ -470,7 +470,7 @@ class DocumentService:
     async def _extract_and_save_images(
         self, doc_id: str, pdf_path: Path
     ) -> list[FigureAsset]:
-        """Extract images from PDF and save them."""
+        """Extract images from PDF, filter small icons, and associate captions."""
         figures = []
 
         raw_images = self.pdf_extractor.extract_images(pdf_path)
@@ -480,7 +480,23 @@ class DocumentService:
         if hasattr(self.pdf_extractor, "config"):
             source = "docling"
 
+        # Extract figure captions for association
+        page_captions: dict[int, list[dict]] = {}
+        if hasattr(self.pdf_extractor, "extract_figure_captions"):
+            page_captions = self.pdf_extractor.extract_figure_captions(pdf_path)
+
+        # Track which captions have been used (per page)
+        used_captions: dict[int, set[int]] = {}
+
         for img_data in raw_images:
+            w = img_data["width"]
+            h = img_data["height"]
+
+            # Filter small images (icons, logos, decorations)
+            min_px = getattr(self.pdf_extractor, "_MIN_FIGURE_PX", 50)
+            if w < min_px or h < min_px:
+                continue
+
             # Generate figure ID: fig_{page}_{index}
             fig_id = f"fig_{img_data['page']}_{img_data['index_on_page']}"
 
@@ -492,8 +508,18 @@ class DocumentService:
                 ext=img_data["ext"],
             )
 
-            # Get caption from Docling if available
+            # Associate caption: pick next unused caption on same page
             caption = img_data.get("caption", "")
+            if not caption:
+                page_num = img_data["page"]
+                caps = page_captions.get(page_num, [])
+                if page_num not in used_captions:
+                    used_captions[page_num] = set()
+                for idx, cap in enumerate(caps):
+                    if idx not in used_captions[page_num]:
+                        caption = cap["caption"]
+                        used_captions[page_num].add(idx)
+                        break
 
             figures.append(
                 FigureAsset(
@@ -501,8 +527,8 @@ class DocumentService:
                     page=img_data["page"],
                     path=str(image_path),
                     ext=img_data["ext"],
-                    width=img_data["width"],
-                    height=img_data["height"],
+                    width=w,
+                    height=h,
                     caption=caption,
                     figure_type="",
                     source=source,

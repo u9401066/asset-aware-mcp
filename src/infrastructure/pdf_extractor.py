@@ -86,6 +86,20 @@ class PyMuPDFExtractor(PDFExtractorInterface):
     _HEADING_NOISE_RE = re.compile(
         r"^(?:[a-z]|OPEN|www\.|http|\d+|[A-Z]{1,2})$", re.IGNORECASE
     )
+    # Minimum dimensions for figures (skip tiny icons/logos)
+    _MIN_FIGURE_PX = 50
+    # Table noise thresholds
+    _MIN_TABLE_ROWS = 1  # Exclude tables with 0 data rows
+    _MIN_TABLE_COLS = 2  # Exclude single-column "tables"
+    # Caption detection patterns
+    _TABLE_CAPTION_RE = re.compile(
+        r"(?:Table|TABLE|Tab\.?)\s+(\d+)\s*[.:,]?\s*(.*)",
+        re.IGNORECASE,
+    )
+    _FIGURE_CAPTION_RE = re.compile(
+        r"(?:Figure|FIGURE|Fig\.?)\s+(\d+)\s*[.:,]?\s*(.*)",
+        re.IGNORECASE,
+    )
 
     def _extract_page_text(self, page: fitz.Page) -> str:
         """Extract text from a single page with basic formatting."""
@@ -605,12 +619,25 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                                 row_count = getattr(tab, "row_count", 0)
                                 col_count = getattr(tab, "col_count", 0)
 
+                            # Filter noise tables (empty or single-column)
+                            if (
+                                row_count < self._MIN_TABLE_ROWS
+                                or col_count < self._MIN_TABLE_COLS
+                            ):
+                                table_index -= 1  # Don't count filtered tables
+                                continue
+
+                            # Detect caption from text near the table
+                            caption = self._detect_table_caption(
+                                page, tab, table_index
+                            )
+
                             tables.append(
                                 {
                                     "id": f"tab_{table_index}",
                                     "page": page_num + 1,
                                     "markdown": markdown,
-                                    "caption": "",  # PyMuPDF doesn't detect captions
+                                    "caption": caption,
                                     "row_count": row_count,
                                     "col_count": col_count,
                                     "preview": markdown[:100] if markdown else "",
@@ -629,6 +656,83 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             doc.close()
 
         return tables
+
+    def _detect_table_caption(
+        self, page: fitz.Page, table: Any, table_index: int
+    ) -> str:
+        """
+        Detect table caption from text above or below the table.
+
+        Searches for patterns like 'Table 1. ...', 'Table 2: ...' etc.
+        in a region above/below the table bounding box.
+        """
+        if not hasattr(table, "bbox"):
+            return ""
+
+        bbox = table.bbox
+        page_h = page.rect.height
+        margin = 80  # pixels to search above/below
+
+        # Search above first (most common position)
+        above = fitz.Rect(
+            max(0, bbox[0] - 50),
+            max(0, bbox[1] - margin),
+            min(page.rect.width, bbox[2] + 50),
+            bbox[1],
+        )
+        # Then below
+        below = fitz.Rect(
+            max(0, bbox[0] - 50),
+            bbox[3],
+            min(page.rect.width, bbox[2] + 50),
+            min(page_h, bbox[3] + margin),
+        )
+
+        for region in (above, below):
+            text = page.get_text("text", clip=region).strip()
+            if not text:
+                continue
+            match = self._TABLE_CAPTION_RE.search(text)
+            if match:
+                cap_num = match.group(1)
+                cap_text = match.group(2).strip()
+                # Take first line only (caption may bleed into body text)
+                cap_text = cap_text.split("\n")[0].rstrip(".")
+                return f"Table {cap_num}. {cap_text}".strip()
+
+        return ""
+
+    def extract_figure_captions(self, pdf_path: Path) -> dict[int, list[dict]]:
+        """
+        Extract figure captions from all pages.
+
+        Returns:
+            Dict mapping page number (1-indexed) to list of caption dicts:
+            [{"number": "1", "caption": "Figure 1. Description..."}]
+        """
+        doc = fitz.open(str(pdf_path))
+        captions: dict[int, list[dict]] = {}
+
+        try:
+            for page_num, page in enumerate(doc):
+                text = page.get_text("text")
+                matches = self._FIGURE_CAPTION_RE.finditer(text)
+                page_captions = []
+                for m in matches:
+                    fig_num = m.group(1)
+                    fig_text = m.group(2).strip().split("\n")[0].rstrip(".")
+                    page_captions.append(
+                        {
+                            "number": fig_num,
+                            "caption": f"Figure {fig_num}. {fig_text}".strip(),
+                        }
+                    )
+                if page_captions:
+                    captions[page_num + 1] = page_captions
+        finally:
+            doc.close()
+
+        return captions
 
     def _table_to_markdown(self, table: Any) -> str:
         """Convert PyMuPDF table to markdown format."""

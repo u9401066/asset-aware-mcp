@@ -28,17 +28,24 @@
   - 修復 C2: `use_marker` 現在正確傳遞到 async job
   - 修復 H1: `list_documents` 跳過 tables/jobs 目錄
   - 修復 H4: `_overlaps_existing_images` 實作 >50% bbox 重疊檢測
-- ✅ **ETL 品質改進 (PDF TOC + Table + Title + Noise Filter)**
+- ✅ **ETL 品質改進 第一輪 (PDF TOC + Table + Title + Noise Filter)**
   - 優先使用 PDF 內建 TOC (`get_toc()`) 取代字型大小啟發式
   - 使用 PDF metadata title 補強標題偵測
   - 加入 heading noise filter（最小長度 3 + regex 過濾）
   - 修復 table 提取：安裝 tabulate + fallback 機制
   - 合併連續 H1 heading 修復截斷標題
   - E2E 測試 5 篇論文 34 項全通過
+- ✅ **ETL 品質改進 第二輪 (Caption Detection + Noise Filtering)**
+  - 表格雜訊過濾：過濾 0 行或 ≤1 欄的空表格（GPT-4: 32→13 有效表格）
+  - 小圖過濾：跳過 <50px 的 icon/logo 圖片
+  - 表格 caption 偵測：搜尋表格 bbox 上下方 80px 文字，匹配 "Table N" 模式
+  - 圖片 caption 偵測：掃描頁面文字匹配 "Figure N / Fig. N" 模式
+  - Caption 覆蓋率：Tables 10/26 (38.5%)、Figures 50/136 (36.8%)
+  - E2E 測試擴充至 44 項全通過
 
 ## Doing
 
-- 🚧 ETL 拆解品質持續改進
+- 🚧 ETL 拆解品質持續改進（第三輪）
 - 🚧 v0.3.0 架構重構：Asset-Centric Architecture
   - Phase 1: Asset Registry（資產註冊中心）
 
