@@ -3,7 +3,14 @@
 from .config import settings
 from .file_storage import FileStorage
 from .job_store import FileJobStore, InMemoryJobStore, JobStoreInterface
-from .lightrag_adapter import LightRAGAdapter
+
+try:
+    from .lightrag_adapter import LightRAGAdapter
+
+    _HAS_LIGHTRAG = True
+except ImportError:
+    _HAS_LIGHTRAG = False
+    LightRAGAdapter = None  # type: ignore
 
 try:
     from .pdf_extractor import PyMuPDFExtractor
@@ -12,6 +19,14 @@ try:
 except ImportError:
     _HAS_PYMUPDF = False
     PyMuPDFExtractor = None  # type: ignore
+
+try:
+    from .marker_adapter import MarkerPDFExtractor
+
+    _HAS_MARKER = True
+except ImportError:
+    _HAS_MARKER = False
+    MarkerPDFExtractor = None  # type: ignore
 
 
 def get_pdf_extractor() -> PyMuPDFExtractor:
@@ -36,7 +51,10 @@ __all__ = [
     "LightRAGAdapter",
     # PDF Extractors
     "PyMuPDFExtractor",
+    "MarkerPDFExtractor",
     "get_pdf_extractor",
     # Availability flags
     "_HAS_PYMUPDF",
+    "_HAS_LIGHTRAG",
+    "_HAS_MARKER",
 ]

@@ -92,7 +92,101 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         finally:
             doc.close()
 
-        return "\n".join(text_parts)
+        raw_markdown = "\n".join(text_parts)
+
+        # Post-process: merge consecutive same-level headings
+        # (PDF wraps long headings across multiple lines, each becoming a separate # heading)
+        return self._merge_consecutive_headings(raw_markdown)
+
+    def _merge_consecutive_headings(self, markdown: str) -> str:
+        """
+        Merge consecutive markdown headings of the same level into one.
+
+        PDF text extraction often splits long headings across multiple lines,
+        producing fragmented headings like:
+            ## Relationship Between the
+            ## Intensive Care Unit and the
+            ## Operating Room
+
+        This merges them into:
+            ## Relationship Between the Intensive Care Unit and the Operating Room
+
+        Also handles standalone chapter numbers (e.g. '# 79') by combining
+        them with adjacent chapter titles into 'Chapter {num}: {title}'.
+        """
+        lines = markdown.split("\n")
+        merged: list[str] = []
+        i = 0
+
+        while i < len(lines):
+            line = lines[i]
+            header_match = re.match(r"^(#{1,6})\s+(.+)$", line)
+
+            if header_match:
+                level = header_match.group(1)
+                title_parts = [header_match.group(2).strip()]
+
+                # Look ahead for consecutive same-level headings
+                j = i + 1
+                while j < len(lines):
+                    next_match = re.match(r"^(#{1,6})\s+(.+)$", lines[j])
+                    if next_match and next_match.group(1) == level:
+                        title_parts.append(next_match.group(2).strip())
+                        j += 1
+                    else:
+                        break
+
+                merged_title = " ".join(title_parts)
+                merged.append(f"{level} {merged_title}")
+                i = j
+            else:
+                merged.append(line)
+                i += 1
+
+        # Second pass: handle standalone chapter numbers for H1
+        # e.g. '# 79' near '# Pediatric and Neonatal Critical Care'
+        #  → '# Chapter 79: Pediatric and Neonatal Critical Care'
+        result: list[str] = []
+        skip_indices: set[int] = set()
+
+        for idx, line in enumerate(merged):
+            if idx in skip_indices:
+                continue
+
+            h1_match = re.match(r"^#\s+(.+)$", line)
+            if h1_match:
+                text = h1_match.group(1).strip()
+                # Check if this H1 is just a number (chapter number)
+                if re.match(r"^\d+$", text):
+                    chapter_num = text
+                    # Look nearby (within 5 lines) for another H1 with actual title
+                    title_found = None
+                    title_idx = None
+                    for search_dir in [-1, 1]:  # search before, then after
+                        for offset in range(1, 6):
+                            check_idx = idx + search_dir * offset
+                            if 0 <= check_idx < len(merged) and check_idx not in skip_indices:
+                                check_match = re.match(r"^#\s+(.+)$", merged[check_idx])
+                                if check_match:
+                                    candidate = check_match.group(1).strip()
+                                    if not re.match(r"^\d+$", candidate):
+                                        title_found = candidate
+                                        title_idx = check_idx
+                                        break
+                        if title_found:
+                            break
+
+                    if title_found and title_idx is not None:
+                        skip_indices.add(title_idx)
+                        result.append(f"# Chapter {chapter_num}: {title_found}")
+                    else:
+                        result.append(line)
+                else:
+                    result.append(line)
+            else:
+                result.append(line)
+
+        return "\n".join(result)
 
     @staticmethod
     def _section_level_from_number(text: str) -> int:
