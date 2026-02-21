@@ -76,6 +76,31 @@
 - 原生支援 lockfile
 - 與 pip 完全相容
 
+### ADR-004: DFM (Docx-Flavored Markdown) 即時編輯架構
+
+**日期**：2026-02-11
+
+**背景**：AI Agent 無法直接讀寫 .docx 二進位格式，需要中間表示
+
+**決定**：設計 DFM 格式 + DocxIR 中間層，實現 docx ↔ IR ↔ DFM 完整往返
+
+**理由**：
+- Agent 天然理解 Markdown，DFM 是最小學習成本的編輯界面
+- IR 保留完整格式/樣式/媒體資訊，DFM 只暴露可編輯的文字結構
+- Template-based rebuild（複製原始 zip → 只改 document.xml）保證非文字部分 100% 保真
+- DocxValidator 6 維度驗證彌補 Agent 無法目視確認的缺陷
+
+**架構**：
+```
+.docx → DocxAdapter.docx_to_ir() → DocxIR
+  DocxIR → DfmRenderer.render() → DFM (Markdown)
+  DFM (edited) → DfmParser.parse() → DocxIR (updated)
+  DocxIR → DocxAdapter.ir_to_docx() → .docx (rebuilt)
+
+DocxValidator.validate(original, rebuilt) → ValidationReport (6D)
+DfmTableBridge: DocxIR.tables ↔ A2T TableAsset
+```
+
 ## 📦 元件圖
 
 ```
@@ -163,6 +188,3 @@
 - DoclingAdapter: 使用 IBM Docling 進行高精度 PDF 解析
 - LightRAGAdapter: 實作知識圖譜索引與查詢
 - FileStorage: 處理本地檔案系統的讀寫與圖片儲存
-
-
-

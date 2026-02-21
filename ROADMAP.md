@@ -169,7 +169,7 @@ discover_sources (新) ─────┤──→ discover_sources (獨立工�
 @dataclass(frozen=True)
 class AssetRef:
     """統一資產引用 — 指向任何可引用的資料來源"""
-    
+
     source_type: Literal[
         "section",      # PDF 章節
         "figure",       # PDF 圖片
@@ -179,16 +179,16 @@ class AssetRef:
         "external",     # 外部 URL / DOI
         "user_input",   # 使用者直接提供的文字
     ]
-    
+
     # 定位 (PDF 資產用)
     doc_id: str = ""               # "doc_gpt4_medical_e567c6"
     asset_id: str = ""             # "sec_introduction", "fig_1"
     page: int | None = None
     line_range: tuple[int, int] | None = None
-    
+
     # 外部來源
     url: str = ""                  # DOI / URL
-    
+
     # 通用
     excerpt: str = ""              # 來源節錄 ≤200 chars（驗證用）
     label: str = ""                # 人類可讀標籤

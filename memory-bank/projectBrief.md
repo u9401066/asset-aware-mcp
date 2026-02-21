@@ -60,4 +60,3 @@ A Local-first MCP Server designed for medical research, enabling AI Agents to pr
 - Local-first (No Docker/Milvus required)
 - Privacy-focused (Local processing)
 - Token-efficient (A2T 2.0 Draft/Commit pattern)
-

@@ -37,10 +37,12 @@ Local Storage
 
 ## ✨ 核心功能
 
-- 📄 PDF → Markdown 轉換 (Mistral OCR)
+- 📄 PDF → Markdown 轉換 (PyMuPDF / Marker)
+- 📝 Docx ↔ DFM 即時編輯 (8 tools, 6D validator)
 - 🗺️ Document Manifest 生成 (Asset 清單)
+- 📊 A2T 表格系統 (7 operation-based tools)
 - 🧠 LightRAG 知識圖譜建立
-- 🔌 MCP Tools 暴露給 Agent
+- 🔌 MCP Tools (36 tools in 7 modules) 暴露給 Agent
 
 ## 🔧 技術棧
 
@@ -127,4 +129,3 @@ Medical RAG with Asset-Aware MCP - Precise PDF asset retrieval (tables, figures,
 - FastMCP
 - XlsxWriter
 - uv
-

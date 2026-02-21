@@ -44,7 +44,8 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 - 🔄 **Async Job Pipeline** - Supports asynchronous task processing and progress tracking for large documents.
 - 🗺️ **Document Manifest** - Provides a structured "map" of the document for precise data access by Agents.
 - 🧠 **LightRAG Integration** - Knowledge Graph + Vector Index, supporting cross-document comparison and reasoning.
-- 📊 **A2T (Anything to Table)** - 7 operation-based tools for building professional tables from **any source** (PDF assets, Knowledge Graph, URLs, user input). Features: **Citations** (AssetRef), **Audit Trail**, **Schema Evolution**, **Templates**, **Drafting**, and **Token-efficient resumption**.
+- � **Docx Editing (DFM)** - Edit .docx files in Markdown via **Docx-Flavored Markdown** format. 8 tools: ingest, edit, save, validate round-trip fidelity (6-dimension scoring), and bridge to A2T tables.
+- �📊 **A2T (Anything to Table)** - 7 operation-based tools for building professional tables from **any source** (PDF assets, Knowledge Graph, URLs, user input). Features: **Citations** (AssetRef), **Audit Trail**, **Schema Evolution**, **Templates**, **Drafting**, and **Token-efficient resumption**.
 - 🖥️ **VS Code Management Extension** - Graphical interface for monitoring server status, ingested documents, and **A2T tables/drafts** with one-click Excel export.
 - 🔌 **MCP Server** - Exposes tools and resources to Copilot/Claude via FastMCP.
 - 🏥 **Medical Research Focus** - Optimized for medical literature, supporting Base64 image transmission for Vision AI analysis.
@@ -59,9 +60,9 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP Server (Modular Presentation)            │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 28 tools in 6 modules                   │   │
-│  │   document (6) │ section (5) │ job (3)          │   │
-│  │   knowledge (2) │ table (7)  │ profile (5)      │   │
+│  │ tools/: 36 tools in 7 modules                   │   │
+│  │   document (6) │ docx (8)   │ section (5)       │   │
+│  │   job (3) │ knowledge (2) │ table (7) │ profile (5) │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │ resources/: 12 resources in 2 modules           │   │
@@ -80,6 +81,7 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 │                   Local Storage                         │
 │  ./data/                                                │
 │  ├── doc_{id}/        # Document Assets                 │
+│  ├── docx_{id}/       # Docx IR + DFM + Assets          │
 │  ├── tables/          # A2T Tables (JSON/MD/XLSX)       │
 │  │   └── drafts/      # Table Drafts (Persistence)      │
 │  └── lightrag_db/     # Knowledge Graph                 │
@@ -134,6 +136,21 @@ uv run python -m src.presentation.server
 | `get_section_blocks` | Extract all blocks from a section with page + bbox |
 | `search_sections` | Search section titles |
 | `get_section_content` | Read section content via asset service |
+
+### Docx Editing Tools (DFM — Docx-Flavored Markdown)
+
+> Edit .docx files as Markdown. Preserves formatting, tables, media on round-trip.
+
+| Tool | Purpose |
+|------|---------|
+| `ingest_docx` | Import .docx and decompose into DFM blocks |
+| `get_docx_content` | Read DFM content of specific blocks |
+| `save_docx` | Write DFM edits back to .docx |
+| `list_docx_blocks` | List document block structure |
+| `docx_validate_roundtrip` | 6-dimension round-trip fidelity validation |
+| `docx_table_to_context` | Bridge: Docx table → A2T context |
+| `docx_table_from_context` | Bridge: A2T table → Docx table |
+| `docx_chart_data` | Extract chart data from Docx |
 
 ### A2T (Anything to Table) Tools — 7 Operation-Based Tools
 

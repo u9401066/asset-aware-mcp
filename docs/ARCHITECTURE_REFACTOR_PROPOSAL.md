@@ -94,19 +94,19 @@ class AssetRegistry:
     掃描並索引所有已存在的資產。
     啟動時自動載入，不需要重新拆解 PDF。
     """
-    
+
     def scan_all_assets(self) -> dict[str, Asset]:
         """掃描 data/ 目錄，建立資產索引"""
         pass
-    
+
     def get_image(self, asset_id: str) -> bytes:
         """直接讀取已存在的圖片"""
         pass
-    
+
     def get_markdown(self, doc_id: str) -> str:
         """直接讀取已存在的 MD 文件"""
         pass
-    
+
     def list_available_assets(self) -> list[AssetSummary]:
         """列出所有可用資產（不需要重新拆解）"""
         pass
@@ -130,7 +130,7 @@ class TableService:
         不需要先拆解 PDF！
         """
         pass
-    
+
     def create_table_from_files(
         self,
         file_paths: list[str],  # 接受任意 MD/TXT 檔案路徑

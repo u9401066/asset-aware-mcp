@@ -51,38 +51,38 @@ sequenceDiagram
     participant MCP as asset-aware-mcp
 
     U->>A: "比較三篇論文的劑量建議"
-    
+
     Note over A,MCP: Phase 1: Discovery (探索)
     A->>MCP: consult_knowledge_graph("remimazolam dosage")
     MCP-->>A: 找到 3 份相關文獻 + 關聯實體
-    
+
     loop 對每份文獻
         A->>MCP: fetch_document_asset(doc_id, "table", "tab_1")
         MCP-->>A: 表格內容 (Markdown)
         A->>MCP: fetch_document_asset(doc_id, "section", "sec_methods")
         MCP-->>A: 方法章節內容
     end
-    
+
     Note over A: Phase 2: Abstraction (Agent 內部處理)
     A->>A: 統一單位 (mg/kg)
     A->>A: 識別比較維度 (劑量, 途徑, 患者類型)
-    
+
     Note over A,MCP: Phase 3: Table Construction (建表)
     A->>MCP: create_table(intent="comparison", columns=[...])
     MCP-->>A: table_id
-    
+
     loop 對每個抽象化後的數據點
         A->>MCP: add_rows(table_id, [{source, dose, route, ...}])
         MCP-->>A: row_count
     end
-    
+
     A->>MCP: preview_table(table_id)
     MCP-->>A: Markdown preview (檢查用)
-    
+
     Note over A,MCP: Phase 4: Polish (美化輸出)
     A->>MCP: render_table(table_id, format="excel")
     MCP-->>A: file_path
-    
+
     A->>U: "已生成比較表格，請查看附件"
 ```
 
@@ -110,7 +110,7 @@ def create_table(
 ) -> str:
     """
     建立一張新表格，定義欄位結構。
-    
+
     Returns:
         table_id + Markdown Preview
     """
@@ -126,7 +126,7 @@ def add_rows(
 ) -> str:
     """
     新增資料列到表格（可多次呼叫）。
-    
+
     Returns:
         執行結果 + Markdown Preview
     """
@@ -143,7 +143,7 @@ def update_row(
 ) -> str:
     """
     更新特定索引的資料列。
-    
+
     Returns:
         執行結果 + Markdown Preview
     """
@@ -159,7 +159,7 @@ def delete_row(
 ) -> str:
     """
     刪除特定索引的資料列。
-    
+
     Returns:
         執行結果 + Markdown Preview
     """
@@ -383,7 +383,7 @@ class TableContext:
     rows: list[dict] = field(default_factory=list)
     source_description: str = ""
     created_at: datetime = field(default_factory=datetime.now)
-    
+
     # 統計資訊
     @property
     def row_count(self) -> int:

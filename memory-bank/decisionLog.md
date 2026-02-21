@@ -2,6 +2,11 @@
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-02-11 | DFM (Docx-Flavored Markdown) 格式設計 | Agent 無法直接看 docx，需要 Markdown 中間格式即時編輯。DFM 保留 block-level 與 run-level 格式資訊，支援完整往返 |
+| 2026-02-11 | DocxIR 中間表示層 | docx → IR → DFM → edit → IR → docx 保證往返保真。IR 保留原始 preserved_parts、assets、styles、checksum |
+| 2026-02-11 | DocxValidator 6 維度驗證 | Agent 看不到渲染結果，需程式化驗證。6 維度加權評分（text 0.35 最重）取代肉眼對比 |
+| 2026-02-11 | DfmTableBridge 雙向橋接 | Docx 表格 → A2T 工作流（plan → draft → commit）→ Docx 表格，打通兩個子系統 |
+| 2026-02-11 | Template-based rebuild (複製 original → 只改 document.xml) | 最大限度保留 media/styles/theme/fonts 等，非文字部分保真率極高 |
 | 2026-02-10 | A2T 工具合併 19→7 (operation-based) | 減少工具總量 28%，降低 Agent 認知負擔，用 Literal type 統一入口 |
 | 2026-02-10 | AssetRef 支援 7 種來源類型 | 做表 ≠ 拆解，表格應接受任意來源（PDF/KG/URL/口述） |
 | 2026-02-10 | Citation 作為平行附加層 | 不改變 rows list[dict] 結構，用 dict[str, CellCitation] 側掛 |

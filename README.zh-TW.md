@@ -44,7 +44,8 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 🔄 **非同步任務流水線** - 支援大型文件的非同步處理與進度追蹤。
 - 🗺️ **文件清單 (Manifest)** - 為 Agent 提供結構化的文件「地圖」，實現精確數據存取。
 - 🧠 **LightRAG 整合** - 知識圖譜 + 向量索引，支援跨文件對比與推理。
-- 📊 **A2T (Anything to Table)** - 7 個 operation-based 工具，從**任意來源**（PDF 資產、知識圖譜、URL、使用者輸入）建立專業表格。支援：**引用管理** (AssetRef)、**變更審計**、**Schema 演進**、**模板**、**草稿機制**與**節省 Token 的續作模式**。
+- � **Docx 即時編輯 (DFM)** - 以 Markdown 格式編輯 .docx 檔案，透過 **Docx-Flavored Markdown** 格式。提供 8 個工具：匯入、編輯、儲存、往返保真驗證（6 維度評分），以及 Docx ↔ A2T 表格橋接。
+- �📊 **A2T (Anything to Table)** - 7 個 operation-based 工具，從**任意來源**（PDF 資產、知識圖譜、URL、使用者輸入）建立專業表格。支援：**引用管理** (AssetRef)、**變更審計**、**Schema 演進**、**模板**、**草稿機制**與**節省 Token 的續作模式**。
 - 🖥️ **VS Code 管理擴充功能** - 提供圖形化介面監控伺服器狀態、已匯入文件，以及 **A2T 表格與草稿**，支援一鍵開啟 Excel。
 - 🔌 **MCP 伺服器** - 透過 FastMCP 向 Copilot/Claude 開放工具與資源。
 - 🏥 **醫療研究優化** - 針對醫療文獻優化，支援 Base64 圖片傳輸供 Vision AI 分析。
@@ -59,9 +60,9 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP 伺服器 (模組化 Presentation 層)          │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 28 工具，6 個模組                       │   │
-│  │   document (6) │ section (5) │ job (3)          │   │
-│  │   knowledge (2) │ table (7)  │ profile (5)      │   │
+│  │ tools/: 36 工具，7 個模組                       │   │
+│  │   document (6) │ docx (8)   │ section (5)       │   │
+│  │   job (3) │ knowledge (2) │ table (7) │ profile (5) │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │ resources/: 12 資源，2 個模組                   │   │
@@ -80,6 +81,7 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 │                      本地儲存                           │
 │  ./data/                                                │
 │  ├── doc_{id}/        # 文件資產 (Markdown/圖片)        │
+│  ├── docx_{id}/       # Docx IR + DFM + 資產            │
 │  ├── tables/          # A2T 表格 (JSON/MD/XLSX)         │
 │  │   └── drafts/      # 表格草稿 (持久化)               │
 │  └── lightrag_db/     # 知識圖譜資料庫                  │
@@ -134,6 +136,21 @@ uv run python -m src.presentation.server
 | `get_section_blocks` | 提取章節內所有區塊（含頁碼 + bbox） |
 | `search_sections` | 搜尋章節標題 |
 | `get_section_content` | 讀取章節內容 |
+
+### Docx 編輯工具 (DFM — Docx-Flavored Markdown)
+
+> 以 Markdown 語法編輯 .docx 檔案，往返保留格式、表格、媒體。
+
+| 工具 | 用途 |
+|------|------|
+| `ingest_docx` | 匯入 .docx 並拆解為 DFM 區塊 |
+| `get_docx_content` | 讀取指定區塊的 DFM 內容 |
+| `save_docx` | 將 DFM 編輯寫回 .docx |
+| `list_docx_blocks` | 列出文件區塊結構 |
+| `docx_validate_roundtrip` | 6 維度往返保真驗證 |
+| `docx_table_to_context` | 橋接：Docx 表格 → A2T 上下文 |
+| `docx_table_from_context` | 橋接：A2T 表格 → Docx 表格 |
+| `docx_chart_data` | 提取 Docx 圖表數據 |
 
 ### A2T (Anything to Table) 工具 — 7 個 Operation-Based 工具
 

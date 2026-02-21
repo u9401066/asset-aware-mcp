@@ -32,6 +32,27 @@ CONSTITUTION.md (最高原則)
 - Commands: 寫入操作
 - Queries: 讀取操作
 
+### DFM Bridge Pattern (Docx ↔ A2T)
+- **DfmTableBridge** 橋接 Docx 子系統與 A2T 子系統
+- `docx_table_to_context` — 從 DocxIR 表格提取 headers + rows → A2T context
+- `docx_table_from_context` — 從 A2T TableAsset 反向寫入 DocxIR
+- 兩方向都保留型別安全（不直接耦合兩個 domain）
+
+### Template-Based Rebuild Pattern (Docx)
+- `ir_to_docx()` 複製原始 .docx ZIP 為模板
+- 僅修改 `word/document.xml`
+- 所有 media/styles/theme/fonts 由原檔保留 → 非文字保真率極高
+
+### Intermediate Representation Pattern (DocxIR)
+- docx → DocxIR → DFM → Agent 編輯 → DFM → DocxIR → docx
+- IR 保留：preserved_parts, assets, styles, runs, checksum
+- DFM 是人/Agent 可讀的 Markdown 視圖
+
+### Multi-Dimensional Validation Pattern (DocxValidator)
+- 6 個獨立維度比較（結構/文字/格式/表格/媒體/樣式）
+- 每維度 0–100 分 + 加權總分
+- 產出 Agent 可讀 Markdown 報告（emoji 等級）
+
 ## � 業務流程模式
 
 ### A2T 2.0 (Anything to Table) 工作流

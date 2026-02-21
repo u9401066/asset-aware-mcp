@@ -7,6 +7,49 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-02-11
+
+### Added
+
+- **📝 Docx 即時編輯系統 (DFM — Docx-Flavored Markdown)**
+  - 全新 DFM 格式：用 Markdown 語法即時編輯 .docx 檔案，保留完整格式（粗體、斜體、連結、列表、表格）
+  - `DocxIR` 中間表示層：拆解 docx → IR → DFM → 編輯 → IR → docx 完整往返
+  - 支援區塊級 (block) 與行內 (run) 格式保留
+  - SHA-256 checksum 驗證文件完整性
+- **8 個 Docx MCP 工具**：
+  - `ingest_docx` — 匯入 .docx 並拆解為 DFM
+  - `get_docx_content` — 讀取指定區塊 DFM 內容
+  - `save_docx` — 將 DFM 編輯寫回 .docx
+  - `list_docx_blocks` — 列出文件區塊結構
+  - `docx_validate_roundtrip` — 6 維度往返保真驗證
+  - `docx_table_to_context` — Docx 表格 → A2T 上下文 (Bridge)
+  - `docx_table_from_context` — A2T 表格 → Docx 表格 (Bridge)
+  - `docx_chart_data` — 提取 Docx 圖表數據
+- **DocxValidator — 6 維度往返保真驗證器**：
+  - 結構 (Structure)、文字 (Text)、格式 (Formatting)、表格 (Table)、媒體 (Media)、樣式 (Style)
+  - 加權評分（text=0.35, structure/format/table=0.15, media/style=0.10）
+  - Emoji 等級（🟢 EXCELLENT ≥95%, 🟡 GOOD ≥80%, 🟠 FAIR ≥60%, 🔴 POOR <60%）
+  - Agent 可讀的 Markdown 報告輸出
+- **DfmTableBridge — DFM ↔ A2T 雙向橋接**：
+  - Docx 表格直接進入 A2T 工作流（plan → draft → commit）
+  - A2T 表格寫回 Docx（支援樣式映射）
+  - 圖表數據提取
+- **DFM 格式規格書**：`docs/dfm-spec.md`
+- **Pre-commit hooks**：commit-size-guard（≤30 檔案）
+- **VS Code Extension DFM 支援**：
+  - DFM 語法高亮 + 語言定義
+  - DFM Preview provider
+  - 37 個 TypeScript 測試
+- **120 個新測試**：test_dfm.py (53), test_dfm_table_bridge.py (32), test_docx_validator.py (35)
+
+### Changed
+
+- 總工具數：28 → **36**（+8 docx 工具）
+- 模組數：6 → **7**（+docx_tools）
+- Domain 層新增：`docx_entities.py`, `docx_value_objects.py`
+- Application 層新增：`docx_service.py`, `dfm_table_bridge.py`
+- Infrastructure 層新增：`docx_adapter.py`, `dfm_parser.py`, `dfm_renderer.py`, `docx_validator.py`
+
 ## [0.2.14] - 2026-02-10
 
 ### Added
