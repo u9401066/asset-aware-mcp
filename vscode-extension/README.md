@@ -6,14 +6,14 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-## 🆕 What's New in v0.2.14
+## 🆕 What's New in v0.3.0
 
-- **A2T Tool Consolidation**: 19 → 7 operation-based tools (total: 39 → 28 tools)
-- **Citation System**: AssetRef with 7 source types + CellCitation parallel layer
-- **Audit Trail**: Automatic change tracking for all table operations
-- **Schema Evolution**: Add/remove/rename columns dynamically
-- **4 Built-in Templates**: drug_comparison, study_summary, citation_extract, pico_analysis
-- **Source Discovery**: Cross-document search returning AssetRef for citations
+- **Docx Editing (DFM)**: 8 new tools for editing .docx files as Markdown with full round-trip fidelity
+- **DocxValidator**: 6-dimension comparison (structure, text, formatting, tables, media, styles) with weighted scoring
+- **DfmTableBridge**: Seamless Docx table ↔ A2T table conversion
+- **VS Code DFM Support**: Syntax highlighting + preview for Docx-Flavored Markdown
+- **120 new tests**: DFM core (53) + Bridge (32) + Validator (35)
+- **Total**: 28 → 36 tools in 7 modules
 
 ## 🌟 Core Concept: Asset-Aware ETL
 
@@ -27,7 +27,7 @@ This extension provides a sophisticated **ETL (Extract, Transform, Load) Pipelin
 
 ## ✨ Features
 
-- **📄 Dual-Engine PDF ETL**: 
+- **📄 Dual-Engine PDF ETL**:
   - **PyMuPDF** (default) - Fast extraction (~50MB dependency)
   - **Marker** (optional, `use_marker=True`) - High-precision with `blocks.json` containing bbox coordinates
 - **🧭 Section Navigation**: Dynamic hierarchy section tree with 5 tools for browsing, searching, content reading, and block extraction
@@ -118,7 +118,7 @@ If the extension fails to start or the MCP server doesn't appear:
     *   Run `npm install`.
     *   Press `F5` to launch the **Extension Development Host**.
 
-## 📚 MCP Tools (28 total)
+## 📚 MCP Tools (36 total)
 
 ### Document ETL (6)
 | Tool | Description |
@@ -150,6 +150,18 @@ If the extension fails to start or the MCP server doesn't appear:
 |------|-------------|
 | `consult_knowledge_graph` | Cross-document RAG queries |
 | `export_knowledge_graph` | Export knowledge graph data |
+
+### Docx Editing — DFM (8)
+| Tool | Description |
+|------|-------------|
+| `ingest_docx` | Import .docx and decompose into DFM blocks |
+| `get_docx_content` | Read DFM content of specific blocks |
+| `save_docx` | Write DFM edits back to .docx |
+| `list_docx_blocks` | List document block structure |
+| `docx_validate_roundtrip` | 6-dimension round-trip fidelity validation |
+| `docx_table_to_context` | Bridge: Docx table → A2T context |
+| `docx_table_from_context` | Bridge: A2T table → Docx table |
+| `docx_chart_data` | Extract chart data from Docx |
 
 ### A2T — Anything to Table (7 operation-based)
 | Tool | Operations | Description |

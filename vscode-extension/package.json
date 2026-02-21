@@ -81,6 +81,26 @@
             {
                 "command": "assetAwareMcp.openTableExcel",
                 "title": "Asset-Aware MCP: Open in Excel"
+            },
+            {
+                "command": "assetAwareMcp.openDocxAsDfm",
+                "title": "Asset-Aware MCP: Open DOCX as DFM (Editable Markdown)"
+            },
+            {
+                "command": "assetAwareMcp.saveDfmToDocx",
+                "title": "Asset-Aware MCP: Save DFM back to DOCX"
+            },
+            {
+                "command": "assetAwareMcp.saveDfmToDocxAs",
+                "title": "Asset-Aware MCP: Save DFM to DOCX As..."
+            },
+            {
+                "command": "assetAwareMcp.closeDfmSession",
+                "title": "Asset-Aware MCP: Close DFM Session"
+            },
+            {
+                "command": "assetAwareMcp.listDfmSessions",
+                "title": "Asset-Aware MCP: List DFM Sessions"
             }
         ],
         "configuration": {
@@ -162,8 +182,30 @@
                     "when": "view == assetAwareMcp.tables && viewItem == table-item",
                     "group": "inline"
                 }
+            ],
+            "explorer/context": [
+                {
+                    "command": "assetAwareMcp.openDocxAsDfm",
+                    "when": "resourceExtname == .docx",
+                    "group": "navigation"
+                }
+            ],
+            "editor/title": [
+                {
+                    "command": "assetAwareMcp.saveDfmToDocx",
+                    "when": "resourceExtname == .dfm",
+                    "group": "navigation"
+                }
             ]
         },
+        "keybindings": [
+            {
+                "command": "assetAwareMcp.saveDfmToDocx",
+                "key": "ctrl+shift+s",
+                "mac": "cmd+shift+s",
+                "when": "resourceExtname == .dfm"
+            }
+        ],
         "walkthroughs": [
             {
                 "id": "assetAwareMcp.welcome",
@@ -204,12 +246,16 @@
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile",
         "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
         "test": "npm run compile && node ./out/test/runTest.js",
+        "test:unit": "npm run compile && mocha --require out/test/unit/setup.js 'out/test/unit/**/*.test.js' --timeout 5000",
+        "test:ci": "npm run lint && npm run test:unit",
         "package": "vsce package"
     },
     "devDependencies": {
         "@types/mocha": "^10.0.10",
         "@types/node": "^20.0.0",
+        "@types/sinon": "^21.0.0",
         "@types/vscode": "^1.96.0",
         "@typescript-eslint/eslint-plugin": "^8.18.0",
         "@typescript-eslint/parser": "^8.18.0",
@@ -217,6 +263,7 @@
         "@vscode/vsce": "^3.2.1",
         "eslint": "^9.16.0",
         "mocha": "^10.8.2",
+        "sinon": "^21.0.1",
         "typescript": "^5.7.2",
         "typescript-eslint": "^8.51.0"
     },

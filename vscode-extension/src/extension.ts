@@ -1,9 +1,9 @@
 /**
  * Asset-Aware MCP VS Code Extension
- * 
+ *
  * Provides Medical RAG capabilities with precise document asset retrieval.
  * Integrates with Ollama (local) or OpenAI for LLM backend.
- * 
+ *
  * Auto-installs uv if not present, then uses uvx to run from PyPI.
  */
 
@@ -19,6 +19,7 @@ import { EnvManager } from './envManager';
 import { StatusTreeProvider } from './statusTreeProvider';
 import { DocumentTreeProvider } from './documentTreeProvider';
 import { TableTreeProvider } from './tableTreeProvider';
+import { DfmEditorService, DfmLanguageFeatures } from './dfm';
 
 const execAsync = promisify(exec);
 
@@ -29,6 +30,8 @@ let envManager: EnvManager;
 let statusTreeProvider: StatusTreeProvider;
 let documentTreeProvider: DocumentTreeProvider;
 let tableTreeProvider: TableTreeProvider;
+let dfmEditorService: DfmEditorService;
+let dfmLanguageFeatures: DfmLanguageFeatures;
 let extensionContext: vscode.ExtensionContext;
 let outputChannel: vscode.OutputChannel;
 
@@ -52,7 +55,7 @@ function log(message: string): void {
 function getUvPaths(): string[] {
     const homeDir = process.env.HOME || process.env.USERPROFILE || '';
     const platform = process.platform;
-    
+
     if (platform === 'win32') {
         return [
             'uv',  // In PATH
@@ -77,7 +80,7 @@ function getUvPaths(): string[] {
  */
 async function findUvPath(): Promise<string | null> {
     const paths = getUvPaths();
-    
+
     for (const uvPath of paths) {
         try {
             if (uvPath === 'uv') {
@@ -95,7 +98,7 @@ async function findUvPath(): Promise<string | null> {
             // Continue to next path
         }
     }
-    
+
     return null;
 }
 
@@ -112,7 +115,7 @@ async function isUvInstalled(): Promise<string | null> {
 async function installUv(): Promise<string | null> {
     const platform = process.platform;
     log(`Installing uv on ${platform}...`);
-    
+
     return vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
@@ -122,7 +125,7 @@ async function installUv(): Promise<string | null> {
         async (progress) => {
             try {
                 progress.report({ message: 'Downloading uv...' });
-                
+
                 if (platform === 'win32') {
                     // Windows: Use PowerShell
                     log('Using PowerShell installer for Windows');
@@ -138,29 +141,29 @@ async function installUv(): Promise<string | null> {
                         { timeout: 120000 }
                     );
                 }
-                
+
                 progress.report({ message: 'Verifying installation...' });
-                
+
                 // Wait a moment for filesystem to sync
                 await new Promise(resolve => setTimeout(resolve, 1000));
-                
+
                 // Find the installed uv path
                 const uvPath = await findUvPath();
-                
+
                 if (uvPath) {
                     log('uv installed successfully at: ' + uvPath);
-                    
+
                     // Ask user to reload VS Code for PATH to take effect
                     const choice = await vscode.window.showInformationMessage(
                         '✅ uv installed! Please reload VS Code to complete setup.',
                         'Reload Now',
                         'Later'
                     );
-                    
+
                     if (choice === 'Reload Now') {
                         vscode.commands.executeCommand('workbench.action.reloadWindow');
                     }
-                    
+
                     return uvPath;
                 } else {
                     throw new Error('uv installation completed but binary not found. Please reload VS Code.');
@@ -168,7 +171,7 @@ async function installUv(): Promise<string | null> {
             } catch (error) {
                 const errorMsg = error instanceof Error ? error.message : String(error);
                 log('uv installation failed: ' + errorMsg);
-                
+
                 vscode.window.showErrorMessage(
                     `Failed to install uv: ${errorMsg}`,
                     'Install Manually'
@@ -177,7 +180,7 @@ async function installUv(): Promise<string | null> {
                         vscode.env.openExternal(vscode.Uri.parse('https://docs.astral.sh/uv/getting-started/installation/'));
                     }
                 });
-                
+
                 return null;
             }
         }
@@ -189,14 +192,14 @@ async function installUv(): Promise<string | null> {
  */
 async function ensureUvInstalled(): Promise<string | null> {
     log('Checking if uv is installed...');
-    
+
     const existingPath = await isUvInstalled();
     if (existingPath) {
         try {
             const cmd = existingPath === 'uv' ? 'uv --version' : `"${existingPath}" --version`;
             const { stdout } = await execAsync(cmd);
             log('uv is already installed: ' + stdout.trim());
-            
+
             // Store the path for mcpProvider to use
             extensionContext.globalState.update('uvPath', existingPath);
             return existingPath;
@@ -204,16 +207,16 @@ async function ensureUvInstalled(): Promise<string | null> {
             return existingPath;
         }
     }
-    
+
     log('uv not found, prompting for installation...');
-    
+
     const choice = await vscode.window.showInformationMessage(
         'Asset-Aware MCP requires "uv" (Python package manager). Install now?',
         'Install uv',
         'Install Manually',
         'Cancel'
     );
-    
+
     if (choice === 'Install uv') {
         const installedPath = await installUv();
         if (installedPath) {
@@ -224,7 +227,7 @@ async function ensureUvInstalled(): Promise<string | null> {
         vscode.env.openExternal(vscode.Uri.parse('https://docs.astral.sh/uv/getting-started/installation/'));
         return null;
     }
-    
+
     return null;
 }
 
@@ -235,18 +238,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // Create output channel first for logging
     outputChannel = vscode.window.createOutputChannel('Asset-Aware MCP');
     context.subscriptions.push(outputChannel);
-    
+
     log('Extension is activating...');
-    
+
     extensionContext = context;
-    
+
     try {
         // Step 1: Initialize status bar
         log('Step 1: Initializing status bar...');
         statusBar = new StatusBarManager();
         context.subscriptions.push(statusBar);
         statusBar.setStatus('initializing', 'Asset-Aware MCP: Initializing...');
-        
+
         // Step 2: Ensure uv is installed (required for running MCP server)
         log('Step 2: Checking uv installation...');
         statusBar.setStatus('initializing', 'Asset-Aware MCP: Checking uv...');
@@ -265,25 +268,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         } else {
             log('uv path: ' + uvPath);
         }
-        
+
         // Step 3: Initialize env manager
         log('Step 3: Initializing env manager...');
         envManager = new EnvManager(getWorkspaceRoot());
-        
+
         // Step 4: Initialize tree providers
         log('Step 4: Initializing tree providers...');
         statusTreeProvider = new StatusTreeProvider(envManager);
         documentTreeProvider = new DocumentTreeProvider(envManager);
         tableTreeProvider = new TableTreeProvider(envManager);
-        
+
         vscode.window.registerTreeDataProvider('assetAwareMcp.status', statusTreeProvider);
         vscode.window.registerTreeDataProvider('assetAwareMcp.documents', documentTreeProvider);
         vscode.window.registerTreeDataProvider('assetAwareMcp.tables', tableTreeProvider);
-        
+
         // Step 5: Register MCP server provider (with error handling)
         log('Step 5: Registering MCP server provider...');
         mcpProvider = new AssetAwareMcpProvider(getWorkspaceRoot(), outputChannel, context);
-        
+
         // Check if MCP API is available (it's a proposed API)
         if (typeof vscode.lm?.registerMcpServerDefinitionProvider === 'function') {
             const providerDisposable = vscode.lm.registerMcpServerDefinitionProvider(
@@ -299,27 +302,39 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             log('  2. The MCP proposed API is not enabled');
             log('  3. GitHub Copilot extension is not installed');
         }
-        
+
         // Step 6: Register commands
         log('Step 6: Registering commands...');
         registerCommands(context);
-        
+
+        // Step 6b: Initialize DFM editor service
+        log('Step 6b: Initializing DFM editor service...');
+        dfmEditorService = new DfmEditorService(context, outputChannel);
+        dfmEditorService.registerCommands();
+        context.subscriptions.push(dfmEditorService);
+
+        // Step 6c: Initialize DFM language features
+        log('Step 6c: Initializing DFM language features...');
+        dfmLanguageFeatures = new DfmLanguageFeatures();
+        dfmLanguageFeatures.register();
+        context.subscriptions.push(dfmLanguageFeatures);
+
         // Step 7: Check Ollama connection (non-blocking)
         log('Step 7: Checking Ollama connection...');
         checkAndUpdateOllamaStatus().catch(err => {
             log('Ollama check failed (non-critical): ' + String(err));
         });
-        
+
         // Step 8: Update status
         log('Step 8: Updating status to ready...');
         statusBar.setStatus('ready', 'Asset-Aware MCP: Ready');
         await vscode.commands.executeCommand('setContext', CONTEXT_READY, true);
-        
+
         // Show walkthrough on first activation
         showFirstTimeWalkthrough(context);
-        
+
         log('Extension activated successfully!');
-        
+
     } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
         log('ACTIVATION ERROR: ' + errorMsg);
@@ -351,13 +366,13 @@ function registerCommands(context: vscode.ExtensionContext): void {
             await runSetupWizard();
         })
     );
-    
+
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.openSettings', async () => {
             SettingsPanel.createOrShow(context.extensionUri, envManager);
         })
     );
-    
+
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.editEnv', async () => {
             const envPath = envManager.getEnvPath();
@@ -368,7 +383,7 @@ function registerCommands(context: vscode.ExtensionContext): void {
             await vscode.window.showTextDocument(doc);
         })
     );
-    
+
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.showStatus', async () => {
             const status = await getExtensionStatus();
@@ -381,12 +396,12 @@ function registerCommands(context: vscode.ExtensionContext): void {
             panel.webview.html = getStatusWebviewContent(status);
         })
     );
-    
+
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.checkConnection', async () => {
             statusBar.setStatus('initializing', 'Checking Ollama...');
             const connected = await checkAndUpdateOllamaStatus();
-            
+
             if (connected) {
                 vscode.window.showInformationMessage('✅ Ollama is running and accessible!');
                 statusBar.setStatus('ready', 'Asset-Aware MCP: Ready');
@@ -403,7 +418,7 @@ function registerCommands(context: vscode.ExtensionContext): void {
             }
         })
     );
-    
+
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.refreshStatus', async () => {
             await statusTreeProvider.refresh();
@@ -419,7 +434,7 @@ function registerCommands(context: vscode.ExtensionContext): void {
             await checkSystemDependencies();
         })
     );
-    
+
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.showOutput', () => {
             outputChannel.show();
@@ -431,11 +446,11 @@ function registerCommands(context: vscode.ExtensionContext): void {
             if (item && item.value) {
                 const dataDir = envManager.getDataDir();
                 const tablesDir = path.join(dataDir, 'tables');
-                
+
                 // Find the most recent Excel file for this table
                 const files = fs.readdirSync(tablesDir);
                 const excelFiles = files.filter(f => f.startsWith(item.value) && f.endsWith('.xlsx'));
-                
+
                 if (excelFiles.length > 0) {
                     // Sort by name (which includes timestamp) and get the last one
                     excelFiles.sort();
@@ -474,30 +489,30 @@ async function checkSystemDependencies(): Promise<void> {
     // Check uvx can find asset-aware-mcp
     depChannel.appendLine('');
     depChannel.appendLine('=== Checking MCP Server ===');
-    
+
     try {
         await execAsync('uvx --help', { timeout: 5000 });
         depChannel.appendLine('✅ uvx: available');
-        
+
         // Check if asset-aware-mcp is accessible via uvx
         depChannel.appendLine('   Will use: uvx asset-aware-mcp');
         depChannel.appendLine('   (Package will be auto-installed from PyPI on first use)');
     } catch {
         depChannel.appendLine('⚠️ uvx: not available (uv may need update)');
     }
-    
+
     // Check for local development source
     const workspaceRoot = getWorkspaceRoot();
     const serverPath = path.join(workspaceRoot, 'src', 'server.py');
     const pyprojectPath = path.join(workspaceRoot, 'pyproject.toml');
-    
+
     if (fs.existsSync(serverPath) && fs.existsSync(pyprojectPath)) {
         depChannel.appendLine('');
         depChannel.appendLine('📁 Local development source detected:');
         depChannel.appendLine('   ' + workspaceRoot);
         depChannel.appendLine('   (Will use local source instead of PyPI)');
     }
-    
+
     depChannel.appendLine('');
     depChannel.appendLine('=== VS Code Info ===');
     depChannel.appendLine('VS Code Version: ' + vscode.version);
@@ -515,7 +530,7 @@ async function checkSystemDependencies(): Promise<void> {
 
 async function runSetupWizard(): Promise<void> {
     log('Running setup wizard...');
-    
+
     const result = await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
@@ -524,23 +539,23 @@ async function runSetupWizard(): Promise<void> {
         },
         async (progress) => {
             progress.report({ message: 'Checking configuration...', increment: 0 });
-            
+
             if (!fs.existsSync(envManager.getEnvPath())) {
                 await envManager.createDefaultEnv();
                 progress.report({ message: '.env created ✓', increment: 25 });
             } else {
                 progress.report({ message: '.env exists ✓', increment: 25 });
             }
-            
+
             progress.report({ message: 'Checking Ollama connection...', increment: 25 });
             const ollamaOk = await checkAndUpdateOllamaStatus();
-            
+
             if (!ollamaOk) {
                 const choice = await vscode.window.showWarningMessage(
                     'Ollama is not running. Would you like to use OpenAI instead?',
                     'Download Ollama', 'Use OpenAI', 'Continue Anyway'
                 );
-                
+
                 if (choice === 'Download Ollama') {
                     vscode.env.openExternal(vscode.Uri.parse('https://ollama.com/download'));
                 } else if (choice === 'Use OpenAI') {
@@ -548,15 +563,15 @@ async function runSetupWizard(): Promise<void> {
                     SettingsPanel.createOrShow(extensionContext.extensionUri, envManager);
                 }
             }
-            
+
             progress.report({ message: 'Connection check ✓', increment: 25 });
             progress.report({ message: 'Refreshing MCP server...', increment: 25 });
             mcpProvider.refresh();
-            
+
             return true;
         }
     );
-    
+
     if (result) {
         statusBar.setStatus('ready', 'Asset-Aware MCP: Ready');
         vscode.window.showInformationMessage(
@@ -573,7 +588,7 @@ async function runSetupWizard(): Promise<void> {
 async function checkOllamaConnection(): Promise<boolean> {
     const config = vscode.workspace.getConfiguration('assetAwareMcp');
     const host = config.get<string>('ollamaHost', 'http://localhost:11434');
-    
+
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -594,7 +609,7 @@ async function checkAndUpdateOllamaStatus(): Promise<boolean> {
 
 function showFirstTimeWalkthrough(context: vscode.ExtensionContext): void {
     const isFirstActivation = context.globalState.get<boolean>(FIRST_ACTIVATION_KEY, true);
-    
+
     if (isFirstActivation) {
         context.globalState.update(FIRST_ACTIVATION_KEY, false);
         vscode.commands.executeCommand(
@@ -623,7 +638,7 @@ async function getExtensionStatus(): Promise<ExtensionStatus> {
     const config = vscode.workspace.getConfiguration('assetAwareMcp');
     const env = await envManager.readEnv();
     const dataDir = path.resolve(getWorkspaceRoot(), env.DATA_DIR || './data');
-    
+
     let documentCount = 0;
     if (fs.existsSync(dataDir)) {
         const files = fs.readdirSync(dataDir);
@@ -632,7 +647,7 @@ async function getExtensionStatus(): Promise<ExtensionStatus> {
             catch { return false; }
         }).length;
     }
-    
+
     return {
         envExists: fs.existsSync(envManager.getEnvPath()),
         envPath: envManager.getEnvPath(),
@@ -652,7 +667,7 @@ function getStatusWebviewContent(status: ExtensionStatus): string {
     const checkmark = '✅';
     const cross = '❌';
     const warning = '⚠️';
-    
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>

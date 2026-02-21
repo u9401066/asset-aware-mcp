@@ -1,6 +1,6 @@
 /**
  * Status Bar Manager
- * 
+ *
  * Shows extension status in VS Code status bar.
  */
 
@@ -10,7 +10,7 @@ export type StatusType = 'initializing' | 'ready' | 'warning' | 'error';
 
 export class StatusBarManager implements vscode.Disposable {
     private statusBarItem: vscode.StatusBarItem;
-    
+
     constructor() {
         this.statusBarItem = vscode.window.createStatusBarItem(
             vscode.StatusBarAlignment.Right,
@@ -19,7 +19,7 @@ export class StatusBarManager implements vscode.Disposable {
         this.statusBarItem.command = 'assetAwareMcp.showStatus';
         this.statusBarItem.show();
     }
-    
+
     /**
      * Update status bar display
      */
@@ -28,7 +28,7 @@ export class StatusBarManager implements vscode.Disposable {
         this.statusBarItem.tooltip = this.getTooltip(type);
         this.statusBarItem.backgroundColor = this.getBackgroundColor(type);
     }
-    
+
     private getIcon(type: StatusType): string {
         switch (type) {
             case 'initializing':
@@ -41,7 +41,7 @@ export class StatusBarManager implements vscode.Disposable {
                 return '$(error)';
         }
     }
-    
+
     private getTooltip(type: StatusType): string {
         switch (type) {
             case 'initializing':
@@ -54,7 +54,7 @@ export class StatusBarManager implements vscode.Disposable {
                 return 'Asset-Aware MCP error. Click for details.';
         }
     }
-    
+
     private getBackgroundColor(type: StatusType): vscode.ThemeColor | undefined {
         switch (type) {
             case 'error':
@@ -65,7 +65,7 @@ export class StatusBarManager implements vscode.Disposable {
                 return undefined;
         }
     }
-    
+
     /**
      * Dispose resources
      */

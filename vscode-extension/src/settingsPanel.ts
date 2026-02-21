@@ -1,6 +1,6 @@
 /**
  * Settings Panel (Webview)
- * 
+ *
  * Provides a UI for editing .env configuration with visual feedback.
  * Users can input settings and save to local .env file.
  */
@@ -87,15 +87,15 @@ export class SettingsPanel {
             for (const [key, value] of Object.entries(settings)) {
                 await this._envManager.updateEnv(key, value);
             }
-            
+
             vscode.window.showInformationMessage('✅ Settings saved to .env file!');
-            
+
             // Refresh the display
             await this._update();
-            
+
             // Notify to refresh MCP server
             vscode.commands.executeCommand('assetAwareMcp.refreshStatus');
-            
+
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to save settings: ${error}`);
         }
@@ -108,11 +108,11 @@ export class SettingsPanel {
                 const data = await response.json() as { models?: { name: string }[] };
                 const models = data.models?.map((m: { name: string }) => m.name).join(', ') || 'None';
                 vscode.window.showInformationMessage(`✅ Ollama connected! Models: ${models}`);
-                
-                this._panel.webview.postMessage({ 
-                    command: 'ollamaStatus', 
-                    connected: true, 
-                    models: data.models 
+
+                this._panel.webview.postMessage({
+                    command: 'ollamaStatus',
+                    connected: true,
+                    models: data.models
                 });
             } else {
                 throw new Error('Connection failed');
@@ -129,7 +129,7 @@ export class SettingsPanel {
             // For now, just save to .env for next server restart
             await this._envManager.updateEnv('ETL_PROFILE', profileName);
             vscode.window.showInformationMessage(`✅ ETL Profile set to: ${profileName}`);
-            
+
             // Notify to refresh MCP server
             vscode.commands.executeCommand('assetAwareMcp.refreshStatus');
         } catch (error) {
@@ -290,18 +290,18 @@ export class SettingsPanel {
 </head>
 <body>
     <h1>⚙️ Asset-Aware MCP Settings</h1>
-    
+
     <div class="file-path">
         <span>📁 Configuration file: <code>.env</code></span>
         <span id="ollamaStatus" class="status-badge status-unknown">
             Status: Unknown
         </span>
     </div>
-    
+
     <form id="settingsForm">
         <div class="section">
             <h2>🤖 LLM Backend</h2>
-            
+
             <div class="form-group">
                 <label for="llmBackend">Backend</label>
                 <p class="description">Choose between local Ollama or cloud OpenAI</p>
@@ -311,10 +311,10 @@ export class SettingsPanel {
                 </select>
             </div>
         </div>
-        
+
         <div class="section">
             <h2>📄 ETL Profile</h2>
-            
+
             <div class="form-group">
                 <label for="etlProfile">Document Format Profile</label>
                 <p class="description">Different journals/formats need different extraction settings. Choose a profile that matches your documents.</p>
@@ -328,108 +328,108 @@ export class SettingsPanel {
                 <p class="hint">Profile affects: heading detection thresholds, noise filtering, caption patterns, section keywords</p>
             </div>
         </div>
-        
+
         <div class="section" id="ollamaSection">
             <h2>🦙 Ollama Settings</h2>
-            
+
             <div class="form-group">
                 <label for="ollamaHost">Ollama Host URL</label>
                 <div class="input-group">
-                    <input type="text" id="ollamaHost" name="OLLAMA_HOST" 
-                           value="${env['OLLAMA_HOST'] || 'http://localhost:11434'}" 
+                    <input type="text" id="ollamaHost" name="OLLAMA_HOST"
+                           value="${env['OLLAMA_HOST'] || 'http://localhost:11434'}"
                            placeholder="http://localhost:11434">
                     <button type="button" class="btn btn-secondary" onclick="testOllama()">Test Connection</button>
                 </div>
             </div>
-            
+
             <div class="form-group">
                 <label for="ollamaModel">LLM Model</label>
                 <p class="description">Model for text generation (e.g., qwen2.5:7b, llama3.2)</p>
-                <input type="text" id="ollamaModel" name="OLLAMA_MODEL" 
-                       value="${env['OLLAMA_MODEL'] || 'qwen2.5:7b'}" 
+                <input type="text" id="ollamaModel" name="OLLAMA_MODEL"
+                       value="${env['OLLAMA_MODEL'] || 'qwen2.5:7b'}"
                        placeholder="qwen2.5:7b">
             </div>
-            
+
             <div class="form-group">
                 <label for="ollamaEmbeddingModel">Embedding Model</label>
                 <p class="description">Model for text embeddings (e.g., nomic-embed-text)</p>
-                <input type="text" id="ollamaEmbeddingModel" name="OLLAMA_EMBEDDING_MODEL" 
-                       value="${env['OLLAMA_EMBEDDING_MODEL'] || 'nomic-embed-text'}" 
+                <input type="text" id="ollamaEmbeddingModel" name="OLLAMA_EMBEDDING_MODEL"
+                       value="${env['OLLAMA_EMBEDDING_MODEL'] || 'nomic-embed-text'}"
                        placeholder="nomic-embed-text">
             </div>
         </div>
-        
+
         <div class="section" id="openaiSection">
             <h2>🔑 OpenAI Settings</h2>
-            
+
             <div class="form-group">
                 <label for="openaiApiKey">API Key</label>
                 <p class="description">Your OpenAI API key (starts with sk-)</p>
                 <div class="input-group">
-                    <input type="password" id="openaiApiKey" name="OPENAI_API_KEY" 
-                           value="${env['OPENAI_API_KEY'] || ''}" 
+                    <input type="password" id="openaiApiKey" name="OPENAI_API_KEY"
+                           value="${env['OPENAI_API_KEY'] || ''}"
                            placeholder="sk-...">
                     <button type="button" class="toggle-visibility" onclick="togglePassword('openaiApiKey')">👁️</button>
                 </div>
                 <p class="hint">Get your API key from <a href="https://platform.openai.com/api-keys">OpenAI Dashboard</a></p>
             </div>
-            
+
             <div class="form-group">
                 <label for="openaiModel">Model</label>
-                <input type="text" id="openaiModel" name="OPENAI_MODEL" 
-                       value="${env['OPENAI_MODEL'] || 'gpt-4o-mini'}" 
+                <input type="text" id="openaiModel" name="OPENAI_MODEL"
+                       value="${env['OPENAI_MODEL'] || 'gpt-4o-mini'}"
                        placeholder="gpt-4o-mini">
             </div>
-            
+
             <div class="form-group">
                 <label for="openaiEmbeddingModel">Embedding Model</label>
-                <input type="text" id="openaiEmbeddingModel" name="OPENAI_EMBEDDING_MODEL" 
-                       value="${env['OPENAI_EMBEDDING_MODEL'] || 'text-embedding-3-small'}" 
+                <input type="text" id="openaiEmbeddingModel" name="OPENAI_EMBEDDING_MODEL"
+                       value="${env['OPENAI_EMBEDDING_MODEL'] || 'text-embedding-3-small'}"
                        placeholder="text-embedding-3-small">
             </div>
         </div>
-        
+
         <div class="section">
             <h2>📂 Storage</h2>
-            
+
             <div class="form-group">
                 <label for="dataDir">Data Directory</label>
                 <p class="description">Directory for storing processed documents and manifests</p>
-                <input type="text" id="dataDir" name="DATA_DIR" 
-                       value="${env['DATA_DIR'] || './data'}" 
+                <input type="text" id="dataDir" name="DATA_DIR"
+                       value="${env['DATA_DIR'] || './data'}"
                        placeholder="./data">
             </div>
-            
+
             <div class="form-group">
                 <label for="lightragDir">LightRAG Directory</label>
                 <p class="description">Directory for LightRAG knowledge graph data</p>
-                <input type="text" id="lightragDir" name="LIGHTRAG_DIR" 
-                       value="${env['LIGHTRAG_DIR'] || './data/lightrag'}" 
+                <input type="text" id="lightragDir" name="LIGHTRAG_DIR"
+                       value="${env['LIGHTRAG_DIR'] || './data/lightrag'}"
                        placeholder="./data/lightrag">
             </div>
         </div>
-        
+
         <div class="actions">
             <button type="button" class="btn btn-secondary" onclick="refreshForm()">↻ Refresh</button>
             <button type="submit" class="btn">💾 Save Settings</button>
         </div>
     </form>
-    
+
     <script>
         const vscode = acquireVsCodeApi();
-        
+
         // Toggle backend sections visibility
         function updateSectionVisibility() {
             const backend = document.getElementById('llmBackend').value;
-            document.getElementById('ollamaSection').style.display = 
+            document.getElementById('ollamaSection').style.display =
                 backend === 'ollama' ? 'block' : 'none';
-            document.getElementById('openaiSection').style.display = 
+            document.getElementById('openaiSection').style.display =
                 backend === 'openai' ? 'block' : 'none';
         }
-        
+
         document.getElementById('llmBackend').addEventListener('change', updateSectionVisibility);
         updateSectionVisibility();
-        
+
         // Form submission
         document.getElementById('settingsForm').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -440,7 +440,7 @@ export class SettingsPanel {
             });
             vscode.postMessage({ command: 'save', settings });
         });
-        
+
         // Test Ollama connection
         function testOllama() {
             const host = document.getElementById('ollamaHost').value;
@@ -448,23 +448,23 @@ export class SettingsPanel {
             document.getElementById('ollamaStatus').textContent = 'Testing...';
             vscode.postMessage({ command: 'testOllama', host });
         }
-        
+
         // Set ETL Profile
         function setProfile(profileName) {
             vscode.postMessage({ command: 'setProfile', profile: profileName });
         }
-        
+
         // Toggle password visibility
         function togglePassword(id) {
             const input = document.getElementById(id);
             input.type = input.type === 'password' ? 'text' : 'password';
         }
-        
+
         // Refresh form
         function refreshForm() {
             vscode.postMessage({ command: 'refresh' });
         }
-        
+
         // Handle messages from extension
         window.addEventListener('message', (event) => {
             const message = event.data;
@@ -479,7 +479,7 @@ export class SettingsPanel {
                 }
             }
         });
-        
+
         // Test connection on load
         setTimeout(() => testOllama(), 500);
     </script>

@@ -1,6 +1,6 @@
 /**
  * Document Tree Provider
- * 
+ *
  * Provides a tree view showing ingested documents.
  */
 
@@ -11,37 +11,37 @@ import { EnvManager } from './envManager';
 export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentItem> {
     private _onDidChangeTreeData = new vscode.EventEmitter<DocumentItem | undefined | void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
-    
+
     private envManager: EnvManager;
-    
+
     constructor(envManager: EnvManager) {
         this.envManager = envManager;
     }
-    
+
     async refresh(): Promise<void> {
         this._onDidChangeTreeData.fire();
     }
-    
+
     getTreeItem(element: DocumentItem): vscode.TreeItem {
         return element;
     }
-    
+
     async getChildren(element?: DocumentItem): Promise<DocumentItem[]> {
         if (!element) {
             return this.getDocuments();
         }
-        
+
         // Show document details when expanded
         if (element.docId) {
             return this.getDocumentDetails(element.docId);
         }
-        
+
         return [];
     }
-    
+
     private getDocuments(): DocumentItem[] {
         const documents = this.envManager.listDocuments();
-        
+
         if (documents.length === 0) {
             return [new DocumentItem(
                 'No documents ingested',
@@ -50,12 +50,12 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
                 'info'
             )];
         }
-        
+
         return documents.map(doc => {
             // Try to get title from manifest
             const manifest = this.envManager.readManifest(doc.id) as { title?: string; pages?: number } | null;
             const title = manifest?.title || doc.id.replace('doc_', '').replace(/_[a-f0-9]+$/, '').replace(/_/g, ' ');
-            
+
             return new DocumentItem(
                 title,
                 doc.id,
@@ -65,7 +65,7 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
             );
         });
     }
-    
+
     private getDocumentDetails(docId: string): DocumentItem[] {
         const manifest = this.envManager.readManifest(docId) as {
             pages?: number;
@@ -73,13 +73,13 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
             figures?: { id: string }[];
             sections?: { id: string }[];
         } | null;
-        
+
         if (!manifest) {
             return [new DocumentItem('Manifest not found', '', vscode.TreeItemCollapsibleState.None, 'warning')];
         }
-        
+
         const items: DocumentItem[] = [];
-        
+
         // Pages
         if (manifest.pages) {
             items.push(new DocumentItem(
@@ -89,7 +89,7 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
                 'book'
             ));
         }
-        
+
         // Tables count
         const tableCount = manifest.tables?.length || 0;
         items.push(new DocumentItem(
@@ -98,7 +98,7 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
             vscode.TreeItemCollapsibleState.None,
             'list-unordered'
         ));
-        
+
         // Figures count
         const figureCount = manifest.figures?.length || 0;
         items.push(new DocumentItem(
@@ -107,7 +107,7 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
             vscode.TreeItemCollapsibleState.None,
             'file-media'
         ));
-        
+
         // Sections count
         const sectionCount = manifest.sections?.length || 0;
         items.push(new DocumentItem(
@@ -116,7 +116,7 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
             vscode.TreeItemCollapsibleState.None,
             'list-ordered'
         ));
-        
+
         // Open manifest command
         items.push(new DocumentItem(
             'Open Manifest',
@@ -130,7 +130,7 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
                 arguments: [vscode.Uri.file(path.join(this.envManager.getDataDir(), docId, 'manifest.json'))]
             }
         ));
-        
+
         return items;
     }
 }
@@ -145,15 +145,15 @@ class DocumentItem extends vscode.TreeItem {
         cmd?: vscode.Command
     ) {
         super(label, collapsibleState);
-        
+
         if (value) {
             this.description = value;
         }
-        
+
         if (icon) {
             this.iconPath = new vscode.ThemeIcon(icon);
         }
-        
+
         if (cmd) {
             this.command = cmd;
         }

@@ -1,6 +1,6 @@
 /**
  * Environment File Manager
- * 
+ *
  * Handles reading and writing .env configuration files.
  * Provides type-safe access to environment variables.
  */
@@ -39,7 +39,7 @@ export class EnvManager {
     private workspaceRoot: string;
     private projectRoot: string;
     private envPath: string;
-    
+
     constructor(workspaceRoot: string) {
         this.workspaceRoot = workspaceRoot;
         this.projectRoot = this.findProjectRoot(workspaceRoot);
@@ -54,7 +54,7 @@ export class EnvManager {
         const root = path.parse(current).root;
 
         while (current !== root) {
-            if (fs.existsSync(path.join(current, 'pyproject.toml')) || 
+            if (fs.existsSync(path.join(current, 'pyproject.toml')) ||
                 fs.existsSync(path.join(current, 'src', 'server.py'))) {
                 return current;
             }
@@ -63,21 +63,21 @@ export class EnvManager {
 
         return startPath;
     }
-    
+
     /**
      * Get the path to the .env file
      */
     getEnvPath(): string {
         return this.envPath;
     }
-    
+
     /**
      * Check if .env file exists
      */
     exists(): boolean {
         return fs.existsSync(this.envPath);
     }
-    
+
     /**
      * Read and parse .env file
      */
@@ -85,7 +85,7 @@ export class EnvManager {
         if (!this.exists()) {
             return { ...DEFAULT_ENV };
         }
-        
+
         try {
             const content = fs.readFileSync(this.envPath, 'utf-8');
             return this.parseEnvContent(content);
@@ -94,40 +94,40 @@ export class EnvManager {
             return { ...DEFAULT_ENV };
         }
     }
-    
+
     /**
      * Parse .env content to object
      */
     private parseEnvContent(content: string): EnvConfig {
         const env: EnvConfig = { ...DEFAULT_ENV };
         const lines = content.split('\n');
-        
+
         for (const line of lines) {
             const trimmed = line.trim();
-            
+
             // Skip empty lines and comments
             if (!trimmed || trimmed.startsWith('#')) {
                 continue;
             }
-            
+
             const eqIndex = trimmed.indexOf('=');
             if (eqIndex > 0) {
                 const key = trimmed.substring(0, eqIndex).trim();
                 let value = trimmed.substring(eqIndex + 1).trim();
-                
+
                 // Remove quotes if present
                 if ((value.startsWith('"') && value.endsWith('"')) ||
                     (value.startsWith("'") && value.endsWith("'"))) {
                     value = value.slice(1, -1);
                 }
-                
+
                 env[key] = value;
             }
         }
-        
+
         return env;
     }
-    
+
     /**
      * Create default .env file
      */
@@ -135,7 +135,7 @@ export class EnvManager {
         const content = this.generateEnvContent(DEFAULT_ENV);
         fs.writeFileSync(this.envPath, content, 'utf-8');
     }
-    
+
     /**
      * Update a single environment variable
      */
@@ -144,7 +144,7 @@ export class EnvManager {
         env[key] = value;
         await this.writeEnv(env);
     }
-    
+
     /**
      * Write entire env config to file
      */
@@ -152,7 +152,7 @@ export class EnvManager {
         const content = this.generateEnvContent(env);
         fs.writeFileSync(this.envPath, content, 'utf-8');
     }
-    
+
     /**
      * Generate .env file content from config
      */
@@ -194,10 +194,10 @@ export class EnvManager {
             `LIGHTRAG_DIR=${env.LIGHTRAG_DIR || './data/lightrag'}`,
             ''
         ];
-        
+
         return lines.join('\n');
     }
-    
+
     /**
      * Get data directory path
      */
@@ -209,7 +209,7 @@ export class EnvManager {
         }
         return path.resolve(this.projectRoot, dataDir);
     }
-    
+
     /**
      * Synchronous read for quick access
      */
@@ -217,7 +217,7 @@ export class EnvManager {
         if (!this.exists()) {
             return { ...DEFAULT_ENV };
         }
-        
+
         try {
             const content = fs.readFileSync(this.envPath, 'utf-8');
             return this.parseEnvContent(content);
@@ -225,26 +225,26 @@ export class EnvManager {
             return { ...DEFAULT_ENV };
         }
     }
-    
+
     /**
      * List ingested documents from data directory
      */
     listDocuments(): { id: string; path: string; manifestExists: boolean }[] {
         const dataDir = this.getDataDir();
         const documents: { id: string; path: string; manifestExists: boolean }[] = [];
-        
+
         if (!fs.existsSync(dataDir)) {
             return documents;
         }
-        
+
         try {
             const entries = fs.readdirSync(dataDir, { withFileTypes: true });
-            
+
             for (const entry of entries) {
                 if (entry.isDirectory() && entry.name.startsWith('doc_')) {
                     const docPath = path.join(dataDir, entry.name);
                     const manifestPath = path.join(docPath, 'manifest.json');
-                    
+
                     documents.push({
                         id: entry.name,
                         path: docPath,
@@ -255,7 +255,7 @@ export class EnvManager {
         } catch (error) {
             console.error('Error listing documents:', error);
         }
-        
+
         return documents;
     }
 
@@ -278,7 +278,7 @@ export class EnvManager {
                     const tableId = entry.name.replace('.json', '');
                     const jsonPath = path.join(tablesDir, entry.name);
                     const mdPath = path.join(tablesDir, `${tableId}.md`);
-                    
+
                     try {
                         const content = fs.readFileSync(jsonPath, 'utf-8');
                         const data = JSON.parse(content);
@@ -318,7 +318,7 @@ export class EnvManager {
                 if (entry.isFile() && entry.name.endsWith('.json') && entry.name.startsWith('draft_')) {
                     const draftId = entry.name.replace('.json', '');
                     const jsonPath = path.join(draftsDir, entry.name);
-                    
+
                     try {
                         const content = fs.readFileSync(jsonPath, 'utf-8');
                         const data = JSON.parse(content);
@@ -338,18 +338,18 @@ export class EnvManager {
 
         return drafts;
     }
-    
+
     /**
      * Read document manifest
      */
     readManifest(docId: string): object | null {
         const dataDir = this.getDataDir();
         const manifestPath = path.join(dataDir, docId, 'manifest.json');
-        
+
         if (!fs.existsSync(manifestPath)) {
             return null;
         }
-        
+
         try {
             const content = fs.readFileSync(manifestPath, 'utf-8');
             return JSON.parse(content);
