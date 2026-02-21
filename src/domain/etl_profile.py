@@ -39,18 +39,18 @@ class FontThresholds:
     Text with font_size > threshold is tagged as that heading level.
     """
 
-    h1: float = 16.0   # > 16pt → # H1
-    h2: float = 14.0   # > 14pt → ## H2
-    h3: float = 12.0   # > 12pt → ### H3
+    h1: float = 16.0  # > 16pt → # H1
+    h2: float = 14.0  # > 14pt → ## H2
+    h3: float = 12.0  # > 12pt → ### H3
 
 
 @dataclass(frozen=True)
 class FigureTableFilter:
     """Thresholds for filtering noise figures and tables."""
 
-    min_figure_px: int = 50      # Skip figures smaller than this (width or height)
-    min_table_rows: int = 1      # Skip tables with fewer data rows
-    min_table_cols: int = 2      # Skip single-column "tables"
+    min_figure_px: int = 50  # Skip figures smaller than this (width or height)
+    min_table_rows: int = 1  # Skip tables with fewer data rows
+    min_table_cols: int = 2  # Skip single-column "tables"
     max_caption_number: int = 999  # Reject captions like "Table 34733"
     min_caption_body_len: int = 10  # Minimum text after "Figure N."
 
@@ -78,14 +78,14 @@ class ETLProfile:
     # Regex patterns that should NEVER be treated as headings.
     # Each string is combined with | into a single compiled regex.
     heading_noise_patterns: tuple[str, ...] = (
-        r"[a-z]$",             # single lowercase letter
-        r"OPEN$",              # "OPEN" label
-        r"www\.",              # URLs
-        r"http",               # URLs
-        r"\d+$",               # pure numbers
-        r"[A-Z]{1,2}$",       # 1-2 uppercase letters
-        r"arXiv:\S+",         # arXiv identifiers
-        r"layers$",           # table column headers
+        r"[a-z]$",  # single lowercase letter
+        r"OPEN$",  # "OPEN" label
+        r"www\.",  # URLs
+        r"http",  # URLs
+        r"\d+$",  # pure numbers
+        r"[A-Z]{1,2}$",  # 1-2 uppercase letters
+        r"arXiv:\S+",  # arXiv identifiers
+        r"layers$",  # table column headers
         r"filters$",
         r"params$",
         r"output size$",
@@ -96,16 +96,22 @@ class ETLProfile:
     numbered_section_pattern: str = r"^(?:[A-Z]?\d+\.(?:\d+\.)*)\s+\S"
 
     # Keywords that indicate a section heading even without numbers
-    section_keywords: frozenset[str] = frozenset({
-        "abstract", "introduction", "conclusion", "conclusions",
-        "references", "acknowledgements", "acknowledgments",
-        "appendix", "supplementary",
-    })
+    section_keywords: frozenset[str] = frozenset(
+        {
+            "abstract",
+            "introduction",
+            "conclusion",
+            "conclusions",
+            "references",
+            "acknowledgements",
+            "acknowledgments",
+            "appendix",
+            "supplementary",
+        }
+    )
 
     # ── Caption detection patterns ────────────────────────────────────
-    table_caption_pattern: str = (
-        r"(?:Table|TABLE|Tab\.?)\s+(\d+)\s*[.:,]?\s*(.*)"
-    )
+    table_caption_pattern: str = r"(?:Table|TABLE|Tab\.?)\s+(\d+)\s*[.:,]?\s*(.*)"
     figure_caption_pattern: str = (
         r"^\s*(?:Figure|FIGURE|Fig\.?)\s+(\d+)\s*[.:,]?\s*(.*)"
     )
@@ -120,28 +126,26 @@ class ETLProfile:
     section_noise_patterns: tuple[str, ...] = (
         r"layers",
         r"filters",
-        r"ﬁlters",       # ligature variant
+        r"ﬁlters",  # ligature variant
         r"params",
         r"output size",
         r"output map size",
         r"method",
         r"error",
-        r"[a-z]",         # single lowercase letter
-        r"\d+$",          # pure numbers
+        r"[a-z]",  # single lowercase letter
+        r"\d+$",  # pure numbers
         r"[A-Z]{1,2}$",  # 1-2 uppercase letters
     )
 
     # Title noise patterns (arXiv stamps, etc.)
     title_noise_patterns: tuple[str, ...] = (
-        r"arXiv:\S+",    # arXiv identifiers
-        r"OPEN$",        # Noise label
-        r"\d+$",         # Pure numbers
+        r"arXiv:\S+",  # arXiv identifiers
+        r"OPEN$",  # Noise label
+        r"\d+$",  # Pure numbers
     )
 
     # TOC caption filter (remove Figure/Table entries from PDF TOC)
-    toc_caption_pattern: str = (
-        r"^(?:Figure|Fig\.?|Table|Tab\.?)\s+\d+"
-    )
+    toc_caption_pattern: str = r"^(?:Figure|Fig\.?|Table|Tab\.?)\s+\d+"
 
     # ── Compiled regex cache (not part of equality) ───────────────────
 
@@ -187,7 +191,9 @@ class ETLProfile:
         return cls()
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any], *, base: ETLProfile | None = None) -> ETLProfile:
+    def from_dict(
+        cls, data: dict[str, Any], *, base: ETLProfile | None = None
+    ) -> ETLProfile:
         """Create a profile from a dict, optionally merging with a base profile.
 
         Args:
@@ -204,9 +210,12 @@ class ETLProfile:
 
         # Simple scalar fields
         for key in (
-            "name", "description", "min_heading_length",
+            "name",
+            "description",
+            "min_heading_length",
             "numbered_section_pattern",
-            "table_caption_pattern", "figure_caption_pattern",
+            "table_caption_pattern",
+            "figure_caption_pattern",
             "figure_caption_require_line_start",
             "toc_caption_pattern",
         ):
@@ -232,8 +241,12 @@ class ETLProfile:
                 min_figure_px=f_data.get("min_figure_px", base_f.min_figure_px),
                 min_table_rows=f_data.get("min_table_rows", base_f.min_table_rows),
                 min_table_cols=f_data.get("min_table_cols", base_f.min_table_cols),
-                max_caption_number=f_data.get("max_caption_number", base_f.max_caption_number),
-                min_caption_body_len=f_data.get("min_caption_body_len", base_f.min_caption_body_len),
+                max_caption_number=f_data.get(
+                    "max_caption_number", base_f.max_caption_number
+                ),
+                min_caption_body_len=f_data.get(
+                    "min_caption_body_len", base_f.min_caption_body_len
+                ),
             )
         else:
             kwargs["filters"] = base.filters
@@ -266,7 +279,9 @@ class ETLProfile:
         return cls(**kwargs)
 
     @classmethod
-    def from_json(cls, path: str | Path, *, base: ETLProfile | None = None) -> ETLProfile:
+    def from_json(
+        cls, path: str | Path, *, base: ETLProfile | None = None
+    ) -> ETLProfile:
         """Load a profile from a JSON file, merging with base profile.
 
         Args:
@@ -348,14 +363,23 @@ class ETLProfileRegistry:
             font_thresholds=FontThresholds(h1=16.0, h2=14.0, h3=12.0),
             heading_noise_patterns=(
                 *ETLProfile.default().heading_noise_patterns,
-                r"Ensemble\b",        # "Ensemble - nlnet" table entries
-                r"Single\b",          # "Single - MIR-MRC" table entries
+                r"Ensemble\b",  # "Ensemble - nlnet" table entries
+                r"Single\b",  # "Single - MIR-MRC" table entries
             ),
-            section_keywords=frozenset({
-                "abstract", "introduction", "conclusion", "conclusions",
-                "references", "acknowledgements", "acknowledgments",
-                "appendix", "supplementary", "related work",
-            }),
+            section_keywords=frozenset(
+                {
+                    "abstract",
+                    "introduction",
+                    "conclusion",
+                    "conclusions",
+                    "references",
+                    "acknowledgements",
+                    "acknowledgments",
+                    "appendix",
+                    "supplementary",
+                    "related work",
+                }
+            ),
         )
 
         # ── Nature / Scientific Reports ───────────────────────────────
@@ -378,11 +402,18 @@ class ETLProfileRegistry:
             description="IEEE format: double-column, Roman numeral sections (I., II., etc.)",
             font_thresholds=FontThresholds(h1=14.0, h2=12.0, h3=10.0),
             numbered_section_pattern=r"^(?:[IVX]+\.(?:\d+\.)*|[A-Z]?\d+\.(?:\d+\.)*)\s+\S",
-            section_keywords=frozenset({
-                "abstract", "introduction", "conclusion", "conclusions",
-                "references", "acknowledgment", "acknowledgement",
-                "appendix",
-            }),
+            section_keywords=frozenset(
+                {
+                    "abstract",
+                    "introduction",
+                    "conclusion",
+                    "conclusions",
+                    "references",
+                    "acknowledgment",
+                    "acknowledgement",
+                    "appendix",
+                }
+            ),
         )
 
         # ── Elsevier (single-column, numbered sections) ───────────────
@@ -390,11 +421,19 @@ class ETLProfileRegistry:
             name="elsevier",
             description="Elsevier journals: single-column, numbered sections, highlights",
             font_thresholds=FontThresholds(h1=16.0, h2=13.0, h3=11.0),
-            section_keywords=frozenset({
-                "abstract", "introduction", "conclusion", "conclusions",
-                "references", "acknowledgements",
-                "appendix", "highlights", "graphical abstract",
-            }),
+            section_keywords=frozenset(
+                {
+                    "abstract",
+                    "introduction",
+                    "conclusion",
+                    "conclusions",
+                    "references",
+                    "acknowledgements",
+                    "appendix",
+                    "highlights",
+                    "graphical abstract",
+                }
+            ),
         )
 
     @classmethod

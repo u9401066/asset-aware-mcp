@@ -111,7 +111,7 @@ async def parse_pdf_structure(
         return "\n".join(lines)
 
     except Exception as e:
-        return f"❌ Marker parsing failed: {str(e)}"
+        return f"❌ Marker parsing failed: {e!s}"
 
 
 @mcp.tool()
@@ -190,7 +190,7 @@ async def search_source_location(
         return "\n".join(lines)
 
     except Exception as e:
-        return f"❌ Search failed: {str(e)}"
+        return f"❌ Search failed: {e!s}"
 
 
 @mcp.tool()
@@ -375,9 +375,7 @@ async def inspect_document_manifest(doc_id: str) -> str:
         )
         output_lines.append(", ".join(manifest.lightrag_entities[:20]))
         if len(manifest.lightrag_entities) > 20:
-            output_lines.append(
-                f"... and {len(manifest.lightrag_entities) - 20} more"
-            )
+            output_lines.append(f"... and {len(manifest.lightrag_entities) - 20} more")
 
     return "\n".join(output_lines)
 

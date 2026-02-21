@@ -216,20 +216,14 @@ class TableService:
         context.rows.pop(index)
         # Shift citation keys for rows after deleted row
         self._shift_citation_keys(context, index)
-        self._record_change(
-            context, "delete_row", f"row:{index}", old_value=old_row
-        )
+        self._record_change(context, "delete_row", f"row:{index}", old_value=old_row)
         self._save_table(context)
         return {"success": True, "total_rows": context.row_count}
 
     def _shift_citation_keys(self, context: TableContext, deleted_index: int) -> None:
         """After deleting a row, shift citation keys for rows above it."""
         # Remove citations for deleted row
-        to_remove = [
-            k
-            for k in context.citations
-            if k.startswith(f"{deleted_index}:")
-        ]
+        to_remove = [k for k in context.citations if k.startswith(f"{deleted_index}:")]
         for k in to_remove:
             del context.citations[k]
 
@@ -423,8 +417,7 @@ class TableService:
         if context.change_log is None:
             return []
         return [
-            e.to_dict()
-            for e in context.change_log.get_by_cell(row_index, column_name)
+            e.to_dict() for e in context.change_log.get_by_cell(row_index, column_name)
         ]
 
     # =========================================================================
@@ -680,9 +673,7 @@ class TableService:
         templates = self._get_builtin_templates()
         return [t.to_dict() for t in templates]
 
-    def create_from_template(
-        self, template_name: str, title_override: str = ""
-    ) -> str:
+    def create_from_template(self, template_name: str, title_override: str = "") -> str:
         """Create a table from a named template."""
         templates = {t.name: t for t in self._get_builtin_templates()}
         if template_name not in templates:
@@ -708,7 +699,9 @@ class TableService:
                     ColumnDef(name="Drug", type="text"),
                     ColumnDef(name="Mechanism", type="text"),
                     ColumnDef(name="Dose", type="text"),
-                    ColumnDef(name="Route", type="enum", enum_values=["IV", "IM", "PO", "SC"]),
+                    ColumnDef(
+                        name="Route", type="enum", enum_values=["IV", "IM", "PO", "SC"]
+                    ),
                     ColumnDef(name="Side_Effects", type="text"),
                     ColumnDef(name="Notes", type="text", required=False),
                 ],

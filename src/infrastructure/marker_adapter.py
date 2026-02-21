@@ -40,7 +40,9 @@ class MarkerBlock:
     text: str = ""
     bbox: list[float] = field(default_factory=list)  # [x0, y0, x1, y1]
     polygon: list[list[float]] = field(default_factory=list)  # [[x,y], ...]
-    section_hierarchy: dict[str, str] = field(default_factory=dict)  # {"1": "Ch1", "2": "1.1"}
+    section_hierarchy: dict[str, str] = field(
+        default_factory=dict
+    )  # {"1": "Ch1", "2": "1.1"}
     children: list[MarkerBlock] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -127,7 +129,9 @@ class MarkerPDFExtractor:
         blocks: list[MarkerBlock] = []
         block_counter = 0
 
-        def traverse_node(node: Any, page_num: int = 1, section_hierarchy: dict | None = None) -> None:
+        def traverse_node(
+            node: Any, page_num: int = 1, section_hierarchy: dict | None = None
+        ) -> None:
             nonlocal block_counter
             section_hierarchy = section_hierarchy or {}
 
@@ -139,7 +143,9 @@ class MarkerPDFExtractor:
             if hasattr(node, "text"):
                 text = node.text or ""
             elif hasattr(node, "raw_text"):
-                text = node.raw_text() if callable(node.raw_text) else str(node.raw_text)
+                text = (
+                    node.raw_text() if callable(node.raw_text) else str(node.raw_text)
+                )
 
             # 取得 bbox/polygon
             bbox = []
@@ -204,20 +210,24 @@ class MarkerPDFExtractor:
 
         if hasattr(rendered, "toc") and rendered.toc:
             for item in rendered.toc:
-                toc.append({
-                    "title": getattr(item, "title", str(item)),
-                    "page": getattr(item, "page", 0),
-                    "level": getattr(item, "level", 1),
-                })
+                toc.append(
+                    {
+                        "title": getattr(item, "title", str(item)),
+                        "page": getattr(item, "page", 0),
+                        "level": getattr(item, "level", 1),
+                    }
+                )
         else:
             # 從 SectionHeader blocks 建構 TOC
             for block in self._extract_blocks(rendered):
                 if block.block_type == "SectionHeader" and block.text:
-                    toc.append({
-                        "title": block.text.strip(),
-                        "page": block.page,
-                        "level": block.metadata.get("level", 1) or 1,
-                    })
+                    toc.append(
+                        {
+                            "title": block.text.strip(),
+                            "page": block.page,
+                            "level": block.metadata.get("level", 1) or 1,
+                        }
+                    )
 
         return toc
 
@@ -230,6 +240,7 @@ class MarkerPDFExtractor:
             for name, img in rendered.images.items():
                 try:
                     import io
+
                     buf = io.BytesIO()
                     img.save(buf, format="PNG")
                     images[name] = buf.getvalue()
@@ -266,6 +277,7 @@ class MarkerPDFExtractor:
         """
         # 生成 doc_id (使用與 DocumentService 一致的慣例)
         from src.domain.value_objects import DocId
+
         doc_id = DocId.generate(pdf_path.stem, str(pdf_path.absolute())).value
 
         # 確保輸出目錄存在
@@ -282,8 +294,7 @@ class MarkerPDFExtractor:
 
         # Collect all Figure blocks for 1:1 matching
         figure_blocks = [
-            block for block in parse_result.blocks
-            if block.block_type == "Figure"
+            block for block in parse_result.blocks if block.block_type == "Figure"
         ]
 
         for idx, (img_name, img_bytes) in enumerate(parse_result.images.items(), 1):
@@ -305,35 +316,40 @@ class MarkerPDFExtractor:
                 import io
 
                 from PIL import Image
+
                 img = Image.open(io.BytesIO(img_bytes))
                 width, height = img.size
             except Exception:
                 pass
 
-            figures.append(FigureAsset(
-                id=f"fig_{idx}",
-                page=page,
-                path=str(fig_path),
-                ext=ext,
-                caption=caption,
-                width=width,
-                height=height,
-                figure_type="",
-                source="marker",
-            ))
+            figures.append(
+                FigureAsset(
+                    id=f"fig_{idx}",
+                    page=page,
+                    path=str(fig_path),
+                    ext=ext,
+                    caption=caption,
+                    width=width,
+                    height=height,
+                    figure_type="",
+                    source="marker",
+                )
+            )
 
         # 建立 SectionAsset
         sections: list[SectionAsset] = []
         for idx, toc_item in enumerate(parse_result.toc, 1):
-            sections.append(SectionAsset(
-                id=f"sec_{idx}",
-                title=toc_item.get("title", ""),
-                level=toc_item.get("level", 1),
-                page=toc_item.get("page", 0),
-                start_line=0,
-                end_line=0,
-                preview="",
-            ))
+            sections.append(
+                SectionAsset(
+                    id=f"sec_{idx}",
+                    title=toc_item.get("title", ""),
+                    level=toc_item.get("level", 1),
+                    page=toc_item.get("page", 0),
+                    start_line=0,
+                    end_line=0,
+                    preview="",
+                )
+            )
 
         # 建立 TableAsset（從 blocks 中提取）
         tables: list[TableAsset] = []
@@ -344,22 +360,30 @@ class MarkerPDFExtractor:
                 # Parse row/col counts from markdown
                 row_count, col_count = 0, 0
                 if block.text:
-                    lines = [line.strip() for line in block.text.strip().splitlines() if line.strip()]
-                    data_lines = [line for line in lines if not all(c in "-| :" for c in line)]
+                    lines = [
+                        line.strip()
+                        for line in block.text.strip().splitlines()
+                        if line.strip()
+                    ]
+                    data_lines = [
+                        line for line in lines if not all(c in "-| :" for c in line)
+                    ]
                     row_count = len(data_lines)
                     if data_lines:
                         col_count = max(data_lines[0].count("|") - 1, 0)
-                tables.append(TableAsset(
-                    id=f"tab_{table_idx}",
-                    page=block.page,
-                    caption="",
-                    preview=block.text[:100] if block.text else "",
-                    markdown=block.text,
-                    row_count=row_count,
-                    col_count=col_count,
-                    has_header=True,
-                    source="marker",
-                ))
+                tables.append(
+                    TableAsset(
+                        id=f"tab_{table_idx}",
+                        page=block.page,
+                        caption="",
+                        preview=block.text[:100] if block.text else "",
+                        markdown=block.text,
+                        row_count=row_count,
+                        col_count=col_count,
+                        has_header=True,
+                        source="marker",
+                    )
+                )
 
         # 建立 DocumentAssets
         assets = DocumentAssets(

@@ -71,7 +71,9 @@ class SectionService:
         if manifest_path.exists():
             try:
                 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-                doc_title = manifest.get("title") or manifest.get("filename") or "Document"
+                doc_title = (
+                    manifest.get("title") or manifest.get("filename") or "Document"
+                )
             except Exception:
                 pass
 
@@ -139,7 +141,11 @@ class SectionService:
             lines.append("| Depth | Path | Pages | Blocks | Est. Tokens |")
             lines.append("|-------|------|-------|--------|-------------|")
             for item in flat_list:
-                pages = f"{item['page_start']}-{item['page_end']}" if item['page_start'] else "-"
+                pages = (
+                    f"{item['page_start']}-{item['page_end']}"
+                    if item["page_start"]
+                    else "-"
+                )
                 lines.append(
                     f"| {item['depth']} | {item['path']} | {pages} | "
                     f"{item['block_count']} | ~{item['est_tokens']} |"
@@ -209,11 +215,13 @@ class SectionService:
             else:
                 lines.append(f"**Pages:** {node.page_start}-{node.page_end}")
 
-        lines.extend([
-            f"**Total Blocks:** {node.block_count}",
-            f"**Direct Blocks:** {node.direct_block_count}",
-            f"**Est. Tokens:** ~{node.estimate_tokens()}",
-        ])
+        lines.extend(
+            [
+                f"**Total Blocks:** {node.block_count}",
+                f"**Direct Blocks:** {node.direct_block_count}",
+                f"**Est. Tokens:** ~{node.estimate_tokens()}",
+            ]
+        )
 
         # 子節點
         if node.children:
@@ -227,7 +235,9 @@ class SectionService:
                         page_info = f", P{child.page_start}-{child.page_end}"
 
                 icon = "📑" if child.children else "📄"
-                lines.append(f"- {icon} **{child.title}** ({child.block_count} blocks{page_info})")
+                lines.append(
+                    f"- {icon} **{child.title}** ({child.block_count} blocks{page_info})"
+                )
 
         # 預覽內容
         if node.block_ids:
@@ -245,17 +255,19 @@ class SectionService:
                 lines.append(f"> {preview_text}...")
 
         # 操作提示
-        lines.extend([
-            "",
-            "---",
-            "**Next:**",
-            f"- Get blocks: `get_section_blocks(\"{doc_id}\", \"{'/'.join(node.path)}\")`",
-        ])
+        lines.extend(
+            [
+                "",
+                "---",
+                "**Next:**",
+                f'- Get blocks: `get_section_blocks("{doc_id}", "{"/".join(node.path)}")`',
+            ]
+        )
 
         if node.children:
             first_child = list(node.children.values())[0]
             lines.append(
-                f"- Drill down: `get_section_detail(\"{doc_id}\", \"{'/'.join(first_child.path)}\")`"
+                f'- Drill down: `get_section_detail("{doc_id}", "{"/".join(first_child.path)}")`'
             )
 
         return "\n".join(lines)
@@ -300,7 +312,7 @@ class SectionService:
             return f"No blocks found in section: `{'/'.join(node.path)}`"
 
         lines = [
-            f"## 📦 Blocks in \"{node.title}\"",
+            f'## 📦 Blocks in "{node.title}"',
             "",
             f"**Section:** {' > '.join(node.path)}",
             f"**Total:** {len(blocks)} blocks",
@@ -322,8 +334,12 @@ class SectionService:
             section_hierarchy = block.get("section_hierarchy", {})
 
             # 建構 section path
-            sorted_keys = sorted(section_hierarchy.keys(), key=lambda x: int(x) if x.isdigit() else 999)
-            section_path = [section_hierarchy[k] for k in sorted_keys if section_hierarchy[k]]
+            sorted_keys = sorted(
+                section_hierarchy.keys(), key=lambda x: int(x) if x.isdigit() else 999
+            )
+            section_path = [
+                section_hierarchy[k] for k in sorted_keys if section_hierarchy[k]
+            ]
 
             lines.append(f"### Block {i} ({block_type}, P{page})")
             lines.append(f"**ID:** `{block_id}`")
@@ -372,10 +388,10 @@ class SectionService:
         results = tree.search_sections(query, fuzzy)
 
         if not results:
-            return f"No sections found matching \"{query}\""
+            return f'No sections found matching "{query}"'
 
         lines = [
-            f"## 🔍 Found {len(results)} sections matching \"{query}\"",
+            f'## 🔍 Found {len(results)} sections matching "{query}"',
             "",
         ]
 

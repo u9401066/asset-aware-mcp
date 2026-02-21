@@ -150,15 +150,19 @@ class SectionNode:
         if self.depth == 1:
             lines.append(f"{icon} {self.title}{page_info}{block_info}")
         else:
-            lines.append(f"{prefix}{connector}{icon} {self.title}{page_info}{block_info}")
+            lines.append(
+                f"{prefix}{connector}{icon} {self.title}{page_info}{block_info}"
+            )
 
         # 子節點
         if max_depth is None or self.depth < max_depth:
             child_prefix = prefix + ("    " if is_last else "│   ")
             children_list = list(self.children.values())
             for i, child in enumerate(children_list):
-                is_child_last = (i == len(children_list) - 1)
-                lines.append(child.to_tree_string(max_depth, child_prefix, is_child_last))
+                is_child_last = i == len(children_list) - 1
+                lines.append(
+                    child.to_tree_string(max_depth, child_prefix, is_child_last)
+                )
 
         return "\n".join(lines)
 
@@ -224,8 +228,12 @@ class SectionTree:
         # 建構 section path
         # section_hierarchy 是 {"1": "Title1", "2": "Title2", ...}
         # 按 key 排序取得有序路徑
-        sorted_keys = sorted(section_hierarchy.keys(), key=lambda x: int(x) if x.isdigit() else 999)
-        section_path = [section_hierarchy[k] for k in sorted_keys if section_hierarchy[k]]
+        sorted_keys = sorted(
+            section_hierarchy.keys(), key=lambda x: int(x) if x.isdigit() else 999
+        )
+        section_path = [
+            section_hierarchy[k] for k in sorted_keys if section_hierarchy[k]
+        ]
 
         # 如果沒有 section，放到根節點
         if not section_path:
@@ -354,15 +362,17 @@ class SectionTree:
         """輸出扁平列表。"""
         result = []
         for node in self.root.iter_all(max_depth):
-            result.append({
-                "title": node.title,
-                "path": "/".join(node.path),
-                "depth": node.depth,
-                "page_start": node.page_start,
-                "page_end": node.page_end,
-                "block_count": node.block_count,
-                "est_tokens": node.estimate_tokens(),
-            })
+            result.append(
+                {
+                    "title": node.title,
+                    "path": "/".join(node.path),
+                    "depth": node.depth,
+                    "page_start": node.page_start,
+                    "page_end": node.page_end,
+                    "block_count": node.block_count,
+                    "est_tokens": node.estimate_tokens(),
+                }
+            )
         return result
 
     def to_dict(self) -> dict[str, Any]:

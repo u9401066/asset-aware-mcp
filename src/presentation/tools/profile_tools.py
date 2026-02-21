@@ -28,16 +28,18 @@ async def list_etl_profiles() -> dict:
     profiles = []
     for name in ETLProfileRegistry.list_profiles():
         p = ETLProfileRegistry.get(name)
-        profiles.append({
-            "name": p.name,
-            "description": p.description,
-            "font_thresholds": {
-                "h1": p.font_thresholds.h1,
-                "h2": p.font_thresholds.h2,
-                "h3": p.font_thresholds.h3,
-            },
-            "min_heading_length": p.min_heading_length,
-        })
+        profiles.append(
+            {
+                "name": p.name,
+                "description": p.description,
+                "font_thresholds": {
+                    "h1": p.font_thresholds.h1,
+                    "h2": p.font_thresholds.h2,
+                    "h3": p.font_thresholds.h3,
+                },
+                "min_heading_length": p.min_heading_length,
+            }
+        )
 
     return {
         "profiles": profiles,
@@ -172,5 +174,5 @@ async def load_etl_profile_from_json(json_path: str) -> dict:
     except Exception as e:
         return {
             "success": False,
-            "error": f"Failed to load profile: {str(e)}",
+            "error": f"Failed to load profile: {e!s}",
         }

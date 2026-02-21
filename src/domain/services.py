@@ -7,7 +7,6 @@ Business logic that doesn't naturally fit within an entity.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
 
 from .entities import (
     DocumentAssets,
@@ -17,9 +16,6 @@ from .entities import (
     TableAsset,
 )
 from .etl_profile import ETLProfile
-
-if TYPE_CHECKING:
-    pass
 
 
 class ManifestGenerator:

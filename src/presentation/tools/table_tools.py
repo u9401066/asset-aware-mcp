@@ -86,22 +86,28 @@ async def _plan_schema(
     ]
 
     question_lower = question.lower()
-    if any(kw in question_lower for kw in ["比較", "compare", "vs", "差異", "different"]):
+    if any(
+        kw in question_lower for kw in ["比較", "compare", "vs", "差異", "different"]
+    ):
         suggested_intent = "comparison"
         intent_reason = "問題涉及比較分析"
-    elif any(kw in question_lower for kw in ["引用", "cite", "reference", "來源", "source"]):
+    elif any(
+        kw in question_lower for kw in ["引用", "cite", "reference", "來源", "source"]
+    ):
         suggested_intent = "citation"
         intent_reason = "問題需要引用來源"
     else:
         suggested_intent = "summary"
         intent_reason = "問題為一般性摘要"
 
-    lines.extend([
-        "## Suggested Intent",
-        f"**{suggested_intent}** - {intent_reason}",
-        "",
-        "## Extraction Hints",
-    ])
+    lines.extend(
+        [
+            "## Suggested Intent",
+            f"**{suggested_intent}** - {intent_reason}",
+            "",
+            "## Extraction Hints",
+        ]
+    )
 
     if doc_ids:
         for doc_id in doc_ids:
@@ -117,51 +123,63 @@ async def _plan_schema(
                     for tab in manifest.assets.tables[:3]:
                         lines.append(f"  - `{tab.id}`: {tab.caption or 'No caption'}")
                 if manifest.assets.figures:
-                    lines.append(f"**Figures:** {len(manifest.assets.figures)} available")
+                    lines.append(
+                        f"**Figures:** {len(manifest.assets.figures)} available"
+                    )
 
     if hints:
         lines.append("\n### User Hints")
         for hint in hints:
             lines.append(f"- {hint}")
 
-    lines.extend([
-        "",
-        "## Suggested Columns",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Suggested Columns",
+            "",
+        ]
+    )
 
     if suggested_intent == "comparison":
-        lines.extend([
-            "| Column | Type | Purpose |",
-            "|--------|------|---------|",
-            "| 項目/Item | text | 比較的對象 |",
-            "| 特徵1 | text | 第一個比較維度 |",
-            "| 特徵2 | text | 第二個比較維度 |",
-            "| 差異/Notes | text | 關鍵差異說明 |",
-        ])
+        lines.extend(
+            [
+                "| Column | Type | Purpose |",
+                "|--------|------|---------|",
+                "| 項目/Item | text | 比較的對象 |",
+                "| 特徵1 | text | 第一個比較維度 |",
+                "| 特徵2 | text | 第二個比較維度 |",
+                "| 差異/Notes | text | 關鍵差異說明 |",
+            ]
+        )
     elif suggested_intent == "citation":
-        lines.extend([
-            "| Column | Type | Purpose |",
-            "|--------|------|---------|",
-            "| 來源/Source | text | 引用來源 |",
-            "| 頁碼/Page | number | 頁碼 |",
-            "| 內容/Content | text | 引用內容 |",
-            "| 備註/Notes | text | 補充說明 |",
-        ])
+        lines.extend(
+            [
+                "| Column | Type | Purpose |",
+                "|--------|------|---------|",
+                "| 來源/Source | text | 引用來源 |",
+                "| 頁碼/Page | number | 頁碼 |",
+                "| 內容/Content | text | 引用內容 |",
+                "| 備註/Notes | text | 補充說明 |",
+            ]
+        )
     else:
-        lines.extend([
-            "| Column | Type | Purpose |",
-            "|--------|------|---------|",
-            "| 主題/Topic | text | 主題項目 |",
-            "| 說明/Description | text | 詳細說明 |",
-            "| 備註/Notes | text | 補充說明 |",
-        ])
+        lines.extend(
+            [
+                "| Column | Type | Purpose |",
+                "|--------|------|---------|",
+                "| 主題/Topic | text | 主題項目 |",
+                "| 說明/Description | text | 詳細說明 |",
+                "| 備註/Notes | text | 補充說明 |",
+            ]
+        )
 
-    lines.extend([
-        "",
-        "💡 **Tip:** Use `plan_table('templates')` to see built-in templates,",
-        "or `table_manage('create', ...)` to directly create a table.",
-    ])
+    lines.extend(
+        [
+            "",
+            "💡 **Tip:** Use `plan_table('templates')` to see built-in templates,",
+            "or `table_manage('create', ...)` to directly create a table.",
+        ]
+    )
 
     return "\n".join(lines)
 
@@ -208,8 +226,15 @@ def _create_from_template(template_name: str, title_override: str) -> str:
 @mcp.tool()
 async def table_manage(
     operation: Literal[
-        "create", "delete", "list", "preview", "resume", "render",
-        "add_column", "remove_column", "rename_column",
+        "create",
+        "delete",
+        "list",
+        "preview",
+        "resume",
+        "render",
+        "add_column",
+        "remove_column",
+        "rename_column",
     ],
     # create
     intent: Literal["comparison", "citation", "summary"] | None = None,
@@ -307,7 +332,9 @@ def _table_create(
     if not intent or not title or not columns:
         return "❌ `intent`, `title`, and `columns` are required."
     table_id = table_service.create_table(
-        intent=intent, title=title, columns=columns,
+        intent=intent,
+        title=title,
+        columns=columns,
         source_description=source_description,
     )
     preview = table_service.preview_table(table_id)
@@ -419,8 +446,13 @@ def _schema_rename_column(table_id: str, old_name: str, new_name: str) -> str:
 @mcp.tool()
 async def table_data(
     operation: Literal[
-        "add_rows", "get_row", "update_row", "delete_row",
-        "get_cell", "update_cell", "clear_cell",
+        "add_rows",
+        "get_row",
+        "update_row",
+        "delete_row",
+        "get_cell",
+        "update_cell",
+        "clear_cell",
     ],
     table_id: str,
     # add_rows / update_row
@@ -539,7 +571,9 @@ def _data_get_cell(table_id: str, row_index: int, column_name: str) -> str:
     if result.get("citation"):
         cite = result["citation"]
         refs_count = len(cite.get("refs", []))
-        lines.append(f"**Citation:** {refs_count} refs, confidence: {cite.get('confidence', 'N/A')}")
+        lines.append(
+            f"**Citation:** {refs_count} refs, confidence: {cite.get('confidence', 'N/A')}"
+        )
     return "\n".join(lines)
 
 
@@ -663,7 +697,9 @@ def _cite_get(
         refs = cite.get("refs", [])
         lines = [f"## Citation: {result['cell']}", ""]
         for i, ref in enumerate(refs):
-            lines.append(f"  [{i}] **{ref['source_type']}**: {ref.get('label', ref.get('excerpt', ref.get('url', ''))[:60])}")
+            lines.append(
+                f"  [{i}] **{ref['source_type']}**: {ref.get('label', ref.get('excerpt', ref.get('url', ''))[:60])}"
+            )
         if cite.get("confidence") is not None:
             lines.append(f"\n**Confidence:** {cite['confidence']}")
         if cite.get("notes"):
@@ -718,7 +754,9 @@ def _cite_cell_history(
     lines = [f"## Cell History [{row_index}:{column_name}]\n"]
     for entry in history:
         ts = entry["timestamp"][:19]
-        lines.append(f"- **{ts}** `{entry['operation']}`: {entry.get('old_value', '')} → {entry.get('new_value', '')}")
+        lines.append(
+            f"- **{ts}** `{entry['operation']}`: {entry.get('old_value', '')} → {entry.get('new_value', '')}"
+        )
     return "\n".join(lines)
 
 
@@ -798,7 +836,9 @@ def _history_tokens(table_id: str, draft_id: str, text: str) -> str:
         try:
             draft = table_service.get_draft(draft_id)
             est = draft.estimate_tokens()
-            lines.append(f"**Draft `{draft_id}`:** ~{est} tokens ({len(draft.pending_rows)} pending rows)")
+            lines.append(
+                f"**Draft `{draft_id}`:** ~{est} tokens ({len(draft.pending_rows)} pending rows)"
+            )
         except ValueError:
             lines.append(f"**Draft `{draft_id}`:** Not found")
     if text:
@@ -822,7 +862,9 @@ def _compact(val: Any) -> str:
 
 @mcp.tool()
 async def table_draft(
-    operation: Literal["create", "update", "add_rows", "resume", "commit", "list", "delete"],
+    operation: Literal[
+        "create", "update", "add_rows", "resume", "commit", "list", "delete"
+    ],
     # create / update
     draft_id: str = "",
     title: str = "",
@@ -871,11 +913,25 @@ async def table_draft(
     """
     try:
         if operation == "create":
-            return _draft_create(title, intent, proposed_columns, extraction_plan,
-                                 source_doc_ids, source_sections, notes)
+            return _draft_create(
+                title,
+                intent,
+                proposed_columns,
+                extraction_plan,
+                source_doc_ids,
+                source_sections,
+                notes,
+            )
         elif operation == "update":
-            return _draft_update(draft_id, title, intent, proposed_columns,
-                                 extraction_plan, source_sections, notes)
+            return _draft_update(
+                draft_id,
+                title,
+                intent,
+                proposed_columns,
+                extraction_plan,
+                source_sections,
+                notes,
+            )
         elif operation == "add_rows":
             return _draft_add_rows(draft_id, rows)
         elif operation == "resume":
@@ -904,7 +960,8 @@ def _draft_create(
     if not title:
         return "❌ `title` is required."
     draft_id = table_service.create_draft(
-        title=title, intent=intent,
+        title=title,
+        intent=intent,
         proposed_columns=proposed_columns,
         extraction_plan=extraction_plan,
         source_doc_ids=source_doc_ids,
@@ -974,7 +1031,9 @@ def _draft_resume(draft_id: str) -> str:
         f"# 📋 Draft: {draft.title}",
         "",
         f"**ID:** `{draft_id}` | **Intent:** {draft.intent or 'N/A'}",
-        f"**Table:** `{draft.table_id}`" if draft.table_id else "**Table:** Not created",
+        f"**Table:** `{draft.table_id}`"
+        if draft.table_id
+        else "**Table:** Not created",
     ]
     if draft.proposed_columns:
         lines.append("\n## Columns")
@@ -1085,26 +1144,33 @@ async def discover_sources(
             if manifest.assets.sections:
                 query_lower = query.lower()
                 for sec in manifest.assets.sections:
-                    if query_lower in (sec.title or "").lower() or query_lower in (sec.id or "").lower():
-                        doc_results.append({
-                            "source_type": "section",
-                            "doc_id": doc_id,
-                            "asset_id": sec.id,
-                            "label": sec.title,
-                            "page": sec.page,
-                        })
+                    if (
+                        query_lower in (sec.title or "").lower()
+                        or query_lower in (sec.id or "").lower()
+                    ):
+                        doc_results.append(
+                            {
+                                "source_type": "section",
+                                "doc_id": doc_id,
+                                "asset_id": sec.id,
+                                "label": sec.title,
+                                "page": sec.page,
+                            }
+                        )
 
             # Search tables
             if manifest.assets.tables:
                 for tab in manifest.assets.tables:
                     if query.lower() in (tab.caption or "").lower():
-                        doc_results.append({
-                            "source_type": "table",
-                            "doc_id": doc_id,
-                            "asset_id": tab.id,
-                            "label": tab.caption or tab.id,
-                            "page": tab.page,
-                        })
+                        doc_results.append(
+                            {
+                                "source_type": "table",
+                                "doc_id": doc_id,
+                                "asset_id": tab.id,
+                                "label": tab.caption or tab.id,
+                                "page": tab.page,
+                            }
+                        )
 
             if doc_results:
                 found_any = True
@@ -1114,7 +1180,9 @@ async def discover_sources(
                         f"  - **{r['source_type']}** `{r['asset_id']}`: "
                         f"{r['label']} (p.{r.get('page', '?')})"
                     )
-                    lines.append(f"    ```json\n    {json.dumps(r, ensure_ascii=False)}\n    ```")
+                    lines.append(
+                        f"    ```json\n    {json.dumps(r, ensure_ascii=False)}\n    ```"
+                    )
                 lines.append("")
 
         except Exception:
@@ -1124,21 +1192,30 @@ async def discover_sources(
     if include_kg:
         try:
             from src.presentation.dependencies import knowledge_service
+
             kg_result = await knowledge_service.query(query)
             if kg_result and "No knowledge graph" not in kg_result:
                 found_any = True
                 lines.append("## 🧠 Knowledge Graph")
                 # Show compact result
-                kg_preview = kg_result[:500] + "..." if len(kg_result) > 500 else kg_result
+                kg_preview = (
+                    kg_result[:500] + "..." if len(kg_result) > 500 else kg_result
+                )
                 lines.append(kg_preview)
-                lines.append(f"\n  AssetRef: `{json.dumps({'source_type': 'kg_entity', 'label': query}, ensure_ascii=False)}`")
+                lines.append(
+                    f"\n  AssetRef: `{json.dumps({'source_type': 'kg_entity', 'label': query}, ensure_ascii=False)}`"
+                )
                 lines.append("")
         except Exception:
             pass
 
     if not found_any:
-        lines.append("No relevant sources found. Try different keywords or ingest documents first.")
+        lines.append(
+            "No relevant sources found. Try different keywords or ingest documents first."
+        )
 
-    lines.append("\n💡 Copy the AssetRef JSON and use `table_cite('add', ...)` to attach as citation.")
+    lines.append(
+        "\n💡 Copy the AssetRef JSON and use `table_cite('add', ...)` to attach as citation."
+    )
 
     return "\n".join(lines)

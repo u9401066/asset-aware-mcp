@@ -44,7 +44,7 @@ class CellCitation:
 
     refs: list[AssetRef] = field(default_factory=list)
     confidence: float | None = None  # Agent 信心度 0.0~1.0
-    notes: str = ""                   # Agent 填寫備註
+    notes: str = ""  # Agent 填寫備註
 
     def add_ref(self, ref: AssetRef) -> None:
         """新增一個引用來源。"""
@@ -97,7 +97,7 @@ class ChangeEntry:
 
     timestamp: datetime
     operation: str  # "update_cell", "add_rows", "delete_row", etc.
-    target: str     # "table" / "row:2" / "row:2/col:Drug"
+    target: str  # "table" / "row:2" / "row:2/col:Drug"
     old_value: Any | None = None
     new_value: Any | None = None
     citations: list[AssetRef] = field(default_factory=list)
@@ -126,9 +126,7 @@ class ChangeEntry:
             target=data["target"],
             old_value=data.get("old_value"),
             new_value=data.get("new_value"),
-            citations=[
-                AssetRef.from_dict(c) for c in data.get("citations", [])
-            ],
+            citations=[AssetRef.from_dict(c) for c in data.get("citations", [])],
         )
 
 
@@ -169,9 +167,7 @@ class TableChangeLog:
         """從 dict 反序列化。"""
         return cls(
             table_id=data["table_id"],
-            entries=[
-                ChangeEntry.from_dict(e) for e in data.get("entries", [])
-            ],
+            entries=[ChangeEntry.from_dict(e) for e in data.get("entries", [])],
         )
 
 
@@ -337,7 +333,9 @@ class TableContext:
         """取得特定儲存格的引用。"""
         return self.citations.get(self._cite_key(row_index, column_name))
 
-    def set_citation(self, row_index: int, column_name: str, citation: CellCitation) -> None:
+    def set_citation(
+        self, row_index: int, column_name: str, citation: CellCitation
+    ) -> None:
         """設定特定儲存格的引用。"""
         self.citations[self._cite_key(row_index, column_name)] = citation
 
@@ -438,7 +436,7 @@ class TableContext:
         col_names = {col.name for col in self.columns}
 
         # Check for unknown columns
-        for key in row.keys():
+        for key in row:
             if key not in col_names:
                 errors.append(f"Unknown column: '{key}'")
 

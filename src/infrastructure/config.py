@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     # ETL Profile selection
     etl_profile: str = Field(
         default="default",
-        description="ETL extraction profile: 'default', 'arxiv', 'nature', 'ieee', 'elsevier'"
+        description="ETL extraction profile: 'default', 'arxiv', 'nature', 'ieee', 'elsevier'",
     )
 
     # OpenAI settings (optional, if using OpenAI backend)

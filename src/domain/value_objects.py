@@ -27,13 +27,13 @@ class AssetType(str, Enum):
 
 # AssetRef 支援的來源類型
 SourceType = Literal[
-    "section",      # PDF 章節
-    "figure",       # PDF 圖片
-    "table",        # PDF 表格
-    "full_text",    # PDF 全文
-    "kg_entity",    # 知識圖譜實體
-    "external",     # 外部 URL / DOI
-    "user_input",   # 使用者直接提供的文字
+    "section",  # PDF 章節
+    "figure",  # PDF 圖片
+    "table",  # PDF 表格
+    "full_text",  # PDF 全文
+    "kg_entity",  # 知識圖譜實體
+    "external",  # 外部 URL / DOI
+    "user_input",  # 使用者直接提供的文字
 ]
 
 
@@ -69,8 +69,8 @@ class AssetRef:
     url: str = ""
 
     # 通用
-    excerpt: str = ""   # 來源節錄 ≤200 chars（驗證用）
-    label: str = ""     # 人類可讀標籤
+    excerpt: str = ""  # 來源節錄 ≤200 chars（驗證用）
+    label: str = ""  # 人類可讀標籤
 
     def __post_init__(self) -> None:
         """Validate and truncate excerpt."""

@@ -8,15 +8,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from src.domain.entities import DocumentManifest, DocumentSummary
 from src.domain.repositories import DocumentRepository
 
 from .config import settings
-
-if TYPE_CHECKING:
-    pass
 
 
 class FileStorage(DocumentRepository):

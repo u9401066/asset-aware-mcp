@@ -7,16 +7,12 @@ Use cases for fetching document assets.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from src.domain.entities import FetchResult
 from src.domain.image_processor import DEFAULT_MAX_SIZE, process_image
 from src.domain.repositories import DocumentRepository
 from src.domain.services import AssetExtractor
 from src.domain.value_objects import AssetType
-
-if TYPE_CHECKING:
-    pass
 
 
 class AssetService:

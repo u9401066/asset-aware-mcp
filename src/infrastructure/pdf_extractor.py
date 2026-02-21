@@ -165,7 +165,10 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                     for search_dir in [-1, 1]:  # search before, then after
                         for offset in range(1, 6):
                             check_idx = idx + search_dir * offset
-                            if 0 <= check_idx < len(merged) and check_idx not in skip_indices:
+                            if (
+                                0 <= check_idx < len(merged)
+                                and check_idx not in skip_indices
+                            ):
                                 check_match = re.match(r"^#\s+(.+)$", merged[check_idx])
                                 if check_match:
                                     candidate = check_match.group(1).strip()
@@ -746,9 +749,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                                 continue
 
                             # Detect caption from text near the table
-                            caption = self._detect_table_caption(
-                                page, tab, table_index
-                            )
+                            caption = self._detect_table_caption(page, tab, table_index)
 
                             tables.append(
                                 {

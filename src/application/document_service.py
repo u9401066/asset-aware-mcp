@@ -258,7 +258,9 @@ class DocumentService:
             parse_result = self.marker_extractor.parse(path)
 
             # Step 2: Save markdown
-            markdown_path = self.repository.save_markdown(doc_id.value, parse_result.markdown)
+            markdown_path = self.repository.save_markdown(
+                doc_id.value, parse_result.markdown
+            )
 
             # Step 3: Save blocks.json (structured data)
             blocks_data = self._convert_blocks_to_json(parse_result.blocks)
@@ -274,16 +276,23 @@ class DocumentService:
             sections = self._extract_sections_from_toc(parse_result.toc)
 
             # Step 7: Get page count
-            page_count = parse_result.page_count or self.pdf_extractor.get_page_count(path)
+            page_count = parse_result.page_count or self.pdf_extractor.get_page_count(
+                path
+            )
 
             # Step 8: Index in knowledge graph (if available)
             entities = []
             if self.knowledge_graph and self.knowledge_graph.is_available:
                 try:
-                    await self.knowledge_graph.insert(doc_id.value, parse_result.markdown)
-                    entities = await self.knowledge_graph.extract_entities(parse_result.markdown)
+                    await self.knowledge_graph.insert(
+                        doc_id.value, parse_result.markdown
+                    )
+                    entities = await self.knowledge_graph.extract_entities(
+                        parse_result.markdown
+                    )
                 except Exception as e:
                     import logging
+
                     logging.warning(f"LightRAG indexing failed: {e}")
 
             # Step 9: Generate manifest (with richer data)
@@ -320,11 +329,12 @@ class DocumentService:
 
         except Exception as e:
             import traceback
+
             return IngestResult(
                 doc_id="",
                 filename=path.name,
                 success=False,
-                error=f"Marker parsing failed: {str(e)}\n{traceback.format_exc()}",
+                error=f"Marker parsing failed: {e!s}\n{traceback.format_exc()}",
             )
 
     def _convert_blocks_to_json(self, blocks: list) -> list[dict]:
@@ -369,14 +379,15 @@ class DocumentService:
         except Exception:
             return (0, 0)
 
-    async def _save_marker_images(self, doc_id: str, parse_result: Any) -> list[FigureAsset]:
+    async def _save_marker_images(
+        self, doc_id: str, parse_result: Any
+    ) -> list[FigureAsset]:
         """Save images from Marker parse result."""
         figures = []
 
         # Collect all Figure blocks for 1:1 matching with images
         figure_blocks = [
-            block for block in parse_result.blocks
-            if block.block_type == "Figure"
+            block for block in parse_result.blocks if block.block_type == "Figure"
         ]
 
         for idx, (img_name, img_bytes) in enumerate(parse_result.images.items(), 1):

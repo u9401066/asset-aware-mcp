@@ -306,7 +306,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
         Returns:
             Dict with graph data in requested format
         """
-        import xml.etree.ElementTree as ET  # noqa: N817
+        import xml.etree.ElementTree as ET
 
         graph_file = (
             settings.lightrag_working_dir / "graph_chunk_entity_relation.graphml"
