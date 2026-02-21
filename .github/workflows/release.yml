@@ -29,21 +29,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
           version: "latest"
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      
+
       - name: Install dependencies
         run: |
           uv sync --all-extras
-      
+
       - name: Run tests
         run: |
           uv run ruff check src/
@@ -62,21 +62,21 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
           version: "latest"
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      
+
       - name: Build package
         run: |
           uv build
-      
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
@@ -94,26 +94,26 @@ jobs:
         working-directory: vscode-extension
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      
+
       - name: Install dependencies
         run: npm install
-      
+
       - name: Compile extension
         run: npm run compile
-      
+
       - name: Package extension
         run: npx vsce package
-      
+
       - name: Publish to VS Code Marketplace
         run: npx vsce publish -p ${{ secrets.VSCE_PAT }}
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-      
+
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v4
         with:
@@ -131,13 +131,13 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Download VSIX
         uses: actions/download-artifact@v4
         with:
           name: vscode-extension
           path: ./release-assets/
-      
+
       - name: Get version from tag
         id: version
         run: |
@@ -146,14 +146,14 @@ jobs:
           else
             echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Extract changelog
         id: changelog
         run: |
           # Extract changelog for current version
           VERSION="${{ steps.version.outputs.version }}"
           sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | head -n -1 > release_notes.md || echo "See CHANGELOG.md for details" > release_notes.md
-      
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:

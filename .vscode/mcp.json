@@ -1,6 +1,6 @@
 {
     // Asset-Aware MCP Server Configuration
-    // 
+    //
     // 如果需要覆蓋預設設定，請建立 .env 檔案（參考 .env.example）
     // 或直接修改下方的 env 設定
     "servers": {
