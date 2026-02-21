@@ -4,7 +4,7 @@
 
 ## 🎯 當前焦點
 
-- **v0.3.0 已完成**：Docx DFM 即時編輯系統 + DocxValidator + DfmTableBridge
+- **v0.3.1 已完成**：分離格式 (content.md + format.yaml) + CLI 工具 + 表格重建 Bug 修復
 - **下一步**：測試覆蓋率提升 / 文件與推廣
 
 ## Docx DFM 系統概要 (v0.3.0)
@@ -45,10 +45,24 @@ src/
     └── resources/              # 12 resources
 ```
 
-## ⚠️ 待解決
+## 📝 新功能 (v0.3.1)
+
+### 分離格式 (Split Format)
+- `content.md` — 乾淨 Markdown，`<!-- @ID -->` 標記（預覽不可見），減少 78% 雜訊
+- `format.yaml` — 所有格式元資料（runs, cell_formats, merged_cells…）
+- `content.dfm` — 原格式保留（MCP 工具用）
+
+### DFM CLI 工具
+- `scripts/dfm_cli.py` — 互動式選單（匯入/開啟/存檔/驗證/列表/一鍵流程）
+- `.vscode/tasks.json` — 6 個 VS Code Tasks
+
+### Bug 修復
+- `docx_adapter._update_table_text()` — 在更新第一個 run 後清除後續 runs，修復表格文字重複
+
+## ⚗️ 待解決
 
 1. **測試覆蓋率**: 目標 60%+
 2. **文件缺乏**: API Reference, Examples, FAQ
 
 ---
-*Last updated: 2026-02-11*
+*Last updated: 2026-02-21*

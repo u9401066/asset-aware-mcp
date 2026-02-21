@@ -25,6 +25,12 @@
   - **120 新測試**：test_dfm (53) + test_dfm_table_bridge (32) + test_docx_validator (35)
   - **總工具數：28 → 36**（7 modules）
 
+- ✅ **v0.3.1: 分離格式 + CLI + Bug 修復**
+  - **Split Format**: content.md (78% less clutter) + format.yaml 分離架構
+  - **DFM CLI**: `scripts/dfm_cli.py` 互動式選單 + `.vscode/tasks.json`
+  - **Bug Fix**: `_update_table_text()` 表格文字重複修復
+  - **改進**: DocxValidator / DfmTableBridge / docx_tools 型別修正
+
 ## Doing
 
 - 🚧 測試覆蓋率與品質強化（目標 60%+）
@@ -33,6 +39,7 @@
 
 ## Released
 
+- ✅ **v0.3.1**: 分離格式 + CLI + Bug 修復 (2026-02-21)
 - ✅ **v0.3.0**: Docx DFM 即時編輯系統 (2026-02-11)
 - ✅ **v0.2.14**: A2T 完整填表系統 (2026-02-10)
 - ✅ **v0.2.11**: ETL Profile + DDD 架構修復 (2026-02-09)
