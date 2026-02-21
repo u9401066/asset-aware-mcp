@@ -17,12 +17,10 @@ import uuid
 from typing import Any
 
 from src.domain.docx_entities import (
-    CellFormat,
     DfmBlock,
     DocxIR,
-    MergedCell,
 )
-from src.domain.docx_value_objects import DfmBlockType, TableCellAlign
+from src.domain.docx_value_objects import DfmBlockType
 from src.domain.table_entities import ColumnDef, TableContext
 
 logger = logging.getLogger(__name__)
@@ -408,7 +406,9 @@ def _parse_chart_xml_to_table(
     for ser in series_elements:
         # Series name
         tx = ser.find("c:tx/c:strRef/c:strCache/c:pt/c:v", ns)
-        name = tx.text if tx is not None and tx.text else f"Series {len(series_names) + 1}"
+        name = (
+            tx.text if tx is not None and tx.text else f"Series {len(series_names) + 1}"
+        )
         series_names.append(name)
 
         # Series values

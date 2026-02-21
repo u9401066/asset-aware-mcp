@@ -10,8 +10,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from src.application.asset_service import AssetService
-from src.application.document_service import DocumentService
 from src.application.dfm_table_bridge import DfmTableBridge
+from src.application.document_service import DocumentService
 from src.application.docx_service import DocxService
 from src.application.job_service import JobService
 from src.application.knowledge_service import KnowledgeService

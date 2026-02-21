@@ -10,9 +10,7 @@ Tests cover:
 
 from __future__ import annotations
 
-import hashlib
 from pathlib import Path
-from typing import Any
 from zipfile import ZipFile
 
 import pytest
@@ -21,8 +19,6 @@ from lxml import etree
 from src.infrastructure.docx_validator import (
     DocxValidator,
     FormatDiff,
-    MediaDiff,
-    StructureDiff,
     TextDiff,
     ValidationReport,
     _normalize_text,
@@ -38,8 +34,7 @@ NS_REL = "http://schemas.openxmlformats.org/package/2006/relationships"
 NS_CT = "http://schemas.openxmlformats.org/package/2006/content-types"
 
 RELS_TYPE_DOC = (
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-    "/officeDocument"
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
 )
 CT_DOC = (
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
@@ -255,7 +250,9 @@ class TestValidationReport:
         report = ValidationReport(
             fidelity_score=0.75,
             text_diffs=[
-                TextDiff(index=0, location="paragraph 1", original="hello", rebuilt="helo"),
+                TextDiff(
+                    index=0, location="paragraph 1", original="hello", rebuilt="helo"
+                ),
             ],
             format_diffs=[
                 FormatDiff(
@@ -316,11 +313,13 @@ class TestValidateIdentical:
         _create_docx(
             docx_path,
             tables=[
-                _make_table([
-                    ["Name", "Age", "City"],
-                    ["Alice", "30", "Taipei"],
-                    ["Bob", "25", "Tokyo"],
-                ]),
+                _make_table(
+                    [
+                        ["Name", "Age", "City"],
+                        ["Alice", "30", "Taipei"],
+                        ["Bob", "25", "Tokyo"],
+                    ]
+                ),
             ],
         )
 
@@ -554,7 +553,7 @@ class TestValidateMediaDiffs:
         _create_docx(
             modified,
             paragraphs=[_make_paragraph("Image")],
-            media={"photo.png": b"\x89PNG" + b"\xFF" * 50},
+            media={"photo.png": b"\x89PNG" + b"\xff" * 50},
         )
 
         report = validator.validate(original, modified)
@@ -665,11 +664,13 @@ class TestFullRoundTrip:
         _create_docx(
             original,
             tables=[
-                _make_table([
-                    ["Name", "Age", "City"],
-                    ["Alice", "30", "Taipei"],
-                    ["Bob", "25", "Tokyo"],
-                ]),
+                _make_table(
+                    [
+                        ["Name", "Age", "City"],
+                        ["Alice", "30", "Taipei"],
+                        ["Bob", "25", "Tokyo"],
+                    ]
+                ),
             ],
         )
 
@@ -696,10 +697,12 @@ class TestFullRoundTrip:
         body_elements = [
             _make_paragraph("Introduction", style="Heading1"),
             _make_paragraph("This is the body text."),
-            _make_table([
-                ["Header 1", "Header 2"],
-                ["Data A", "Data B"],
-            ]),
+            _make_table(
+                [
+                    ["Header 1", "Header 2"],
+                    ["Data A", "Data B"],
+                ]
+            ),
             _make_paragraph("Conclusion"),
         ]
         _create_docx(original, body_elements=body_elements)
@@ -813,9 +816,7 @@ class TestFullRoundTrip:
 class TestEditRoundTrip:
     """Test that edits via DFM are correctly reflected in rebuilt docx."""
 
-    def test_text_edit_reflected(
-        self, validator: DocxValidator, tmp_docx_dir: Path
-    ):
+    def test_text_edit_reflected(self, validator: DocxValidator, tmp_docx_dir: Path):
         """Edit text in IR, rebuild, verify the change appears."""
         from src.infrastructure.docx_adapter import DocxAdapter
 
@@ -849,13 +850,9 @@ class TestEditRoundTrip:
         # Second paragraph should be unchanged
         assert report.rebuilt_stats["paragraphs"] == report.original_stats["paragraphs"]
 
-    def test_table_edit_reflected(
-        self, validator: DocxValidator, tmp_docx_dir: Path
-    ):
+    def test_table_edit_reflected(self, validator: DocxValidator, tmp_docx_dir: Path):
         """Edit table cell in IR, rebuild, verify change."""
         from src.infrastructure.docx_adapter import DocxAdapter
-        from src.infrastructure.dfm_parser import DfmParser
-        from src.infrastructure.dfm_renderer import DfmRenderer
 
         adapter = DocxAdapter()
 

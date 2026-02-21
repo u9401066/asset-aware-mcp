@@ -27,9 +27,8 @@ from src.domain.docx_entities import (
     DocxIR,
     MergedCell,
 )
-from src.domain.docx_value_objects import DfmBlockType, TableCellAlign
+from src.domain.docx_value_objects import DfmBlockType
 from src.domain.table_entities import ColumnDef, TableContext
-
 
 # ============================================================================
 # Fixtures
@@ -73,7 +72,9 @@ def _make_chart_block(block_id: str = "c001") -> DfmBlock:
 
 def _make_ir() -> DocxIR:
     """Create a minimal DocxIR with one table for testing."""
-    ir = DocxIR(doc_id="test_doc", source_path="/test.docx", source_filename="test.docx")
+    ir = DocxIR(
+        doc_id="test_doc", source_path="/test.docx", source_filename="test.docx"
+    )
     ir.add_block(_make_table_block("t001"))
     ir.add_block(
         DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="Hello")
@@ -231,9 +232,7 @@ class TestBlockToTableContext:
         assert score_col.type == "number"
 
     def test_wrong_block_type_raises(self):
-        block = DfmBlock(
-            id="p001", block_type=DfmBlockType.PARAGRAPH, content="text"
-        )
+        block = DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="text")
         with pytest.raises(ValueError, match="Expected TABLE"):
             DfmTableBridge.block_to_table_context(block)
 
@@ -341,17 +340,13 @@ class TestApplyTableContextToIR:
 
     def test_block_not_found_raises(self):
         ir = _make_ir()
-        tc = TableContext(
-            id="x", intent="summary", title="X", columns=[], rows=[]
-        )
+        tc = TableContext(id="x", intent="summary", title="X", columns=[], rows=[])
         with pytest.raises(ValueError, match="Block not found"):
             DfmTableBridge.apply_table_context_to_ir(ir, "t999", tc)
 
     def test_non_table_block_raises(self):
         ir = _make_ir()
-        tc = TableContext(
-            id="x", intent="summary", title="X", columns=[], rows=[]
-        )
+        tc = TableContext(id="x", intent="summary", title="X", columns=[], rows=[])
         with pytest.raises(ValueError, match="not TABLE"):
             DfmTableBridge.apply_table_context_to_ir(ir, "p001", tc)
 
@@ -375,9 +370,7 @@ class TestExtractChartData:
         assert props["binary_ref"] == "assets/chart_c001.bin"
 
     def test_wrong_type_returns_none(self):
-        block = DfmBlock(
-            id="p001", block_type=DfmBlockType.PARAGRAPH, content="text"
-        )
+        block = DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="text")
         assert DfmTableBridge.extract_chart_data(block) is None
 
 

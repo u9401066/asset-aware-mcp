@@ -248,7 +248,9 @@ class ValidationReport:
             lines.append("")
             lines.append(f"### 表格差異 ({len(self.table_diffs)} 處)")
             for d in self.table_diffs[:10]:
-                lines.append(f"- **{d.location}**: `{d.original[:60]}` → `{d.rebuilt[:60]}`")
+                lines.append(
+                    f"- **{d.location}**: `{d.original[:60]}` → `{d.rebuilt[:60]}`"
+                )
 
         if self.media_diffs:
             lines.append("")
@@ -260,9 +262,7 @@ class ValidationReport:
             lines.append("")
             lines.append(f"### 樣式差異 ({len(self.style_diffs)} 處)")
             for d in self.style_diffs[:10]:
-                lines.append(
-                    f"- **{d.location}**: `{d.original}` → `{d.rebuilt}`"
-                )
+                lines.append(f"- **{d.location}**: `{d.original}` → `{d.rebuilt}`")
 
         if self.errors:
             lines.append("")
@@ -483,9 +483,8 @@ class DocxValidator:
                 # Font
                 fonts = rpr.find(f"{{{NS['w']}}}rFonts")
                 if fonts is not None:
-                    font_name = (
-                        fonts.get(f"{{{NS['w']}}}ascii")
-                        or fonts.get(f"{{{NS['w']}}}hAnsi")
+                    font_name = fonts.get(f"{{{NS['w']}}}ascii") or fonts.get(
+                        f"{{{NS['w']}}}hAnsi"
                     )
                     if font_name:
                         run_data["font_name"] = font_name
@@ -654,7 +653,14 @@ class DocxValidator:
 
             # Compare format attributes of first run (primary format)
             if orig_runs and rebuilt_runs:
-                for attr in ["bold", "italic", "font_name", "font_size", "color", "underline"]:
+                for attr in [
+                    "bold",
+                    "italic",
+                    "font_name",
+                    "font_size",
+                    "color",
+                    "underline",
+                ]:
                     orig_val = orig_runs[0].get(attr)
                     rebuilt_val = rebuilt_runs[0].get(attr)
                     if orig_val is not None or rebuilt_val is not None:
@@ -732,9 +738,7 @@ class DocxValidator:
             )
             total_cells += int(diff_tables * avg_cells)
 
-        report.table_score = (
-            matching_cells / total_cells if total_cells > 0 else 1.0
-        )
+        report.table_score = matching_cells / total_cells if total_cells > 0 else 1.0
 
     def _compare_media(
         self,
@@ -755,9 +759,7 @@ class DocxValidator:
 
         for filename in all_files:
             if filename not in orig_media:
-                report.media_diffs.append(
-                    MediaDiff(filename=filename, status="added")
-                )
+                report.media_diffs.append(MediaDiff(filename=filename, status="added"))
             elif filename not in rebuilt_media:
                 report.media_diffs.append(
                     MediaDiff(filename=filename, status="missing")

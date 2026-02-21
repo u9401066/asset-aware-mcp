@@ -218,7 +218,9 @@ async def docx_validate_roundtrip(
     original_path = doc_dir / "original.docx"
 
     if not original_path.exists():
-        return f"❌ 找不到原始檔案：{original_path}\n請先用 ingest_docx 攝入 .docx 文件。"
+        return (
+            f"❌ 找不到原始檔案：{original_path}\n請先用 ingest_docx 攝入 .docx 文件。"
+        )
 
     # Load IR
     ir = docx_service._load_ir(doc_id)
@@ -325,8 +327,12 @@ async def docx_table_to_context(
         lines.append(f"  - `table_data(op='add_rows', table_id='{tc.id}', ...)`")
         lines.append(f"  - `table_data(op='update_cell', table_id='{tc.id}', ...)`")
         lines.append(f"  - `table_cite(op='add', table_id='{tc.id}', ...)`")
-        lines.append(f"  - `table_manage(op='render', table_id='{tc.id}', format='excel')`")
-        lines.append(f"  - 完成後用 `docx_table_from_context(doc_id='{doc_id}', block_id='{block_id}', table_id='{tc.id}')` 寫回")
+        lines.append(
+            f"  - `table_manage(op='render', table_id='{tc.id}', format='excel')`"
+        )
+        lines.append(
+            f"  - 完成後用 `docx_table_from_context(doc_id='{doc_id}', block_id='{block_id}', table_id='{tc.id}')` 寫回"
+        )
 
     return "\n".join(lines)
 
@@ -357,7 +363,9 @@ async def docx_table_from_context(
     """
     tc = table_service._tables.get(table_id)
     if tc is None:
-        return f"❌ 找不到 TableContext `{table_id}`，請先用 docx_table_to_context 轉換。"
+        return (
+            f"❌ 找不到 TableContext `{table_id}`，請先用 docx_table_to_context 轉換。"
+        )
 
     ir = docx_service._load_ir(doc_id)
     if ir is None:
@@ -382,6 +390,7 @@ async def docx_table_from_context(
 
     if save_dfm:
         from src.infrastructure.dfm_renderer import DfmRenderer
+
         renderer = DfmRenderer()
         dfm_text = renderer.render(ir)
         dfm_path = doc_dir / "content.dfm"
@@ -389,7 +398,9 @@ async def docx_table_from_context(
         result_lines.append(f"- **DFM 已更新**: `{dfm_path}`")
 
     result_lines.append("")
-    result_lines.append(f"💡 用 `save_docx(doc_id='{doc_id}', ...)` 可將修改寫回 .docx 檔案。")
+    result_lines.append(
+        f"💡 用 `save_docx(doc_id='{doc_id}', ...)` 可將修改寫回 .docx 檔案。"
+    )
 
     return "\n".join(result_lines)
 
@@ -470,8 +481,14 @@ async def docx_chart_data(
     if register:
         lines.append("")
         lines.append("💡 **可用以下工具操作此資料**：")
-        lines.append(f"  - `table_manage(op='render', table_id='{tc.id}', format='excel')` 匯出 Excel")
-        lines.append(f"  - `table_manage(op='render', table_id='{tc.id}', format='markdown')` 匯出 MD")
-        lines.append(f"  - `table_data(op='update_cell', table_id='{tc.id}', ...)` 修改數據")
+        lines.append(
+            f"  - `table_manage(op='render', table_id='{tc.id}', format='excel')` 匯出 Excel"
+        )
+        lines.append(
+            f"  - `table_manage(op='render', table_id='{tc.id}', format='markdown')` 匯出 MD"
+        )
+        lines.append(
+            f"  - `table_data(op='update_cell', table_id='{tc.id}', ...)` 修改數據"
+        )
 
     return "\n".join(lines)
