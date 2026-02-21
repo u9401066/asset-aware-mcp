@@ -1335,17 +1335,33 @@ class DocxAdapter:
                 zip(cells, md_row, strict=False)
             ):
                 # Update first paragraph's text in the cell
-                first_p = cell.find(f"{{{NS['w']}}}p")
-                if first_p is not None:
-                    first_r = first_p.find(f"{{{NS['w']}}}r")
-                    if first_r is not None:
-                        t_elem = first_r.find(f"{{{NS['w']}}}t")
-                        if t_elem is not None:
-                            t_elem.text = md_cell.strip()
-                            t_elem.set(
-                                "{http://www.w3.org/XML/1998/namespace}space",
-                                "preserve",
-                            )
+                paragraphs = cell.findall(f"{{{NS['w']}}}p")
+                if not paragraphs:
+                    continue
+
+                first_p = paragraphs[0]
+                first_r = first_p.find(f"{{{NS['w']}}}r")
+                if first_r is not None:
+                    t_elem = first_r.find(f"{{{NS['w']}}}t")
+                    if t_elem is not None:
+                        t_elem.text = md_cell.strip()
+                        t_elem.set(
+                            "{http://www.w3.org/XML/1998/namespace}space",
+                            "preserve",
+                        )
+
+                    # Clear text from subsequent runs in the first paragraph
+                    for r in first_p.findall(f"{{{NS['w']}}}r")[1:]:
+                        t = r.find(f"{{{NS['w']}}}t")
+                        if t is not None:
+                            t.text = ""
+
+                # Clear text from subsequent paragraphs in the cell
+                for p in paragraphs[1:]:
+                    for r in p.findall(f"{{{NS['w']}}}r"):
+                        t = r.find(f"{{{NS['w']}}}t")
+                        if t is not None:
+                            t.text = ""
 
     @staticmethod
     def _parse_md_table(md_table: str) -> list[list[str]]:

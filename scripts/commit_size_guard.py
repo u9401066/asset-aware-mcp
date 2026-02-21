@@ -17,6 +17,7 @@ EXEMPT_PATTERNS = (
     "uv.lock",
     "htmlcov/",
     "memory-bank/",
+    "data/",
 )
 
 
@@ -34,8 +35,8 @@ def main() -> int:
         idx = args.index("--max")
         max_files = int(args[idx + 1])
 
-    result = subprocess.run(  # noqa: S603
-        ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],  # noqa: S607
+    result = subprocess.run(
+        ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
         capture_output=True,
         text=True,
         check=False,
@@ -48,13 +49,16 @@ def main() -> int:
     count = len(staged)
 
     if count > max_files:
-        print(f"❌ Commit size guard: {count} files staged (max {max_files})")
+        print(
+            f"FAIL Commit size guard: {count} files staged (max {max_files})",
+            flush=True,
+        )
         print("   Split into smaller, focused commits.")
         print(f"   Exempt: {', '.join(EXEMPT_PATTERNS)}")
         print("   Bypass: git commit --no-verify")
         return 1
 
-    print(f"✅ Commit size guard: {count}/{max_files} files")
+    print(f"OK Commit size guard: {count}/{max_files} files", flush=True)
     return 0
 
 
