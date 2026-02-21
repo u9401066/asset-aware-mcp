@@ -74,7 +74,9 @@ class TestMarkerBlock:
             section_hierarchy=hierarchy,
         )
         for key in block.section_hierarchy:
-            assert key.isdigit(), f"section_hierarchy key '{key}' should be numeric string"
+            assert key.isdigit(), (
+                f"section_hierarchy key '{key}' should be numeric string"
+            )
 
     def test_section_hierarchy_no_shared_mutation(self):
         """不同 block 的 section_hierarchy 不應共享參考。"""
@@ -87,9 +89,17 @@ class TestMarkerBlock:
     def test_block_types_known(self):
         """QB-3: block_type 應為已知類型。"""
         known_types = {
-            "Text", "Table", "Figure", "SectionHeader",
-            "ListItem", "Equation", "Caption", "Footnote",
-            "Page", "PageHeader", "PageFooter",
+            "Text",
+            "Table",
+            "Figure",
+            "SectionHeader",
+            "ListItem",
+            "Equation",
+            "Caption",
+            "Footnote",
+            "Page",
+            "PageHeader",
+            "PageFooter",
         }
         for bt in known_types:
             block = MarkerBlock(block_id="blk_0001", block_type=bt, page=1)
@@ -116,8 +126,12 @@ class TestMarkerParseResult:
     def test_create_with_content(self):
         """MarkerParseResult 帶完整內容。"""
         blocks = [
-            MarkerBlock(block_id="blk_0001", block_type="SectionHeader", page=1, text="Title"),
-            MarkerBlock(block_id="blk_0002", block_type="Text", page=1, text="Content here"),
+            MarkerBlock(
+                block_id="blk_0001", block_type="SectionHeader", page=1, text="Title"
+            ),
+            MarkerBlock(
+                block_id="blk_0002", block_type="Text", page=1, text="Content here"
+            ),
         ]
         toc = [{"title": "Title", "page": 1, "level": 1}]
 
@@ -141,7 +155,12 @@ class TestMarkerParseResult:
             for i in range(1, 11)
         ]
         result = MarkerParseResult(
-            markdown="", blocks=blocks, toc=[], images={}, metadata={}, page_count=1,
+            markdown="",
+            blocks=blocks,
+            toc=[],
+            images={},
+            metadata={},
+            page_count=1,
         )
         ids = [b.block_id for b in result.blocks]
         assert len(ids) == len(set(ids)), "block_ids must be unique"
@@ -154,7 +173,12 @@ class TestMarkerParseResult:
             MarkerBlock(block_id="blk_0003", block_type="Text", page=3),
         ]
         result = MarkerParseResult(
-            markdown="", blocks=blocks, toc=[], images={}, metadata={}, page_count=3,
+            markdown="",
+            blocks=blocks,
+            toc=[],
+            images={},
+            metadata={},
+            page_count=3,
         )
         for block in result.blocks:
             assert block.page >= 1, f"page should be >= 1, got {block.page}"

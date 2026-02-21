@@ -125,7 +125,9 @@ def setup_data_dir(
 
     # 寫入 {doc_id}_manifest.json (與 FileStorage 慣例一致)
     manifest_path = doc_dir / f"{doc_id}_manifest.json"
-    manifest_path.write_text(json.dumps(sample_manifest_data, ensure_ascii=False, indent=2))
+    manifest_path.write_text(
+        json.dumps(sample_manifest_data, ensure_ascii=False, indent=2)
+    )
 
     return temp_dir, doc_id
 
@@ -300,8 +302,12 @@ class TestGetSectionBlocks:
         data_dir, doc_id = setup_data_dir
         service = SectionService(data_dir=data_dir)
 
-        with_children = await service.get_section_blocks(doc_id, "Methods", include_children=True)
-        without_children = await service.get_section_blocks(doc_id, "Methods", include_children=False)
+        with_children = await service.get_section_blocks(
+            doc_id, "Methods", include_children=True
+        )
+        without_children = await service.get_section_blocks(
+            doc_id, "Methods", include_children=False
+        )
 
         # 含子節點的結果應 ≥ 不含子節點的
         assert len(with_children) >= len(without_children)

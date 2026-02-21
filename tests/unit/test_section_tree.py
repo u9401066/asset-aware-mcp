@@ -20,6 +20,7 @@ from src.domain.section_tree import (
 # Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def simple_blocks() -> list[dict]:
     """簡單的 blocks 資料（2 層結構）。"""
@@ -106,7 +107,11 @@ def deep_blocks() -> list[dict]:
             "block_type": "SectionHeader",
             "page": 2,
             "text": "Cellular Mechanisms",
-            "section_hierarchy": {"1": "Chapter 79: Shock", "2": "Pathophysiology", "3": "Cellular Mechanisms"},
+            "section_hierarchy": {
+                "1": "Chapter 79: Shock",
+                "2": "Pathophysiology",
+                "3": "Cellular Mechanisms",
+            },
         },
         {
             "block_id": "blk_0004",
@@ -354,7 +359,9 @@ class TestSectionTree:
 
         blocks = tree.get_blocks_for_section("Methods", include_children=False)
         # 只有 Methods 直屬的 blocks
-        blocks_with_children = tree.get_blocks_for_section("Methods", include_children=True)
+        blocks_with_children = tree.get_blocks_for_section(
+            "Methods", include_children=True
+        )
         assert len(blocks) <= len(blocks_with_children)
 
     def test_get_blocks_filter_by_type(self, simple_blocks: list[dict]):
@@ -422,7 +429,12 @@ class TestSectionTreeEdgeCases:
     def test_blocks_without_section_hierarchy(self):
         """沒有 section_hierarchy 的 blocks 歸入根節點。"""
         blocks = [
-            {"block_id": "blk_0001", "block_type": "Text", "page": 1, "text": "Orphan text"},
+            {
+                "block_id": "blk_0001",
+                "block_type": "Text",
+                "page": 1,
+                "text": "Orphan text",
+            },
         ]
         tree = build_section_tree_from_blocks("doc_test", blocks, "Doc")
 

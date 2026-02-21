@@ -136,10 +136,24 @@ class TestExtractTablesFromBlocks:
     def test_extract_multiple_tables(self, mock_service: DocumentService):
         """多個 Table block 都被提取。"""
         blocks = [
-            MarkerBlock(block_id="blk_0001", block_type="Text", page=1, text="Some text"),
-            MarkerBlock(block_id="blk_0002", block_type="Table", page=2, text="| A |\n|---|\n| 1 |"),
-            MarkerBlock(block_id="blk_0003", block_type="Text", page=2, text="More text"),
-            MarkerBlock(block_id="blk_0004", block_type="Table", page=4, text="| B |\n|---|\n| 2 |"),
+            MarkerBlock(
+                block_id="blk_0001", block_type="Text", page=1, text="Some text"
+            ),
+            MarkerBlock(
+                block_id="blk_0002",
+                block_type="Table",
+                page=2,
+                text="| A |\n|---|\n| 1 |",
+            ),
+            MarkerBlock(
+                block_id="blk_0003", block_type="Text", page=2, text="More text"
+            ),
+            MarkerBlock(
+                block_id="blk_0004",
+                block_type="Table",
+                page=4,
+                text="| B |\n|---|\n| 2 |",
+            ),
         ]
         tables = mock_service._extract_tables_from_blocks(blocks)
 
@@ -152,7 +166,9 @@ class TestExtractTablesFromBlocks:
     def test_no_tables(self, mock_service: DocumentService):
         """無 Table block 時回傳空列表。"""
         blocks = [
-            MarkerBlock(block_id="blk_0001", block_type="Text", page=1, text="Just text"),
+            MarkerBlock(
+                block_id="blk_0001", block_type="Text", page=1, text="Just text"
+            ),
         ]
         tables = mock_service._extract_tables_from_blocks(blocks)
         assert tables == []
@@ -161,7 +177,9 @@ class TestExtractTablesFromBlocks:
         """QT: preview 截斷至 100 字元。"""
         long_table = "| " + "A " * 200 + "|\n|---|\n| 1 |"
         blocks = [
-            MarkerBlock(block_id="blk_0001", block_type="Table", page=1, text=long_table),
+            MarkerBlock(
+                block_id="blk_0001", block_type="Table", page=1, text=long_table
+            ),
         ]
         tables = mock_service._extract_tables_from_blocks(blocks)
         assert len(tables[0].preview) <= 100
@@ -331,6 +349,7 @@ class TestSaveMarkerImagesFigureMatching:
         # save_image 回傳不同路徑
         def fake_save_image(doc_id, image_id, data, ext):
             return temp_dir / "images" / f"{image_id}.{ext}"
+
         mock_repo.save_image.side_effect = fake_save_image
 
         mock_extractor = MagicMock()
@@ -340,7 +359,9 @@ class TestSaveMarkerImagesFigureMatching:
         )
 
     @pytest.mark.asyncio
-    async def test_multiple_figures_matched_correctly(self, service_with_mock: DocumentService):
+    async def test_multiple_figures_matched_correctly(
+        self, service_with_mock: DocumentService
+    ):
         """每張圖片匹配到對應的 Figure block（不是全部匹配第一個）。"""
         import io
 
@@ -358,9 +379,27 @@ class TestSaveMarkerImagesFigureMatching:
         parse_result.images = images
         parse_result.blocks = [
             MarkerBlock(block_id="blk_0001", block_type="Text", page=1, text="intro"),
-            MarkerBlock(block_id="blk_0002", block_type="Figure", page=2, text="", metadata={"caption": "Fig 1"}),
-            MarkerBlock(block_id="blk_0003", block_type="Figure", page=5, text="", metadata={"caption": "Fig 2"}),
-            MarkerBlock(block_id="blk_0004", block_type="Figure", page=8, text="", metadata={"caption": "Fig 3"}),
+            MarkerBlock(
+                block_id="blk_0002",
+                block_type="Figure",
+                page=2,
+                text="",
+                metadata={"caption": "Fig 1"},
+            ),
+            MarkerBlock(
+                block_id="blk_0003",
+                block_type="Figure",
+                page=5,
+                text="",
+                metadata={"caption": "Fig 2"},
+            ),
+            MarkerBlock(
+                block_id="blk_0004",
+                block_type="Figure",
+                page=8,
+                text="",
+                metadata={"caption": "Fig 3"},
+            ),
         ]
 
         figures = await service_with_mock._save_marker_images("test_doc", parse_result)
@@ -397,7 +436,9 @@ class TestSaveMarkerImagesFigureMatching:
         assert figures[0].height == 240
 
     @pytest.mark.asyncio
-    async def test_more_images_than_figure_blocks(self, service_with_mock: DocumentService):
+    async def test_more_images_than_figure_blocks(
+        self, service_with_mock: DocumentService
+    ):
         """圖片多於 Figure blocks 時，多餘的用 page=1, caption=''。"""
         import io
 
@@ -413,7 +454,13 @@ class TestSaveMarkerImagesFigureMatching:
         parse_result = MagicMock()
         parse_result.images = images
         parse_result.blocks = [
-            MarkerBlock(block_id="blk_0001", block_type="Figure", page=3, text="", metadata={"caption": "Only one"}),
+            MarkerBlock(
+                block_id="blk_0001",
+                block_type="Figure",
+                page=3,
+                text="",
+                metadata={"caption": "Only one"},
+            ),
         ]
 
         figures = await service_with_mock._save_marker_images("test_doc", parse_result)

@@ -131,11 +131,13 @@ class TestETLProfile:
         assert isinstance(d["section_keywords"], list)
 
     def test_from_dict_override(self):
-        p = ETLProfile.from_dict({
-            "name": "custom",
-            "min_heading_length": 5,
-            "font_thresholds": {"h1": 20.0},
-        })
+        p = ETLProfile.from_dict(
+            {
+                "name": "custom",
+                "min_heading_length": 5,
+                "font_thresholds": {"h1": 20.0},
+            }
+        )
         assert p.name == "custom"
         assert p.min_heading_length == 5
         assert p.font_thresholds.h1 == 20.0
@@ -183,9 +185,11 @@ class TestETLProfile:
         assert loaded["name"] == "default"
 
     def test_section_keywords_frozenset(self):
-        p = ETLProfile.from_dict({
-            "section_keywords": ["abstract", "introduction", "custom"],
-        })
+        p = ETLProfile.from_dict(
+            {
+                "section_keywords": ["abstract", "introduction", "custom"],
+            }
+        )
         assert "custom" in p.section_keywords
         assert isinstance(p.section_keywords, frozenset)
 
@@ -294,12 +298,12 @@ class TestProfileRegexConsistency:
 
         # Heading noise: should match what was _HEADING_NOISE_RE
         h = p.compile_heading_noise_re()
-        assert h.match("a")          # single lowercase
+        assert h.match("a")  # single lowercase
         assert h.match("OPEN")
         assert h.match("www.example.com")
         assert h.match("http://x")
         assert h.match("42")
-        assert h.match("AB")         # 1-2 uppercase
+        assert h.match("AB")  # 1-2 uppercase
         assert h.match("arXiv:1234.5678v1")
         assert h.match("layers")
         assert h.match("filters")

@@ -27,6 +27,7 @@ import pytest
 
 try:
     from src.infrastructure.marker_adapter import MarkerPDFExtractor
+
     MARKER_AVAILABLE = True
 except ImportError:
     MARKER_AVAILABLE = False
@@ -34,7 +35,7 @@ except ImportError:
 # 測試 PDF 路徑候選
 TEST_PDF_CANDIDATES = [
     Path("test_pdfs"),  # 專案下的測試 PDF 目錄
-    Path("data"),       # 可能有已存在的 PDF
+    Path("data"),  # 可能有已存在的 PDF
 ]
 
 
@@ -117,7 +118,9 @@ class TestMarkerParsing:
         for block in parse_result.blocks:
             assert block.block_id, "block missing block_id"
             assert block.block_type, f"block {block.block_id} missing block_type"
-            assert block.page >= 1, f"block {block.block_id} has invalid page: {block.page}"
+            assert block.page >= 1, (
+                f"block {block.block_id} has invalid page: {block.page}"
+            )
 
     def test_page_count_positive(self, parse_result):
         """QF-3: page_count > 0。"""
@@ -131,7 +134,9 @@ class TestMarkerBlocks:
 
     def test_section_headers_have_hierarchy(self, parse_result):
         """IT-04: SectionHeader blocks 有 section_hierarchy。"""
-        section_headers = [b for b in parse_result.blocks if b.block_type == "SectionHeader"]
+        section_headers = [
+            b for b in parse_result.blocks if b.block_type == "SectionHeader"
+        ]
 
         if section_headers:
             # 至少部分 SectionHeader 應該有 section_hierarchy
@@ -148,13 +153,29 @@ class TestMarkerBlocks:
     def test_block_types_known(self, parse_result):
         """QB-3: block_type 為已知類型。"""
         known_types = {
-            "Text", "Table", "Figure", "SectionHeader",
-            "ListItem", "Equation", "Caption", "Footnote",
-            "Page", "PageHeader", "PageFooter",
+            "Text",
+            "Table",
+            "Figure",
+            "SectionHeader",
+            "ListItem",
+            "Equation",
+            "Caption",
+            "Footnote",
+            "Page",
+            "PageHeader",
+            "PageFooter",
             # Marker 可能的其他類型
-            "Line", "Span", "Code", "TextInlineMath",
-            "Form", "Handwriting", "Picture", "FigureGroup",
-            "TableOfContents", "Document", "PageGroup",
+            "Line",
+            "Span",
+            "Code",
+            "TextInlineMath",
+            "Form",
+            "Handwriting",
+            "Picture",
+            "FigureGroup",
+            "TableOfContents",
+            "Document",
+            "PageGroup",
         }
         unknown_types = set()
         for block in parse_result.blocks:
@@ -178,7 +199,11 @@ class TestMarkerBlocks:
         blocks_with_bbox = [b for b in parse_result.blocks if b.bbox]
 
         # 至少 90% 的 blocks 應有 bbox
-        bbox_ratio = len(blocks_with_bbox) / len(parse_result.blocks) if parse_result.blocks else 0
+        bbox_ratio = (
+            len(blocks_with_bbox) / len(parse_result.blocks)
+            if parse_result.blocks
+            else 0
+        )
         print(f"BBox coverage: {bbox_ratio:.1%}")
 
         for block in blocks_with_bbox:
@@ -215,7 +240,9 @@ class TestMarkerImages:
             if img_name.endswith(".png"):
                 assert img_bytes[:4] == b"\x89PNG", f"Image {img_name} is not valid PNG"
             elif img_name.endswith((".jpg", ".jpeg")):
-                assert img_bytes[:2] == b"\xff\xd8", f"Image {img_name} is not valid JPEG"
+                assert img_bytes[:2] == b"\xff\xd8", (
+                    f"Image {img_name} is not valid JPEG"
+                )
 
 
 @skip_no_marker
@@ -228,7 +255,9 @@ class TestMarkerManifest:
         from src.domain.entities import DocumentManifest
 
         manifest = marker_extractor.convert_to_manifest(
-            parse_result, TEST_PDF, temp_dir,
+            parse_result,
+            TEST_PDF,
+            temp_dir,
         )
         assert isinstance(manifest, DocumentManifest)
         assert manifest.page_count > 0
@@ -236,7 +265,9 @@ class TestMarkerManifest:
     def test_manifest_has_valid_fields(self, marker_extractor, parse_result, temp_dir):
         """QF-1 ~ QF-3: manifest 欄位正確。"""
         manifest = marker_extractor.convert_to_manifest(
-            parse_result, TEST_PDF, temp_dir,
+            parse_result,
+            TEST_PDF,
+            temp_dir,
         )
         assert manifest.doc_id, "doc_id should not be empty"
         assert manifest.filename, "filename should not be empty"

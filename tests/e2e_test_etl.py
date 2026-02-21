@@ -52,9 +52,7 @@ def _clean_and_ingest(service: DocumentService, pdf_name: str) -> dict:
         pytest.skip(f"PDF not found: {pdf_path}")
 
     # Run ingest
-    results = asyncio.get_event_loop().run_until_complete(
-        service.ingest([pdf_path])
-    )
+    results = asyncio.get_event_loop().run_until_complete(service.ingest([pdf_path]))
     assert len(results) == 1
     r = results[0]
     assert r.success, f"Ingest failed: {r.error}"
@@ -87,9 +85,9 @@ def _print_summary(data: dict, label: str):
     tables = data["tables"]
     figures = data["figures"]
 
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"  {label}")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
     print(f"  Doc ID:    {r.doc_id}")
     print(f"  Title:     {r.title}")
     print(f"  Pages:     {r.pages_processed}")
@@ -102,22 +100,28 @@ def _print_summary(data: dict, label: str):
         print("\n  --- Sections ---")
         for s in sections:
             indent = "  " * s.get("level", 1)
-            print(f"  {indent}[L{s['level']}] {s['title'][:60]} (p.{s.get('page', '?')})")
+            print(
+                f"  {indent}[L{s['level']}] {s['title'][:60]} (p.{s.get('page', '?')})"
+            )
 
     if tables:
         print("\n  --- Tables ---")
         for t in tables:
             cap = t.get("caption", "")[:60] or "(no caption)"
-            print(f"    {t['id']}: p.{t.get('page', '?')} {t.get('row_count', '?')}x{t.get('col_count', '?')} {cap}")
+            print(
+                f"    {t['id']}: p.{t.get('page', '?')} {t.get('row_count', '?')}x{t.get('col_count', '?')} {cap}"
+            )
 
     if figures:
         print("\n  --- Figures (with captions) ---")
         captioned = [f for f in figures if f.get("caption")]
         print(f"    {len(captioned)}/{len(figures)} have captions")
         for f_ in captioned[:5]:
-            print(f"    {f_['id']}: p.{f_.get('page', '?')} {f_.get('caption', '')[:60]}")
+            print(
+                f"    {f_['id']}: p.{f_.get('page', '?')} {f_.get('caption', '')[:60]}"
+            )
 
-    print(f"{'='*70}\n")
+    print(f"{'=' * 70}\n")
 
 
 # ---------------------------------------------------------------------------
@@ -166,10 +170,13 @@ class TestMusicPlayschool:
     def test_no_figure_table_in_sections(self):
         """PDF TOC should NOT include Figure/Table captions as sections."""
         import re
+
         sections = self.data["sections"]
         caption_re = re.compile(r"^(?:Figure|Fig\.?|Table|Tab\.?)\s+\d+", re.IGNORECASE)
         bad = [s for s in sections if caption_re.match(s["title"])]
-        assert len(bad) == 0, f"Figure/Table entries in sections: {[s['title'] for s in bad]}"
+        assert len(bad) == 0, (
+            f"Figure/Table entries in sections: {[s['title'] for s in bad]}"
+        )
 
     def test_no_noise_headings(self):
         """Should NOT have single-letter noise like 'a', 'b', 'c', 'd'."""
@@ -188,7 +195,9 @@ class TestMusicPlayschool:
     def test_no_noise_tables(self):
         """Should NOT have tables with 0 rows or <=1 column."""
         tables = self.data["tables"]
-        noise = [t for t in tables if t.get("row_count", 0) < 1 or t.get("col_count", 0) < 2]
+        noise = [
+            t for t in tables if t.get("row_count", 0) < 1 or t.get("col_count", 0) < 2
+        ]
         assert len(noise) == 0, f"Found noise tables: {[t['id'] for t in noise]}"
 
     def test_table_has_caption(self):
@@ -206,7 +215,9 @@ class TestMusicPlayschool:
     def test_no_small_figures(self):
         """Should NOT have tiny icon figures (<50px)."""
         figures = self.data["figures"]
-        small = [f for f in figures if f.get("width", 0) < 50 or f.get("height", 0) < 50]
+        small = [
+            f for f in figures if f.get("width", 0) < 50 or f.get("height", 0) < 50
+        ]
         assert len(small) == 0, f"Found small figures: {[f['id'] for f in small]}"
 
     def test_figure_captions(self):
@@ -267,9 +278,18 @@ class TestAttentionPaper:
         all_titles = " | ".join(titles)
 
         # At least some of these should be present
-        expected_any = ["introduction", "model", "attention", "training", "result", "conclusion"]
+        expected_any = [
+            "introduction",
+            "model",
+            "attention",
+            "training",
+            "result",
+            "conclusion",
+        ]
         found = [e for e in expected_any if any(e in t for t in titles)]
-        assert len(found) >= 2, f"Expected key sections, found: {found} in: {all_titles}"
+        assert len(found) >= 2, (
+            f"Expected key sections, found: {found} in: {all_titles}"
+        )
 
     def test_tables_present(self):
         """Transformer paper has performance comparison tables."""
@@ -282,7 +302,9 @@ class TestAttentionPaper:
     def test_no_noise_tables(self):
         """Tables should not be empty or single-column."""
         tables = self.data["tables"]
-        noise = [t for t in tables if t.get("row_count", 0) < 1 or t.get("col_count", 0) < 2]
+        noise = [
+            t for t in tables if t.get("row_count", 0) < 1 or t.get("col_count", 0) < 2
+        ]
         assert len(noise) == 0, f"Noise tables: {[t['id'] for t in noise]}"
 
     def test_table_captions(self):
@@ -443,7 +465,9 @@ class TestGPT4Medical:
     def test_title_detected(self):
         """Title should reference GPT-4."""
         title = self.data["result"].title.lower()
-        assert "gpt" in title or len(title) > 10, f"Bad title: {self.data['result'].title}"
+        assert "gpt" in title or len(title) > 10, (
+            f"Bad title: {self.data['result'].title}"
+        )
 
     def test_sections_present(self):
         """Should have many sections (long paper)."""
@@ -490,9 +514,11 @@ class TestResNet:
     def test_title_detected(self):
         """Title should contain 'deep residual' or 'image recognition'."""
         title = self.data["result"].title.lower()
-        assert "deep residual" in title or "image recognition" in title or "resnet" in title, (
-            f"Bad title: {self.data['result'].title}"
-        )
+        assert (
+            "deep residual" in title
+            or "image recognition" in title
+            or "resnet" in title
+        ), f"Bad title: {self.data['result'].title}"
 
     def test_sections_exist(self):
         """Should have sections from font-size heuristics (no PDF TOC)."""
@@ -502,7 +528,13 @@ class TestResNet:
     def test_key_sections_present(self):
         """Should have key sections like Introduction, Related Work, etc."""
         titles = [s["title"].lower() for s in self.data["sections"]]
-        expected_any = ["introduction", "related work", "deep residual", "experiment", "imagenet"]
+        expected_any = [
+            "introduction",
+            "related work",
+            "deep residual",
+            "experiment",
+            "imagenet",
+        ]
         found = [e for e in expected_any if any(e in t for t in titles)]
         assert len(found) >= 2, f"Expected key sections, found: {found}"
 
@@ -514,7 +546,9 @@ class TestResNet:
     def test_no_noise_tables(self):
         """Tables should not be empty or single-column."""
         tables = self.data["tables"]
-        noise = [t for t in tables if t.get("row_count", 0) < 1 or t.get("col_count", 0) < 2]
+        noise = [
+            t for t in tables if t.get("row_count", 0) < 1 or t.get("col_count", 0) < 2
+        ]
         assert len(noise) == 0, f"Noise tables: {[t['id'] for t in noise]}"
 
     def test_table_captions(self):
@@ -574,7 +608,14 @@ class TestBERT:
     def test_key_sections_present(self):
         """Should have key sections like Introduction, BERT, Experiments, etc."""
         titles = [s["title"].lower() for s in self.data["sections"]]
-        expected_any = ["introduction", "bert", "experiment", "related work", "fine-tuning", "conclusion"]
+        expected_any = [
+            "introduction",
+            "bert",
+            "experiment",
+            "related work",
+            "fine-tuning",
+            "conclusion",
+        ]
         found = [e for e in expected_any if any(e in t for t in titles)]
         assert len(found) >= 2, f"Expected key sections, found: {found}"
 
@@ -586,7 +627,9 @@ class TestBERT:
     def test_no_noise_tables(self):
         """Tables should not be empty or single-column."""
         tables = self.data["tables"]
-        noise = [t for t in tables if t.get("row_count", 0) < 1 or t.get("col_count", 0) < 2]
+        noise = [
+            t for t in tables if t.get("row_count", 0) < 1 or t.get("col_count", 0) < 2
+        ]
         assert len(noise) == 0, f"Noise tables: {[t['id'] for t in noise]}"
 
     def test_table_captions(self):
@@ -671,7 +714,9 @@ class TestCrossDocument:
             sections = m["assets"].get("sections", [])
             ids = [s["id"] for s in sections]
             dupes = [i for i in ids if ids.count(i) > 1]
-            assert len(dupes) == 0, f"Duplicate section IDs in {m['doc_id']}: {set(dupes)}"
+            assert len(dupes) == 0, (
+                f"Duplicate section IDs in {m['doc_id']}: {set(dupes)}"
+            )
 
     def test_no_noise_sections_globally(self):
         """No document should have single-letter noise sections."""
@@ -687,7 +732,8 @@ class TestCrossDocument:
         for m in self.manifests:
             tables = m["assets"].get("tables", [])
             noise = [
-                t for t in tables
+                t
+                for t in tables
                 if t.get("row_count", 0) < 1 or t.get("col_count", 0) < 2
             ]
             assert len(noise) == 0, (
@@ -699,8 +745,7 @@ class TestCrossDocument:
         for m in self.manifests:
             figures = m["assets"].get("figures", [])
             small = [
-                f for f in figures
-                if f.get("width", 0) < 50 or f.get("height", 0) < 50
+                f for f in figures if f.get("width", 0) < 50 or f.get("height", 0) < 50
             ]
             assert len(small) == 0, (
                 f"Small figures in {m['doc_id']}: {[f['id'] for f in small]}"
@@ -714,6 +759,7 @@ class TestCrossDocument:
                 cap = t.get("caption", "")
                 if cap:
                     import re
+
                     num_match = re.search(r"Table\s+(\d+)", cap)
                     if num_match:
                         num = int(num_match.group(1))
@@ -724,6 +770,7 @@ class TestCrossDocument:
     def test_no_figure_table_in_sections_globally(self):
         """No document should have Figure/Table captions as sections."""
         import re
+
         caption_re = re.compile(r"^(?:Figure|Fig\.?|Table|Tab\.?)\s+\d+", re.IGNORECASE)
         for m in self.manifests:
             sections = m["assets"].get("sections", [])
