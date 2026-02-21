@@ -196,6 +196,7 @@ Different journals/formats need different extraction settings. Use these tools t
 - [Technical Spec](docs/spec.md) - Detailed technical specification
 - [Architecture](ARCHITECTURE.md) - System architecture
 - [Constitution](CONSTITUTION.md) - Project principles
+- [Competitive Analysis](docs/competitor-analysis.md) - MCP + DOCX ecosystem landscape
 
 ## 📄 License
 
