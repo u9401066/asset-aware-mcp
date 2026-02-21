@@ -12,13 +12,16 @@ import json
 import logging
 import shutil
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from src.application.dfm_integrity import DfmIntegrityChecker
 from src.domain.docx_entities import DfmBlock, DocxIR
-from src.domain.repositories import DocumentRepository
 from src.infrastructure.dfm_parser import DfmParser
 from src.infrastructure.dfm_renderer import DfmRenderer
 from src.infrastructure.docx_adapter import DocxAdapter
+
+if TYPE_CHECKING:
+    from src.domain.repositories import DocumentRepository
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +42,7 @@ class DocxService:
         self.adapter = DocxAdapter()
         self.renderer = DfmRenderer()
         self.parser = DfmParser()
+        self.integrity = DfmIntegrityChecker()
 
     # ========================================================================
     # Ingest
@@ -101,10 +105,22 @@ class DocxService:
             # Save IR as JSON for round-trip
             self._save_ir(ir, doc_dir / "ir.json")
 
+            # --- Post-ingest integrity check ---
+            ingest_report = self.integrity.check_ingest(ir, md_text, yaml_text)
+            if not ingest_report.passed:
+                # Auto-repair and re-render
+                md_text, yaml_text, repair_report = self.integrity.auto_repair_split(
+                    md_text, yaml_text, ir
+                )
+                md_path.write_text(md_text, encoding="utf-8")
+                yaml_path.write_text(yaml_text, encoding="utf-8")
+                logger.info("Ingest auto-repair: %s", repair_report.to_summary())
+
             summary = ir.get_summary()
             summary["success"] = True
             summary["dfm_path"] = str(dfm_path)
             summary["md_path"] = str(md_path)
+            summary["integrity"] = ingest_report.to_summary()
             return summary
 
         except Exception as e:
@@ -245,14 +261,25 @@ class DocxService:
                     ir.checksum,
                 )
 
+            # --- Pre-save integrity check + auto-repair ---
+            pre_report = self.integrity.check_pre_save(ir, parse_result)
+            for edit in parse_result.edits:
+                if edit.table_rows:
+                    block = ir.find_block(edit.block_id)
+                    if block and block.content:
+                        edit.table_rows, repair = self.integrity.auto_repair_table_edit(
+                            block.content, edit.table_rows
+                        )
+                        for issue in repair.issues:
+                            pre_report.add(issue)
+            if pre_report.issues:
+                logger.info("Pre-save check: %s", pre_report.to_summary())
+
             # Apply edits to IR
             ir = self.parser.apply_edits(ir, parse_result)
 
             # Determine output path
-            if output_path is None:
-                out = doc_dir / "output.docx"
-            else:
-                out = Path(output_path)
+            out = doc_dir / "output.docx" if output_path is None else Path(output_path)
 
             # Rebuild docx
             result_path = self.adapter.ir_to_docx(ir, doc_dir, out)
@@ -268,12 +295,22 @@ class DocxService:
             (doc_dir / "content.md").write_text(md_text, encoding="utf-8")
             (doc_dir / "format.yaml").write_text(yaml_text, encoding="utf-8")
 
+            # --- Post-save integrity check ---
+            original_path = doc_dir / "original.docx"
+            post_report = self.integrity.check_post_save(original_path, result_path)
+
             result: dict[str, Any] = {
                 "success": True,
                 "output_path": str(result_path),
+                "integrity": post_report.to_summary(),
             }
-            if parse_result.errors:
-                result["warnings"] = parse_result.errors
+            warnings = list(parse_result.errors)
+            for issue in pre_report.issues + post_report.issues:
+                if issue.severity in ("error", "warning"):
+                    prefix = "[auto-fixed] " if issue.auto_fixed else ""
+                    warnings.append(f"{prefix}{issue.message}")
+            if warnings:
+                result["warnings"] = warnings
             return result
 
         except Exception as e:

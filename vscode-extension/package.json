@@ -1,8 +1,8 @@
 {
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
-    "description": "Medical RAG MCP Server with precise document asset retrieval - tables, figures, sections from PDFs (PyMuPDF powered)",
-    "version": "0.2.11",
+    "description": "Medical RAG MCP Server with precise document asset retrieval and Docx editing (DFM) — tables, figures, sections from PDFs + .docx round-trip with integrity validation",
+    "version": "0.3.2",
     "publisher": "u9401066",
     "engines": {
         "vscode": "^1.96.0"

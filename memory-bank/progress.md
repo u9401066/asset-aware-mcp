@@ -1,4 +1,4 @@
-# Progress (Updated: 2026-02-11)
+# Progress (Updated: 2026-02-21)
 
 ## Done
 
@@ -14,22 +14,18 @@
   - 19 → 7 工具合併，總工具數 39 → 28
   - 68 新測試 (asset_ref + citation_audit)
 - ✅ **v0.3.0: Docx DFM 即時編輯系統**
-  - **DFM 格式 (Docx-Flavored Markdown)** — 用 Markdown 語法即時編輯 .docx
-  - **DocxIR 中間表示** — docx → IR → DFM → 編輯 → IR → docx 完整往返
-  - **8 個 Docx MCP 工具**：core (4) + validator (1) + bridge (3)
-  - **DocxValidator** — 6 維度往返保真驗證器（結構/文字/格式/表格/媒體/樣式）
-  - **DfmTableBridge** — DFM ↔ A2T 雙向橋接
-  - **DFM 規格書**：`docs/dfm-spec.md`
-  - **VS Code Extension DFM 支援**：語法高亮 + Preview (37 TS tests)
-  - **Pre-commit hooks**：commit-size-guard
-  - **120 新測試**：test_dfm (53) + test_dfm_table_bridge (32) + test_docx_validator (35)
-  - **總工具數：28 → 36**（7 modules）
-
+  - 8 個 Docx MCP 工具 + DocxValidator + DfmTableBridge
+  - 120 新測試（DFM 53 + Bridge 32 + Validator 35）
+  - 總工具數：28 → 36（7 modules）
 - ✅ **v0.3.1: 分離格式 + CLI + Bug 修復**
-  - **Split Format**: content.md (78% less clutter) + format.yaml 分離架構
-  - **DFM CLI**: `scripts/dfm_cli.py` 互動式選單 + `.vscode/tasks.json`
-  - **Bug Fix**: `_update_table_text()` 表格文字重複修復
-  - **改進**: DocxValidator / DfmTableBridge / docx_tools 型別修正
+  - Split Format: content.md + format.yaml
+  - DFM CLI: `scripts/dfm_cli.py` + VS Code Tasks
+  - Bug Fix: 表格文字重複修復
+- ✅ **v0.3.2: Integrity Checker + 檔案層級比對 + uv 遷移**
+  - DfmIntegrityChecker: 6 個檢查/修復方法 + 自動整合至 DocxService/MCP/CLI
+  - DocxValidator: SHA-256 + 檔案大小 + ZIP diff
+  - CI/CD: pip → uv 全面遷移
+  - 271 單元測試全數通過
 
 ## Doing
 
@@ -39,6 +35,7 @@
 
 ## Released
 
+- ✅ **v0.3.2**: Integrity Checker + 檔案層級比對 + uv 遷移 (2026-02-21)
 - ✅ **v0.3.1**: 分離格式 + CLI + Bug 修復 (2026-02-21)
 - ✅ **v0.3.0**: Docx DFM 即時編輯系統 (2026-02-11)
 - ✅ **v0.2.14**: A2T 完整填表系統 (2026-02-10)

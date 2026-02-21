@@ -63,12 +63,15 @@ async def cmd_ingest(file_path: str) -> str | None:
 
     doc_id = result.get("doc_id", "")
     dfm_path = result.get("dfm_path", "")
-    print(f"✅ 匯入成功!")
+    print("✅ 匯入成功!")
     print(f"   doc_id:     {doc_id}")
     print(f"   區塊數:     {result.get('total_blocks', '?')}")
     print(f"   可編輯:     {result.get('editable_blocks', '?')}")
     print(f"   MD  路徑:  {result.get('md_path', '')}")
     print(f"   DFM 路徑:  {dfm_path}")
+    integrity = result.get("integrity", "")
+    if integrity:
+        print(f"   完整性:    {integrity}")
     print()
     print("💡 下一步: 用 VS Code 開啟 content.md 進行編輯，編輯完成後選擇「存回 docx」")
     return doc_id
@@ -84,7 +87,7 @@ async def cmd_save(doc_id: str, output_path: str | None = None) -> None:
     dfm_text: str | None = None
 
     if use_md:
-        print(f"📄 使用分離格式: content.md + format.yaml")
+        print("📄 使用分離格式: content.md + format.yaml")
     else:
         # Fallback to DFM
         dfm_text = await service.get_dfm(doc_id)
@@ -116,6 +119,9 @@ async def cmd_save(doc_id: str, output_path: str | None = None) -> None:
 
     if result.get("success"):
         print(f"✅ 存檔成功: {result.get('output_path')}")
+        integrity = result.get("integrity", "")
+        if integrity:
+            print(f"   完整性:    {integrity}")
         warnings = result.get("warnings", [])
         if warnings:
             print("⚠️ 警告:")

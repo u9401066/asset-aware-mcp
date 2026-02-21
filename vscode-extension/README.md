@@ -6,14 +6,22 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-## 🆕 What's New in v0.3.0
+## 🆕 What's New in v0.3.2
 
+- **DFM Integrity Checker**: Automatic validation + auto-repair at every pipeline stage (ingest/save)
+- **File-Level Comparison**: SHA-256 hash + file size + ZIP entry diff for binary-level round-trip verification
+- **CI/CD Migrated to uv**: All pip/setup-python references removed across workflows
+- **271 unit tests** passing
+
+### v0.3.1
+- **Split Format**: `content.md` + `format.yaml` — 78% less clutter for human editing
+- **DFM CLI**: Interactive menu for ingest/edit/save/validate
+
+### v0.3.0
 - **Docx Editing (DFM)**: 8 new tools for editing .docx files as Markdown with full round-trip fidelity
-- **DocxValidator**: 6-dimension comparison (structure, text, formatting, tables, media, styles) with weighted scoring
+- **DocxValidator**: 6-dimension comparison with weighted scoring
 - **DfmTableBridge**: Seamless Docx table ↔ A2T table conversion
-- **VS Code DFM Support**: Syntax highlighting + preview for Docx-Flavored Markdown
-- **120 new tests**: DFM core (53) + Bridge (32) + Validator (35)
-- **Total**: 28 → 36 tools in 7 modules
+- **Total**: 36 tools in 7 modules
 
 ## 🌟 Core Concept: Asset-Aware ETL
 
@@ -158,7 +166,7 @@ If the extension fails to start or the MCP server doesn't appear:
 | `get_docx_content` | Read DFM content of specific blocks |
 | `save_docx` | Write DFM edits back to .docx |
 | `list_docx_blocks` | List document block structure |
-| `docx_validate_roundtrip` | 6-dimension round-trip fidelity validation |
+| `docx_validate_roundtrip` | 6-dimension round-trip fidelity + file-level SHA-256/ZIP comparison |
 | `docx_table_to_context` | Bridge: Docx table → A2T context |
 | `docx_table_from_context` | Bridge: A2T table → Docx table |
 | `docx_chart_data` | Extract chart data from Docx |

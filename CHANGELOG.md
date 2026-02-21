@@ -7,6 +7,41 @@
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-02-21
+
+### Added
+
+- **🛡️ DFM Integrity Checker — 拆解/組裝內部驗證引擎**
+  - 新模組 `dfm_integrity.py`：`DfmIntegrityChecker` 類別，6 個檢查/修復方法
+  - **Post-ingest 驗證**：MD markers ↔ IR blocks ↔ YAML blocks 三方交叉比對
+  - **Split-format 一致性**：content.md ↔ format.yaml 互相驗證（doc_id、block ID）
+  - **Pre-save 驗證**：edit block_id 存在性、保護區塊偵測、表格欄數比對、重複編輯
+  - **Post-save 驗證**：round-trip fidelity 驗證（自動呼叫 DocxValidator）
+  - **Auto-repair**：自動修復 orphan markers、缺失 YAML entries、表格欄數不符（pad/truncate）
+  - 整合至 `DocxService.ingest_docx()` 和 `save_docx()`，MCP 工具 + CLI 皆顯示完整性狀態
+- **📊 DocxValidator 檔案層級比對**
+  - 新增 SHA-256 全檔 hash 比對（一鍵判斷二進位是否完全相同）
+  - 新增檔案大小比對（bytes 精確到個位數）
+  - 新增 ZIP 內容差異分析（新增/移除/大小變化的 ZIP entries）
+  - `ValidationReport` 新增 `binary_identical`, `original_sha256`, `rebuilt_sha256`, `zip_entry_diffs` 欄位
+  - `to_markdown()` 報告新增「檔案層級比對」區塊
+- **🔧 Round-trip 測試腳本** `scripts/roundtrip_test.py`
+
+### Changed
+
+- **🔄 CI/CD 全面遷移至 uv**（移除所有 pip/setup-python）
+  - `.github/workflows/ci.yml`：5 個 jobs 全部改用 `astral-sh/setup-uv@v4`
+  - `.github/workflows/release.yml`：test + publish-pypi 改用 uv
+  - `.pre-commit-config.yaml`：`pytest-smoke` 改為 `uv run pytest`
+  - 原始碼/文件中所有 `pip install` 建議改為 `uv add`
+- CLI `cmd_ingest` / `cmd_save` 顯示完整性檢查結果
+- MCP `ingest_docx` / `save_docx` 工具返回完整性狀態
+
+### Fixed
+
+- `test_etl_profile.py::test_to_json` — Windows cp950 編碼錯誤（`read_text()` 加 `encoding="utf-8"`）
+- CLI `dfm_cli.py` 語法錯誤（多語句合併在同一行）
+
 ## [0.3.0] - 2026-02-11
 
 ### Added

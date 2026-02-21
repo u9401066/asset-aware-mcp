@@ -4,8 +4,24 @@
 
 ## 🎯 當前焦點
 
-- **v0.3.1 已完成**：分離格式 (content.md + format.yaml) + CLI 工具 + 表格重建 Bug 修復
+- **v0.3.2 已完成**：DFM Integrity Checker + 檔案層級比對 + CI/CD uv 遷移
 - **下一步**：測試覆蓋率提升 / 文件與推廣
+
+## 🛡️ v0.3.2 新功能
+
+### DFM Integrity Checker
+- `dfm_integrity.py` — 6 個檢查/修復方法
+- Post-ingest / Pre-save / Post-save 驗證
+- Auto-repair: orphan markers, YAML entries, 表格欄數
+- 整合至 DocxService + MCP tools + CLI
+
+### DocxValidator 檔案層級比對
+- SHA-256 hash / 檔案大小 / ZIP 內容差異分析
+- `binary_identical` 一鍵判斷是否完全相同
+
+### CI/CD uv 遷移
+- ci.yml / release.yml / pre-commit 全部改用 uv
+- 所有原始碼中 pip install 建議改為 uv add
 
 ## Docx DFM 系統概要 (v0.3.0)
 

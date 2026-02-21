@@ -52,7 +52,7 @@ TEST_PDF = find_test_pdf()
 
 skip_no_marker = pytest.mark.skipif(
     not MARKER_AVAILABLE,
-    reason="Marker not installed (pip install marker-pdf)",
+    reason="Marker not installed (uv add marker-pdf)",
 )
 
 skip_no_pdf = pytest.mark.skipif(

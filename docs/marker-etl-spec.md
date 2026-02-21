@@ -396,7 +396,7 @@ return IngestResult(
 位置：`tests/integration/test_marker_etl.py`
 
 **前置條件：**
-- Marker 已安裝（`pip install marker-pdf`）
+- Marker 已安裝（`uv add marker-pdf`）
 - 模型已下載（首次執行時自動下載）
 - 測試用 PDF 檔案存在
 

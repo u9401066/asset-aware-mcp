@@ -21,7 +21,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 from zipfile import ZipFile
 
 from lxml import etree
@@ -103,6 +103,14 @@ class ValidationReport:
     media_diffs: list[MediaDiff] = field(default_factory=list)
     style_diffs: list[TextDiff] = field(default_factory=list)
 
+    # File-level stats
+    original_file_size: int = 0
+    rebuilt_file_size: int = 0
+    original_sha256: str = ""
+    rebuilt_sha256: str = ""
+    binary_identical: bool = False
+    zip_entry_diffs: list[str] = field(default_factory=list)
+
     # Summary stats
     original_stats: dict[str, int] = field(default_factory=dict)
     rebuilt_stats: dict[str, int] = field(default_factory=dict)
@@ -114,6 +122,12 @@ class ValidationReport:
         return {
             "original_path": self.original_path,
             "rebuilt_path": self.rebuilt_path,
+            "binary_identical": self.binary_identical,
+            "original_file_size": self.original_file_size,
+            "rebuilt_file_size": self.rebuilt_file_size,
+            "file_size_diff": self.rebuilt_file_size - self.original_file_size,
+            "original_sha256": self.original_sha256,
+            "rebuilt_sha256": self.rebuilt_sha256,
             "fidelity_score": round(self.fidelity_score * 100, 1),
             "scores": {
                 "structure": round(self.structure_score * 100, 1),
@@ -198,6 +212,29 @@ class ValidationReport:
         lines.append(f"## Docx Round-Trip Validation: {grade} ({pct}%)")
         lines.append("")
 
+        # File-level comparison
+        lines.append("### 檔案層級比對")
+        if self.binary_identical:
+            lines.append("✅ **二進位完全相同** — 檔案未被改動")
+        else:
+            size_diff = self.rebuilt_file_size - self.original_file_size
+            sign = "+" if size_diff > 0 else ""
+            lines.append("| 指標 | 原始 | 重建 |")
+            lines.append("|------|------|------|")
+            lines.append(
+                f"| 檔案大小 | {self.original_file_size:,} bytes "
+                f"| {self.rebuilt_file_size:,} bytes ({sign}{size_diff:,}) |"
+            )
+            lines.append(
+                f"| SHA-256 | `{self.original_sha256[:16]}…` "
+                f"| `{self.rebuilt_sha256[:16]}…` |"
+            )
+            if self.zip_entry_diffs:
+                lines.append("")
+                lines.append(f"**ZIP 內容差異** ({len(self.zip_entry_diffs)} 項):")
+                lines.extend(f"  - {d}" for d in self.zip_entry_diffs[:15])
+        lines.append("")
+
         # Score breakdown
         lines.append("| 維度 | 分數 |")
         lines.append("|------|------|")
@@ -239,36 +276,36 @@ class ValidationReport:
         if self.format_diffs:
             lines.append("")
             lines.append(f"### 格式差異 ({len(self.format_diffs)} 處)")
-            for d in self.format_diffs[:10]:
-                lines.append(
-                    f"- **{d.location}** [{d.attribute}]: `{d.original}` → `{d.rebuilt}`"
-                )
+            lines.extend(
+                f"- **{d.location}** [{d.attribute}]: `{d.original}` → `{d.rebuilt}`"
+                for d in self.format_diffs[:10]
+            )
 
         if self.table_diffs:
             lines.append("")
             lines.append(f"### 表格差異 ({len(self.table_diffs)} 處)")
-            for d in self.table_diffs[:10]:
-                lines.append(
-                    f"- **{d.location}**: `{d.original[:60]}` → `{d.rebuilt[:60]}`"
-                )
+            lines.extend(
+                f"- **{d.location}**: `{d.original[:60]}` → `{d.rebuilt[:60]}`"
+                for d in self.table_diffs[:10]
+            )
 
         if self.media_diffs:
             lines.append("")
             lines.append(f"### 媒體差異 ({len(self.media_diffs)} 處)")
-            for d in self.media_diffs:
-                lines.append(f"- `{d.filename}`: {d.status}")
+            lines.extend(f"- `{d.filename}`: {d.status}" for d in self.media_diffs)
 
         if self.style_diffs:
             lines.append("")
             lines.append(f"### 樣式差異 ({len(self.style_diffs)} 處)")
-            for d in self.style_diffs[:10]:
-                lines.append(f"- **{d.location}**: `{d.original}` → `{d.rebuilt}`")
+            lines.extend(
+                f"- **{d.location}**: `{d.original}` → `{d.rebuilt}`"
+                for d in self.style_diffs[:10]
+            )
 
         if self.errors:
             lines.append("")
             lines.append("### ⚠️ 錯誤")
-            for e in self.errors:
-                lines.append(f"- {e}")
+            lines.extend(f"- {e}" for e in self.errors)
 
         return "\n".join(lines)
 
@@ -282,7 +319,7 @@ class DocxValidator:
     """
 
     # Weights for overall fidelity score
-    WEIGHTS = {
+    WEIGHTS: ClassVar[dict[str, float]] = {
         "structure": 0.15,
         "text": 0.35,
         "format": 0.15,
@@ -313,6 +350,9 @@ class DocxValidator:
         if not rebuilt_path.exists():
             report.errors.append(f"Rebuilt file not found: {rebuilt_path}")
             return report
+
+        # File-level comparison
+        self._compare_file_level(original_path, rebuilt_path, report)
 
         try:
             orig_data = self._extract_docx_data(original_path)
@@ -406,7 +446,7 @@ class DocxValidator:
                 return data
 
             doc_xml = zf.read("word/document.xml")
-            tree = etree.fromstring(doc_xml)
+            tree = etree.fromstring(doc_xml)  # noqa: S320
             body = tree.find(f".//{{{NS['w']}}}body")
             if body is None:
                 return data
@@ -528,10 +568,9 @@ class DocxValidator:
             for tc_elem in tr_elem.findall(f"{{{NS['w']}}}tc"):
                 cell_parts = []
                 for p in tc_elem.findall(f"{{{NS['w']}}}p"):
-                    text_parts = []
-                    for t in p.findall(f".//{{{NS['w']}}}t"):
-                        if t.text:
-                            text_parts.append(t.text)
+                    text_parts = [
+                        t.text for t in p.findall(f".//{{{NS['w']}}}t") if t.text
+                    ]
                     cell_parts.append("".join(text_parts))
                 row_cells.append("\n".join(cell_parts))
             rows.append(row_cells)
@@ -554,6 +593,49 @@ class DocxValidator:
     # ========================================================================
     # Comparison methods
     # ========================================================================
+
+    def _compare_file_level(
+        self,
+        original_path: Path,
+        rebuilt_path: Path,
+        report: ValidationReport,
+    ) -> None:
+        """Compare files at binary/ZIP level."""
+        orig_bytes = original_path.read_bytes()
+        rebuilt_bytes = rebuilt_path.read_bytes()
+
+        report.original_file_size = len(orig_bytes)
+        report.rebuilt_file_size = len(rebuilt_bytes)
+        report.original_sha256 = hashlib.sha256(orig_bytes).hexdigest()
+        report.rebuilt_sha256 = hashlib.sha256(rebuilt_bytes).hexdigest()
+        report.binary_identical = report.original_sha256 == report.rebuilt_sha256
+
+        if not report.binary_identical:
+            # Compare ZIP entries
+            try:
+                with ZipFile(original_path) as oz, ZipFile(rebuilt_path) as rz:
+                    orig_entries = set(oz.namelist())
+                    rebuilt_entries = set(rz.namelist())
+
+                    for name in sorted(orig_entries - rebuilt_entries):
+                        report.zip_entry_diffs.append(f"🔴 removed: {name}")
+                    for name in sorted(rebuilt_entries - orig_entries):
+                        report.zip_entry_diffs.append(f"🟢 added: {name}")
+
+                    # Check size changes in shared entries
+                    for name in sorted(orig_entries & rebuilt_entries):
+                        o_info = oz.getinfo(name)
+                        r_info = rz.getinfo(name)
+                        if o_info.file_size != r_info.file_size:
+                            diff = r_info.file_size - o_info.file_size
+                            sign = "+" if diff > 0 else ""
+                            report.zip_entry_diffs.append(
+                                f"🟡 changed: {name} "
+                                f"({o_info.file_size:,} → {r_info.file_size:,}, "
+                                f"{sign}{diff:,} bytes)"
+                            )
+            except Exception as e:
+                report.zip_entry_diffs.append(f"⚠️ ZIP comparison error: {e}")
 
     def _compare_structure(
         self,

@@ -45,7 +45,8 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 - 🗺️ **Document Manifest** - Provides a structured "map" of the document for precise data access by Agents.
 - 🧠 **LightRAG Integration** - Knowledge Graph + Vector Index, supporting cross-document comparison and reasoning.
 - � **Docx Editing (DFM)** - Edit .docx files in Markdown via **Docx-Flavored Markdown** format. 8 tools: ingest, edit, save, validate round-trip fidelity (6-dimension scoring), and bridge to A2T tables.
-- �📊 **A2T (Anything to Table)** - 7 operation-based tools for building professional tables from **any source** (PDF assets, Knowledge Graph, URLs, user input). Features: **Citations** (AssetRef), **Audit Trail**, **Schema Evolution**, **Templates**, **Drafting**, and **Token-efficient resumption**.
+- 🛡️ **DFM Integrity Checker** - Automatic validation and auto-repair at every pipeline stage (post-ingest, pre-save, post-save). Catches orphan markers, column mismatches, and format inconsistencies.
+- 📊 **A2T (Anything to Table)** - 7 operation-based tools for building professional tables from **any source** (PDF assets, Knowledge Graph, URLs, user input). Features: **Citations** (AssetRef), **Audit Trail**, **Schema Evolution**, **Templates**, **Drafting**, and **Token-efficient resumption**.
 - 🖥️ **VS Code Management Extension** - Graphical interface for monitoring server status, ingested documents, and **A2T tables/drafts** with one-click Excel export.
 - 🔌 **MCP Server** - Exposes tools and resources to Copilot/Claude via FastMCP.
 - 🏥 **Medical Research Focus** - Optimized for medical literature, supporting Base64 image transmission for Vision AI analysis.
@@ -147,7 +148,7 @@ uv run python -m src.presentation.server
 | `get_docx_content` | Read DFM content of specific blocks |
 | `save_docx` | Write DFM edits back to .docx |
 | `list_docx_blocks` | List document block structure |
-| `docx_validate_roundtrip` | 6-dimension round-trip fidelity validation |
+| `docx_validate_roundtrip` | 6-dimension round-trip fidelity validation + file-level comparison (SHA-256, ZIP diff) |
 | `docx_table_to_context` | Bridge: Docx table → A2T context |
 | `docx_table_from_context` | Bridge: A2T table → Docx table |
 | `docx_chart_data` | Extract chart data from Docx |
@@ -184,6 +185,7 @@ Different journals/formats need different extraction settings. Use these tools t
 | Category | Technology |
 |----------|------------|
 | Language | Python 3.10+ |
+| Package Manager | **uv** (all pip/setup-python removed) |
 | ETL | **PyMuPDF** (fitz) + **Marker** (optional, high-precision) |
 | RAG | LightRAG (lightrag-hku) |
 | MCP | FastMCP |

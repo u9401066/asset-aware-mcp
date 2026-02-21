@@ -181,7 +181,7 @@ class TestETLProfile:
         out = tmp_path / "out.json"
         p.to_json(out)
         assert out.exists()
-        loaded = json.loads(out.read_text())
+        loaded = json.loads(out.read_text(encoding="utf-8"))
         assert loaded["name"] == "default"
 
     def test_section_keywords_frozenset(self):

@@ -193,7 +193,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
 
         except ImportError as e:
             raise RuntimeError(
-                "LightRAG not installed. Install with: pip install lightrag-hku"
+                "LightRAG not installed. Install with: uv add lightrag-hku"
             ) from e
 
     async def insert(self, doc_id: str, text: str) -> None:
@@ -306,7 +306,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
         Returns:
             Dict with graph data in requested format
         """
-        import xml.etree.ElementTree as ET
+        import xml.etree.ElementTree as ET  # nosec B405
 
         graph_file = (
             settings.lightrag_working_dir / "graph_chunk_entity_relation.graphml"
@@ -321,7 +321,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
             }
 
         # Parse GraphML
-        tree = ET.parse(graph_file)
+        tree = ET.parse(graph_file)  # noqa: S314  # nosec B314
         root = tree.getroot()
         ns = {"g": "http://graphml.graphdrawing.org/xmlns"}
 

@@ -63,6 +63,7 @@ async def ingest_docx(file_path: str) -> str:
         f"- **受保護區塊**: {result.get('protected_blocks', 0)}",
         f"- **資產數**: {result.get('assets', 0)}",
         f"- **DFM 路徑**: `{result.get('dfm_path', '')}`",
+        f"- **完整性**: {result.get('integrity', 'N/A')}",
     ]
 
     block_types = result.get("block_types", {})
@@ -135,14 +136,14 @@ async def save_docx(
     lines = [
         "✅ Docx 儲存成功",
         f"- **輸出路徑**: `{result.get('output_path', '')}`",
+        f"- **完整性**: {result.get('integrity', 'N/A')}",
     ]
 
     warnings = result.get("warnings", [])
     if warnings:
         lines.append("")
         lines.append("⚠️ 警告：")
-        for w in warnings:
-            lines.append(f"  - {w}")
+        lines.extend(f"  - {w}" for w in warnings)
 
     return "\n".join(lines)
 
@@ -307,8 +308,7 @@ async def docx_table_to_context(
         "",
         "**欄位定義**：",
     ]
-    for col in tc.columns:
-        lines.append(f"  - `{col.name}` ({col.type})")
+    lines.extend(f"  - `{col.name}` ({col.type})" for col in tc.columns)
 
     if tc.rows:
         lines.append("")
@@ -445,10 +445,10 @@ async def docx_chart_data(
     if block.binary_ref:
         chart_path = doc_dir / block.binary_ref
         if chart_path.exists():
-            try:
+            import contextlib
+
+            with contextlib.suppress(UnicodeDecodeError):
                 chart_xml = chart_path.read_text(encoding="utf-8")
-            except UnicodeDecodeError:
-                pass  # Binary data, not XML
 
     tc = dfm_table_bridge.extract_chart_data(block, chart_xml)
     if tc is None:
