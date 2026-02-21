@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 
 from src.application.asset_service import AssetService
 from src.application.document_service import DocumentService
+from src.application.dfm_table_bridge import DfmTableBridge
+from src.application.docx_service import DocxService
 from src.application.job_service import JobService
 from src.application.knowledge_service import KnowledgeService
 from src.application.section_service import SectionService
@@ -33,6 +35,7 @@ if TYPE_CHECKING:
 # Load ETL profile from environment/settings
 try:
     from src.domain.etl_profile import ETLProfileRegistry
+
     etl_profile = ETLProfileRegistry.get(settings.etl_profile)
 except KeyError:
     # Fallback to default if configured profile not found
@@ -63,6 +66,13 @@ table_service = TableService(
     table_output_dir=settings.table_output_dir,
     table_renderer=excel_renderer,
 )
+docx_service = DocxService(repository=repository)
+dfm_table_bridge = DfmTableBridge()
+
+# Docx round-trip validator
+from src.infrastructure.docx_validator import DocxValidator
+
+docx_validator = DocxValidator()
 
 
 # ============================================================================

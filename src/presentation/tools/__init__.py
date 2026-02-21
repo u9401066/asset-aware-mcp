@@ -3,13 +3,14 @@ Presentation Layer - MCP Tools
 
 拆分自 server.py，按領域分模組：
 - document_tools: ETL + 文件管理工具 (6)
+- docx_tools: Docx ↔ DFM 編輯 + 驗證 + Bridge 工具 (8)
 - section_tools: Section 導航工具 (5)
 - job_tools: 非同步 Job 管理工具 (3)
 - knowledge_tools: 知識圖譜工具 (2)
 - table_tools: A2T 表格工具 (7) — v0.2.14 合併版
 - profile_tools: ETL Profile 設定工具 (5)
 
-Total: 28 tools
+Total: 36 tools
 """
 
 # Import all tools to register them with mcp
@@ -20,6 +21,16 @@ from src.presentation.tools.document_tools import (
     list_documents,
     parse_pdf_structure,
     search_source_location,
+)
+from src.presentation.tools.docx_tools import (
+    docx_chart_data,
+    docx_table_from_context,
+    docx_table_to_context,
+    docx_validate_roundtrip,
+    get_docx_content,
+    ingest_docx,
+    list_docx_blocks,
+    save_docx,
 )
 from src.presentation.tools.job_tools import (
     cancel_job,
@@ -62,6 +73,15 @@ __all__ = [
     "list_documents",
     "inspect_document_manifest",
     "fetch_document_asset",
+    # Docx tools (8)
+    "ingest_docx",
+    "get_docx_content",
+    "save_docx",
+    "list_docx_blocks",
+    "docx_validate_roundtrip",
+    "docx_table_to_context",
+    "docx_table_from_context",
+    "docx_chart_data",
     # Section tools (5)
     "list_section_tree",
     "get_section_detail",
