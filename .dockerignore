@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual env
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data (mount as volume instead)
+data/
+
+# Dev tools
+.git/
+.github/
+.pre-commit-config.yaml
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+htmlcov/
+coverage.xml
+
+# Tests
+tests/
+scripts/
+
+# Docs
+docs/
+*.md
+!README.md
+LICENSE
+
+# Memory bank
+memory-bank/

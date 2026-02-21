@@ -21,15 +21,15 @@ from src.domain.entities import (
     TableAsset,
 )
 from src.domain.etl_profile import ETLProfile
-from src.domain.repositories import (
-    DocumentRepository,
-    KnowledgeGraphInterface,
-    PDFExtractorInterface,
-)
 from src.domain.services import ManifestGenerator
 from src.domain.value_objects import DocId
 
 if TYPE_CHECKING:
+    from src.domain.repositories import (
+        DocumentRepository,
+        KnowledgeGraphInterface,
+        PDFExtractorInterface,
+    )
     from src.infrastructure.marker_adapter import MarkerPDFExtractor
 
 
@@ -124,12 +124,31 @@ class DocumentService:
                 error=f"File not found: {path}",
             )
 
-        if not path.suffix.lower() == ".pdf":
+        if path.suffix.lower() != ".pdf":
             return IngestResult(
                 doc_id="",
                 filename=path.name,
                 success=False,
                 error=f"Not a PDF file: {path}",
+            )
+
+        # Validate PDF magic bytes (%PDF-)
+        try:
+            with path.open("rb") as f:
+                header = f.read(5)
+            if header != b"%PDF-":
+                return IngestResult(
+                    doc_id="",
+                    filename=path.name,
+                    success=False,
+                    error="Invalid PDF: file does not start with %PDF- header",
+                )
+        except OSError as e:
+            return IngestResult(
+                doc_id="",
+                filename=path.name,
+                success=False,
+                error=f"Cannot read file: {e}",
             )
 
         try:
@@ -167,11 +186,13 @@ class DocumentService:
                     await self.knowledge_graph.insert(doc_id.value, markdown)
                     # Extract entities
                     entities = await self.knowledge_graph.extract_entities(markdown)
-                except Exception as e:
+                except Exception:
                     # Log but don't fail - LightRAG is optional
                     import logging
 
-                    logging.warning(f"LightRAG indexing failed: {e}")
+                    logging.getLogger(__name__).warning(
+                        "LightRAG indexing failed for %s", doc_id.value, exc_info=True
+                    )
 
             # Step 6: Generate manifest
             manifest = self.manifest_generator.generate(
@@ -234,7 +255,7 @@ class DocumentService:
                 error=f"File not found: {path}",
             )
 
-        if not path.suffix.lower() == ".pdf":
+        if path.suffix.lower() != ".pdf":
             return IngestResult(
                 doc_id="",
                 filename=path.name,
@@ -376,7 +397,7 @@ class DocumentService:
 
             img = Image.open(io.BytesIO(img_bytes))
             return img.size  # (width, height)
-        except Exception:
+        except Exception:  # PIL can raise various errors
             return (0, 0)
 
     async def _save_marker_images(

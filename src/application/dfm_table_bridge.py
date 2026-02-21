@@ -266,7 +266,7 @@ class DfmTableBridge:
                     source_description=f"Table from {ir.source_filename}",
                 )
                 result[block.id] = tc
-            except Exception:
+            except Exception:  # PIL/lxml may raise various errors
                 logger.warning("Failed to convert table block %s", block.id)
         return result
 
@@ -363,7 +363,7 @@ def _parse_chart_xml_to_table(
         return None
 
     try:
-        root = etree.fromstring(chart_xml.encode("utf-8"))  # noqa: S320
+        root = etree.fromstring(chart_xml.encode("utf-8"))  # noqa: S320  # trusted internal XML
     except etree.XMLSyntaxError:
         logger.warning("Invalid chart XML for block %s", block.id)
         return None

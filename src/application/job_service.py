@@ -14,12 +14,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from src.domain.job import Job, JobProgress, JobStatus, JobSummary, JobType
-from src.domain.repositories import JobStoreInterface
 
 if TYPE_CHECKING:
     from src.application.document_service import DocumentService
+    from src.domain.repositories import JobStoreInterface
 
 logger = logging.getLogger(__name__)
+
+
+# Maximum concurrent ETL jobs to prevent resource exhaustion
+MAX_CONCURRENT_JOBS = 5
 
 
 class JobService:
@@ -37,6 +41,7 @@ class JobService:
         self,
         job_store: JobStoreInterface,
         document_service: DocumentService | None = None,
+        max_concurrent_jobs: int = MAX_CONCURRENT_JOBS,
     ) -> None:
         """
         Initialize job service.
@@ -44,9 +49,11 @@ class JobService:
         Args:
             job_store: Job storage implementation
             document_service: Document processing service
+            max_concurrent_jobs: Maximum number of concurrent jobs
         """
         self.job_store = job_store
         self.document_service = document_service
+        self.max_concurrent_jobs = max_concurrent_jobs
         self._running_tasks: dict[str, asyncio.Task[None]] = {}
 
     def set_document_service(self, document_service: DocumentService) -> None:
@@ -68,6 +75,15 @@ class JobService:
         Returns:
             Created job with ID for tracking
         """
+        # Check concurrent job limit
+        active_count = len(self._running_tasks)
+        if active_count >= self.max_concurrent_jobs:
+            msg = (
+                f"Too many concurrent jobs ({active_count}/{self.max_concurrent_jobs}). "
+                "Wait for existing jobs to finish or cancel some."
+            )
+            raise RuntimeError(msg)
+
         # Generate unique job ID
         job_id = (
             f"job_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"

@@ -1,0 +1,55 @@
+# ============================================================================
+# Asset-Aware MCP — Production Dockerfile (multi-stage)
+# ============================================================================
+# Usage:
+#   docker build -t asset-aware-mcp .
+#   docker run -i --rm \
+#     -v ./data:/app/data \
+#     -e ENABLE_LIGHTRAG=false \
+#     asset-aware-mcp
+# ============================================================================
+
+# Stage 1: Builder — install dependencies
+FROM python:3.12-slim AS builder
+
+RUN pip install --no-cache-dir uv
+
+WORKDIR /app
+COPY pyproject.toml ./
+# Install runtime deps only (no dev)
+RUN uv pip install --system --no-cache "." \
+    && rm -rf /root/.cache
+
+# Stage 2: Runtime
+FROM python:3.12-slim AS runtime
+
+# Security: non-root user
+RUN groupadd -r mcp && useradd -r -g mcp -d /app -s /sbin/nologin mcp
+
+WORKDIR /app
+
+# Copy installed packages from builder
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copy application source
+COPY src/ ./src/
+
+# Create data directory owned by mcp user
+RUN mkdir -p /app/data && chown -R mcp:mcp /app
+
+# Environment defaults
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DATA_DIR=/app/data \
+    ENABLE_LIGHTRAG=false \
+    LOG_LEVEL=INFO
+
+USER mcp
+
+# Health metadata
+LABEL maintainer="u9401066@gap.kmu.edu.tw" \
+      version="0.3.3" \
+      description="Asset-Aware Medical RAG MCP Server"
+
+ENTRYPOINT ["python", "-m", "src.presentation.server"]

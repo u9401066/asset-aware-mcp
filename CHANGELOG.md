@@ -7,6 +7,24 @@
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-02-22
+
+### Added
+
+- **🐳 Dockerfile — 生產級容器部署**
+  - Multi-stage build（builder + runtime），Python 3.12-slim
+  - Non-root `mcp` 使用者、uv 安裝、`.dockerignore` 排除非必要檔案
+- **🛡️ PDF magic byte 驗證** — 在 `document_service._ingest_single()` 中驗證 `%PDF-` 標頭，防止非 PDF 檔案偽裝
+- **⚡ 並行 Job 上限** — `MAX_CONCURRENT_JOBS=5`，防止資源耗盡（`job_service.py`）
+- **📊 Structured logging** — `server.py` 新增 `configure_logging()`，統一格式 `%(asctime)s | %(levelname)-8s | %(name)s | %(message)s`
+- **🧪 37 個新 MCP 工具層單元測試** — `test_mcp_tool_layer.py`，覆蓋全部 7 個 tool 模組 + server + 新功能
+  - 測試類別：TestDocxTools(10), TestJobTools(3), TestDocumentTools(3), TestTableTools(11), TestProfileTools(3), TestKnowledgeTools(1), TestServerStartup(2), TestJobServiceConcurrency(1), TestPDFValidation(2)
+
+### Fixed
+
+- **MCP server 未攔截異常** — `main()` 加入 try/except + `logger.exception()`，避免無訊息斷線
+- **bare `except Exception:` 模式** — 全面加上描述性註解（table_service、dfm_table_bridge、table_tools、document_service）
+
 ## [0.3.2] - 2026-02-21
 
 ### Added

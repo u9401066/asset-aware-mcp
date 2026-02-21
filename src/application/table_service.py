@@ -6,6 +6,7 @@ citation management, audit trail, and schema evolution.
 """
 
 import json
+import logging
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -22,6 +23,8 @@ from src.domain.table_entities import (
     TableTemplate,
 )
 from src.domain.value_objects import AssetRef
+
+logger = logging.getLogger(__name__)
 
 
 class TableService:
@@ -54,7 +57,7 @@ class TableService:
         """Load table metadata from disk on startup."""
         for json_file in self.storage_dir.glob("tbl_*.json"):
             try:
-                with open(json_file, encoding="utf-8") as f:
+                with json_file.open(encoding="utf-8") as f:
                     data = json.load(f)
                     # Reconstruct TableContext
                     col_defs = [ColumnDef(**c) for c in data["columns"]]
@@ -79,6 +82,7 @@ class TableService:
                     )
                     self._tables[context.id] = context
             except Exception:
+                logger.debug("Skipping corrupted table file: %s", json_file)
                 continue
 
     def _save_table(self, context: TableContext) -> None:
@@ -113,12 +117,12 @@ class TableService:
         if context.change_log and context.change_log.entries:
             state["change_log"] = context.change_log.to_dict()
 
-        with open(json_path, "w", encoding="utf-8") as f:
+        with json_path.open("w", encoding="utf-8") as f:
             json.dump(state, f, indent=2, ensure_ascii=False)
 
         # Save Markdown preview
         md_path = self.storage_dir / f"{context.id}.md"
-        with open(md_path, "w", encoding="utf-8") as f:
+        with md_path.open("w", encoding="utf-8") as f:
             f.write(self.preview_table(context.id, limit=1000))
 
     def create_table(
@@ -777,7 +781,7 @@ class TableService:
         """Load drafts from disk on startup."""
         for json_file in self.draft_dir.glob("draft_*.json"):
             try:
-                with open(json_file, encoding="utf-8") as f:
+                with json_file.open(encoding="utf-8") as f:
                     data = json.load(f)
                     draft = TableDraft(
                         table_id=data.get("table_id"),
@@ -793,6 +797,7 @@ class TableService:
                     draft_id = json_file.stem  # draft_xxx
                     self._drafts[draft_id] = draft
             except Exception:
+                logger.debug("Skipping corrupted draft file: %s", json_file)
                 continue
 
     def _save_draft(self, draft_id: str, draft: TableDraft) -> None:
@@ -810,7 +815,7 @@ class TableService:
             "notes": draft.notes,
             "last_updated": str(draft.last_updated),
         }
-        with open(json_path, "w", encoding="utf-8") as f:
+        with json_path.open("w", encoding="utf-8") as f:
             json.dump(state, f, indent=2, ensure_ascii=False)
 
     def create_draft(

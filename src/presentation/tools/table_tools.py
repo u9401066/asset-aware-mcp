@@ -14,6 +14,7 @@ Table Tools - A2T (Anything to Table) MCP 工具（v0.2.14 合併版）
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any, Literal
 
 from src.presentation.dependencies import (
@@ -21,6 +22,8 @@ from src.presentation.dependencies import (
     table_service,
 )
 from src.presentation.mcp_app import mcp
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # 1. plan_table — 規劃 + 模板
@@ -1129,7 +1132,7 @@ async def discover_sources(
         try:
             all_docs = await document_service.list_documents()
             target_docs = [d.doc_id for d in all_docs] if all_docs else []
-        except Exception:
+        except Exception:  # Service may be unavailable
             target_docs = []
 
     for doc_id in target_docs:
@@ -1186,6 +1189,7 @@ async def discover_sources(
                 lines.append("")
 
         except Exception:
+            logger.debug("Failed to parse manifest for doc %s", doc_id)
             continue
 
     # 2. Search KG
@@ -1207,7 +1211,7 @@ async def discover_sources(
                 )
                 lines.append("")
         except Exception:
-            pass
+            logger.debug("KG search failed for query: %s", query)
 
     if not found_any:
         lines.append(
