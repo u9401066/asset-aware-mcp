@@ -1,0 +1,112 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "DFM: 匯入 docx → DFM",
+            "type": "shell",
+            "command": "python",
+            "args": ["scripts/dfm_cli.py", "ingest", "${input:docxFilePath}"],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "none",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "focus": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "DFM: 開啟 Markdown 編輯",
+            "type": "shell",
+            "command": "python",
+            "args": ["scripts/dfm_cli.py", "open", "${input:docId}"],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "none",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "DFM: 存回 docx",
+            "type": "shell",
+            "command": "python",
+            "args": ["scripts/dfm_cli.py", "save", "${input:docId}"],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "none",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "focus": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "DFM: 驗證 round-trip",
+            "type": "shell",
+            "command": "python",
+            "args": ["scripts/dfm_cli.py", "validate", "${input:docId}"],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "none",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "focus": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "DFM: 列出已匯入文件",
+            "type": "shell",
+            "command": "python",
+            "args": ["scripts/dfm_cli.py", "list"],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "none",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "DFM: 互動式選單",
+            "type": "shell",
+            "command": "python",
+            "args": ["scripts/dfm_cli.py"],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "none",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": true
+            },
+            "isBackground": false,
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "docxFilePath",
+            "type": "promptString",
+            "description": "請輸入 .docx 檔案的完整路徑"
+        },
+        {
+            "id": "docId",
+            "type": "promptString",
+            "description": "請輸入文件 ID (doc_id)，可用「列出已匯入文件」查看"
+        }
+    ]
+}
