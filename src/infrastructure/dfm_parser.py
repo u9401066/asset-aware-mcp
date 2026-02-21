@@ -91,8 +91,163 @@ _HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)")
 _LIST_ITEM_RE = re.compile(r"^(\s*)(?:[-*]|\d+\.)\s+(.*)")
 
 
+# Marker in split-format .md: <!-- @ID -->
+_SPLIT_MARKER_RE = re.compile(r"<!--\s*@(\S+)\s*-->")
+
+
 class DfmParser:
     """Parses DFM text and extracts block edits for merging with the original IR."""
+
+    # ========================================================================
+    # Split format: content.md + format.yaml
+    # ========================================================================
+
+    def parse_split(self, md_text: str, yaml_text: str) -> DfmParseResult:
+        """
+        Parse the split MD + YAML format into a DfmParseResult.
+
+        Args:
+            md_text: Clean Markdown content (content.md)
+            yaml_text: Format metadata (format.yaml)
+
+        Returns:
+            DfmParseResult with extracted edits.
+        """
+        result = DfmParseResult(doc_id="", source="", checksum="")
+
+        # 1. Parse format.yaml
+        try:
+            fmt = yaml.safe_load(yaml_text)
+            if not isinstance(fmt, dict):
+                result.errors.append("Invalid format.yaml: not a mapping")
+                return result
+            result.doc_id = fmt.get("doc_id", "")
+            result.source = fmt.get("source", "")
+            result.checksum = fmt.get("checksum", "")
+            styles_data = fmt.get("styles")
+            if styles_data:
+                result.style_info = DocxStyleInfo.from_dict(styles_data)
+        except yaml.YAMLError as e:
+            result.errors.append(f"Invalid format.yaml: {e}")
+            return result
+
+        block_meta: dict[str, dict[str, Any]] = fmt.get("blocks", {})
+
+        # 2. Parse frontmatter from .md (just to cross-check doc_id)
+        fm_match = _FRONTMATTER_RE.search(md_text)
+        if fm_match:
+            try:
+                fm_data = yaml.safe_load(fm_match.group(1))
+                if fm_data and fm_data.get("doc_id"):
+                    if not result.doc_id:
+                        result.doc_id = fm_data["doc_id"]
+            except yaml.YAMLError:
+                pass
+
+        # 3. Parse blocks from .md using <!-- @ID --> markers
+        self._parse_split_blocks(md_text, block_meta, result)
+
+        return result
+
+    def _parse_split_blocks(
+        self,
+        md_text: str,
+        block_meta: dict[str, dict[str, Any]],
+        result: DfmParseResult,
+    ) -> None:
+        """Parse blocks from clean Markdown with @ID markers."""
+        lines = md_text.split("\n")
+        i = 0
+        n = len(lines)
+
+        # Skip frontmatter
+        if i < n and lines[i].strip() == "---":
+            i += 1
+            while i < n and lines[i].strip() != "---":
+                i += 1
+            i += 1
+
+        while i < n:
+            line = lines[i]
+            m = _SPLIT_MARKER_RE.match(line.strip())
+            if not m:
+                i += 1
+                continue
+
+            block_id = m.group(1)
+            i += 1
+
+            # Collect content until next marker or end
+            content_lines: list[str] = []
+            while i < n:
+                if _SPLIT_MARKER_RE.match(lines[i].strip()):
+                    break
+                content_lines.append(lines[i])
+                i += 1
+
+            # Trim trailing blanks
+            while content_lines and content_lines[-1].strip() == "":
+                content_lines.pop()
+
+            raw_content = "\n".join(content_lines).strip()
+
+            # Look up metadata
+            meta = block_meta.get(block_id, {})
+            bt_str = meta.get("type", "paragraph")
+            try:
+                bt = DfmBlockType(bt_str)
+            except ValueError:
+                bt = DfmBlockType.PARAGRAPH
+
+            edit = BlockEdit(
+                block_id=block_id,
+                new_content=raw_content,
+                block_type=bt,
+            )
+
+            # Protected blocks: skip editing
+            if bt.is_protected:
+                result.edits.append(edit)
+                continue
+
+            # Type-specific parsing
+            if bt == DfmBlockType.TABLE:
+                edit.table_rows = self._parse_md_table(raw_content)
+
+            elif bt == DfmBlockType.FORMAT:
+                runs_data = meta.get("runs", [])
+                if runs_data:
+                    edit.updated_runs = [FormatRun.from_dict(r) for r in runs_data]
+                edit.new_content = self._md_to_plain(raw_content)
+
+            elif bt == DfmBlockType.HEADING:
+                hm = _HEADING_RE.match(raw_content)
+                if hm:
+                    edit.new_content = hm.group(2)
+                else:
+                    edit.new_content = self._md_to_plain(raw_content)
+
+            elif bt == DfmBlockType.LIST_ITEM:
+                lm = _LIST_ITEM_RE.match(raw_content)
+                if lm:
+                    edit.new_content = self._md_to_plain(lm.group(2))
+                else:
+                    edit.new_content = self._md_to_plain(raw_content)
+
+            elif bt == DfmBlockType.CAPTION:
+                # Strip italic markers
+                clean = raw_content.strip("*").strip()
+                edit.new_content = clean
+
+            else:
+                # Paragraph etc.
+                edit.new_content = self._md_to_plain(raw_content)
+
+            result.edits.append(edit)
+
+    # ========================================================================
+    # Original DFM format (single file)
+    # ========================================================================
 
     def parse(self, dfm_text: str) -> DfmParseResult:
         """

@@ -87,9 +87,16 @@ class DocxService:
             # Render IR → DFM text
             dfm_text = self.renderer.render(ir)
 
-            # Save DFM
+            # Save DFM (original format, for MCP tools)
             dfm_path = doc_dir / "content.dfm"
             dfm_path.write_text(dfm_text, encoding="utf-8")
+
+            # Render split format: clean MD + format YAML
+            md_text, yaml_text = self.renderer.render_split(ir)
+            md_path = doc_dir / "content.md"
+            md_path.write_text(md_text, encoding="utf-8")
+            yaml_path = doc_dir / "format.yaml"
+            yaml_path.write_text(yaml_text, encoding="utf-8")
 
             # Save IR as JSON for round-trip
             self._save_ir(ir, doc_dir / "ir.json")
@@ -97,6 +104,7 @@ class DocxService:
             summary = ir.get_summary()
             summary["success"] = True
             summary["dfm_path"] = str(dfm_path)
+            summary["md_path"] = str(md_path)
             return summary
 
         except Exception as e:
@@ -119,6 +127,19 @@ class DocxService:
         if not dfm_path.exists():
             return None
         return dfm_path.read_text(encoding="utf-8")
+
+    async def get_md(self, doc_id: str) -> str | None:
+        """
+        Get the clean Markdown content for human editing.
+
+        Returns:
+            MD text, or None if not found.
+        """
+        doc_dir = self.repository.get_doc_dir(doc_id)
+        md_path = doc_dir / "content.md"
+        if not md_path.exists():
+            return None
+        return md_path.read_text(encoding="utf-8")
 
     async def get_block_content(
         self, doc_id: str, block_id: str
@@ -168,21 +189,25 @@ class DocxService:
     # ========================================================================
 
     async def save_docx(
-        self, doc_id: str, dfm_text: str, output_path: str | None = None
+        self,
+        doc_id: str,
+        dfm_text: str | None = None,
+        output_path: str | None = None,
+        *,
+        from_md: bool = False,
     ) -> dict[str, Any]:
         """
-        Save edited DFM back to a .docx file.
+        Save edited content back to a .docx file.
 
-        Steps:
-        1. Parse DFM text to extract edits
-        2. Load original IR
-        3. Apply edits to IR
-        4. Rebuild .docx from modified IR
+        Supports two modes:
+        - DFM mode (default): pass dfm_text with the full .dfm content
+        - MD mode (from_md=True): reads content.md + format.yaml from disk
 
         Args:
             doc_id: Document ID
-            dfm_text: Edited DFM content
+            dfm_text: Edited DFM content (ignored if from_md=True)
             output_path: Output .docx path (default: data/{doc_id}/output.docx)
+            from_md: If True, read content.md + format.yaml instead of dfm_text
 
         Returns:
             Result dict with output path and any errors.
@@ -195,8 +220,22 @@ class DocxService:
             return {"success": False, "error": f"IR not found for {doc_id}"}
 
         try:
-            # Parse DFM edits
-            parse_result = self.parser.parse(dfm_text)
+            # Parse edits from the appropriate format
+            if from_md:
+                md_path = doc_dir / "content.md"
+                yaml_path = doc_dir / "format.yaml"
+                if not md_path.exists() or not yaml_path.exists():
+                    return {
+                        "success": False,
+                        "error": "content.md or format.yaml not found",
+                    }
+                md_content = md_path.read_text(encoding="utf-8")
+                yaml_content = yaml_path.read_text(encoding="utf-8")
+                parse_result = self.parser.parse_split(md_content, yaml_content)
+            else:
+                if dfm_text is None:
+                    return {"success": False, "error": "No content provided"}
+                parse_result = self.parser.parse(dfm_text)
 
             # Verify checksum matches
             if parse_result.checksum and parse_result.checksum != ir.checksum:
@@ -221,9 +260,13 @@ class DocxService:
             # Save updated IR
             self._save_ir(ir, doc_dir / "ir.json")
 
-            # Update DFM file with current state
+            # Update all formats with current state
             updated_dfm = self.renderer.render(ir)
             (doc_dir / "content.dfm").write_text(updated_dfm, encoding="utf-8")
+
+            md_text, yaml_text = self.renderer.render_split(ir)
+            (doc_dir / "content.md").write_text(md_text, encoding="utf-8")
+            (doc_dir / "format.yaml").write_text(yaml_text, encoding="utf-8")
 
             result: dict[str, Any] = {
                 "success": True,
