@@ -8,16 +8,19 @@ for elements that cannot be represented in standard Markdown.
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import yaml
 
-from src.domain.docx_entities import (
+from src.domain.docx_entities import (  # noqa: TC001
     DfmBlock,
     DocxIR,
     FormatRun,
 )
 from src.domain.docx_value_objects import DfmBlockType, ImageAnchorType
+
+logger = logging.getLogger(__name__)
 
 
 class DfmRenderer:

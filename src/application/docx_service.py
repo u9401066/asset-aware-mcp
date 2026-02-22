@@ -11,10 +11,11 @@ import hashlib
 import json
 import logging
 import shutil
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from src.application.dfm_integrity import DfmIntegrityChecker
+from src.application.dfm_integrity import DfmIntegrityChecker, IntegrityIssue
 from src.domain.docx_entities import DfmBlock, DocxIR
 from src.infrastructure.dfm_parser import DfmParser
 from src.infrastructure.dfm_renderer import DfmRenderer
@@ -253,6 +254,21 @@ class DocxService:
                     return {"success": False, "error": "No content provided"}
                 parse_result = self.parser.parse(dfm_text)
 
+            # Abort on format mismatch — prevents silent data loss
+            format_errors = [
+                e for e in parse_result.errors if e.startswith("FORMAT_MISMATCH")
+            ]
+            if format_errors:
+                return {
+                    "success": False,
+                    "error": (
+                        "Split-format content (<!-- @ID -->) was passed to the DFM "
+                        "parser which expects <!-- @b:ID --> markers. No edits were "
+                        "detected. Aborting to prevent data loss. "
+                        "Use save_docx with from_md=True, or pass .dfm-format content."
+                    ),
+                }
+
             # Verify checksum matches
             if parse_result.checksum and parse_result.checksum != ir.checksum:
                 logger.warning(
@@ -287,6 +303,15 @@ class DocxService:
             # Save updated IR
             self._save_ir(ir, doc_dir / "ir.json")
 
+            # --- Auto-backup before overwrite ---
+            self._backup_before_overwrite(doc_dir)
+
+            # Snapshot old content.md for drift detection
+            old_md_path = doc_dir / "content.md"
+            old_md_text = (
+                old_md_path.read_text(encoding="utf-8") if old_md_path.exists() else ""
+            )
+
             # Update all formats with current state
             updated_dfm = self.renderer.render(ir)
             (doc_dir / "content.dfm").write_text(updated_dfm, encoding="utf-8")
@@ -294,6 +319,11 @@ class DocxService:
             md_text, yaml_text = self.renderer.render_split(ir)
             (doc_dir / "content.md").write_text(md_text, encoding="utf-8")
             (doc_dir / "format.yaml").write_text(yaml_text, encoding="utf-8")
+
+            # --- Content drift detection ---
+            drift_issues = self._detect_content_drift(old_md_text, md_text)
+            for issue in drift_issues:
+                pre_report.add(issue)
 
             # --- Post-save integrity check ---
             original_path = doc_dir / "original.docx"
@@ -318,8 +348,110 @@ class DocxService:
             return {"success": False, "error": str(e)}
 
     # ========================================================================
+    # Content drift detection
+    # ========================================================================
+
+    @staticmethod
+    def _detect_content_drift(old_md: str, new_md: str) -> list[IntegrityIssue]:
+        """Compare old vs re-rendered content.md and flag significant losses.
+
+        Detects:
+        - Lines present in old but absent in new (deleted content)
+        - Substantial character-level shrinkage (>5%)
+
+        Returns list of IntegrityIssue objects for any detected drift.
+        """
+        issues: list[IntegrityIssue] = []
+        if not old_md:
+            return issues
+
+        # --- Character-level shrinkage check ---
+        old_len = len(old_md)
+        new_len = len(new_md)
+        if old_len > 0 and new_len < old_len * 0.95:
+            shrinkage_pct = (1 - new_len / old_len) * 100
+            issues.append(
+                IntegrityIssue(
+                    severity="warning",
+                    stage="content_drift",
+                    message=(
+                        f"Content shrunk by {shrinkage_pct:.1f}% after re-render "
+                        f"({old_len} → {new_len} chars). Possible data loss."
+                    ),
+                    details={"old_len": old_len, "new_len": new_len},
+                )
+            )
+
+        # --- Line-level diff: find lost non-trivial lines ---
+        old_lines = [
+            ln.strip()
+            for ln in old_md.splitlines()
+            if ln.strip() and not ln.strip().startswith("<!--")
+        ]
+        new_lines_set = {
+            ln.strip()
+            for ln in new_md.splitlines()
+            if ln.strip() and not ln.strip().startswith("<!--")
+        }
+
+        lost_lines = [
+            ln for ln in old_lines if ln not in new_lines_set and len(ln) > 20
+        ]
+        if lost_lines:
+            preview = lost_lines[:5]
+            issues.append(
+                IntegrityIssue(
+                    severity="warning",
+                    stage="content_drift",
+                    message=(
+                        f"{len(lost_lines)} non-trivial lines lost after re-render. "
+                        f"Samples: {preview}"
+                    ),
+                    details={"lost_count": len(lost_lines), "samples": preview},
+                )
+            )
+
+        if issues:
+            logger.warning(
+                "Content drift detected: %d issues. Check .backups/ for recovery.",
+                len(issues),
+            )
+
+        return issues
+
+    # ========================================================================
     # IR persistence
     # ========================================================================
+
+    @staticmethod
+    def _backup_before_overwrite(doc_dir: Path, max_backups: int = 5) -> None:
+        """Create timestamped backups of content.md, content.dfm, format.yaml, ir.json before overwrite.
+
+        Keeps at most `max_backups` backup sets (oldest are pruned).
+        """
+        backup_dir = doc_dir / ".backups"
+        backup_dir.mkdir(exist_ok=True)
+
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        slot = backup_dir / ts
+        slot.mkdir(exist_ok=True)
+
+        for name in ("content.md", "content.dfm", "format.yaml", "ir.json"):
+            src = doc_dir / name
+            if src.exists():
+                shutil.copy2(src, slot / name)
+
+        logger.info("Pre-overwrite backup created: %s", slot)
+
+        # Prune old backups — keep newest max_backups
+        existing = sorted(
+            [d for d in backup_dir.iterdir() if d.is_dir()],
+            key=lambda p: p.name,
+        )
+        while len(existing) > max_backups:
+            old = existing.pop(0)
+            shutil.rmtree(old, ignore_errors=True)
+            logger.info("Pruned old backup: %s", old)
 
     def _save_ir(self, ir: DocxIR, path: Path) -> None:
         """Serialize IR to JSON file."""

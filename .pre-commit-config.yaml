@@ -46,6 +46,7 @@ repos:
         args: [--ignore-missing-imports]
         additional_dependencies:
           - pydantic>=2.0.0
+          - types-PyYAML>=6.0.0
         pass_filenames: false
         entry: mypy src
         types: [python]

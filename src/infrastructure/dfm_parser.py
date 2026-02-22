@@ -7,6 +7,7 @@ Used for the write-back path: user edits DFM → Parser extracts changes → mer
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from typing import Any
@@ -21,6 +22,8 @@ from src.domain.docx_entities import (
 from src.domain.docx_value_objects import (
     DfmBlockType,
 )
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # Parsed edit result
@@ -138,9 +141,8 @@ class DfmParser:
         if fm_match:
             try:
                 fm_data = yaml.safe_load(fm_match.group(1))
-                if fm_data and fm_data.get("doc_id"):
-                    if not result.doc_id:
-                        result.doc_id = fm_data["doc_id"]
+                if fm_data and fm_data.get("doc_id") and not result.doc_id:
+                    result.doc_id = fm_data["doc_id"]
             except yaml.YAMLError:
                 pass
 
@@ -159,6 +161,7 @@ class DfmParser:
         lines = md_text.split("\n")
         i = 0
         n = len(lines)
+        seen_ids: dict[str, int] = {}  # block_id -> occurrence count
 
         # Skip frontmatter
         if i < n and lines[i].strip() == "---":
@@ -175,6 +178,25 @@ class DfmParser:
                 continue
 
             block_id = m.group(1)
+            # --- Duplicate ID detection & auto-fix ---
+            if block_id in seen_ids:
+                seen_ids[block_id] += 1
+                new_id = f"{block_id}_d{seen_ids[block_id]}"
+                result.errors.append(
+                    f"DUPLICATE_ID: Marker @{block_id} appears multiple times "
+                    f"(occurrence #{seen_ids[block_id]}). Auto-renamed to @{new_id}. "
+                    f"This may cause edits to apply to the wrong block. "
+                    f"Fix content.md to use unique IDs."
+                )
+                logger.warning(
+                    "Duplicate marker @%s (occurrence #%d) → auto-renamed to @%s",
+                    block_id,
+                    seen_ids[block_id],
+                    new_id,
+                )
+                block_id = new_id
+            else:
+                seen_ids[block_id] = 1
             i += 1
 
             # Collect content until next marker or end
@@ -267,7 +289,25 @@ class DfmParser:
         # 2. Parse styles
         self._parse_styles(dfm_text, result)
 
-        # 3. Parse blocks
+        # 3. Detect format mismatch: split-format content passed to DFM parser
+        split_markers = _SPLIT_MARKER_RE.findall(dfm_text)
+        dfm_markers = _SIMPLE_BLOCK_RE.findall(dfm_text)
+        if split_markers and not dfm_markers:
+            result.errors.append(
+                f"FORMAT_MISMATCH: Detected {len(split_markers)} split-format "
+                f"markers (<!-- @ID -->) but 0 DFM markers (<!-- @b:ID -->). "
+                f"Content appears to be in split .md format, not .dfm format. "
+                f"This will result in 0 edits applied — the original IR will "
+                f"be rendered unchanged, effectively REVERTING all .md edits. "
+                f"Use from_md=True or pass content in .dfm format."
+            )
+            logger.error(
+                "FORMAT_MISMATCH in parse(): %d split markers, 0 DFM markers. "
+                "Edits will NOT be applied. Risk of data loss!",
+                len(split_markers),
+            )
+
+        # 4. Parse blocks
         self._parse_blocks(dfm_text, result)
 
         return result
@@ -307,9 +347,19 @@ class DfmParser:
                 # Table: rebuild content from parsed rows
                 block.content = self._rows_to_md_table(edit.table_rows)
             elif edit.updated_runs is not None:
-                # Format block with YAML runs
-                block.runs = edit.updated_runs
-                block.content = "".join(r.text for r in edit.updated_runs)
+                # Format block with YAML runs — check if content.md
+                # text diverges from runs' text (user edited content.md)
+                runs_text = "".join(r.text for r in edit.updated_runs)
+                if new_content and new_content != runs_text:
+                    # Content was edited in .md — merge new text with
+                    # original runs' formatting
+                    block.runs = self._merge_runs(
+                        edit.updated_runs, runs_text, new_content
+                    )
+                    block.content = new_content
+                else:
+                    block.runs = edit.updated_runs
+                    block.content = runs_text
             elif block.runs:
                 # Apply format merge strategy
                 block.runs = self._merge_runs(block.runs, old_content, new_content)

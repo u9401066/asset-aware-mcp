@@ -14,6 +14,7 @@ Docx Tools - Docx ↔ DFM 雙向轉換 + Table Bridge MCP 工具
 from __future__ import annotations
 
 import json
+import logging
 
 from src.presentation.dependencies import (
     dfm_table_bridge,
@@ -22,6 +23,8 @@ from src.presentation.dependencies import (
     table_service,
 )
 from src.presentation.mcp_app import mcp
+
+logger = logging.getLogger(__name__)
 
 
 @mcp.tool()
@@ -49,6 +52,7 @@ async def ingest_docx(file_path: str) -> str:
         攝入結果摘要（doc_id、區塊數量等）
     """
     result = await docx_service.ingest_docx(file_path)
+    logger.info("ingest_docx | file=%s | success=%s", file_path, result.get("success"))
 
     if not result.get("success"):
         return f"❌ 攝入失敗：{result.get('error', '未知錯誤')}"
@@ -108,27 +112,47 @@ async def get_docx_content(
 @mcp.tool()
 async def save_docx(
     doc_id: str,
-    dfm_content: str,
+    dfm_content: str | None = None,
     output_path: str | None = None,
+    from_md: bool = False,
 ) -> str:
     """
-    將編輯後的 DFM 內容存回 .docx 檔案。
+    將編輯後的內容存回 .docx 檔案。
+
+    支援兩種模式：
+    - DFM 模式（預設）：傳入 dfm_content（.dfm 格式全文）
+    - MD 模式（from_md=True）：從磁碟讀取 content.md + format.yaml
 
     回寫流程：
-    1. 解析 DFM → 提取修改
+    1. 解析 DFM/MD → 提取修改
     2. 載入原始 IR
     3. 合併修改（格式合併策略）
     4. 重建 .docx
 
     Args:
         doc_id: 文件 ID
-        dfm_content: 編輯後的 DFM 全文
+        dfm_content: 編輯後的 DFM 全文（from_md=True 時可省略）
         output_path: 輸出路徑（預設為 data/{doc_id}/output.docx）
+        from_md: 若為 True，從磁碟讀取 content.md + format.yaml 而非使用 dfm_content
 
     Returns:
         儲存結果
     """
-    result = await docx_service.save_docx(doc_id, dfm_content, output_path)
+    logger.info(
+        "save_docx | doc_id=%s | from_md=%s | output=%s",
+        doc_id,
+        from_md,
+        output_path,
+    )
+    result = await docx_service.save_docx(
+        doc_id, dfm_content, output_path, from_md=from_md
+    )
+    logger.info(
+        "save_docx done | doc_id=%s | success=%s | integrity=%s",
+        doc_id,
+        result.get("success"),
+        result.get("integrity", "N/A"),
+    )
 
     if not result.get("success"):
         return f"❌ 儲存失敗：{result.get('error', '未知錯誤')}"

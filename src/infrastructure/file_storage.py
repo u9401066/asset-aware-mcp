@@ -7,12 +7,15 @@ Implementation of DocumentRepository using local filesystem.
 from __future__ import annotations
 
 import json
-from pathlib import Path
+import logging
+from pathlib import Path  # noqa: TC003
 
 from src.domain.entities import DocumentManifest, DocumentSummary
 from src.domain.repositories import DocumentRepository
 
 from .config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class FileStorage(DocumentRepository):
