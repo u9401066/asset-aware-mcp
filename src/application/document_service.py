@@ -396,7 +396,8 @@ class DocumentService:
             from PIL import Image
 
             img = Image.open(io.BytesIO(img_bytes))
-            return img.size  # (width, height)
+            size: tuple[int, int] = img.size  # (width, height)
+            return size
         except Exception:  # PIL can raise various errors
             return (0, 0)
 

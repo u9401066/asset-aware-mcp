@@ -73,16 +73,14 @@ class ManifestGenerator:
             Complete DocumentManifest
         """
         # Use provided tables (Docling) or parse from markdown
-        if tables:
-            parsed_tables = tables
-        else:
-            parsed_tables = self._parse_tables(markdown)
+        parsed_tables = tables if tables else self._parse_tables(markdown)
 
         # Parse sections: prefer PDF built-in TOC over font-size heuristics
-        if pdf_toc:
-            sections = self._sections_from_pdf_toc(pdf_toc)
-        else:
-            sections = self._parse_sections(markdown)
+        sections = (
+            self._sections_from_pdf_toc(pdf_toc)
+            if pdf_toc
+            else self._parse_sections(markdown)
+        )
 
         # Build TOC from sections
         toc = [s.title for s in sections if s.level <= 2]
@@ -144,7 +142,7 @@ class ManifestGenerator:
 
     def _parse_sections(self, markdown: str) -> list[SectionAsset]:
         """Parse markdown headers as sections."""
-        sections = []
+        sections: list[SectionAsset] = []
         lines = markdown.split("\n")
         current_page = 1
 

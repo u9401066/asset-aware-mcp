@@ -7,9 +7,10 @@ Key feature: Extracts images WITH page numbers for verification.
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path  # noqa: TC003
 from typing import Any
 
 import fitz  # type: ignore # PyMuPDF
@@ -18,6 +19,8 @@ from src.domain.etl_profile import ETLProfile
 from src.domain.repositories import PDFExtractorInterface
 
 from .config import settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -314,6 +317,11 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                             images.append(img_dict)
                             page_images_found.append(img_dict)
                     except Exception:
+                        logger.debug(
+                            "Image extraction failed on page %d",
+                            page_num,
+                            exc_info=True,
+                        )
                         continue
 
                 # Strategy 2: Vector graphics detection
@@ -335,7 +343,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                                 }
                             )
                 except Exception:
-                    pass
+                    logger.debug("Vector graphics extraction failed", exc_info=True)
 
                 # Strategy 3: Smart region detection (find non-text areas)
                 try:
@@ -356,7 +364,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                                 }
                             )
                 except Exception:
-                    pass
+                    logger.debug("Region detection failed", exc_info=True)
 
         finally:
             doc.close()
@@ -380,10 +388,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             r = d["rect"]
             if r.width < 1 and r.height < 1:
                 continue
-            if bbox is None:
-                bbox = r
-            else:
-                bbox = bbox | r
+            bbox = r if bbox is None else bbox | r
 
         # If bbox is too small or empty, skip
         if not bbox or bbox.is_empty or bbox.width < 50 or bbox.height < 50:
@@ -446,6 +451,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                         }
                     )
             except Exception:
+                logger.debug("Cluster rendering failed", exc_info=True)
                 continue
 
         return results
@@ -565,6 +571,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                                     }
                                 )
                     except Exception:
+                        logger.debug("Table region rendering failed", exc_info=True)
                         continue
 
         return results
@@ -614,7 +621,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
 
             existing_bbox = img["bbox"]
             # Handle both fitz.Rect and tuple/list formats
-            if isinstance(existing_bbox, (list, tuple)):
+            if isinstance(existing_bbox, (list, tuple)):  # noqa: UP038
                 existing_bbox = fitz.Rect(existing_bbox)
 
             # Calculate intersection
@@ -680,7 +687,10 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         """
         doc = fitz.open(str(pdf_path))
         try:
-            return doc.get_toc()  # [(level, title, page), ...]
+            toc: list[tuple[int, str, int]] = (
+                doc.get_toc()
+            )  # [(level, title, page), ...]
+            return toc
         finally:
             doc.close()
 
@@ -765,10 +775,14 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                                 }
                             )
                         except Exception:
+                            logger.debug("Table cell extraction failed", exc_info=True)
                             continue
 
                 except Exception:
                     # find_tables() may not be available in older versions
+                    logger.debug(
+                        "find_tables() failed on page %d", page_num, exc_info=True
+                    )
                     continue
 
         finally:

@@ -143,7 +143,7 @@ class DocxAdapter:
 
             # 5. Parse document body → blocks
             doc_xml = zf.read("word/document.xml")
-            tree = etree.fromstring(doc_xml)
+            tree = etree.fromstring(doc_xml)  # noqa: S320
             body = tree.find(f".//{{{NS['w']}}}body")
             if body is not None:
                 self._parse_body(body, ir, rels, assets_dir, parts_dir)
@@ -196,7 +196,7 @@ class DocxAdapter:
     def _compute_checksum(path: Path) -> str:
         """Compute SHA-256 checksum of a file."""
         sha = hashlib.sha256()
-        with open(path, "rb") as f:
+        with path.open("rb") as f:
             for chunk in iter(lambda: f.read(8192), b""):
                 sha.update(chunk)
         return f"sha256:{sha.hexdigest()}"
@@ -240,7 +240,7 @@ class DocxAdapter:
             return rels
 
         rels_xml = zf.read(rels_path)
-        tree = etree.fromstring(rels_xml)
+        tree = etree.fromstring(rels_xml)  # noqa: S320
 
         for rel in tree.findall(f"{{{NS['rel']}}}Relationship"):
             rid = rel.get("Id", "")
@@ -257,7 +257,7 @@ class DocxAdapter:
         # Parse page setup from document.xml (sectPr)
         if "word/document.xml" in zf.namelist():
             doc_xml = zf.read("word/document.xml")
-            tree = etree.fromstring(doc_xml)
+            tree = etree.fromstring(doc_xml)  # noqa: S320
             sect_pr = tree.find(f".//{{{NS['w']}}}sectPr")
             if sect_pr is not None:
                 style_info.page_setup = self._parse_page_setup(sect_pr)
@@ -265,7 +265,7 @@ class DocxAdapter:
         # Parse default font from styles.xml
         if "word/styles.xml" in zf.namelist():
             styles_xml = zf.read("word/styles.xml")
-            styles_tree = etree.fromstring(styles_xml)
+            styles_tree = etree.fromstring(styles_xml)  # noqa: S320
             doc_defaults = styles_tree.find(f".//{{{NS['w']}}}docDefaults")
             if doc_defaults is not None:
                 rpr_default = doc_defaults.find(
@@ -467,10 +467,7 @@ class DocxAdapter:
         else:
             # Check if mixed format
             has_mixed = self._has_mixed_formatting(runs)
-            if has_mixed:
-                block_type = DfmBlockType.FORMAT
-            else:
-                block_type = DfmBlockType.PARAGRAPH
+            block_type = DfmBlockType.FORMAT if has_mixed else DfmBlockType.PARAGRAPH
 
             block_id = ir.next_block_id(block_type)
             ir.add_block(
@@ -917,7 +914,7 @@ class DocxAdapter:
             return
 
         fn_xml = zf.read("word/footnotes.xml")
-        tree = etree.fromstring(fn_xml)
+        tree = etree.fromstring(fn_xml)  # noqa: S320
 
         for footnote in tree.findall(f"{{{NS['w']}}}footnote"):
             fn_type = footnote.get(f"{{{NS['w']}}}type")
@@ -955,7 +952,7 @@ class DocxAdapter:
                 (parts_dir / safe_name).write_bytes(data)
 
                 # Extract preview text
-                tree = etree.fromstring(data)
+                tree = etree.fromstring(data)  # noqa: S320
                 preview = self._get_all_text(tree)
 
                 hdr_type = "default"
@@ -981,7 +978,7 @@ class DocxAdapter:
                 safe_name = Path(name).name
                 (parts_dir / safe_name).write_bytes(data)
 
-                preview_tree = etree.fromstring(data)
+                preview_tree = etree.fromstring(data)  # noqa: S320
                 preview = self._get_all_text(preview_tree)
 
                 ftr_type = "default"
@@ -1035,7 +1032,8 @@ class DocxAdapter:
             return None
         style = ppr.find(f"{{{NS['w']}}}pStyle")
         if style is not None:
-            return style.get(f"{{{NS['w']}}}val")
+            val: str | None = style.get(f"{{{NS['w']}}}val")
+            return val
         return None
 
     def _get_outline_level(self, ppr: etree._Element | None) -> int | None:
@@ -1262,7 +1260,7 @@ class DocxAdapter:
         Walks paragraphs and tables in the same order as original parsing,
         matching each to the corresponding IR block by index position.
         """
-        tree = etree.fromstring(doc_xml)
+        tree = etree.fromstring(doc_xml)  # noqa: S320
         body = tree.find(f".//{{{NS['w']}}}body")
         if body is None:
             return doc_xml
@@ -1284,15 +1282,16 @@ class DocxAdapter:
                     ):
                         self._update_paragraph_text(element, block)
                     block_idx += 1
-            elif tag == "tbl":
-                if block_idx < len(ir.blocks):
-                    block = ir.blocks[block_idx]
-                    if block.block_type == DfmBlockType.TABLE:
-                        self._update_table_text(element, block)
-                    block_idx += 1
+            elif tag == "tbl" and block_idx < len(ir.blocks):
+                block = ir.blocks[block_idx]
+                if block.block_type == DfmBlockType.TABLE:
+                    self._update_table_text(element, block)
+                block_idx += 1
 
-        return etree.tostring(
-            tree, xml_declaration=True, encoding="UTF-8", standalone=True
+        return bytes(
+            etree.tostring(
+                tree, xml_declaration=True, encoding="UTF-8", standalone=True
+            )
         )
 
     def _update_paragraph_text(self, p_elem: etree._Element, block: DfmBlock) -> None:

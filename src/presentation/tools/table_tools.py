@@ -838,15 +838,15 @@ def _history_tokens(table_id: str, draft_id: str, text: str) -> str:
     if draft_id:
         try:
             draft = table_service.get_draft(draft_id)
-            est = draft.estimate_tokens()
+            draft_est = draft.estimate_tokens()
             lines.append(
-                f"**Draft `{draft_id}`:** ~{est} tokens ({len(draft.pending_rows)} pending rows)"
+                f"**Draft `{draft_id}`:** ~{draft_est} tokens ({len(draft.pending_rows)} pending rows)"
             )
         except ValueError:
             lines.append(f"**Draft `{draft_id}`:** Not found")
     if text:
-        est = len(text) // 4
-        lines.append(f"**Text:** ~{est} tokens ({len(text)} chars)")
+        text_est = len(text) // 4
+        lines.append(f"**Text:** ~{text_est} tokens ({len(text)} chars)")
     if len(lines) == 1:
         lines.append("Provide `table_id`, `draft_id`, or `text`.")
     return "\n".join(lines)
