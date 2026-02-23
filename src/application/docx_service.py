@@ -248,6 +248,21 @@ class DocxService:
                     }
                 md_content = md_path.read_text(encoding="utf-8")
                 yaml_content = yaml_path.read_text(encoding="utf-8")
+
+                split_report = self.integrity.check_split_consistency(
+                    md_content, yaml_content
+                )
+                if split_report.error_count:
+                    return {
+                        "success": False,
+                        "error": (
+                            "Split format consistency check failed. "
+                            "Fix duplicate/mismatched markers in content.md and "
+                            "format.yaml before save_docx."
+                        ),
+                        "warnings": [i.message for i in split_report.issues],
+                    }
+
                 parse_result = self.parser.parse_split(md_content, yaml_content)
             else:
                 if dfm_text is None:
@@ -267,6 +282,20 @@ class DocxService:
                         "detected. Aborting to prevent data loss. "
                         "Use save_docx with from_md=True, or pass .dfm-format content."
                     ),
+                }
+
+            duplicate_id_errors = [
+                e for e in parse_result.errors if e.startswith("DUPLICATE_ID")
+            ]
+            if duplicate_id_errors:
+                return {
+                    "success": False,
+                    "error": (
+                        "Duplicate marker IDs detected in edited content. "
+                        "Aborting to prevent ambiguous write-back. "
+                        "Please make all <!-- @ID --> markers unique."
+                    ),
+                    "warnings": duplicate_id_errors,
                 }
 
             # Verify checksum matches

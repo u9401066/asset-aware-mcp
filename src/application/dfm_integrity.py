@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -288,7 +289,23 @@ class DfmIntegrityChecker:
         """
         report = IntegrityReport()
 
-        md_marker_ids = set(_SPLIT_MARKER_RE.findall(md_text))
+        md_markers = _SPLIT_MARKER_RE.findall(md_text)
+        md_marker_ids = set(md_markers)
+
+        # Detect duplicate marker IDs (high-risk: can misapply edits)
+        marker_counts = Counter(md_markers)
+        duplicate_ids = [
+            marker_id for marker_id, count in marker_counts.items() if count > 1
+        ]
+        if duplicate_ids:
+            report.add(
+                IntegrityIssue(
+                    severity="error",
+                    stage="split_consistency",
+                    message=f"{len(duplicate_ids)} duplicate MD marker IDs found",
+                    details={"ids": sorted(duplicate_ids)[:10]},
+                )
+            )
 
         try:
             fmt = yaml.safe_load(yaml_text)

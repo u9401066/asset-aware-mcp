@@ -621,7 +621,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
 
             existing_bbox = img["bbox"]
             # Handle both fitz.Rect and tuple/list formats
-            if isinstance(existing_bbox, (list, tuple)):  # noqa: UP038
+            if isinstance(existing_bbox, (list, tuple)):  # noqa: UP038 - keep tuple form for Ruff version compatibility
                 existing_bbox = fitz.Rect(existing_bbox)
 
             # Calculate intersection

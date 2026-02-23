@@ -143,7 +143,7 @@ class DocxAdapter:
 
             # 5. Parse document body → blocks
             doc_xml = zf.read("word/document.xml")
-            tree = etree.fromstring(doc_xml)  # noqa: S320
+            tree = etree.fromstring(doc_xml)  # noqa: S320 - parse OOXML from local .docx package
             body = tree.find(f".//{{{NS['w']}}}body")
             if body is not None:
                 self._parse_body(body, ir, rels, assets_dir, parts_dir)
@@ -240,7 +240,7 @@ class DocxAdapter:
             return rels
 
         rels_xml = zf.read(rels_path)
-        tree = etree.fromstring(rels_xml)  # noqa: S320
+        tree = etree.fromstring(rels_xml)  # noqa: S320 - parse OOXML relationships from local .docx package
 
         for rel in tree.findall(f"{{{NS['rel']}}}Relationship"):
             rid = rel.get("Id", "")
@@ -257,7 +257,7 @@ class DocxAdapter:
         # Parse page setup from document.xml (sectPr)
         if "word/document.xml" in zf.namelist():
             doc_xml = zf.read("word/document.xml")
-            tree = etree.fromstring(doc_xml)  # noqa: S320
+            tree = etree.fromstring(doc_xml)  # noqa: S320 - parse OOXML from local .docx package
             sect_pr = tree.find(f".//{{{NS['w']}}}sectPr")
             if sect_pr is not None:
                 style_info.page_setup = self._parse_page_setup(sect_pr)
@@ -265,7 +265,7 @@ class DocxAdapter:
         # Parse default font from styles.xml
         if "word/styles.xml" in zf.namelist():
             styles_xml = zf.read("word/styles.xml")
-            styles_tree = etree.fromstring(styles_xml)  # noqa: S320
+            styles_tree = etree.fromstring(styles_xml)  # noqa: S320 - parse OOXML styles from local .docx package
             doc_defaults = styles_tree.find(f".//{{{NS['w']}}}docDefaults")
             if doc_defaults is not None:
                 rpr_default = doc_defaults.find(
@@ -914,7 +914,7 @@ class DocxAdapter:
             return
 
         fn_xml = zf.read("word/footnotes.xml")
-        tree = etree.fromstring(fn_xml)  # noqa: S320
+        tree = etree.fromstring(fn_xml)  # noqa: S320 - parse OOXML footnotes from local .docx package
 
         for footnote in tree.findall(f"{{{NS['w']}}}footnote"):
             fn_type = footnote.get(f"{{{NS['w']}}}type")
@@ -952,7 +952,7 @@ class DocxAdapter:
                 (parts_dir / safe_name).write_bytes(data)
 
                 # Extract preview text
-                tree = etree.fromstring(data)  # noqa: S320
+                tree = etree.fromstring(data)  # noqa: S320 - parse saved OOXML header fragment
                 preview = self._get_all_text(tree)
 
                 hdr_type = "default"
@@ -978,7 +978,7 @@ class DocxAdapter:
                 safe_name = Path(name).name
                 (parts_dir / safe_name).write_bytes(data)
 
-                preview_tree = etree.fromstring(data)  # noqa: S320
+                preview_tree = etree.fromstring(data)  # noqa: S320 - parse saved OOXML footer fragment
                 preview = self._get_all_text(preview_tree)
 
                 ftr_type = "default"
@@ -1260,7 +1260,7 @@ class DocxAdapter:
         Walks paragraphs and tables in the same order as original parsing,
         matching each to the corresponding IR block by index position.
         """
-        tree = etree.fromstring(doc_xml)  # noqa: S320
+        tree = etree.fromstring(doc_xml)  # noqa: S320 - parse OOXML from local .docx package
         body = tree.find(f".//{{{NS['w']}}}body")
         if body is None:
             return doc_xml
