@@ -6,12 +6,18 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-## 🆕 What's New in v0.3.2
+## 🆕 What's New in v0.3.3
 
+- **`.doc` Auto-Conversion**: `ingest_docx` now accepts legacy `.doc` files — auto-converts via LibreOffice headless
+- **Markdown Escaping Fix**: `_escape_md()` / `_unescape_md()` prevents text content (e.g. `※**`) from being misinterpreted as bold/italic markers
+- **Run Merging**: Adjacent runs with identical formatting are merged before Markdown generation, eliminating `**A****B**` artifacts
+- **Production Hardening**: Dockerfile, PDF magic byte validation, concurrent job limits, structured logging
+- **361 unit tests** passing
+
+### v0.3.2
 - **DFM Integrity Checker**: Automatic validation + auto-repair at every pipeline stage (ingest/save)
 - **File-Level Comparison**: SHA-256 hash + file size + ZIP entry diff for binary-level round-trip verification
 - **CI/CD Migrated to uv**: All pip/setup-python references removed across workflows
-- **271 unit tests** passing
 
 ### v0.3.1
 - **Split Format**: `content.md` + `format.yaml` — 78% less clutter for human editing

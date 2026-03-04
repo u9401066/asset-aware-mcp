@@ -11,6 +11,8 @@ import hashlib
 import json
 import logging
 import shutil
+import subprocess
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -70,6 +72,21 @@ class DocxService:
         path = Path(file_path)
         if not path.exists():
             return {"success": False, "error": f"File not found: {path}"}
+
+        # Auto-convert .doc to .docx via LibreOffice
+        if path.suffix.lower() == ".doc":
+            converted = self._convert_doc_to_docx(path)
+            if converted is None:
+                return {
+                    "success": False,
+                    "error": (
+                        f"Failed to convert .doc to .docx: {path}. "
+                        "Please install LibreOffice (apt install libreoffice-writer)."
+                    ),
+                }
+            logger.info("Auto-converted .doc → .docx: %s → %s", path, converted)
+            path = converted
+
         if path.suffix.lower() not in (".docx", ".docm"):
             return {"success": False, "error": f"Not a docx file: {path}"}
 
@@ -127,6 +144,54 @@ class DocxService:
         except Exception as e:
             logger.exception("Failed to ingest docx: %s", file_path)
             return {"success": False, "error": str(e)}
+
+    # ========================================================================
+    # .doc conversion
+    # ========================================================================
+
+    @staticmethod
+    def _convert_doc_to_docx(doc_path: Path) -> Path | None:
+        """Convert a legacy .doc file to .docx using LibreOffice.
+
+        Returns the path to the converted .docx, or None on failure.
+        """
+        try:
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                result = subprocess.run(  # noqa: S603
+                    [
+                        "libreoffice",
+                        "--headless",
+                        "--convert-to",
+                        "docx",
+                        str(doc_path),
+                        "--outdir",
+                        tmp_dir,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                    check=False,
+                )
+                if result.returncode != 0:
+                    logger.error("LibreOffice conversion failed: %s", result.stderr)
+                    return None
+
+                # Find the converted file
+                converted = Path(tmp_dir) / (doc_path.stem + ".docx")
+                if not converted.exists():
+                    logger.error("Converted file not found: %s", converted)
+                    return None
+
+                # Move to same directory as original
+                dest = doc_path.with_suffix(".docx")
+                shutil.move(str(converted), str(dest))
+                return dest
+        except FileNotFoundError:
+            logger.error("LibreOffice not installed")
+            return None
+        except subprocess.TimeoutExpired:
+            logger.error("LibreOffice conversion timed out")
+            return None
 
     # ========================================================================
     # Read

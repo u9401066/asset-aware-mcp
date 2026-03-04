@@ -47,7 +47,7 @@ def _create_service() -> DocxService:
 
 
 async def cmd_ingest(file_path: str) -> str | None:
-    """匯入 .docx → DFM"""
+    """匯入 .docx/.doc → DFM（.doc 自動轉換為 .docx）"""
     service = _create_service()
     path = Path(file_path).resolve()
     if not path.exists():
@@ -157,7 +157,7 @@ async def cmd_validate(doc_id: str) -> None:
         return
 
     # Run validator
-    from src.application.docx_validator import DocxValidator
+    from src.infrastructure.docx_validator import DocxValidator
 
     validator = DocxValidator()
     report = validator.validate(original, temp_output)

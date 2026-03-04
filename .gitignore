@@ -64,6 +64,10 @@ lightrag_db/
 test_data/
 test_pdfs/
 
+# Test documents (docx/doc files in project root)
+*.doc
+*.docx
+
 # VS Code extension build outputs
 vscode-extension/out/
 vscode-extension/*.vsix

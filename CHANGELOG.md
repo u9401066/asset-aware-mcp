@@ -7,7 +7,7 @@
 
 ## [Unreleased]
 
-## [0.3.3] - 2026-02-22
+## [0.3.3] - 2026-02-23
 
 ### Added
 
@@ -17,6 +17,7 @@
 - **🛡️ PDF magic byte 驗證** — 在 `document_service._ingest_single()` 中驗證 `%PDF-` 標頭，防止非 PDF 檔案偽裝
 - **⚡ 並行 Job 上限** — `MAX_CONCURRENT_JOBS=5`，防止資源耗盡（`job_service.py`）
 - **📊 Structured logging** — `server.py` 新增 `configure_logging()`，統一格式 `%(asctime)s | %(levelname)-8s | %(name)s | %(message)s`
+- **📝 `.doc` 格式自動轉換** — `ingest_docx` 支援舊版 `.doc` 檔案，自動透過 LibreOffice headless 轉換為 `.docx`
 - **🧪 37 個新 MCP 工具層單元測試** — `test_mcp_tool_layer.py`，覆蓋全部 7 個 tool 模組 + server + 新功能
   - 測試類別：TestDocxTools(10), TestJobTools(3), TestDocumentTools(3), TestTableTools(11), TestProfileTools(3), TestKnowledgeTools(1), TestServerStartup(2), TestJobServiceConcurrency(1), TestPDFValidation(2)
 
@@ -24,6 +25,10 @@
 
 - **MCP server 未攔截異常** — `main()` 加入 try/except + `logger.exception()`，避免無訊息斷線
 - **bare `except Exception:` 模式** — 全面加上描述性註解（table_service、dfm_table_bridge、table_tools、document_service）
+- **Markdown 跳脫修復** — 新增 `_escape_md()` / `_unescape_md()`，跳脫 `*`、`~`、`^` 字元，防止文字內容被誤判為 Markdown 格式標記（如 `※**下列` 中的 `**`）
+- **Run 合併優化** — 相鄰相同格式的 runs 先合併再產生 Markdown，避免 `**A****B**` 碎片化
+- **Caption 偵測修正** — 排除 `**...**` bold 模式的誤判為 caption
+- **CLI import path 修正** — `src.application.docx_validator` → `src.infrastructure.docx_validator`
 
 ## [0.3.2] - 2026-02-21
 

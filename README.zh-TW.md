@@ -44,7 +44,7 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 🔄 **非同步任務流水線** - 支援大型文件的非同步處理與進度追蹤。
 - 🗺️ **文件清單 (Manifest)** - 為 Agent 提供結構化的文件「地圖」，實現精確數據存取。
 - 🧠 **LightRAG 整合** - 知識圖譜 + 向量索引，支援跨文件對比與推理。
-- � **Docx 即時編輯 (DFM)** - 以 Markdown 格式編輯 .docx 檔案，透過 **Docx-Flavored Markdown** 格式。提供 8 個工具：匯入、編輯、儲存、往返保真驗證（6 維度評分），以及 Docx ↔ A2T 表格橋接。
+- 📝 **Docx 即時編輯 (DFM)** - 以 Markdown 格式編輯 .docx 檔案，透過 **Docx-Flavored Markdown** 格式。支援舊版 `.doc` 格式（自動透過 LibreOffice 轉換）。提供 8 個工具：匯入、編輯、儲存、往返保真驗證（6 維度評分），以及 Docx ↔ A2T 表格橋接。
 - �📊 **A2T (Anything to Table)** - 7 個 operation-based 工具，從**任意來源**（PDF 資產、知識圖譜、URL、使用者輸入）建立專業表格。支援：**引用管理** (AssetRef)、**變更審計**、**Schema 演進**、**模板**、**草稿機制**與**節省 Token 的續作模式**。
 - 🖥️ **VS Code 管理擴充功能** - 提供圖形化介面監控伺服器狀態、已匯入文件，以及 **A2T 表格與草稿**，支援一鍵開啟 Excel。
 - 🔌 **MCP 伺服器** - 透過 FastMCP 向 Copilot/Claude 開放工具與資源。
@@ -139,11 +139,11 @@ uv run python -m src.presentation.server
 
 ### Docx 編輯工具 (DFM — Docx-Flavored Markdown)
 
-> 以 Markdown 語法編輯 .docx 檔案，往返保留格式、表格、媒體。
+> 以 Markdown 語法編輯 .docx/.doc 檔案，往返保留格式、表格、媒體。支援舊版 `.doc` 自動轉換。
 
 | 工具 | 用途 |
 |------|------|
-| `ingest_docx` | 匯入 .docx 並拆解為 DFM 區塊 |
+| `ingest_docx` | 匯入 .docx/.doc 並拆解為 DFM 區塊 |
 | `get_docx_content` | 讀取指定區塊的 DFM 內容 |
 | `save_docx` | 將 DFM 編輯寫回 .docx |
 | `list_docx_blocks` | 列出文件區塊結構 |

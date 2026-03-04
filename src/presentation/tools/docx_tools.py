@@ -30,10 +30,11 @@ logger = logging.getLogger(__name__)
 @mcp.tool()
 async def ingest_docx(file_path: str) -> str:
     """
-    攝入 .docx 文件，轉換為 DFM (Docx-Flavored Markdown) 格式。
+    攝入 .docx / .doc 文件，轉換為 DFM (Docx-Flavored Markdown) 格式。
 
     將 docx 解析為中間表示 (IR)，再轉換為可在 VS Code 中編輯的 DFM 格式。
     支援複雜元素：合併表格、圖表、頁首頁尾、巨集、目錄等。
+    **支援舊版 .doc 格式**（自動透過 LibreOffice 轉換為 .docx）。
 
     輸出目錄結構：
     ```
@@ -46,7 +47,7 @@ async def ingest_docx(file_path: str) -> str:
     ```
 
     Args:
-        file_path: .docx 檔案的絕對路徑
+        file_path: .docx 或 .doc 檔案的絕對路徑
 
     Returns:
         攝入結果摘要（doc_id、區塊數量等）

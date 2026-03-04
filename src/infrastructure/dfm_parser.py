@@ -532,8 +532,13 @@ class DfmParser:
         elif list_m:
             block_type = DfmBlockType.LIST_ITEM
             clean_content = list_m.group(2)
-        elif raw_content.startswith("*") and raw_content.endswith("*"):
-            # Could be a caption
+        elif (
+            raw_content.startswith("*")
+            and not raw_content.startswith("**")
+            and raw_content.endswith("*")
+            and not raw_content.endswith("**")
+        ):
+            # Could be a caption (italic wrapped *...*, NOT bold **...**)
             block_type = DfmBlockType.CAPTION
             clean_content = raw_content.strip("*").strip()
 
@@ -846,6 +851,15 @@ class DfmParser:
     # ========================================================================
 
     @staticmethod
+    def _unescape_md(text: str) -> str:
+        """Reverse Markdown escaping applied by DfmRenderer._escape_md."""
+        text = text.replace("\\*", "*")
+        text = text.replace("\\~", "~")
+        text = text.replace("\\^", "^")
+        text = text.replace("\\\\", "\\")
+        return text
+
+    @staticmethod
     def _md_to_plain(text: str) -> str:
         """Strip common Markdown formatting to get plain text."""
         # Bold+italic
@@ -853,11 +867,13 @@ class DfmParser:
         # Bold
         text = re.sub(r"\*{2}(.+?)\*{2}", r"\1", text)
         # Italic
-        text = re.sub(r"\*(.+?)\*", r"\1", text)
+        text = re.sub(r"(?<!\\)\*(.+?)(?<!\\)\*", r"\1", text)
         # Strikethrough
         text = re.sub(r"~~(.+?)~~", r"\1", text)
         # Superscript
         text = re.sub(r"\^(.+?)\^", r"\1", text)
         # Subscript (pandoc-style)
         text = re.sub(r"~(.+?)~", r"\1", text)
+        # Unescape after stripping markers
+        text = DfmParser._unescape_md(text)
         return text

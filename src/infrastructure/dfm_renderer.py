@@ -749,24 +749,50 @@ class DfmRenderer:
     # ========================================================================
 
     @staticmethod
+    def _escape_md(text: str) -> str:
+        """Escape Markdown-special characters so they survive round-trip."""
+        # Backslash must be first to avoid double-escaping
+        text = text.replace("\\", "\\\\")
+        text = text.replace("*", "\\*")
+        text = text.replace("~", "\\~")
+        text = text.replace("^", "\\^")
+        return text
+
+    @staticmethod
     def _runs_to_md(runs: list[FormatRun]) -> str:
-        """Convert format runs to Markdown-formatted text."""
-        parts = []
+        """Convert format runs to Markdown-formatted text.
+
+        Merges adjacent runs with identical formatting to produce
+        cleaner Markdown (e.g. ``**AB**`` instead of ``**A****B**``).
+        """
+        if not runs:
+            return ""
+
+        # Group consecutive runs by formatting key
+        groups: list[tuple[tuple, list[str]]] = []
         for run in runs:
-            text = run.text
-            if not text:
+            if not run.text:
                 continue
-            if run.bold and run.italic:
+            key = (run.bold, run.italic, run.strike, run.superscript, run.subscript)
+            if groups and groups[-1][0] == key:
+                groups[-1][1].append(run.text)
+            else:
+                groups.append((key, [run.text]))
+
+        parts = []
+        for (bold, italic, strike, superscript, subscript), texts in groups:
+            text = DfmRenderer._escape_md("".join(texts))
+            if bold and italic:
                 text = f"***{text}***"
-            elif run.bold:
+            elif bold:
                 text = f"**{text}**"
-            elif run.italic:
+            elif italic:
                 text = f"*{text}*"
-            if run.strike:
+            if strike:
                 text = f"~~{text}~~"
-            if run.superscript:
+            if superscript:
                 text = f"^{text}^"
-            if run.subscript:
+            if subscript:
                 text = f"~{text}~"
             parts.append(text)
         return "".join(parts)

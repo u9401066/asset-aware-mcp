@@ -1,4 +1,4 @@
-# Progress (Updated: 2026-02-21)
+# Progress (Updated: 2026-02-23)
 
 ## Done
 
@@ -26,15 +26,22 @@
   - DocxValidator: SHA-256 + 檔案大小 + ZIP diff
   - CI/CD: pip → uv 全面遷移
   - 271 單元測試全數通過
+- ✅ **v0.3.3: 生產強化 + .doc 支援 + Markdown 跳脫修復**
+  - Dockerfile + PDF magic byte + 並行 Job 上限 + Structured logging
+  - `.doc` 格式自動轉換（LibreOffice headless）
+  - Markdown `_escape_md()` / `_unescape_md()` + Run 合併
+  - Round-trip 驗證：2 份文件 100% 通過
+  - 361 單元測試全數通過
 
 ## Doing
 
-- 🚧 測試覆蓋率與品質強化（目標 60%+）
+- 🚧 v0.3.3 發布（文檔 + VSX + Git tag）
 
 ---
 
 ## Released
 
+- ✅ **v0.3.3**: 生產強化 + .doc 支援 + Markdown 跳脫修復 (2026-02-23)
 - ✅ **v0.3.2**: Integrity Checker + 檔案層級比對 + uv 遷移 (2026-02-21)
 - ✅ **v0.3.1**: 分離格式 + CLI + Bug 修復 (2026-02-21)
 - ✅ **v0.3.0**: Docx DFM 即時編輯系統 (2026-02-11)
