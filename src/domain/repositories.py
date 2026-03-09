@@ -9,10 +9,11 @@ Infrastructure layer provides HOW they are implemented.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from .entities import DocumentManifest, DocumentSummary
     from .job import Job, JobSummary
     from .table_entities import TableContext

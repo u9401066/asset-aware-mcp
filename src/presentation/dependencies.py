@@ -70,7 +70,7 @@ docx_service = DocxService(repository=repository)
 dfm_table_bridge = DfmTableBridge()
 
 # Docx round-trip validator
-from src.infrastructure.docx_validator import DocxValidator
+from src.infrastructure.docx_validator import DocxValidator  # noqa: E402
 
 docx_validator = DocxValidator()
 

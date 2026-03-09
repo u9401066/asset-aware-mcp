@@ -345,7 +345,7 @@ class ETLProfileRegistry:
     plus the ability to register custom profiles at runtime.
     """
 
-    _profiles: dict[str, ETLProfile] = {}
+    _profiles: dict[str, ETLProfile] = {}  # noqa: RUF012 — intentional mutable class var for registry pattern
 
     @classmethod
     def _ensure_builtins(cls) -> None:

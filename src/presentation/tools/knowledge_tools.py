@@ -103,18 +103,18 @@ async def export_knowledge_graph(
             "### Entity Types",
         ]
         for etype, count in cast(
-            dict[str, int], result.get("entity_types", {})
+            "dict[str, int]", result.get("entity_types", {})
         ).items():
             lines.append(f"- {etype}: {count}")
 
         lines.append("\n### Sample Nodes")
-        for node in cast(list[dict[str, str]], result.get("sample_nodes", []))[:5]:
+        for node in cast("list[dict[str, str]]", result.get("sample_nodes", []))[:5]:
             lines.append(f"- **{node['id']}** ({node['type']})")
             if node.get("description"):
                 lines.append(f"  _{node['description'][:100]}_")
 
         lines.append("\n### Sample Relationships")
-        for edge in cast(list[dict[str, str]], result.get("sample_edges", []))[:5]:
+        for edge in cast("list[dict[str, str]]", result.get("sample_edges", []))[:5]:
             lines.append(f"- {edge['source']} → {edge['target']}")
             if edge.get("keywords"):
                 lines.append(f"  _Keywords: {edge['keywords']}_")

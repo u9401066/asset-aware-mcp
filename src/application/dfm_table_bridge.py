@@ -363,7 +363,7 @@ def _parse_chart_xml_to_table(
         return None
 
     try:
-        root = etree.fromstring(chart_xml.encode("utf-8"))  # noqa: S320  # trusted internal XML
+        root = etree.fromstring(chart_xml.encode("utf-8"))  # trusted internal XML
     except etree.XMLSyntaxError:
         logger.warning("Invalid chart XML for block %s", block.id)
         return None

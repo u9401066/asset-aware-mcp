@@ -6,7 +6,10 @@ Use cases for knowledge graph queries.
 
 from __future__ import annotations
 
-from src.domain.repositories import KnowledgeGraphInterface
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.domain.repositories import KnowledgeGraphInterface
 
 
 class KnowledgeService:

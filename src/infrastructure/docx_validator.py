@@ -446,7 +446,7 @@ class DocxValidator:
                 return data
 
             doc_xml = zf.read("word/document.xml")
-            tree = etree.fromstring(doc_xml)  # noqa: S320
+            tree = etree.fromstring(doc_xml)
             body = tree.find(f".//{{{NS['w']}}}body")
             if body is None:
                 return data

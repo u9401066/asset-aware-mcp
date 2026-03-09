@@ -453,16 +453,14 @@ class TableContext:
                 continue
 
             # Check type
-            if col.type == "number":
-                if not isinstance(val, int | float):
-                    errors.append(
-                        f"Column '{col.name}' must be a number, got {type(val).__name__}"
-                    )
-            elif col.type == "enum":
-                if col.enum_values and val not in col.enum_values:
-                    errors.append(
-                        f"Invalid value for enum column '{col.name}': '{val}'. Allowed: {col.enum_values}"
-                    )
+            if col.type == "number" and not isinstance(val, int | float):
+                errors.append(
+                    f"Column '{col.name}' must be a number, got {type(val).__name__}"
+                )
+            elif col.type == "enum" and col.enum_values and val not in col.enum_values:
+                errors.append(
+                    f"Invalid value for enum column '{col.name}': '{val}'. Allowed: {col.enum_values}"
+                )
             # Basic URL validation could be added here if needed
 
         return errors

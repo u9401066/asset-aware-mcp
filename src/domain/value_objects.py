@@ -224,7 +224,7 @@ class DocId:
         # Clean filename
         name = re.sub(r"[^a-z0-9]", "_", filename.lower())[:30]
         # Add hash for uniqueness
-        hash_suffix = hashlib.md5(unique_suffix.encode()).hexdigest()[:6]
+        hash_suffix = hashlib.md5(unique_suffix.encode()).hexdigest()[:6]  # noqa: S324 — non-security use for ID generation
         return cls(f"doc_{name}_{hash_suffix}")
 
     @property

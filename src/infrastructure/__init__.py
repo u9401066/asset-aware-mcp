@@ -43,18 +43,18 @@ def get_pdf_extractor() -> PyMuPDFExtractor:
 
 
 __all__ = [
-    "settings",
-    "FileStorage",
+    "_HAS_LIGHTRAG",
+    "_HAS_MARKER",
+    # Availability flags
+    "_HAS_PYMUPDF",
     "FileJobStore",
+    "FileStorage",
     "InMemoryJobStore",
     "JobStoreInterface",
     "LightRAGAdapter",
+    "MarkerPDFExtractor",
     # PDF Extractors
     "PyMuPDFExtractor",
-    "MarkerPDFExtractor",
     "get_pdf_extractor",
-    # Availability flags
-    "_HAS_PYMUPDF",
-    "_HAS_LIGHTRAG",
-    "_HAS_MARKER",
+    "settings",
 ]

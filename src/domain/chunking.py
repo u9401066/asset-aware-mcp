@@ -521,10 +521,7 @@ def smart_chunk(
     # Choose strategy
     if strategy == "auto":
         # Use page-aware for PDFs with markers, semantic otherwise
-        if "<!-- Page" in text:
-            strategy = "page_aware"
-        else:
-            strategy = "semantic"
+        strategy = "page_aware" if "<!-- Page" in text else "semantic"
 
     chunker = get_chunker(strategy)
     return chunker.chunk(text, config)

@@ -66,47 +66,47 @@ from src.presentation.tools.table_tools import (
 )
 
 __all__ = [
-    # Document tools (6)
-    "parse_pdf_structure",
-    "search_source_location",
-    "ingest_documents",
-    "list_documents",
-    "inspect_document_manifest",
-    "fetch_document_asset",
-    # Docx tools (8)
-    "ingest_docx",
-    "get_docx_content",
-    "save_docx",
-    "list_docx_blocks",
-    "docx_validate_roundtrip",
-    "docx_table_to_context",
-    "docx_table_from_context",
-    "docx_chart_data",
-    # Section tools (5)
-    "list_section_tree",
-    "get_section_detail",
-    "get_section_blocks",
-    "search_sections",
-    "get_section_content",
-    # Job tools (3)
-    "get_job_status",
-    "list_jobs",
     "cancel_job",
     # Knowledge tools (2)
     "consult_knowledge_graph",
+    "discover_sources",
+    "docx_chart_data",
+    "docx_table_from_context",
+    "docx_table_to_context",
+    "docx_validate_roundtrip",
     "export_knowledge_graph",
+    "fetch_document_asset",
+    "get_current_etl_profile",
+    "get_docx_content",
+    "get_etl_profile",
+    # Job tools (3)
+    "get_job_status",
+    "get_section_blocks",
+    "get_section_content",
+    "get_section_detail",
+    "ingest_documents",
+    # Docx tools (8)
+    "ingest_docx",
+    "inspect_document_manifest",
+    "list_documents",
+    "list_docx_blocks",
     # Profile tools (5)
     "list_etl_profiles",
-    "get_etl_profile",
-    "get_current_etl_profile",
-    "set_etl_profile",
+    "list_jobs",
+    # Section tools (5)
+    "list_section_tree",
     "load_etl_profile_from_json",
+    # Document tools (6)
+    "parse_pdf_structure",
     # Table tools (7) — v0.2.14 consolidated
     "plan_table",
-    "table_manage",
-    "table_data",
+    "save_docx",
+    "search_sections",
+    "search_source_location",
+    "set_etl_profile",
     "table_cite",
-    "table_history",
+    "table_data",
     "table_draft",
-    "discover_sources",
+    "table_history",
+    "table_manage",
 ]

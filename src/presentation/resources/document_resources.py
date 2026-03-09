@@ -267,11 +267,11 @@ async def resource_knowledge_graph_summary() -> str:
         "## Entity Types",
     ]
 
-    for etype, count in cast(dict[str, int], result.get("entity_types", {})).items():
+    for etype, count in cast("dict[str, int]", result.get("entity_types", {})).items():
         lines.append(f"- **{etype}:** {count}")
 
     lines.append("\n## Sample Entities")
-    for node in cast(list[dict[str, str]], result.get("sample_nodes", []))[:8]:
+    for node in cast("list[dict[str, str]]", result.get("sample_nodes", []))[:8]:
         lines.append(f"- {node['id']} ({node['type']})")
 
     lines.extend(

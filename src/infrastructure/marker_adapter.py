@@ -244,7 +244,7 @@ class MarkerPDFExtractor:
                     buf = io.BytesIO()
                     img.save(buf, format="PNG")
                     images[name] = buf.getvalue()
-                except Exception:
+                except Exception:  # noqa: S112 — image extraction failure is non-critical
                     continue
 
         return images
@@ -319,7 +319,7 @@ class MarkerPDFExtractor:
 
                 img = Image.open(io.BytesIO(img_bytes))
                 width, height = img.size
-            except Exception:
+            except Exception:  # noqa: S110 — PIL image size read failure is non-critical
                 pass
 
             figures.append(

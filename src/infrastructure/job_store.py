@@ -47,7 +47,7 @@ class FileJobStore(JobStoreInterface):
         if path.exists():
             raise ValueError(f"Job {job.job_id} already exists")
 
-        with open(path, "w", encoding="utf-8") as f:
+        with path.open("w", encoding="utf-8") as f:
             json.dump(job.model_dump(mode="json"), f, indent=2, default=str)
 
         logger.info(f"Created job: {job.job_id}")
@@ -62,7 +62,7 @@ class FileJobStore(JobStoreInterface):
             return None
 
         try:
-            with open(path, encoding="utf-8") as f:
+            with path.open(encoding="utf-8") as f:
                 data = json.load(f)
             return Job.model_validate(data)
         except Exception as e:
@@ -73,7 +73,7 @@ class FileJobStore(JobStoreInterface):
         """Update an existing job."""
         path = self._job_path(job.job_id)
 
-        with open(path, "w", encoding="utf-8") as f:
+        with path.open("w", encoding="utf-8") as f:
             json.dump(job.model_dump(mode="json"), f, indent=2, default=str)
 
         return job
@@ -95,7 +95,7 @@ class FileJobStore(JobStoreInterface):
 
         for path in self.jobs_dir.glob("*.json"):
             try:
-                with open(path, encoding="utf-8") as f:
+                with path.open(encoding="utf-8") as f:
                     data = json.load(f)
                 job = Job.model_validate(data)
                 jobs.append((job.created_at, JobSummary.from_job(job)))
@@ -115,7 +115,7 @@ class FileJobStore(JobStoreInterface):
 
         for path in self.jobs_dir.glob("*.json"):
             try:
-                with open(path, encoding="utf-8") as f:
+                with path.open(encoding="utf-8") as f:
                     data = json.load(f)
                 job = Job.model_validate(data)
                 if not job.is_terminal:
@@ -134,7 +134,7 @@ class FileJobStore(JobStoreInterface):
 
         for path in self.jobs_dir.glob("*.json"):
             try:
-                with open(path, encoding="utf-8") as f:
+                with path.open(encoding="utf-8") as f:
                     data = json.load(f)
                 job = Job.model_validate(data)
 

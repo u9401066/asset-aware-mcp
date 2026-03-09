@@ -7,10 +7,12 @@ Application Layer - Section Service
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from src.domain.section_tree import SectionTree, build_section_tree_from_blocks
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class SectionService:
@@ -74,7 +76,7 @@ class SectionService:
                 doc_title = (
                     manifest.get("title") or manifest.get("filename") or "Document"
                 )
-            except Exception:
+            except Exception:  # noqa: S110 — manifest parse failure is non-critical
                 pass
 
         # 建構 tree
@@ -265,7 +267,7 @@ class SectionService:
         )
 
         if node.children:
-            first_child = list(node.children.values())[0]
+            first_child = next(iter(node.children.values()))
             lines.append(
                 f'- Drill down: `get_section_detail("{doc_id}", "{"/".join(first_child.path)}")`'
             )

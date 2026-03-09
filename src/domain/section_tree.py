@@ -7,9 +7,11 @@ Domain Layer - Section Tree
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 @dataclass
@@ -69,7 +71,7 @@ class SectionNode:
         if title not in self.children:
             self.children[title] = SectionNode(
                 title=title,
-                path=self.path + [title],
+                path=[*self.path, title],
                 depth=self.depth + 1,
             )
         return self.children[title]
@@ -82,12 +84,14 @@ class SectionNode:
             self.text_length += child.text_length
 
             # 更新頁碼範圍
-            if child.page_start is not None:
-                if self.page_start is None or child.page_start < self.page_start:
-                    self.page_start = child.page_start
-            if child.page_end is not None:
-                if self.page_end is None or child.page_end > self.page_end:
-                    self.page_end = child.page_end
+            if child.page_start is not None and (
+                self.page_start is None or child.page_start < self.page_start
+            ):
+                self.page_start = child.page_start
+            if child.page_end is not None and (
+                self.page_end is None or child.page_end > self.page_end
+            ):
+                self.page_end = child.page_end
 
     def get_all_block_ids(self) -> list[str]:
         """取得所有 block IDs（含子節點）。"""
@@ -333,10 +337,7 @@ class SectionTree:
             return []
 
         # 取得 block IDs
-        if include_children:
-            block_ids = node.get_all_block_ids()
-        else:
-            block_ids = node.block_ids
+        block_ids = node.get_all_block_ids() if include_children else node.block_ids
 
         # 取得 block 資料
         result = []
@@ -344,9 +345,8 @@ class SectionTree:
             block = self.blocks.get(bid)
             if block:
                 # 檢查類型篩選
-                if block_types:
-                    if block.get("block_type") not in block_types:
-                        continue
+                if block_types and block.get("block_type") not in block_types:
+                    continue
                 result.append(block)
 
         # 按頁碼排序

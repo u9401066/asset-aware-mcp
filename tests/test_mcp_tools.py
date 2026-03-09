@@ -32,7 +32,7 @@ async def test_job_system():
     # 2. Test ingest_documents with async mode (non-existent file to test job creation)
     print("\n📄 2. Testing ingest_documents (async mode)...")
     # Use a test file path - will fail but should create a job
-    test_file = "/tmp/test_document.pdf"
+    test_file = "/tmp/test_document.pdf"  # noqa: S108 — test-only temp path
 
     # Create a dummy PDF for testing
     Path(test_file).write_bytes(b"%PDF-1.4 test")

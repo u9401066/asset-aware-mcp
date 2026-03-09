@@ -895,7 +895,7 @@ class TestWeightedScoring:
     def test_text_dominates(self, validator: DocxValidator, tmp_docx_dir: Path):
         """Text has highest weight (0.35), so text errors should impact score most."""
         # Perfect structure/format/table/media/style but imperfect text
-        report = ValidationReport(
+        ValidationReport(
             structure_score=1.0,
             text_score=0.0,  # All text wrong
             format_score=1.0,

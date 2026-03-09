@@ -57,7 +57,7 @@ class FigureAsset(BaseModel):
         if not img_path.exists():
             raise FileNotFoundError(f"Image not found: {self.path}")
 
-        with open(img_path, "rb") as f:
+        with img_path.open("rb") as f:
             return base64.b64encode(f.read()).decode("utf-8")
 
     def get_media_type(self) -> ImageMediaType:

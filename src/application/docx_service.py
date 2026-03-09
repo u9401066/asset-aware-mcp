@@ -157,7 +157,7 @@ class DocxService:
         """
         try:
             with tempfile.TemporaryDirectory() as tmp_dir:
-                result = subprocess.run(  # noqa: S603
+                result = subprocess.run(
                     [
                         "libreoffice",
                         "--headless",
