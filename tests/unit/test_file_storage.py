@@ -208,7 +208,7 @@ class TestFileStorage:
                 {
                     "doc_id": "docx_demo_123",
                     "source_filename": "demo.docx",
-                    "source_path": "/tmp/demo.docx",
+                    "source_path": "/workspace/demo.docx",
                     "created_at": "2026-02-09T18:59:45",
                     "updated_at": "2026-02-10T08:00:00",
                     "blocks": [

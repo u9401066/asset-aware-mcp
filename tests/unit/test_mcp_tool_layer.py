@@ -218,7 +218,7 @@ class TestDocxTools:
                     "success": True,
                     "doc_id": "docx_123",
                     "mode": "fidelity",
-                    "output_path": "/tmp/output.pdf",
+                    "output_path": "/workspace/output.pdf",
                 }
             )
             from src.presentation.tools.docx_tools import convert_docx_to_pdf
@@ -235,7 +235,7 @@ class TestDocxTools:
                     "success": True,
                     "doc_id": "docx_123",
                     "mode": "fidelity",
-                    "output_path": "/tmp/output.doc",
+                    "output_path": "/workspace/output.doc",
                 }
             )
             from src.presentation.tools.docx_tools import convert_docx_to_doc
@@ -246,28 +246,29 @@ class TestDocxTools:
 
     async def test_docx_validate_roundtrip_strict(self, tmp_path: Path) -> None:
         """docx_validate_roundtrip forwards strict mode to validator."""
-        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
-            with patch("src.presentation.tools.docx_tools.docx_validator") as mock_validator:
-                doc_dir = tmp_path / "docx_123"
-                doc_dir.mkdir()
-                (doc_dir / "original.docx").write_bytes(b"docx")
+        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc, patch(
+            "src.presentation.tools.docx_tools.docx_validator"
+        ) as mock_validator:
+            doc_dir = tmp_path / "docx_123"
+            doc_dir.mkdir()
+            (doc_dir / "original.docx").write_bytes(b"docx")
 
-                mock_svc.repository.get_doc_dir.return_value = doc_dir
-                mock_svc._load_ir.return_value = {"doc_id": "docx_123"}
-                mock_svc.adapter.ir_to_docx.return_value = None
+            mock_svc.repository.get_doc_dir.return_value = doc_dir
+            mock_svc._load_ir.return_value = {"doc_id": "docx_123"}
+            mock_svc.adapter.ir_to_docx.return_value = None
 
-                report = MagicMock()
-                report.to_markdown.return_value = "STRICT PASS"
-                mock_validator.validate.return_value = report
+            report = MagicMock()
+            report.to_markdown.return_value = "STRICT PASS"
+            mock_validator.validate.return_value = report
 
-                from src.presentation.tools.docx_tools import docx_validate_roundtrip
+            from src.presentation.tools.docx_tools import docx_validate_roundtrip
 
-                result = await docx_validate_roundtrip("docx_123", strict=True)
+            result = await docx_validate_roundtrip("docx_123", strict=True)
 
-                assert result == "STRICT PASS"
-                mock_validator.validate.assert_called_once()
-                _, kwargs = mock_validator.validate.call_args
-                assert kwargs["strict"] is True
+            assert result == "STRICT PASS"
+            mock_validator.validate.assert_called_once()
+            _, kwargs = mock_validator.validate.call_args
+            assert kwargs["strict"] is True
 
 
 # ============================================================================
@@ -373,7 +374,7 @@ class TestDocumentTools:
                     "success": True,
                     "doc_id": "doc_123",
                     "mode": "content",
-                    "output_path": "/tmp/converted.docx",
+                    "output_path": "/workspace/converted.docx",
                     "figures_embedded": 2,
                     "tables_found": 1,
                 }

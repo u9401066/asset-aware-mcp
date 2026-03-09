@@ -7,6 +7,14 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-03-09
+
+### Fixed
+
+- **Release workflow CI 對齊**
+  - 修正新測試檔在 GitHub Actions `ruff check .` 下的 lint 問題（安全路徑字串、巢狀 `with`、EOF newline）
+  - 確保 Release workflow 與本機 `scripts/release.sh` 均可完整通過
+
 ## [0.4.0] - 2026-03-09
 
 ### Added

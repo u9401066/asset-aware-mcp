@@ -6,6 +6,7 @@
 
 ## 最近完成 ✅
 
+- **v0.4.1** (2026-03-09) — Release workflow lint 對齊，確保 GitHub Actions 發版全綠
 - **v0.4.0** (2026-03-09) — 文件級 CRUD、DOCX/PDF 互轉、strict round-trip、Proposal 真實文件戰測
 - **v0.3.3** (2026-02-23) — 生產強化、`.doc` 自動轉換、Markdown escaping 修復
 - **v0.3.2** (2026-02-21) — DFM Integrity Checker、檔案層級比對、全面遷移至 uv

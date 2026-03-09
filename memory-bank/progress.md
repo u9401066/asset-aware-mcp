@@ -8,10 +8,11 @@
 - 修正 protected block placeholder 被誤判為編輯的 parser/integrity 根因問題
 - 同步更新 CLI 與 README/README.zh-TW 的 42 tools 文件描述
 - 完成 0.4.0 release 驗證：ruff、mypy、336 單元測試、Python build、VSIX 0.4.0 打包
+- 修正 GitHub Release workflow 專屬 lint 問題，準備滾動 patch release v0.4.1
 
 ## Doing
 
-- commit / push / tag v0.4.0
+- push / tag v0.4.1 並確認 CI/Release workflow 全綠
 
 ## Next
 

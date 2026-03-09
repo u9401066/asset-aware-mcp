@@ -8,7 +8,7 @@ def test_check_pre_save_does_not_warn_for_unchanged_protected_block():
     checker = DfmIntegrityChecker()
     ir = DocxIR(
         doc_id="docx_123",
-        source_path="/tmp/demo.docx",
+        source_path="/workspace/demo.docx",
         blocks=[
             DfmBlock(id="toc001", block_type=DfmBlockType.TOC, content="Table of Contents"),
         ],
@@ -29,7 +29,7 @@ def test_check_pre_save_warns_for_changed_protected_block():
     checker = DfmIntegrityChecker()
     ir = DocxIR(
         doc_id="docx_123",
-        source_path="/tmp/demo.docx",
+        source_path="/workspace/demo.docx",
         blocks=[
             DfmBlock(id="toc001", block_type=DfmBlockType.TOC, content="Table of Contents"),
         ],

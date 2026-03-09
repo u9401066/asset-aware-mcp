@@ -147,7 +147,7 @@ def test_detect_unedited_block_mutations():
 
     original_ir = DocxIR(
         doc_id="docx_123",
-        source_path="/tmp/original.docx",
+        source_path="/workspace/original.docx",
         blocks=[
             DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="A"),
             DfmBlock(id="p002", block_type=DfmBlockType.PARAGRAPH, content="B"),
@@ -155,7 +155,7 @@ def test_detect_unedited_block_mutations():
     )
     updated_ir = DocxIR(
         doc_id="docx_123",
-        source_path="/tmp/original.docx",
+        source_path="/workspace/original.docx",
         blocks=[
             DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="A2"),
             DfmBlock(id="p002", block_type=DfmBlockType.PARAGRAPH, content="BROKEN"),
@@ -179,7 +179,7 @@ async def test_save_docx_fails_when_unedited_block_changes(monkeypatch, tmp_path
     service = DocxService(repository=repository)
     ir = DocxIR(
         doc_id="docx_123",
-        source_path="/tmp/original.docx",
+        source_path="/workspace/original.docx",
         blocks=[
             DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="Before"),
             DfmBlock(id="p002", block_type=DfmBlockType.PARAGRAPH, content="Safe"),
@@ -212,3 +212,4 @@ async def test_save_docx_fails_when_unedited_block_changes(monkeypatch, tmp_path
     assert result["success"] is False
     assert "Unexpected changes detected in unedited blocks" in result["error"]
     assert any("p002" in warning for warning in result["warnings"])
+

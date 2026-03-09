@@ -26,6 +26,7 @@ blocks:
     assert [edit.block_id for edit in result.edits] == ["p001"]
 
 
+
 def test_parse_dfm_skips_protected_compound_blocks():
     parser = DfmParser()
     dfm_text = """---

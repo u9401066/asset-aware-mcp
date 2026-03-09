@@ -4,8 +4,8 @@
 
 ## 🎯 當前焦點
 
-- **v0.4.0 發布準備中**：文件級 CRUD、互轉、strict round-trip 驗證、CLI 與 VSX 文件同步
-- **下一步**：完成 release 驗證、commit、push、tag
+- **v0.4.1 發布準備中**：修正 0.4.0 tag 後暴露的 Release workflow lint 問題，確保真正全綠發布
+- **下一步**：完成 v0.4.1 驗證、push、tag、確認 GitHub Actions
 
 ## 🆕 v0.4.0 新功能
 

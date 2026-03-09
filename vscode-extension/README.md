@@ -6,7 +6,11 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-## 🆕 What's New in v0.4.0
+## 🆕 What's New in v0.4.1
+
+- **Release Workflow Hardening**: Fixed test lint issues that only surfaced under GitHub Actions `ruff check .`, ensuring the tagged release passes CI cleanly
+
+### v0.4.0
 
 - **Document CRUD + Conversion**: Added `delete_document`, `delete_docx`, `list_docx_documents`, `convert_docx_to_pdf`, `convert_docx_to_doc`, and `convert_pdf_to_docx`
 - **Strict Round-Trip Validation**: `docx_validate_roundtrip(..., strict=true)` now supports fail-closed validation for structure/text/format/table/media/style regressions
