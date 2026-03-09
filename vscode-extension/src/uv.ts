@@ -9,7 +9,7 @@ export function getUvPaths(
     platform: NodeJS.Platform = process.platform,
     env: NodeJS.ProcessEnv = process.env,
 ): string[] {
-    const pathApi = platform === 'win32' ? path.win32 : path;
+    const pathApi = platform === 'win32' ? path.win32 : path.posix;
     const homeDir = env.HOME || env.USERPROFILE || '';
     const cargoHome = env.CARGO_HOME || pathApi.join(homeDir, '.cargo');
     const localAppData = env.LOCALAPPDATA || pathApi.join(homeDir, 'AppData', 'Local');
