@@ -6,7 +6,11 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-## 🆕 What's New in v0.4.1
+## 🆕 What's New in v0.4.2
+
+- **Release Validation Parity**: `scripts/release.sh` now checks the full repository with the same Ruff scope as GitHub Actions, preventing tag-only CI surprises
+
+### v0.4.1
 
 - **Release Workflow Hardening**: Fixed test lint issues that only surfaced under GitHub Actions `ruff check .`, ensuring the tagged release passes CI cleanly
 

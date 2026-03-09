@@ -6,6 +6,7 @@
 
 ## 最近完成 ✅
 
+- **v0.4.2** (2026-03-09) — release.sh 與 GitHub Actions 靜態檢查範圍完全對齊
 - **v0.4.1** (2026-03-09) — Release workflow lint 對齊，確保 GitHub Actions 發版全綠
 - **v0.4.0** (2026-03-09) — 文件級 CRUD、DOCX/PDF 互轉、strict round-trip、Proposal 真實文件戰測
 - **v0.3.3** (2026-02-23) — 生產強化、`.doc` 自動轉換、Markdown escaping 修復

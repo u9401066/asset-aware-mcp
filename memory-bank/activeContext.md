@@ -4,8 +4,8 @@
 
 ## 🎯 當前焦點
 
-- **v0.4.1 發布準備中**：修正 0.4.0 tag 後暴露的 Release workflow lint 問題，確保真正全綠發布
-- **下一步**：完成 v0.4.1 驗證、push、tag、確認 GitHub Actions
+- **v0.4.2 發布準備中**：補上 release.sh 與 GitHub Actions 的 repo 級檢查一致性，確保最終 tag 真正可發布
+- **下一步**：完成 v0.4.2 push、tag、確認 GitHub Actions
 
 ## 🆕 v0.4.0 新功能
 

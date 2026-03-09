@@ -23,8 +23,8 @@ cd "$PROJECT_ROOT"
 echo -e "\n${YELLOW}📋 Step 1: Static Analysis${NC}"
 
 echo "Running ruff..."
-uv run ruff check src/
-uv run ruff format src/
+uv run ruff check .
+uv run ruff format --check .
 
 echo "Running mypy..."
 uv run mypy src/ --ignore-missing-imports

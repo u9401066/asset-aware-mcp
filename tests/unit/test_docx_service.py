@@ -81,7 +81,9 @@ async def test_convert_to_pdf_success(monkeypatch, tmp_path: Path):
 
     service = DocxService(repository=repository)
     service.get_dfm = AsyncMock(return_value="# title")
-    service.save_docx = AsyncMock(return_value={"success": True, "output_path": str(tmp_path / "tmp.docx")})
+    service.save_docx = AsyncMock(
+        return_value={"success": True, "output_path": str(tmp_path / "tmp.docx")}
+    )
 
     output_pdf = tmp_path / "result.pdf"
     monkeypatch.setattr(
@@ -212,4 +214,3 @@ async def test_save_docx_fails_when_unedited_block_changes(monkeypatch, tmp_path
     assert result["success"] is False
     assert "Unexpected changes detected in unedited blocks" in result["error"]
     assert any("p002" in warning for warning in result["warnings"])
-

@@ -10,7 +10,9 @@ def test_check_pre_save_does_not_warn_for_unchanged_protected_block():
         doc_id="docx_123",
         source_path="/workspace/demo.docx",
         blocks=[
-            DfmBlock(id="toc001", block_type=DfmBlockType.TOC, content="Table of Contents"),
+            DfmBlock(
+                id="toc001", block_type=DfmBlockType.TOC, content="Table of Contents"
+            ),
         ],
     )
     parse_result = DfmParseResult(
@@ -31,7 +33,9 @@ def test_check_pre_save_warns_for_changed_protected_block():
         doc_id="docx_123",
         source_path="/workspace/demo.docx",
         blocks=[
-            DfmBlock(id="toc001", block_type=DfmBlockType.TOC, content="Table of Contents"),
+            DfmBlock(
+                id="toc001", block_type=DfmBlockType.TOC, content="Table of Contents"
+            ),
         ],
     )
     parse_result = DfmParseResult(

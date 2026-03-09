@@ -7,6 +7,14 @@
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-03-09
+
+### Fixed
+
+- **本機 release 驗證與 GitHub Actions 完全對齊**
+  - `scripts/release.sh` 改為檢查整個 repo：`ruff check .`、`ruff format --check .`
+  - 修正測試檔格式與 EOF newline，消除 release-only CI failure
+
 ## [0.4.1] - 2026-03-09
 
 ### Fixed

@@ -246,9 +246,10 @@ class TestDocxTools:
 
     async def test_docx_validate_roundtrip_strict(self, tmp_path: Path) -> None:
         """docx_validate_roundtrip forwards strict mode to validator."""
-        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc, patch(
-            "src.presentation.tools.docx_tools.docx_validator"
-        ) as mock_validator:
+        with (
+            patch("src.presentation.tools.docx_tools.docx_service") as mock_svc,
+            patch("src.presentation.tools.docx_tools.docx_validator") as mock_validator,
+        ):
             doc_dir = tmp_path / "docx_123"
             doc_dir.mkdir()
             (doc_dir / "original.docx").write_bytes(b"docx")
@@ -385,7 +386,6 @@ class TestDocumentTools:
             assert "✅" in result
             assert "converted.docx" in result
             assert "figures_embedded" in result
-
 
 
 # ============================================================================

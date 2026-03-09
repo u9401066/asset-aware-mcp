@@ -9,10 +9,11 @@
 - 同步更新 CLI 與 README/README.zh-TW 的 42 tools 文件描述
 - 完成 0.4.0 release 驗證：ruff、mypy、336 單元測試、Python build、VSIX 0.4.0 打包
 - 修正 GitHub Release workflow 專屬 lint 問題，準備滾動 patch release v0.4.1
+- 修正 release.sh 只檢查 src/ 的根因問題，準備最終 patch release v0.4.2
 
 ## Doing
 
-- push / tag v0.4.1 並確認 CI/Release workflow 全綠
+- push / tag v0.4.2 並確認 CI/Release workflow 全綠
 
 ## Next
 
