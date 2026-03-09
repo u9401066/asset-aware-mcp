@@ -10,7 +10,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { AssetAwareMcpProvider } from './mcpProvider';
 import { StatusBarManager } from './statusBar';
@@ -20,8 +20,10 @@ import { StatusTreeProvider } from './statusTreeProvider';
 import { DocumentTreeProvider } from './documentTreeProvider';
 import { TableTreeProvider } from './tableTreeProvider';
 import { DfmEditorService, DfmLanguageFeatures } from './dfm';
+import { findUvPath, getUvVersion, getUvxLaunch } from './uv';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // Module-level variables
 let mcpProvider: AssetAwareMcpProvider;
@@ -47,59 +49,6 @@ function log(message: string): void {
     const timestamp = new Date().toISOString();
     outputChannel?.appendLine(`[${timestamp}] ${message}`);
     console.log(`[Asset-Aware MCP] ${message}`);
-}
-
-/**
- * Get potential uv binary paths based on platform
- */
-function getUvPaths(): string[] {
-    const homeDir = process.env.HOME || process.env.USERPROFILE || '';
-    const platform = process.platform;
-
-    if (platform === 'win32') {
-        return [
-            'uv',  // In PATH
-            path.join(homeDir, 'AppData', 'Local', 'uv', 'bin', 'uv.exe'),
-            path.join(homeDir, '.local', 'bin', 'uv.exe'),
-            path.join(homeDir, '.cargo', 'bin', 'uv.exe'),
-            'C:\\Program Files\\uv\\uv.exe',
-        ];
-    } else {
-        return [
-            'uv',  // In PATH
-            path.join(homeDir, '.local', 'bin', 'uv'),
-            path.join(homeDir, '.cargo', 'bin', 'uv'),
-            '/usr/local/bin/uv',
-            '/opt/homebrew/bin/uv',
-        ];
-    }
-}
-
-/**
- * Find the actual uv binary path
- */
-async function findUvPath(): Promise<string | null> {
-    const paths = getUvPaths();
-
-    for (const uvPath of paths) {
-        try {
-            if (uvPath === 'uv') {
-                // Check if in PATH
-                await execAsync('uv --version');
-                log('Found uv in PATH');
-                return 'uv';
-            } else if (fs.existsSync(uvPath)) {
-                // Verify it works
-                await execAsync(`"${uvPath}" --version`);
-                log('Found uv at: ' + uvPath);
-                return uvPath;
-            }
-        } catch {
-            // Continue to next path
-        }
-    }
-
-    return null;
 }
 
 /**
@@ -153,20 +102,13 @@ async function installUv(): Promise<string | null> {
                 if (uvPath) {
                     log('uv installed successfully at: ' + uvPath);
 
-                    // Ask user to reload VS Code for PATH to take effect
-                    const choice = await vscode.window.showInformationMessage(
-                        '✅ uv installed! Please reload VS Code to complete setup.',
-                        'Reload Now',
-                        'Later'
-                    );
-
-                    if (choice === 'Reload Now') {
-                        vscode.commands.executeCommand('workbench.action.reloadWindow');
-                    }
+                    await extensionContext.globalState.update('uvPath', uvPath);
+                    mcpProvider?.refresh();
+                    statusTreeProvider?.refresh();
 
                     return uvPath;
                 } else {
-                    throw new Error('uv installation completed but binary not found. Please reload VS Code.');
+                    throw new Error('uv installation completed but the binary could not be located.');
                 }
             } catch (error) {
                 const errorMsg = error instanceof Error ? error.message : String(error);
@@ -196,12 +138,10 @@ async function ensureUvInstalled(): Promise<string | null> {
     const existingPath = await isUvInstalled();
     if (existingPath) {
         try {
-            const cmd = existingPath === 'uv' ? 'uv --version' : `"${existingPath}" --version`;
-            const { stdout } = await execAsync(cmd);
-            log('uv is already installed: ' + stdout.trim());
+            log('uv is already installed: ' + await getUvVersion(existingPath));
 
             // Store the path for mcpProvider to use
-            extensionContext.globalState.update('uvPath', existingPath);
+            await extensionContext.globalState.update('uvPath', existingPath);
             return existingPath;
         } catch {
             return existingPath;
@@ -271,7 +211,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         // Step 3: Initialize env manager
         log('Step 3: Initializing env manager...');
-        envManager = new EnvManager(getWorkspaceRoot());
+        envManager = new EnvManager(getStorageRoot());
 
         // Step 4: Initialize tree providers
         log('Step 4: Initializing tree providers...');
@@ -285,7 +225,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         // Step 5: Register MCP server provider (with error handling)
         log('Step 5: Registering MCP server provider...');
-        mcpProvider = new AssetAwareMcpProvider(getWorkspaceRoot(), outputChannel, context);
+        mcpProvider = new AssetAwareMcpProvider(getStorageRoot(), outputChannel, context);
 
         // Check if MCP API is available (it's a proposed API)
         if (typeof vscode.lm?.registerMcpServerDefinitionProvider === 'function') {
@@ -349,12 +289,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 /**
  * Get workspace root path
  */
-function getWorkspaceRoot(): string {
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    if (workspaceFolder) {
-        return workspaceFolder.uri.fsPath;
-    }
-    return extensionContext.extensionPath;
+function getPrimaryWorkspaceRoot(): string | undefined {
+    return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+}
+
+function getStorageRoot(): string {
+    const workspaceRoot = getPrimaryWorkspaceRoot();
+    const root = workspaceRoot ?? extensionContext.globalStorageUri.fsPath;
+    fs.mkdirSync(root, { recursive: true });
+    return root;
 }
 
 /**
@@ -478,8 +421,13 @@ async function checkSystemDependencies(): Promise<void> {
 
     // Check uv
     try {
-        const { stdout } = await execAsync('uv --version');
-        depChannel.appendLine('✅ uv: ' + stdout.trim());
+        const uvPath = await findUvPath();
+        if (!uvPath) {
+            throw new Error('uv not found');
+        }
+
+        depChannel.appendLine('✅ uv: ' + await getUvVersion(uvPath));
+        depChannel.appendLine('   Path: ' + uvPath);
     } catch {
         depChannel.appendLine('❌ uv: NOT FOUND (required)');
         depChannel.appendLine('   Run "Asset-Aware MCP: Setup Wizard" to install');
@@ -491,22 +439,30 @@ async function checkSystemDependencies(): Promise<void> {
     depChannel.appendLine('=== Checking MCP Server ===');
 
     try {
-        await execAsync('uvx --help', { timeout: 5000 });
-        depChannel.appendLine('✅ uvx: available');
+        const uvPath = await findUvPath();
+        if (!uvPath) {
+            throw new Error('uv not found');
+        }
+
+        const launch = getUvxLaunch(uvPath);
+        const command = launch.command === 'uvx' ? 'uvx' : launch.command;
+        const args = launch.command === 'uvx' ? ['--help'] : ['tool', 'run', '--help'];
+        await execFileAsync(command, args, { timeout: 5000 });
+        depChannel.appendLine('✅ MCP launcher: available');
 
         // Check if asset-aware-mcp is accessible via uvx
-        depChannel.appendLine('   Will use: uvx asset-aware-mcp');
+        depChannel.appendLine('   Will use: ' + launch.command + ' ' + [...launch.args, 'asset-aware-mcp'].join(' '));
         depChannel.appendLine('   (Package will be auto-installed from PyPI on first use)');
     } catch {
-        depChannel.appendLine('⚠️ uvx: not available (uv may need update)');
+        depChannel.appendLine('⚠️ MCP launcher: not available (uv may need update)');
     }
 
     // Check for local development source
-    const workspaceRoot = getWorkspaceRoot();
-    const serverPath = path.join(workspaceRoot, 'src', 'server.py');
-    const pyprojectPath = path.join(workspaceRoot, 'pyproject.toml');
+    const workspaceRoot = getPrimaryWorkspaceRoot();
+    const serverPath = workspaceRoot ? path.join(workspaceRoot, 'src', 'server.py') : '';
+    const pyprojectPath = workspaceRoot ? path.join(workspaceRoot, 'pyproject.toml') : '';
 
-    if (fs.existsSync(serverPath) && fs.existsSync(pyprojectPath)) {
+    if (workspaceRoot && fs.existsSync(serverPath) && fs.existsSync(pyprojectPath)) {
         depChannel.appendLine('');
         depChannel.appendLine('📁 Local development source detected:');
         depChannel.appendLine('   ' + workspaceRoot);
@@ -637,16 +593,9 @@ interface ExtensionStatus {
 async function getExtensionStatus(): Promise<ExtensionStatus> {
     const config = vscode.workspace.getConfiguration('assetAwareMcp');
     const env = await envManager.readEnv();
-    const dataDir = path.resolve(getWorkspaceRoot(), env.DATA_DIR || './data');
+    const dataDir = envManager.getDataDir();
 
-    let documentCount = 0;
-    if (fs.existsSync(dataDir)) {
-        const files = fs.readdirSync(dataDir);
-        documentCount = files.filter(f => {
-            try { return fs.statSync(path.join(dataDir, f)).isDirectory(); }
-            catch { return false; }
-        }).length;
-    }
+    const documentCount = envManager.listDocuments().length;
 
     return {
         envExists: fs.existsSync(envManager.getEnvPath()),

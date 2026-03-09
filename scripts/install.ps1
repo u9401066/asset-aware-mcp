@@ -6,6 +6,12 @@
 
 $ErrorActionPreference = "Stop"
 
+param(
+    [switch]$Check,
+    [switch]$Diagnose,
+    [switch]$Help
+)
+
 # --- Configuration ---
 $RequiredPythonMajor = 3
 $RequiredPythonMinor = 10
@@ -19,6 +25,42 @@ function Write-Err   { Write-Host "[ERROR] $args" -ForegroundColor Red }
 function Test-Command {
     param([string]$Name)
     $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
+}
+
+function Get-UvCandidates {
+    $homeDir = if ($env:USERPROFILE) { $env:USERPROFILE } else { [Environment]::GetFolderPath("UserProfile") }
+    $localAppData = if ($env:LOCALAPPDATA) { $env:LOCALAPPDATA } else { Join-Path $homeDir "AppData\Local" }
+    $cargoHome = if ($env:CARGO_HOME) { $env:CARGO_HOME } else { Join-Path $homeDir ".cargo" }
+
+    return @(
+        "uv",
+        (Join-Path $localAppData "uv\bin\uv.exe"),
+        (Join-Path $homeDir ".local\bin\uv.exe"),
+        (Join-Path $cargoHome "bin\uv.exe"),
+        (Join-Path $homeDir "scoop\shims\uv.exe"),
+        "C:\ProgramData\chocolatey\bin\uv.exe",
+        "C:\Program Files\uv\uv.exe"
+    ) | Select-Object -Unique
+}
+
+function Find-UvCommand {
+    foreach ($candidate in Get-UvCandidates) {
+        try {
+            if ($candidate -eq "uv") {
+                if (Test-Command "uv") {
+                    $null = & uv --version 2>&1 | Select-Object -First 1
+                    return "uv"
+                }
+            } elseif (Test-Path $candidate) {
+                $null = & $candidate --version 2>&1 | Select-Object -First 1
+                return $candidate
+            }
+        } catch {
+            # Try next candidate
+        }
+    }
+
+    return $null
 }
 
 function Get-PythonVersion {
@@ -40,10 +82,80 @@ function Test-VersionGe {
     return $false
 }
 
+function Show-Help {
+    Write-Host "Usage: powershell -ExecutionPolicy Bypass -File scripts\install.ps1 [OPTIONS]"
+    Write-Host ""
+    Write-Host "Options:"
+    Write-Host "  -Check      Run diagnostics only (no changes)"
+    Write-Host "  -Diagnose   Alias for -Check"
+    Write-Host "  -Help       Show this help message"
+    Write-Host ""
+}
+
+function Run-Check {
+    Write-Host ""
+    Write-Host "+=================================================+" -ForegroundColor Cyan
+    Write-Host "|  Asset-Aware MCP - Diagnostics (Windows)        |" -ForegroundColor Cyan
+    Write-Host "+=================================================+" -ForegroundColor Cyan
+    Write-Host ""
+
+    Write-Info "System: Windows $([System.Environment]::OSVersion.Version) ($env:PROCESSOR_ARCHITECTURE)"
+    Write-Info "PowerShell: $($PSVersionTable.PSVersion)"
+    Write-Host ""
+
+    Write-Info "=== uv package manager ==="
+    $uvCmd = Find-UvCommand
+    if ($uvCmd) {
+        $uvVer = (& $uvCmd --version 2>&1 | Select-Object -First 1).ToString().Trim()
+        $uvPath = if ($uvCmd -eq "uv") { (Get-Command "uv").Source } else { $uvCmd }
+        Write-Ok "uv found: $uvVer"
+        Write-Info "  Location: $uvPath"
+    } else {
+        Write-Err "uv not found"
+    }
+    Write-Host ""
+
+    Write-Info "=== Python ==="
+    $foundPython = $false
+    foreach ($candidate in @("python3", "python", "py")) {
+        if (Test-Command $candidate) {
+            $verInfo = Get-PythonVersion $candidate
+            if ($verInfo) {
+                $foundPython = $true
+                $cmdPath = (Get-Command $candidate).Source
+                $status = if (Test-VersionGe $verInfo) { "OK" } else { "TOO OLD" }
+                Write-Info "  $candidate => $($verInfo.Raw) [$status]"
+                Write-Info "    Location: $cmdPath"
+            }
+        }
+    }
+    if (-not $foundPython) {
+        Write-Warn "No usable Python command found"
+    }
+    Write-Host ""
+
+    Write-Info "=== Project ==="
+    if (Test-Path "pyproject.toml") {
+        Write-Ok "pyproject.toml found"
+    } else {
+        Write-Warn "pyproject.toml not found in current directory"
+    }
+}
+
 # ============================================================================
 # Main
 # ============================================================================
 function Main {
+    if ($Help) {
+        Show-Help
+        return
+    }
+
+    if ($Check -or $Diagnose) {
+        Run-Check
+        return
+    }
+
     Write-Host ""
     Write-Host "+=================================================+" -ForegroundColor Magenta
     Write-Host "|  Asset-Aware MCP - Installer (Windows)          |" -ForegroundColor Magenta
@@ -58,15 +170,16 @@ function Main {
     Write-Host ""
     Write-Info "=== Checking uv package manager ==="
 
-    if (Test-Command "uv") {
-        $uvVer = (uv --version 2>&1 | Select-Object -First 1).ToString().Trim()
-        $uvPath = (Get-Command "uv").Source
+    $uvCmd = Find-UvCommand
+    if ($uvCmd) {
+        $uvVer = (& $uvCmd --version 2>&1 | Select-Object -First 1).ToString().Trim()
+        $uvPath = if ($uvCmd -eq "uv") { (Get-Command "uv").Source } else { $uvCmd }
         Write-Ok "uv already installed: $uvVer"
         Write-Info "  Location: $uvPath"
 
         Write-Info "Updating uv to latest version..."
         try {
-            uv self update 2>$null
+            & $uvCmd self update 2>$null
             Write-Ok "uv updated successfully"
         } catch {
             Write-Warn "uv self-update not available, skipping"
@@ -80,8 +193,10 @@ function Main {
             # Refresh PATH
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
-            if (Test-Command "uv") {
-                $uvVer = (uv --version 2>&1 | Select-Object -First 1).ToString().Trim()
+            $uvCmd = Find-UvCommand
+
+            if ($uvCmd) {
+                $uvVer = (& $uvCmd --version 2>&1 | Select-Object -First 1).ToString().Trim()
                 Write-Ok "uv installed: $uvVer"
             } else {
                 Write-Err "uv installation succeeded but command not found."
@@ -138,7 +253,7 @@ function Main {
         Write-Warn "Python >= ${RequiredPythonMajor}.${RequiredPythonMinor} not found."
         Write-Info "Installing Python via uv..."
         try {
-            uv python install "${RequiredPythonMajor}.11"
+            & $uvCmd python install "${RequiredPythonMajor}.11"
             Write-Ok "Python installed via uv"
         } catch {
             Write-Err "Failed to install Python via uv."
@@ -164,7 +279,7 @@ function Main {
 
     Write-Info "Running uv sync --all-extras ..."
     try {
-        uv sync --all-extras
+        & $uvCmd sync --all-extras
         Write-Ok "All dependencies installed/updated successfully"
     } catch {
         Write-Err "Failed to install dependencies. Check pyproject.toml."
@@ -182,7 +297,7 @@ function Main {
 
     # Check 1: uv run python works
     try {
-        $pyVer = (uv run python --version 2>&1).ToString().Trim()
+        $pyVer = (& $uvCmd run python --version 2>&1).ToString().Trim()
         Write-Ok "Python in venv: $pyVer"
         $checksPassed++
     } catch {
@@ -191,7 +306,7 @@ function Main {
 
     # Check 2: import src
     try {
-        uv run python -c "import src" 2>$null
+        & $uvCmd run python -c "import src" 2>$null
         Write-Ok "src package importable"
         $checksPassed++
     } catch {
@@ -201,7 +316,7 @@ function Main {
 
     # Check 3: MCP module
     try {
-        uv run python -c "from src.presentation.mcp_app import mcp" 2>$null
+        & $uvCmd run python -c "from src.presentation.mcp_app import mcp" 2>$null
         Write-Ok "MCP server module loadable"
         $checksPassed++
     } catch {

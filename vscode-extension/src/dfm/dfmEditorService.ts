@@ -12,6 +12,17 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 
+export function normalizeSessionPath(
+    filePath: string,
+    platform: NodeJS.Platform = process.platform,
+): string {
+    if (platform === 'win32') {
+        return path.win32.normalize(path.win32.resolve(filePath)).toLowerCase();
+    }
+
+    return path.normalize(path.resolve(filePath));
+}
+
 /** Represents an active DFM editing session */
 export interface DfmSession {
     /** Unique doc_id from MCP server */
@@ -53,12 +64,15 @@ export class DfmSessionManager {
 
     /** Register a new editing session */
     addSession(session: DfmSession): void {
+        session.docxPath = normalizeSessionPath(session.docxPath);
+        session.dfmPath = normalizeSessionPath(session.dfmPath);
+        session.dataDir = normalizeSessionPath(session.dataDir);
         this.sessions.set(session.dfmPath, session);
     }
 
     /** Get session by .dfm file path */
     getSessionByDfm(dfmPath: string): DfmSession | undefined {
-        return this.sessions.get(dfmPath);
+        return this.sessions.get(normalizeSessionPath(dfmPath));
     }
 
     /** Get session by doc_id */
@@ -73,8 +87,9 @@ export class DfmSessionManager {
 
     /** Get session by .docx path */
     getSessionByDocx(docxPath: string): DfmSession | undefined {
+        const normalizedDocxPath = normalizeSessionPath(docxPath);
         for (const session of this.sessions.values()) {
-            if (session.docxPath === docxPath) {
+            if (session.docxPath === normalizedDocxPath) {
                 return session;
             }
         }
@@ -83,12 +98,12 @@ export class DfmSessionManager {
 
     /** Remove a session */
     removeSession(dfmPath: string): boolean {
-        return this.sessions.delete(dfmPath);
+        return this.sessions.delete(normalizeSessionPath(dfmPath));
     }
 
     /** Mark session as dirty/clean */
     setDirty(dfmPath: string, dirty: boolean): void {
-        const session = this.sessions.get(dfmPath);
+        const session = this.sessions.get(normalizeSessionPath(dfmPath));
         if (session) {
             session.dirty = dirty;
         }
@@ -101,7 +116,7 @@ export class DfmSessionManager {
 
     /** Check if a file path is a tracked .dfm file */
     isDfmTracked(filePath: string): boolean {
-        return this.sessions.has(filePath);
+        return this.sessions.has(normalizeSessionPath(filePath));
     }
 
     /** Get count of active sessions */
@@ -266,7 +281,7 @@ export class DfmEditorService implements vscode.Disposable {
                         docxPath = uri.fsPath;
                     } else {
                         const uris = await vscode.window.showOpenDialog({
-                            filters: { 'Word Documents': ['docx'] },
+                            filters: { 'Word Documents': ['docx', 'doc'] },
                             canSelectMany: false,
                         });
                         if (!uris || uris.length === 0) {

@@ -72,6 +72,13 @@ export class EnvManager {
     }
 
     /**
+     * Get the manifest path for a document, supporting both legacy and current layouts.
+     */
+    getManifestPath(docId: string): string | null {
+        return this.findManifestPath(path.join(this.getDataDir(), docId), docId);
+    }
+
+    /**
      * Check if .env file exists
      */
     exists(): boolean {
@@ -133,6 +140,7 @@ export class EnvManager {
      */
     async createDefaultEnv(): Promise<void> {
         const content = this.generateEnvContent(DEFAULT_ENV);
+        fs.mkdirSync(path.dirname(this.envPath), { recursive: true });
         fs.writeFileSync(this.envPath, content, 'utf-8');
     }
 
@@ -150,7 +158,23 @@ export class EnvManager {
      */
     async writeEnv(env: EnvConfig): Promise<void> {
         const content = this.generateEnvContent(env);
+        fs.mkdirSync(path.dirname(this.envPath), { recursive: true });
         fs.writeFileSync(this.envPath, content, 'utf-8');
+    }
+
+    private findManifestPath(docPath: string, docId: string): string | null {
+        const candidates = [
+            path.join(docPath, `${docId}_manifest.json`),
+            path.join(docPath, 'manifest.json'),
+        ];
+
+        for (const candidate of candidates) {
+            if (fs.existsSync(candidate)) {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -243,12 +267,12 @@ export class EnvManager {
             for (const entry of entries) {
                 if (entry.isDirectory() && entry.name.startsWith('doc_')) {
                     const docPath = path.join(dataDir, entry.name);
-                    const manifestPath = path.join(docPath, 'manifest.json');
+                    const manifestPath = this.findManifestPath(docPath, entry.name);
 
                     documents.push({
                         id: entry.name,
                         path: docPath,
-                        manifestExists: fs.existsSync(manifestPath)
+                        manifestExists: manifestPath !== null
                     });
                 }
             }
@@ -343,10 +367,9 @@ export class EnvManager {
      * Read document manifest
      */
     readManifest(docId: string): object | null {
-        const dataDir = this.getDataDir();
-        const manifestPath = path.join(dataDir, docId, 'manifest.json');
+        const manifestPath = this.getManifestPath(docId);
 
-        if (!fs.existsSync(manifestPath)) {
+        if (!manifestPath) {
             return null;
         }
 

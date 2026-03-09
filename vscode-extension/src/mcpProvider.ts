@@ -11,6 +11,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { getUvxLaunch, getUvPaths } from './uv';
 
 export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider<vscode.McpStdioServerDefinition> {
 
@@ -44,19 +45,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
         }
 
         // Fallback: try common paths
-        const homeDir = process.env.HOME || process.env.USERPROFILE || '';
-        const platform = process.platform;
-
-        const possiblePaths = platform === 'win32'
-            ? [
-                path.join(homeDir, 'AppData', 'Local', 'uv', 'bin', 'uv.exe'),
-                path.join(homeDir, '.local', 'bin', 'uv.exe'),
-            ]
-            : [
-                path.join(homeDir, '.local', 'bin', 'uv'),
-                path.join(homeDir, '.cargo', 'bin', 'uv'),
-                '/usr/local/bin/uv',
-            ];
+        const possiblePaths = getUvPaths().filter(candidate => candidate !== 'uv');
 
         for (const p of possiblePaths) {
             if (fs.existsSync(p)) {
@@ -74,15 +63,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
      * Get uvx command (uv tool run)
      */
     private getUvxCommand(): { command: string; args: string[] } {
-        const uvPath = this.getUvCommand();
-
-        // uvx is actually "uv tool run"
-        if (uvPath === 'uv') {
-            return { command: 'uvx', args: [] };
-        } else {
-            // Use full path with tool run
-            return { command: uvPath, args: ['tool', 'run'] };
-        }
+        return getUvxLaunch(this.getUvCommand());
     }
 
     /**
@@ -161,7 +142,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
             if (path.isAbsolute(dataDir)) {
                 envVars['DATA_DIR'] = dataDir;
             } else {
-                envVars['DATA_DIR'] = path.join(this.workspaceRoot, dataDir);
+                envVars['DATA_DIR'] = path.resolve(this.workspaceRoot, dataDir);
             }
 
             // Get uvx command (handles full path if needed)
@@ -199,12 +180,18 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
      */
     private findMcpServerDir(): string | undefined {
         // Look for the src directory with server.py
-        const possiblePaths = [
-            this.workspaceRoot,  // Root directory
-            path.join(this.workspaceRoot, 'mcp-server'),
-            path.join(this.workspaceRoot, 'asset-aware-mcp'),
-            path.dirname(this.workspaceRoot),  // Parent directory (for vscode-extension subfolder)
-        ];
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        const possiblePaths = Array.from(
+            new Set(
+                [
+                    workspaceFolder,
+                    workspaceFolder ? path.join(workspaceFolder, 'mcp-server') : undefined,
+                    workspaceFolder ? path.join(workspaceFolder, 'asset-aware-mcp') : undefined,
+                    workspaceFolder ? path.dirname(workspaceFolder) : undefined,
+                    this.workspaceRoot,
+                ].filter((candidate): candidate is string => Boolean(candidate))
+            )
+        );
 
         this.log('Checking for local development source...');
 

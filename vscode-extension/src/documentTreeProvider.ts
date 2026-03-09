@@ -5,7 +5,6 @@
  */
 
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { EnvManager } from './envManager';
 
 export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentItem> {
@@ -118,18 +117,21 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
         ));
 
         // Open manifest command
-        items.push(new DocumentItem(
-            'Open Manifest',
-            '',
-            vscode.TreeItemCollapsibleState.None,
-            'json',
-            undefined,
-            {
-                command: 'vscode.open',
-                title: 'Open Manifest',
-                arguments: [vscode.Uri.file(path.join(this.envManager.getDataDir(), docId, 'manifest.json'))]
-            }
-        ));
+        const manifestPath = this.envManager.getManifestPath(docId);
+        if (manifestPath) {
+            items.push(new DocumentItem(
+                'Open Manifest',
+                '',
+                vscode.TreeItemCollapsibleState.None,
+                'json',
+                undefined,
+                {
+                    command: 'vscode.open',
+                    title: 'Open Manifest',
+                    arguments: [vscode.Uri.file(manifestPath)]
+                }
+            ));
+        }
 
         return items;
     }

@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import shutil
 import subprocess
 import tempfile
@@ -81,7 +82,8 @@ class DocxService:
                     "success": False,
                     "error": (
                         f"Failed to convert .doc to .docx: {path}. "
-                        "Please install LibreOffice (apt install libreoffice-writer)."
+                        "Please install LibreOffice and ensure the 'libreoffice' or "
+                        "'soffice' binary is available, or set LIBREOFFICE_BIN."
                     ),
                 }
             logger.info("Auto-converted .doc → .docx: %s → %s", path, converted)
@@ -150,16 +152,45 @@ class DocxService:
     # ========================================================================
 
     @staticmethod
+    def _find_libreoffice_binary() -> str | None:
+        """Find a LibreOffice executable across Linux/macOS installs."""
+        env_candidate = os.getenv("LIBREOFFICE_BIN")
+        if env_candidate and Path(env_candidate).exists():
+            return env_candidate
+
+        for binary_name in ("libreoffice", "soffice"):
+            resolved = shutil.which(binary_name)
+            if resolved:
+                return resolved
+
+        for candidate in (
+            "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+            "/Applications/LibreOffice.app/Contents/MacOS/LibreOffice",
+        ):
+            if Path(candidate).exists():
+                return candidate
+
+        return None
+
+    @staticmethod
     def _convert_doc_to_docx(doc_path: Path) -> Path | None:
         """Convert a legacy .doc file to .docx using LibreOffice.
 
         Returns the path to the converted .docx, or None on failure.
         """
         try:
+            libreoffice_bin = DocxService._find_libreoffice_binary()
+            if libreoffice_bin is None:
+                logger.error(
+                    "LibreOffice not installed or not discoverable. "
+                    "Checked LIBREOFFICE_BIN, libreoffice, soffice, and the macOS app bundle."
+                )
+                return None
+
             with tempfile.TemporaryDirectory() as tmp_dir:
                 result = subprocess.run(
                     [
-                        "libreoffice",
+                        libreoffice_bin,
                         "--headless",
                         "--convert-to",
                         "docx",

@@ -1,55 +1,17 @@
-# Progress (Updated: 2026-02-23)
+# Progress (Updated: 2026-03-09)
 
 ## Done
 
-- ✅ v0.2.7 發布完成 (圖片擷取策略增強)
-- ✅ 架構重構提案完成 (`docs/ARCHITECTURE_REFACTOR_PROPOSAL.md`)
-- ✅ 決策記錄更新 (Asset-Centric Architecture)
-- ✅ ROADMAP 更新 (v0.3.0 規劃)
-- ✅ **v0.2.8: Marker 整合 + Section Navigation**
-- ✅ **v0.2.9: ETL 缺陷修復 + 路徑統一 + 文件同步**
-- ✅ **v0.2.10: Presentation 層模組化完成 + Bug 修復**
-- ✅ **v0.2.11: ETL Profile + DDD 架構修復**（39 tools, 268 tests）
-- ✅ **v0.2.14: A2T 完整填表系統**
-  - 19 → 7 工具合併，總工具數 39 → 28
-  - 68 新測試 (asset_ref + citation_audit)
-- ✅ **v0.3.0: Docx DFM 即時編輯系統**
-  - 8 個 Docx MCP 工具 + DocxValidator + DfmTableBridge
-  - 120 新測試（DFM 53 + Bridge 32 + Validator 35）
-  - 總工具數：28 → 36（7 modules）
-- ✅ **v0.3.1: 分離格式 + CLI + Bug 修復**
-  - Split Format: content.md + format.yaml
-  - DFM CLI: `scripts/dfm_cli.py` + VS Code Tasks
-  - Bug Fix: 表格文字重複修復
-- ✅ **v0.3.2: Integrity Checker + 檔案層級比對 + uv 遷移**
-  - DfmIntegrityChecker: 6 個檢查/修復方法 + 自動整合至 DocxService/MCP/CLI
-  - DocxValidator: SHA-256 + 檔案大小 + ZIP diff
-  - CI/CD: pip → uv 全面遷移
-  - 271 單元測試全數通過
-- ✅ **v0.3.3: 生產強化 + .doc 支援 + Markdown 跳脫修復**
-  - Dockerfile + PDF magic byte + 並行 Job 上限 + Structured logging
-  - `.doc` 格式自動轉換（LibreOffice headless）
-  - Markdown `_escape_md()` / `_unescape_md()` + Run 合併
-  - Round-trip 驗證：2 份文件 100% 通過
-  - 361 單元測試全數通過
+- 強化 VSX extension 的 macOS uv 偵測與無工作區 storage 路徑處理
+- 修正 extension 文件樹對新版/舊版 manifest 檔名的相容讀取
+- 補上 macOS LibreOffice/soffice 偵測，讓 .doc 轉檔可在 mac App bundle 下工作
+- 新增 extension 與 Python 單元測試，驗證路徑正規化與 manifest/LibreOffice 偵測
+- 在 CI 新增 macOS smoke test，驗證 install.sh 與 VS Code extension unit tests
 
 ## Doing
 
-- 🚧 v0.3.3 發布（文檔 + VSX + Git tag）
-
----
-
-## Released
-
-- ✅ **v0.3.3**: 生產強化 + .doc 支援 + Markdown 跳脫修復 (2026-02-23)
-- ✅ **v0.3.2**: Integrity Checker + 檔案層級比對 + uv 遷移 (2026-02-21)
-- ✅ **v0.3.1**: 分離格式 + CLI + Bug 修復 (2026-02-21)
-- ✅ **v0.3.0**: Docx DFM 即時編輯系統 (2026-02-11)
-- ✅ **v0.2.14**: A2T 完整填表系統 (2026-02-10)
-- ✅ **v0.2.11**: ETL Profile + DDD 架構修復 (2026-02-09)
+- 整理本輪修正與 repo review 結果
 
 ## Next
 
-- P1: 測試覆蓋率提升（pdf_extractor, lightrag_adapter, asset_service, job_service）
-- P2: 說明文件與推廣（examples/, API Reference, FAQ）
-- P3: Asset Registry
+- 如需要可提交目前修改並觀察新的 macOS CI 執行情況

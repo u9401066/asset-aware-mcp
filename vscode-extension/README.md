@@ -113,7 +113,7 @@ The agent retrieves exactly what it needs:
 | `Setup Wizard` | Initial configuration & dependency check |
 | `Open Settings Panel` | Visual editor for `.env` settings |
 | `Check Ollama Connection` | Test if local LLM is accessible |
-| `Check System Dependencies` | Verify `uv`, `python`, and `pip` are installed |
+| `Check System Dependencies` | Verify `uv` is available and the MCP launcher can start |
 | `Refresh Status` | Update the Status and Documents tree views |
 
 ## 🛠️ Troubleshooting & Debugging

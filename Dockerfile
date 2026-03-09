@@ -12,7 +12,11 @@
 # Stage 1: Builder — install dependencies
 FROM python:3.12-slim AS builder
 
-RUN pip install --no-cache-dir uv
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && ln -s /root/.local/bin/uv /usr/local/bin/uv
 
 WORKDIR /app
 COPY pyproject.toml ./

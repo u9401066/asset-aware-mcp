@@ -63,6 +63,59 @@ jobs:
         run: uv run mypy src --ignore-missing-imports
 
   # ==========================================
+  # macOS 安裝/Extension Smoke Test
+  # ==========================================
+  macos-smoke:
+    name: 🍎 macOS Smoke Test
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install via project installer
+        run: bash scripts/install.sh
+
+      - name: Run installer diagnostics
+        run: bash scripts/install.sh --check
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run VS Code extension unit tests
+        run: |
+          cd vscode-extension
+          npm ci
+          npm run test:unit
+
+  # ==========================================
+  # Windows 安裝/Extension Smoke Test
+  # ==========================================
+  windows-smoke:
+    name: 🪟 Windows Smoke Test
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install via project installer
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File scripts/install.ps1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run VS Code extension unit tests
+        shell: pwsh
+        run: |
+          cd vscode-extension
+          npm ci
+          npm run test:unit
+
+  # ==========================================
   # Python 單元測試
   # ==========================================
   unit-tests:
@@ -146,7 +199,7 @@ jobs:
   test-summary:
     name: 📋 Test Summary
     runs-on: ubuntu-latest
-    needs: [docs-check, static-analysis, unit-tests, integration-tests]
+    needs: [docs-check, static-analysis, macos-smoke, windows-smoke, unit-tests, integration-tests]
     if: always()
     steps:
       - name: Generate Summary
@@ -157,5 +210,7 @@ jobs:
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| 📚 Documentation | ${{ needs.docs-check.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 🔍 Static Analysis | ${{ needs.static-analysis.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🍎 macOS Smoke Test | ${{ needs.macos-smoke.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🪟 Windows Smoke Test | ${{ needs.windows-smoke.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 🧪 Unit Tests | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 🔗 Integration Tests | ${{ needs.integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
