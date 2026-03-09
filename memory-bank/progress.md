@@ -2,16 +2,16 @@
 
 ## Done
 
-- 強化 VSX extension 的 macOS uv 偵測與無工作區 storage 路徑處理
-- 修正 extension 文件樹對新版/舊版 manifest 檔名的相容讀取
-- 補上 macOS LibreOffice/soffice 偵測，讓 .doc 轉檔可在 mac App bundle 下工作
-- 新增 extension 與 Python 單元測試，驗證路徑正規化與 manifest/LibreOffice 偵測
-- 在 CI 新增 macOS smoke test，驗證 install.sh 與 VS Code extension unit tests
+- 完成跨平台 repo review 第二輪並用 subagent 收斂剩餘風險
+- 修正文檔中的 MCP 工具清單與 36 tools 計數一致性
+- 加強 release workflow 的 VSIX 完整性驗證
+- 讓 scripts/release.sh 在版本不一致時 fail-fast
+- 同步 extension package-lock 版本到 0.3.3
 
 ## Doing
 
-- 整理本輪修正與 repo review 結果
+- 整理並提交第二輪文檔與發佈流程修正
 
 ## Next
 
-- 如需要可提交目前修改並觀察新的 macOS CI 執行情況
+- 如需要可 push 並觀察新的 release/CI workflow

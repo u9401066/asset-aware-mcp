@@ -106,6 +106,22 @@ jobs:
       - name: Package extension
         run: npx vsce package
 
+      - name: Verify VSIX integrity
+        run: |
+          VSIX_FILE=$(ls -1 asset-aware-mcp-*.vsix | head -1)
+          if [ -z "$VSIX_FILE" ] || [ ! -f "$VSIX_FILE" ]; then
+            echo "ERROR: VSIX file was not created"
+            exit 1
+          fi
+
+          if [ ! -f "resources/icon.png" ]; then
+            echo "ERROR: resources/icon.png is missing"
+            exit 1
+          fi
+
+          unzip -t "$VSIX_FILE" >/dev/null
+          echo "Verified VSIX: $VSIX_FILE"
+
       - name: Publish to VS Code Marketplace
         run: npx vsce publish -p ${{ secrets.VSCE_PAT }}
         env:

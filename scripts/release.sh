@@ -114,7 +114,10 @@ echo "  Python package: v$PYTHON_VERSION"
 echo "  VS Code extension: v$VSCODE_VERSION"
 
 if [ "$PYTHON_VERSION" != "$VSCODE_VERSION" ]; then
-    echo -e "  ${YELLOW}⚠ Warning: Version mismatch!${NC}"
+    echo -e "  ${RED}✗ ERROR: Version mismatch!${NC}"
+    echo "  Python:  $PYTHON_VERSION"
+    echo "  VSCode:  $VSCODE_VERSION"
+    exit 1
 fi
 
 # =============================================================================

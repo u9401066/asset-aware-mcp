@@ -142,6 +142,7 @@ If the extension fails to start or the MCP server doesn't appear:
 | `inspect_document_manifest` | View document structure (Tables/Figures/Sections) |
 | `fetch_document_asset` | Get specific Table/Figure/Section content |
 | `parse_pdf_structure` | Parse PDF structure without full ingestion |
+| `search_source_location` | Search exact source locations with page numbers and bbox |
 
 ### Section Navigation (5)
 | Tool | Description |

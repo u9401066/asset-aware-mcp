@@ -124,8 +124,26 @@ uv run python -m src.presentation.server
 | 工具 | 用途 |
 |------|------|
 | `ingest_documents` | 處理 PDF 檔案，可選用 Marker 後端 (`use_marker=True` 產出 blocks.json) |
+| `list_documents` | 列出所有已攝入文件與資產統計 |
+| `inspect_document_manifest` | 在抓取資產前先檢視文件結構 |
 | `fetch_document_asset` | 精確獲取表格 (MD) / 圖片 (B64) / 章節內容 |
+| `parse_pdf_structure` | 使用 Marker 進行高精度結構化 PDF 解析 |
+| `search_source_location` | 搜尋精確來源位置（頁碼 + bbox） |
+
+### 工作管理工具
+
+| 工具 | 用途 |
+|------|------|
+| `get_job_status` | 取得非同步 ETL 工作進度與結果 |
+| `list_jobs` | 列出目前或歷史工作 |
+| `cancel_job` | 取消執行中的 ETL 工作 |
+
+### 知識圖譜工具
+
+| 工具 | 用途 |
+|------|------|
 | `consult_knowledge_graph` | 知識圖譜查詢，跨文件對比推理 |
+| `export_knowledge_graph` | 匯出圖譜摘要 / JSON / Mermaid 視圖 |
 
 ### 章節導航工具（動態層級）
 

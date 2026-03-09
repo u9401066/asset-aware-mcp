@@ -125,8 +125,26 @@ uv run python -m src.presentation.server
 | Tool | Purpose |
 |------|---------|
 | `ingest_documents` | Process PDF files with optional Marker backend (`use_marker=True` for blocks.json) |
+| `list_documents` | List all ingested documents and their asset counts |
+| `inspect_document_manifest` | Inspect document structure before fetching specific assets |
 | `fetch_document_asset` | Precisely retrieve tables (MD) / figures (B64) / sections |
+| `parse_pdf_structure` | Run high-precision Marker parsing and emit structured blocks |
+| `search_source_location` | Search exact source locations with page + bbox for verification |
+
+### Job Management Tools
+
+| Tool | Purpose |
+|------|---------|
+| `get_job_status` | Get async ingestion job progress and final result |
+| `list_jobs` | List active or historical ETL jobs |
+| `cancel_job` | Cancel a running ETL job |
+
+### Knowledge Graph Tools
+
+| Tool | Purpose |
+|------|---------|
 | `consult_knowledge_graph` | Knowledge graph query, cross-document comparison |
+| `export_knowledge_graph` | Export graph summary / JSON / Mermaid for inspection |
 
 ### Section Navigation Tools (Dynamic Hierarchy)
 
