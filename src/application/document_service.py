@@ -8,6 +8,7 @@ Supports multiple PDF backends for flexible extraction.
 from __future__ import annotations
 
 import json
+import re
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -640,3 +641,221 @@ class DocumentService:
     async def document_exists(self, doc_id: str) -> bool:
         """Check if a document exists."""
         return self.repository.document_exists(doc_id)
+
+    async def delete_document(self, doc_id: str) -> dict[str, Any]:
+        """Delete a stored PDF document and its local artifacts."""
+        manifest = self.repository.load_manifest(doc_id)
+        if manifest is None:
+            return {"success": False, "error": f"Document not found: {doc_id}"}
+
+        deleted = self.repository.delete_document(doc_id)
+        if not deleted:
+            return {
+                "success": False,
+                "error": f"Failed to delete document directory for {doc_id}",
+            }
+
+        warnings: list[str] = []
+        if self.knowledge_graph and self.knowledge_graph.is_available:
+            warnings.append(
+                "Knowledge graph entries were not removed; only local document artifacts were deleted."
+            )
+
+        return {
+            "success": True,
+            "doc_id": doc_id,
+            "filename": manifest.filename,
+            "warnings": warnings,
+        }
+
+    async def convert_pdf_to_docx(
+        self,
+        doc_id: str,
+        output_path: str | None = None,
+        *,
+        mode: str = "content",
+    ) -> dict[str, Any]:
+        """
+        Convert an ingested PDF document to DOCX.
+
+        Supported modes:
+        - ``content``: rebuild a readable DOCX from extracted markdown and figures.
+        - ``fidelity``: currently unsupported because PDF ETL is not layout-reversible.
+        """
+        if mode != "content":
+            return {
+                "success": False,
+                "error": (
+                    "PDF → DOCX currently supports content mode only. "
+                    "Layout-fidelity reconstruction is not available."
+                ),
+            }
+
+        manifest = self.repository.load_manifest(doc_id)
+        if manifest is None:
+            return {"success": False, "error": f"Document not found: {doc_id}"}
+
+        markdown = self.repository.load_markdown(doc_id)
+        if markdown is None:
+            return {
+                "success": False,
+                "error": f"Markdown content not found for {doc_id}",
+            }
+
+        doc_dir = self.repository.get_doc_dir(doc_id)
+        out_path = (
+            Path(output_path)
+            if output_path is not None
+            else doc_dir / "converted_from_pdf.docx"
+        )
+
+        try:
+            self._build_docx_from_markdown(markdown, manifest, out_path)
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+        return {
+            "success": True,
+            "doc_id": doc_id,
+            "output_path": str(out_path),
+            "mode": mode,
+            "figures_embedded": len(manifest.assets.figures),
+            "tables_found": len(manifest.assets.tables),
+        }
+
+    def _build_docx_from_markdown(
+        self,
+        markdown: str,
+        manifest: DocumentManifest,
+        output_path: Path,
+    ) -> None:
+        """Render extracted markdown into a readable DOCX document."""
+        from docx import Document
+        from docx.enum.text import WD_BREAK
+        from docx.shared import Cm
+
+        document = Document()
+        if manifest.title:
+            document.add_heading(manifest.title, level=0)
+            document.core_properties.title = manifest.title
+
+        lines = markdown.splitlines()
+        index = 0
+        while index < len(lines):
+            raw_line = lines[index].rstrip()
+            stripped = raw_line.strip()
+
+            if not stripped:
+                index += 1
+                continue
+
+            if stripped.startswith("<!--") and stripped.endswith("-->"):
+                if stripped.lower().startswith("<!-- page") and document.paragraphs:
+                    document.paragraphs[-1].add_run().add_break(WD_BREAK.PAGE)
+                index += 1
+                continue
+
+            if stripped.startswith("#"):
+                level = min(len(stripped) - len(stripped.lstrip("#")), 9)
+                document.add_heading(stripped[level:].strip(), level=level)
+                index += 1
+                continue
+
+            if self._is_table_start(lines, index):
+                index = self._append_markdown_table(document, lines, index)
+                continue
+
+            if self._is_list_item(stripped):
+                index = self._append_markdown_list(document, lines, index)
+                continue
+
+            paragraph_lines = [stripped]
+            index += 1
+            while index < len(lines):
+                next_line = lines[index].strip()
+                if (
+                    not next_line
+                    or next_line.startswith(("<!--", "#"))
+                    or self._is_list_item(next_line)
+                    or self._is_table_start(lines, index)
+                ):
+                    break
+                paragraph_lines.append(next_line)
+                index += 1
+
+            document.add_paragraph(" ".join(paragraph_lines))
+
+        if manifest.assets.figures:
+            document.add_page_break()
+            document.add_heading("Extracted Figures", level=1)
+            for figure in manifest.assets.figures:
+                if figure.caption:
+                    document.add_paragraph(figure.caption)
+                figure_path = Path(figure.path)
+                if figure_path.exists():
+                    with figure_path.open("rb"):
+                        document.add_picture(str(figure_path), width=Cm(15))
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        document.save(str(output_path))
+
+    @staticmethod
+    def _is_list_item(line: str) -> bool:
+        return bool(re.match(r"^([-*+]\s+|\d+[.)]\s+)", line))
+
+    @staticmethod
+    def _is_table_start(lines: list[str], index: int) -> bool:
+        if index + 1 >= len(lines):
+            return False
+        header = lines[index].strip()
+        separator = lines[index + 1].strip()
+        return (
+            header.startswith("|")
+            and header.endswith("|")
+            and separator.startswith("|")
+            and separator.endswith("|")
+            and set(separator.replace("|", "").replace(" ", "")) <= {"-", ":"}
+        )
+
+    @staticmethod
+    def _split_markdown_row(line: str) -> list[str]:
+        return [cell.strip() for cell in line.strip().strip("|").split("|")]
+
+    def _append_markdown_table(
+        self, document: Any, lines: list[str], index: int
+    ) -> int:
+        header_cells = self._split_markdown_row(lines[index])
+        index += 2  # Skip header + separator
+
+        rows: list[list[str]] = []
+        while index < len(lines):
+            current = lines[index].strip()
+            if not (current.startswith("|") and current.endswith("|")):
+                break
+            rows.append(self._split_markdown_row(current))
+            index += 1
+
+        table = document.add_table(rows=1, cols=len(header_cells))
+        table.style = "Table Grid"
+        for col_index, value in enumerate(header_cells):
+            table.rows[0].cells[col_index].text = value
+
+        for row in rows:
+            cells = table.add_row().cells
+            for col_index, value in enumerate(row[: len(header_cells)]):
+                cells[col_index].text = value
+
+        return index
+
+    def _append_markdown_list(self, document: Any, lines: list[str], index: int) -> int:
+        while index < len(lines):
+            stripped = lines[index].strip()
+            if not self._is_list_item(stripped):
+                break
+            style = (
+                "List Number" if re.match(r"^\d+[.)]\s+", stripped) else "List Bullet"
+            )
+            text = re.sub(r"^([-*+]\s+|\d+[.)]\s+)", "", stripped)
+            document.add_paragraph(text, style=style)
+            index += 1
+        return index

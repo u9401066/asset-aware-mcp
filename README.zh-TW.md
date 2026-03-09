@@ -44,7 +44,7 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 🔄 **非同步任務流水線** - 支援大型文件的非同步處理與進度追蹤。
 - 🗺️ **文件清單 (Manifest)** - 為 Agent 提供結構化的文件「地圖」，實現精確數據存取。
 - 🧠 **LightRAG 整合** - 知識圖譜 + 向量索引，支援跨文件對比與推理。
-- 📝 **Docx 即時編輯 (DFM)** - 以 Markdown 格式編輯 .docx 檔案，透過 **Docx-Flavored Markdown** 格式。支援舊版 `.doc` 格式（自動透過 LibreOffice 轉換）。提供 8 個工具：匯入、編輯、儲存、往返保真驗證（6 維度評分），以及 Docx ↔ A2T 表格橋接。
+- 📝 **Docx 即時編輯 (DFM)** - 以 Markdown 格式編輯 .docx 檔案，透過 **Docx-Flavored Markdown** 格式。支援舊版 `.doc` 格式（自動透過 LibreOffice 轉換）。提供 12 個工具：匯入、讀取、儲存、列出、刪除、strict 往返保真驗證、DOCX→PDF、DOCX→DOC，以及 Docx ↔ A2T 表格橋接。
 - �📊 **A2T (Anything to Table)** - 7 個 operation-based 工具，從**任意來源**（PDF 資產、知識圖譜、URL、使用者輸入）建立專業表格。支援：**引用管理** (AssetRef)、**變更審計**、**Schema 演進**、**模板**、**草稿機制**與**節省 Token 的續作模式**。
 - 🖥️ **VS Code 管理擴充功能** - 提供圖形化介面監控伺服器狀態、已匯入文件，以及 **A2T 表格與草稿**，支援一鍵開啟 Excel。
 - 🔌 **MCP 伺服器** - 透過 FastMCP 向 Copilot/Claude 開放工具與資源。
@@ -60,8 +60,8 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP 伺服器 (模組化 Presentation 層)          │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 36 工具，7 個模組                       │   │
-│  │   document (6) │ docx (8)   │ section (5)       │   │
+│  │ tools/: 42 工具，7 個模組                       │   │
+│  │   document (8) │ docx (12)  │ section (5)       │   │
 │  │   job (3) │ knowledge (2) │ table (7) │ profile (5) │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │
@@ -125,6 +125,8 @@ uv run python -m src.presentation.server
 |------|------|
 | `ingest_documents` | 處理 PDF 檔案，可選用 Marker 後端 (`use_marker=True` 產出 blocks.json) |
 | `list_documents` | 列出所有已攝入文件與資產統計 |
+| `delete_document` | 刪除已攝入 PDF 與本地 artifacts |
+| `convert_pdf_to_docx` | 將 PDF 內容層重建為可讀 DOCX |
 | `inspect_document_manifest` | 在抓取資產前先檢視文件結構 |
 | `fetch_document_asset` | 精確獲取表格 (MD) / 圖片 (B64) / 章節內容 |
 | `parse_pdf_structure` | 使用 Marker 進行高精度結構化 PDF 解析 |
@@ -165,7 +167,11 @@ uv run python -m src.presentation.server
 | `get_docx_content` | 讀取指定區塊的 DFM 內容 |
 | `save_docx` | 將 DFM 編輯寫回 .docx |
 | `list_docx_blocks` | 列出文件區塊結構 |
-| `docx_validate_roundtrip` | 6 維度往返保真驗證 |
+| `list_docx_documents` | 列出所有已攝入的 DOCX/DFM 文件 |
+| `delete_docx` | 刪除已攝入的 DOCX/DFM 文件及其本地 artifacts |
+| `convert_docx_to_pdf` | 以保真模式輸出 PDF |
+| `convert_docx_to_doc` | 以保真模式輸出 DOC |
+| `docx_validate_roundtrip` | 6 維度往返保真驗證，支援 strict fail-closed 模式 |
 | `docx_table_to_context` | 橋接：Docx 表格 → A2T 上下文 |
 | `docx_table_from_context` | 橋接：A2T 表格 → Docx 表格 |
 | `docx_chart_data` | 提取 Docx 圖表數據 |

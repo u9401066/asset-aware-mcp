@@ -201,8 +201,9 @@ src/
     ├── server.py            # Thin entry point (31 行)
     ├── mcp_app.py           # FastMCP 單一實例
     ├── dependencies.py      # Composition Root
-    ├── tools/               # 28 tools (6 模組)
-    │   ├── document_tools.py   # ETL (6)
+    ├── tools/               # 42 tools (7 模組)
+    │   ├── document_tools.py   # ETL + document management (8)
+    │   ├── docx_tools.py       # Docx ↔ DFM + conversion (12)
     │   ├── section_tools.py    # Navigation (5)
     │   ├── job_tools.py        # Job management (3)
     │   ├── knowledge_tools.py  # KG (2)

@@ -172,6 +172,103 @@ class TestDocxTools:
             assert "t001" in result
             assert "2 個區塊" in result
 
+    async def test_list_docx_documents_success(self) -> None:
+        """list_docx_documents returns markdown summary table."""
+        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
+            mock_svc.list_documents = AsyncMock(
+                return_value=[
+                    {
+                        "doc_id": "docx_123",
+                        "filename": "demo.docx",
+                        "total_blocks": 7,
+                        "has_output_docx": True,
+                        "has_output_pdf": False,
+                        "updated_at": "2026-02-10T08:00:00",
+                    }
+                ]
+            )
+            from src.presentation.tools.docx_tools import list_docx_documents
+
+            result = await list_docx_documents()
+            assert "docx_123" in result
+            assert "demo.docx" in result
+            assert "DOCX Documents" in result
+
+    async def test_delete_docx_success(self) -> None:
+        """delete_docx returns formatted summary on success."""
+        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
+            mock_svc.delete_docx = AsyncMock(
+                return_value={
+                    "success": True,
+                    "doc_id": "docx_123",
+                    "filename": "demo.docx",
+                }
+            )
+            from src.presentation.tools.docx_tools import delete_docx
+
+            result = await delete_docx("docx_123")
+            assert "✅" in result
+            assert "demo.docx" in result
+
+    async def test_convert_docx_to_pdf_success(self) -> None:
+        """convert_docx_to_pdf returns converted path."""
+        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
+            mock_svc.convert_to_pdf = AsyncMock(
+                return_value={
+                    "success": True,
+                    "doc_id": "docx_123",
+                    "mode": "fidelity",
+                    "output_path": "/tmp/output.pdf",
+                }
+            )
+            from src.presentation.tools.docx_tools import convert_docx_to_pdf
+
+            result = await convert_docx_to_pdf("docx_123")
+            assert "✅" in result
+            assert "output.pdf" in result
+
+    async def test_convert_docx_to_doc_success(self) -> None:
+        """convert_docx_to_doc returns converted path."""
+        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
+            mock_svc.convert_to_doc = AsyncMock(
+                return_value={
+                    "success": True,
+                    "doc_id": "docx_123",
+                    "mode": "fidelity",
+                    "output_path": "/tmp/output.doc",
+                }
+            )
+            from src.presentation.tools.docx_tools import convert_docx_to_doc
+
+            result = await convert_docx_to_doc("docx_123")
+            assert "✅" in result
+            assert "output.doc" in result
+
+    async def test_docx_validate_roundtrip_strict(self, tmp_path: Path) -> None:
+        """docx_validate_roundtrip forwards strict mode to validator."""
+        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
+            with patch("src.presentation.tools.docx_tools.docx_validator") as mock_validator:
+                doc_dir = tmp_path / "docx_123"
+                doc_dir.mkdir()
+                (doc_dir / "original.docx").write_bytes(b"docx")
+
+                mock_svc.repository.get_doc_dir.return_value = doc_dir
+                mock_svc._load_ir.return_value = {"doc_id": "docx_123"}
+                mock_svc.adapter.ir_to_docx.return_value = None
+
+                report = MagicMock()
+                report.to_markdown.return_value = "STRICT PASS"
+                mock_validator.validate.return_value = report
+
+                from src.presentation.tools.docx_tools import docx_validate_roundtrip
+
+                result = await docx_validate_roundtrip("docx_123", strict=True)
+
+                assert result == "STRICT PASS"
+                mock_validator.validate.assert_called_once()
+                _, kwargs = mock_validator.validate.call_args
+                assert kwargs["strict"] is True
+
 
 # ============================================================================
 # Job Tools
@@ -245,6 +342,49 @@ class TestDocumentTools:
 
             result = await search_source_location("doc123", "test query")
             assert "❌" in result
+
+    async def test_delete_document_success(self) -> None:
+        """delete_document returns formatted summary on success."""
+        with patch(
+            "src.presentation.tools.document_tools.document_service"
+        ) as mock_svc:
+            mock_svc.delete_document = AsyncMock(
+                return_value={
+                    "success": True,
+                    "doc_id": "doc_123",
+                    "filename": "paper.pdf",
+                    "warnings": ["kg not removed"],
+                }
+            )
+            from src.presentation.tools.document_tools import delete_document
+
+            result = await delete_document("doc_123")
+            assert "✅" in result
+            assert "paper.pdf" in result
+            assert "warning" in result
+
+    async def test_convert_pdf_to_docx_success(self) -> None:
+        """convert_pdf_to_docx returns output summary on success."""
+        with patch(
+            "src.presentation.tools.document_tools.document_service"
+        ) as mock_svc:
+            mock_svc.convert_pdf_to_docx = AsyncMock(
+                return_value={
+                    "success": True,
+                    "doc_id": "doc_123",
+                    "mode": "content",
+                    "output_path": "/tmp/converted.docx",
+                    "figures_embedded": 2,
+                    "tables_found": 1,
+                }
+            )
+            from src.presentation.tools.document_tools import convert_pdf_to_docx
+
+            result = await convert_pdf_to_docx("doc_123")
+            assert "✅" in result
+            assert "converted.docx" in result
+            assert "figures_embedded" in result
+
 
 
 # ============================================================================

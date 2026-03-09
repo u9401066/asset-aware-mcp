@@ -116,6 +116,8 @@ class ValidationReport:
     rebuilt_stats: dict[str, int] = field(default_factory=dict)
 
     errors: list[str] = field(default_factory=list)
+    strict_passed: bool | None = None
+    strict_failures: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to serializable dict."""
@@ -192,6 +194,8 @@ class ValidationReport:
                 for d in self.style_diffs[:20]
             ],
             "errors": self.errors,
+            "strict_passed": self.strict_passed,
+            "strict_failures": self.strict_failures,
         }
 
     def to_markdown(self) -> str:
@@ -307,6 +311,17 @@ class ValidationReport:
             lines.append("### ⚠️ 錯誤")
             lines.extend(f"- {e}" for e in self.errors)
 
+        if self.strict_passed is not None:
+            lines.append("")
+            lines.append("### Strict Gate")
+            if self.strict_passed:
+                lines.append(
+                    "✅ STRICT PASS — no structural, text, formatting, table, media, or style regressions detected."
+                )
+            else:
+                lines.append("❌ STRICT FAIL")
+                lines.extend(f"- {failure}" for failure in self.strict_failures)
+
         return "\n".join(lines)
 
 
@@ -328,7 +343,17 @@ class DocxValidator:
         "style": 0.10,
     }
 
-    def validate(self, original_path: Path, rebuilt_path: Path) -> ValidationReport:
+    STRICT_VOLATILE_ZIP_ENTRIES: ClassVar[set[str]] = {
+        "docProps/core.xml",
+    }
+
+    def validate(
+        self,
+        original_path: Path,
+        rebuilt_path: Path,
+        *,
+        strict: bool = False,
+    ) -> ValidationReport:
         """
         Compare original and rebuilt .docx files.
 
@@ -379,7 +404,61 @@ class DocxValidator:
             + self.WEIGHTS["style"] * report.style_score
         )
 
+        if strict:
+            self._apply_strict_policy(report)
+
         return report
+
+    def _apply_strict_policy(self, report: ValidationReport) -> None:
+        """Apply fail-closed criteria for strict round-trip validation."""
+        failures: list[str] = []
+
+        if report.errors:
+            failures.extend(f"validator error: {error}" for error in report.errors)
+
+        if report.structure_diffs:
+            failures.append(
+                f"{len(report.structure_diffs)} structural differences detected"
+            )
+        if report.text_diffs:
+            failures.append(f"{len(report.text_diffs)} text differences detected")
+        if report.format_diffs:
+            failures.append(
+                f"{len(report.format_diffs)} formatting differences detected"
+            )
+        if report.table_diffs:
+            failures.append(f"{len(report.table_diffs)} table differences detected")
+        if report.media_diffs:
+            failures.append(f"{len(report.media_diffs)} media differences detected")
+        if report.style_diffs:
+            failures.append(f"{len(report.style_diffs)} style differences detected")
+
+        unexpected_zip_changes = self._unexpected_zip_entry_changes(
+            report.zip_entry_diffs
+        )
+        if unexpected_zip_changes:
+            failures.append(
+                f"{len(unexpected_zip_changes)} unexpected ZIP entry additions/removals detected"
+            )
+
+        report.strict_failures = failures
+        report.strict_passed = not failures
+
+    @classmethod
+    def _unexpected_zip_entry_changes(cls, zip_entry_diffs: list[str]) -> list[str]:
+        """Filter package additions/removals that are not explicitly whitelisted."""
+        unexpected: list[str] = []
+        for diff in zip_entry_diffs:
+            if not diff.startswith(("🔴 removed:", "🟢 added:")):
+                continue
+
+            _, _, name = diff.partition(": ")
+            if name in cls.STRICT_VOLATILE_ZIP_ENTRIES:
+                continue
+
+            unexpected.append(diff)
+
+        return unexpected
 
     def validate_ir_roundtrip(
         self,

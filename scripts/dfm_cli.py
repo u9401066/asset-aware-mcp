@@ -8,8 +8,10 @@ DFM CLI — Docx ↔ DFM 互動式轉換工具
     python scripts/dfm_cli.py              # 互動式選單
     python scripts/dfm_cli.py ingest FILE  # 直接匯入
     python scripts/dfm_cli.py save DOC_ID  # 存回 docx
+    python scripts/dfm_cli.py to-pdf DOC_ID [OUT]  # 轉成 pdf
+    python scripts/dfm_cli.py to-doc DOC_ID [OUT]  # 轉成 doc
     python scripts/dfm_cli.py list         # 列出已匯入文件
-    python scripts/dfm_cli.py validate ID  # 驗證 round-trip
+    python scripts/dfm_cli.py validate ID [--strict]  # 驗證 round-trip
     python scripts/dfm_cli.py open DOC_ID  # 用 VS Code 開啟 DFM
 """
 
@@ -131,8 +133,8 @@ async def cmd_save(doc_id: str, output_path: str | None = None) -> None:
         print(f"❌ 存檔失敗: {result.get('error')}")
 
 
-async def cmd_validate(doc_id: str) -> None:
-    """驗證 round-trip 保真度"""
+async def cmd_validate(doc_id: str, strict: bool = False) -> None:
+    """驗證 round-trip 保真度。"""
     service = _create_service()
 
     dfm_text = await service.get_dfm(doc_id)
@@ -160,12 +162,32 @@ async def cmd_validate(doc_id: str) -> None:
     from src.infrastructure.docx_validator import DocxValidator
 
     validator = DocxValidator()
-    report = validator.validate(original, temp_output)
+    report = validator.validate(original, temp_output, strict=strict)
     print(report.to_markdown())
 
     # Clean up
     if temp_output.exists():
         temp_output.unlink()
+
+
+async def cmd_convert_pdf(doc_id: str, output_path: str | None = None) -> None:
+    """將目前 DFM 狀態轉為 PDF。"""
+    service = _create_service()
+    result = await service.convert_to_pdf(doc_id, output_path)
+    if result.get("success"):
+        print(f"✅ 轉換成功: {result.get('output_path')}")
+    else:
+        print(f"❌ 轉換失敗: {result.get('error')}")
+
+
+async def cmd_convert_doc(doc_id: str, output_path: str | None = None) -> None:
+    """將目前 DFM 狀態轉為 DOC。"""
+    service = _create_service()
+    result = await service.convert_to_doc(doc_id, output_path)
+    if result.get("success"):
+        print(f"✅ 轉換成功: {result.get('output_path')}")
+    else:
+        print(f"❌ 轉換失敗: {result.get('error')}")
 
 
 def cmd_list() -> None:
@@ -288,12 +310,14 @@ async def interactive_menu() -> None:
         print("│  2. 📝 開啟 DFM 編輯 (VS Code)        │")
         print("│  3. 💾 存回 docx                      │")
         print("│  4. 🔍 驗證 round-trip                │")
-        print("│  5. 📋 列出已匯入文件                  │")
-        print("│  6. 📄 列出文件區塊                    │")
-        print("│  7. 🔄 一鍵流程 (匯入→編輯→存檔)       │")
+        print("│  5. 📤 轉成 PDF                       │")
+        print("│  6. 📤 轉成 DOC                       │")
+        print("│  7. 📋 列出已匯入文件                  │")
+        print("│  8. 📄 列出文件區塊                    │")
+        print("│  9. 🔄 一鍵流程 (匯入→編輯→存檔)       │")
         print("│  0. 🚪 離開                           │")
         print("└──────────────────────────────────────┘")
-        choice = input("\n請選擇 [0-7]: ").strip()
+        choice = input("\n請選擇 [0-9]: ").strip()
 
         if choice == "0":
             print("👋 Bye!")
@@ -318,17 +342,30 @@ async def interactive_menu() -> None:
         elif choice == "4":
             doc_id = _pick_doc()
             if doc_id:
-                await cmd_validate(doc_id)
+                strict = input("啟用 strict 驗證? [y/N]: ").strip().lower() == "y"
+                await cmd_validate(doc_id, strict=strict)
 
         elif choice == "5":
-            cmd_list()
+            doc_id = _pick_doc()
+            if doc_id:
+                custom = input("輸出 PDF 路徑 (Enter = 預設): ").strip().strip('"')
+                await cmd_convert_pdf(doc_id, custom or None)
 
         elif choice == "6":
             doc_id = _pick_doc()
             if doc_id:
-                await cmd_blocks(doc_id)
+                custom = input("輸出 DOC 路徑 (Enter = 預設): ").strip().strip('"')
+                await cmd_convert_doc(doc_id, custom or None)
 
         elif choice == "7":
+            cmd_list()
+
+        elif choice == "8":
+            doc_id = _pick_doc()
+            if doc_id:
+                await cmd_blocks(doc_id)
+
+        elif choice == "9":
             # One-click workflow
             print("\n🔄 一鍵流程：匯入 → 編輯 → 存檔")
             path = _pick_file()
@@ -347,7 +384,8 @@ async def interactive_menu() -> None:
 
             validate_yn = input("\n是否驗證 round-trip? [y/N]: ").strip().lower()
             if validate_yn == "y":
-                await cmd_validate(doc_id)
+                strict = input("啟用 strict 驗證? [y/N]: ").strip().lower() == "y"
+                await cmd_validate(doc_id, strict=strict)
 
         else:
             print("❓ 無效選項，請重新輸入")
@@ -374,7 +412,14 @@ def main() -> None:
         output = args[2] if len(args) >= 3 else None
         asyncio.run(cmd_save(args[1], output))
     elif cmd == "validate" and len(args) >= 2:
-        asyncio.run(cmd_validate(args[1]))
+        strict = "--strict" in args[2:]
+        asyncio.run(cmd_validate(args[1], strict=strict))
+    elif cmd == "to-pdf" and len(args) >= 2:
+        output = args[2] if len(args) >= 3 else None
+        asyncio.run(cmd_convert_pdf(args[1], output))
+    elif cmd == "to-doc" and len(args) >= 2:
+        output = args[2] if len(args) >= 3 else None
+        asyncio.run(cmd_convert_doc(args[1], output))
     elif cmd == "list":
         cmd_list()
     elif cmd == "open" and len(args) >= 2:

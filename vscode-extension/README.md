@@ -6,13 +6,23 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-## 🆕 What's New in v0.3.3
+## 🆕 What's New in v0.4.0
 
+- **Document CRUD + Conversion**: Added `delete_document`, `delete_docx`, `list_docx_documents`, `convert_docx_to_pdf`, `convert_docx_to_doc`, and `convert_pdf_to_docx`
+- **Strict Round-Trip Validation**: `docx_validate_roundtrip(..., strict=true)` now supports fail-closed validation for structure/text/format/table/media/style regressions
+- **Write-Back Safety Guard**: `save_docx` now aborts if unedited blocks mutate during write-back
 - **`.doc` Auto-Conversion**: `ingest_docx` now accepts legacy `.doc` files — auto-converts via LibreOffice headless
 - **Markdown Escaping Fix**: `_escape_md()` / `_unescape_md()` prevents text content (e.g. `※**`) from being misinterpreted as bold/italic markers
 - **Run Merging**: Adjacent runs with identical formatting are merged before Markdown generation, eliminating `**A****B**` artifacts
 - **Production Hardening**: Dockerfile, PDF magic byte validation, concurrent job limits, structured logging
-- **361 unit tests** passing
+- **42 tools** across 7 modules
+- **Proposal real-file verification**: battle-tested on a real Proposal DOCX for DOCX→DFM→DOCX, DOCX→PDF, and DOCX→DOC
+
+### v0.3.3
+- **Production Hardening**: Dockerfile, PDF magic byte validation, concurrent job limits, structured logging
+- **`.doc` Auto-Conversion**: `ingest_docx` now accepts legacy `.doc` files — auto-converts via LibreOffice headless
+- **Markdown Escaping Fix**: `_escape_md()` / `_unescape_md()` prevents text content (e.g. `※**`) from being misinterpreted as bold/italic markers
+- **Run Merging**: Adjacent runs with identical formatting are merged before Markdown generation, eliminating `**A****B**` artifacts
 
 ### v0.3.2
 - **DFM Integrity Checker**: Automatic validation + auto-repair at every pipeline stage (ingest/save)
@@ -27,7 +37,7 @@
 - **Docx Editing (DFM)**: 8 new tools for editing .docx files as Markdown with full round-trip fidelity
 - **DocxValidator**: 6-dimension comparison with weighted scoring
 - **DfmTableBridge**: Seamless Docx table ↔ A2T table conversion
-- **Total**: 36 tools in 7 modules
+- **Total at release time**: 36 tools in 7 modules
 
 ## 🌟 Core Concept: Asset-Aware ETL
 
@@ -132,13 +142,15 @@ If the extension fails to start or the MCP server doesn't appear:
     *   Run `npm install`.
     *   Press `F5` to launch the **Extension Development Host**.
 
-## 📚 MCP Tools (36 total)
+## 📚 MCP Tools (42 total)
 
-### Document ETL (6)
+### Document ETL (8)
 | Tool | Description |
 |------|-------------|
 | `ingest_documents` | Process PDF files into structured assets |
 | `list_documents` | List all ingested documents |
+| `delete_document` | Delete an ingested PDF and its local artifacts |
+| `convert_pdf_to_docx` | Reconstruct a readable DOCX from extracted PDF content |
 | `inspect_document_manifest` | View document structure (Tables/Figures/Sections) |
 | `fetch_document_asset` | Get specific Table/Figure/Section content |
 | `parse_pdf_structure` | Parse PDF structure without full ingestion |
@@ -166,14 +178,18 @@ If the extension fails to start or the MCP server doesn't appear:
 | `consult_knowledge_graph` | Cross-document RAG queries |
 | `export_knowledge_graph` | Export knowledge graph data |
 
-### Docx Editing — DFM (8)
+### Docx Editing — DFM (12)
 | Tool | Description |
 |------|-------------|
 | `ingest_docx` | Import .docx and decompose into DFM blocks |
 | `get_docx_content` | Read DFM content of specific blocks |
 | `save_docx` | Write DFM edits back to .docx |
 | `list_docx_blocks` | List document block structure |
-| `docx_validate_roundtrip` | 6-dimension round-trip fidelity + file-level SHA-256/ZIP comparison |
+| `list_docx_documents` | List all ingested DOCX/DFM documents |
+| `delete_docx` | Delete an ingested DOCX/DFM document and its local artifacts |
+| `convert_docx_to_pdf` | Export the current DOCX/DFM state to PDF in fidelity mode |
+| `convert_docx_to_doc` | Export the current DOCX/DFM state to DOC in fidelity mode |
+| `docx_validate_roundtrip` | 6-dimension round-trip fidelity + file-level SHA-256/ZIP comparison with optional strict fail-closed mode |
 | `docx_table_to_context` | Bridge: Docx table → A2T context |
 | `docx_table_from_context` | Bridge: A2T table → Docx table |
 | `docx_chart_data` | Extract chart data from Docx |

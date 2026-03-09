@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 from pathlib import Path  # noqa: TC003
+from typing import Any
 
 from src.domain.entities import DocumentManifest, DocumentSummary
 from src.domain.repositories import DocumentRepository
@@ -148,3 +150,59 @@ class FileStorage(DocumentRepository):
         """Check if document exists."""
         manifest_path = self.base_dir / doc_id / f"{doc_id}_manifest.json"
         return manifest_path.exists()
+
+    def delete_document(self, doc_id: str) -> bool:
+        """Delete a stored document directory and all of its artifacts."""
+        doc_dir = self.base_dir / doc_id
+        if not doc_dir.exists() or not doc_dir.is_dir():
+            return False
+
+        shutil.rmtree(doc_dir, ignore_errors=True)
+        return not doc_dir.exists()
+
+    def list_docx_documents(self) -> list[dict[str, Any]]:
+        """List all DOCX/DFM documents managed by the repository."""
+        documents: list[dict[str, Any]] = []
+
+        skip_dirs = {"lightrag_db", "jobs", "tables"}
+
+        for doc_dir in self.base_dir.iterdir():
+            if not doc_dir.is_dir():
+                continue
+
+            if doc_dir.name.startswith(".") or doc_dir.name in skip_dirs:
+                continue
+
+            ir_path = doc_dir / "ir.json"
+            original_path = doc_dir / "original.docx"
+            if not ir_path.exists() or not original_path.exists():
+                continue
+
+            try:
+                ir_data = json.loads(ir_path.read_text(encoding="utf-8"))
+            except Exception:
+                logger.warning("Failed to parse ir.json for %s", doc_dir.name)
+                continue
+
+            blocks = ir_data.get("blocks", [])
+            block_types: dict[str, int] = {}
+            for block in blocks:
+                block_type = str(block.get("block_type", "unknown"))
+                block_types[block_type] = block_types.get(block_type, 0) + 1
+
+            documents.append(
+                {
+                    "doc_id": ir_data.get("doc_id", doc_dir.name),
+                    "filename": ir_data.get("source_filename", original_path.name),
+                    "source_path": ir_data.get("source_path", str(original_path)),
+                    "total_blocks": len(blocks),
+                    "block_types": block_types,
+                    "created_at": ir_data.get("created_at", ""),
+                    "updated_at": ir_data.get("updated_at", ""),
+                    "has_output_docx": (doc_dir / "output.docx").exists(),
+                    "has_output_pdf": (doc_dir / "output.pdf").exists(),
+                }
+            )
+
+        documents.sort(key=lambda item: str(item.get("updated_at", "")), reverse=True)
+        return documents

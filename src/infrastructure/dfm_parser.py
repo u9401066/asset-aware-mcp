@@ -227,9 +227,9 @@ class DfmParser:
                 block_type=bt,
             )
 
-            # Protected blocks: skip editing
+            # Protected blocks are represented as placeholders in split format;
+            # do not treat them as user edits.
             if bt.is_protected:
-                result.edits.append(edit)
                 continue
 
             # Type-specific parsing
@@ -623,6 +623,9 @@ class DfmParser:
             block_type=bt,
         )
 
+        if bt.is_protected:
+            return i
+
         if bt == DfmBlockType.TABLE:
             edit.table_rows = self._parse_md_table(content)
             edit.new_content = content
@@ -706,6 +709,9 @@ class DfmParser:
             new_content=content,
             block_type=bt,
         )
+
+        if bt.is_protected:
+            return i
 
         if bt == DfmBlockType.TABLE:
             edit.table_rows = self._parse_md_table(content)

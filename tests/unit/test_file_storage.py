@@ -6,6 +6,7 @@ Tests for FileStorage repository implementation.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -181,3 +182,51 @@ class TestFileStorage:
         storage.save_manifest(sample_manifest)
 
         assert storage.document_exists("doc_test_abc123")
+
+    def test_delete_document(
+        self, storage: FileStorage, sample_manifest: DocumentManifest
+    ):
+        """Test deleting a stored document directory."""
+        storage.save_manifest(sample_manifest)
+        storage.save_markdown(sample_manifest.doc_id, "# content")
+
+        assert storage.delete_document(sample_manifest.doc_id) is True
+        assert storage.document_exists(sample_manifest.doc_id) is False
+
+    def test_delete_document_missing(self, storage: FileStorage):
+        """Deleting a missing document returns False."""
+        assert storage.delete_document("doc_missing") is False
+
+    def test_list_docx_documents(self, storage: FileStorage):
+        """Test listing DOCX/DFM documents from repository layout."""
+        doc_dir = storage.get_doc_dir("docx_demo_123")
+        (doc_dir / "original.docx").write_bytes(b"fake-docx")
+        (doc_dir / "output.docx").write_bytes(b"rebuilt-docx")
+        (doc_dir / "output.pdf").write_bytes(b"pdf")
+        (doc_dir / "ir.json").write_text(
+            json.dumps(
+                {
+                    "doc_id": "docx_demo_123",
+                    "source_filename": "demo.docx",
+                    "source_path": "/tmp/demo.docx",
+                    "created_at": "2026-02-09T18:59:45",
+                    "updated_at": "2026-02-10T08:00:00",
+                    "blocks": [
+                        {"id": "h1", "block_type": "heading"},
+                        {"id": "p1", "block_type": "paragraph"},
+                        {"id": "p2", "block_type": "paragraph"},
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        documents = storage.list_docx_documents()
+
+        assert len(documents) == 1
+        assert documents[0]["doc_id"] == "docx_demo_123"
+        assert documents[0]["filename"] == "demo.docx"
+        assert documents[0]["total_blocks"] == 3
+        assert documents[0]["block_types"] == {"heading": 1, "paragraph": 2}
+        assert documents[0]["has_output_docx"] is True
+        assert documents[0]["has_output_pdf"] is True

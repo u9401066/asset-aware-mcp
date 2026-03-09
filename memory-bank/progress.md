@@ -2,14 +2,17 @@
 
 ## Done
 
-- 新增 VSIX install smoke 測試腳本，模擬 fresh install 與 update install
-- 在本機以真實 VSIX 驗證 0.2.10 → 0.3.3 更新與 0.3.3 新安裝
-- 修正 ESLint 忽略 .vscode-test 與 *.vsix，避免 smoke test 後 lint OOM
+- 補齊 PDF/DOCX 文件級 CRUD 與互轉能力
+- 實作 strict DOCX round-trip 驗證與 save-time mutation guard
+- 以 Proposal 真實文件完成 DOCX→DFM→DOCX、DOCX→PDF、DOCX→DOC 實戰驗證
+- 修正 protected block placeholder 被誤判為編輯的 parser/integrity 根因問題
+- 同步更新 CLI 與 README/README.zh-TW 的 42 tools 文件描述
+- 完成 0.4.0 release 驗證：ruff、mypy、336 單元測試、Python build、VSIX 0.4.0 打包
 
 ## Doing
 
-- 整理 CI 與本地 install-smoke 驗證結果
+- commit / push / tag v0.4.0
 
 ## Next
 
-- 如需要可提交 install-smoke 變更並 push 觸發新的跨平台 CI
+- 如需要，可處理 VS Code extension npm audit 顯示的相依套件弱點

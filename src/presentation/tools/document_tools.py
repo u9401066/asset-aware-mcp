@@ -6,6 +6,8 @@ Document Tools - ETL + 文件管理 MCP 工具
 - search_source_location: 來源位置搜尋
 - ingest_documents: PDF 文件攝入
 - list_documents: 列出所有文件
+- delete_document: 刪除已攝入的 PDF 文件及本地 artifacts
+- convert_pdf_to_docx: 將 PDF 內容層重建為 DOCX
 - inspect_document_manifest: 查看文件 Manifest
 - fetch_document_asset: 擷取文件資產
 """
@@ -304,6 +306,61 @@ async def list_documents() -> str:
         output_lines.append("")
 
     return "\n".join(output_lines)
+
+
+@mcp.tool()
+async def delete_document(doc_id: str) -> str:
+    """
+    刪除已攝入的 PDF 文件及其本地 artifacts。
+
+    會移除 data/{doc_id}/ 下的 manifest、markdown、images、blocks.json 等檔案。
+    注意：若啟用了知識圖譜，目前只會刪除本地 artifacts，不會同步刪除圖譜節點。
+    """
+    result = await document_service.delete_document(doc_id)
+    if not result.get("success"):
+        return f"❌ 刪除失敗：{result.get('error', '未知錯誤')}"
+
+    lines = [
+        "✅ PDF 文件已刪除",
+        f"- **doc_id**: `{result.get('doc_id', '')}`",
+        f"- **filename**: {result.get('filename', '')}",
+    ]
+    for warning in result.get("warnings", []):
+        lines.append(f"- **warning**: {warning}")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def convert_pdf_to_docx(
+    doc_id: str,
+    output_path: str | None = None,
+    mode: str = "content",
+) -> str:
+    """
+    將已攝入的 PDF 文件轉為 DOCX。
+
+    轉換範圍：
+    - `content`：內容層重建。根據 PDF ETL 的 Markdown/表格/圖片生成可讀 DOCX。
+    - `fidelity`：目前不支援，因為 PDF ETL 並非版面可逆。
+    """
+    result = await document_service.convert_pdf_to_docx(
+        doc_id,
+        output_path,
+        mode=mode,
+    )
+    if not result.get("success"):
+        return f"❌ 轉換失敗：{result.get('error', '未知錯誤')}"
+
+    return "\n".join(
+        [
+            "✅ PDF → DOCX 轉換成功",
+            f"- **doc_id**: `{result.get('doc_id', '')}`",
+            f"- **mode**: {result.get('mode', mode)}",
+            f"- **output_path**: `{result.get('output_path', '')}`",
+            f"- **figures_embedded**: {result.get('figures_embedded', 0)}",
+            f"- **tables_found**: {result.get('tables_found', 0)}",
+        ]
+    )
 
 
 @mcp.tool()

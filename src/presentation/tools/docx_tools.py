@@ -6,6 +6,10 @@ Docx Tools - Docx ↔ DFM 雙向轉換 + Table Bridge MCP 工具
 - get_docx_content: 取得可編輯的 DFM 內容
 - save_docx: 將編輯後的 DFM 存回 .docx
 - list_docx_blocks: 列出文件中所有區塊的摘要
+- list_docx_documents: 列出所有已攝入的 DOCX/DFM 文件
+- delete_docx: 刪除已攝入的 DOCX/DFM 文件及其本地 artifacts
+- convert_docx_to_doc: 將目前 DOCX/DFM 狀態轉為 DOC（保真模式）
+- convert_docx_to_pdf: 將目前 DOCX/DFM 狀態轉為 PDF（保真模式）
 - docx_table_to_context: 將 DFM 表格區塊轉為 TableContext（可用 table_manage/table_data 編輯）
 - docx_table_from_context: 將 TableContext 寫回 DFM 表格區塊
 - docx_chart_data: 提取圖表的底層資料為表格格式
@@ -207,9 +211,109 @@ async def list_docx_blocks(doc_id: str) -> str:
 
 
 @mcp.tool()
+async def list_docx_documents() -> str:
+    """
+    列出所有已攝入的 DOCX/DFM 文件。
+
+    Returns:
+        DOCX 文件摘要列表
+    """
+    documents = await docx_service.list_documents()
+    if not documents:
+        return "No DOCX documents found. Use `ingest_docx` to process .doc/.docx files."
+
+    lines = [f"# DOCX Documents ({len(documents)} total)\n"]
+    lines.append("| doc_id | filename | blocks | output.docx | output.pdf | updated |")
+    lines.append("|---|---|---:|:---:|:---:|---|")
+
+    for doc in documents:
+        lines.append(
+            "| {doc_id} | {filename} | {total_blocks} | {has_docx} | {has_pdf} | {updated_at} |".format(
+                doc_id=doc.get("doc_id", ""),
+                filename=doc.get("filename", ""),
+                total_blocks=doc.get("total_blocks", 0),
+                has_docx="✅" if doc.get("has_output_docx") else "-",
+                has_pdf="✅" if doc.get("has_output_pdf") else "-",
+                updated_at=doc.get("updated_at", ""),
+            )
+        )
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def delete_docx(doc_id: str) -> str:
+    """
+    刪除已攝入的 DOCX/DFM 文件及其本地 artifacts。
+
+    會移除 data/{doc_id}/ 下的 IR、DFM、原始 DOCX、輸出檔與備份。
+    """
+    result = await docx_service.delete_docx(doc_id)
+    if not result.get("success"):
+        return f"❌ 刪除失敗：{result.get('error', '未知錯誤')}"
+
+    return (
+        "✅ DOCX 文件已刪除\n"
+        f"- **doc_id**: `{result.get('doc_id', '')}`\n"
+        f"- **filename**: {result.get('filename', '')}"
+    )
+
+
+@mcp.tool()
+async def convert_docx_to_doc(
+    doc_id: str,
+    output_path: str | None = None,
+    mode: str = "fidelity",
+) -> str:
+    """
+    將已攝入的 DOCX/DFM 文件轉為 DOC。
+
+    轉換範圍：
+    - `fidelity`：保真模式。以目前 DFM 狀態重建 DOCX，再用 LibreOffice 輸出 DOC。
+    - `content`：目前不支援；DOCX → DOC 應以保真輸出為主。
+    """
+    result = await docx_service.convert_to_doc(doc_id, output_path, mode=mode)
+    if not result.get("success"):
+        return f"❌ 轉換失敗：{result.get('error', '未知錯誤')}"
+
+    return (
+        "✅ DOCX → DOC 轉換成功\n"
+        f"- **doc_id**: `{result.get('doc_id', '')}`\n"
+        f"- **mode**: {result.get('mode', mode)}\n"
+        f"- **output_path**: `{result.get('output_path', '')}`"
+    )
+
+
+@mcp.tool()
+async def convert_docx_to_pdf(
+    doc_id: str,
+    output_path: str | None = None,
+    mode: str = "fidelity",
+) -> str:
+    """
+    將已攝入的 DOCX/DFM 文件轉為 PDF。
+
+    轉換範圍：
+    - `fidelity`：保真模式。以目前 DFM 狀態重建 DOCX，再用 LibreOffice 輸出 PDF。
+    - `content`：目前不支援；DOCX → PDF 應以保真輸出為主。
+    """
+    result = await docx_service.convert_to_pdf(doc_id, output_path, mode=mode)
+    if not result.get("success"):
+        return f"❌ 轉換失敗：{result.get('error', '未知錯誤')}"
+
+    return (
+        "✅ DOCX → PDF 轉換成功\n"
+        f"- **doc_id**: `{result.get('doc_id', '')}`\n"
+        f"- **mode**: {result.get('mode', mode)}\n"
+        f"- **output_path**: `{result.get('output_path', '')}`"
+    )
+
+
+@mcp.tool()
 async def docx_validate_roundtrip(
     doc_id: str,
     output_path: str | None = None,
+    strict: bool = False,
 ) -> str:
     """
     驗證 docx → DFM → docx 的往返保真度 (Round-Trip Fidelity)。
@@ -234,6 +338,7 @@ async def docx_validate_roundtrip(
     Args:
         doc_id: 文件 ID（由 ingest_docx 產生）
         output_path: 可選，指定輸出的 .docx 路徑。預設使用 data/{doc_id}/output.docx
+        strict: 若為 True，啟用 fail-closed 嚴格驗證；任何結構/文字/格式/表格/媒體/樣式差異都視為失敗
 
     Returns:
         Markdown 格式的驗證報告（含保真度分數和差異列表）
@@ -266,7 +371,7 @@ async def docx_validate_roundtrip(
         return f"❌ 重建 docx 失敗：{e}"
 
     # Validate
-    report = docx_validator.validate(original_path, rebuilt_path)
+    report = docx_validator.validate(original_path, rebuilt_path, strict=strict)
 
     return report.to_markdown()
 

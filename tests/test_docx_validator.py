@@ -282,6 +282,19 @@ class TestValidationReport:
             md = report.to_markdown()
             assert expected in md
 
+    def test_to_markdown_with_strict_failures(self):
+        report = ValidationReport(
+            fidelity_score=0.9,
+            strict_passed=False,
+            strict_failures=["1 text differences detected"],
+        )
+
+        md = report.to_markdown()
+
+        assert "Strict Gate" in md
+        assert "STRICT FAIL" in md
+        assert "1 text differences detected" in md
+
 
 # ============================================================================
 # Tests: DocxValidator — identical files
@@ -340,6 +353,21 @@ class TestValidateIdentical:
         report = validator.validate(docx_path, docx_path)
         assert report.media_score == pytest.approx(1.0)
         assert report.original_stats["media_files"] == 1
+
+    def test_identical_strict_passes(
+        self, validator: DocxValidator, tmp_docx_dir: Path
+    ):
+        """Strict mode should pass for identical documents."""
+        docx_path = tmp_docx_dir / "strict.docx"
+        _create_docx(
+            docx_path,
+            paragraphs=[_make_paragraph("Strict validation")],
+        )
+
+        report = validator.validate(docx_path, docx_path, strict=True)
+
+        assert report.strict_passed is True
+        assert report.strict_failures == []
 
 
 # ============================================================================
@@ -408,6 +436,21 @@ class TestValidateTextDiffs:
 
         report = validator.validate(a, b)
         assert report.fidelity_score == pytest.approx(1.0)
+
+    def test_modified_text_strict_fails(
+        self, validator: DocxValidator, tmp_docx_dir: Path
+    ):
+        """Strict mode should fail on any text diff."""
+        original = tmp_docx_dir / "orig.docx"
+        modified = tmp_docx_dir / "rebuilt.docx"
+
+        _create_docx(original, paragraphs=[_make_paragraph("Hello")])
+        _create_docx(modified, paragraphs=[_make_paragraph("Hello world")])
+
+        report = validator.validate(original, modified, strict=True)
+
+        assert report.strict_passed is False
+        assert "text differences detected" in report.strict_failures[0]
 
 
 # ============================================================================

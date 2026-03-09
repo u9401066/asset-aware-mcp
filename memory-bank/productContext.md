@@ -6,7 +6,7 @@
 
 **專案名稱**：asset-aware-mcp
 
-**一句話描述**：Medical RAG with Asset-Aware MCP - 讓 AI Agent 精準存取 PDF 文獻中的表格、章節與知識圖譜
+**一句話描述**：Asset-Aware MCP Server，讓 AI Agent 精準存取 PDF 資產並安全編輯 DOCX/DFM，支援文件級 CRUD、互轉與 strict round-trip 驗證
 
 **目標用戶**：醫學研究人員、使用 VS Code + Copilot 的開發者
 
@@ -38,11 +38,11 @@ Local Storage
 ## ✨ 核心功能
 
 - 📄 PDF → Markdown 轉換 (PyMuPDF / Marker)
-- 📝 Docx ↔ DFM 即時編輯 (8 tools, 6D validator)
+- 📝 Docx ↔ DFM 即時編輯與互轉 (12 tools, 6D validator + strict gate)
 - 🗺️ Document Manifest 生成 (Asset 清單)
 - 📊 A2T 表格系統 (7 operation-based tools)
 - 🧠 LightRAG 知識圖譜建立
-- 🔌 MCP Tools (36 tools in 7 modules) 暴露給 Agent
+- 🔌 MCP Tools (42 tools in 7 modules) 暴露給 Agent
 
 ## 🔧 技術棧
 
@@ -66,7 +66,7 @@ Local Storage
 - ruff, mypy
 
 ---
-*Last updated: 2025-12-26*
+*Last updated: 2026-03-09*
 
 
 ## Project Description

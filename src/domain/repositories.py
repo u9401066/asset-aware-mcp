@@ -9,7 +9,7 @@ Infrastructure layer provides HOW they are implemented.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -64,6 +64,16 @@ class DocumentRepository(ABC):
     @abstractmethod
     def document_exists(self, doc_id: str) -> bool:
         """Check if document exists."""
+        ...
+
+    @abstractmethod
+    def delete_document(self, doc_id: str) -> bool:
+        """Delete a document directory and all persisted artifacts."""
+        ...
+
+    @abstractmethod
+    def list_docx_documents(self) -> list[dict[str, Any]]:
+        """List all ingested DOCX/DFM documents."""
         ...
 
     @abstractmethod

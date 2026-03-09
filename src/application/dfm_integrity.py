@@ -421,8 +421,8 @@ class DfmIntegrityChecker:
                 )
                 continue
 
-            # Protected block check
-            if block.is_protected and edit.new_content.strip():
+            # Protected block check: only warn if user actually changed content.
+            if block.is_protected and self._protected_block_changed(block, edit):
                 report.add(
                     IntegrityIssue(
                         severity="warning",
@@ -484,6 +484,15 @@ class DfmIntegrityChecker:
             )
 
         return report
+
+    @staticmethod
+    def _protected_block_changed(block: Any, edit: Any) -> bool:
+        """Return True only when a protected block's visible content was changed."""
+        current_content = (
+            block.plain_text if getattr(block, "runs", None) else block.content
+        ) or ""
+        edited_content = (edit.new_content or "").strip()
+        return bool(edited_content) and edited_content != current_content.strip()
 
     # ========================================================================
     # 4. Post-save validation

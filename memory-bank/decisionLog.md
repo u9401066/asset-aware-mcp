@@ -2,6 +2,9 @@
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-03-09 | **DOCX→PDF / DOCX→DOC 採保真模式，PDF→DOCX 採內容重建模式** | DOCX 來源具可逆結構，適合透過 LibreOffice 做 fidelity export；PDF ETL 不具版面可逆性，因此僅承諾可讀內容重建，不宣稱 layout fidelity。 |
+| 2026-03-09 | **strict round-trip 採 fail-closed 策略** | 對生產級文件編輯流程，任何結構、文字、格式、表格、媒體、樣式差異都應明確視為失敗，避免只靠總分掩蓋回歸。 |
+| 2026-03-09 | **save_docx 加入 unedited block mutation guard** | 真實 Proposal 文件測試證明 parser/render 流程若誤動未編輯區塊，必須立即中止寫回，避免 silent corruption。 |
 | 2026-02-23 | **`.doc` 格式支援 — LibreOffice 自動轉換** | 使用者需要編輯舊版 `.doc` 檔案，DFM 僅支援 `.docx`。透過 `subprocess` 呼叫 LibreOffice headless 模式自動轉換，無需使用者手動操作。轉換後的 `.docx` 存於 tempdir 避免污染原始目錄。 |
 | 2026-02-23 | **Markdown 跳脫機制 (`_escape_md` / `_unescape_md`)** | 文字內容含 `*`、`~`、`^` 字元時，Round-trip 會被 Markdown 格式標記干擾（如 `※**下列` 中的 `**`）。新增跳脫/反跳脫對稱方法，並合併相鄰同格式 runs 避免 `**A****B**` 問題。 |
 | 2026-02-11 | DFM (Docx-Flavored Markdown) 格式設計 | Agent 無法直接看 docx，需要 Markdown 中間格式即時編輯。DFM 保留 block-level 與 run-level 格式資訊，支援完整往返 |

@@ -14,6 +14,8 @@ import os
 import shutil
 import subprocess
 import tempfile
+from copy import deepcopy
+from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -297,6 +299,32 @@ class DocxService:
             )
         return blocks
 
+    async def list_documents(self) -> list[dict[str, Any]]:
+        """List all ingested DOCX/DFM documents."""
+        return self.repository.list_docx_documents()
+
+    async def delete_docx(self, doc_id: str) -> dict[str, Any]:
+        """Delete an ingested DOCX/DFM document and all local artifacts."""
+        documents = self.repository.list_docx_documents()
+        document = next(
+            (item for item in documents if item.get("doc_id") == doc_id), None
+        )
+        if document is None:
+            return {"success": False, "error": f"DOCX document not found: {doc_id}"}
+
+        deleted = self.repository.delete_document(doc_id)
+        if not deleted:
+            return {
+                "success": False,
+                "error": f"Failed to delete DOCX document directory for {doc_id}",
+            }
+
+        return {
+            "success": True,
+            "doc_id": doc_id,
+            "filename": document.get("filename", ""),
+        }
+
     # ========================================================================
     # Write-back
     # ========================================================================
@@ -416,8 +444,26 @@ class DocxService:
             if pre_report.issues:
                 logger.info("Pre-save check: %s", pre_report.to_summary())
 
+            original_ir = deepcopy(ir)
+
             # Apply edits to IR
             ir = self.parser.apply_edits(ir, parse_result)
+
+            expected_changed_ids = self._expected_changed_block_ids(
+                original_ir, parse_result
+            )
+            unexpected_mutations = self._detect_unedited_block_mutations(
+                original_ir, ir, expected_changed_ids
+            )
+            if unexpected_mutations:
+                return {
+                    "success": False,
+                    "error": (
+                        "Unexpected changes detected in unedited blocks during write-back. "
+                        "Aborting to prevent silent document corruption."
+                    ),
+                    "warnings": unexpected_mutations,
+                }
 
             # Determine output path
             out = doc_dir / "output.docx" if output_path is None else Path(output_path)
@@ -471,6 +517,200 @@ class DocxService:
         except Exception as e:
             logger.exception("Failed to save docx: %s", doc_id)
             return {"success": False, "error": str(e)}
+
+    async def convert_to_pdf(
+        self,
+        doc_id: str,
+        output_path: str | None = None,
+        *,
+        mode: str = "fidelity",
+    ) -> dict[str, Any]:
+        """
+        Convert an ingested DOCX/DFM document to PDF.
+
+        Supported modes:
+        - ``fidelity``: rebuild current DOCX state and render via LibreOffice.
+        - ``content``: unsupported because DOCX already has a layout-preserving source.
+        """
+        if mode != "fidelity":
+            return {
+                "success": False,
+                "error": (
+                    "DOCX → PDF currently supports fidelity mode only. "
+                    "Use fidelity mode to preserve layout via LibreOffice."
+                ),
+            }
+
+        doc_dir = self.repository.get_doc_dir(doc_id)
+        if not (doc_dir / "ir.json").exists():
+            return {"success": False, "error": f"IR not found for {doc_id}"}
+
+        dfm_text = await self.get_dfm(doc_id)
+        if dfm_text is None:
+            return {"success": False, "error": f"DFM not found for {doc_id}"}
+
+        target_pdf = (
+            Path(output_path) if output_path is not None else doc_dir / "output.pdf"
+        )
+
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            tmp_dir = Path(tmp_dir_name)
+            temp_docx = tmp_dir / f"{doc_id}.docx"
+
+            save_result = await self.save_docx(doc_id, dfm_text, str(temp_docx))
+            if not save_result.get("success"):
+                return save_result
+
+            converted_pdf = self._convert_docx_file_to_pdf(temp_docx, target_pdf)
+            if converted_pdf is None:
+                return {
+                    "success": False,
+                    "error": (
+                        "Failed to convert DOCX to PDF. Please install LibreOffice and ensure "
+                        "the 'libreoffice' or 'soffice' binary is available, or set LIBREOFFICE_BIN."
+                    ),
+                }
+
+        return {
+            "success": True,
+            "doc_id": doc_id,
+            "output_path": str(converted_pdf),
+            "mode": mode,
+        }
+
+    async def convert_to_doc(
+        self,
+        doc_id: str,
+        output_path: str | None = None,
+        *,
+        mode: str = "fidelity",
+    ) -> dict[str, Any]:
+        """
+        Convert an ingested DOCX/DFM document to legacy .doc.
+
+        Supported modes:
+        - ``fidelity``: rebuild current DOCX state and render via LibreOffice.
+        - ``content``: unsupported because DOCX already has a layout-preserving source.
+        """
+        if mode != "fidelity":
+            return {
+                "success": False,
+                "error": (
+                    "DOCX → DOC currently supports fidelity mode only. "
+                    "Use fidelity mode to preserve layout via LibreOffice."
+                ),
+            }
+
+        doc_dir = self.repository.get_doc_dir(doc_id)
+        if not (doc_dir / "ir.json").exists():
+            return {"success": False, "error": f"IR not found for {doc_id}"}
+
+        dfm_text = await self.get_dfm(doc_id)
+        if dfm_text is None:
+            return {"success": False, "error": f"DFM not found for {doc_id}"}
+
+        target_doc = (
+            Path(output_path) if output_path is not None else doc_dir / "output.doc"
+        )
+
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            tmp_dir = Path(tmp_dir_name)
+            temp_docx = tmp_dir / f"{doc_id}.docx"
+
+            save_result = await self.save_docx(doc_id, dfm_text, str(temp_docx))
+            if not save_result.get("success"):
+                return save_result
+
+            converted_doc = self._convert_docx_file_to_doc(temp_docx, target_doc)
+            if converted_doc is None:
+                return {
+                    "success": False,
+                    "error": (
+                        "Failed to convert DOCX to DOC. Please install LibreOffice and ensure "
+                        "the 'libreoffice' or 'soffice' binary is available, or set LIBREOFFICE_BIN."
+                    ),
+                }
+
+        return {
+            "success": True,
+            "doc_id": doc_id,
+            "output_path": str(converted_doc),
+            "mode": mode,
+        }
+
+    @staticmethod
+    def _block_signature(block: DfmBlock) -> dict[str, Any]:
+        """Build a comparable snapshot for a DFM block."""
+        return asdict(block)
+
+    def _expected_changed_block_ids(
+        self,
+        original_ir: DocxIR,
+        parse_result: Any,
+    ) -> set[str]:
+        """Determine which block IDs are expected to change based on parsed edits."""
+        changed_ids: set[str] = set()
+
+        for edit in parse_result.edits:
+            block = original_ir.find_block(edit.block_id)
+            if block is None or block.is_protected:
+                continue
+
+            if edit.table_rows is not None:
+                expected_content = self.parser._rows_to_md_table(edit.table_rows)
+                if expected_content != block.content:
+                    changed_ids.add(edit.block_id)
+                continue
+
+            if edit.updated_runs is not None:
+                expected_runs = [run.to_dict() for run in edit.updated_runs]
+                current_runs = [run.to_dict() for run in block.runs]
+                runs_text = "".join(run.text for run in edit.updated_runs)
+                expected_content = edit.new_content or runs_text
+                if expected_runs != current_runs or expected_content != block.content:
+                    changed_ids.add(edit.block_id)
+                continue
+
+            current_text = block.plain_text if block.runs else block.content
+            if edit.new_content != current_text:
+                changed_ids.add(edit.block_id)
+
+        return changed_ids
+
+    def _detect_unedited_block_mutations(
+        self,
+        original_ir: DocxIR,
+        updated_ir: DocxIR,
+        expected_changed_ids: set[str],
+    ) -> list[str]:
+        """Detect blocks that changed even though no semantic edit targeted them."""
+        original_blocks = {block.id: block for block in original_ir.blocks}
+        updated_blocks = {block.id: block for block in updated_ir.blocks}
+        unexpected: list[str] = []
+
+        for block_id, original_block in original_blocks.items():
+            if block_id in expected_changed_ids:
+                continue
+
+            updated_block = updated_blocks.get(block_id)
+            if updated_block is None:
+                unexpected.append(f"Block {block_id} disappeared during write-back")
+                continue
+
+            if self._block_signature(original_block) != self._block_signature(
+                updated_block
+            ):
+                unexpected.append(
+                    f"Block {block_id} changed without an explicit edit request"
+                )
+
+        for block_id in updated_blocks.keys() - original_blocks.keys():
+            if block_id not in expected_changed_ids:
+                unexpected.append(
+                    f"Unexpected new block {block_id} appeared during write-back"
+                )
+
+        return unexpected
 
     # ========================================================================
     # Content drift detection
@@ -577,6 +817,82 @@ class DocxService:
             old = existing.pop(0)
             shutil.rmtree(old, ignore_errors=True)
             logger.info("Pruned old backup: %s", old)
+
+    @classmethod
+    def _convert_docx_file_to_pdf(
+        cls, docx_path: Path, output_path: Path
+    ) -> Path | None:
+        """Convert a DOCX file to PDF using LibreOffice."""
+        return cls._convert_docx_file_to_format(docx_path, output_path, "pdf")
+
+    @classmethod
+    def _convert_docx_file_to_doc(
+        cls, docx_path: Path, output_path: Path
+    ) -> Path | None:
+        """Convert a DOCX file to DOC using LibreOffice."""
+        return cls._convert_docx_file_to_format(docx_path, output_path, "doc")
+
+    @classmethod
+    def _convert_docx_file_to_format(
+        cls,
+        docx_path: Path,
+        output_path: Path,
+        target_format: str,
+    ) -> Path | None:
+        """Convert a DOCX file to another office format using LibreOffice."""
+        try:
+            libreoffice_bin = cls._find_libreoffice_binary()
+            if libreoffice_bin is None:
+                logger.error(
+                    "LibreOffice not installed or not discoverable for DOCX → %s",
+                    target_format.upper(),
+                )
+                return None
+
+            with tempfile.TemporaryDirectory() as tmp_dir_name:
+                tmp_dir = Path(tmp_dir_name)
+                result = subprocess.run(
+                    [
+                        libreoffice_bin,
+                        "--headless",
+                        "--convert-to",
+                        target_format,
+                        str(docx_path),
+                        "--outdir",
+                        str(tmp_dir),
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                    check=False,
+                )
+                if result.returncode != 0:
+                    logger.error(
+                        "LibreOffice DOCX→%s failed: %s",
+                        target_format.upper(),
+                        result.stderr,
+                    )
+                    return None
+
+                converted_path = tmp_dir / f"{docx_path.stem}.{target_format}"
+                if not converted_path.exists():
+                    logger.error(
+                        "Converted %s not found: %s",
+                        target_format.upper(),
+                        converted_path,
+                    )
+                    return None
+
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(converted_path, output_path)
+                return output_path
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            logger.exception(
+                "DOCX → %s conversion failed for %s",
+                target_format.upper(),
+                docx_path,
+            )
+            return None
 
     def _save_ir(self, ir: DocxIR, path: Path) -> None:
         """Serialize IR to JSON file."""

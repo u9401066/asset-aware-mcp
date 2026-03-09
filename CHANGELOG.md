@@ -7,6 +7,40 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-03-09
+
+### Added
+
+- **文件級 CRUD 與互轉工具擴充**
+  - `delete_document`：刪除已攝入 PDF 與本地 artifacts
+  - `delete_docx`：刪除已攝入 DOCX/DFM 與本地 artifacts
+  - `list_docx_documents`：列出所有已攝入 DOCX/DFM 文件
+  - `convert_docx_to_pdf`：以保真模式輸出 PDF
+  - `convert_docx_to_doc`：以保真模式輸出 DOC
+  - `convert_pdf_to_docx`：以內容重建模式輸出可讀 DOCX
+- **Strict round-trip 驗證**
+  - `DocxValidator.validate(..., strict=True)` fail-closed 模式
+  - `ValidationReport` 新增 `strict_passed` / `strict_failures`
+- **Save-time mutation guard**
+  - `DocxService.save_docx()` 會偵測未編輯區塊被意外改動並中止寫回
+- **Proposal 真實文件戰測完成**
+  - 以真實 Proposal 文件驗證 DOCX→DFM→DOCX、DOCX→PDF、DOCX→DOC CLI 流程
+
+### Changed
+
+- **MCP 工具總數**：36 → **42**（7 模組）
+- **Docx 工具總數**：8 → **12**
+- `scripts/dfm_cli.py` 新增 `to-pdf`、`to-doc`、`validate --strict` 與互動式選單選項
+- README、README.zh-TW、VS Code extension README 與工具統計全面同步到 42 tools
+
+### Fixed
+
+- **Protected block placeholder 誤判為編輯**
+  - `dfm_parser.py` 不再把 protected blocks placeholder 當作 user edits
+  - `dfm_integrity.py` 僅在 protected block 真的變更時發出 warning
+- **無聲文件破壞風險降低**
+  - 寫回流程若發現非目標區塊被更動，立即 fail closed
+
 ## [0.3.3] - 2026-02-23
 
 ### Added
