@@ -289,13 +289,19 @@ run_check() {
     else
         error "NOT FOUND"
         info "  Checked PATH: (relevant dirs)"
-        info "    ~/.local/bin:  $([ -d "$HOME/.local/bin" ] && echo 'exists' || echo 'missing')"
-        info "    ~/.cargo/bin:  $([ -d "$HOME/.cargo/bin" ] && echo 'exists' || echo 'missing')"
+        local local_bin_status cargo_bin_status
+        local_bin_status="$(if [ -d "$HOME/.local/bin" ]; then echo exists; else echo missing; fi)"
+        cargo_bin_status="$(if [ -d "$HOME/.cargo/bin" ]; then echo exists; else echo missing; fi)"
+        info "    ~/.local/bin:  $local_bin_status"
+        info "    ~/.cargo/bin:  $cargo_bin_status"
         if [ "$os" = "macos" ]; then
+            local brew_bin_status
             if [ "$arch" = "arm64" ]; then
-                info "    /opt/homebrew/bin: $([ -d "/opt/homebrew/bin" ] && echo 'exists' || echo 'missing')"
+                brew_bin_status="$(if [ -d "/opt/homebrew/bin" ]; then echo exists; else echo missing; fi)"
+                info "    /opt/homebrew/bin: $brew_bin_status"
             else
-                info "    /usr/local/bin:    $([ -d "/usr/local/bin" ] && echo 'exists' || echo 'missing')"
+                brew_bin_status="$(if [ -d "/usr/local/bin" ]; then echo exists; else echo missing; fi)"
+                info "    /usr/local/bin:    $brew_bin_status"
             fi
         fi
     fi
@@ -462,7 +468,7 @@ main() {
                 error ""
                 error "Troubleshooting:"
                 error "  1. Try: source ~/.local/bin/env && uv --version"
-                error "  2. Or:  export PATH=HOME/.local/bin:PATH"
+                error "  2. Or:  export PATH=\$HOME/.local/bin:\$PATH"
                 error "  3. Then re-run this script"
                 error ""
                 error "Run: bash scripts/install.sh --check  for diagnostics"

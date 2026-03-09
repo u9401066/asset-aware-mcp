@@ -29,9 +29,9 @@ export function getUvPaths(
         const xdgBinHome = env.XDG_BIN_HOME || '';
         candidates.push(
             'uv',
-            path.join(homeDir, '.local', 'bin', 'uv'),
-            path.join(cargoHome, 'bin', 'uv'),
-            xdgBinHome ? path.join(xdgBinHome, 'uv') : '',
+            pathApi.join(homeDir, '.local', 'bin', 'uv'),
+            pathApi.join(cargoHome, 'bin', 'uv'),
+            xdgBinHome ? pathApi.join(xdgBinHome, 'uv') : '',
             '/usr/bin/uv',
             '/usr/local/bin/uv',
             '/opt/homebrew/bin/uv',
