@@ -458,11 +458,11 @@ main() {
                 ok "uv installed: $(uv --version 2>&1 | head -1)"
                 info "  Location: $(command -v uv)"
             else
-                error "uv installation completed but 'uv' command not found in PATH."
+                error "uv installation completed but the uv command was not found in PATH."
                 error ""
                 error "Troubleshooting:"
                 error "  1. Try: source ~/.local/bin/env && uv --version"
-                error "  2. Or:  export PATH=\"\$HOME/.local/bin:\$PATH\""
+                error "  2. Or:  export PATH=HOME/.local/bin:PATH"
                 error "  3. Then re-run this script"
                 error ""
                 error "Run: bash scripts/install.sh --check  for diagnostics"

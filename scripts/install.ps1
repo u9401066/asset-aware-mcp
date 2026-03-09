@@ -4,13 +4,13 @@
 # Usage: powershell -ExecutionPolicy Bypass -File scripts\install.ps1
 # ============================================================================
 
-$ErrorActionPreference = "Stop"
-
 param(
     [switch]$Check,
     [switch]$Diagnose,
     [switch]$Help
 )
+
+$ErrorActionPreference = "Stop"
 
 # --- Configuration ---
 $RequiredPythonMajor = 3
