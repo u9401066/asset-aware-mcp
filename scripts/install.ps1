@@ -60,7 +60,9 @@ function Main {
 
     if (Test-Command "uv") {
         $uvVer = (uv --version 2>&1 | Select-Object -First 1).ToString().Trim()
+        $uvPath = (Get-Command "uv").Source
         Write-Ok "uv already installed: $uvVer"
+        Write-Info "  Location: $uvPath"
 
         Write-Info "Updating uv to latest version..."
         try {
@@ -102,29 +104,34 @@ function Main {
     $pythonFound = $false
     $pythonCmd = ""
 
-    # Check multiple Python commands
+    # Check multiple Python commands (including Windows py launcher)
     foreach ($candidate in @("python3", "python", "py")) {
         if (Test-Command $candidate) {
             $verInfo = Get-PythonVersion $candidate
             if (Test-VersionGe $verInfo) {
                 $pythonFound = $true
                 $pythonCmd = $candidate
-                Write-Ok "Python found: $candidate ($($verInfo.Raw)) at $((Get-Command $candidate).Source)"
+                $cmdPath = (Get-Command $candidate).Source
+                Write-Ok "Python found: $candidate ($($verInfo.Raw))"
+                Write-Info "  Location: $cmdPath"
+
+                # Detect installation method
+                if ($cmdPath -match "WindowsApps") {
+                    Write-Info "  Installed via: Microsoft Store"
+                } elseif ($cmdPath -match "scoop") {
+                    Write-Info "  Installed via: Scoop"
+                } elseif ($cmdPath -match "chocolatey|choco") {
+                    Write-Info "  Installed via: Chocolatey"
+                } elseif ($cmdPath -match "winget|Program Files\\Python") {
+                    Write-Info "  Installed via: winget / python.org"
+                } elseif ($cmdPath -match "pyenv") {
+                    Write-Info "  Installed via: pyenv-win"
+                } else {
+                    Write-Info "  Installed via: manual / unknown"
+                }
                 break
             }
         }
-    }
-
-    # Also check Windows Python Launcher
-    if (-not $pythonFound -and (Test-Command "py")) {
-        try {
-            $verInfo = Get-PythonVersion "py"
-            if (Test-VersionGe $verInfo) {
-                $pythonFound = $true
-                $pythonCmd = "py"
-                Write-Ok "Python found via py launcher: $($verInfo.Raw)"
-            }
-        } catch {}
     }
 
     if (-not $pythonFound) {

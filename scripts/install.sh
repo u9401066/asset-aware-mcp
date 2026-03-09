@@ -40,6 +40,50 @@ cmd_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# --- Augment PATH with common install locations ---
+# Ensures manually installed uv/Python are discoverable even in
+# non-interactive shells (e.g. piped install: curl ... | bash)
+augment_path() {
+    local os="$1"
+
+    # Common: uv default install location & cargo
+    if [ -d "$HOME/.local/bin" ]; then export PATH="$HOME/.local/bin:$PATH"; fi
+    if [ -d "$HOME/.cargo/bin" ]; then export PATH="$HOME/.cargo/bin:$PATH"; fi
+
+    # Common: pyenv shims
+    if [ -d "$HOME/.pyenv/shims" ]; then export PATH="$HOME/.pyenv/shims:$PATH"; fi
+
+    if [ "$os" = "macos" ]; then
+        local arch
+        arch="$(uname -m)"
+
+        # Homebrew — Apple Silicon (M1/M2/M3/M4) vs Intel
+        if [ "$arch" = "arm64" ]; then
+            if [ -d "/opt/homebrew/bin" ]; then export PATH="/opt/homebrew/bin:$PATH"; fi
+        else
+            if [ -d "/usr/local/bin" ]; then export PATH="/usr/local/bin:$PATH"; fi
+        fi
+
+        # python.org framework installer
+        for ver in 3.13 3.12 3.11 3.10; do
+            local fw="/Library/Frameworks/Python.framework/Versions/$ver/bin"
+            if [ -d "$fw" ]; then export PATH="$fw:$PATH"; fi
+        done
+
+        # MacPorts
+        if [ -d "/opt/local/bin" ]; then export PATH="/opt/local/bin:$PATH"; fi
+    fi
+
+    if [ "$os" = "linux" ]; then
+        # Snap packages
+        if [ -d "/snap/bin" ]; then export PATH="/snap/bin:$PATH"; fi
+        # Linuxbrew
+        if [ -d "/home/linuxbrew/.linuxbrew/bin" ]; then export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"; fi
+    fi
+
+    return 0
+}
+
 # --- Parse Python version string → (major, minor) ---
 parse_python_version() {
     local ver
@@ -72,7 +116,18 @@ main() {
 
     local os
     os="$(detect_os)"
-    info "Detected OS: $os ($(uname -m))"
+    local arch
+    arch="$(uname -m)"
+
+    # Friendly architecture label for macOS
+    local arch_label="$arch"
+    if [ "$os" = "macos" ]; then
+        case "$arch" in
+            arm64)  arch_label="Apple Silicon (arm64)" ;;
+            x86_64) arch_label="Intel (x86_64)" ;;
+        esac
+    fi
+    info "Detected OS: $os ($arch_label)"
 
     if [ "$os" = "unknown" ]; then
         error "Unsupported OS: $(uname -s)"
@@ -81,6 +136,9 @@ main() {
         exit 1
     fi
 
+    # Augment PATH to discover manually installed tools
+    augment_path "$os"
+
     # ========================================================================
     # Step 2: Check / Install uv
     # ========================================================================
@@ -88,16 +146,18 @@ main() {
     info "=== Checking uv package manager ==="
 
     if cmd_exists uv; then
-        local uv_ver
+        local uv_ver uv_path
         uv_ver="$(uv --version 2>&1 | head -1)"
+        uv_path="$(command -v uv)"
         ok "uv already installed: $uv_ver"
+        info "  Location: $uv_path"
 
-        # Update uv to latest
+        # Update uv to latest (may fail if installed via Homebrew/system pkg)
         info "Updating uv to latest version..."
         if uv self update 2>/dev/null; then
             ok "uv updated successfully"
         else
-            warn "uv self-update not available, skipping"
+            warn "uv self-update not available (installed via package manager?), skipping"
         fi
     else
         warn "uv not found. Installing..."
@@ -147,7 +207,26 @@ main() {
     done
 
     if [ "$python_found" = "yes" ]; then
-        ok "Python found: $python_cmd ($python_ver) at $(command -v "$python_cmd")"
+        local python_path
+        python_path="$(command -v "$python_cmd")"
+        ok "Python found: $python_cmd ($python_ver)"
+        info "  Location: $python_path"
+
+        # Detect installation method for user info
+        case "$python_path" in
+            /opt/homebrew/*|/usr/local/Cellar/*)
+                info "  Installed via: Homebrew" ;;
+            /Library/Frameworks/Python.framework/*)
+                info "  Installed via: python.org installer" ;;
+            */.pyenv/*)
+                info "  Installed via: pyenv" ;;
+            /usr/bin/*)
+                info "  Installed via: system" ;;
+            /snap/*)
+                info "  Installed via: snap" ;;
+            *)
+                info "  Installed via: unknown / manual" ;;
+        esac
     else
         warn "Python >= ${REQUIRED_PYTHON_MAJOR}.${REQUIRED_PYTHON_MINOR} not found in PATH."
         info "Installing Python via uv..."
