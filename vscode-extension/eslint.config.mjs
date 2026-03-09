@@ -19,6 +19,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['out/', 'dist/', '**/*.d.ts', 'eslint.config.mjs'],
+    ignores: ['out/', 'dist/', '.vscode-test/', '*.vsix', '**/*.d.ts', 'eslint.config.mjs'],
   }
 );

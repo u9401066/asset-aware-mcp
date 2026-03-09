@@ -2,16 +2,14 @@
 
 ## Done
 
-- 完成跨平台 repo review 第二輪並用 subagent 收斂剩餘風險
-- 修正文檔中的 MCP 工具清單與 36 tools 計數一致性
-- 加強 release workflow 的 VSIX 完整性驗證
-- 讓 scripts/release.sh 在版本不一致時 fail-fast
-- 同步 extension package-lock 版本到 0.3.3
+- 新增 VSIX install smoke 測試腳本，模擬 fresh install 與 update install
+- 在本機以真實 VSIX 驗證 0.2.10 → 0.3.3 更新與 0.3.3 新安裝
+- 修正 ESLint 忽略 .vscode-test 與 *.vsix，避免 smoke test 後 lint OOM
 
 ## Doing
 
-- 整理並提交第二輪文檔與發佈流程修正
+- 整理 CI 與本地 install-smoke 驗證結果
 
 ## Next
 
-- 如需要可 push 並觀察新的 release/CI workflow
+- 如需要可提交 install-smoke 變更並 push 觸發新的跨平台 CI
