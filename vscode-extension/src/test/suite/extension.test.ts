@@ -77,12 +77,13 @@ suite('Utility Functions Test Suite', () => {
     test('Path resolution should work correctly', () => {
         const testPath = './data';
         const basePath = '/home/user/workspace';
+        const expected = path.join(basePath, 'data');
 
         const resolved = path.isAbsolute(testPath)
             ? testPath
             : path.join(basePath, testPath);
 
-        assert.strictEqual(resolved, '/home/user/workspace/data');
+        assert.strictEqual(resolved, expected);
     });
 
     test('Environment variable parsing simulation', () => {
