@@ -108,10 +108,10 @@ parse_python_version() {
 
     # Use timeout to prevent hanging (macOS Xcode CLT shim can hang)
     if cmd_exists timeout; then
-        ver="$(timeout 5 "$cmd" --version 2>&1 | head -1 | grep -oE '[0-9]+\.[0-9]+' | head -1)" || true
+        ver="$(timeout 5 "$cmd" --version 2>&1 | head -1 | grep -oE "[0-9]+\.[0-9]+" | head -1)" || true
     elif cmd_exists gtimeout; then
         # macOS with coreutils from Homebrew
-        ver="$(gtimeout 5 "$cmd" --version 2>&1 | head -1 | grep -oE '[0-9]+\.[0-9]+' | head -1)" || true
+        ver="$(gtimeout 5 "$cmd" --version 2>&1 | head -1 | grep -oE "[0-9]+\.[0-9]+" | head -1)" || true
     else
         # Fallback: run with background + wait (portable timeout)
         ver="$(probe_python_version_with_timeout "$cmd")" || true
@@ -126,10 +126,14 @@ probe_python_version_with_timeout() {
     local cmd="$1"
     local ver=""
     local pid
+    local tmp_output
 
-    # Run in background, capture output via temp approach
-    ver="$("$cmd" --version 2>&1 &
+    tmp_output="$(mktemp)"
+
+    # Run in background and capture output to a temp file.
+    "$cmd" --version >"$tmp_output" 2>&1 &
     pid=$!
+
     # Wait up to 5 seconds
     local i=0
     while [ $i -lt 50 ] && kill -0 "$pid" 2>/dev/null; do
@@ -140,12 +144,16 @@ probe_python_version_with_timeout() {
     if kill -0 "$pid" 2>/dev/null; then
         kill "$pid" 2>/dev/null || true
         wait "$pid" 2>/dev/null || true
+        rm -f "$tmp_output"
         echo ""
         return 1
     fi
-    wait "$pid" 2>/dev/null || true)" 2>/dev/null
 
-    echo "$ver" | head -1 | grep -oE '[0-9]+\.[0-9]+' | head -1
+    wait "$pid" 2>/dev/null || true
+    ver="$(cat "$tmp_output" 2>/dev/null || true)"
+    rm -f "$tmp_output"
+
+    echo "$ver" | head -1 | grep -oE "[0-9]+\.[0-9]+" | head -1
 }
 
 # --- Compare version: returns 0 if $1 >= required ---
@@ -262,7 +270,7 @@ run_check() {
     info "  Bash: ${BASH_VERSION:-unknown}"
     if [ "$os" = "macos" ]; then
         local macos_ver
-        macos_ver="$(sw_vers -productVersion 2>/dev/null || echo 'unknown')"
+        macos_ver="$(sw_vers -productVersion 2>/dev/null || echo unknown)"
         info "  macOS version: $macos_ver"
     fi
     echo ""
