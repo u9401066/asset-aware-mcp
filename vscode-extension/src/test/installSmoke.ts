@@ -24,6 +24,7 @@ async function runCommand(command: string, args: string[], cwd?: string): Promis
         cwd,
         env: process.env,
         maxBuffer: 1024 * 1024 * 10,
+        shell: process.platform === 'win32',
     });
 
     return `${stdout}${stderr}`.trim();
