@@ -6,6 +6,10 @@
 
 ## 最近完成 ✅
 
+- **v0.3.3** (2026-02-23) — 生產強化、`.doc` 自動轉換、Markdown escaping 修復
+- **v0.3.2** (2026-02-21) — DFM Integrity Checker、檔案層級比對、全面遷移至 uv
+- **v0.3.1** (2026-02-21) — Split Format、DFM CLI、Bug 修復
+- **v0.3.0** (2026-02-11) — Docx DFM 即時編輯系統
 - **v0.2.14** (2026-02-10) — A2T 完整填表系統：19→7 工具合併 + Citation + Audit Trail + Templates
 - **v0.2.11** (2026-02-09) — 程式碼品質、工具統計 script、CI 檢查強制
 - **v0.2.10** (2026-02-09) — Presentation 層模組化 (39 tools / 6 modules)
@@ -71,7 +75,7 @@
 
 | 平台 | 現況 | 目標 |
 |------|------|------|
-| PyPI | ✅ v0.2.11 | 維持更新 |
+| PyPI | ✅ v0.3.3 | 維持更新 |
 | VSCode Marketplace | ✅ | 維持更新 |
 | MCP Hub | ❌ 未登錄 | 提交登錄 |
 | GitHub Topics | ❌ 未設定 | 加入 `mcp`, `ai-agents`, `pdf-extraction` |
