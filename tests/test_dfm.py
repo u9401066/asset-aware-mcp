@@ -534,6 +534,29 @@ class TestDfmParser:
         assert "| 1 | 2 |" in result
         assert "| --- | --- |" in result
 
+    def test_parse_md_table_with_br(self, parser: DfmParser):
+        """Cells containing <br> should be restored to real newlines."""
+        table = "| Col |\n| --- |\n| Line 1<br>Line 2 |"
+        rows = parser._parse_md_table(table)
+        assert rows is not None
+        assert rows[1][0] == "Line 1\nLine 2"
+
+    def test_rows_to_md_table_with_newline(self, parser: DfmParser):
+        """Newlines in cell data should be escaped as <br>."""
+        rows = [["Col"], ["Line 1\nLine 2"]]
+        result = parser._rows_to_md_table(rows)
+        assert "<br>" in result
+        assert "Line 1\nLine 2" not in result
+
+    def test_md_table_newline_roundtrip(self, parser: DfmParser):
+        """Round-trip: rows with newlines → md → parse → same rows."""
+        original = [["Header"], ["A\nB\nC"], ["Simple"]]
+        md = parser._rows_to_md_table(original)
+        parsed = parser._parse_md_table(md)
+        assert parsed is not None
+        assert parsed[1][0] == "A\nB\nC"
+        assert parsed[2][0] == "Simple"
+
 
 # ============================================================================
 # Format Merge Tests

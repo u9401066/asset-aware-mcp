@@ -586,11 +586,19 @@ def _data_update_cell(
     if row_index < 0 or not column_name:
         return "❌ `row_index` and `column_name` are required."
     result = table_service.update_cell(table_id, row_index, column_name, value)
-    return (
+    value_str = str(value) if value is not None else ""
+    char_count = len(value_str)
+    line_count = value_str.count("\n")
+
+    msg = (
         f"✅ Cell updated.\n"
         f"- **[{result['row_index']}:{result['column']}]**\n"
-        f"- Old: `{result['old_value']}` → New: `{result['new_value']}`"
+        f"- Old: `{result['old_value']}` → New: `{result['new_value']}`\n"
+        f"- **字元數**: {char_count}"
     )
+    if line_count > 0:
+        msg += f" (含 {line_count} 個換行符，將以 `<br>` 轉義寫入 DFM)"
+    return msg
 
 
 def _data_clear_cell(table_id: str, row_index: int, column_name: str) -> str:

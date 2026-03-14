@@ -100,16 +100,37 @@ async def ollama_embedding(
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         for text in texts:
+            # Try new /api/embed endpoint first (Ollama v0.5+),
+            # fall back to legacy /api/embeddings
             response = await client.post(
-                f"{host}/api/embeddings",
+                f"{host}/api/embed",
                 json={
                     "model": model,
-                    "prompt": text,
+                    "input": text,
                 },
             )
+            if response.status_code == 404:
+                # Distinguish model-not-found from endpoint-not-found
+                body = response.text
+                if "not found" in body and "model" in body:
+                    # Model doesn't exist — no point trying legacy endpoint
+                    response.raise_for_status()
+                # Endpoint doesn't exist — try legacy /api/embeddings
+                response = await client.post(
+                    f"{host}/api/embeddings",
+                    json={
+                        "model": model,
+                        "prompt": text,
+                    },
+                )
             response.raise_for_status()
             result = response.json()
-            embeddings.append(result.get("embedding", []))
+            # /api/embed returns "embeddings" (list), /api/embeddings returns "embedding"
+            emb = result.get("embeddings", [result.get("embedding", [])])
+            if isinstance(emb, list) and emb and isinstance(emb[0], list):
+                embeddings.append(emb[0])
+            else:
+                embeddings.append(emb)
 
     # LightRAG requires numpy array with .size attribute
     return np.array(embeddings)

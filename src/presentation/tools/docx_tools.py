@@ -10,6 +10,7 @@ Docx Tools - Docx ↔ DFM 雙向轉換 + Table Bridge MCP 工具
 - delete_docx: 刪除已攝入的 DOCX/DFM 文件及其本地 artifacts
 - convert_docx_to_doc: 將目前 DOCX/DFM 狀態轉為 DOC（保真模式）
 - convert_docx_to_pdf: 將目前 DOCX/DFM 狀態轉為 PDF（保真模式）
+- export_markdown: 將 Markdown 直接匯出為 DOCX/PDF/DOC（無需 ingest）
 - docx_table_to_context: 將 DFM 表格區塊轉為 TableContext（可用 table_manage/table_data 編輯）
 - docx_table_from_context: 將 TableContext 寫回 DFM 表格區塊
 - docx_chart_data: 提取圖表的底層資料為表格格式
@@ -120,6 +121,7 @@ async def save_docx(
     dfm_content: str | None = None,
     output_path: str | None = None,
     from_md: bool = False,
+    force: bool = False,
 ) -> str:
     """
     將編輯後的內容存回 .docx 檔案。
@@ -134,11 +136,15 @@ async def save_docx(
     3. 合併修改（格式合併策略）
     4. 重建 .docx
 
+    安全機制：若內容萎縮 > 50%，預設拒絕輸出（疑似資料遺失）。
+    使用 force=True 強制輸出。
+
     Args:
         doc_id: 文件 ID
         dfm_content: 編輯後的 DFM 全文（from_md=True 時可省略）
         output_path: 輸出路徑（預設為 data/{doc_id}/output.docx）
         from_md: 若為 True，從磁碟讀取 content.md + format.yaml 而非使用 dfm_content
+        force: 若為 True，即使偵測到嚴重內容萎縮仍強制輸出
 
     Returns:
         儲存結果
@@ -150,7 +156,7 @@ async def save_docx(
         output_path,
     )
     result = await docx_service.save_docx(
-        doc_id, dfm_content, output_path, from_md=from_md
+        doc_id, dfm_content, output_path, from_md=from_md, force=force
     )
     logger.info(
         "save_docx done | doc_id=%s | success=%s | integrity=%s",
@@ -506,6 +512,35 @@ async def docx_table_from_context(
     except ValueError as e:
         return f"❌ 寫回失敗：{e}"
 
+    # --- Post-write validation: verify cell content survived serialization ---
+    block_after = ir.find_block(block_id)
+    if block_after and block_after.content:
+        from src.application.dfm_table_bridge import _parse_md_table
+
+        written_rows = _parse_md_table(block_after.content)
+        if written_rows is not None:
+            # Skip header row (index 0) — compare data rows only
+            written_data = written_rows[1:]
+            source_nonempty = sum(
+                1
+                for row in tc.rows
+                for c in tc.column_names
+                if str(row.get(c, "")).strip()
+            )
+            written_nonempty = sum(
+                1 for row in written_data for cell in row if cell.strip()
+            )
+            if source_nonempty > 0 and written_nonempty == 0:
+                return (
+                    f"❌ 寫回失敗：TableContext 有 {source_nonempty} 個非空 cell，"
+                    f"但序列化後全部遺失。請檢查 cell 內容格式。"
+                )
+            if source_nonempty > 0 and written_nonempty < source_nonempty * 0.5:
+                return (
+                    f"❌ 寫回失敗：TableContext 有 {source_nonempty} 個非空 cell，"
+                    f"但序列化後僅剩 {written_nonempty} 個。疑似資料遺失。"
+                )
+
     doc_dir = docx_service.repository.get_doc_dir(doc_id)
     docx_service._save_ir(ir, doc_dir / "ir.json")
 
@@ -622,3 +657,63 @@ async def docx_chart_data(
         )
 
     return "\n".join(lines)
+
+
+@mcp.tool()
+async def export_markdown(
+    md_text: str | None = None,
+    md_path: str | None = None,
+    output_path: str | None = None,
+    output_format: str = "docx",
+) -> str:
+    """
+    將 Markdown 文字或檔案直接匯出為 DOCX / PDF / DOC。
+
+    此工具不需要事先 ingest_docx — 直接從 Markdown 建立新文件。
+    適用於：
+    - 從 AI 生成的 Markdown 內容製作正式文件
+    - 將 .md 筆記轉換為可分享的 Word/PDF 格式
+    - 快速製作報告、提案、文件
+
+    支援的 Markdown 語法：
+    - 標題（# ~ ######）
+    - 段落、粗體、斜體、刪除線、行內程式碼
+    - 有序/無序列表
+    - 表格（含多行 cell，使用 <br> 換行）
+    - 程式碼區塊（```）
+    - 引用區塊（>）
+    - 圖片（![alt](path)，需本地檔案）
+    - 水平線（--- / ***）
+
+    轉換流程：
+    - DOCX：直接用 python-docx 生成
+    - PDF/DOC：先生成 DOCX，再經由 LibreOffice 轉換
+
+    Args:
+        md_text: Markdown 內容字串（與 md_path 二擇一）
+        md_path: .md 檔案路徑（與 md_text 二擇一）
+        output_path: 輸出檔案路徑（預設依據 md_path 或 output.{format}）
+        output_format: 輸出格式，"docx"（預設）、"pdf"、"doc"
+    """
+    logger.info(
+        "export_markdown | format=%s | md_path=%s | output=%s",
+        output_format,
+        md_path,
+        output_path,
+    )
+
+    result = await docx_service.export_from_markdown(
+        md_text=md_text,
+        md_path=md_path,
+        output_path=output_path,
+        output_format=output_format,
+    )
+
+    if not result.get("success"):
+        return f"❌ 匯出失敗：{result.get('error', '未知錯誤')}"
+
+    return (
+        f"✅ Markdown → {result['format'].upper()} 匯出成功\n"
+        f"- **output_path**: `{result['output_path']}`\n"
+        f"- **format**: {result['format']}"
+    )

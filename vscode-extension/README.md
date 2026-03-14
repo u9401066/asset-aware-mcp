@@ -6,7 +6,17 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-## 🆕 What's New in v0.4.2
+## 🆕 What's New in v0.5.0
+
+- **Markdown Export**: New `export_markdown` tool — export Markdown text to `.docx`, `.pdf`, or `.doc`
+- **Multiline Cell Protection**: Table cells with `\n` are now safely escaped as `<br>` in DFM pipe-tables, preventing silent data loss
+- **Post-Write Validation**: `docx_table_from_context` validates non-empty cell counts after write — rejects if >50% cells lost
+- **Save Fail-Safe**: `save_docx` rejects output if content shrinks >50% (use `force=true` to override)
+- **Content Volume Metrics**: `docx_validate_roundtrip` now reports `total_chars`, `table_nonempty_cells`, `table_cell_chars`
+- **Ollama API Fix**: Compatible with Ollama v0.5+ (`/api/embed`) with legacy fallback
+- **43 tools** across 7 modules
+
+### v0.4.2
 
 - **Release Validation Parity**: `scripts/release.sh` now checks the full repository with the same Ruff scope as GitHub Actions, preventing tag-only CI surprises
 
@@ -23,7 +33,7 @@
 - **Markdown Escaping Fix**: `_escape_md()` / `_unescape_md()` prevents text content (e.g. `※**`) from being misinterpreted as bold/italic markers
 - **Run Merging**: Adjacent runs with identical formatting are merged before Markdown generation, eliminating `**A****B**` artifacts
 - **Production Hardening**: Dockerfile, PDF magic byte validation, concurrent job limits, structured logging
-- **42 tools** across 7 modules
+- **43 tools** across 7 modules
 - **Proposal real-file verification**: battle-tested on a real Proposal DOCX for DOCX→DFM→DOCX, DOCX→PDF, and DOCX→DOC
 
 ### v0.3.3
@@ -186,7 +196,7 @@ If the extension fails to start or the MCP server doesn't appear:
 | `consult_knowledge_graph` | Cross-document RAG queries |
 | `export_knowledge_graph` | Export knowledge graph data |
 
-### Docx Editing — DFM (12)
+### Docx Editing — DFM (13)
 | Tool | Description |
 |------|-------------|
 | `ingest_docx` | Import .docx and decompose into DFM blocks |
@@ -201,6 +211,7 @@ If the extension fails to start or the MCP server doesn't appear:
 | `docx_table_to_context` | Bridge: Docx table → A2T context |
 | `docx_table_from_context` | Bridge: A2T table → Docx table |
 | `docx_chart_data` | Extract chart data from Docx |
+| `export_markdown` | Export Markdown to .docx/.pdf/.doc |
 
 ### A2T — Anything to Table (7 operation-based)
 | Tool | Operations | Description |

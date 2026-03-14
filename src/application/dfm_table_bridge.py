@@ -293,6 +293,8 @@ def _parse_md_table(text: str) -> list[list[str]] | None:
             continue
         cells = line.split("|")
         cells = [c.strip() for c in cells[1:-1]]
+        # Restore escaped newlines
+        cells = [c.replace("<br>", "\n") for c in cells]
         rows.append(cells)
     return rows if rows else None
 
@@ -312,8 +314,8 @@ def _table_context_to_md(tc: TableContext) -> str:
     # Data rows
     for row in tc.rows:
         cells = [str(row.get(c, "")) for c in col_names]
-        # Escape pipe characters in cell content
-        cells = [c.replace("|", "\\|") for c in cells]
+        # Escape pipe characters and newlines in cell content
+        cells = [c.replace("|", "\\|").replace("\n", "<br>") for c in cells]
         lines.append("| " + " | ".join(cells) + " |")
 
     return "\n".join(lines)

@@ -746,6 +746,8 @@ class DfmParser:
             # Split by pipes, strip outer empties
             cells = line.split("|")
             cells = [c.strip() for c in cells[1:-1]]  # Remove first/last empty
+            # Restore escaped newlines (<br> → real newline)
+            cells = [c.replace("<br>", "\n") for c in cells]
             rows.append(cells)
         return rows if rows else None
 
@@ -764,7 +766,9 @@ class DfmParser:
         for row in rows[1:]:
             # Pad row to match header width
             padded = row + [""] * (len(rows[0]) - len(row))
-            lines.append("| " + " | ".join(padded[: len(rows[0])]) + " |")
+            # Escape newlines in cell content for markdown table
+            escaped = [c.replace("\n", "<br>") for c in padded[: len(rows[0])]]
+            lines.append("| " + " | ".join(escaped) + " |")
         return "\n".join(lines)
 
     # ========================================================================

@@ -4,8 +4,8 @@
 
 ## 🎯 當前焦點
 
-- **v0.4.2 發布準備中**：補上 release.sh 與 GitHub Actions 的 repo 級檢查一致性，確保最終 tag 真正可發布
-- **下一步**：完成 v0.4.2 push、tag、確認 GitHub Actions
+- **v0.5.0 發布中**：完成多行儲存格保護、Markdown 匯出、Ollama API 修復等功能
+- **下一步**：完成 v0.5.0 tag、push、marketplace 發布
 
 ## 🆕 v0.4.0 新功能
 
@@ -68,7 +68,7 @@ src/
 ├── domain/          # 🔵 核心業務邏輯 (+docx_entities, docx_value_objects)
 ├── application/     # 🟢 使用案例 (+docx_service, dfm_table_bridge)
 ├── infrastructure/  # 🟠 外部依賴實作 (+docx_adapter, dfm_parser, dfm_renderer, docx_validator)
-└── presentation/    # 🔴 MCP Server (42 tools in 7 modules, 12 resources)
+└── presentation/    # 🔴 MCP Server (43 tools in 7 modules, 12 resources)
     ├── tools/
     │   ├── document_tools.py   # ETL + document management (8)
     │   ├── docx_tools.py       # Docx DFM + conversion (12) — core + validator + bridge

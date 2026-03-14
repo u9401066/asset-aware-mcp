@@ -171,6 +171,51 @@ class TestTableContextToMd:
         md = _table_context_to_md(tc)
         assert "a\\|b" in md
 
+    def test_newline_in_cell_escaped(self):
+        """Newlines in cell values must survive markdown round-trip."""
+        tc = TableContext(
+            id="test",
+            intent="summary",
+            title="Test",
+            columns=[
+                ColumnDef(name="Name", type="text"),
+                ColumnDef(name="Notes", type="text"),
+            ],
+            rows=[
+                {"Name": "Alice", "Notes": "Line 1\nLine 2"},
+                {"Name": "Bob", "Notes": "Single line"},
+            ],
+        )
+        md = _table_context_to_md(tc)
+        # Newlines should be escaped as <br> in markdown
+        assert "<br>" in md
+        assert "Line 1\nLine 2" not in md  # raw newline must NOT appear
+
+        # Round-trip: parse back and verify content restored
+        rows = _parse_md_table(md)
+        assert rows is not None
+        assert len(rows) == 3  # header + 2 data rows
+        assert rows[1][1] == "Line 1\nLine 2"  # newline restored
+        assert rows[2][1] == "Single line"
+
+    def test_multiline_single_column_roundtrip(self):
+        """Single-column table with multiline values — the exact bug scenario."""
+        tc = TableContext(
+            id="test",
+            intent="summary",
+            title="Test",
+            columns=[ColumnDef(name="Content", type="text")],
+            rows=[
+                {"Content": "First paragraph\nSecond paragraph\nThird paragraph"},
+                {"Content": "Normal single line"},
+            ],
+        )
+        md = _table_context_to_md(tc)
+        rows = _parse_md_table(md)
+        assert rows is not None
+        assert rows[1][0] == "First paragraph\nSecond paragraph\nThird paragraph"
+        assert rows[2][0] == "Normal single line"
+
 
 # ============================================================================
 # _infer_column_type
@@ -528,3 +573,33 @@ class TestRoundTrip:
         # Other blocks unchanged
         assert ir.find_block("p001").content == "Hello"
         assert ir.find_block("t002") is not None
+
+    def test_ir_round_trip_multiline_cells(self):
+        """End-to-end: TableContext with multiline cells → IR → re-extract."""
+        ir = _make_ir()
+
+        # Create a TableContext with multiline cell values
+        tc = TableContext(
+            id="multi",
+            intent="summary",
+            title="Multiline Test",
+            columns=[ColumnDef(name="Item", type="text")],
+            rows=[
+                {"Item": "Line A\nLine B\nLine C"},
+                {"Item": "Single"},
+            ],
+        )
+
+        # Write to IR
+        DfmTableBridge.apply_table_context_to_ir(ir, "t001", tc)
+        block = ir.find_block("t001")
+
+        # Verify DFM content has <br> (not raw newlines breaking table)
+        assert "<br>" in block.content
+        lines = block.content.split("\n")
+        assert all(line.startswith("|") for line in lines if line.strip())
+
+        # Re-extract and verify content is restored
+        tc2 = DfmTableBridge.block_to_table_context(block)
+        assert tc2.rows[0]["Item"] == "Line A\nLine B\nLine C"
+        assert tc2.rows[1]["Item"] == "Single"

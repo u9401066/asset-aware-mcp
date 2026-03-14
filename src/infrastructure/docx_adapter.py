@@ -1184,10 +1184,10 @@ class DocxAdapter:
             while len(row) < max_cols:
                 row.append("")
 
-        # Clean cell text (replace newlines, strip)
+        # Clean cell text (escape newlines for markdown, strip)
         for row in rows:
             for i, cell in enumerate(row):
-                row[i] = cell.replace("\n", " ").strip()
+                row[i] = cell.replace("\n", "<br>").strip()
 
         # Calculate column widths
         widths = [0] * max_cols
@@ -1374,5 +1374,7 @@ class DocxAdapter:
             if re.match(r"^\|[\s\-:|]+\|$", line):
                 continue
             cells = [c.strip() for c in line.split("|")[1:-1]]
+            # Restore escaped newlines (<br> → real newline)
+            cells = [c.replace("<br>", "\n") for c in cells]
             rows.append(cells)
         return rows

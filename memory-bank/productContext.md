@@ -42,7 +42,7 @@ Local Storage
 - 🗺️ Document Manifest 生成 (Asset 清單)
 - 📊 A2T 表格系統 (7 operation-based tools)
 - 🧠 LightRAG 知識圖譜建立
-- 🔌 MCP Tools (42 tools in 7 modules) 暴露給 Agent
+- 🔌 MCP Tools (43 tools in 7 modules) 暴露給 Agent
 
 ## 🔧 技術棧
 

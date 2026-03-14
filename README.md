@@ -61,8 +61,8 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP Server (Modular Presentation)            │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 42 tools in 7 modules                   │   │
-│  │   document (8) │ docx (12) │ section (5)        │   │
+│  │ tools/: 43 tools in 7 modules                   │   │
+│  │   document (8) │ docx (13) │ section (5)        │   │
 │  │   job (3) │ knowledge (2) │ table (7) │ profile (5) │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │

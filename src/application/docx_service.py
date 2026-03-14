@@ -336,6 +336,7 @@ class DocxService:
         output_path: str | None = None,
         *,
         from_md: bool = False,
+        force: bool = False,
     ) -> dict[str, Any]:
         """
         Save edited content back to a .docx file.
@@ -496,6 +497,31 @@ class DocxService:
             for issue in drift_issues:
                 pre_report.add(issue)
 
+            # --- Fail-safe: reject output if severe content loss detected ---
+            if old_md_text and not force:
+                old_len = len(old_md_text)
+                new_len = len(md_text)
+                if old_len > 100 and new_len < old_len * 0.5:
+                    shrinkage_pct = (1 - new_len / old_len) * 100
+                    logger.error(
+                        "Content shrunk by %.1f%% (%d → %d chars). "
+                        "Refusing to output corrupted docx.",
+                        shrinkage_pct,
+                        old_len,
+                        new_len,
+                    )
+                    return {
+                        "success": False,
+                        "error": (
+                            f"Content shrunk by {shrinkage_pct:.1f}% "
+                            f"({old_len} → {new_len} chars). "
+                            f"Refusing to output — likely data loss. "
+                            f"Check .backups/ for recovery. "
+                            f"Use force=True to override."
+                        ),
+                        "output_path": str(result_path),
+                    }
+
             # --- Post-save integrity check ---
             original_path = doc_dir / "original.docx"
             post_report = self.integrity.check_post_save(original_path, result_path)
@@ -637,6 +663,94 @@ class DocxService:
             "output_path": str(converted_doc),
             "mode": mode,
         }
+
+    # ========================================================================
+    # Markdown → DOCX/PDF/DOC export (no prior ingest needed)
+    # ========================================================================
+
+    async def export_from_markdown(
+        self,
+        md_text: str | None = None,
+        md_path: str | None = None,
+        output_path: str | None = None,
+        output_format: str = "docx",
+    ) -> dict[str, Any]:
+        """
+        Convert standalone Markdown to DOCX, PDF, or DOC.
+
+        Unlike save_docx (which requires a prior ingest_docx), this method
+        creates a document from scratch — no original .docx is needed.
+
+        Args:
+            md_text: Markdown content as a string.
+            md_path: Path to a .md file (used if md_text is None).
+            output_path: Where to write the output file.
+            output_format: "docx", "pdf", or "doc".
+
+        Returns:
+            Result dict with output_path and success status.
+        """
+        from src.infrastructure.markdown_converter import MarkdownDocxConverter
+
+        # Resolve markdown content
+        if md_text is None and md_path is not None:
+            p = Path(md_path)
+            if not p.exists():
+                return {"success": False, "error": f"Markdown file not found: {p}"}
+            md_text = p.read_text(encoding="utf-8")
+
+        if not md_text:
+            return {"success": False, "error": "No markdown content provided"}
+
+        output_format = output_format.lower().strip()
+        if output_format not in ("docx", "pdf", "doc"):
+            return {
+                "success": False,
+                "error": f"Unsupported format: {output_format}. Use docx, pdf, or doc.",
+            }
+
+        # Resolve output path
+        if output_path:
+            out = Path(output_path)
+        elif md_path:
+            out = Path(md_path).with_suffix(f".{output_format}")
+        else:
+            out = Path(f"output.{output_format}")
+
+        converter = MarkdownDocxConverter()
+
+        try:
+            if output_format == "docx":
+                converter.convert(md_text, out)
+                return {"success": True, "output_path": str(out), "format": "docx"}
+
+            # For PDF/DOC: first create a temp docx, then convert via LibreOffice
+            with tempfile.TemporaryDirectory() as tmp_dir_name:
+                tmp_docx = Path(tmp_dir_name) / "temp.docx"
+                converter.convert(md_text, tmp_docx)
+
+                if output_format == "pdf":
+                    result = self._convert_docx_file_to_pdf(tmp_docx, out)
+                else:  # doc
+                    result = self._convert_docx_file_to_doc(tmp_docx, out)
+
+                if result is None:
+                    return {
+                        "success": False,
+                        "error": (
+                            f"DOCX → {output_format.upper()} conversion failed. "
+                            "Please install LibreOffice and ensure the 'libreoffice' or "
+                            "'soffice' binary is available, or set LIBREOFFICE_BIN."
+                        ),
+                    }
+                return {
+                    "success": True,
+                    "output_path": str(result),
+                    "format": output_format,
+                }
+        except Exception as e:
+            logger.exception("export_from_markdown failed")
+            return {"success": False, "error": str(e)}
 
     @staticmethod
     def _block_signature(block: DfmBlock) -> dict[str, Any]:

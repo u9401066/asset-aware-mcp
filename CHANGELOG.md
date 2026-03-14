@@ -7,6 +7,34 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-03-14
+
+### Added
+
+- **Markdown 匯出工具 `export_markdown`**
+  - 支援將 Markdown 文字匯出為 `.docx`、`.pdf`、`.doc` 格式
+  - 新增 `MarkdownDocxConverter` 基礎設施元件
+- **DFM 表格多行儲存格保護**
+  - 表格儲存格內含 `\n` 時自動以 `<br>` 轉義，防止 pipe-table 格式破損
+  - 寫入後自動驗證非空儲存格數量，偏差 >50% 時拒絕寫入
+- **`save_docx` 內容收縮安全閥**
+  - 寫回時若內容量縮減超過 50% 則自動拒絕，需 `force=True` 強制執行
+- **`docx_validate_roundtrip` 內容量指標**
+  - 新增 `total_chars`、`table_nonempty_cells`、`table_cell_chars` 統計欄位
+- **`update_cell` 多行警告**
+  - 寫入含換行符的儲存格時回傳字元數與換行數提示
+
+### Fixed
+
+- **Ollama Embedding API 相容性**
+  - 支援 Ollama v0.5+ `/api/embed` 端點，向下相容 `/api/embeddings`
+  - 區分「模型未安裝」與「端點不存在」的 404 錯誤
+
+### Changed
+
+- **MCP 工具總數**：42 → **43**（7 模組）
+- **Docx 工具總數**：12 → **13**（新增 `export_markdown`）
+
 ## [0.4.2] - 2026-03-09
 
 ### Fixed

@@ -723,17 +723,46 @@ class DocxValidator:
         report: ValidationReport,
     ) -> None:
         """Compare structural element counts."""
+        # Character volume computation
+        orig_total_chars = sum(len(p) for p in orig["paragraphs"])
+        rebuilt_total_chars = sum(len(p) for p in rebuilt["paragraphs"])
+
+        # Table cell content volume
+        orig_nonempty_cells = 0
+        orig_total_cell_chars = 0
+        for tbl in orig["tables"]:
+            for row in tbl["rows"]:
+                for cell in row:
+                    if cell.strip():
+                        orig_nonempty_cells += 1
+                        orig_total_cell_chars += len(cell)
+
+        rebuilt_nonempty_cells = 0
+        rebuilt_total_cell_chars = 0
+        for tbl in rebuilt["tables"]:
+            for row in tbl["rows"]:
+                for cell in row:
+                    if cell.strip():
+                        rebuilt_nonempty_cells += 1
+                        rebuilt_total_cell_chars += len(cell)
+
         orig_stats = {
             "paragraphs": len(orig["paragraphs"]),
             "tables": len(orig["tables"]),
             "media_files": len(orig["media"]),
             "xml_parts": len(orig["xml_parts"]),
+            "total_chars": orig_total_chars,
+            "table_nonempty_cells": orig_nonempty_cells,
+            "table_cell_chars": orig_total_cell_chars,
         }
         rebuilt_stats = {
             "paragraphs": len(rebuilt["paragraphs"]),
             "tables": len(rebuilt["tables"]),
             "media_files": len(rebuilt["media"]),
             "xml_parts": len(rebuilt["xml_parts"]),
+            "total_chars": rebuilt_total_chars,
+            "table_nonempty_cells": rebuilt_nonempty_cells,
+            "table_cell_chars": rebuilt_total_cell_chars,
         }
 
         report.original_stats = orig_stats
