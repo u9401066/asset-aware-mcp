@@ -12,6 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from docx import Document
 
 from src.infrastructure.markdown_converter import MarkdownDocxConverter
 
@@ -184,6 +185,30 @@ def main():
         converter.convert(md, out)
         assert out.exists()
         assert out.stat().st_size > 5000  # Non-trivial size
+
+    def test_crlf_line_endings(self, converter: MarkdownDocxConverter, tmp_path: Path):
+        """Windows CRLF line endings should be handled correctly."""
+        md = "# Title\r\n\r\nParagraph one.\r\n\r\n## Section\r\n\r\n- item 1\r\n- item 2\r\n"
+        out = tmp_path / "crlf.docx"
+        converter.convert(md, out)
+        doc = Document(str(out))
+        headings = [p.text for p in doc.paragraphs if p.style.name.startswith("Heading")]
+        assert "Title" in headings
+        assert "Section" in headings
+
+    def test_bold_not_greedy_across_stars(
+        self, converter: MarkdownDocxConverter, tmp_path: Path
+    ):
+        """Ensure **bold** does not consume ***bold_italic*** markers."""
+        md = "This is ***bold italic*** and **bold** text"
+        out = tmp_path / "greedy.docx"
+        converter.convert(md, out)
+        doc = Document(str(out))
+        runs = doc.paragraphs[0].runs
+        has_bold_italic = any(r.bold and r.italic for r in runs)
+        has_bold_only = any(r.bold and not r.italic for r in runs)
+        assert has_bold_italic
+        assert has_bold_only
 
 
 # ============================================================================

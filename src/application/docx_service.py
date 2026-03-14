@@ -155,7 +155,7 @@ class DocxService:
 
     @staticmethod
     def _find_libreoffice_binary() -> str | None:
-        """Find a LibreOffice executable across Linux/macOS installs."""
+        """Find a LibreOffice executable across Windows/Linux/macOS."""
         env_candidate = os.getenv("LIBREOFFICE_BIN")
         if env_candidate and Path(env_candidate).exists():
             return env_candidate
@@ -165,10 +165,32 @@ class DocxService:
             if resolved:
                 return resolved
 
-        for candidate in (
-            "/Applications/LibreOffice.app/Contents/MacOS/soffice",
-            "/Applications/LibreOffice.app/Contents/MacOS/LibreOffice",
-        ):
+        import sys
+
+        platform_candidates: list[str] = []
+        if os.name == "nt":
+            # Windows — check both 64-bit and 32-bit Program Files
+            for pf in ("PROGRAMFILES", "PROGRAMFILES(X86)"):
+                pf_path = os.getenv(pf)
+                if pf_path:
+                    platform_candidates.append(
+                        str(Path(pf_path) / "LibreOffice" / "program" / "soffice.exe")
+                    )
+        elif sys.platform == "darwin":
+            # macOS app bundle
+            platform_candidates.extend([
+                "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+                "/Applications/LibreOffice.app/Contents/MacOS/libreoffice",
+            ])
+        else:
+            # Linux — common install locations
+            platform_candidates.extend([
+                "/usr/bin/libreoffice",
+                "/usr/bin/soffice",
+                "/snap/bin/libreoffice",
+            ])
+
+        for candidate in platform_candidates:
             if Path(candidate).exists():
                 return candidate
 
@@ -981,10 +1003,11 @@ class DocxService:
                     check=False,
                 )
                 if result.returncode != 0:
+                    error_detail = result.stderr or result.stdout or f"exit code {result.returncode}"
                     logger.error(
                         "LibreOffice DOCX→%s failed: %s",
                         target_format.upper(),
-                        result.stderr,
+                        error_detail,
                     )
                     return None
 

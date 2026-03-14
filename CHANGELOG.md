@@ -7,6 +7,29 @@
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-03-14
+
+### Fixed
+
+- **Markdown 匯出器 Unicode 修復**
+  - 修正水平分隔線字元損壞（`U+FFFD` → `─` U+2500）
+  - 修正無序列表符號損壞（`??` → `•` U+2022）
+- **CRLF 換行符相容性**
+  - `MarkdownDocxConverter.convert()` 新增 `\r\n` → `\n` 正規化
+  - 防止 Windows 換行符導致 Heading / Table / List 解析異常
+- **LibreOffice 跨平台路徑偵測**
+  - 新增 Windows `Program Files\LibreOffice\program\soffice.exe` 路徑
+  - 新增 Linux `/usr/bin/libreoffice`、`/snap/bin/libreoffice` 路徑
+  - macOS / Linux / Windows 三平台分流偵測
+- **LibreOffice 錯誤回報改善**
+  - 轉換失敗時 fallback 到 stdout 訊息，避免空白 error log
+- **Inline Markdown regex 改善**
+  - 加入 negative lookahead 避免 `**bold**` 誤消費 `***bold_italic***`
+  - `_italic_` 限制不跨行匹配
+- **測試修正**
+  - `test_find_libreoffice_binary_prefers_env_var` 改用 `tmp_path` 跨平台相容
+  - 新增 CRLF 換行測試、bold/italic regex 邊界測試
+
 ## [0.5.0] - 2026-03-14
 
 ### Added

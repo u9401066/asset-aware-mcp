@@ -31,9 +31,9 @@ _Doc = Any
 
 _INLINE_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("code", re.compile(r"`([^`]+)`")),
-    ("bold_italic", re.compile(r"\*\*\*(.+?)\*\*\*|___(.+?)___")),
-    ("bold", re.compile(r"\*\*(.+?)\*\*|__(.+?)__")),
-    ("italic", re.compile(r"\*(.+?)\*|_(.+?)_")),
+    ("bold_italic", re.compile(r"\*\*\*(.+?)\*\*\*(?!\*)|___(.+?)___(?!_)")),
+    ("bold", re.compile(r"\*\*(.+?)\*\*(?!\*)|__(.+?)__(?!_)")),
+    ("italic", re.compile(r"\*([^*\n]+)\*(?!\*)|_([^_\n]+)_(?!_)")),
     ("strikethrough", re.compile(r"~~(.+?)~~")),
 ]
 
@@ -49,7 +49,8 @@ class MarkdownDocxConverter:
         """
         doc = create_document()
         self._set_default_style(doc)
-        lines = md_text.split("\n")
+        # Normalize line endings (CRLF → LF) before splitting
+        lines = md_text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
         i = 0
         while i < len(lines):
             i = self._process_line(doc, lines, i)
@@ -83,7 +84,7 @@ class MarkdownDocxConverter:
         if re.match(r"^(\*{3,}|-{3,}|_{3,})\s*$", line.strip()):
             p = doc.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            run = p.add_run("?�" * 50)
+            run = p.add_run("─" * 50)
             run.font.color.rgb = RGBColor(0xCC, 0xCC, 0xCC)
             return i + 1
 
@@ -221,7 +222,7 @@ class MarkdownDocxConverter:
                 p = doc.add_paragraph(style=style)
             except KeyError:
                 p = doc.add_paragraph()
-                prefix = f"{item_num}. " if ordered else "??"
+                prefix = f"{item_num}. " if ordered else "• "
                 text = prefix + text
             self._add_inline_runs(p, text)
             if indent_level > 0:

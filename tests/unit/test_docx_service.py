@@ -10,12 +10,13 @@ from src.domain.docx_value_objects import DfmBlockType
 from src.infrastructure.dfm_parser import BlockEdit, DfmParseResult
 
 
-def test_find_libreoffice_binary_prefers_env_var(monkeypatch):
-    monkeypatch.setenv("LIBREOFFICE_BIN", "/custom/LibreOffice")
-    monkeypatch.setattr(Path, "exists", lambda self: str(self) == "/custom/LibreOffice")
+def test_find_libreoffice_binary_prefers_env_var(monkeypatch, tmp_path):
+    fake_bin = tmp_path / "soffice"
+    fake_bin.touch()
+    monkeypatch.setenv("LIBREOFFICE_BIN", str(fake_bin))
     monkeypatch.setattr("src.application.docx_service.shutil.which", lambda _name: None)
 
-    assert DocxService._find_libreoffice_binary() == "/custom/LibreOffice"
+    assert DocxService._find_libreoffice_binary() == str(fake_bin)
 
 
 def test_find_libreoffice_binary_uses_soffice_on_macos(monkeypatch):
