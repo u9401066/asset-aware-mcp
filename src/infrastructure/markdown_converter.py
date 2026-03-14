@@ -12,15 +12,21 @@ from __future__ import annotations
 import logging
 import re
 from pathlib import Path
+from typing import Any
 
-from docx import Document
+from docx import Document as create_document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Inches, Pt, RGBColor
 
 logger = logging.getLogger(__name__)
 
+# Type alias ??python-docx's Document() is a factory function;
+# the actual class lives in docx.document.Document but is not
+# publicly re-exported. We use Any for type annotations.
+_Doc = Any
+
 # ============================================================================
-# Inline pattern — order matters (code backtick before bold/italic)
+# Inline pattern ??order matters (code backtick before bold/italic)
 # ============================================================================
 
 _INLINE_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
@@ -41,7 +47,7 @@ class MarkdownDocxConverter:
 
         Returns the resolved output path.
         """
-        doc = Document()
+        doc = create_document()
         self._set_default_style(doc)
         lines = md_text.split("\n")
         i = 0
@@ -54,11 +60,11 @@ class MarkdownDocxConverter:
     # Line-level processing
     # ====================================================================
 
-    def _process_line(self, doc: Document, lines: list[str], i: int) -> int:
+    def _process_line(self, doc: _Doc, lines: list[str], i: int) -> int:
         """Process one logical block starting at line *i*. Return next index."""
         line = lines[i]
 
-        # Blank line — skip
+        # Blank line ??skip
         if not line.strip():
             return i + 1
 
@@ -66,7 +72,7 @@ class MarkdownDocxConverter:
         if line.strip().startswith("```"):
             return self._process_code_block(doc, lines, i)
 
-        # Heading (# … ######)
+        # Heading (# ??######)
         m = re.match(r"^(#{1,6})\s+(.*)", line)
         if m:
             level = len(m.group(1))
@@ -77,7 +83,7 @@ class MarkdownDocxConverter:
         if re.match(r"^(\*{3,}|-{3,}|_{3,})\s*$", line.strip()):
             p = doc.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            run = p.add_run("─" * 50)
+            run = p.add_run("?�" * 50)
             run.font.color.rgb = RGBColor(0xCC, 0xCC, 0xCC)
             return i + 1
 
@@ -114,7 +120,7 @@ class MarkdownDocxConverter:
     # Block-level helpers
     # ====================================================================
 
-    def _process_code_block(self, doc: Document, lines: list[str], start: int) -> int:
+    def _process_code_block(self, doc: _Doc, lines: list[str], start: int) -> int:
         """Handle fenced code blocks (``` ... ```)."""
         code_lines: list[str] = []
         i = start + 1
@@ -131,7 +137,7 @@ class MarkdownDocxConverter:
         run.font.color.rgb = RGBColor(0x33, 0x33, 0x33)
         return i
 
-    def _process_table(self, doc: Document, lines: list[str], start: int) -> int:
+    def _process_table(self, doc: _Doc, lines: list[str], start: int) -> int:
         """Parse a markdown pipe table and add a docx table."""
         table_lines: list[str] = []
         i = start
@@ -171,7 +177,7 @@ class MarkdownDocxConverter:
 
         return i
 
-    def _process_blockquote(self, doc: Document, lines: list[str], start: int) -> int:
+    def _process_blockquote(self, doc: _Doc, lines: list[str], start: int) -> int:
         """Handle blockquote lines (> ...)."""
         quote_lines: list[str] = []
         i = start
@@ -190,7 +196,7 @@ class MarkdownDocxConverter:
 
     def _process_list(
         self,
-        doc: Document,
+        doc: _Doc,
         lines: list[str],
         start: int,
         *,
@@ -215,7 +221,7 @@ class MarkdownDocxConverter:
                 p = doc.add_paragraph(style=style)
             except KeyError:
                 p = doc.add_paragraph()
-                prefix = f"{item_num}. " if ordered else "• "
+                prefix = f"{item_num}. " if ordered else "??"
                 text = prefix + text
             self._add_inline_runs(p, text)
             if indent_level > 0:
@@ -223,7 +229,7 @@ class MarkdownDocxConverter:
             i += 1
         return i
 
-    def _add_image(self, doc: Document, src: str, alt: str) -> None:
+    def _add_image(self, doc: _Doc, src: str, alt: str) -> None:
         """Add an image to the document if the file exists."""
         img_path = Path(src)
         if img_path.exists():
@@ -239,11 +245,11 @@ class MarkdownDocxConverter:
     # Inline formatting
     # ====================================================================
 
-    def _add_inline_runs(self, paragraph, text: str) -> None:
+    def _add_inline_runs(self, paragraph: Any, text: str) -> None:
         """Parse inline markdown formatting and add runs to *paragraph*."""
         self._parse_inline(paragraph, text)
 
-    def _parse_inline(self, paragraph, text: str) -> None:
+    def _parse_inline(self, paragraph: Any, text: str) -> None:
         """Recursively parse inline patterns and emit runs."""
         if not text:
             return
@@ -261,7 +267,7 @@ class MarkdownDocxConverter:
                 best_start = m.start()
 
         if best_match is None:
-            # No inline formatting — plain text
+            # No inline formatting ??plain text
             if text:
                 paragraph.add_run(text)
             return
@@ -272,7 +278,7 @@ class MarkdownDocxConverter:
             paragraph.add_run(before)
 
         # The matched content
-        # Groups may differ per pattern — pick first non-None group
+        # Groups may differ per pattern ??pick first non-None group
         content = next((g for g in best_match.groups() if g is not None), "")
         after = text[best_match.end() :]
 
@@ -303,7 +309,7 @@ class MarkdownDocxConverter:
     # ====================================================================
 
     @staticmethod
-    def _set_default_style(doc: Document) -> None:
+    def _set_default_style(doc: _Doc) -> None:
         """Set sane default font for the document."""
         style = doc.styles["Normal"]
         font = style.font
