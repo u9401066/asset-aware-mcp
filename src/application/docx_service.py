@@ -178,17 +178,21 @@ class DocxService:
                     )
         elif sys.platform == "darwin":
             # macOS app bundle
-            platform_candidates.extend([
-                "/Applications/LibreOffice.app/Contents/MacOS/soffice",
-                "/Applications/LibreOffice.app/Contents/MacOS/libreoffice",
-            ])
+            platform_candidates.extend(
+                [
+                    "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+                    "/Applications/LibreOffice.app/Contents/MacOS/libreoffice",
+                ]
+            )
         else:
             # Linux — common install locations
-            platform_candidates.extend([
-                "/usr/bin/libreoffice",
-                "/usr/bin/soffice",
-                "/snap/bin/libreoffice",
-            ])
+            platform_candidates.extend(
+                [
+                    "/usr/bin/libreoffice",
+                    "/usr/bin/soffice",
+                    "/snap/bin/libreoffice",
+                ]
+            )
 
         for candidate in platform_candidates:
             if Path(candidate).exists():
@@ -1003,7 +1007,11 @@ class DocxService:
                     check=False,
                 )
                 if result.returncode != 0:
-                    error_detail = result.stderr or result.stdout or f"exit code {result.returncode}"
+                    error_detail = (
+                        result.stderr
+                        or result.stdout
+                        or f"exit code {result.returncode}"
+                    )
                     logger.error(
                         "LibreOffice DOCX→%s failed: %s",
                         target_format.upper(),

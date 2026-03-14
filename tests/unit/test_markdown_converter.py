@@ -192,7 +192,9 @@ def main():
         out = tmp_path / "crlf.docx"
         converter.convert(md, out)
         doc = Document(str(out))
-        headings = [p.text for p in doc.paragraphs if p.style.name.startswith("Heading")]
+        headings = [
+            p.text for p in doc.paragraphs if p.style.name.startswith("Heading")
+        ]
         assert "Title" in headings
         assert "Section" in headings
 
