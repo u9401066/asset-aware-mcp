@@ -4,9 +4,51 @@
 
 ## 🎯 當前焦點
 
+- **Section truth 已收斂**：manifest generator 現在是 section metadata 最終寫入點；Marker ingest 不再先算 section 再被 generator 用另一套規則覆蓋
+- **Line span 正式化完成**：fetch asset 已可直接回傳 line range / section context，Marker blocks 也在 ETL 階段持久化 line span
+- **Segmentation correctness 修復完成**：已修正 stale `original.pdf`、same-page asset 錯配與 section line range 顯示語意
+- **MCP 處理可視化**：已把 progress 從單純 ETL 擴展到 segmentation、layout overlay、OCR、knowledge graph、table render
 - **v0.5.2 已發布**：Marker optional + Server 版本釘定 + Windows DLL 錯誤修正
 - **版本釘定**：Extension 啟動時 `--from asset-aware-mcp==X.Y.Z`，版本變更自動 `--upgrade`
 - **Windows 修正**：`except (ImportError, OSError)` 捕獲 torch DLL 載入失敗
+- **save_docx 穩定化**：MCP/agent 透過 TableContext 改表格後，`save_docx` 先同步 IR/DFM，再輸出 DOCX，避免最後一步產生空白內容
+
+## 🆕 ETL / Layout / OCR 可視化 (2026-03-18)
+
+- `src/domain/segmentation.py`：新增 `DocumentSegment` / `DocumentSegmentation`
+- `src/application/segmentation_service.py`：整合 manifest + blocks + assets + reading order，輸出 `segmentation.json`
+- `segmentation.json` 現在同時保留 `reading_order` 與 `line_start` / `line_end`，可用於內容流理解與精準行號引用
+- `src/domain/line_spans.py`：新增 page-aware / section-aware line span index，對重複句子會先在 page 與 section 範圍內定位
+- `blocks.json` 現在會持久化 `line_start` / `line_end` / `line_match_strategy` 等 metadata；舊資料在 export segmentation 時會自動 backfill
+- `fetch_document_asset` 現在直接回傳 asset 的 line range、section、source block，減少 agent 端額外查詢成本
+- `FigureAsset` / `TableAsset` 追加 `source_block_id` / `source_order`，segmentation 會優先按來源 block 身分配對，避免同頁多資產錯配
+- `src/infrastructure/layout_visualizer.py`：以 `original.pdf` 或白底畫布渲染 bbox overlay
+- `src/infrastructure/ocr_processor.py`：封裝 `ocrmypdf`，支援 `language` / `rotate_pages` / `deskew`
+- `DocumentService`：每次 ingest 會覆蓋保存最新 `original.pdf`，可選 OCR 後再進 ETL；`JobService` step 數跟隨 OCR 階段
+- `document_tools.py`：新增 `export_document_segmentation`、`visualize_document_layout`、`ocr_pdf_document`
+- `document_resources.py`：新增 `document://{doc_id}/segmentation`
+- `vscode-extension`：Documents tree 相容新 manifest 結構，並顯示 segmentation 與 ETL jobs 概況
+- 驗證結果：`uv run pytest tests/unit -q` → 384 passed；`npm run compile` 通過
+
+## 🆕 Reading Order 與行號並存 (2026-03-18)
+
+- `src/domain/reading_order.py`：新增顯式 `ReadingOrderPolicy`
+- policy 不取代 line-level citation；`DocumentSegment` 另存 `line_start` / `line_end`
+- 排序依據分離為兩軸：
+    - `reading_order`：回答「內容應該怎麼讀」
+    - `line_start/end`：回答「這段資訊在 markdown 第幾行」
+- Marker block metadata 會保存 `source_order`，segmentation 匯出時再套用 type/caption/non-text policy
+- 驗證結果：`uv run pytest tests/unit -q` → 379 passed
+
+## 🆕 MCP Progress / Logging (2026-03-18)
+
+- `src/presentation/mcp_context.py`：封裝安全 progress/log helper
+- `DocumentService.ingest()`：新增可選 progress callback，提供每個檔案內部 phase 訊號
+- `JobService`：改接真實 ingest phase，不再手動模擬 job 階段
+- 已接入 progress 的工具：
+    - PDF：`ingest_documents`、`parse_pdf_structure`、`convert_pdf_to_docx`
+    - DOCX：`ingest_docx`、`save_docx`、`convert_docx_to_doc`、`convert_docx_to_pdf`、`docx_validate_roundtrip`、`export_markdown`
+- 驗證結果：`uv run pytest tests/unit -q` → 368 passed
 
 ## 🆕 v0.4.0 新功能
 
@@ -69,16 +111,16 @@ src/
 ├── domain/          # 🔵 核心業務邏輯 (+docx_entities, docx_value_objects)
 ├── application/     # 🟢 使用案例 (+docx_service, dfm_table_bridge)
 ├── infrastructure/  # 🟠 外部依賴實作 (+docx_adapter, dfm_parser, dfm_renderer, docx_validator)
-└── presentation/    # 🔴 MCP Server (43 tools in 7 modules, 12 resources)
+└── presentation/    # 🔴 MCP Server (46 tools in 7 modules, 13 resources)
     ├── tools/
-    │   ├── document_tools.py   # ETL + document management (8)
+    │   ├── document_tools.py   # ETL + document management (11)
     │   ├── docx_tools.py       # Docx DFM + conversion (12) — core + validator + bridge
     │   ├── section_tools.py    # Navigation (5)
     │   ├── job_tools.py        # Job (3)
     │   ├── knowledge_tools.py  # KG (2)
     │   ├── profile_tools.py    # Profile (5)
     │   └── table_tools.py      # A2T (7) — operation-based
-    └── resources/              # 12 resources
+    └── resources/              # 13 resources
 ```
 
 ## 📝 新功能 (v0.3.1)
@@ -101,4 +143,4 @@ src/
 2. **文件缺乏**: API Reference, Examples, FAQ
 
 ---
-*Last updated: 2026-03-09*
+*Last updated: 2026-03-18*

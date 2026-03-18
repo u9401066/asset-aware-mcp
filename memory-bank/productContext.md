@@ -38,11 +38,14 @@ Local Storage
 ## ✨ 核心功能
 
 - 📄 PDF → Markdown 轉換 (PyMuPDF / Marker)
-- 📝 Docx ↔ DFM 即時編輯與互轉 (12 tools, 6D validator + strict gate)
+- 🧩 Unified segmentation 匯出（reading order + markdown line span）
+- 🖼️ Layout overlay 偵錯（直接檢查 bbox / type / order）
+- 🔤 Optional OCR preprocessing（掃描 PDF 按需前處理）
+- 📝 Docx ↔ DFM 即時編輯與互轉 (13 tools, 6D validator + strict gate)
 - 🗺️ Document Manifest 生成 (Asset 清單)
 - 📊 A2T 表格系統 (7 operation-based tools)
 - 🧠 LightRAG 知識圖譜建立
-- 🔌 MCP Tools (43 tools in 7 modules) 暴露給 Agent
+- 🔌 MCP Tools (46 tools in 7 modules, 13 resources) 暴露給 Agent
 
 ## 🔧 技術棧
 
@@ -66,7 +69,7 @@ Local Storage
 - ruff, mypy
 
 ---
-*Last updated: 2026-03-09*
+*Last updated: 2026-03-18*
 
 
 ## Project Description

@@ -2,6 +2,52 @@
 
 ## Done
 
+- 修正 section truth 在 manifest / marker ingest / fetch 間分叉的設計問題
+	- `ManifestGenerator.generate()` 新增 `sections` 參數，允許 ETL 路徑傳入預先計算好的 section 真相，避免 Marker ingest 先算 section 後又被 generator 覆蓋
+	- PDF TOC 路徑不再只產生 `start_line=0/end_line=0` 的 section；現在會用 markdown line index 補齊 line span 與 preview
+	- manifest 生成時統一回填 figure/table 的 `section_id` / `section_title`，讓 manifest、fetch、segmentation 共用同一份 section 歸屬
+	- `DocumentService` Marker ingest 改為先建 sections，再套 `apply_asset_line_spans(..., sections=sections)`，並把 sections 直接傳入 manifest generator
+	- 驗證完成：`uv run pytest tests/unit -q` → 386 passed
+- 將 line range 升級為 ETL 正式資料流，fetch 時可直接取用
+	- 新增 `src/domain/line_spans.py`，實作 page-aware / section-aware markdown line span index
+	- Marker ETL 會在保存 `blocks.json` 前直接把 `block -> line_start/end`、`line_match_strategy` 寫入 metadata，不再依賴 segmentation runtime 回推
+	- `FigureAsset` / `TableAsset` / `FetchResult` 新增 `line_start`、`line_end`、`line_source`、`section_id`、`section_title`、`source_block_id`
+	- PyMuPDF 路徑也會在 ETL 階段把 table/figure line span enrich 到 asset；markdown pipe table 直接在 manifest 生成時保存 line span
+	- `fetch_document_asset` 現在直接顯示 line range、section、source block，agent 不必再額外查 segmentation
+	- `SegmentationService` 改為優先使用持久化 line span；若遇到舊 `blocks.json` 缺 metadata，會用新版 page-aware/section-aware index 升級回填後再輸出
+	- 另外補強 `parse_pdf_structure` 路徑的一致性：Marker adapter 也會保存 block metadata 與 asset line span
+	- 驗證完成：`uv run pytest tests/unit -q` → 384 passed
+- 修復 segmentation / overlay 的 3 個 correctness 問題
+	- `DocumentService._save_original_pdf_copy()` 改為每次 ingest 都覆蓋 `original.pdf`，避免 overlay 對到舊版來源檔
+	- `FigureAsset` / `TableAsset` 新增 `source_block_id` / `source_order`，Marker ingest 與 Marker adapter 兩條路徑都會保留來源 block 身分
+	- `SegmentationService` 不再用同頁 FIFO 配對 picture/table，而是優先用 `source_block_id`、再退到 `source_order` / 內容比對，降低同頁多資產錯配
+	- section line range 對外顯示改為 1-based，並修正 `start_line=0` 時被當成 falsy 而不顯示的問題
+	- 新增回歸測試：stale `original.pdf` 覆蓋、same-page block identity 配對、section 第一段行號顯示
+	- 驗證完成：`uv run pytest tests/unit -q` → 382 passed
+- 實作 ETL 可視化與 OCR 強化，降低 MCP「空等」感
+	- 新增統一 segmentation schema：`src/domain/segmentation.py` + `src/application/segmentation_service.py`
+	- 新增 `export_document_segmentation`，將 manifest、blocks、assets、reading order 匯出為 `segmentation.json`
+	- `DocumentSegment` 新增 `line_start` / `line_end`，讓 reading order 與行號級引用並存
+	- `SegmentationService` 新增 markdown line resolver，section 直接保留既有 line range，block/table/caption 以文字對位補上行號
+	- 新增 `visualize_document_layout`，產生 page overlay 直接檢查 bbox / type / reading order
+	- 新增 `ocr_pdf_document`，並讓 `ingest_documents` / `parse_pdf_structure` 支援 `ocr_enabled`、`ocr_language`、`rotate_pages`、`deskew`
+	- `DocumentService` / `JobService` 會保存 `original.pdf`、支援 OCR 預處理，且背景 job step 數會反映 OCR 階段
+	- `knowledge_tools` 查詢/匯出與 `table_manage(..., render ...)` 已補上 MCP progress
+	- VS Code extension 修正 manifest 舊欄位假設，並新增 segmentation 檔案入口與 ETL job 概況顯示
+	- 驗證完成：`uv run pytest tests/unit -q` → 374 passed；`cd vscode-extension && npm run compile` 通過
+- 實作 MCP SDK 原生 `Context` progress / logging 整合
+	- 新增 `src/presentation/mcp_context.py` 統一處理安全的 `report_progress()` / `log()` 呼叫
+	- `document_tools.py` 的 `ingest_documents`、`parse_pdf_structure`、`convert_pdf_to_docx` 已支援 MCP progress
+	- `docx_tools.py` 的 `ingest_docx`、`save_docx`、`convert_docx_to_doc/pdf`、`docx_validate_roundtrip`、`export_markdown` 已支援 MCP progress
+	- `DocumentService.ingest()` 新增可選 progress callback，將階段訊號下沉到應用層
+	- `JobService` 改用 `DocumentService` 的真實 phase callback 更新 background job progress，不再手動模擬階段
+	- 新增 progress 回歸測試並驗證 `uv run pytest tests/unit -q` 全數通過（368 passed）
+- 修復 agent/MCP 多步驟編輯後 `save_docx` 可能輸出空白內容的問題
+	- `save_docx()` 未提供 inline DFM 時，改為讀取磁碟上最新的 `content.dfm`
+	- `docx_tools.save_docx()` 改為先合併 inline DFM / split MD edits 與 doc-linked `TableContext`，再統一回寫
+	- `TableContext` 新增 `source_doc_id` / `source_block_id` 追蹤來源表格
+	- 新增 MCP 層回歸測試：inline DFM + TableContext、from_md + TableContext 雙路徑都必須正確 merge
+	- 新增真實 DOCX integration tests：直接建立 `.docx`、ingest、轉 TableContext、修改、save_docx，再讀回輸出檔驗證文字真的寫入
 - **v0.5.2 發布**
 - MCP Server 版本釘定與自動升級（`--from`, `--upgrade`, `upgradeServer` 指令）
 - Windows `OSError` (torch DLL) 安全降級修正（`except (ImportError, OSError)`）
@@ -31,11 +77,13 @@
 
 ## Doing
 
-- v0.5.2 released — 等待 CI / PyPI / VSIX 發布完成
+- v0.6.0 release prep：同步版本 / changelog / Memory Bank，準備跑完整 release 驗證、commit、push、tag
 
 ## Next
 
 - 視需要將 Linux smoke test 擴展為 CI 中對 `Check System Dependencies` 輸出的斷言
+- 視需要補 integration test：實際產生 segmentation.json 與 layout overlay PNG
+- 視需要將 line resolver 從 best-effort text match 升級為 ETL 階段直接寫入 token/line spans
 - Bug #4: 欄位名稱長度觸發 pipe-table 對齊偏移（低優先）
 - Bug #6: 工具參數命名一致性（低優先）
 - VS Code extension npm audit 相依套件弱點

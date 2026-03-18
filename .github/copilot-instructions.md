@@ -17,10 +17,12 @@
 ### 核心功能
 
 - 📄 **PDF ETL** — 雙引擎文件拆解（圖片、表格、章節）
+- 🧩 **Segmentation Export** — 統一 segmentation schema（reading order + line span）
 - 📊 **A2T** — Anything to Table 表格建立
 - 🧭 **Section Navigation** — 動態層級章節導航（5 Tools）
 - 🔍 **Knowledge Graph** — 跨文獻知識圖譜（LightRAG）
 - 🖼️ **Vision AI** — 圖片分析（base64 返回）
+- 🔤 **OCR Preprocessing** — 掃描 PDF 按需前處理
 
 ### LLM 後端
 
@@ -202,16 +204,16 @@ src/
     ├── server.py            # Thin entry point (31 行)
     ├── mcp_app.py           # FastMCP 單一實例
     ├── dependencies.py      # Composition Root
-    ├── tools/               # 43 tools (7 模組)
-    │   ├── document_tools.py   # ETL + document management (8)
+    ├── tools/               # 46 tools (7 模組)
+    │   ├── document_tools.py   # ETL + document management (11)
     │   ├── docx_tools.py       # Docx ↔ DFM + conversion (13)
     │   ├── section_tools.py    # Navigation (5)
     │   ├── job_tools.py        # Job management (3)
     │   ├── knowledge_tools.py  # KG (2)
     │   ├── profile_tools.py    # Profile (5)
     │   └── table_tools.py      # A2T (7) — operation-based
-    └── resources/           # 12 resources (2 模組)
-        ├── document_resources.py  # Documents (7)
+    └── resources/           # 13 resources (2 模組)
+        ├── document_resources.py  # Documents (8)
         └── table_resources.py     # Tables (5)
 ```
 

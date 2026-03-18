@@ -6,12 +6,19 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-## 🆕 What's New in v0.5.2
+## 🆕 What's New in v0.6.0
+
+- **Unified Segmentation Export**: New `segmentation.json` contract combines manifest, blocks, reading order, and persisted markdown line ranges
+- **Layout Overlay Debugging**: Render bbox / type / reading-order overlays directly from `original.pdf`
+- **On-Demand OCR Preprocessing**: Clean scanned PDFs before ETL with `ocr_pdf_document` or OCR-enabled ingest
+- **Line-Aware Asset Fetching**: `fetch_document_asset` now returns line ranges, section context, and source block IDs directly
+- **46 tools** across 7 modules
+
+### v0.5.2
 
 - **Stable Python Runtime**: Extension launch now prefers Python 3.11 to avoid macOS native build failures on newer interpreters
 - **Optional Marker Backend**: Marker and torch are no longer installed by default; enable them only when you need structured parsing
 - **Safer Torch Resolution**: Added configurable `torchBackend`, defaulting to `cpu` to reduce wheel/CUDA mismatch issues
-- **43 tools** across 7 modules
 
 ### v0.5.1
 
@@ -78,6 +85,9 @@ This extension provides a sophisticated **ETL (Extract, Transform, Load) Pipelin
 - **📄 Dual-Engine PDF ETL**:
   - **PyMuPDF** (default) - Fast extraction (~50MB dependency)
   - **Marker** (optional, `use_marker=True`) - High-precision with `blocks.json` containing bbox coordinates
+- **🧩 Unified Segmentation**: Export normalized `segmentation.json` with reading order and markdown line ranges
+- **🖼️ Layout Overlay**: Visual bbox/type/reading-order inspection from the original PDF
+- **🔤 OCR Preprocessing**: Optional scanned-PDF cleanup before ETL
 - **🧭 Section Navigation**: Dynamic hierarchy section tree with 5 tools for browsing, searching, content reading, and block extraction
 - **🔄 Async Jobs**: Track progress for large document batches with Job IDs.
 - **🗺️ Document Manifest**: A structured index that lets Agents "see" document structure before reading.
@@ -176,9 +186,9 @@ If the extension fails to start or the MCP server doesn't appear:
     *   Run `npm install`.
     *   Press `F5` to launch the **Extension Development Host**.
 
-## 📚 MCP Tools (43 total)
+## 📚 MCP Tools (46 total)
 
-### Document ETL (8)
+### Document ETL (11)
 | Tool | Description |
 |------|-------------|
 | `ingest_documents` | Process PDF files into structured assets |
@@ -189,6 +199,9 @@ If the extension fails to start or the MCP server doesn't appear:
 | `fetch_document_asset` | Get specific Table/Figure/Section content |
 | `parse_pdf_structure` | Parse PDF structure without full ingestion |
 | `search_source_location` | Search exact source locations with page numbers and bbox |
+| `export_document_segmentation` | Export normalized segmentation with reading order and line spans |
+| `visualize_document_layout` | Render page overlay images for layout debugging |
+| `ocr_pdf_document` | Run OCR preprocessing and output a cleaned PDF |
 
 ### Section Navigation (5)
 | Tool | Description |

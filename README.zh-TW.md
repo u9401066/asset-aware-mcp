@@ -40,6 +40,9 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 📄 **資產感知 ETL** - PDF → Markdown，**雙引擎** PDF 解析：
   - **PyMuPDF**（預設）- 快速提取（~50MB）
   - **Marker**（可選，`use_marker=True`）- 高精度結構化解析，產出含 bbox 座標的 `blocks.json`
+- 🧩 **統一 Segmentation 匯出** - 產生正規化 `segmentation.json`，整合 manifest、blocks、reading order 與持久化 line span。
+- 🖼️ **版面 Overlay 偵錯** - 可從 `original.pdf` 產生 page overlay，直接檢查 bbox、區塊類型與 reading order。
+- 🔤 **按需 OCR 前處理** - 針對掃描型 PDF 提供可選 `ocrmypdf` 前處理流程，再進行 ETL。
 - 🧭 **章節導航** - 動態層級章節樹，提供 5 個工具：瀏覽、搜尋、詳情、內容讀取、區塊提取，支援任意深度的標題層級。
 - 🔄 **非同步任務流水線** - 支援大型文件的非同步處理與進度追蹤。
 - 🗺️ **文件清單 (Manifest)** - 為 Agent 提供結構化的文件「地圖」，實現精確數據存取。
@@ -60,12 +63,12 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP 伺服器 (模組化 Presentation 層)          │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 43 工具，7 個模組                       │   │
-│  │   document (8) │ docx (13)  │ section (5)       │   │
+│  │ tools/: 46 工具，7 個模組                       │   │
+│  │   document (11) │ docx (13) │ section (5)       │   │
 │  │   job (3) │ knowledge (2) │ table (7) │ profile (5) │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ resources/: 12 資源，2 個模組                   │   │
+│  │ resources/: 13 資源，2 個模組                   │   │
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────┬───────────────────────────────────┘
                       │
@@ -140,6 +143,9 @@ Marker 說明：
 | `fetch_document_asset` | 精確獲取表格 (MD) / 圖片 (B64) / 章節內容 |
 | `parse_pdf_structure` | 使用 Marker 進行高精度結構化 PDF 解析 |
 | `search_source_location` | 搜尋精確來源位置（頁碼 + bbox） |
+| `export_document_segmentation` | 匯出含 reading order 與 line range 的統一 `segmentation.json` |
+| `visualize_document_layout` | 產生 page overlay，檢查 bbox / 類型 / reading order |
+| `ocr_pdf_document` | 執行 OCR 前處理，產生後續 ETL 可用的 PDF |
 
 ### 工作管理工具
 

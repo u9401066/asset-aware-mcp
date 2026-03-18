@@ -40,6 +40,9 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 - 📄 **Asset-Aware ETL** - PDF → Markdown with **dual-engine** PDF parsing:
   - **PyMuPDF** (default) - Fast extraction (~50MB)
   - **Marker** (optional, `use_marker=True`) - High-precision structured parsing with `blocks.json` (bbox/coordinates)
+- 🧩 **Unified Segmentation Export** - Normalized `segmentation.json` merges manifest, blocks, reading order, and persisted markdown line spans for downstream tools and extensions.
+- 🖼️ **Layout Overlay Debugging** - Render page overlays from `original.pdf` to inspect bbox, segment type, and reading order visually.
+- 🔤 **On-Demand OCR Preprocessing** - Optional `ocrmypdf` preprocessing path for scanned PDFs before ETL.
 - 🧭 **Section Navigation** - Dynamic hierarchy section tree with 5 tools: browse, search, detail, content reading, and block extraction for any depth of headings.
 - 🔄 **Async Job Pipeline** - Supports asynchronous task processing and progress tracking for large documents.
 - 🗺️ **Document Manifest** - Provides a structured "map" of the document for precise data access by Agents.
@@ -61,12 +64,12 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP Server (Modular Presentation)            │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 43 tools in 7 modules                   │   │
-│  │   document (8) │ docx (13) │ section (5)        │   │
+│  │ tools/: 46 tools in 7 modules                   │   │
+│  │   document (11) │ docx (13) │ section (5)       │   │
 │  │   job (3) │ knowledge (2) │ table (7) │ profile (5) │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ resources/: 12 resources in 2 modules           │   │
+│  │ resources/: 13 resources in 2 modules           │   │
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────┬───────────────────────────────────┘
                       │
@@ -141,6 +144,9 @@ Marker note:
 | `fetch_document_asset` | Precisely retrieve tables (MD) / figures (B64) / sections |
 | `parse_pdf_structure` | Run high-precision Marker parsing and emit structured blocks |
 | `search_source_location` | Search exact source locations with page + bbox for verification |
+| `export_document_segmentation` | Export normalized `segmentation.json` with reading order + line ranges |
+| `visualize_document_layout` | Render page overlay images for bbox / type / reading-order inspection |
+| `ocr_pdf_document` | Run OCR preprocessing and generate a cleaned PDF for later ETL |
 
 ### Job Management Tools
 

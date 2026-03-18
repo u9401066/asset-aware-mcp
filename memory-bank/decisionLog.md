@@ -2,6 +2,15 @@
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-03-18 | **section metadata 的最終真相必須在 manifest generator 收斂** | 如果 Marker ingest 先用 TOC + line index 算出 section，再由 `ManifestGenerator.generate()` 用另一套規則重建 sections，manifest、fetch、segmentation 會開始共享不同的 section 歸屬。改為讓 generator 接受預先計算好的 sections，並在 generator 階段統一回填 assets 的 `section_id` / `section_title`，可避免多重真相。 |
+| 2026-03-18 | **line span 必須在 ETL 階段持久化，segmentation 只消費不回推** | 如果 line range 只存在於 segmentation export 的 runtime 回推邏輯，asset fetch、overlay、agent citation 都必須重複做猜測，且容易因重複句子而誤對位。將 block 與 asset 的 line span 在 ETL 當下寫進 `blocks.json` / manifest，才能讓 fetch、segmentation、resource 共用同一份定位真相。 |
+| 2026-03-18 | **line span 對位採 page-aware + section-aware，並保留 legacy backfill** | 純全文順序比對對重複句子很脆弱。新版 line span index 先縮到 page，再縮到 section，可明顯降低誤對位；但現有舊資料沒有 metadata，所以在 `SegmentationService` 遇到舊 `blocks.json` 時允許自動 backfill 升級。 |
+| 2026-03-18 | **layout asset 關聯要保留來源 block identity，不能只靠同頁順序猜測** | 同頁多 figure/table 時，單靠 page-based FIFO 很容易把 segmentation block 配到錯的 asset。將 `source_block_id` / `source_order` 存入 `FigureAsset` / `TableAsset`，再讓 segmentation 優先按 block 身分配對，才能穩定支援 overlay、caption 關聯與 citation。 |
+| 2026-03-18 | **line number 內部維持 0-based / end-exclusive，但所有對外顯示改為 1-based** | `SectionAsset.start_line/end_line` 目前被 section extractor 與 slicing 邏輯用作 0-based / end-exclusive 索引。為避免打破內部語意，顯示層統一轉成 1-based，可同時修正第一段 `start_line=0` 被隱藏的問題。 |
+| 2026-03-18 | **reading order 與 line-level citation 必須分離建模** | `reading_order` 回答的是閱讀流程與區塊排序，`line_start/end` 回答的是 markdown 引用定位。兩者不是同一個軸，若混在一起會導致 caption/table/footer 排序規則破壞精準行號引用，因此在 `DocumentSegment` 中同時保存兩套資訊。 |
+| 2026-03-18 | **以 `segmentation.json` 作為統一 layout contract** | 現有 manifest 偏向資產摘要，`blocks.json` 偏向 Marker 原始結構。新增 `DocumentSegmentation` 將 manifest、blocks、assets、reading order 正規化，讓 MCP tool、resource 與 VS Code extension 都能用穩定結構消費，不必各自猜欄位。 |
+| 2026-03-18 | **保存 `original.pdf` 並以 overlay 圖像做 layout debug** | 單看文字回傳仍然難知道 ETL 解析是否正確。將原始 PDF 與 segmentation 結合，產生 bbox/type/reading-order overlay，可直接檢查 Marker 或 PyMuPDF 的段落切分品質。 |
+| 2026-03-18 | **OCR 採 on-demand 前處理而非全域預設啟用** | OCR 成本高、依賴額外系統工具，且不是所有 PDF 都需要。將 `ocr_enabled`、`ocr_language`、`rotate_pages`、`deskew` 暴露在 tool 參數層，保留預設快速路徑，同時支援掃描 PDF 的補救流程。 |
 | 2026-03-18 | **`marker-pdf` 改為 optional extra，預設安裝不帶 torch** | `Marker` 是高精度但重量級的可選功能，會帶入 `torch` / `surya` 與平台相關 wheels，最容易造成安裝失敗。預設安裝改為只保留 PyMuPDF，可顯著降低 cross-platform 安裝摩擦；需要 `use_marker=True` 時再透過 `uv sync --extra marker` 或 extension 設定明確啟用。 |
 | 2026-03-18 | **不收窄 package 的 Python 3.11+ 支援宣告，只固定 extension / installer runtime 為 Python 3.11** | 使用者要求保留 3.11+ 支援。真正的啟動問題不是專案邏輯不支援新版 Python，而是終端使用者機器在 `uvx` 自動選到 3.14 時，`marker-pdf -> regex` 依賴鏈可能觸發本機原生編譯。將 extension / installer 固定到 wheel 可用性最佳的 3.11，可同時保留專案相容性與跨平台穩定啟動。 |
 | 2026-03-09 | **DOCX→PDF / DOCX→DOC 採保真模式，PDF→DOCX 採內容重建模式** | DOCX 來源具可逆結構，適合透過 LibreOffice 做 fidelity export；PDF ETL 不具版面可逆性，因此僅承諾可讀內容重建，不宣稱 layout fidelity。 |
