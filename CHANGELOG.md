@@ -7,6 +7,44 @@
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-03-18
+
+### Added
+
+- **Unified segmentation / layout / OCR 工具鏈**
+  - 新增 `export_document_segmentation`，輸出整合 manifest、blocks、assets、reading order 與 markdown line range 的 `segmentation.json`
+  - 新增 `visualize_document_layout`，可從 `original.pdf` 產生 bbox / type / reading order overlay
+  - 新增 `ocr_pdf_document`，支援 `ocrmypdf` 按需前處理掃描 PDF
+- **精準 line-range / section context 回傳**
+  - `fetch_document_asset` 現在直接回傳 `line_start` / `line_end` / `section_title` / `source_block_id`
+  - `FigureAsset`、`TableAsset`、`FetchResult` 追加 line span 與 section metadata 欄位
+- **MCP progress / logging 擴展**
+  - PDF ETL、DOCX save / convert、Knowledge Graph、table render 現在都會回報 MCP-native progress
+  - 非同步 ingest job 會跟隨實際 phase 與 OCR 階段更新進度
+
+### Changed
+
+- **Line span 正式成為 ETL 真相**
+  - Marker / PyMuPDF 路徑會在 ETL 階段持久化 block 與 asset 的 markdown line span
+  - `SegmentationService` 只消費持久化資料；舊 `blocks.json` 則在匯出時自動 backfill 升級
+  - line resolver 升級為 page-aware + section-aware，比全文文字回推更穩定
+- **Section truth 在 manifest generator 收斂**
+  - `ManifestGenerator.generate()` 接受預先計算的 `sections`，避免 Marker ingest 與 manifest 重建出兩份不同 section 真相
+  - PDF TOC 路徑現在也會補齊 section line span 與 preview，並由 manifest 統一回填 asset 的 `section_id` / `section_title`
+- **VS Code extension / 文件同步更新**
+  - 文件全面更新為 `46 tools / 13 resources`
+  - extension 現在會顯示 segmentation 入口與 ETL jobs 概況
+
+### Fixed
+
+- **Segmentation / overlay correctness**
+  - 每次 ingest 都會覆蓋保存最新 `original.pdf`，避免 overlay 對到舊檔
+  - 同頁多 figure / table 的 block 對位改為優先使用 `source_block_id` / `source_order`，降低錯配
+  - section line range 對外顯示統一改為 1-based，修正第一段 `start_line=0` 被隱藏的問題
+- **DOCX save write-back 穩定化**
+  - `save_docx` 未帶 inline DFM 時會回退使用持久化 `content.dfm`
+  - 儲存前會先把 doc-linked `TableContext` 變更合併回 IR/DFM，避免最後輸出空白或遺漏表格修改
+
 ## [0.5.2] - 2026-03-18
 
 ### Changed
