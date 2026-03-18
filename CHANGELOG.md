@@ -7,6 +7,37 @@
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-03-18
+
+### Changed
+
+- **Marker / torch 改為可選安裝路徑**
+  - `marker-pdf` 從預設依賴移到 optional extra：`uv sync --extra marker`
+  - 預設安裝與 installer 不再自動拉入 `torch` / `surya` 依賴鏈
+  - VS Code extension 新增 `enableMarkerBackend` 與 `torchBackend` 設定，預設使用 `cpu` 以降低 wheel / CUDA 相容性問題
+
+### Added
+
+- **MCP Server 版本釘定與自動升級**
+  - Extension 啟動時使用 `--from asset-aware-mcp==X.Y.Z` 釘定 PyPI 版本，確保 server 與 extension 版本一致
+  - 偵測到 extension 版本變更時自動加入 `--upgrade` 旗標，觸發 uvx 快取刷新
+  - 新增 `assetAwareMcp.upgradeServer` 手動指令，使用者可強制升級 MCP Server
+  - 安裝一次即全機共享（uvx 全域快取），不需每個資料夾重新安裝
+
+### Fixed
+
+- **Windows 上 torch DLL 載入失敗導致 server 無法啟動**
+  - `src/infrastructure/__init__.py` 的 optional dependency import 改為 catch `(ImportError, OSError)`
+  - 修正 Windows 下 `torch` DLL 載入失敗（`OSError: [WinError 1114]`）不被 `ImportError` 捕獲的問題
+  - LightRAG、PyMuPDF、Marker 三個可選依賴均加寬例外處理
+- **VS Code extension 啟動 runtime 穩定化**
+  - extension 的 PyPI 啟動與本地 dev 啟動都改為優先使用 Python 3.11
+  - 避免 macOS 在 Python 3.14 上為 `regex`/`marker-pdf` 觸發本機 C 編譯，導致缺少 Xcode CLT 時無法啟動
+  - 不限縮專案整體的 Python 3.11+ 支援宣告，只固定 extension/installer 的穩定執行 runtime
+- **跨平台 installer 對齊**
+  - `scripts/install.sh` 與 `scripts/install.ps1` 以 `uv sync --python 3.11` 建立環境
+  - Linux / macOS / Windows 均使用相同的穩定 runtime 策略
+
 ## [0.5.1] - 2026-03-14
 
 ### Fixed

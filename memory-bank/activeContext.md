@@ -4,8 +4,9 @@
 
 ## 🎯 當前焦點
 
-- **v0.5.0 發布中**：完成多行儲存格保護、Markdown 匯出、Ollama API 修復等功能
-- **下一步**：完成 v0.5.0 tag、push、marketplace 發布
+- **v0.5.2 已發布**：Marker optional + Server 版本釘定 + Windows DLL 錯誤修正
+- **版本釘定**：Extension 啟動時 `--from asset-aware-mcp==X.Y.Z`，版本變更自動 `--upgrade`
+- **Windows 修正**：`except (ImportError, OSError)` 捕獲 torch DLL 載入失敗
 
 ## 🆕 v0.4.0 新功能
 

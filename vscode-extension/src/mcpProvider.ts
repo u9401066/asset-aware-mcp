@@ -11,7 +11,15 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { getUvxLaunch, getUvPaths } from './uv';
+import {
+    DEFAULT_TORCH_BACKEND,
+    getUvRunArgs,
+    getUvxLaunch,
+    getUvPaths,
+    PREFERRED_RUNTIME_PYTHON,
+} from './uv';
+
+export const LAST_SERVER_VERSION_KEY = 'lastServerVersion';
 
 export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider<vscode.McpStdioServerDefinition> {
 
@@ -21,11 +29,13 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
     private workspaceRoot: string;
     private outputChannel?: vscode.OutputChannel;
     private context?: vscode.ExtensionContext;
+    private needsUpgrade: boolean;
 
-    constructor(workspaceRoot: string, outputChannel?: vscode.OutputChannel, context?: vscode.ExtensionContext) {
+    constructor(workspaceRoot: string, outputChannel?: vscode.OutputChannel, context?: vscode.ExtensionContext, needsUpgrade: boolean = false) {
         this.workspaceRoot = workspaceRoot;
         this.outputChannel = outputChannel;
         this.context = context;
+        this.needsUpgrade = needsUpgrade;
     }
 
     private log(message: string): void {
@@ -60,10 +70,26 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
     }
 
     /**
-     * Get uvx command (uv tool run)
+     * Get the extension's own version (matches PyPI package version)
+     */
+    private getExtensionVersion(): string | undefined {
+        return this.context?.extension?.packageJSON?.version;
+    }
+
+    /**
+     * Get uvx command (uv tool run) with version pinning and upgrade support
      */
     private getUvxCommand(): { command: string; args: string[] } {
-        return getUvxLaunch(this.getUvCommand());
+        const config = vscode.workspace.getConfiguration('assetAwareMcp');
+        const serverVersion = this.getExtensionVersion();
+        return getUvxLaunch(
+            this.getUvCommand(),
+            PREFERRED_RUNTIME_PYTHON,
+            config.get('enableMarkerBackend', false),
+            config.get('torchBackend', DEFAULT_TORCH_BACKEND),
+            serverVersion,
+            this.needsUpgrade,
+        );
     }
 
     /**
@@ -87,6 +113,8 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
 
         // Get configuration from VS Code settings
         const config = vscode.workspace.getConfiguration('assetAwareMcp');
+        const enableMarkerBackend = config.get('enableMarkerBackend', false);
+        const torchBackend = config.get('torchBackend', DEFAULT_TORCH_BACKEND);
 
         // Build environment variables from settings
         const envVars: Record<string, string> = {
@@ -121,13 +149,25 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
                 this.log('Merged .env file settings');
             }
 
-            this.log('Command: ' + uvCommand + ' run --directory ' + mcpServerDir + ' python -m src.server');
+            this.log(
+                'Command: '
+                + uvCommand
+                + ' '
+                + [
+                    ...getUvRunArgs(PREFERRED_RUNTIME_PYTHON),
+                    '--directory',
+                    mcpServerDir,
+                    'python',
+                    '-m',
+                    'src.server',
+                ].join(' ')
+            );
 
             servers.push({
                 label: 'Asset-Aware MCP (Dev)',
                 command: uvCommand,
                 args: [
-                    'run',
+                    ...getUvRunArgs(PREFERRED_RUNTIME_PYTHON),
                     '--directory', mcpServerDir,
                     'python', '-m', 'src.server'
                 ],
@@ -151,6 +191,18 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
 
             this.log('Command: ' + uvx.command + ' ' + args.join(' '));
             this.log('DATA_DIR: ' + envVars['DATA_DIR']);
+            this.log('Preferred Python runtime: ' + PREFERRED_RUNTIME_PYTHON);
+            const serverVersion = this.getExtensionVersion();
+            if (serverVersion) {
+                this.log('Server version pin: ' + serverVersion);
+            }
+            if (this.needsUpgrade) {
+                this.log('Upgrade flag: enabled (version changed)');
+            }
+            this.log('Marker backend enabled: ' + String(enableMarkerBackend));
+            if (enableMarkerBackend) {
+                this.log('Torch backend: ' + torchBackend);
+            }
 
             servers.push({
                 label: 'Asset-Aware MCP',

@@ -13,8 +13,10 @@ set -euo pipefail
 # --- Configuration ---
 REQUIRED_PYTHON_MAJOR=3
 REQUIRED_PYTHON_MINOR=10
+PREFERRED_RUNTIME_PYTHON=3.11
 UV_INSTALL_URL="https://astral.sh/uv/install.sh"
 CHECK_MODE=false
+INSTALL_MARKER=false
 
 # --- Colors (disabled if not a terminal) ---
 if [ -t 1 ]; then
@@ -241,10 +243,12 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  --check    Run diagnostics only (no installations or changes)"
+    echo "  --with-marker  Install optional Marker backend (pulls torch / surya stack)"
     echo "  --help     Show this help message"
     echo ""
     echo "Examples:"
-    echo "  bash scripts/install.sh            # Install / update"
+    echo "  bash scripts/install.sh            # Install / update (no Marker/torch)"
+    echo "  bash scripts/install.sh --with-marker  # Install with Marker backend"
     echo "  bash scripts/install.sh --check    # Check environment"
     echo ""
 }
@@ -559,9 +563,19 @@ main() {
         exit 1
     fi
 
-    info "Running uv sync --all-extras ..."
-    if uv sync --all-extras; then
+    local sync_args=(sync --python "${PREFERRED_RUNTIME_PYTHON}")
+    if [ "$INSTALL_MARKER" = true ]; then
+        sync_args+=(--extra marker)
+        info "Running uv ${sync_args[*]} ..."
+        info "  Optional Marker backend enabled (this may install torch)"
+    else
+        info "Running uv ${sync_args[*]} ..."
+        info "  Default install skips optional Marker backend to avoid torch version issues"
+    fi
+
+    if uv "${sync_args[@]}"; then
         ok "All dependencies installed/updated successfully"
+        info "  Runtime pinned to Python ${PREFERRED_RUNTIME_PYTHON} for cross-platform wheel availability"
     else
         error "Failed to install dependencies."
         if [ "$os" = "macos" ]; then
@@ -635,6 +649,10 @@ case "${1:-}" in
         # shellcheck disable=SC2034
         CHECK_MODE=true
         run_check
+        ;;
+    --with-marker)
+        INSTALL_MARKER=true
+        main
         ;;
     --help|-h)
         show_help

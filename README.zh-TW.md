@@ -44,8 +44,8 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 🔄 **非同步任務流水線** - 支援大型文件的非同步處理與進度追蹤。
 - 🗺️ **文件清單 (Manifest)** - 為 Agent 提供結構化的文件「地圖」，實現精確數據存取。
 - 🧠 **LightRAG 整合** - 知識圖譜 + 向量索引，支援跨文件對比與推理。
-- 📝 **Docx 即時編輯 (DFM)** - 以 Markdown 格式編輯 .docx 檔案，透過 **Docx-Flavored Markdown** 格式。支援舊版 `.doc` 格式（自動透過 LibreOffice 轉換）。提供 12 個工具：匯入、讀取、儲存、列出、刪除、strict 往返保真驗證、DOCX→PDF、DOCX→DOC，以及 Docx ↔ A2T 表格橋接。
-- �📊 **A2T (Anything to Table)** - 7 個 operation-based 工具，從**任意來源**（PDF 資產、知識圖譜、URL、使用者輸入）建立專業表格。支援：**引用管理** (AssetRef)、**變更審計**、**Schema 演進**、**模板**、**草稿機制**與**節省 Token 的續作模式**。
+- 📝 **Docx 即時編輯 (DFM)** - 以 Markdown 格式編輯 .docx 檔案，透過 **Docx-Flavored Markdown** 格式。支援舊版 `.doc` 格式（自動透過 LibreOffice 轉換）。提供 13 個工具：匯入、讀取、儲存、列出、刪除、匯出、strict 往返保真驗證、DOCX→PDF、DOCX→DOC，以及 Docx ↔ A2T 表格橋接。
+- 📊 **A2T (Anything to Table)** - 7 個 operation-based 工具，從**任意來源**（PDF 資產、知識圖譜、URL、使用者輸入）建立專業表格。支援：**引用管理** (AssetRef)、**變更審計**、**Schema 演進**、**模板**、**草稿機制**與**節省 Token 的續作模式**。
 - 🖥️ **VS Code 管理擴充功能** - 提供圖形化介面監控伺服器狀態、已匯入文件，以及 **A2T 表格與草稿**，支援一鍵開啟 Excel。
 - 🔌 **MCP 伺服器** - 透過 FastMCP 向 Copilot/Claude 開放工具與資源。
 - 🏥 **醫療研究優化** - 針對醫療文獻優化，支援 Base64 圖片傳輸供 Vision AI 分析。
@@ -108,14 +108,23 @@ asset-aware-mcp/
 ## 🚀 快速開始
 
 ```bash
-# 安裝依賴 (使用 uv)
+# 安裝依賴 (使用 uv) — 預設不安裝 Marker/torch
 uv sync
+
+# 如需高精度結構化解析，再額外安裝 Marker backend
+uv sync --extra marker
 
 # 啟動 MCP 伺服器
 uv run python -m src.presentation.server
 
 # 或使用 VS Code 擴充套件進行圖形化管理
 ```
+
+Runtime 說明：
+VS Code 擴充套件在透過 `uv` / `uvx` 啟動 MCP server 時，會優先使用受管理的 Python 3.11 runtime。這可避免終端使用者機器上發生原生套件編譯，特別是未安裝 Xcode Command Line Tools 的 macOS；但專案本身仍保留對較新 Python 版本的相容性。
+
+Marker 說明：
+`marker-pdf` 現在是可選依賴，因為它可能拉入 `torch`、`surya` 與平台相關的 ML wheels。預設安裝只使用 PyMuPDF 後端；只有在你真的需要 `use_marker=True` 或 `parse_pdf_structure` 時才建議額外安裝。
 
 ## 🔌 MCP 工具
 
@@ -175,6 +184,7 @@ uv run python -m src.presentation.server
 | `docx_table_to_context` | 橋接：Docx 表格 → A2T 上下文 |
 | `docx_table_from_context` | 橋接：A2T 表格 → Docx 表格 |
 | `docx_chart_data` | 提取 Docx 圖表數據 |
+| `export_markdown` | 匯出 Markdown 為 .docx/.pdf/.doc |
 
 ### A2T (Anything to Table) 工具 — 7 個 Operation-Based 工具
 
@@ -214,6 +224,11 @@ uv run python -m src.presentation.server
 | 儲存 | 本地檔案系統 (JSON/Markdown/PNG) |
 
 ## 📋 相關文件
+
+安裝建議：
+- 預設安裝：`uv sync`
+- 需要 Marker 時再安裝：`uv sync --extra marker`
+- VS Code extension 要啟用 Marker 時，建議先用 `torchBackend=cpu`，除非你明確需要 GPU wheels
 
 - [技術規格書](docs/spec.md) - 詳細技術定義
 - [系統架構](ARCHITECTURE.md) - 架構設計說明

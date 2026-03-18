@@ -12,7 +12,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
-import { AssetAwareMcpProvider } from './mcpProvider';
+import { AssetAwareMcpProvider, LAST_SERVER_VERSION_KEY } from './mcpProvider';
 import { StatusBarManager } from './statusBar';
 import { SettingsPanel } from './settingsPanel';
 import { EnvManager } from './envManager';
@@ -20,7 +20,13 @@ import { StatusTreeProvider } from './statusTreeProvider';
 import { DocumentTreeProvider } from './documentTreeProvider';
 import { TableTreeProvider } from './tableTreeProvider';
 import { DfmEditorService, DfmLanguageFeatures } from './dfm';
-import { findUvPath, getUvVersion, getUvxLaunch } from './uv';
+import {
+    DEFAULT_TORCH_BACKEND,
+    findUvPath,
+    getUvVersion,
+    getUvxLaunch,
+    PREFERRED_RUNTIME_PYTHON,
+} from './uv';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -223,9 +229,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         vscode.window.registerTreeDataProvider('assetAwareMcp.documents', documentTreeProvider);
         vscode.window.registerTreeDataProvider('assetAwareMcp.tables', tableTreeProvider);
 
-        // Step 5: Register MCP server provider (with error handling)
+        // Step 5: Register MCP server provider (with version pinning & auto-upgrade)
         log('Step 5: Registering MCP server provider...');
-        mcpProvider = new AssetAwareMcpProvider(getStorageRoot(), outputChannel, context);
+        const currentVersion = context.extension.packageJSON.version as string;
+        const lastServerVersion = context.globalState.get<string>(LAST_SERVER_VERSION_KEY);
+        const needsUpgrade = lastServerVersion !== currentVersion;
+        if (needsUpgrade) {
+            log(`Server upgrade needed: ${lastServerVersion ?? '(first install)'} → ${currentVersion}`);
+        } else {
+            log(`Server version matches: ${currentVersion} (using cache)`);
+        }
+        mcpProvider = new AssetAwareMcpProvider(getStorageRoot(), outputChannel, context, needsUpgrade);
+        // Persist current version so next launch won't trigger upgrade again
+        context.globalState.update(LAST_SERVER_VERSION_KEY, currentVersion);
 
         // Check if MCP API is available (it's a proposed API)
         if (typeof vscode.lm?.registerMcpServerDefinitionProvider === 'function') {
@@ -385,6 +401,31 @@ function registerCommands(context: vscode.ExtensionContext): void {
     );
 
     context.subscriptions.push(
+        vscode.commands.registerCommand('assetAwareMcp.upgradeServer', async () => {
+            const currentVersion = extensionContext.extension.packageJSON.version as string;
+            log(`Force upgrade: clearing cached server version to trigger --upgrade`);
+            // Reset stored version so next MCP launch will pass --upgrade
+            await extensionContext.globalState.update(LAST_SERVER_VERSION_KEY, undefined);
+
+            // Recreate provider with upgrade flag
+            mcpProvider = new AssetAwareMcpProvider(getStorageRoot(), outputChannel, extensionContext, true);
+
+            if (typeof vscode.lm?.registerMcpServerDefinitionProvider === 'function') {
+                const providerDisposable = vscode.lm.registerMcpServerDefinitionProvider(
+                    'asset-aware-mcp.servers',
+                    mcpProvider
+                );
+                context.subscriptions.push(providerDisposable);
+            }
+            mcpProvider.refresh();
+
+            vscode.window.showInformationMessage(
+                `Asset-Aware MCP: Server will upgrade to v${currentVersion} on next MCP connection.`
+            );
+        })
+    );
+
+    context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.openTableExcel', async (item: any) => {
             if (item && item.value) {
                 const dataDir = envManager.getDataDir();
@@ -444,14 +485,31 @@ async function checkSystemDependencies(): Promise<void> {
             throw new Error('uv not found');
         }
 
-        const launch = getUvxLaunch(uvPath);
-        const command = launch.command === 'uvx' ? 'uvx' : launch.command;
-        const args = launch.command === 'uvx' ? ['--help'] : ['tool', 'run', '--help'];
-        await execFileAsync(command, args, { timeout: 5000 });
+        const config = vscode.workspace.getConfiguration('assetAwareMcp');
+        const enableMarkerBackend = config.get('enableMarkerBackend', false);
+        const torchBackend = config.get('torchBackend', DEFAULT_TORCH_BACKEND);
+        const extensionVersion = extensionContext.extension.packageJSON.version as string;
+        const lastVersion = extensionContext.globalState.get<string>(LAST_SERVER_VERSION_KEY);
+        const launch = getUvxLaunch(
+            uvPath,
+            PREFERRED_RUNTIME_PYTHON,
+            enableMarkerBackend,
+            torchBackend,
+            extensionVersion,
+            lastVersion !== extensionVersion,
+        );
+        await execFileAsync(launch.command, [...launch.args, '--help'], { timeout: 5000 });
         depChannel.appendLine('✅ MCP launcher: available');
 
         // Check if asset-aware-mcp is accessible via uvx
         depChannel.appendLine('   Will use: ' + launch.command + ' ' + [...launch.args, 'asset-aware-mcp'].join(' '));
+        depChannel.appendLine('   Preferred Python runtime: ' + PREFERRED_RUNTIME_PYTHON);
+        depChannel.appendLine('   Server version pin: ' + extensionVersion);
+        depChannel.appendLine('   Cached version: ' + (lastVersion ?? '(first install)'));
+        depChannel.appendLine('   Marker backend enabled: ' + String(enableMarkerBackend));
+        if (enableMarkerBackend) {
+            depChannel.appendLine('   Torch backend: ' + torchBackend);
+        }
         depChannel.appendLine('   (Package will be auto-installed from PyPI on first use)');
     } catch {
         depChannel.appendLine('⚠️ MCP launcher: not available (uv may need update)');

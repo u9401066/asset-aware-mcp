@@ -6,7 +6,14 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-## 🆕 What's New in v0.5.0
+## 🆕 What's New in v0.5.2
+
+- **Stable Python Runtime**: Extension launch now prefers Python 3.11 to avoid macOS native build failures on newer interpreters
+- **Optional Marker Backend**: Marker and torch are no longer installed by default; enable them only when you need structured parsing
+- **Safer Torch Resolution**: Added configurable `torchBackend`, defaulting to `cpu` to reduce wheel/CUDA mismatch issues
+- **43 tools** across 7 modules
+
+### v0.5.1
 
 - **Markdown Export**: New `export_markdown` tool — export Markdown text to `.docx`, `.pdf`, or `.doc`
 - **Multiline Cell Protection**: Table cells with `\n` are now safely escaped as `<br>` in DFM pipe-tables, preventing silent data loss
@@ -14,7 +21,6 @@
 - **Save Fail-Safe**: `save_docx` rejects output if content shrinks >50% (use `force=true` to override)
 - **Content Volume Metrics**: `docx_validate_roundtrip` now reports `total_chars`, `table_nonempty_cells`, `table_cell_chars`
 - **Ollama API Fix**: Compatible with Ollama v0.5+ (`/api/embed`) with legacy fallback
-- **43 tools** across 7 modules
 
 ### v0.4.2
 
@@ -133,6 +139,14 @@ The agent retrieves exactly what it needs:
 | `assetAwareMcp.llmBackend` | `ollama` | LLM backend (ollama/openai) |
 | `assetAwareMcp.ollamaHost` | `http://localhost:11434` | Ollama URL |
 | `assetAwareMcp.dataDir` | `./data` | Storage for processed assets |
+| `assetAwareMcp.enableMarkerBackend` | `false` | Install optional Marker backend for structured parsing; pulls torch-related ML dependencies |
+| `assetAwareMcp.torchBackend` | `cpu` | Torch backend used when Marker backend is enabled; `cpu` is the safest default |
+
+Runtime note:
+The extension prefers a managed Python 3.11 runtime when launching the MCP server via `uv`/`uvx`. This avoids package builds on machines without native toolchains, especially macOS systems missing Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
+
+Marker note:
+The extension does not install Marker or torch by default. If you need `use_marker=True` workflows, enable `assetAwareMcp.enableMarkerBackend`. Keeping `assetAwareMcp.torchBackend=cpu` avoids most cross-platform wheel and CUDA mismatch issues.
 
 ## 🔧 Commands
 
@@ -150,6 +164,8 @@ If the extension fails to start or the MCP server doesn't appear:
 
 1.  **Check VS Code Version**: Ensure you are using VS Code **1.96.0** or newer.
 2.  **Check Dependencies**: Run `Asset-Aware MCP: Check System Dependencies` from the command palette.
+  The dependency checker will also show the preferred Python runtime used by the MCP launcher.
+  If Marker backend is enabled, it will also show the selected torch backend.
 3.  **Inspect Logs**:
     *   Open **Output** panel (`Ctrl+Shift+U`).
     *   Select **Asset-Aware MCP** from the dropdown to see extension logs.
@@ -160,7 +176,7 @@ If the extension fails to start or the MCP server doesn't appear:
     *   Run `npm install`.
     *   Press `F5` to launch the **Extension Development Host**.
 
-## 📚 MCP Tools (42 total)
+## 📚 MCP Tools (43 total)
 
 ### Document ETL (8)
 | Tool | Description |

@@ -8,7 +8,7 @@ try:
     from .lightrag_adapter import LightRAGAdapter
 
     _HAS_LIGHTRAG = True
-except ImportError:
+except (ImportError, OSError):
     _HAS_LIGHTRAG = False
     LightRAGAdapter = None  # type: ignore
 
@@ -16,7 +16,7 @@ try:
     from .pdf_extractor import PyMuPDFExtractor
 
     _HAS_PYMUPDF = True
-except ImportError:
+except (ImportError, OSError):
     _HAS_PYMUPDF = False
     PyMuPDFExtractor = None  # type: ignore
 
@@ -24,7 +24,7 @@ try:
     from .marker_adapter import MarkerPDFExtractor
 
     _HAS_MARKER = True
-except ImportError:
+except (ImportError, OSError):
     _HAS_MARKER = False
     MarkerPDFExtractor = None  # type: ignore
 

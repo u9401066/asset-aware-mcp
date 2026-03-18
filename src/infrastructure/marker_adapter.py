@@ -17,10 +17,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from marker.converters.pdf import PdfConverter  # type: ignore
-from marker.models import create_model_dict  # type: ignore
-from marker.output import text_from_rendered  # type: ignore
-
 from src.domain.entities import (
     DocumentAssets,
     DocumentManifest,
@@ -83,6 +79,8 @@ class MarkerPDFExtractor:
     def _get_models(self) -> dict:
         """懶加載 Marker 模型（首次使用時初始化）。"""
         if self._model_dict is None:
+            from marker.models import create_model_dict  # type: ignore
+
             self._model_dict = create_model_dict()
         return self._model_dict
 
@@ -96,6 +94,9 @@ class MarkerPDFExtractor:
         Returns:
             MarkerParseResult 包含 markdown, blocks, toc, images
         """
+        from marker.converters.pdf import PdfConverter  # type: ignore
+        from marker.output import text_from_rendered  # type: ignore
+
         converter = PdfConverter(artifact_dict=self._get_models())
         rendered = converter(str(pdf_path))
 

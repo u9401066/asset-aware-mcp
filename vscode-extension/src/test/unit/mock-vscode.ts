@@ -51,6 +51,19 @@ export class Uri {
     }
 }
 
+// EventEmitter mock
+export class EventEmitter<T> {
+    readonly event = (_listener: (value: T) => void) => ({ dispose() { /* no-op */ } });
+
+    fire(_value?: T): void {
+        // no-op
+    }
+
+    dispose(): void {
+        // no-op
+    }
+}
+
 // TextEditorDecorationType mock
 export class MockDecorationType {
     dispose(): void {
@@ -81,12 +94,24 @@ export const window = {
 };
 
 // Workspace mock
+const configurationValues = new Map<string, unknown>();
+
+export function __setConfigurationValue(key: string, value: unknown): void {
+    configurationValues.set(key, value);
+}
+
+export function __resetConfiguration(): void {
+    configurationValues.clear();
+}
+
 export const workspace = {
     onDidChangeTextDocument: () => ({ dispose() { /* no-op */ } }),
     onDidCloseTextDocument: () => ({ dispose() { /* no-op */ } }),
     openTextDocument: async (path: string) => ({ uri: Uri.file(path), getText: () => '' }),
     getConfiguration: () => ({
-        get: (key: string, defaultValue?: any) => defaultValue,
+        get: (key: string, defaultValue?: any) => configurationValues.has(`assetAwareMcp.${key}`)
+            ? configurationValues.get(`assetAwareMcp.${key}`)
+            : defaultValue,
     }),
     workspaceFolders: undefined as any,
 };

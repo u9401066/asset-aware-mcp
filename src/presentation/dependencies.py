@@ -84,7 +84,13 @@ def get_marker_extractor() -> MarkerPDFExtractor:
     """Lazy-load Marker extractor (heavy model initialization, ~1GB)."""
     global marker_extractor
     if marker_extractor is None:
-        from src.infrastructure.marker_adapter import MarkerPDFExtractor
+        try:
+            from src.infrastructure.marker_adapter import MarkerPDFExtractor
+        except ModuleNotFoundError as exc:
+            raise RuntimeError(
+                "Marker backend is not installed. Install it with `uv sync --extra marker` "
+                "for local/dev usage, or enable the Marker backend in the VS Code extension settings."
+            ) from exc
 
         marker_extractor = MarkerPDFExtractor()
     return marker_extractor

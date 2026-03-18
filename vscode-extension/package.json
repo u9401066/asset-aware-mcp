@@ -2,7 +2,7 @@
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
     "description": "Medical RAG MCP Server with precise document asset retrieval and Docx editing (DFM) — tables, figures, sections from PDFs + .docx/.doc round-trip with integrity validation",
-    "version": "0.5.1",
+    "version": "0.5.2",
     "publisher": "u9401066",
     "engines": {
         "vscode": "^1.96.0"
@@ -79,6 +79,10 @@
                 "title": "Asset-Aware MCP: Show Output Log"
             },
             {
+                "command": "assetAwareMcp.upgradeServer",
+                "title": "Asset-Aware MCP: Upgrade Server to Latest Version"
+            },
+            {
                 "command": "assetAwareMcp.openTableExcel",
                 "title": "Asset-Aware MCP: Open in Excel"
             },
@@ -144,6 +148,20 @@
                     "type": "string",
                     "default": "./data",
                     "description": "Directory for storing processed documents"
+                },
+                "assetAwareMcp.enableMarkerBackend": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Install and enable the optional Marker backend for structured PDF parsing. This pulls torch and related ML dependencies."
+                },
+                "assetAwareMcp.torchBackend": {
+                    "type": "string",
+                    "default": "cpu",
+                    "enum": [
+                        "cpu",
+                        "auto"
+                    ],
+                    "description": "Torch backend to request when the optional Marker backend is enabled. Use cpu for the safest cross-platform install."
                 }
             }
         },

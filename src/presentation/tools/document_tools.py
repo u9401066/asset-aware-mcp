@@ -112,6 +112,8 @@ async def parse_pdf_structure(
 
         return "\n".join(lines)
 
+    except RuntimeError as e:
+        return f"❌ Marker parsing unavailable: {e!s}"
     except Exception as e:
         return f"❌ Marker parsing failed: {e!s}"
 
@@ -235,7 +237,14 @@ async def ingest_documents(
     """
     # Lazy-load Marker if requested
     if use_marker and document_service.marker_extractor is None:
-        document_service.marker_extractor = get_marker_extractor()
+        try:
+            document_service.marker_extractor = get_marker_extractor()
+        except RuntimeError as e:
+            return (
+                "# ❌ Marker Backend Not Available\n\n"
+                f"{e!s}\n\n"
+                "Use default PyMuPDF mode, or install the optional Marker dependency first."
+            )
 
     if async_mode:
         job = await job_service.create_ingest_job(file_paths)

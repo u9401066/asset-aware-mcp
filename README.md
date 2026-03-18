@@ -44,7 +44,7 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 - 🔄 **Async Job Pipeline** - Supports asynchronous task processing and progress tracking for large documents.
 - 🗺️ **Document Manifest** - Provides a structured "map" of the document for precise data access by Agents.
 - 🧠 **LightRAG Integration** - Knowledge Graph + Vector Index, supporting cross-document comparison and reasoning.
-- 📝 **Docx Editing (DFM)** - Edit .docx files in Markdown via **Docx-Flavored Markdown** format. Supports legacy `.doc` files (auto-converts via LibreOffice). 12 tools: ingest, read, save, list, delete, strict round-trip validation, DOCX→PDF, DOCX→DOC, and Docx ↔ A2T bridges.
+- 📝 **Docx Editing (DFM)** - Edit .docx files in Markdown via **Docx-Flavored Markdown** format. Supports legacy `.doc` files (auto-converts via LibreOffice). 13 tools: ingest, read, save, list, delete, export, strict round-trip validation, DOCX→PDF, DOCX→DOC, and Docx ↔ A2T bridges.
 - 🛡️ **DFM Integrity Checker** - Automatic validation and auto-repair at every pipeline stage (post-ingest, pre-save, post-save). Catches orphan markers, column mismatches, and format inconsistencies.
 - 📊 **A2T (Anything to Table)** - 7 operation-based tools for building professional tables from **any source** (PDF assets, Knowledge Graph, URLs, user input). Features: **Citations** (AssetRef), **Audit Trail**, **Schema Evolution**, **Templates**, **Drafting**, and **Token-efficient resumption**.
 - 🖥️ **VS Code Management Extension** - Graphical interface for monitoring server status, ingested documents, and **A2T tables/drafts** with one-click Excel export.
@@ -109,14 +109,23 @@ asset-aware-mcp/
 ## 🚀 Quick Start
 
 ```bash
-# Install dependencies (using uv)
+# Install dependencies (using uv) — default install skips Marker/torch
 uv sync
+
+# Optional: install Marker backend only if you need structured parsing
+uv sync --extra marker
 
 # Run MCP Server
 uv run python -m src.presentation.server
 
 # Or use the VS Code extension for graphical management
 ```
+
+Runtime note:
+The VS Code extension prefers a managed Python 3.11 runtime when launching the MCP server via `uv` or `uvx`. This avoids native package builds on end-user machines, especially macOS systems without Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
+
+Marker note:
+`marker-pdf` is now an optional dependency because it may pull in `torch`, `surya`, and platform-specific ML wheels. Default installs use the PyMuPDF backend only. Enable Marker only when you need `use_marker=True` or `parse_pdf_structure`.
 
 ## 🔌 MCP Tools
 
@@ -126,6 +135,8 @@ uv run python -m src.presentation.server
 |------|---------|
 | `ingest_documents` | Process PDF files with optional Marker backend (`use_marker=True` for blocks.json) |
 | `list_documents` | List all ingested documents and their asset counts |
+| `delete_document` | Delete an ingested PDF and its local artifacts |
+| `convert_pdf_to_docx` | Reconstruct a readable DOCX from extracted PDF content |
 | `inspect_document_manifest` | Inspect document structure before fetching specific assets |
 | `fetch_document_asset` | Precisely retrieve tables (MD) / figures (B64) / sections |
 | `parse_pdf_structure` | Run high-precision Marker parsing and emit structured blocks |
@@ -166,10 +177,15 @@ uv run python -m src.presentation.server
 | `get_docx_content` | Read DFM content of specific blocks |
 | `save_docx` | Write DFM edits back to .docx |
 | `list_docx_blocks` | List document block structure |
+| `list_docx_documents` | List all ingested DOCX/DFM documents |
+| `delete_docx` | Delete an ingested DOCX/DFM document and its local artifacts |
+| `convert_docx_to_pdf` | Export the current DOCX/DFM state to PDF in fidelity mode |
+| `convert_docx_to_doc` | Export the current DOCX/DFM state to DOC in fidelity mode |
 | `docx_validate_roundtrip` | 6-dimension round-trip fidelity validation + file-level comparison (SHA-256, ZIP diff) |
 | `docx_table_to_context` | Bridge: Docx table → A2T context |
 | `docx_table_from_context` | Bridge: A2T table → Docx table |
 | `docx_chart_data` | Extract chart data from Docx |
+| `export_markdown` | Export Markdown to .docx/.pdf/.doc |
 
 ### A2T (Anything to Table) Tools — 7 Operation-Based Tools
 
@@ -210,6 +226,11 @@ Different journals/formats need different extraction settings. Use these tools t
 | Storage | Local filesystem (JSON/Markdown/PNG) |
 
 ## 📋 Documentation
+
+Installation guidance:
+- Default install: `uv sync`
+- Install Marker backend only when needed: `uv sync --extra marker`
+- Safer extension Marker setup: enable Marker backend in settings and keep `torchBackend=cpu` unless you explicitly need GPU wheels
 
 - [Technical Spec](docs/spec.md) - Detailed technical specification
 - [Architecture](ARCHITECTURE.md) - System architecture

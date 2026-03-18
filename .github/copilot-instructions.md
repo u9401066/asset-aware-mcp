@@ -68,7 +68,8 @@
 ```bash
 # 初始化環境
 uv venv
-uv sync --all-extras
+uv sync                    # 基本安裝
+uv sync --extra marker     # 如需 Marker 高精度引擎（含 torch）
 
 # 安裝依賴
 uv add package-name

@@ -562,12 +562,12 @@ class TestServerStartup:
         configure_logging()  # Should not raise
 
     def test_tool_count(self) -> None:
-        """All 36 expected tools are registered."""
+        """All 43 expected tools are registered."""
         from src.presentation.mcp_app import mcp
 
         registered = [t.name for t in mcp._tool_manager._tools.values()]
-        assert len(registered) >= 36, (
-            f"Expected >=36 tools, got {len(registered)}: {registered}"
+        assert len(registered) >= 43, (
+            f"Expected >=43 tools, got {len(registered)}: {registered}"
         )
 
 

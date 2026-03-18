@@ -5,6 +5,9 @@ import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
 
+export const PREFERRED_RUNTIME_PYTHON = '3.11';
+export const DEFAULT_TORCH_BACKEND = 'cpu';
+
 export function getUvPaths(
     platform: NodeJS.Platform = process.platform,
     env: NodeJS.ProcessEnv = process.env,
@@ -70,10 +73,29 @@ export async function getUvVersion(uvPath: string): Promise<string> {
     return stdout.trim();
 }
 
-export function getUvxLaunch(uvPath: string): { command: string; args: string[] } {
+export function getUvRunArgs(pythonVersion: string = PREFERRED_RUNTIME_PYTHON): string[] {
+    return ['run', '--python', pythonVersion];
+}
+
+export function getMarkerRuntimeArgs(torchBackend: string = DEFAULT_TORCH_BACKEND): string[] {
+    return ['--with', 'marker-pdf', '--torch-backend', torchBackend];
+}
+
+export function getUvxLaunch(
+    uvPath: string,
+    pythonVersion: string = PREFERRED_RUNTIME_PYTHON,
+    withMarker: boolean = false,
+    torchBackend: string = DEFAULT_TORCH_BACKEND,
+    serverVersion?: string,
+    upgrade: boolean = false,
+): { command: string; args: string[] } {
+    const markerArgs = withMarker ? getMarkerRuntimeArgs(torchBackend) : [];
+    const upgradeArgs = upgrade ? ['--upgrade'] : [];
+    const fromArgs = serverVersion ? ['--from', `asset-aware-mcp==${serverVersion}`] : [];
+
     if (uvPath === 'uv') {
-        return { command: 'uvx', args: [] };
+        return { command: 'uvx', args: ['--python', pythonVersion, ...upgradeArgs, ...fromArgs, ...markerArgs] };
     }
 
-    return { command: uvPath, args: ['tool', 'run'] };
+    return { command: uvPath, args: ['tool', 'run', '--python', pythonVersion, ...upgradeArgs, ...fromArgs, ...markerArgs] };
 }

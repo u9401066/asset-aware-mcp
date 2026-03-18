@@ -1,5 +1,12 @@
 import * as assert from 'assert';
-import { getUvPaths } from '../../uv';
+import {
+    DEFAULT_TORCH_BACKEND,
+    getMarkerRuntimeArgs,
+    getUvPaths,
+    getUvRunArgs,
+    getUvxLaunch,
+    PREFERRED_RUNTIME_PYTHON,
+} from '../../uv';
 
 describe('uv path discovery', () => {
     it('includes common Windows install locations', () => {
@@ -38,5 +45,58 @@ describe('uv path discovery', () => {
         assert.ok(paths.includes('/Users/alice/.local/bin/uv'));
         assert.ok(paths.includes('/opt/homebrew/bin/uv'));
         assert.ok(paths.includes('/opt/local/bin/uv'));
+    });
+
+    it('builds uvx launch args with preferred python', () => {
+        const launch = getUvxLaunch('uv');
+
+        assert.strictEqual(launch.command, 'uvx');
+        assert.deepStrictEqual(launch.args, ['--python', PREFERRED_RUNTIME_PYTHON]);
+    });
+
+    it('builds uv tool run launch args with preferred python', () => {
+        const launch = getUvxLaunch('/usr/local/bin/uv');
+
+        assert.strictEqual(launch.command, '/usr/local/bin/uv');
+        assert.deepStrictEqual(launch.args, ['tool', 'run', '--python', PREFERRED_RUNTIME_PYTHON]);
+    });
+
+    it('builds uv run args with preferred python', () => {
+        assert.deepStrictEqual(getUvRunArgs(), ['run', '--python', PREFERRED_RUNTIME_PYTHON]);
+    });
+
+    it('builds marker runtime args with cpu backend by default', () => {
+        assert.deepStrictEqual(getMarkerRuntimeArgs(), ['--with', 'marker-pdf', '--torch-backend', DEFAULT_TORCH_BACKEND]);
+    });
+
+    it('builds uvx launch args with optional marker backend', () => {
+        const launch = getUvxLaunch('uv', PREFERRED_RUNTIME_PYTHON, true, 'cpu');
+
+        assert.deepStrictEqual(launch.args, ['--python', PREFERRED_RUNTIME_PYTHON, '--with', 'marker-pdf', '--torch-backend', 'cpu']);
+    });
+
+    it('pins server version with --from when serverVersion provided', () => {
+        const launch = getUvxLaunch('uv', PREFERRED_RUNTIME_PYTHON, false, 'cpu', '0.5.2');
+
+        assert.deepStrictEqual(launch.args, ['--python', PREFERRED_RUNTIME_PYTHON, '--from', 'asset-aware-mcp==0.5.2']);
+    });
+
+    it('adds --upgrade flag when upgrade is true', () => {
+        const launch = getUvxLaunch('uv', PREFERRED_RUNTIME_PYTHON, false, 'cpu', '0.5.2', true);
+
+        assert.ok(launch.args.includes('--upgrade'));
+        assert.ok(launch.args.includes('--from'));
+        assert.ok(launch.args.includes('asset-aware-mcp==0.5.2'));
+    });
+
+    it('combines version pin, upgrade, and marker args', () => {
+        const launch = getUvxLaunch('/usr/bin/uv', PREFERRED_RUNTIME_PYTHON, true, 'cpu', '0.5.3', true);
+
+        assert.strictEqual(launch.command, '/usr/bin/uv');
+        assert.deepStrictEqual(launch.args, [
+            'tool', 'run', '--python', PREFERRED_RUNTIME_PYTHON,
+            '--upgrade', '--from', 'asset-aware-mcp==0.5.3',
+            '--with', 'marker-pdf', '--torch-backend', 'cpu',
+        ]);
     });
 });

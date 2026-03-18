@@ -7,6 +7,7 @@
 param(
     [switch]$Check,
     [switch]$Diagnose,
+    [switch]$WithMarker,
     [switch]$Help
 )
 
@@ -15,6 +16,7 @@ $ErrorActionPreference = "Stop"
 # --- Configuration ---
 $RequiredPythonMajor = 3
 $RequiredPythonMinor = 10
+$PreferredRuntimePython = '3.11'
 
 # --- Helpers ---
 function Write-Info  { Write-Host "[INFO]  $args" -ForegroundColor Cyan }
@@ -88,6 +90,7 @@ function Show-Help {
     Write-Host "Options:"
     Write-Host "  -Check      Run diagnostics only (no changes)"
     Write-Host "  -Diagnose   Alias for -Check"
+    Write-Host "  -WithMarker Install optional Marker backend (pulls torch / surya stack)"
     Write-Host "  -Help       Show this help message"
     Write-Host ""
 }
@@ -277,10 +280,19 @@ function Main {
         exit 1
     }
 
-    Write-Info "Running uv sync --all-extras ..."
+    $syncArgs = @('sync', '--python', $PreferredRuntimePython)
+    if ($WithMarker) {
+        $syncArgs += @('--extra', 'marker')
+        Write-Info "Running uv $($syncArgs -join ' ') ..."
+        Write-Info "  Optional Marker backend enabled (this may install torch)"
+    } else {
+        Write-Info "Running uv $($syncArgs -join ' ') ..."
+        Write-Info "  Default install skips optional Marker backend to avoid torch version issues"
+    }
     try {
-        & $uvCmd sync --all-extras
+        & $uvCmd @syncArgs
         Write-Ok "All dependencies installed/updated successfully"
+        Write-Info "  Runtime pinned to Python $PreferredRuntimePython for cross-platform wheel availability"
     } catch {
         Write-Err "Failed to install dependencies. Check pyproject.toml."
         exit 1

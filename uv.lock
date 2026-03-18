@@ -222,14 +222,13 @@ wheels = [
 
 [[package]]
 name = "asset-aware-mcp"
-version = "0.5.0"
+version = "0.5.2"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
     { name = "httpx" },
     { name = "lightrag-hku" },
     { name = "lxml" },
-    { name = "marker-pdf" },
     { name = "mcp" },
     { name = "mistralai" },
     { name = "pillow" },
@@ -241,6 +240,11 @@ dependencies = [
     { name = "pyyaml" },
     { name = "tabulate" },
     { name = "xlsxwriter" },
+]
+
+[package.optional-dependencies]
+marker = [
+    { name = "marker-pdf" },
 ]
 
 [package.dev-dependencies]
@@ -262,7 +266,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "lightrag-hku", specifier = ">=1.0.0" },
     { name = "lxml", specifier = ">=5.0.0" },
-    { name = "marker-pdf", specifier = ">=1.10.2" },
+    { name = "marker-pdf", marker = "extra == 'marker'", specifier = ">=1.10.2" },
     { name = "mcp", specifier = ">=1.0.0" },
     { name = "mistralai", specifier = ">=1.0.0" },
     { name = "pillow", specifier = ">=10.0.0" },
@@ -275,6 +279,7 @@ requires-dist = [
     { name = "tabulate", specifier = ">=0.9.0" },
     { name = "xlsxwriter", specifier = ">=3.2.9" },
 ]
+provides-extras = ["marker"]
 
 [package.metadata.requires-dev]
 dev = [
