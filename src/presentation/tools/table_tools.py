@@ -15,13 +15,19 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from src.presentation.dependencies import (
     document_service,
     table_service,
 )
 from src.presentation.mcp_app import mcp
+from src.presentation.mcp_context import log_message, report_progress
+
+if TYPE_CHECKING:
+    from mcp.server.fastmcp import Context
+else:
+    Context = Any
 
 logger = logging.getLogger(__name__)
 
@@ -259,6 +265,7 @@ async def table_manage(
     enum_values: list[str] | None = None,
     # rename_column
     new_name: str = "",
+    ctx: Context | None = None,
 ) -> str:
     """
     📊 表格管理工具：建立、刪除、列表、預覽、渲染、Schema 演進。
@@ -311,7 +318,7 @@ async def table_manage(
         elif operation == "resume":
             return _table_resume(table_id)
         elif operation == "render":
-            return await _table_render(table_id, format, filename)
+            return await _table_render(table_id, format, filename, ctx=ctx)
         elif operation == "add_column":
             return _schema_add_column(
                 table_id, column_name, column_type, required, default_value, enum_values
@@ -393,10 +400,15 @@ async def _table_render(
     table_id: str,
     fmt: Literal["excel", "markdown", "html"],
     filename: str,
+    ctx: Context | None = None,
 ) -> str:
     if not table_id:
         return "❌ `table_id` is required."
+    await log_message(ctx, "info", f"table_render start: {table_id} format={fmt}")
+    await report_progress(ctx, 15, message=f"Rendering table {table_id}")
     result = await table_service.render_table(table_id, fmt, filename)
+    await report_progress(ctx, 100, message=f"Rendered table {table_id}")
+    await log_message(ctx, "info", f"table_render complete: {table_id}")
     return (
         f"✅ Rendered!\n"
         f"- **Format:** {result['format']}\n"

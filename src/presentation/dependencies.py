@@ -16,13 +16,16 @@ from src.application.docx_service import DocxService
 from src.application.job_service import JobService
 from src.application.knowledge_service import KnowledgeService
 from src.application.section_service import SectionService
+from src.application.segmentation_service import SegmentationService
 from src.application.table_service import TableService
 from src.domain.etl_profile import ETLProfile
 from src.infrastructure.config import settings
 from src.infrastructure.excel_renderer import ExcelRenderer
 from src.infrastructure.file_storage import FileStorage
 from src.infrastructure.job_store import FileJobStore
+from src.infrastructure.layout_visualizer import LayoutVisualizer
 from src.infrastructure.lightrag_adapter import LightRAGAdapter
+from src.infrastructure.ocr_processor import OCRProcessor
 from src.infrastructure.pdf_extractor import PyMuPDFExtractor
 
 if TYPE_CHECKING:
@@ -47,6 +50,8 @@ marker_extractor: MarkerPDFExtractor | None = None  # Lazy-loaded
 knowledge_graph = LightRAGAdapter() if settings.enable_lightrag else None
 job_store = FileJobStore(settings.data_dir)
 excel_renderer = ExcelRenderer(settings.table_output_dir)
+layout_visualizer = LayoutVisualizer()
+ocr_processor = OCRProcessor()
 
 # ============================================================================
 # Application Services
@@ -57,10 +62,12 @@ document_service = DocumentService(
     pdf_extractor=pdf_extractor,
     knowledge_graph=knowledge_graph,
     marker_extractor=marker_extractor,
+    ocr_processor=ocr_processor,
 )
 asset_service = AssetService(repository=repository)
 knowledge_service = KnowledgeService(knowledge_graph=knowledge_graph)
 job_service = JobService(job_store=job_store, document_service=document_service)
+segmentation_service = SegmentationService(repository=repository)
 section_service = SectionService(data_dir=settings.data_dir)
 table_service = TableService(
     table_output_dir=settings.table_output_dir,
@@ -132,6 +139,7 @@ def rebuild_for_profile(profile_name: str) -> ETLProfile:
         knowledge_graph=knowledge_graph,
         marker_extractor=marker_extractor,
         profile=new_profile,
+        ocr_processor=ocr_processor,
     )
 
     return new_profile

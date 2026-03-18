@@ -7,9 +7,12 @@ Supports multiple PDF backends for flexible extraction.
 
 from __future__ import annotations
 
+import inspect
 import json
 import re
+import shutil
 import time
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -22,6 +25,11 @@ from src.domain.entities import (
     TableAsset,
 )
 from src.domain.etl_profile import ETLProfile
+from src.domain.line_spans import (
+    MarkdownLineSpanIndex,
+    annotate_marker_blocks,
+    apply_asset_line_spans,
+)
 from src.domain.services import ManifestGenerator
 from src.domain.value_objects import DocId
 
@@ -32,6 +40,25 @@ if TYPE_CHECKING:
         PDFExtractorInterface,
     )
     from src.infrastructure.marker_adapter import MarkerPDFExtractor
+    from src.infrastructure.ocr_processor import OCRProcessor
+
+
+ToolProgressCallback = Callable[[int, int, str, str], Awaitable[None] | None]
+
+
+async def _invoke_progress_callback(
+    callback: ToolProgressCallback | None,
+    step: int,
+    total_steps: int,
+    phase: str,
+    message: str,
+) -> None:
+    if callback is None:
+        return
+
+    result = callback(step, total_steps, phase, message)
+    if inspect.isawaitable(result):
+        await result
 
 
 class DocumentService:
@@ -56,6 +83,7 @@ class DocumentService:
         knowledge_graph: KnowledgeGraphInterface | None = None,
         marker_extractor: MarkerPDFExtractor | None = None,
         profile: ETLProfile | None = None,
+        ocr_processor: OCRProcessor | None = None,
     ):
         """
         Initialize document service with dependencies.
@@ -71,6 +99,7 @@ class DocumentService:
         self.pdf_extractor = pdf_extractor
         self.knowledge_graph = knowledge_graph
         self.marker_extractor = marker_extractor
+        self.ocr_processor = ocr_processor
 
         # Resolve profile: explicit > from extractor > default
         if profile is not None:
@@ -86,6 +115,12 @@ class DocumentService:
         self,
         file_paths: list[str],
         use_marker: bool = False,
+        progress_callback: ToolProgressCallback | None = None,
+        *,
+        ocr_enabled: bool = False,
+        ocr_language: str = "eng",
+        rotate_pages: bool = False,
+        deskew: bool = False,
     ) -> list[IngestResult]:
         """
         Ingest multiple PDF files.
@@ -101,20 +136,68 @@ class DocumentService:
             List of IngestResult for each file
         """
         results = []
+        base_steps = 9 if use_marker and self.marker_extractor else 8
+        per_file_steps = base_steps + (1 if ocr_enabled else 0)
+        total_steps = max(len(file_paths), 1) * per_file_steps
 
-        for file_path in file_paths:
+        for index, file_path in enumerate(file_paths):
+            base_step = index * per_file_steps
+
+            async def file_progress(
+                step: int,
+                inner_total_steps: int,
+                phase: str,
+                message: str,
+                *,
+                _base_step: int = base_step,
+                _file_index: int = index,
+            ) -> None:
+                bounded_total = max(inner_total_steps, 1)
+                mapped_step = _base_step + min(max(step, 0), bounded_total)
+                await _invoke_progress_callback(
+                    progress_callback,
+                    mapped_step,
+                    total_steps,
+                    phase,
+                    f"[{_file_index + 1}/{len(file_paths)}] {message}",
+                )
+
             if use_marker and self.marker_extractor:
-                result = await self._ingest_single_with_marker(file_path)
+                result = await self._ingest_single_with_marker(
+                    file_path,
+                    progress_callback=file_progress,
+                    ocr_enabled=ocr_enabled,
+                    ocr_language=ocr_language,
+                    rotate_pages=rotate_pages,
+                    deskew=deskew,
+                )
             else:
-                result = await self._ingest_single(file_path)
+                result = await self._ingest_single(
+                    file_path,
+                    progress_callback=file_progress,
+                    ocr_enabled=ocr_enabled,
+                    ocr_language=ocr_language,
+                    rotate_pages=rotate_pages,
+                    deskew=deskew,
+                )
             results.append(result)
 
         return results
 
-    async def _ingest_single(self, file_path: str) -> IngestResult:
+    async def _ingest_single(
+        self,
+        file_path: str,
+        progress_callback: ToolProgressCallback | None = None,
+        *,
+        ocr_enabled: bool = False,
+        ocr_language: str = "eng",
+        rotate_pages: bool = False,
+        deskew: bool = False,
+    ) -> IngestResult:
         """Ingest a single PDF file."""
         start_time = time.time()
         path = Path(file_path)
+        total_steps = 9 if ocr_enabled else 8
 
         # Validate file exists
         if not path.exists():
@@ -154,34 +237,109 @@ class DocumentService:
 
         try:
             # Generate unique doc_id
+            await _invoke_progress_callback(
+                progress_callback,
+                1,
+                total_steps,
+                "Preparing",
+                f"Preparing {path.name}",
+            )
             doc_id = DocId.generate(path.stem, str(path.absolute()))
+            self._save_original_pdf_copy(doc_id.value, path)
+
+            active_pdf_path = path
+            current_step = 2
+            if ocr_enabled:
+                await _invoke_progress_callback(
+                    progress_callback,
+                    current_step,
+                    total_steps,
+                    "OCR Preprocessing",
+                    f"Running OCR preprocessing for {path.name}",
+                )
+                active_pdf_path = self._preprocess_pdf_with_ocr(
+                    doc_id.value,
+                    path,
+                    language=ocr_language,
+                    rotate_pages=rotate_pages,
+                    deskew=deskew,
+                )
+                current_step += 1
 
             # Step 1: Extract text as markdown
-            markdown = self.pdf_extractor.extract_text(path)
+            await _invoke_progress_callback(
+                progress_callback,
+                current_step,
+                total_steps,
+                "Extracting Text",
+                f"Extracting text from {path.name}",
+            )
+            markdown = self.pdf_extractor.extract_text(active_pdf_path)
+            current_step += 1
 
             # Step 2: Save markdown
+            await _invoke_progress_callback(
+                progress_callback,
+                current_step,
+                total_steps,
+                "Saving Markdown",
+                f"Saving markdown for {path.name}",
+            )
             markdown_path = self.repository.save_markdown(doc_id.value, markdown)
+            current_step += 1
 
             # Step 3: Extract and save images
-            figures = await self._extract_and_save_images(doc_id.value, path)
+            await _invoke_progress_callback(
+                progress_callback,
+                current_step,
+                total_steps,
+                "Extracting Figures",
+                f"Extracting figures from {path.name}",
+            )
+            figures = await self._extract_and_save_images(doc_id.value, active_pdf_path)
+            current_step += 1
 
             # Step 3.5: Extract tables (Docling enhanced)
-            tables = await self._extract_tables(path)
+            await _invoke_progress_callback(
+                progress_callback,
+                current_step,
+                total_steps,
+                "Extracting Tables",
+                f"Extracting tables from {path.name}",
+            )
+            tables = await self._extract_tables(active_pdf_path)
+            apply_asset_line_spans(MarkdownLineSpanIndex(markdown), figures, tables)
+            current_step += 1
 
             # Step 4: Get page count
-            page_count = self.pdf_extractor.get_page_count(path)
+            await _invoke_progress_callback(
+                progress_callback,
+                current_step,
+                total_steps,
+                "Reading Metadata",
+                f"Reading PDF metadata from {path.name}",
+            )
+            page_count = self.pdf_extractor.get_page_count(active_pdf_path)
+            current_step += 1
 
             # Step 4.5: Get PDF built-in TOC and metadata title (if available)
             pdf_toc: list[tuple[int, str, int]] = []
             pdf_title = ""
             if hasattr(self.pdf_extractor, "get_toc"):
-                pdf_toc = self.pdf_extractor.get_toc(path)
+                pdf_toc = self.pdf_extractor.get_toc(active_pdf_path)
             if hasattr(self.pdf_extractor, "get_title"):
-                pdf_title = self.pdf_extractor.get_title(path)
+                pdf_title = self.pdf_extractor.get_title(active_pdf_path)
 
             # Step 5: Extract entities from knowledge graph (if available)
             entities = []
             if self.knowledge_graph and self.knowledge_graph.is_available:
+                await _invoke_progress_callback(
+                    progress_callback,
+                    current_step,
+                    total_steps,
+                    "Indexing Knowledge Graph",
+                    f"Indexing {path.name} into the knowledge graph",
+                )
                 try:
                     # Index the document
                     await self.knowledge_graph.insert(doc_id.value, markdown)
@@ -194,8 +352,24 @@ class DocumentService:
                     logging.getLogger(__name__).warning(
                         "LightRAG indexing failed for %s", doc_id.value, exc_info=True
                     )
+            else:
+                await _invoke_progress_callback(
+                    progress_callback,
+                    current_step,
+                    total_steps,
+                    "Skipping Knowledge Graph",
+                    f"Knowledge graph indexing skipped for {path.name}",
+                )
+            current_step += 1
 
             # Step 6: Generate manifest
+            await _invoke_progress_callback(
+                progress_callback,
+                current_step,
+                total_steps,
+                "Generating Manifest",
+                f"Generating manifest for {path.name}",
+            )
             manifest = self.manifest_generator.generate(
                 doc_id=doc_id.value,
                 filename=path.name,
@@ -211,6 +385,13 @@ class DocumentService:
 
             # Step 7: Save manifest
             self.repository.save_manifest(manifest)
+            await _invoke_progress_callback(
+                progress_callback,
+                total_steps,
+                total_steps,
+                "Completed",
+                f"Finished processing {path.name}",
+            )
 
             processing_time = time.time() - start_time
 
@@ -235,7 +416,16 @@ class DocumentService:
                 error=str(e),
             )
 
-    async def _ingest_single_with_marker(self, file_path: str) -> IngestResult:
+    async def _ingest_single_with_marker(
+        self,
+        file_path: str,
+        progress_callback: ToolProgressCallback | None = None,
+        *,
+        ocr_enabled: bool = False,
+        ocr_language: str = "eng",
+        rotate_pages: bool = False,
+        deskew: bool = False,
+    ) -> IngestResult:
         """
         Ingest a single PDF file using Marker for structured parsing.
 
@@ -246,6 +436,7 @@ class DocumentService:
         """
         start_time = time.time()
         path = Path(file_path)
+        total_steps = 10 if ocr_enabled else 9
 
         # Validate file exists
         if not path.exists():
@@ -274,37 +465,133 @@ class DocumentService:
 
         try:
             # Generate unique doc_id
+            await _invoke_progress_callback(
+                progress_callback,
+                1,
+                total_steps,
+                "Preparing",
+                f"Preparing {path.name}",
+            )
             doc_id = DocId.generate(path.stem, str(path.absolute()))
+            self._save_original_pdf_copy(doc_id.value, path)
+
+            active_pdf_path = path
+            current_step = 2
+            if ocr_enabled:
+                await _invoke_progress_callback(
+                    progress_callback,
+                    current_step,
+                    total_steps,
+                    "OCR Preprocessing",
+                    f"Running OCR preprocessing for {path.name}",
+                )
+                active_pdf_path = self._preprocess_pdf_with_ocr(
+                    doc_id.value,
+                    path,
+                    language=ocr_language,
+                    rotate_pages=rotate_pages,
+                    deskew=deskew,
+                )
+                current_step += 1
 
             # Step 1: Parse PDF with Marker (rich structure)
-            parse_result = self.marker_extractor.parse(path)
+            await _invoke_progress_callback(
+                progress_callback,
+                current_step,
+                total_steps,
+                "Parsing Structure",
+                f"Parsing structure from {path.name} with Marker",
+            )
+            parse_result = self.marker_extractor.parse(active_pdf_path)
+            current_step += 1
 
             # Step 2: Save markdown
+            await _invoke_progress_callback(
+                progress_callback,
+                current_step,
+                total_steps,
+                "Saving Markdown",
+                f"Saving markdown for {path.name}",
+            )
+            line_span_index = annotate_marker_blocks(
+                parse_result.markdown,
+                parse_result.blocks,
+            )
             markdown_path = self.repository.save_markdown(
                 doc_id.value, parse_result.markdown
             )
+            current_step += 1
 
             # Step 3: Save blocks.json (structured data)
+            await _invoke_progress_callback(
+                progress_callback,
+                current_step,
+                total_steps,
+                "Saving Blocks",
+                f"Saving structured blocks for {path.name}",
+            )
             blocks_data = self._convert_blocks_to_json(parse_result.blocks)
             self._save_blocks_json(doc_id.value, blocks_data)
+            current_step += 1
 
             # Step 4: Extract and save images from Marker result
+            await _invoke_progress_callback(
+                progress_callback,
+                current_step,
+                total_steps,
+                "Extracting Figures",
+                f"Extracting figures from {path.name}",
+            )
             figures = await self._save_marker_images(doc_id.value, parse_result)
+            current_step += 1
 
             # Step 5: Convert Marker blocks to TableAsset
+            await _invoke_progress_callback(
+                progress_callback,
+                current_step,
+                total_steps,
+                "Extracting Tables",
+                f"Extracting tables from {path.name}",
+            )
             tables = self._extract_tables_from_blocks(parse_result.blocks)
+            current_step += 1
 
             # Step 6: Convert TOC to SectionAsset
-            sections = self._extract_sections_from_toc(parse_result.toc)
+            await _invoke_progress_callback(
+                progress_callback,
+                current_step,
+                total_steps,
+                "Building Sections",
+                f"Building section tree for {path.name}",
+            )
+            sections = self._extract_sections_from_toc(
+                parse_result.toc,
+                parse_result.markdown,
+            )
+            apply_asset_line_spans(
+                line_span_index,
+                figures,
+                tables,
+                blocks=parse_result.blocks,
+                sections=sections,
+            )
+            current_step += 1
 
             # Step 7: Get page count
             page_count = parse_result.page_count or self.pdf_extractor.get_page_count(
-                path
+                active_pdf_path
             )
 
             # Step 8: Index in knowledge graph (if available)
             entities = []
             if self.knowledge_graph and self.knowledge_graph.is_available:
+                await _invoke_progress_callback(
+                    progress_callback,
+                    current_step,
+                    total_steps,
+                    "Indexing Knowledge Graph",
+                    f"Indexing {path.name} into the knowledge graph",
+                )
                 try:
                     await self.knowledge_graph.insert(
                         doc_id.value, parse_result.markdown
@@ -316,6 +603,15 @@ class DocumentService:
                     import logging
 
                     logging.warning(f"LightRAG indexing failed: {e}")
+            else:
+                await _invoke_progress_callback(
+                    progress_callback,
+                    current_step,
+                    total_steps,
+                    "Skipping Knowledge Graph",
+                    f"Knowledge graph indexing skipped for {path.name}",
+                )
+            current_step += 1
 
             # Step 9: Generate manifest (with richer data)
             # Note: sections are parsed from markdown by ManifestGenerator
@@ -328,10 +624,18 @@ class DocumentService:
                 page_count=page_count,
                 markdown_path=str(markdown_path),
                 lightrag_entities=entities,
+                sections=sections,
             )
 
             # Step 10: Save manifest
             self.repository.save_manifest(manifest)
+            await _invoke_progress_callback(
+                progress_callback,
+                total_steps,
+                total_steps,
+                "Completed",
+                f"Finished processing {path.name}",
+            )
 
             processing_time = time.time() - start_time
 
@@ -388,6 +692,38 @@ class DocumentService:
         )
         return blocks_path
 
+    def _save_original_pdf_copy(self, doc_id: str, source_path: Path) -> None:
+        """Persist the original PDF for overlay inspection and downstream tooling."""
+        doc_dir = self.repository.get_doc_dir(doc_id)
+        doc_dir.mkdir(parents=True, exist_ok=True)
+        target = doc_dir / "original.pdf"
+        shutil.copy2(source_path, target)
+
+    def _preprocess_pdf_with_ocr(
+        self,
+        doc_id: str,
+        source_path: Path,
+        *,
+        language: str,
+        rotate_pages: bool,
+        deskew: bool,
+    ) -> Path:
+        if self.ocr_processor is None:
+            raise RuntimeError(
+                "OCR preprocessing requested, but OCR processor is not configured."
+            )
+
+        doc_dir = self.repository.get_doc_dir(doc_id)
+        target = doc_dir / "ocr_processed.pdf"
+        result = self.ocr_processor.preprocess_pdf(
+            source_path,
+            target,
+            language=language,
+            rotate_pages=rotate_pages,
+            deskew=deskew,
+        )
+        return result.output_path
+
     @staticmethod
     def _get_image_dimensions(img_bytes: bytes) -> tuple[int, int]:
         """Read image dimensions from bytes using PIL."""
@@ -416,6 +752,9 @@ class DocumentService:
         for idx, (img_name, img_bytes) in enumerate(parse_result.images.items(), 1):
             ext = img_name.split(".")[-1] if "." in img_name else "png"
             fig_id = f"fig_{idx}"
+            matched_block = (
+                figure_blocks[idx - 1] if idx - 1 < len(figure_blocks) else None
+            )
 
             # Save image
             image_path = self.repository.save_image(
@@ -428,8 +767,7 @@ class DocumentService:
             # Match corresponding Figure block by index (1:1 mapping)
             page = 1
             caption = ""
-            if idx - 1 < len(figure_blocks):
-                matched_block = figure_blocks[idx - 1]
+            if matched_block is not None:
                 page = matched_block.page
                 caption = matched_block.metadata.get("caption", "")
 
@@ -447,6 +785,23 @@ class DocumentService:
                     caption=caption,
                     figure_type="",
                     source="marker",
+                    source_block_id=matched_block.block_id if matched_block else "",
+                    source_order=int(matched_block.metadata.get("source_order") or 0)
+                    if matched_block
+                    else 0,
+                    line_start=int(matched_block.metadata.get("line_start"))
+                    if matched_block
+                    and isinstance(matched_block.metadata.get("line_start"), int)
+                    else None,
+                    line_end=int(matched_block.metadata.get("line_end"))
+                    if matched_block
+                    and isinstance(matched_block.metadata.get("line_end"), int)
+                    else None,
+                    line_source=str(
+                        matched_block.metadata.get("line_match_strategy") or ""
+                    )
+                    if matched_block
+                    else "",
                 )
             )
 
@@ -489,27 +844,64 @@ class DocumentService:
                         col_count=col_count,
                         has_header=True,
                         source="marker",
+                        source_block_id=block.block_id,
+                        source_order=int(block.metadata.get("source_order") or 0),
+                        line_start=int(block.metadata.get("line_start"))
+                        if isinstance(block.metadata.get("line_start"), int)
+                        else None,
+                        line_end=int(block.metadata.get("line_end"))
+                        if isinstance(block.metadata.get("line_end"), int)
+                        else None,
+                        line_source=str(
+                            block.metadata.get("line_match_strategy") or ""
+                        ),
                     )
                 )
 
         return tables
 
-    def _extract_sections_from_toc(self, toc: list[dict]) -> list[SectionAsset]:
+    def _extract_sections_from_toc(
+        self,
+        toc: list[dict],
+        markdown: str,
+    ) -> list[SectionAsset]:
         """Convert Marker TOC to SectionAsset list."""
         sections = []
+        existing_ids: set[str] = set()
+        line_index = MarkdownLineSpanIndex(markdown)
 
         for idx, item in enumerate(toc, 1):
+            title = item.get("title", "")
+            base_id = f"sec_{idx}"
+            sec_id = base_id
+            if sec_id in existing_ids:
+                counter = 2
+                while f"{base_id}_{counter}" in existing_ids:
+                    counter += 1
+                sec_id = f"{base_id}_{counter}"
+            section_span = line_index.find_section_span(
+                title,
+                page_hint=item.get("page", 0) or None,
+            )
             sections.append(
                 SectionAsset(
-                    id=f"sec_{idx}",
-                    title=item.get("title", ""),
+                    id=sec_id,
+                    title=title,
                     level=item.get("level", 1),
                     page=item.get("page", 0),
-                    start_line=0,
-                    end_line=0,
-                    preview="",
+                    start_line=section_span.start_line if section_span else 0,
+                    end_line=section_span.end_line if section_span else 0,
+                    preview=(
+                        line_index.extract_preview(
+                            section_span.start_line,
+                            section_span.end_line,
+                        )
+                        if section_span is not None
+                        else ""
+                    ),
                 )
             )
+            existing_ids.add(sec_id)
 
         return sections
 

@@ -29,6 +29,8 @@ from .etl_profile import (
     FontThresholds,
 )
 from .job import Job, JobProgress, JobStatus, JobSummary, JobType
+from .reading_order import ReadingOrderPolicy
+from .segmentation import DocumentSegment, DocumentSegmentation
 from .table_entities import (
     CellCitation,
     ChangeEntry,
@@ -42,12 +44,9 @@ from .table_entities import (
 from .value_objects import AssetRef, AssetType, DocId, ImageMediaType, SourceType
 
 __all__ = [
-    # Value Objects
     "AssetRef",
     "AssetType",
-    # Chunking
     "BasicChunker",
-    # Table Entities
     "CellCitation",
     "ChangeEntry",
     "Chunk",
@@ -55,12 +54,12 @@ __all__ = [
     "ChunkingStrategy",
     "ColumnDef",
     "DocId",
-    # Entities
     "DocumentAssets",
     "DocumentManifest",
+    "DocumentSegment",
+    "DocumentSegmentation",
     "DocumentSummary",
     "DocumentType",
-    # ETL Profile
     "ETLProfile",
     "ETLProfileRegistry",
     "FetchResult",
@@ -69,13 +68,13 @@ __all__ = [
     "FontThresholds",
     "ImageMediaType",
     "IngestResult",
-    # Job
     "Job",
     "JobProgress",
     "JobStatus",
     "JobSummary",
     "JobType",
     "PageAwareChunker",
+    "ReadingOrderPolicy",
     "SectionAsset",
     "SemanticChunker",
     "SourceType",

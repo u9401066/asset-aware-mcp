@@ -13,6 +13,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.domain.docx_entities import DfmBlock, DocxIR
+from src.domain.docx_value_objects import DfmBlockType
+from src.domain.table_entities import ColumnDef, TableContext
+
 # ============================================================================
 # Docx Tools
 # ============================================================================
@@ -68,6 +72,33 @@ class TestDocxTools:
             assert "✅" in result
             assert "docx_test_abc123" in result
             assert "10" in result  # total_blocks
+
+    async def test_ingest_docx_reports_context_progress(self) -> None:
+        """ingest_docx emits MCP progress when Context is injected."""
+        fake_ctx = MagicMock()
+        fake_ctx.report_progress = AsyncMock()
+        fake_ctx.log = AsyncMock()
+
+        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
+            mock_svc.ingest_docx = AsyncMock(
+                return_value={
+                    "success": True,
+                    "doc_id": "docx_test_abc123",
+                    "source": "test.docx",
+                    "total_blocks": 1,
+                    "editable_blocks": 1,
+                    "protected_blocks": 0,
+                    "assets": 0,
+                    "dfm_path": "/data/docx_test_abc123/content.dfm",
+                    "integrity": "OK",
+                }
+            )
+            from src.presentation.tools.docx_tools import ingest_docx
+
+            await ingest_docx("/test.docx", ctx=fake_ctx)
+
+        assert fake_ctx.report_progress.await_count >= 2
+        assert fake_ctx.log.await_count >= 2
 
     async def test_get_docx_content_not_found(self) -> None:
         """get_docx_content returns error for unknown doc_id."""
@@ -125,6 +156,147 @@ class TestDocxTools:
             result = await save_docx("doc123", "# content")
             assert "✅" in result
             assert "output.docx" in result
+
+    async def test_save_docx_merges_inline_dfm_with_pending_table_context(self) -> None:
+        """save_docx should merge editor DFM edits with pending TableContext changes."""
+        with (
+            patch("src.presentation.tools.docx_tools.docx_service") as mock_svc,
+            patch("src.presentation.tools.docx_tools.table_service") as mock_table_svc,
+            patch("src.presentation.tools.docx_tools.dfm_table_bridge") as mock_bridge,
+        ):
+            ir = DocxIR(doc_id="doc123", source_path="workspace/test.docx")
+            ir.add_block(
+                DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="old")
+            )
+            ir.add_block(
+                DfmBlock(
+                    id="t001",
+                    block_type=DfmBlockType.TABLE,
+                    content="| A |\n| --- |\n| old |",
+                )
+            )
+            tc = TableContext(
+                id="tbl_ctx",
+                intent="summary",
+                title="T",
+                columns=[ColumnDef(name="A", type="text")],
+                rows=[{"A": "new"}],
+                source_doc_id="doc123",
+                source_block_id="t001",
+            )
+
+            mock_table_svc._tables = {tc.id: tc}
+            mock_svc._load_ir.return_value = ir
+            mock_svc.parser.parse.return_value = MagicMock(errors=[])
+
+            def apply_inline(ir_obj, _parse_result):
+                ir_obj.find_block("p001").content = "editor text"
+                return ir_obj
+
+            def apply_table(ir_obj, block_id, table_ctx):
+                ir_obj.find_block(block_id).content = "| A |\n| --- |\n| new |"
+                return ir_obj
+
+            mock_svc.parser.apply_edits.side_effect = apply_inline
+            mock_bridge.apply_table_context_to_ir.side_effect = apply_table
+            mock_svc.renderer.render.return_value = (
+                "<!-- @b:p001 -->\neditor text\n\n"
+                "<!-- dfm:table @b:t001 -->\n| A |\n| --- |\n| new |\n<!-- /dfm:table -->"
+            )
+            mock_svc.save_docx = AsyncMock(
+                return_value={
+                    "success": True,
+                    "output_path": "/data/doc123/output.docx",
+                    "integrity": "OK",
+                }
+            )
+
+            from src.presentation.tools.docx_tools import save_docx
+
+            result = await save_docx("doc123", "inline dfm", force=True)
+
+            assert "自動同步的表格變更" in result
+            call_args = mock_svc.save_docx.await_args
+            assert "editor text" in call_args.args[1]
+            assert "| new |" in call_args.args[1]
+            assert call_args.kwargs["from_md"] is False
+
+    async def test_save_docx_merges_split_md_with_pending_table_context(
+        self, tmp_path: Path
+    ) -> None:
+        """save_docx should merge from_md edits with pending TableContext changes."""
+        with (
+            patch("src.presentation.tools.docx_tools.docx_service") as mock_svc,
+            patch("src.presentation.tools.docx_tools.table_service") as mock_table_svc,
+            patch("src.presentation.tools.docx_tools.dfm_table_bridge") as mock_bridge,
+        ):
+            doc_dir = tmp_path / "doc123"
+            doc_dir.mkdir()
+            (doc_dir / "content.md").write_text("md body", encoding="utf-8")
+            (doc_dir / "format.yaml").write_text(
+                "doc_id: doc123\nblocks: {}\n", encoding="utf-8"
+            )
+
+            ir = DocxIR(doc_id="doc123", source_path="workspace/test.docx")
+            ir.add_block(
+                DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="old")
+            )
+            ir.add_block(
+                DfmBlock(
+                    id="t001",
+                    block_type=DfmBlockType.TABLE,
+                    content="| A |\n| --- |\n| old |",
+                )
+            )
+            tc = TableContext(
+                id="tbl_ctx",
+                intent="summary",
+                title="T",
+                columns=[ColumnDef(name="A", type="text")],
+                rows=[{"A": "split-new"}],
+                source_doc_id="doc123",
+                source_block_id="t001",
+            )
+
+            mock_table_svc._tables = {tc.id: tc}
+            mock_svc._load_ir.return_value = ir
+            mock_svc.repository.get_doc_dir.return_value = doc_dir
+            mock_svc.integrity.check_split_consistency.return_value = MagicMock(
+                error_count=0
+            )
+            mock_svc.parser.parse_split.return_value = MagicMock(errors=[])
+
+            def apply_split(ir_obj, _parse_result):
+                ir_obj.find_block("p001").content = "split text"
+                return ir_obj
+
+            def apply_table(ir_obj, block_id, table_ctx):
+                ir_obj.find_block(block_id).content = "| A |\n| --- |\n| split-new |"
+                return ir_obj
+
+            mock_svc.parser.apply_edits.side_effect = apply_split
+            mock_bridge.apply_table_context_to_ir.side_effect = apply_table
+            mock_svc.renderer.render.return_value = (
+                "<!-- @b:p001 -->\nsplit text\n\n"
+                "<!-- dfm:table @b:t001 -->\n| A |\n| --- |\n| split-new |\n<!-- /dfm:table -->"
+            )
+            mock_svc.save_docx = AsyncMock(
+                return_value={
+                    "success": True,
+                    "output_path": "/data/doc123/output.docx",
+                    "integrity": "OK",
+                }
+            )
+
+            from src.presentation.tools.docx_tools import save_docx
+
+            result = await save_docx("doc123", from_md=True)
+
+            assert "自動同步的表格變更" in result
+            call_args = mock_svc.save_docx.await_args
+            assert "split text" in call_args.args[1]
+            assert "split-new" in call_args.args[1]
+            assert call_args.kwargs["from_md"] is False
 
     async def test_list_docx_blocks_not_found(self) -> None:
         """list_docx_blocks returns error for unknown doc."""
@@ -385,7 +557,224 @@ class TestDocumentTools:
             result = await convert_pdf_to_docx("doc_123")
             assert "✅" in result
             assert "converted.docx" in result
-            assert "figures_embedded" in result
+
+    async def test_ingest_documents_sync_reports_context_progress(self) -> None:
+        """ingest_documents emits MCP progress for synchronous ETL."""
+        fake_ctx = MagicMock()
+        fake_ctx.report_progress = AsyncMock()
+        fake_ctx.log = AsyncMock()
+
+        async def fake_ingest(
+            file_paths,
+            use_marker=False,
+            progress_callback=None,
+            ocr_enabled=False,
+            ocr_language="eng",
+            rotate_pages=False,
+            deskew=False,
+        ):
+            assert progress_callback is not None
+            await progress_callback(1, 4, "Extracting", "Extracting test.pdf")
+            await progress_callback(4, 4, "Completed", "Finished test.pdf")
+            return [
+                MagicMock(
+                    success=True,
+                    filename="test.pdf",
+                    doc_id="doc_123",
+                    title="Test",
+                    backend="pymupdf",
+                    pages_processed=1,
+                    tables_found=0,
+                    figures_found=0,
+                    sections_found=0,
+                    processing_time_seconds=0.1,
+                )
+            ]
+
+        with patch(
+            "src.presentation.tools.document_tools.document_service"
+        ) as mock_svc:
+            mock_svc.ingest = AsyncMock(side_effect=fake_ingest)
+            from src.presentation.tools.document_tools import ingest_documents
+
+            result = await ingest_documents(
+                ["workspace/test.pdf"], async_mode=False, ctx=fake_ctx
+            )
+
+        assert "Processed" in result
+        assert fake_ctx.report_progress.await_count >= 3
+        assert fake_ctx.log.await_count >= 2
+
+    async def test_ingest_documents_async_passes_use_marker_to_job(self) -> None:
+        """ingest_documents async job preserves use_marker in job parameters."""
+        with patch("src.presentation.tools.document_tools.job_service") as mock_jobs:
+            mock_jobs.create_ingest_job = AsyncMock(
+                return_value=MagicMock(job_id="job_123", estimated_duration_seconds=10)
+            )
+            from src.presentation.tools.document_tools import ingest_documents
+
+            result = await ingest_documents(
+                ["workspace/test.pdf"], async_mode=True, use_marker=True
+            )
+
+        assert "job_123" in result
+        _, kwargs = mock_jobs.create_ingest_job.await_args
+        assert kwargs["parameters"] == {
+            "use_marker": True,
+            "ocr_enabled": False,
+            "ocr_language": "eng",
+            "rotate_pages": False,
+            "deskew": False,
+        }
+
+    async def test_ingest_documents_async_passes_ocr_params_to_job(self) -> None:
+        """ingest_documents async job preserves OCR parameters."""
+        with patch("src.presentation.tools.document_tools.job_service") as mock_jobs:
+            mock_jobs.create_ingest_job = AsyncMock(
+                return_value=MagicMock(job_id="job_ocr", estimated_duration_seconds=10)
+            )
+            from src.presentation.tools.document_tools import ingest_documents
+
+            result = await ingest_documents(
+                ["workspace/test.pdf"],
+                async_mode=True,
+                ocr_enabled=True,
+                ocr_language="chi_tra",
+                rotate_pages=True,
+                deskew=True,
+            )
+
+        assert "job_ocr" in result
+        _, kwargs = mock_jobs.create_ingest_job.await_args
+        assert kwargs["parameters"] == {
+            "use_marker": False,
+            "ocr_enabled": True,
+            "ocr_language": "chi_tra",
+            "rotate_pages": True,
+            "deskew": True,
+        }
+
+    async def test_export_document_segmentation_success(self) -> None:
+        """export_document_segmentation writes schema summary."""
+        segmentation = MagicMock(
+            doc_id="doc_123",
+            source_backend="marker",
+            segments=[
+                MagicMock(
+                    reading_order=1,
+                    page_number=1,
+                    segment_type="Text",
+                    segment_id="seg_1",
+                )
+            ],
+            page_count=3,
+        )
+        segmentation.page_count_summary.return_value = {1: 1}
+
+        with patch(
+            "src.presentation.tools.document_tools.segmentation_service"
+        ) as mock_seg:
+            mock_seg.save_document_segmentation = AsyncMock(
+                return_value=Path("workspace/segmentation.json")
+            )
+            mock_seg.export_document_segmentation = AsyncMock(return_value=segmentation)
+            from src.presentation.tools.document_tools import (
+                export_document_segmentation,
+            )
+
+            result = await export_document_segmentation("doc_123")
+
+        assert "Unified Segmentation Export" in result
+        assert "segmentation.json" in result
+
+    async def test_visualize_document_layout_returns_overlay(self) -> None:
+        """visualize_document_layout returns text and image payload."""
+        segmentation = MagicMock(segments=[MagicMock()], doc_id="doc_123")
+        overlay = MagicMock(
+            image_base64="ZmFrZQ==",
+            width=1200,
+            height=1600,
+            output_path="workspace/layout.png",
+        )
+
+        with (
+            patch(
+                "src.presentation.tools.document_tools.segmentation_service"
+            ) as mock_seg,
+            patch(
+                "src.presentation.tools.document_tools.layout_visualizer"
+            ) as mock_visualizer,
+            patch("src.presentation.tools.document_tools.repository") as mock_repo,
+        ):
+            mock_seg.export_document_segmentation = AsyncMock(return_value=segmentation)
+            mock_visualizer.render_page_overlay.return_value = overlay
+            mock_repo.get_doc_dir.return_value = Path("workspace/doc_123")
+            from src.presentation.tools.document_tools import visualize_document_layout
+
+            result = await visualize_document_layout("doc_123", page=1)
+
+        assert len(result) == 2
+        assert result[0].type == "text"
+        assert result[1].type == "image"
+
+    async def test_ocr_pdf_document_success(self, tmp_path: Path) -> None:
+        """ocr_pdf_document delegates to OCR processor and returns summary."""
+        pdf_path = tmp_path / "sample.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 fake")
+
+        with patch("src.presentation.tools.document_tools.ocr_processor") as mock_ocr:
+            mock_ocr.preprocess_pdf.return_value = MagicMock(
+                output_path=tmp_path / "sample.ocr.pdf",
+                language="eng",
+                rotate_pages=True,
+                deskew=False,
+            )
+            from src.presentation.tools.document_tools import ocr_pdf_document
+
+            result = await ocr_pdf_document(
+                str(pdf_path),
+                language="eng",
+                rotate_pages=True,
+            )
+
+        assert "OCR preprocessing completed" in result
+        assert "sample.ocr.pdf" in result
+
+    async def test_fetch_document_asset_reports_context_progress(self) -> None:
+        """fetch_document_asset emits MCP progress when Context is injected."""
+        fake_ctx = MagicMock()
+        fake_ctx.report_progress = AsyncMock()
+        fake_ctx.log = AsyncMock()
+
+        with patch(
+            "src.presentation.tools.document_tools.asset_service"
+        ) as mock_assets:
+            mock_assets.fetch_asset = AsyncMock(
+                return_value=MagicMock(
+                    success=True,
+                    image_base64=None,
+                    asset_id="sec_1",
+                    page=1,
+                    line_start=0,
+                    line_end=3,
+                    section_title="Introduction",
+                    source_block_id="blk_0001",
+                    text_content="section text",
+                )
+            )
+            from src.presentation.tools.document_tools import fetch_document_asset
+
+            result = await fetch_document_asset(
+                "doc_123",
+                "section",
+                "sec_1",
+                ctx=fake_ctx,
+            )
+
+        assert result[0].type == "text"
+        assert "Line Range:" in result[0].text
+        assert "L1-3" in result[0].text
+        assert fake_ctx.report_progress.await_count >= 2
 
 
 # ============================================================================
@@ -545,6 +934,23 @@ class TestKnowledgeTools:
 
             result = await export_knowledge_graph()
             assert "not enabled" in result.lower() or "Error" in result
+
+    async def test_consult_knowledge_graph_reports_progress(self) -> None:
+        """consult_knowledge_graph emits MCP progress when Context is injected."""
+        fake_ctx = MagicMock()
+        fake_ctx.report_progress = AsyncMock()
+        fake_ctx.log = AsyncMock()
+
+        with patch(
+            "src.presentation.tools.knowledge_tools.knowledge_service"
+        ) as mock_svc:
+            mock_svc.query = AsyncMock(return_value="answer")
+            from src.presentation.tools.knowledge_tools import consult_knowledge_graph
+
+            result = await consult_knowledge_graph("test", ctx=fake_ctx)
+
+        assert result == "answer"
+        assert fake_ctx.report_progress.await_count >= 2
 
 
 # ============================================================================

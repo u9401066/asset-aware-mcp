@@ -76,6 +76,8 @@ class TableService:
                         columns=col_defs,
                         rows=data["rows"],
                         source_description=data.get("source_description", ""),
+                        source_doc_id=data.get("source_doc_id", ""),
+                        source_block_id=data.get("source_block_id", ""),
                         created_at=data.get("created_at", ""),
                         citations=citations,
                         change_log=change_log,
@@ -104,6 +106,8 @@ class TableService:
             ],
             "rows": context.rows,
             "source_description": context.source_description,
+            "source_doc_id": context.source_doc_id,
+            "source_block_id": context.source_block_id,
             "created_at": str(context.created_at)
             if isinstance(context.created_at, datetime)
             else context.created_at,
@@ -309,6 +313,8 @@ class TableService:
             "row_count": context.row_count,
             "citation_count": len(context.citations),
             "source_description": context.source_description,
+            "source_doc_id": context.source_doc_id,
+            "source_block_id": context.source_block_id,
             "created_at": str(context.created_at),
             # Compact: only show last 2 rows to save tokens
             "last_rows": context.rows[-2:] if context.rows else [],

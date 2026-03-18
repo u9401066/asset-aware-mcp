@@ -215,3 +215,67 @@ async def test_save_docx_fails_when_unedited_block_changes(monkeypatch, tmp_path
     assert result["success"] is False
     assert "Unexpected changes detected in unedited blocks" in result["error"]
     assert any("p002" in warning for warning in result["warnings"])
+
+
+@pytest.mark.asyncio
+async def test_save_docx_uses_persisted_dfm_when_no_inline_content(
+    monkeypatch, tmp_path: Path
+):
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path
+
+    service = DocxService(repository=repository)
+    ir = DocxIR(
+        doc_id="docx_123",
+        source_path="/workspace/original.docx",
+        blocks=[
+            DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="Before"),
+        ],
+    )
+    (tmp_path / "content.dfm").write_text("persisted dfm", encoding="utf-8")
+    (tmp_path / "original.docx").write_bytes(b"docx")
+
+    parse_result = DfmParseResult(
+        doc_id="docx_123",
+        source="demo.docx",
+        checksum="",
+        edits=[BlockEdit(block_id="p001", new_content="After")],
+    )
+
+    monkeypatch.setattr(service, "_load_ir", lambda doc_id: ir)
+    monkeypatch.setattr(service.parser, "parse", lambda dfm_text: parse_result)
+    monkeypatch.setattr(
+        service.integrity,
+        "check_pre_save",
+        lambda ir, parse_result: IntegrityReport(),
+    )
+    monkeypatch.setattr(service.parser, "apply_edits", lambda ir_obj, parsed: ir_obj)
+    monkeypatch.setattr(service, "_expected_changed_block_ids", lambda *_args: set())
+    monkeypatch.setattr(
+        service,
+        "_detect_unedited_block_mutations",
+        lambda *_args: [],
+    )
+    monkeypatch.setattr(
+        service.adapter,
+        "ir_to_docx",
+        lambda ir_obj, doc_dir, out: out,
+    )
+    monkeypatch.setattr(service, "_save_ir", lambda *_args: None)
+    monkeypatch.setattr(service, "_backup_before_overwrite", lambda *_args: None)
+    monkeypatch.setattr(service.renderer, "render", lambda ir_obj: "updated dfm")
+    monkeypatch.setattr(
+        service.renderer,
+        "render_split",
+        lambda ir_obj: ("updated md", "updated yaml"),
+    )
+    monkeypatch.setattr(service, "_detect_content_drift", lambda *_args: [])
+    monkeypatch.setattr(
+        service.integrity,
+        "check_post_save",
+        lambda *_args: IntegrityReport(),
+    )
+
+    result = await service.save_docx("docx_123")
+
+    assert result["success"] is True

@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import json
 import logging
+from copy import deepcopy
+from typing import TYPE_CHECKING, Any, cast
 
 from src.presentation.dependencies import (
     dfm_table_bridge,
@@ -28,12 +30,100 @@ from src.presentation.dependencies import (
     table_service,
 )
 from src.presentation.mcp_app import mcp
+from src.presentation.mcp_context import log_message, report_progress
+
+if TYPE_CHECKING:
+    from mcp.server.fastmcp import Context
+
+    from src.domain.table_entities import TableContext
+else:
+    Context = Any
 
 logger = logging.getLogger(__name__)
 
 
+def _get_pending_table_contexts(doc_id: str) -> list[TableContext]:
+    """Collect doc-linked TableContext instances pending write-back."""
+    pending: list[TableContext] = []
+    for candidate in table_service._tables.values():
+        if getattr(candidate, "source_doc_id", "") != doc_id:
+            continue
+        if not getattr(candidate, "source_block_id", ""):
+            continue
+        pending.append(cast("TableContext", candidate))
+    return pending
+
+
+def _prepare_merged_save_input(
+    doc_id: str,
+    dfm_content: str | None,
+    from_md: bool,
+) -> tuple[str | None, bool, list[str]]:
+    """Merge editor/disk edits with pending TableContext changes before save."""
+    pending = _get_pending_table_contexts(doc_id)
+    if not pending:
+        return dfm_content, from_md, []
+
+    ir = docx_service._load_ir(doc_id)
+    if ir is None:
+        return dfm_content, from_md, []
+
+    working_ir = deepcopy(ir)
+    doc_dir = docx_service.repository.get_doc_dir(doc_id)
+
+    if from_md:
+        md_path = doc_dir / "content.md"
+        yaml_path = doc_dir / "format.yaml"
+        if not md_path.exists() or not yaml_path.exists():
+            return dfm_content, from_md, []
+
+        md_content = md_path.read_text(encoding="utf-8")
+        yaml_content = yaml_path.read_text(encoding="utf-8")
+        split_report = docx_service.integrity.check_split_consistency(
+            md_content, yaml_content
+        )
+        if split_report.error_count:
+            return dfm_content, from_md, []
+
+        parse_result = docx_service.parser.parse_split(md_content, yaml_content)
+        working_ir = docx_service.parser.apply_edits(working_ir, parse_result)
+    elif dfm_content is not None:
+        parse_result = docx_service.parser.parse(dfm_content)
+        fatal_errors = [
+            e
+            for e in parse_result.errors
+            if e.startswith(("FORMAT_MISMATCH", "DUPLICATE_ID"))
+        ]
+        if fatal_errors:
+            return dfm_content, from_md, []
+        working_ir = docx_service.parser.apply_edits(working_ir, parse_result)
+
+    synced_table_ids: list[str] = []
+    for tc in pending:
+        try:
+            dfm_table_bridge.apply_table_context_to_ir(
+                working_ir, tc.source_block_id, tc
+            )
+        except ValueError:
+            logger.warning(
+                "Skipping TableContext merge before save_docx | doc_id=%s | table_id=%s | block_id=%s",
+                doc_id,
+                tc.id,
+                tc.source_block_id,
+                exc_info=True,
+            )
+            continue
+        synced_table_ids.append(tc.id)
+
+    if not synced_table_ids:
+        return dfm_content, from_md, []
+
+    merged_dfm = docx_service.renderer.render(working_ir)
+    return merged_dfm, False, synced_table_ids
+
+
 @mcp.tool()
-async def ingest_docx(file_path: str) -> str:
+async def ingest_docx(file_path: str, ctx: Context | None = None) -> str:
     """
     攝入 .docx / .doc 文件，轉換為 DFM (Docx-Flavored Markdown) 格式。
 
@@ -57,11 +147,17 @@ async def ingest_docx(file_path: str) -> str:
     Returns:
         攝入結果摘要（doc_id、區塊數量等）
     """
+    await log_message(ctx, "info", f"ingest_docx start: {file_path}")
+    await report_progress(ctx, 10, message="Preparing DOCX ingest")
     result = await docx_service.ingest_docx(file_path)
     logger.info("ingest_docx | file=%s | success=%s", file_path, result.get("success"))
 
     if not result.get("success"):
+        await log_message(ctx, "error", f"ingest_docx failed: {file_path}")
         return f"❌ 攝入失敗：{result.get('error', '未知錯誤')}"
+
+    await report_progress(ctx, 100, message=f"Finished ingesting {file_path}")
+    await log_message(ctx, "info", f"ingest_docx complete: {result.get('doc_id', '')}")
 
     lines = [
         "✅ Docx 攝入成功",
@@ -122,6 +218,7 @@ async def save_docx(
     output_path: str | None = None,
     from_md: bool = False,
     force: bool = False,
+    ctx: Context | None = None,
 ) -> str:
     """
     將編輯後的內容存回 .docx 檔案。
@@ -155,6 +252,14 @@ async def save_docx(
         from_md,
         output_path,
     )
+    await log_message(ctx, "info", f"save_docx start: {doc_id}")
+    await report_progress(ctx, 10, message=f"Preparing merged save for {doc_id}")
+    dfm_content, from_md, synced_table_ids = _prepare_merged_save_input(
+        doc_id,
+        dfm_content,
+        from_md,
+    )
+    await report_progress(ctx, 45, message=f"Writing DOCX for {doc_id}")
     result = await docx_service.save_docx(
         doc_id, dfm_content, output_path, from_md=from_md, force=force
     )
@@ -166,13 +271,22 @@ async def save_docx(
     )
 
     if not result.get("success"):
+        await log_message(ctx, "error", f"save_docx failed: {doc_id}")
         return f"❌ 儲存失敗：{result.get('error', '未知錯誤')}"
+
+    await report_progress(ctx, 100, message=f"Finished saving {doc_id}")
+    await log_message(ctx, "info", f"save_docx complete: {doc_id}")
 
     lines = [
         "✅ Docx 儲存成功",
         f"- **輸出路徑**: `{result.get('output_path', '')}`",
         f"- **完整性**: {result.get('integrity', 'N/A')}",
     ]
+
+    if synced_table_ids:
+        lines.append(
+            f"- **自動同步的表格變更**: {len(synced_table_ids)} 個 TableContext"
+        )
 
     warnings = result.get("warnings", [])
     if warnings:
@@ -270,6 +384,7 @@ async def convert_docx_to_doc(
     doc_id: str,
     output_path: str | None = None,
     mode: str = "fidelity",
+    ctx: Context | None = None,
 ) -> str:
     """
     將已攝入的 DOCX/DFM 文件轉為 DOC。
@@ -278,9 +393,14 @@ async def convert_docx_to_doc(
     - `fidelity`：保真模式。以目前 DFM 狀態重建 DOCX，再用 LibreOffice 輸出 DOC。
     - `content`：目前不支援；DOCX → DOC 應以保真輸出為主。
     """
+    await log_message(ctx, "info", f"convert_docx_to_doc start: {doc_id}")
+    await report_progress(ctx, 10, message=f"Converting {doc_id} to DOC")
     result = await docx_service.convert_to_doc(doc_id, output_path, mode=mode)
     if not result.get("success"):
+        await log_message(ctx, "error", f"convert_docx_to_doc failed: {doc_id}")
         return f"❌ 轉換失敗：{result.get('error', '未知錯誤')}"
+
+    await report_progress(ctx, 100, message=f"Finished DOC conversion for {doc_id}")
 
     return (
         "✅ DOCX → DOC 轉換成功\n"
@@ -295,6 +415,7 @@ async def convert_docx_to_pdf(
     doc_id: str,
     output_path: str | None = None,
     mode: str = "fidelity",
+    ctx: Context | None = None,
 ) -> str:
     """
     將已攝入的 DOCX/DFM 文件轉為 PDF。
@@ -303,9 +424,14 @@ async def convert_docx_to_pdf(
     - `fidelity`：保真模式。以目前 DFM 狀態重建 DOCX，再用 LibreOffice 輸出 PDF。
     - `content`：目前不支援；DOCX → PDF 應以保真輸出為主。
     """
+    await log_message(ctx, "info", f"convert_docx_to_pdf start: {doc_id}")
+    await report_progress(ctx, 10, message=f"Converting {doc_id} to PDF")
     result = await docx_service.convert_to_pdf(doc_id, output_path, mode=mode)
     if not result.get("success"):
+        await log_message(ctx, "error", f"convert_docx_to_pdf failed: {doc_id}")
         return f"❌ 轉換失敗：{result.get('error', '未知錯誤')}"
+
+    await report_progress(ctx, 100, message=f"Finished PDF conversion for {doc_id}")
 
     return (
         "✅ DOCX → PDF 轉換成功\n"
@@ -320,6 +446,7 @@ async def docx_validate_roundtrip(
     doc_id: str,
     output_path: str | None = None,
     strict: bool = False,
+    ctx: Context | None = None,
 ) -> str:
     """
     驗證 docx → DFM → docx 的往返保真度 (Round-Trip Fidelity)。
@@ -351,6 +478,8 @@ async def docx_validate_roundtrip(
     """
     from pathlib import Path
 
+    await log_message(ctx, "info", f"docx_validate_roundtrip start: {doc_id}")
+    await report_progress(ctx, 10, message=f"Loading original DOCX for {doc_id}")
     doc_dir = docx_service.repository.get_doc_dir(doc_id)
     original_path = doc_dir / "original.docx"
 
@@ -372,12 +501,19 @@ async def docx_validate_roundtrip(
 
     # Rebuild docx from current IR state
     try:
+        await report_progress(
+            ctx, 50, message=f"Rebuilding round-trip DOCX for {doc_id}"
+        )
         docx_service.adapter.ir_to_docx(ir, doc_dir, rebuilt_path)
     except Exception as e:
         return f"❌ 重建 docx 失敗：{e}"
 
     # Validate
+    await report_progress(ctx, 80, message=f"Validating rebuilt DOCX for {doc_id}")
     report = docx_validator.validate(original_path, rebuilt_path, strict=strict)
+    await report_progress(
+        ctx, 100, message=f"Finished round-trip validation for {doc_id}"
+    )
 
     return report.to_markdown()
 
@@ -665,6 +801,7 @@ async def export_markdown(
     md_path: str | None = None,
     output_path: str | None = None,
     output_format: str = "docx",
+    ctx: Context | None = None,
 ) -> str:
     """
     將 Markdown 文字或檔案直接匯出為 DOCX / PDF / DOC。
@@ -701,6 +838,10 @@ async def export_markdown(
         md_path,
         output_path,
     )
+    await log_message(ctx, "info", f"export_markdown start: format={output_format}")
+    await report_progress(
+        ctx, 10, message=f"Exporting Markdown to {output_format.upper()}"
+    )
 
     result = await docx_service.export_from_markdown(
         md_text=md_text,
@@ -710,7 +851,14 @@ async def export_markdown(
     )
 
     if not result.get("success"):
+        await log_message(
+            ctx, "error", f"export_markdown failed: format={output_format}"
+        )
         return f"❌ 匯出失敗：{result.get('error', '未知錯誤')}"
+
+    await report_progress(
+        ctx, 100, message=f"Finished Markdown export to {result['format'].upper()}"
+    )
 
     return (
         f"✅ Markdown → {result['format'].upper()} 匯出成功\n"

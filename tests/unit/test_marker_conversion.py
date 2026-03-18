@@ -228,17 +228,39 @@ class TestExtractSectionsFromToc:
             {"title": "Background", "page": 2, "level": 2},
             {"title": "Methods", "page": 3, "level": 1},
         ]
-        sections = mock_service._extract_sections_from_toc(toc)
+        markdown = """# Abstract
+
+Intro
+
+# Introduction
+
+Body
+
+<!-- Page 2 -->
+
+## Background
+
+Details
+
+<!-- Page 3 -->
+
+# Methods
+
+Procedure
+"""
+        sections = mock_service._extract_sections_from_toc(toc, markdown)
 
         assert len(sections) == 4
         assert sections[0].title == "Abstract"
         assert sections[0].level == 1
         assert sections[2].title == "Background"
         assert sections[2].level == 2
+        assert sections[3].start_line > 0
+        assert sections[3].end_line > sections[3].start_line
 
     def test_empty_toc(self, mock_service: DocumentService):
         """空 TOC 回傳空列表。"""
-        sections = mock_service._extract_sections_from_toc([])
+        sections = mock_service._extract_sections_from_toc([], "")
         assert sections == []
 
     def test_section_ids_sequential(self, mock_service: DocumentService):
@@ -248,7 +270,9 @@ class TestExtractSectionsFromToc:
             {"title": "B", "page": 2, "level": 1},
             {"title": "C", "page": 3, "level": 1},
         ]
-        sections = mock_service._extract_sections_from_toc(toc)
+        sections = mock_service._extract_sections_from_toc(
+            toc, "# A\n\n<!-- Page 2 -->\n# B\n\n<!-- Page 3 -->\n# C\n"
+        )
         assert sections[0].id == "sec_1"
         assert sections[1].id == "sec_2"
         assert sections[2].id == "sec_3"

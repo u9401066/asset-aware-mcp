@@ -294,6 +294,13 @@ class TestBlockToTableContext:
         )
         assert tc.source_description == "custom source"
 
+    def test_source_ids_are_preserved(self):
+        block = _make_table_block(block_id="t123")
+        tc = DfmTableBridge.block_to_table_context(block, doc_id="doc_alpha")
+
+        assert tc.source_doc_id == "doc_alpha"
+        assert tc.source_block_id == "t123"
+
 
 # ============================================================================
 # DfmTableBridge.table_context_to_block

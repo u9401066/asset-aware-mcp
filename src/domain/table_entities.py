@@ -313,6 +313,8 @@ class TableContext:
     columns: list[ColumnDef]
     rows: list[dict[str, Any]] = field(default_factory=list)
     source_description: str = ""
+    source_doc_id: str = ""
+    source_block_id: str = ""
     created_at: datetime = field(default_factory=datetime.now)
     # 平行引用層 — key: "row_index:column_name"
     citations: dict[str, CellCitation] = field(default_factory=dict)

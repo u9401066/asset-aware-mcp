@@ -13,6 +13,7 @@ from src.presentation.resources.document_resources import (
     resource_document_manifest,
     resource_document_outline,
     resource_document_sections,
+    resource_document_segmentation,
     resource_document_tables,
     resource_knowledge_graph_summary,
 )
@@ -26,17 +27,16 @@ from src.presentation.resources.table_resources import (
 
 __all__ = [
     "resource_document_figures",
-    # Document resources
     "resource_document_list",
     "resource_document_manifest",
     "resource_document_outline",
     "resource_document_sections",
+    "resource_document_segmentation",
     "resource_document_tables",
     "resource_draft_content",
     "resource_draft_list",
     "resource_knowledge_graph_summary",
     "resource_table_content",
-    # Table resources
     "resource_table_list",
     "resource_table_status",
 ]

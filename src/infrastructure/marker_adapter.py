@@ -24,6 +24,23 @@ from src.domain.entities import (
     SectionAsset,
     TableAsset,
 )
+from src.domain.line_spans import annotate_marker_blocks, apply_asset_line_spans
+
+
+def _coerce_metadata_int(metadata: dict[str, Any], key: str, default: int = 0) -> int:
+    value = metadata.get(key)
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return default
+    return default
 
 
 @dataclass
@@ -187,6 +204,7 @@ class MarkerPDFExtractor:
                 metadata={
                     "id": getattr(node, "id", None),
                     "level": getattr(node, "level", None),
+                    "source_order": block_counter,
                 },
             )
             blocks.append(block)
@@ -289,6 +307,10 @@ class MarkerPDFExtractor:
         # 儲存 markdown
         markdown_path = output_dir / "content.md"
         markdown_path.write_text(parse_result.markdown, encoding="utf-8")
+        line_span_index = annotate_marker_blocks(
+            parse_result.markdown,
+            parse_result.blocks,
+        )
 
         # 儲存圖片並建立 FigureAsset
         figures: list[FigureAsset] = []
@@ -302,12 +324,12 @@ class MarkerPDFExtractor:
             ext = img_name.split(".")[-1] if "." in img_name else "png"
             fig_path = images_dir / f"fig_{idx}.{ext}"
             fig_path.write_bytes(img_bytes)
+            matched = figure_blocks[idx - 1] if idx - 1 < len(figure_blocks) else None
 
             # Match corresponding Figure block by index
             page = 1
             caption = ""
-            if idx - 1 < len(figure_blocks):
-                matched = figure_blocks[idx - 1]
+            if matched is not None:
                 page = matched.page
                 caption = matched.metadata.get("caption", "")
 
@@ -334,21 +356,45 @@ class MarkerPDFExtractor:
                     height=height,
                     figure_type="",
                     source="marker",
+                    source_block_id=matched.block_id if matched else "",
+                    source_order=_coerce_metadata_int(matched.metadata, "source_order")
+                    if matched
+                    else 0,
+                    line_start=_coerce_metadata_int(matched.metadata, "line_start")
+                    if matched and isinstance(matched.metadata.get("line_start"), int)
+                    else None,
+                    line_end=_coerce_metadata_int(matched.metadata, "line_end")
+                    if matched and isinstance(matched.metadata.get("line_end"), int)
+                    else None,
+                    line_source=str(matched.metadata.get("line_match_strategy") or "")
+                    if matched
+                    else "",
                 )
             )
 
         # 建立 SectionAsset
         sections: list[SectionAsset] = []
         for idx, toc_item in enumerate(parse_result.toc, 1):
+            section_span = line_span_index.find_section_span(
+                toc_item.get("title", ""),
+                page_hint=toc_item.get("page", 0) or None,
+            )
             sections.append(
                 SectionAsset(
                     id=f"sec_{idx}",
                     title=toc_item.get("title", ""),
                     level=toc_item.get("level", 1),
                     page=toc_item.get("page", 0),
-                    start_line=0,
-                    end_line=0,
-                    preview="",
+                    start_line=section_span.start_line if section_span else 0,
+                    end_line=section_span.end_line if section_span else 0,
+                    preview=(
+                        line_span_index.extract_preview(
+                            section_span.start_line,
+                            section_span.end_line,
+                        )
+                        if section_span
+                        else ""
+                    ),
                 )
             )
 
@@ -383,8 +429,29 @@ class MarkerPDFExtractor:
                         col_count=col_count,
                         has_header=True,
                         source="marker",
+                        source_block_id=block.block_id,
+                        source_order=_coerce_metadata_int(
+                            block.metadata, "source_order"
+                        ),
+                        line_start=_coerce_metadata_int(block.metadata, "line_start")
+                        if isinstance(block.metadata.get("line_start"), int)
+                        else None,
+                        line_end=_coerce_metadata_int(block.metadata, "line_end")
+                        if isinstance(block.metadata.get("line_end"), int)
+                        else None,
+                        line_source=str(
+                            block.metadata.get("line_match_strategy") or ""
+                        ),
                     )
                 )
+
+        apply_asset_line_spans(
+            line_span_index,
+            figures,
+            tables,
+            blocks=parse_result.blocks,
+            sections=sections,
+        )
 
         # 建立 DocumentAssets
         assets = DocumentAssets(
@@ -422,6 +489,7 @@ class MarkerPDFExtractor:
                 "text": b.text[:500] if b.text else "",  # 截斷避免過大
                 "bbox": b.bbox,
                 "section_hierarchy": b.section_hierarchy,
+                "metadata": b.metadata,
             }
             for b in parse_result.blocks
         ]

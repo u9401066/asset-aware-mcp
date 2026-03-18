@@ -91,6 +91,9 @@ class JobService:
 
         # Estimate duration (rough: 10s per file)
         estimated_duration = len(file_paths) * 10
+        job_parameters = parameters or {}
+        base_steps = 9 if job_parameters.get("use_marker") else 8
+        steps_per_file = base_steps + (1 if job_parameters.get("ocr_enabled") else 0)
 
         # Create job
         job = Job(
@@ -100,9 +103,9 @@ class JobService:
             else JobType.INGEST_BATCH,
             status=JobStatus.PENDING,
             input_files=file_paths,
-            parameters=parameters or {},
+            parameters=job_parameters,
             progress=JobProgress(
-                total_steps=len(file_paths) * 5,  # 5 steps per file
+                total_steps=len(file_paths) * steps_per_file,
                 message="Job created, waiting to start...",
             ),
             estimated_duration_seconds=estimated_duration,
@@ -190,59 +193,75 @@ class JobService:
                 raise RuntimeError("Document service not configured")
 
             total_files = len(job.input_files)
-            step = 0
+            base_steps = 9 if job.parameters.get("use_marker") else 8
+            steps_per_file = base_steps + (
+                1 if job.parameters.get("ocr_enabled") else 0
+            )
+            total_steps = max(total_files, 1) * steps_per_file
+            job.update_progress(total=total_steps)
+            await self.job_store.update(job)
 
             for i, file_path in enumerate(job.input_files):
                 filename = Path(file_path).name
+                base_step = i * steps_per_file
 
-                # Phase 1: Extract
-                step += 1
-                job.update_progress(
-                    step=step,
-                    phase="Extracting",
-                    message=f"[{i + 1}/{total_files}] Extracting text from {filename}...",
-                )
-                await self.job_store.update(job)
+                async def report_job_progress(
+                    step: int,
+                    _ignored_total: int,
+                    phase: str,
+                    message: str,
+                    *,
+                    _base_step: int = base_step,
+                ) -> None:
+                    current_job = await self.job_store.get(job_id)
+                    if current_job is None or current_job.is_terminal:
+                        return
+                    current_job.update_progress(
+                        step=_base_step + step,
+                        total=total_steps,
+                        phase=phase,
+                        message=message,
+                    )
+                    await self.job_store.update(current_job)
 
                 # Actually process the document (ingest() takes a list)
                 try:
                     use_marker = job.parameters.get("use_marker", False)
                     results = await self.document_service.ingest(
-                        [file_path], use_marker=use_marker
+                        [file_path],
+                        use_marker=use_marker,
+                        progress_callback=report_job_progress,
+                        ocr_enabled=job.parameters.get("ocr_enabled", False),
+                        ocr_language=job.parameters.get("ocr_language", "eng"),
+                        rotate_pages=job.parameters.get("rotate_pages", False),
+                        deskew=job.parameters.get("deskew", False),
                     )
                     result = results[0] if results else None
 
                     if result is not None and result.success:
                         job.output_doc_ids.append(result.doc_id)
-
-                        # Update progress through phases
-                        phases = [
-                            "Converting",
-                            "Indexing",
-                            "Generating Manifest",
-                            "Finalizing",
-                        ]
-                        for phase in phases:
-                            step += 1
-                            job.update_progress(
-                                step=step,
-                                phase=phase,
-                                message=f"[{i + 1}/{total_files}] {phase} {filename}...",
-                            )
-                            await self.job_store.update(job)
-                            # Small delay to show progress
-                            await asyncio.sleep(0.1)
                     else:
-                        # File failed but continue with others
-                        step += 4  # Skip remaining phases for this file
                         error_msg = result.error if result else "No result returned"
                         logger.warning(f"Failed to process {filename}: {error_msg}")
+                        job.update_progress(
+                            step=base_step + steps_per_file,
+                            total=total_steps,
+                            phase="Failed",
+                            message=f"[{i + 1}/{total_files}] Failed processing {filename}: {error_msg}",
+                        )
+                        await self.job_store.update(job)
 
                 except asyncio.CancelledError:
                     raise  # Re-raise cancellation
                 except Exception as e:
-                    step += 4
                     logger.error(f"Error processing {filename}: {e}")
+                    job.update_progress(
+                        step=base_step + steps_per_file,
+                        total=total_steps,
+                        phase="Failed",
+                        message=f"[{i + 1}/{total_files}] Error processing {filename}: {e}",
+                    )
+                    await self.job_store.update(job)
 
             # Complete job
             job.complete(

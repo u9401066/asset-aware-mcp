@@ -8,16 +8,23 @@ Knowledge Tools - 知識圖譜 MCP 工具
 
 from __future__ import annotations
 
-from typing import cast
+from typing import TYPE_CHECKING, Any, cast
 
 from src.presentation.dependencies import knowledge_graph, knowledge_service
 from src.presentation.mcp_app import mcp
+from src.presentation.mcp_context import log_message, report_progress
+
+if TYPE_CHECKING:
+    from mcp.server.fastmcp import Context
+else:
+    Context = Any
 
 
 @mcp.tool()
 async def consult_knowledge_graph(
     query: str,
     mode: str = "hybrid",
+    ctx: Context | None = None,
 ) -> str:
     """
     Query the LightRAG knowledge graph for cross-document insights.
@@ -43,13 +50,19 @@ async def consult_knowledge_graph(
         consult_knowledge_graph("What are the dosing recommendations for remimazolam?")
         consult_knowledge_graph("Compare sedation outcomes between propofol and remimazolam", mode="global")
     """
-    return await knowledge_service.query(query, mode=mode)
+    await log_message(ctx, "info", f"consult_knowledge_graph start: mode={mode}")
+    await report_progress(ctx, 10, message="Querying knowledge graph")
+    result = await knowledge_service.query(query, mode=mode)
+    await report_progress(ctx, 100, message="Knowledge graph query finished")
+    await log_message(ctx, "info", "consult_knowledge_graph complete")
+    return result
 
 
 @mcp.tool()
 async def export_knowledge_graph(
     format: str = "summary",
     limit: int = 50,
+    ctx: Context | None = None,
 ) -> str:
     """
     Export the knowledge graph for visualization.
@@ -81,10 +94,16 @@ async def export_knowledge_graph(
     if knowledge_graph is None:
         return "Error: LightRAG is not enabled. Set ENABLE_LIGHTRAG=true in .env"
 
+    await log_message(
+        ctx, "info", f"export_knowledge_graph start: format={format} limit={limit}"
+    )
+    await report_progress(ctx, 10, message="Exporting knowledge graph")
     result = await knowledge_graph.export_graph(
         format=format,
         limit=limit,
     )
+    await report_progress(ctx, 100, message="Knowledge graph export finished")
+    await log_message(ctx, "info", "export_knowledge_graph complete")
 
     if format == "mermaid" and "diagram" in result:
         return (

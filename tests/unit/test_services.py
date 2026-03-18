@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pytest
 
+from src.domain.entities import FigureAsset
 from src.domain.services import AssetExtractor, ManifestGenerator
 
 
@@ -46,6 +47,9 @@ class TestManifestGenerator:
         assert tables[0].id == "tab_1"
         assert tables[0].row_count == 3  # Header row + 2 data rows (separator excluded)
         assert tables[0].col_count == 3
+        assert tables[0].line_start is not None
+        assert tables[0].line_end is not None
+        assert tables[0].line_end > tables[0].line_start
 
     def test_parse_sections(self, generator: ManifestGenerator, sample_markdown: str):
         """Test section parsing from markdown."""
@@ -95,6 +99,53 @@ class TestManifestGenerator:
         methods = next((s for s in sections if s.title == "Methods"), None)
         assert methods is not None
         assert methods.page == 2
+
+    def test_pdf_toc_sections_get_line_spans_and_preview(
+        self, generator: ManifestGenerator, sample_markdown: str
+    ):
+        """PDF TOC route should still resolve markdown line spans and previews."""
+        sections = generator._sections_from_pdf_toc(
+            [(1, "Methods", 2), (1, "Results", 3)],
+            sample_markdown,
+        )
+
+        methods = next((s for s in sections if s.title == "Methods"), None)
+        assert methods is not None
+        assert methods.start_line > 0
+        assert methods.end_line > methods.start_line
+        assert methods.preview
+
+    def test_generate_assigns_asset_section_metadata(
+        self, generator: ManifestGenerator, sample_markdown: str
+    ):
+        """Manifest generation should persist nearest containing section onto assets."""
+        figures = [
+            FigureAsset(
+                id="fig_1",
+                page=2,
+                path="workspace/fig.png",
+                ext="png",
+                caption="Methods figure",
+                width=100,
+                height=100,
+                line_start=11,
+                line_end=13,
+                line_source="caption",
+            )
+        ]
+
+        manifest = generator.generate(
+            doc_id="doc_test_abc123",
+            filename="test.pdf",
+            markdown=sample_markdown,
+            figures=figures,
+            page_count=3,
+            markdown_path="/data/doc_test/test_full.md",
+            pdf_toc=[(1, "Methods", 2)],
+        )
+
+        assert manifest.assets.figures[0].section_title == "Methods"
+        assert manifest.assets.figures[0].section_id.startswith("sec_methods")
 
 
 class TestAssetExtractor:

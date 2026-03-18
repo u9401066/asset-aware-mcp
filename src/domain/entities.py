@@ -34,6 +34,34 @@ class TableAsset(BaseModel):
     # Enhanced fields from Docling
     has_header: bool = Field(True, description="Whether table has header row")
     source: str = Field("pymupdf", description="Extraction source: docling/pymupdf")
+    source_block_id: str = Field(
+        "",
+        description="Source block identifier when the extractor can map the table back to a layout block",
+    )
+    source_order: int = Field(
+        0,
+        description="Stable source ordering emitted by the extractor for layout correlation",
+    )
+    line_start: int | None = Field(
+        None,
+        description="0-based start line in markdown for this table asset",
+    )
+    line_end: int | None = Field(
+        None,
+        description="0-based end line in markdown for this table asset",
+    )
+    line_source: str = Field(
+        "",
+        description="How the line span was resolved, e.g. block/page-section/page",
+    )
+    section_id: str = Field(
+        "",
+        description="Nearest containing section ID for this table asset",
+    )
+    section_title: str = Field(
+        "",
+        description="Nearest containing section title for this table asset",
+    )
 
 
 class FigureAsset(BaseModel):
@@ -50,6 +78,34 @@ class FigureAsset(BaseModel):
     # Enhanced fields from Docling
     figure_type: str = Field("", description="Figure type: chart/diagram/photo/etc.")
     source: str = Field("pymupdf", description="Extraction source: docling/pymupdf")
+    source_block_id: str = Field(
+        "",
+        description="Source block identifier when the extractor can map the figure back to a layout block",
+    )
+    source_order: int = Field(
+        0,
+        description="Stable source ordering emitted by the extractor for layout correlation",
+    )
+    line_start: int | None = Field(
+        None,
+        description="0-based start line in markdown for this figure asset",
+    )
+    line_end: int | None = Field(
+        None,
+        description="0-based end line in markdown for this figure asset",
+    )
+    line_source: str = Field(
+        "",
+        description="How the line span was resolved, e.g. caption/page-section/page",
+    )
+    section_id: str = Field(
+        "",
+        description="Nearest containing section ID for this figure asset",
+    )
+    section_title: str = Field(
+        "",
+        description="Nearest containing section title for this figure asset",
+    )
 
     def to_base64(self) -> str:
         """Convert image to base64 string."""
@@ -218,6 +274,12 @@ class FetchResult(BaseModel):
     page: int | None = None
     width: int | None = None
     height: int | None = None
+    line_start: int | None = None
+    line_end: int | None = None
+    line_source: str | None = None
+    section_id: str | None = None
+    section_title: str | None = None
+    source_block_id: str | None = None
 
     def to_mcp_content(self) -> dict[str, Any]:
         """Convert to MCP-compatible content format."""

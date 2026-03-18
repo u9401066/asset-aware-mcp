@@ -92,6 +92,18 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
             'file-directory'
         ));
 
+        const jobs = this.envManager.listJobs();
+        const activeJobs = jobs.filter(job => job.status === 'running' || job.status === 'pending');
+        const jobLabel = activeJobs.length > 0
+            ? `${activeJobs.length} active / ${jobs.length} total`
+            : `${jobs.length} total`;
+        items.push(new StatusItem(
+            'ETL Jobs',
+            jobLabel,
+            vscode.TreeItemCollapsibleState.None,
+            activeJobs.length > 0 ? 'sync~spin' : 'history'
+        ));
+
         return items;
     }
 

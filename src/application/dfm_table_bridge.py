@@ -78,6 +78,8 @@ class DfmTableBridge:
                 columns=[],
                 rows=[],
                 source_description=source_description or f"From docx {doc_id}",
+                source_doc_id=doc_id,
+                source_block_id=block.id,
             )
 
         # First row = headers
@@ -107,6 +109,8 @@ class DfmTableBridge:
             columns=columns,
             rows=data_rows,
             source_description=source_description or f"From docx {doc_id}",
+            source_doc_id=doc_id,
+            source_block_id=block.id,
         )
 
     # ========================================================================

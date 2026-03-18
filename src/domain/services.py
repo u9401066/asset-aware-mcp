@@ -16,6 +16,7 @@ from .entities import (
     TableAsset,
 )
 from .etl_profile import ETLProfile
+from .line_spans import MarkdownLineSpanIndex
 
 
 class ManifestGenerator:
@@ -53,6 +54,7 @@ class ManifestGenerator:
         tables: list[TableAsset] | None = None,
         pdf_toc: list[tuple[int, str, int]] | None = None,
         pdf_title: str = "",
+        sections: list[SectionAsset] | None = None,
     ) -> DocumentManifest:
         """
         Generate a complete document manifest.
@@ -77,10 +79,14 @@ class ManifestGenerator:
 
         # Parse sections: prefer PDF built-in TOC over font-size heuristics
         sections = (
-            self._sections_from_pdf_toc(pdf_toc)
+            sections
+            if sections is not None
+            else self._sections_from_pdf_toc(pdf_toc, markdown)
             if pdf_toc
             else self._parse_sections(markdown)
         )
+
+        self._assign_asset_sections(figures, parsed_tables, sections)
 
         # Build TOC from sections
         toc = [s.title for s in sections if s.level <= 2]
@@ -122,6 +128,8 @@ class ManifestGenerator:
             # Find which page this table is on
             table_start = match.start()
             page_for_table = self._find_page_at_position(markdown, table_start)
+            line_start = markdown[:table_start].count("\n")
+            line_end = line_start + len(table_text.splitlines())
 
             # Preview: first 100 chars
             preview = table_text[:100].replace("\n", " ")
@@ -135,6 +143,9 @@ class ManifestGenerator:
                     markdown=table_text,
                     row_count=row_count,
                     col_count=col_count,
+                    line_start=line_start,
+                    line_end=line_end,
+                    line_source="markdown-table",
                 )
             )
 
@@ -270,7 +281,9 @@ class ManifestGenerator:
         return ""
 
     def _sections_from_pdf_toc(
-        self, pdf_toc: list[tuple[int, str, int]]
+        self,
+        pdf_toc: list[tuple[int, str, int]],
+        markdown: str,
     ) -> list[SectionAsset]:
         """
         Convert PDF built-in TOC to SectionAsset list.
@@ -284,6 +297,8 @@ class ManifestGenerator:
             List of SectionAsset
         """
         sections = []
+        existing_ids: set[str] = set()
+        line_index = MarkdownLineSpanIndex(markdown)
 
         for level, title, page in pdf_toc:
             title = title.strip()
@@ -296,7 +311,24 @@ class ManifestGenerator:
 
             # Generate section ID
             clean_title = re.sub(r"[^a-z0-9]", "_", title.lower())[:30]
-            sec_id = f"sec_{clean_title}"
+            base_id = f"sec_{clean_title}"
+            sec_id = base_id
+            counter = 2
+            while sec_id in existing_ids:
+                sec_id = f"{base_id}_{counter}"
+                counter += 1
+
+            section_span = line_index.find_section_span(
+                title,
+                page_hint=page or None,
+            )
+            start_line = section_span.start_line if section_span else 0
+            end_line = section_span.end_line if section_span else 0
+            preview = (
+                line_index.extract_preview(start_line, end_line)
+                if section_span is not None
+                else ""
+            )
 
             sections.append(
                 SectionAsset(
@@ -304,13 +336,44 @@ class ManifestGenerator:
                     title=title,
                     level=level,
                     page=page,
-                    start_line=0,  # PDF TOC doesn't have line numbers
-                    end_line=0,
-                    preview="",
+                    start_line=start_line,
+                    end_line=end_line,
+                    preview=preview,
                 )
             )
+            existing_ids.add(sec_id)
 
         return sections
+
+    @staticmethod
+    def _assign_asset_sections(
+        figures: list[FigureAsset],
+        tables: list[TableAsset],
+        sections: list[SectionAsset],
+    ) -> None:
+        if not sections:
+            return
+
+        def assign_asset_section(asset: FigureAsset | TableAsset) -> None:
+            if asset.line_start is None or asset.line_end is None:
+                return
+            containing = [
+                section
+                for section in sections
+                if section.start_line <= asset.line_start
+                and asset.line_end <= section.end_line
+            ]
+            if not containing:
+                return
+            section = max(containing, key=lambda item: (item.level, item.start_line))
+            asset.section_id = section.id
+            asset.section_title = section.title
+
+        for table_asset in tables:
+            assign_asset_section(table_asset)
+
+        for figure_asset in figures:
+            assign_asset_section(figure_asset)
 
 
 class AssetExtractor:

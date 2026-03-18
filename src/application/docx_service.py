@@ -417,7 +417,10 @@ class DocxService:
                 parse_result = self.parser.parse_split(md_content, yaml_content)
             else:
                 if dfm_text is None:
-                    return {"success": False, "error": "No content provided"}
+                    persisted_dfm = doc_dir / "content.dfm"
+                    if not persisted_dfm.exists():
+                        return {"success": False, "error": "No content provided"}
+                    dfm_text = persisted_dfm.read_text(encoding="utf-8")
                 parse_result = self.parser.parse(dfm_text)
 
             # Abort on format mismatch — prevents silent data loss

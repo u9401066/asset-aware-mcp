@@ -4,6 +4,7 @@ Document Resources - MCP Resources for Documents and Knowledge Graph
 包含：
 - documents://list: 文件列表
 - document://{doc_id}/manifest: 文件 Manifest
+- document://{doc_id}/segmentation: 統一 segmentation schema
 - document://{doc_id}/figures: 文件圖片列表
 - document://{doc_id}/tables: 文件表格列表
 - document://{doc_id}/sections: 文件章節列表
@@ -20,6 +21,13 @@ from src.presentation.mcp_app import mcp
 from src.presentation.tools.document_tools import list_documents
 
 
+def _display_line_range(start_line: int, end_line: int) -> str:
+    """Render internal 0-based, end-exclusive line ranges as 1-based display values."""
+    if start_line < 0 or end_line < 0 or end_line < start_line:
+        return ""
+    return f"(L{start_line + 1}-{end_line})"
+
+
 @mcp.resource("documents://list")
 async def resource_document_list() -> str:
     """Dynamic resource listing all processed documents."""
@@ -34,6 +42,20 @@ async def resource_document_manifest(doc_id: str) -> str:
 
     result: str = await inspect_document_manifest(doc_id)
     return result
+
+
+@mcp.resource("document://{doc_id}/segmentation")
+async def resource_document_segmentation(doc_id: str) -> str:
+    """Dynamic resource for unified segmentation schema JSON."""
+    from src.presentation.tools.document_tools import export_document_segmentation
+
+    await export_document_segmentation(doc_id)
+    segmentation_path = (
+        document_service.repository.get_doc_dir(doc_id) / "segmentation.json"
+    )
+    if not segmentation_path.exists():
+        return f"Segmentation not found for {doc_id}"
+    return segmentation_path.read_text(encoding="utf-8")
 
 
 @mcp.resource("document://{doc_id}/figures")
@@ -139,7 +161,7 @@ async def resource_document_sections(doc_id: str) -> str:
 
     for sec in manifest.assets.sections:
         indent = "  " * (sec.level - 1) if sec.level > 1 else ""
-        line_info = f"(L{sec.start_line}-{sec.end_line})" if sec.start_line else ""
+        line_info = _display_line_range(sec.start_line, sec.end_line)
         lines.append(f"{indent}- **{sec.title}** `{sec.id}` {line_info}")
 
     lines.extend(

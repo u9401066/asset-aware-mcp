@@ -284,6 +284,49 @@ export class EnvManager {
     }
 
     /**
+     * List persisted ETL jobs from data/jobs directory.
+     */
+    listJobs(): { id: string; status: string; progress: number; path: string }[] {
+        const jobsDir = path.join(this.getDataDir(), 'jobs');
+        const jobs: { id: string; status: string; progress: number; path: string }[] = [];
+
+        if (!fs.existsSync(jobsDir)) {
+            return jobs;
+        }
+
+        try {
+            const entries = fs.readdirSync(jobsDir, { withFileTypes: true });
+            for (const entry of entries) {
+                if (!entry.isFile() || !entry.name.endsWith('.json') || !entry.name.startsWith('job_')) {
+                    continue;
+                }
+
+                const jobPath = path.join(jobsDir, entry.name);
+                try {
+                    const content = fs.readFileSync(jobPath, 'utf-8');
+                    const data = JSON.parse(content) as {
+                        job_id?: string;
+                        status?: string;
+                        progress?: { percentage?: number };
+                    };
+                    jobs.push({
+                        id: data.job_id || entry.name.replace('.json', ''),
+                        status: data.status || 'unknown',
+                        progress: data.progress?.percentage || 0,
+                        path: jobPath
+                    });
+                } catch {
+                    // Skip unreadable job files
+                }
+            }
+        } catch (error) {
+            console.error('Error listing jobs:', error);
+        }
+
+        return jobs;
+    }
+
+    /**
      * List A2T tables from tables directory
      */
     listTables(): { id: string; title: string; path: string; mdPath: string }[] {

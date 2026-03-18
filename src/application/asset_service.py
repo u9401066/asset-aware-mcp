@@ -15,6 +15,7 @@ from src.domain.services import AssetExtractor
 from src.domain.value_objects import AssetType
 
 if TYPE_CHECKING:
+    from src.domain.entities import DocumentManifest, SectionAsset
     from src.domain.repositories import DocumentRepository
 
 
@@ -122,6 +123,12 @@ class AssetService:
                 error=f"Table not found: {table_id}",
             )
 
+        section = self._find_containing_section(
+            manifest,
+            table.line_start,
+            table.line_end,
+            table.section_id,
+        )
         return FetchResult(
             doc_id=doc_id,
             asset_type=AssetType.TABLE,
@@ -129,6 +136,12 @@ class AssetService:
             success=True,
             text_content=table.markdown,
             page=table.page,
+            line_start=table.line_start,
+            line_end=table.line_end,
+            line_source=table.line_source or None,
+            section_id=section.id if section else (table.section_id or None),
+            section_title=section.title if section else (table.section_title or None),
+            source_block_id=table.source_block_id or None,
         )
 
     async def _fetch_figure(
@@ -194,6 +207,12 @@ class AssetService:
                 info += f" | Resized: {result.original_width}x{result.original_height} → {result.width}x{result.height}"
                 info += f" | {result.size_reduction_percent:.0f}% smaller"
 
+            section = self._find_containing_section(
+                manifest,
+                figure.line_start,
+                figure.line_end,
+                figure.section_id,
+            )
             return FetchResult(
                 doc_id=doc_id,
                 asset_type=AssetType.FIGURE,
@@ -205,6 +224,14 @@ class AssetService:
                 width=result.width,
                 height=result.height,
                 text_content=info,
+                line_start=figure.line_start,
+                line_end=figure.line_end,
+                line_source=figure.line_source or None,
+                section_id=section.id if section else (figure.section_id or None),
+                section_title=section.title
+                if section
+                else (figure.section_title or None),
+                source_block_id=figure.source_block_id or None,
             )
 
         except FileNotFoundError as e:
@@ -219,6 +246,12 @@ class AssetService:
             # PIL not installed - return original
             try:
                 image_base64 = figure.to_base64()
+                section = self._find_containing_section(
+                    manifest,
+                    figure.line_start,
+                    figure.line_end,
+                    figure.section_id,
+                )
                 return FetchResult(
                     doc_id=doc_id,
                     asset_type=AssetType.FIGURE,
@@ -230,6 +263,14 @@ class AssetService:
                     width=figure.width,
                     height=figure.height,
                     text_content=f"Page {figure.page} (unprocessed - PIL not available)",
+                    line_start=figure.line_start,
+                    line_end=figure.line_end,
+                    line_source=figure.line_source or None,
+                    section_id=section.id if section else (figure.section_id or None),
+                    section_title=section.title
+                    if section
+                    else (figure.section_title or None),
+                    source_block_id=figure.source_block_id or None,
                 )
             except Exception as e:
                 return FetchResult(
@@ -283,6 +324,11 @@ class AssetService:
             success=True,
             text_content=content,
             page=section.page,
+            line_start=section.start_line,
+            line_end=section.end_line,
+            line_source="section",
+            section_id=section.id,
+            section_title=section.title,
         )
 
     async def _fetch_full_text(self, doc_id: str) -> FetchResult:
@@ -303,4 +349,29 @@ class AssetService:
             asset_id="full",
             success=True,
             text_content=markdown,
+            line_start=0,
+            line_end=len(markdown.splitlines()),
+            line_source="document",
         )
+
+    @staticmethod
+    def _find_containing_section(
+        manifest: DocumentManifest,
+        line_start: int | None,
+        line_end: int | None,
+        section_id: str | None,
+    ) -> SectionAsset | None:
+        if section_id:
+            section = manifest.assets.find_section(section_id)
+            if section is not None:
+                return section
+        if line_start is None or line_end is None:
+            return None
+        containing = [
+            section
+            for section in manifest.assets.sections
+            if section.start_line <= line_start and line_end <= section.end_line
+        ]
+        if not containing:
+            return None
+        return max(containing, key=lambda section: (section.level, section.start_line))

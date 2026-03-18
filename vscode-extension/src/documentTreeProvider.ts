@@ -4,8 +4,23 @@
  * Provides a tree view showing ingested documents.
  */
 
+import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { EnvManager } from './envManager';
+
+type ManifestSummary = {
+    title?: string;
+    page_count?: number;
+    pages?: number;
+    assets?: {
+        tables?: { id: string }[];
+        figures?: { id: string }[];
+        sections?: { id: string }[];
+    };
+    tables?: { id: string }[];
+    figures?: { id: string }[];
+    sections?: { id: string }[];
+};
 
 export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentItem> {
     private _onDidChangeTreeData = new vscode.EventEmitter<DocumentItem | undefined | void>();
@@ -52,7 +67,7 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
 
         return documents.map(doc => {
             // Try to get title from manifest
-            const manifest = this.envManager.readManifest(doc.id) as { title?: string; pages?: number } | null;
+            const manifest = this.envManager.readManifest(doc.id) as ManifestSummary | null;
             const title = manifest?.title || doc.id.replace('doc_', '').replace(/_[a-f0-9]+$/, '').replace(/_/g, ' ');
 
             return new DocumentItem(
@@ -66,12 +81,7 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
     }
 
     private getDocumentDetails(docId: string): DocumentItem[] {
-        const manifest = this.envManager.readManifest(docId) as {
-            pages?: number;
-            tables?: { id: string }[];
-            figures?: { id: string }[];
-            sections?: { id: string }[];
-        } | null;
+        const manifest = this.envManager.readManifest(docId) as ManifestSummary | null;
 
         if (!manifest) {
             return [new DocumentItem('Manifest not found', '', vscode.TreeItemCollapsibleState.None, 'warning')];
@@ -80,9 +90,10 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
         const items: DocumentItem[] = [];
 
         // Pages
-        if (manifest.pages) {
+        const pageCount = manifest.page_count ?? manifest.pages;
+        if (pageCount) {
             items.push(new DocumentItem(
-                `Pages: ${manifest.pages}`,
+                `Pages: ${pageCount}`,
                 '',
                 vscode.TreeItemCollapsibleState.None,
                 'book'
@@ -90,7 +101,7 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
         }
 
         // Tables count
-        const tableCount = manifest.tables?.length || 0;
+        const tableCount = manifest.assets?.tables?.length || manifest.tables?.length || 0;
         items.push(new DocumentItem(
             `Tables: ${tableCount}`,
             '',
@@ -99,7 +110,7 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
         ));
 
         // Figures count
-        const figureCount = manifest.figures?.length || 0;
+        const figureCount = manifest.assets?.figures?.length || manifest.figures?.length || 0;
         items.push(new DocumentItem(
             `Figures: ${figureCount}`,
             '',
@@ -108,13 +119,29 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
         ));
 
         // Sections count
-        const sectionCount = manifest.sections?.length || 0;
+        const sectionCount = manifest.assets?.sections?.length || manifest.sections?.length || 0;
         items.push(new DocumentItem(
             `Sections: ${sectionCount}`,
             '',
             vscode.TreeItemCollapsibleState.None,
             'list-ordered'
         ));
+
+        const segmentationPath = `${this.envManager.getDataDir()}/${docId}/segmentation.json`;
+        if (fs.existsSync(segmentationPath)) {
+            items.push(new DocumentItem(
+                'Open Segmentation',
+                '',
+                vscode.TreeItemCollapsibleState.None,
+                'symbol-structure',
+                undefined,
+                {
+                    command: 'vscode.open',
+                    title: 'Open Segmentation',
+                    arguments: [vscode.Uri.file(segmentationPath)]
+                }
+            ));
+        }
 
         // Open manifest command
         const manifestPath = this.envManager.getManifestPath(docId);

@@ -15,6 +15,9 @@ Document Tools - ETL + 文件管理 MCP 工具
 from __future__ import annotations
 
 import json
+import shutil
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from mcp.types import ImageContent, TextContent
 
@@ -24,14 +27,50 @@ from src.presentation.dependencies import (
     document_service,
     get_marker_extractor,
     job_service,
+    layout_visualizer,
+    ocr_processor,
+    repository,
+    segmentation_service,
 )
 from src.presentation.mcp_app import mcp
+from src.presentation.mcp_context import (
+    create_subrange_progress_callback,
+    log_message,
+    report_progress,
+)
+
+if TYPE_CHECKING:
+    from mcp.server.fastmcp import Context
+else:
+    Context = Any
+
+
+def _display_line_range(start_line: int, end_line: int) -> str:
+    if start_line < 0 or end_line < 0 or end_line < start_line:
+        return "L?"
+    return f"L{start_line + 1}-{end_line}"
+
+
+def _format_line_range(start_line: int | None, end_line: int | None) -> str | None:
+    if (
+        start_line is None
+        or end_line is None
+        or start_line < 0
+        or end_line < start_line
+    ):
+        return None
+    return _display_line_range(start_line, end_line)
 
 
 @mcp.tool()
 async def parse_pdf_structure(
     pdf_path: str,
     output_dir: str | None = None,
+    ocr_enabled: bool = False,
+    ocr_language: str = "eng",
+    rotate_pages: bool = False,
+    deskew: bool = False,
+    ctx: Context | None = None,
 ) -> str:
     """
     使用 Marker 進行結構化 PDF 解析（高精度）。
@@ -64,6 +103,9 @@ async def parse_pdf_structure(
     start = time.time()
     pdf_file = Path(pdf_path)
 
+    await log_message(ctx, "info", f"parse_pdf_structure start: {pdf_path}")
+    await report_progress(ctx, 5, message=f"Validating {pdf_file.name}")
+
     if not pdf_file.exists():
         return f"❌ File not found: {pdf_path}"
 
@@ -77,8 +119,45 @@ async def parse_pdf_structure(
         out_path = settings.data_dir / doc_id_obj.value
 
     try:
+        out_path.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(pdf_file, out_path / "original.pdf")
+
+        active_pdf = pdf_file
+        if ocr_enabled:
+            await report_progress(
+                ctx, 15, message=f"Running OCR preprocessing for {pdf_file.name}"
+            )
+            if ocr_processor is None:
+                return "❌ OCR processor not configured."
+            active_pdf = ocr_processor.preprocess_pdf(
+                pdf_file,
+                out_path / "ocr_processed.pdf",
+                language=ocr_language,
+                rotate_pages=rotate_pages,
+                deskew=deskew,
+            ).output_path
+
+        await report_progress(
+            ctx, 25, message=f"Loading Marker extractor for {pdf_file.name}"
+        )
         extractor = get_marker_extractor()
-        manifest = extractor.extract_to_manifest(pdf_file, out_path)
+        await report_progress(
+            ctx, 45, message=f"Parsing structure from {pdf_file.name}"
+        )
+        manifest = extractor.extract_to_manifest(active_pdf, out_path)
+        await report_progress(ctx, 90, message=f"Finalizing assets for {pdf_file.name}")
+
+        segmentation_path = ""
+        try:
+            if out_path.is_relative_to(settings.data_dir):
+                segmentation_file = (
+                    await segmentation_service.save_document_segmentation(
+                        manifest.doc_id
+                    )
+                )
+                segmentation_path = str(segmentation_file)
+        except Exception:
+            segmentation_path = ""
 
         elapsed = time.time() - start
 
@@ -99,8 +178,11 @@ async def parse_pdf_structure(
             f"- Manifest: `{manifest.manifest_path}`",
             f"- Markdown: `{manifest.markdown_path}`",
             f"- Blocks: `{out_path / 'blocks.json'}`",
+            f"- Original PDF: `{out_path / 'original.pdf'}`",
             "",
         ]
+        if segmentation_path:
+            lines.insert(-1, f"- Segmentation: `{segmentation_path}`")
 
         # Show TOC preview
         if manifest.toc:
@@ -110,11 +192,17 @@ async def parse_pdf_structure(
             if len(manifest.toc) > 10:
                 lines.append(f"- _...and {len(manifest.toc) - 10} more_")
 
+        await report_progress(ctx, 100, message=f"Finished parsing {pdf_file.name}")
+        await log_message(
+            ctx, "info", f"parse_pdf_structure complete: {manifest.doc_id}"
+        )
         return "\n".join(lines)
 
     except RuntimeError as e:
+        await log_message(ctx, "error", f"parse_pdf_structure unavailable: {e}")
         return f"❌ Marker parsing unavailable: {e!s}"
     except Exception as e:
+        await log_message(ctx, "error", f"parse_pdf_structure failed: {e}")
         return f"❌ Marker parsing failed: {e!s}"
 
 
@@ -202,6 +290,11 @@ async def ingest_documents(
     file_paths: list[str],
     async_mode: bool = True,
     use_marker: bool = False,
+    ocr_enabled: bool = False,
+    ocr_language: str = "eng",
+    rotate_pages: bool = False,
+    deskew: bool = False,
+    ctx: Context | None = None,
 ) -> str:
     """
     Process PDF files and create Document Manifests.
@@ -235,6 +328,13 @@ async def ingest_documents(
         # With Marker for precise source tracking:
         ingest_documents(["/papers/textbook.pdf"], use_marker=True, async_mode=False)
     """
+    await log_message(
+        ctx,
+        "info",
+        f"ingest_documents start: files={len(file_paths)} use_marker={use_marker} async_mode={async_mode}",
+    )
+    await report_progress(ctx, 5, message="Validating ingest request")
+
     # Lazy-load Marker if requested
     if use_marker and document_service.marker_extractor is None:
         try:
@@ -247,7 +347,19 @@ async def ingest_documents(
             )
 
     if async_mode:
-        job = await job_service.create_ingest_job(file_paths)
+        await report_progress(ctx, 20, message="Creating background ETL job")
+        job = await job_service.create_ingest_job(
+            file_paths,
+            parameters={
+                "use_marker": use_marker,
+                "ocr_enabled": ocr_enabled,
+                "ocr_language": ocr_language,
+                "rotate_pages": rotate_pages,
+                "deskew": deskew,
+            },
+        )
+        await report_progress(ctx, 100, message=f"Created job {job.job_id}")
+        await log_message(ctx, "info", f"ingest_documents job created: {job.job_id}")
 
         backend_note = " (Marker)" if use_marker else ""
         return (
@@ -260,12 +372,27 @@ async def ingest_documents(
             f"Or use `list_jobs()` to see all active jobs."
         )
     else:
-        results = await document_service.ingest(file_paths, use_marker=use_marker)
+        await report_progress(ctx, 15, message="Starting synchronous ingestion")
+        results = await document_service.ingest(
+            file_paths,
+            use_marker=use_marker,
+            progress_callback=create_subrange_progress_callback(ctx, 15, 95),
+            ocr_enabled=ocr_enabled,
+            ocr_language=ocr_language,
+            rotate_pages=rotate_pages,
+            deskew=deskew,
+        )
+        await report_progress(ctx, 100, message="Synchronous ingestion finished")
+        await log_message(ctx, "info", "ingest_documents sync completed")
 
         backend_label = "Marker" if use_marker else "PyMuPDF"
         output_lines = [f"# Ingestion Results ({backend_label})\n"]
         success_count = sum(1 for r in results if r.success)
         output_lines.append(f"**Processed:** {success_count}/{len(results)} files\n")
+        if ocr_enabled:
+            output_lines.append(
+                f"**OCR:** enabled ({ocr_language}, rotate_pages={rotate_pages}, deskew={deskew})\n"
+            )
 
         for result in results:
             if result.success:
@@ -344,6 +471,7 @@ async def convert_pdf_to_docx(
     doc_id: str,
     output_path: str | None = None,
     mode: str = "content",
+    ctx: Context | None = None,
 ) -> str:
     """
     將已攝入的 PDF 文件轉為 DOCX。
@@ -352,13 +480,19 @@ async def convert_pdf_to_docx(
     - `content`：內容層重建。根據 PDF ETL 的 Markdown/表格/圖片生成可讀 DOCX。
     - `fidelity`：目前不支援，因為 PDF ETL 並非版面可逆。
     """
+    await log_message(ctx, "info", f"convert_pdf_to_docx start: {doc_id}")
+    await report_progress(ctx, 10, message=f"Converting {doc_id} to DOCX")
     result = await document_service.convert_pdf_to_docx(
         doc_id,
         output_path,
         mode=mode,
     )
     if not result.get("success"):
+        await log_message(ctx, "error", f"convert_pdf_to_docx failed: {doc_id}")
         return f"❌ 轉換失敗：{result.get('error', '未知錯誤')}"
+
+    await report_progress(ctx, 100, message=f"Finished DOCX conversion for {doc_id}")
+    await log_message(ctx, "info", f"convert_pdf_to_docx complete: {doc_id}")
 
     return "\n".join(
         [
@@ -429,7 +563,7 @@ async def inspect_document_manifest(doc_id: str) -> str:
         for sec in manifest.assets.sections:
             indent = "  " * (sec.level - 1) if sec.level > 1 else ""
             output_lines.append(
-                f"{indent}- `{sec.id}`: {sec.title} (L{sec.start_line}-{sec.end_line})"
+                f"{indent}- `{sec.id}`: {sec.title} ({_display_line_range(sec.start_line, sec.end_line)})"
             )
     else:
         output_lines.append("_No sections found_")
@@ -447,11 +581,169 @@ async def inspect_document_manifest(doc_id: str) -> str:
 
 
 @mcp.tool()
+async def export_document_segmentation(
+    doc_id: str,
+    page: int | None = None,
+    limit: int | None = None,
+    output_path: str | None = None,
+    ctx: Context | None = None,
+) -> str:
+    """匯出整合 manifest、blocks、assets、reading order 的 segmentation schema。"""
+    await log_message(ctx, "info", f"export_document_segmentation start: {doc_id}")
+    await report_progress(ctx, 10, message=f"Loading manifest for {doc_id}")
+
+    target = await segmentation_service.save_document_segmentation(
+        doc_id,
+        output_path=output_path,
+        page=page,
+        limit=limit,
+    )
+    segmentation = await segmentation_service.export_document_segmentation(
+        doc_id,
+        page=page,
+        limit=limit,
+    )
+
+    await report_progress(ctx, 100, message=f"Segmentation exported for {doc_id}")
+    await log_message(ctx, "info", f"export_document_segmentation complete: {doc_id}")
+
+    summary_lines = [
+        "# Unified Segmentation Export",
+        "",
+        f"**doc_id:** `{segmentation.doc_id}`",
+        f"**backend:** {segmentation.source_backend}",
+        f"**reading_order_policy:** {segmentation.reading_order_policy}",
+        f"**segments:** {len(segmentation.segments)}",
+        f"**pages:** {segmentation.page_count}",
+        f"**output:** `{target}`",
+        "",
+        "## Segment Counts by Page",
+    ]
+    for page_number, count in segmentation.page_count_summary().items():
+        summary_lines.append(f"- Page {page_number}: {count}")
+
+    preview_segments = segmentation.segments[:5]
+    if preview_segments:
+        summary_lines.extend(["", "## Preview"])
+        for segment in preview_segments:
+            summary_lines.append(
+                f"- #{segment.reading_order} P{segment.page_number} {segment.segment_type}"
+                f" [{segment.segment_id}]"
+            )
+
+    return "\n".join(summary_lines)
+
+
+@mcp.tool()
+async def visualize_document_layout(
+    doc_id: str,
+    page: int = 1,
+    show_labels: bool = True,
+    include_reading_order: bool = True,
+    output_path: str | None = None,
+    ctx: Context | None = None,
+) -> list[TextContent | ImageContent]:
+    """產生 PDF page overlay，直接檢查 block bbox、類型與 reading order。"""
+    await log_message(
+        ctx, "info", f"visualize_document_layout start: {doc_id} page={page}"
+    )
+    await report_progress(
+        ctx, 10, message=f"Loading segmentation for {doc_id} page {page}"
+    )
+
+    segmentation = await segmentation_service.export_document_segmentation(
+        doc_id, page=page
+    )
+    await report_progress(
+        ctx, 55, message=f"Rendering layout overlay for {doc_id} page {page}"
+    )
+    overlay = layout_visualizer.render_page_overlay(
+        repository.get_doc_dir(doc_id),
+        segmentation,
+        page,
+        show_labels=show_labels,
+        include_reading_order=include_reading_order,
+        output_path=output_path,
+    )
+
+    await report_progress(
+        ctx, 100, message=f"Layout overlay ready for {doc_id} page {page}"
+    )
+    await log_message(
+        ctx, "info", f"visualize_document_layout complete: {doc_id} page={page}"
+    )
+
+    summary = [
+        f"## Layout Overlay: {doc_id}",
+        f"**Page:** {page}",
+        f"**Segments:** {len(segmentation.segments)}",
+        f"**Image Size:** {overlay.width}×{overlay.height}",
+    ]
+    if overlay.output_path:
+        summary.append(f"**Saved To:** {overlay.output_path}")
+
+    return [
+        TextContent(type="text", text="\n".join(summary)),
+        ImageContent(type="image", data=overlay.image_base64, mimeType="image/png"),
+    ]
+
+
+@mcp.tool()
+async def ocr_pdf_document(
+    pdf_path: str,
+    output_path: str | None = None,
+    language: str = "eng",
+    rotate_pages: bool = False,
+    deskew: bool = False,
+    ctx: Context | None = None,
+) -> str:
+    """執行按需 OCR 前處理，產生可再供 ingest/parse 使用的 PDF。"""
+    pdf_file = Path(pdf_path)
+    await log_message(ctx, "info", f"ocr_pdf_document start: {pdf_path}")
+    await report_progress(ctx, 10, message=f"Preparing OCR for {pdf_file.name}")
+
+    if not pdf_file.exists():
+        return f"❌ File not found: {pdf_path}"
+    if ocr_processor is None:
+        return "❌ OCR processor not configured."
+
+    target = (
+        Path(output_path)
+        if output_path
+        else pdf_file.with_name(f"{pdf_file.stem}.ocr.pdf")
+    )
+    result = ocr_processor.preprocess_pdf(
+        pdf_file,
+        target,
+        language=language,
+        rotate_pages=rotate_pages,
+        deskew=deskew,
+    )
+
+    await report_progress(
+        ctx, 100, message=f"OCR preprocessing finished for {pdf_file.name}"
+    )
+    await log_message(ctx, "info", f"ocr_pdf_document complete: {target}")
+
+    return "\n".join(
+        [
+            "✅ OCR preprocessing completed",
+            f"- **input**: `{pdf_path}`",
+            f"- **output**: `{result.output_path}`",
+            f"- **language**: {result.language}",
+            f"- **rotate_pages**: {result.rotate_pages}",
+            f"- **deskew**: {result.deskew}",
+        ]
+    )
+
+
+@mcp.tool()
 async def fetch_document_asset(
     doc_id: str,
     asset_type: str,
     asset_id: str = "full",
     max_size: int | None = None,
+    ctx: Context | None = None,
 ) -> list[TextContent | ImageContent]:
     """
     Fetch specific content from a document with precision.
@@ -489,22 +781,39 @@ async def fetch_document_asset(
         # Get original image (no resize)
         fetch_document_asset("abc123", "figure", "fig_2_1", max_size=0)
     """
+    await log_message(
+        ctx, "info", f"fetch_document_asset start: {doc_id} {asset_type}:{asset_id}"
+    )
+    await report_progress(
+        ctx, 10, message=f"Fetching {asset_type} {asset_id} from {doc_id}"
+    )
     result = await asset_service.fetch_asset(
         doc_id, asset_type, asset_id, max_size=max_size
     )
 
     if not result.success:
+        await log_message(ctx, "error", f"fetch_document_asset failed: {result.error}")
         return [TextContent(type="text", text=f"Error: {result.error}")]
 
     if result.image_base64:
-        metadata = (
-            f"## Figure: {result.asset_id}\n"
-            f"**Page:** {result.page or 'Unknown'}\n"
-            f"**Size:** {result.width}×{result.height}\n"
-            f"**Format:** {result.image_media_type}"
+        await report_progress(
+            ctx, 100, message=f"Fetched {asset_type} {asset_id} from {doc_id}"
         )
+        metadata_lines = [
+            f"## Figure: {result.asset_id}",
+            f"**Page:** {result.page or 'Unknown'}",
+            f"**Size:** {result.width}×{result.height}",
+            f"**Format:** {result.image_media_type}",
+        ]
+        line_range = _format_line_range(result.line_start, result.line_end)
+        if line_range:
+            metadata_lines.append(f"**Line Range:** {line_range}")
+        if result.section_title:
+            metadata_lines.append(f"**Section:** {result.section_title}")
+        if result.source_block_id:
+            metadata_lines.append(f"**Source Block:** {result.source_block_id}")
         return [
-            TextContent(type="text", text=metadata),
+            TextContent(type="text", text="\n".join(metadata_lines)),
             ImageContent(
                 type="image",
                 data=result.image_base64,
@@ -512,9 +821,19 @@ async def fetch_document_asset(
             ),
         ]
     else:
+        await report_progress(
+            ctx, 100, message=f"Fetched {asset_type} {asset_id} from {doc_id}"
+        )
         lines = [f"## {asset_type.title()}: {result.asset_id}"]
         if result.page:
             lines.append(f"**Page:** {result.page}")
+        line_range = _format_line_range(result.line_start, result.line_end)
+        if line_range:
+            lines.append(f"**Line Range:** {line_range}")
+        if result.section_title:
+            lines.append(f"**Section:** {result.section_title}")
+        if result.source_block_id:
+            lines.append(f"**Source Block:** {result.source_block_id}")
         lines.append("")
         lines.append(result.text_content or "")
         return [TextContent(type="text", text="\n".join(lines))]
