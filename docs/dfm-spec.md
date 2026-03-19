@@ -480,3 +480,11 @@ Presentation Layer:
 - `python-docx >= 1.1.0`：docx 解析與重建
 - `lxml >= 5.0.0`：XML 處理（python-docx 已內含）
 - 現有依賴：`pydantic`, `aiofiles`, `Pillow`
+
+## 11. 格式互轉保真度
+
+DFM round-trip (DOCX → DFM → DOCX) 經過 3 次迴圈測試驗證為 **100% 冪等**——所有 6 個維度（Structure, Text, Format, Table, Media, Style）零退化。
+
+跨格式轉換 (DOCX ↔ DOC, DOCX ↔ ODT) 保真度為 **94.5%**，損失來自 LibreOffice 轉換引擎的格式模型差異。
+
+> 完整測試報告見 [`docs/format-conversion-report.md`](format-conversion-report.md)

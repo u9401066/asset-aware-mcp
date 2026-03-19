@@ -227,4 +227,42 @@ asset-aware-mcp 在 MCP + DOCX 生態系中佔據一個 **獨特且難以複製�
 
 ---
 
+## 8. 通用文件轉換參考專案 (非 MCP)
+
+> 補充說明：以下為 MCP 生態系之外，在文件格式轉換與品質驗證領域最具參考價值的開源專案。
+
+| 專案 | GitHub | 重點 | 可借鑑之處 |
+|------|--------|------|-----------|
+| **Pandoc** | [jgm/pandoc](https://github.com/jgm/pandoc) | 萬用格式轉換器 (40+ 格式)，Haskell。DOCX↔MD↔HTML↔LaTeX↔ODT | AST 中間表示 + reader↔writer round-trip 一致性測試 |
+| **LibreOffice Core** | [LibreOffice/core](https://github.com/LibreOffice/core) | 業界最完整開源文件引擎 | `sw/qa/extras/ooxmlexport/` 有**數百個 round-trip 測試**（目前業界最大規模） |
+| **Docling (IBM)** | [DS4SD/docling](https://github.com/DS4SD/docling) | PDF/DOCX/PPTX/HTML → 統一 IR | DoclingDocument 跨格式中間表示，table structure recognition |
+| **python-docx** | [python-openxml/python-docx](https://github.com/python-openxml/python-docx) | Python OOXML 操作基礎庫 | `oxml` 層保留未知 XML 策略；社群 round-trip issue 是痛點最佳來源 |
+| **Marker** | [VikParuchuri/marker](https://github.com/VikParuchuri/marker) | ML-based PDF→Markdown | `benchmark/` 品質比較框架 (BLEU/edit-distance) |
+| **Apache POI** | [apache/poi](https://github.com/apache/poi) | Java OOXML/OLE2 處理標準 | OOXML spec compliance 測試 + 邊界情況 .docx 收集 |
+| **ODF Toolkit** | [tdf/odftoolkit](https://github.com/tdf/odftoolkit) | Apache 基金會 ODF 處理 | ODF Validator 規範驗證工具 |
+| **Mammoth** | [mwilliamson/mammoth](https://github.com/mwilliamson/mammoth) | DOCX→HTML 語義轉換 | Style map 映射規則引擎（語義 vs 視覺保真度取捨） |
+| **veraPDF** | [veraPDF/veraPDF-library](https://github.com/veraPDF/veraPDF-library) | PDF/A 合規性驗證器 | 規則引擎式驗證架構，每個規則獨立可配置 |
+| **Calibre** | [kovidgoyal/calibre](https://github.com/kovidgoyal/calibre) | 電子書格式轉換 (EPUB↔DOCX↔PDF↔HTML) | Pipeline 階段設計 (parse→transform→serialize) |
+
+### 8.1 Round-trip 領域競爭定位
+
+```
+  round-trip 測試完整度
+  │
+  │ ● LibreOffice Core (數百個 XPath 逐屬性測試)
+  │
+  │         ● asset-aware-mcp (6 維度 + 3-cycle + cross-format)
+  │
+  │               ● Pandoc (Golden file AST 比對)
+  │
+  │                     ○ veraPDF (合規性，非 round-trip)
+  │
+  │                           ○ MCP 競爭者 (全部 = 0)
+  └───────────────────────────────────────────────> 格式多樣性
+```
+
+> 詳細測試報告見 [`docs/format-conversion-report.md`](format-conversion-report.md)
+
+---
+
 *本分析基於 2026-06 GitHub 公開資料。星數與功能可能隨時變動。*

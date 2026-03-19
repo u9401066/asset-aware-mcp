@@ -76,19 +76,24 @@ class DocxService:
         if not path.exists():
             return {"success": False, "error": f"File not found: {path}"}
 
-        # Auto-convert .doc to .docx via LibreOffice
-        if path.suffix.lower() == ".doc":
-            converted = self._convert_doc_to_docx(path)
+        # Auto-convert .doc / .odt / .ods to .docx via LibreOffice
+        if path.suffix.lower() in (".doc", ".odt", ".ods"):
+            converted = self._convert_to_docx_via_libreoffice(path)
             if converted is None:
                 return {
                     "success": False,
                     "error": (
-                        f"Failed to convert .doc to .docx: {path}. "
+                        f"Failed to convert {path.suffix} to .docx: {path}. "
                         "Please install LibreOffice and ensure the 'libreoffice' or "
                         "'soffice' binary is available, or set LIBREOFFICE_BIN."
                     ),
                 }
-            logger.info("Auto-converted .doc → .docx: %s → %s", path, converted)
+            logger.info(
+                "Auto-converted %s → .docx: %s → %s",
+                path.suffix,
+                path,
+                converted,
+            )
             path = converted
 
         if path.suffix.lower() not in (".docx", ".docm"):
@@ -206,6 +211,14 @@ class DocxService:
 
         Returns the path to the converted .docx, or None on failure.
         """
+        return DocxService._convert_to_docx_via_libreoffice(doc_path)
+
+    @staticmethod
+    def _convert_to_docx_via_libreoffice(source_path: Path) -> Path | None:
+        """Convert any LibreOffice-supported file (.doc/.odt/.ods) to .docx.
+
+        Returns the path to the converted .docx, or None on failure.
+        """
         try:
             libreoffice_bin = DocxService._find_libreoffice_binary()
             if libreoffice_bin is None:
@@ -222,7 +235,7 @@ class DocxService:
                         "--headless",
                         "--convert-to",
                         "docx",
-                        str(doc_path),
+                        str(source_path),
                         "--outdir",
                         tmp_dir,
                     ],
@@ -232,17 +245,21 @@ class DocxService:
                     check=False,
                 )
                 if result.returncode != 0:
-                    logger.error("LibreOffice conversion failed: %s", result.stderr)
+                    logger.error(
+                        "LibreOffice %s→docx failed: %s",
+                        source_path.suffix,
+                        result.stderr,
+                    )
                     return None
 
                 # Find the converted file
-                converted = Path(tmp_dir) / (doc_path.stem + ".docx")
+                converted = Path(tmp_dir) / (source_path.stem + ".docx")
                 if not converted.exists():
                     logger.error("Converted file not found: %s", converted)
                     return None
 
                 # Move to same directory as original
-                dest = doc_path.with_suffix(".docx")
+                dest = source_path.with_suffix(".docx")
                 shutil.move(str(converted), str(dest))
                 return dest
         except FileNotFoundError:
@@ -693,8 +710,67 @@ class DocxService:
             "mode": mode,
         }
 
+    async def convert_to_odt(
+        self,
+        doc_id: str,
+        output_path: str | None = None,
+        *,
+        mode: str = "fidelity",
+    ) -> dict[str, Any]:
+        """
+        Convert an ingested DOCX/DFM document to ODT (OpenDocument Text).
+
+        Supported modes:
+        - ``fidelity``: rebuild current DOCX state and render via LibreOffice.
+        """
+        if mode != "fidelity":
+            return {
+                "success": False,
+                "error": (
+                    "DOCX → ODT currently supports fidelity mode only. "
+                    "Use fidelity mode to preserve layout via LibreOffice."
+                ),
+            }
+
+        doc_dir = self.repository.get_doc_dir(doc_id)
+        if not (doc_dir / "ir.json").exists():
+            return {"success": False, "error": f"IR not found for {doc_id}"}
+
+        dfm_text = await self.get_dfm(doc_id)
+        if dfm_text is None:
+            return {"success": False, "error": f"DFM not found for {doc_id}"}
+
+        target_odt = (
+            Path(output_path) if output_path is not None else doc_dir / "output.odt"
+        )
+
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            tmp_dir = Path(tmp_dir_name)
+            temp_docx = tmp_dir / f"{doc_id}.docx"
+
+            save_result = await self.save_docx(doc_id, dfm_text, str(temp_docx))
+            if not save_result.get("success"):
+                return save_result
+
+            converted_odt = self._convert_docx_file_to_odt(temp_docx, target_odt)
+            if converted_odt is None:
+                return {
+                    "success": False,
+                    "error": (
+                        "Failed to convert DOCX to ODT. Please install LibreOffice and ensure "
+                        "the 'libreoffice' or 'soffice' binary is available, or set LIBREOFFICE_BIN."
+                    ),
+                }
+
+        return {
+            "success": True,
+            "doc_id": doc_id,
+            "output_path": str(converted_odt),
+            "mode": mode,
+        }
+
     # ========================================================================
-    # Markdown → DOCX/PDF/DOC export (no prior ingest needed)
+    # Markdown → DOCX/PDF/DOC/ODT export (no prior ingest needed)
     # ========================================================================
 
     async def export_from_markdown(
@@ -705,7 +781,7 @@ class DocxService:
         output_format: str = "docx",
     ) -> dict[str, Any]:
         """
-        Convert standalone Markdown to DOCX, PDF, or DOC.
+        Convert standalone Markdown to DOCX, PDF, DOC, or ODT.
 
         Unlike save_docx (which requires a prior ingest_docx), this method
         creates a document from scratch — no original .docx is needed.
@@ -714,7 +790,7 @@ class DocxService:
             md_text: Markdown content as a string.
             md_path: Path to a .md file (used if md_text is None).
             output_path: Where to write the output file.
-            output_format: "docx", "pdf", or "doc".
+            output_format: "docx", "pdf", "doc", or "odt".
 
         Returns:
             Result dict with output_path and success status.
@@ -732,10 +808,10 @@ class DocxService:
             return {"success": False, "error": "No markdown content provided"}
 
         output_format = output_format.lower().strip()
-        if output_format not in ("docx", "pdf", "doc"):
+        if output_format not in ("docx", "pdf", "doc", "odt"):
             return {
                 "success": False,
-                "error": f"Unsupported format: {output_format}. Use docx, pdf, or doc.",
+                "error": f"Unsupported format: {output_format}. Use docx, pdf, doc, or odt.",
             }
 
         # Resolve output path
@@ -753,13 +829,15 @@ class DocxService:
                 converter.convert(md_text, out)
                 return {"success": True, "output_path": str(out), "format": "docx"}
 
-            # For PDF/DOC: first create a temp docx, then convert via LibreOffice
+            # For PDF/DOC/ODT: first create a temp docx, then convert via LibreOffice
             with tempfile.TemporaryDirectory() as tmp_dir_name:
                 tmp_docx = Path(tmp_dir_name) / "temp.docx"
                 converter.convert(md_text, tmp_docx)
 
                 if output_format == "pdf":
                     result = self._convert_docx_file_to_pdf(tmp_docx, out)
+                elif output_format == "odt":
+                    result = self._convert_docx_file_to_odt(tmp_docx, out)
                 else:  # doc
                     result = self._convert_docx_file_to_doc(tmp_docx, out)
 
@@ -974,6 +1052,13 @@ class DocxService:
     ) -> Path | None:
         """Convert a DOCX file to DOC using LibreOffice."""
         return cls._convert_docx_file_to_format(docx_path, output_path, "doc")
+
+    @classmethod
+    def _convert_docx_file_to_odt(
+        cls, docx_path: Path, output_path: Path
+    ) -> Path | None:
+        """Convert a DOCX file to ODT using LibreOffice."""
+        return cls._convert_docx_file_to_format(docx_path, output_path, "odt")
 
     @classmethod
     def _convert_docx_file_to_format(

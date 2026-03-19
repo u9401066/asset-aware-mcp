@@ -2,6 +2,24 @@
 
 ## Done
 
+- 完成 `0.6.1` / `0.6.2` 分段發布準備與驗證
+	- 版本號同步到 `0.6.2`：`pyproject.toml`、`src/__init__.py`、`vscode-extension/package.json`、`package-lock.json`、`uv.lock`
+	- `CHANGELOG.md` 新增 `0.6.1` 與 `0.6.2` 條目，將 OpenDocument 支援與策略/文件更新拆成兩個 patch release
+	- README / README.zh-TW / extension README / copilot-instructions / productContext 全面同步為 `47 tools / 13 resources`
+	- 修正 `src/presentation/tools/__init__.py` 工具總數與 `convert_docx_to_odt` 匯出註冊
+	- `./scripts/count_tools.sh` 驗證：47 tools / 13 resources
+	- `uv run pytest tests/unit -q`：386 passed
+	- `cd vscode-extension && npm run test:unit`：57 passing
+	- `./scripts/release.sh`：通過，成功產生 `dist/asset_aware_mcp-0.6.2*` 與 `vscode-extension/asset-aware-mcp-0.6.2.vsix`
+- 完成 agent asset 全覆蓋 gap 分析與分段發布建議
+	- 新增 `docs/agent-asset-gap-analysis.md`
+	- 將目標拆成四層：格式轉換 / 資產拆解 / 結構導航 / 語義理解
+	- 量化目前整體完成度約 35%，並定義 Phase 1/2/3 完成後的預估提升
+	- 明確建議按 Release A/B/C/D 分段發布，而非把所有 gap 修補打成單一大版本
+	- Release A: RTF/TXT/MD/CSV/HTML
+	- Release B: XLSX/XLS 原生解析
+	- Release C: 圖片 caption、圖片 OCR、DOCX 結構導航、自動摘要
+	- Release D: PPTX/EPUB/EML/圖片直接 ingest/LaTeX
 - 修正 section truth 在 manifest / marker ingest / fetch 間分叉的設計問題
 	- `ManifestGenerator.generate()` 新增 `sections` 參數，允許 ETL 路徑傳入預先計算好的 section 真相，避免 Marker ingest 先算 section 後又被 generator 覆蓋
 	- PDF TOC 路徑不再只產生 `start_line=0/end_line=0` 的 section；現在會用 markdown line index 補齊 line span 與 preview
@@ -77,10 +95,14 @@
 
 ## Doing
 
-- v0.6.0 release prep：同步版本 / changelog / Memory Bank，準備跑完整 release 驗證、commit、push、tag
+- 等待實際執行外部發布：PyPI / VS Code Marketplace / Git tag
 
 ## Next
 
+- 如需真正發布，依序執行：`uv publish`、`cd vscode-extension && npx vsce publish`、`git tag v0.6.2 && git push --tags`
+- 若仍要保留 `0.6.1` 實體 tag，需從對應內容切出獨立 commit/tag，再推送 `v0.6.1`
+- 決定 Release A 的具體版本號與驗收標準
+- 若採分段發布，README / CHANGELOG / copilot-instructions 的版本敘事需從單次大更新改為連續小版本
 - 視需要將 Linux smoke test 擴展為 CI 中對 `Check System Dependencies` 輸出的斷言
 - 視需要補 integration test：實際產生 segmentation.json 與 layout overlay PNG
 - 視需要將 line resolver 從 best-effort text match 升級為 ETL 階段直接寫入 token/line spans

@@ -7,6 +7,44 @@
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-03-19
+
+### Added
+
+- **Agent asset 覆蓋規劃與操作文件**
+  - 新增 `docs/agent-asset-gap-analysis.md`，整理 agent 資產全覆蓋目標、量化 gap 與 Release A/B/C/D 分段發布策略
+  - 新增 `docs/github-cli.md`，整理團隊常用 GitHub CLI 維運流程
+  - 新增 `scripts/gh_update_repo_metadata.sh` 與 `scripts/gh_update_issue_or_pr.sh`，加速 repo metadata、issue、PR 的批次更新
+
+### Changed
+
+- **文件與版本 metadata 對齊 0.6.2**
+  - README、README.zh-TW、VS Code extension README、copilot-instructions 與 Memory Bank 同步更新為 `47 tools / 13 resources`
+  - Release 敘事正式拆成 `0.6.1` 與 `0.6.2` 兩段 patch release，避免把功能擴展與策略文件混成單一大版
+
+## [0.6.1] - 2026-03-19
+
+### Added
+
+- **OpenDocument 互轉與保真測試**
+  - `ingest_docx` 現在支援 `.odt`、`.ods` 經由 LibreOffice 自動轉為 `.docx`
+  - 新增 `convert_docx_to_odt` 工具，支援 DOCX/DFM → ODT 保真匯出
+  - 新增 `scripts/roundtrip_3cycle_test.py`，驗證 DFM 3-cycle 與 DOCX↔DOC / DOCX↔ODT cross-format fidelity
+  - 新增 `docs/format-conversion-report.md`，記錄 round-trip 結果與退化分析
+
+### Changed
+
+- **Markdown / DOCX 匯出路徑擴展**
+  - `export_markdown` 現在支援輸出 ODT
+  - `src/presentation/tools/__init__.py` 與相關文件同步為 `47 tools / 13 resources`
+- **Table domain models 對齊 Pydantic v2**
+  - A2T 相關 table entities 改用 `BaseModel` / `Field` / `field_validator`，改善驗證與序列化一致性
+
+### Fixed
+
+- **舊版表格資料相容性**
+  - `TableContext.created_at` 可安全處理 ISO string 與 legacy 空字串，降低歷史 JSON 載入失敗風險
+
 ## [0.6.0] - 2026-03-18
 
 ### Added

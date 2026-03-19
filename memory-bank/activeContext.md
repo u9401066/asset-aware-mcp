@@ -4,6 +4,10 @@
 
 ## 🎯 當前焦點
 
+- **0.6.1 / 0.6.2 已完成 release prep**：版本、changelog、README、extension metadata 已同步，`release.sh` 成功建出 wheel 與 `asset-aware-mcp-0.6.2.vsix`
+- **當前版本真相為 0.6.2**：本地已完成 patch-release split；若要真正對外發布，下一步是 PyPI / VS Code Marketplace / Git tag 推送
+- **Agent asset 全覆蓋規劃已補齊**：新增 `docs/agent-asset-gap-analysis.md`，明確拆成格式轉換、資產拆解、結構導航、語義理解四層，並量化目前完成度約 35%
+- **建議採分段發布**：先發格式入口補齊（RTF/TXT/MD/CSV/HTML），再發 XLSX 原生化，其次是 agent 理解增強，最後才是 PPTX/EPUB/EML 等高成本格式
 - **Section truth 已收斂**：manifest generator 現在是 section metadata 最終寫入點；Marker ingest 不再先算 section 再被 generator 用另一套規則覆蓋
 - **Line span 正式化完成**：fetch asset 已可直接回傳 line range / section context，Marker blocks 也在 ETL 階段持久化 line span
 - **Segmentation correctness 修復完成**：已修正 stale `original.pdf`、same-page asset 錯配與 section line range 顯示語意
@@ -111,10 +115,10 @@ src/
 ├── domain/          # 🔵 核心業務邏輯 (+docx_entities, docx_value_objects)
 ├── application/     # 🟢 使用案例 (+docx_service, dfm_table_bridge)
 ├── infrastructure/  # 🟠 外部依賴實作 (+docx_adapter, dfm_parser, dfm_renderer, docx_validator)
-└── presentation/    # 🔴 MCP Server (46 tools in 7 modules, 13 resources)
+└── presentation/    # 🔴 MCP Server (47 tools in 7 modules, 13 resources)
     ├── tools/
     │   ├── document_tools.py   # ETL + document management (11)
-    │   ├── docx_tools.py       # Docx DFM + conversion (12) — core + validator + bridge
+    │   ├── docx_tools.py       # Docx DFM + conversion (14) — core + validator + bridge
     │   ├── section_tools.py    # Navigation (5)
     │   ├── job_tools.py        # Job (3)
     │   ├── knowledge_tools.py  # KG (2)
@@ -143,4 +147,4 @@ src/
 2. **文件缺乏**: API Reference, Examples, FAQ
 
 ---
-*Last updated: 2026-03-18*
+*Last updated: 2026-03-19*

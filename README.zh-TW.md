@@ -47,7 +47,7 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 🔄 **非同步任務流水線** - 支援大型文件的非同步處理與進度追蹤。
 - 🗺️ **文件清單 (Manifest)** - 為 Agent 提供結構化的文件「地圖」，實現精確數據存取。
 - 🧠 **LightRAG 整合** - 知識圖譜 + 向量索引，支援跨文件對比與推理。
-- 📝 **Docx 即時編輯 (DFM)** - 以 Markdown 格式編輯 .docx 檔案，透過 **Docx-Flavored Markdown** 格式。支援舊版 `.doc` 格式（自動透過 LibreOffice 轉換）。提供 13 個工具：匯入、讀取、儲存、列出、刪除、匯出、strict 往返保真驗證、DOCX→PDF、DOCX→DOC，以及 Docx ↔ A2T 表格橋接。
+- 📝 **Docx 即時編輯 (DFM)** - 以 Markdown 格式編輯 .docx 檔案，透過 **Docx-Flavored Markdown** 格式。支援 `.doc`、`.odt`、`.ods` 經 LibreOffice 自動轉換後攝入。提供 14 個工具：匯入、讀取、儲存、列出、刪除、匯出、strict 往返保真驗證、DOCX→PDF、DOCX→DOC、DOCX→ODT，以及 Docx ↔ A2T 表格橋接。
 - 📊 **A2T (Anything to Table)** - 7 個 operation-based 工具，從**任意來源**（PDF 資產、知識圖譜、URL、使用者輸入）建立專業表格。支援：**引用管理** (AssetRef)、**變更審計**、**Schema 演進**、**模板**、**草稿機制**與**節省 Token 的續作模式**。
 - 🖥️ **VS Code 管理擴充功能** - 提供圖形化介面監控伺服器狀態、已匯入文件，以及 **A2T 表格與草稿**，支援一鍵開啟 Excel。
 - 🔌 **MCP 伺服器** - 透過 FastMCP 向 Copilot/Claude 開放工具與資源。
@@ -63,8 +63,8 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP 伺服器 (模組化 Presentation 層)          │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 46 工具，7 個模組                       │   │
-│  │   document (11) │ docx (13) │ section (5)       │   │
+│  │ tools/: 47 工具，7 個模組                       │   │
+│  │   document (11) │ docx (14) │ section (5)       │   │
 │  │   job (3) │ knowledge (2) │ table (7) │ profile (5) │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │

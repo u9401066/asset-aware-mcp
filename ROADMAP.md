@@ -6,6 +6,8 @@
 
 ## 最近完成 ✅
 
+- **v0.6.2** (2026-03-19) — 分段發布策略落地、agent asset gap 分析、GitHub CLI 維運文件與腳本
+- **v0.6.1** (2026-03-19) — ODT/ODS 支援、DOCX→ODT 匯出、3-cycle round-trip fidelity 測試與報告
 - **v0.4.2** (2026-03-09) — release.sh 與 GitHub Actions 靜態檢查範圍完全對齊
 - **v0.4.1** (2026-03-09) — Release workflow lint 對齊，確保 GitHub Actions 發版全綠
 - **v0.4.0** (2026-03-09) — 文件級 CRUD、DOCX/PDF 互轉、strict round-trip、Proposal 真實文件戰測

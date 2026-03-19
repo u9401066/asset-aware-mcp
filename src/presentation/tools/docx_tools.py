@@ -442,6 +442,45 @@ async def convert_docx_to_pdf(
 
 
 @mcp.tool()
+async def convert_docx_to_odt(
+    doc_id: str,
+    output_path: str | None = None,
+    mode: str = "fidelity",
+    ctx: Context | None = None,
+) -> str:
+    """
+    將已攝入的 DOCX/DFM 文件轉為 ODT (OpenDocument Text)。
+
+    轉換範圍：
+    - `fidelity`：保真模式。以目前 DFM 狀態重建 DOCX，再用 LibreOffice 輸出 ODT。
+    - `content`：目前不支援。
+
+    用途：
+    - 匯出為 OpenDocument 格式以便在 LibreOffice Writer 中編輯。
+    - 與 ODT/ODS 攝入功能搭配，實現 DOCX ↔ ODT 雙向轉換。
+
+    注意：
+    - 攝入支援 .odt 和 .ods（LibreOffice 自動轉為 .docx）。
+    - 匯出僅支援 ODT（非 ODS），因 DOCX 是文書處理格式、ODS 是試算表格式，無法直接互轉。
+    """
+    await log_message(ctx, "info", f"convert_docx_to_odt start: {doc_id}")
+    await report_progress(ctx, 10, message=f"Converting {doc_id} to ODT")
+    result = await docx_service.convert_to_odt(doc_id, output_path, mode=mode)
+    if not result.get("success"):
+        await log_message(ctx, "error", f"convert_docx_to_odt failed: {doc_id}")
+        return f"❌ 轉換失敗：{result.get('error', '未知錯誤')}"
+
+    await report_progress(ctx, 100, message=f"Finished ODT conversion for {doc_id}")
+
+    return (
+        "✅ DOCX → ODT 轉換成功\n"
+        f"- **doc_id**: `{result.get('doc_id', '')}`\n"
+        f"- **mode**: {result.get('mode', mode)}\n"
+        f"- **output_path**: `{result.get('output_path', '')}`"
+    )
+
+
+@mcp.tool()
 async def docx_validate_roundtrip(
     doc_id: str,
     output_path: str | None = None,

@@ -3,13 +3,17 @@ Domain Layer - Table Entities
 
 Entities and value objects for the A2T (Anything to Table) module.
 Includes: TableContext, CellCitation, ChangeEntry, TableChangeLog, TableTemplate.
+
+All models use Pydantic v2 BaseModel for consistent validation and serialization,
+matching the pattern in entities.py.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal
+
+from pydantic import BaseModel, Field, field_validator
 
 from .value_objects import AssetRef
 
@@ -18,8 +22,7 @@ from .value_objects import AssetRef
 # ============================================================================
 
 
-@dataclass
-class ColumnDef:
+class ColumnDef(BaseModel):
     """Definition of a table column."""
 
     name: str
@@ -33,8 +36,7 @@ class ColumnDef:
 # ============================================================================
 
 
-@dataclass
-class CellCitation:
+class CellCitation(BaseModel):
     """
     一個儲存格的完整引用紀錄。
 
@@ -42,7 +44,7 @@ class CellCitation:
     可有多個引用來源，以及 Agent 信心度。
     """
 
-    refs: list[AssetRef] = field(default_factory=list)
+    refs: list[AssetRef] = Field(default_factory=list)
     confidence: float | None = None  # Agent 信心度 0.0~1.0
     notes: str = ""  # Agent 填寫備註
 
@@ -57,7 +59,7 @@ class CellCitation:
         return None
 
     def to_dict(self) -> dict[str, Any]:
-        """序列化為 dict。"""
+        """序列化為 dict（保持 JSON 格式向後相容）。"""
         d: dict[str, Any] = {
             "refs": [r.to_dict() for r in self.refs],
         }
@@ -87,8 +89,7 @@ class CellCitation:
 # ============================================================================
 
 
-@dataclass
-class ChangeEntry:
+class ChangeEntry(BaseModel):
     """
     一筆表格變更紀錄。
 
@@ -100,10 +101,10 @@ class ChangeEntry:
     target: str  # "table" / "row:2" / "row:2/col:Drug"
     old_value: Any | None = None
     new_value: Any | None = None
-    citations: list[AssetRef] = field(default_factory=list)
+    citations: list[AssetRef] = Field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
-        """序列化為 dict。"""
+        """序列化為 dict（保持 JSON 格式向後相容）。"""
         d: dict[str, Any] = {
             "timestamp": self.timestamp.isoformat(),
             "operation": self.operation,
@@ -130,12 +131,11 @@ class ChangeEntry:
         )
 
 
-@dataclass
-class TableChangeLog:
+class TableChangeLog(BaseModel):
     """表格完整變更歷史。"""
 
     table_id: str
-    entries: list[ChangeEntry] = field(default_factory=list)
+    entries: list[ChangeEntry] = Field(default_factory=list)
 
     def add(self, entry: ChangeEntry) -> None:
         """新增一筆變更紀錄。"""
@@ -156,7 +156,7 @@ class TableChangeLog:
         return [e for e in self.entries if e.target.startswith(prefix)]
 
     def to_dict(self) -> dict[str, Any]:
-        """序列化為 dict。"""
+        """序列化為 dict（保持 JSON 格式向後相容）。"""
         return {
             "table_id": self.table_id,
             "entries": [e.to_dict() for e in self.entries],
@@ -176,8 +176,7 @@ class TableChangeLog:
 # ============================================================================
 
 
-@dataclass
-class TableTemplate:
+class TableTemplate(BaseModel):
     """預設表格模板。"""
 
     name: str
@@ -198,7 +197,7 @@ class TableTemplate:
         }
 
     def to_dict(self) -> dict[str, Any]:
-        """序列化為 dict。"""
+        """序列化為 dict（保持 JSON 格式向後相容）。"""
         return {
             "name": self.name,
             "title": self.title,
@@ -235,8 +234,7 @@ class TableTemplate:
         )
 
 
-@dataclass
-class TableDraft:
+class TableDraft(BaseModel):
     """
     Draft state for table work-in-progress.
     Allows resumption after conversation interruption.
@@ -245,13 +243,13 @@ class TableDraft:
     table_id: str | None = None  # None if table not yet created
     intent: Literal["comparison", "citation", "summary"] | None = None
     title: str = ""
-    proposed_columns: list[dict[str, Any]] = field(default_factory=list)
-    extraction_plan: list[str] = field(default_factory=list)  # What to extract
-    source_doc_ids: list[str] = field(default_factory=list)
-    source_sections: list[str] = field(default_factory=list)  # Section IDs to use
-    pending_rows: list[dict[str, Any]] = field(default_factory=list)  # Not yet added
+    proposed_columns: list[dict[str, Any]] = Field(default_factory=list)
+    extraction_plan: list[str] = Field(default_factory=list)  # What to extract
+    source_doc_ids: list[str] = Field(default_factory=list)
+    source_sections: list[str] = Field(default_factory=list)  # Section IDs to use
+    pending_rows: list[dict[str, Any]] = Field(default_factory=list)  # Not yet added
     notes: str = ""  # Agent's working notes
-    last_updated: datetime = field(default_factory=datetime.now)
+    last_updated: datetime = Field(default_factory=datetime.now)
 
     def estimate_tokens(self) -> int:
         """Estimate token count for this draft."""
@@ -271,8 +269,7 @@ class TableDraft:
         return len(content) // 4
 
 
-@dataclass
-class TableSchema:
+class TableSchema(BaseModel):
     """
     Proposed table schema before creation.
     Used for the "think before create" pattern.
@@ -297,8 +294,7 @@ class TableSchema:
         }
 
 
-@dataclass
-class TableContext:
+class TableContext(BaseModel):
     """
     Context for a table being constructed.
     Stored in memory for the MVP.
@@ -311,17 +307,27 @@ class TableContext:
     intent: Literal["comparison", "citation", "summary"]
     title: str
     columns: list[ColumnDef]
-    rows: list[dict[str, Any]] = field(default_factory=list)
+    rows: list[dict[str, Any]] = Field(default_factory=list)
     source_description: str = ""
     source_doc_id: str = ""
     source_block_id: str = ""
-    created_at: datetime = field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=datetime.now)
     # 平行引用層 — key: "row_index:column_name"
-    citations: dict[str, CellCitation] = field(default_factory=dict)
+    citations: dict[str, CellCitation] = Field(default_factory=dict)
     # 變更歷史（惰性初始化）
     change_log: TableChangeLog | None = None
 
-    def __post_init__(self) -> None:
+    @field_validator("created_at", mode="before")
+    @classmethod
+    def _parse_created_at(cls, v: Any) -> datetime:
+        """Handle ISO strings and empty strings from legacy JSON data."""
+        if isinstance(v, datetime):
+            return v
+        if isinstance(v, str):
+            return datetime.fromisoformat(v) if v else datetime.now()
+        return datetime.now()
+
+    def model_post_init(self, __context: Any) -> None:
         """Ensure change_log is initialized."""
         if self.change_log is None:
             self.change_log = TableChangeLog(table_id=self.id)

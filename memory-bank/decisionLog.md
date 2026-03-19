@@ -2,6 +2,7 @@
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-03-19 | **agent asset 能力擴展採分段發布，不做單一大版本合併** | gap 修補涉及不同風險面：格式入口擴展、表格原生化、agent 理解增強、非 flow-based 特殊格式。若一次合併發布，測試面與回歸面會互相干擾，難以判斷品質退化來源。按 Release A/B/C/D 分段，可讓每次發布只承擔單一能力面風險。 |
 | 2026-03-18 | **section metadata 的最終真相必須在 manifest generator 收斂** | 如果 Marker ingest 先用 TOC + line index 算出 section，再由 `ManifestGenerator.generate()` 用另一套規則重建 sections，manifest、fetch、segmentation 會開始共享不同的 section 歸屬。改為讓 generator 接受預先計算好的 sections，並在 generator 階段統一回填 assets 的 `section_id` / `section_title`，可避免多重真相。 |
 | 2026-03-18 | **line span 必須在 ETL 階段持久化，segmentation 只消費不回推** | 如果 line range 只存在於 segmentation export 的 runtime 回推邏輯，asset fetch、overlay、agent citation 都必須重複做猜測，且容易因重複句子而誤對位。將 block 與 asset 的 line span 在 ETL 當下寫進 `blocks.json` / manifest，才能讓 fetch、segmentation、resource 共用同一份定位真相。 |
 | 2026-03-18 | **line span 對位採 page-aware + section-aware，並保留 legacy backfill** | 純全文順序比對對重複句子很脆弱。新版 line span index 先縮到 page，再縮到 section，可明顯降低誤對位；但現有舊資料沒有 metadata，所以在 `SegmentationService` 遇到舊 `blocks.json` 時允許自動 backfill 升級。 |

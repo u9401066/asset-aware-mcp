@@ -6,7 +6,17 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-## 🆕 What's New in v0.6.0
+## 🆕 What's New in v0.6.2
+
+- **Release Split Finalized**: the March updates are now split into `v0.6.1` and `v0.6.2` for lower-risk patch releases
+- **47 tools** across 7 modules
+
+### v0.6.1
+
+- **OpenDocument Support**: Added `.odt` / `.ods` ingest via LibreOffice auto-conversion and a new `convert_docx_to_odt` tool
+- **3-Cycle Fidelity Testing**: Added repeatable round-trip validation script and formal format-conversion report
+
+### v0.6.0
 
 - **Unified Segmentation Export**: New `segmentation.json` contract combines manifest, blocks, reading order, and persisted markdown line ranges
 - **Layout Overlay Debugging**: Render bbox / type / reading-order overlays directly from `original.pdf`
