@@ -11,6 +11,12 @@
 - **Release Split Finalized**: the March updates are now split into `v0.6.1` and `v0.6.2` for lower-risk patch releases
 - **47 tools** across 7 modules
 
+## 🧪 Current Main Branch
+
+- **Structured LightRAG MCP Output**: `consult_knowledge_graph` now supports `structured`, `data`, and `text` response modes for citation-aware agent workflows
+- **LightRAG Deletion Sync**: deleting an ingested PDF now also attempts to remove its LightRAG document index
+- **Extension Env Alignment**: generated `.env` now writes `LIGHTRAG_WORKING_DIR` and still falls back from legacy `LIGHTRAG_DIR`
+
 ### v0.6.1
 
 - **OpenDocument Support**: Added `.odt` / `.ods` ingest via LibreOffice auto-conversion and a new `convert_docx_to_odt` tool
@@ -159,6 +165,7 @@ The agent retrieves exactly what it needs:
 | `assetAwareMcp.llmBackend` | `ollama` | LLM backend (ollama/openai) |
 | `assetAwareMcp.ollamaHost` | `http://localhost:11434` | Ollama URL |
 | `assetAwareMcp.dataDir` | `./data` | Storage for processed assets |
+| `.env: LIGHTRAG_WORKING_DIR` | `./data/lightrag_db` | LightRAG working directory written by the setup wizard / settings panel |
 | `assetAwareMcp.enableMarkerBackend` | `false` | Install optional Marker backend for structured parsing; pulls torch-related ML dependencies |
 | `assetAwareMcp.torchBackend` | `cpu` | Torch backend used when Marker backend is enabled; `cpu` is the safest default |
 
@@ -196,7 +203,7 @@ If the extension fails to start or the MCP server doesn't appear:
     *   Run `npm install`.
     *   Press `F5` to launch the **Extension Development Host**.
 
-## 📚 MCP Tools (46 total)
+## 📚 MCP Tools (47 total)
 
 ### Document ETL (11)
 | Tool | Description |
@@ -232,10 +239,10 @@ If the extension fails to start or the MCP server doesn't appear:
 ### Knowledge Graph (2)
 | Tool | Description |
 |------|-------------|
-| `consult_knowledge_graph` | Cross-document RAG queries |
+| `consult_knowledge_graph` | Cross-document RAG queries with `structured`, `data`, and `text` response modes |
 | `export_knowledge_graph` | Export knowledge graph data |
 
-### Docx Editing — DFM (13)
+### Docx Editing — DFM (14)
 | Tool | Description |
 |------|-------------|
 | `ingest_docx` | Import .docx and decompose into DFM blocks |
@@ -251,6 +258,7 @@ If the extension fails to start or the MCP server doesn't appear:
 | `docx_table_from_context` | Bridge: A2T table → Docx table |
 | `docx_chart_data` | Extract chart data from Docx |
 | `export_markdown` | Export Markdown to .docx/.pdf/.doc |
+| `convert_docx_to_odt` | Export the current DOCX/DFM state to ODT |
 
 ### A2T — Anything to Table (7 operation-based)
 | Tool | Operations | Description |

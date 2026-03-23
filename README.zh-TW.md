@@ -47,6 +47,7 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 🔄 **非同步任務流水線** - 支援大型文件的非同步處理與進度追蹤。
 - 🗺️ **文件清單 (Manifest)** - 為 Agent 提供結構化的文件「地圖」，實現精確數據存取。
 - 🧠 **LightRAG 整合** - 知識圖譜 + 向量索引，支援跨文件對比與推理。
+- 🧾 **Citation-Aware KG 輸出** - `consult_knowledge_graph` 現在可直接回傳結構化 answer/reference payload，方便後續 agent workflow 直接做 citation-aware 處理。
 - 📝 **Docx 即時編輯 (DFM)** - 以 Markdown 格式編輯 .docx 檔案，透過 **Docx-Flavored Markdown** 格式。支援 `.doc`、`.odt`、`.ods` 經 LibreOffice 自動轉換後攝入。提供 14 個工具：匯入、讀取、儲存、列出、刪除、匯出、strict 往返保真驗證、DOCX→PDF、DOCX→DOC、DOCX→ODT，以及 Docx ↔ A2T 表格橋接。
 - 📊 **A2T (Anything to Table)** - 7 個 operation-based 工具，從**任意來源**（PDF 資產、知識圖譜、URL、使用者輸入）建立專業表格。支援：**引用管理** (AssetRef)、**變更審計**、**Schema 演進**、**模板**、**草稿機制**與**節省 Token 的續作模式**。
 - 🖥️ **VS Code 管理擴充功能** - 提供圖形化介面監控伺服器狀態、已匯入文件，以及 **A2T 表格與草稿**，支援一鍵開啟 Excel。
@@ -137,7 +138,7 @@ Marker 說明：
 |------|------|
 | `ingest_documents` | 處理 PDF 檔案，可選用 Marker 後端 (`use_marker=True` 產出 blocks.json) |
 | `list_documents` | 列出所有已攝入文件與資產統計 |
-| `delete_document` | 刪除已攝入 PDF 與本地 artifacts |
+| `delete_document` | 刪除已攝入 PDF、本地 artifacts，以及啟用時對應的 LightRAG 索引 |
 | `convert_pdf_to_docx` | 將 PDF 內容層重建為可讀 DOCX |
 | `inspect_document_manifest` | 在抓取資產前先檢視文件結構 |
 | `fetch_document_asset` | 精確獲取表格 (MD) / 圖片 (B64) / 章節內容 |
@@ -159,8 +160,12 @@ Marker 說明：
 
 | 工具 | 用途 |
 |------|------|
-| `consult_knowledge_graph` | 知識圖譜查詢，跨文件對比推理 |
+| `consult_knowledge_graph` | 支援 `structured`、`data`、`text` 三種回傳模式的 citation-aware 知識圖譜查詢 |
 | `export_knowledge_graph` | 匯出圖譜摘要 / JSON / Mermaid 視圖 |
+
+知識圖譜補充：
+- `consult_knowledge_graph` 預設使用 `response_mode="structured"`，可回傳 `answer`、`references`、`metadata`、`retrieval`、`counts`。
+- 若只需要 retrieval payload、不想讓 LLM 合成最終答案，可使用 `response_mode="data"`；若要保留舊版純文字行為，使用 `response_mode="text"`。
 
 ### 章節導航工具（動態層級）
 

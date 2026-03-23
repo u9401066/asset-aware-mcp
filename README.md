@@ -47,6 +47,7 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 - 🔄 **Async Job Pipeline** - Supports asynchronous task processing and progress tracking for large documents.
 - 🗺️ **Document Manifest** - Provides a structured "map" of the document for precise data access by Agents.
 - 🧠 **LightRAG Integration** - Knowledge Graph + Vector Index, supporting cross-document comparison and reasoning.
+- 🧾 **Citation-Aware KG Output** - `consult_knowledge_graph` now supports structured answer/reference payloads for downstream agent workflows.
 - 📝 **Docx Editing (DFM)** - Edit .docx files in Markdown via **Docx-Flavored Markdown** format. Supports legacy `.doc`, `.odt`, and `.ods` ingest via LibreOffice auto-conversion. 14 tools: ingest, read, save, list, delete, export, strict round-trip validation, DOCX→PDF, DOCX→DOC, DOCX→ODT, and Docx ↔ A2T bridges.
 - 🛡️ **DFM Integrity Checker** - Automatic validation and auto-repair at every pipeline stage (post-ingest, pre-save, post-save). Catches orphan markers, column mismatches, and format inconsistencies.
 - 📊 **A2T (Anything to Table)** - 7 operation-based tools for building professional tables from **any source** (PDF assets, Knowledge Graph, URLs, user input). Features: **Citations** (AssetRef), **Audit Trail**, **Schema Evolution**, **Templates**, **Drafting**, and **Token-efficient resumption**.
@@ -138,7 +139,7 @@ Marker note:
 |------|---------|
 | `ingest_documents` | Process PDF files with optional Marker backend (`use_marker=True` for blocks.json) |
 | `list_documents` | List all ingested documents and their asset counts |
-| `delete_document` | Delete an ingested PDF and its local artifacts |
+| `delete_document` | Delete an ingested PDF, its local artifacts, and LightRAG index entries when enabled |
 | `convert_pdf_to_docx` | Reconstruct a readable DOCX from extracted PDF content |
 | `inspect_document_manifest` | Inspect document structure before fetching specific assets |
 | `fetch_document_asset` | Precisely retrieve tables (MD) / figures (B64) / sections |
@@ -160,8 +161,12 @@ Marker note:
 
 | Tool | Purpose |
 |------|---------|
-| `consult_knowledge_graph` | Knowledge graph query, cross-document comparison |
+| `consult_knowledge_graph` | Citation-aware knowledge graph query with `structured`, `data`, and `text` response modes |
 | `export_knowledge_graph` | Export graph summary / JSON / Mermaid for inspection |
+
+Knowledge graph note:
+- `consult_knowledge_graph` defaults to `response_mode="structured"` and can return `answer`, `references`, `metadata`, `retrieval`, and `counts` for agent-side citation workflows.
+- Use `response_mode="data"` when you want retrieval payloads without final answer synthesis, or `response_mode="text"` for legacy plain-text behavior.
 
 ### Section Navigation Tools (Dynamic Hierarchy)
 

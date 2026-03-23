@@ -7,6 +7,29 @@
 
 ## [Unreleased]
 
+### Added
+
+- **LightRAG citation-aware structured MCP output**
+  - `consult_knowledge_graph` 現在支援 `response_mode=structured|data|text`
+  - 預設 structured 模式會回傳 `answer`、`references`、`metadata`、`retrieval`、`counts`
+  - 新增 retrieval-only 路徑，讓 agent 可直接使用 `aquery_data` 類型資料做 citation-aware workflow
+
+### Changed
+
+- **LightRAG query surface 對齊上游能力**
+  - Knowledge service / adapter 現在支援 `mix`、`naive`、`bypass`、`user_prompt`、`include_references`
+  - VS Code extension `.env` 對齊後端設定，改用 `LIGHTRAG_WORKING_DIR`（保留 legacy `LIGHTRAG_DIR` fallback）
+  - README、README.zh-TW、VS Code extension README 與 Memory Bank 同步更新，文件統一為 `47 tools / 13 resources`
+
+### Fixed
+
+- **Knowledge graph deletion 與本地文件刪除同步**
+  - `delete_document` 在啟用 LightRAG 時，會同步嘗試刪除知識圖譜中的文件索引
+  - MCP 回傳現在會明確顯示 `knowledge_graph_status`
+- **Knowledge Graph tool guard rails**
+  - `consult_knowledge_graph` 對非法 `response_mode` fail fast
+  - `LightRAGAdapter` 會拒絕錯誤型別的建構參數，避免把非 LightRAG 物件誤當 adapter state
+
 ## [0.6.2] - 2026-03-19
 
 ### Added

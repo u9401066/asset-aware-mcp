@@ -6,6 +6,7 @@
 
 ## 最近完成 ✅
 
+- **main branch / Unreleased** (2026-03-23) — LightRAG 結構化 citation-aware MCP 輸出、KG deletion sync、extension env key 對齊 `LIGHTRAG_WORKING_DIR`
 - **v0.6.2** (2026-03-19) — 分段發布策略落地、agent asset gap 分析、GitHub CLI 維運文件與腳本
 - **v0.6.1** (2026-03-19) — ODT/ODS 支援、DOCX→ODT 匯出、3-cycle round-trip fidelity 測試與報告
 - **v0.4.2** (2026-03-09) — release.sh 與 GitHub Actions 靜態檢查範圍完全對齊

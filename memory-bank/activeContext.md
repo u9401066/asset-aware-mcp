@@ -2,7 +2,16 @@
 
 > 📌 當前工作焦點和進行中的變更
 
+## Current Goals
+
+- 正在完成 LightRAG modernization release-prep 收尾：本地 CI 等價驗證已全過，接下來分段 git commit、push，並監看 GitHub Actions。
+
 ## 🎯 當前焦點
+
+- **LightRAG citation-aware MCP output 已落地**：`consult_knowledge_graph` 預設回傳 structured payload，支援 `response_mode=structured|data|text`
+- **LightRAG 與文件刪除流程已同步**：`delete_document` 現在會嘗試同步刪除知識圖譜索引，並在 MCP 結果中回傳 `knowledge_graph_status`
+- **VS Code extension env key 已對齊**：設定面板與 `.env` 生成器改寫 `LIGHTRAG_WORKING_DIR`，同時保留 `LIGHTRAG_DIR` fallback
+- **目前正在做 release/push 前收尾**：補 README / CHANGELOG / extension README / ROADMAP / Memory Bank 對齊，準備跑 CI 等價驗證與分段提交
 
 - **0.6.1 / 0.6.2 已完成 release prep**：版本、changelog、README、extension metadata 已同步，`release.sh` 成功建出 wheel 與 `asset-aware-mcp-0.6.2.vsix`
 - **當前版本真相為 0.6.2**：本地已完成 patch-release split；若要真正對外發布，下一步是 PyPI / VS Code Marketplace / Git tag 推送
@@ -147,4 +156,4 @@ src/
 2. **文件缺乏**: API Reference, Examples, FAQ
 
 ---
-*Last updated: 2026-03-19*
+*Last updated: 2026-03-23*
