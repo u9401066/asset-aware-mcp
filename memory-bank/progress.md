@@ -2,15 +2,13 @@
 
 ## Done
 
-- 完成 LightRAG 結構化 citation-aware MCP 輸出與 response_mode 相容層
-- 完成 LightRAG 文件刪除同步與 extension env key 對齊
-- 完成 README / README.zh-TW / extension README / CHANGELOG / ROADMAP / activeContext / decisionLog 對齊
-- 完成本地 CI 等價驗證：ruff、mypy、unit、integration、extension lint/unit/install-smoke/package
+- 完成 0.6.3 版本號同步到 Python package、extension package、package-lock、版本測試與 changelog
+- 確認 extension 版本相關單元測試通過，0.6.3 釘版參數正常
 
 ## Doing
 
-- 整理本次變更為分段 git commits 並準備 push
+- 建立 v0.6.3 release commit、tag 並推送
 
 ## Next
 
-- 推送到 origin/master 並監看 GitHub Actions 到完成
+- 如需正式對外發布，再執行 PyPI / VS Code Marketplace 發布流程

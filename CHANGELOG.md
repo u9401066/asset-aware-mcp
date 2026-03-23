@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-03-23
+
 ### Added
 
 - **LightRAG citation-aware structured MCP output**

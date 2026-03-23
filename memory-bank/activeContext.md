@@ -13,8 +13,8 @@
 - **VS Code extension env key 已對齊**：設定面板與 `.env` 生成器改寫 `LIGHTRAG_WORKING_DIR`，同時保留 `LIGHTRAG_DIR` fallback
 - **目前正在做 release/push 前收尾**：補 README / CHANGELOG / extension README / ROADMAP / Memory Bank 對齊，準備跑 CI 等價驗證與分段提交
 
-- **0.6.1 / 0.6.2 已完成 release prep**：版本、changelog、README、extension metadata 已同步，`release.sh` 成功建出 wheel 與 `asset-aware-mcp-0.6.2.vsix`
-- **當前版本真相為 0.6.2**：本地已完成 patch-release split；若要真正對外發布，下一步是 PyPI / VS Code Marketplace / Git tag 推送
+- **0.6.3 release prep 已完成**：LightRAG modernization、changelog、README、extension metadata 與 install smoke 驗證已同步收斂，可建立新 tag
+- **當前版本真相為 0.6.3**：`v0.6.2` 已存在且指向舊 release commit，本次變更需以新的 patch tag 對外發布
 - **Agent asset 全覆蓋規劃已補齊**：新增 `docs/agent-asset-gap-analysis.md`，明確拆成格式轉換、資產拆解、結構導航、語義理解四層，並量化目前完成度約 35%
 - **建議採分段發布**：先發格式入口補齊（RTF/TXT/MD/CSV/HTML），再發 XLSX 原生化，其次是 agent 理解增強，最後才是 PPTX/EPUB/EML 等高成本格式
 - **Section truth 已收斂**：manifest generator 現在是 section metadata 最終寫入點；Marker ingest 不再先算 section 再被 generator 用另一套規則覆蓋

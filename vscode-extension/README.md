@@ -6,9 +6,9 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-## 🆕 What's New in v0.6.2
+## 🆕 What's New in v0.6.3
 
-- **Release Split Finalized**: the March updates are now split into `v0.6.1` and `v0.6.2` for lower-risk patch releases
+- **Citation-Aware LightRAG Release**: structured KG output, LightRAG deletion sync, env alignment, and hardened install smoke are now part of `v0.6.3`
 - **47 tools** across 7 modules
 
 ## 🧪 Current Main Branch
