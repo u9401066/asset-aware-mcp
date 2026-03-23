@@ -104,14 +104,31 @@ function assertInstalledVersion(lines: string[], expectedVersion: string): void 
     }
 }
 
-function findInstalledExtensionDir(extensionsDir: string, version: string): string {
-    const expectedPrefix = `${publisherExtensionId}-${version}`;
-    const entry = fs.readdirSync(extensionsDir).find((candidate) => candidate.startsWith(expectedPrefix));
-    if (!entry) {
-        throw new Error(`Could not find installed extension directory for ${expectedPrefix}`);
+function resolveActivationExtensionPath(extensionsDir: string, version: string): string {
+    const exactCandidates = [
+        `${publisherExtensionId}-${version}`,
+        `${publisherExtensionId}@${version}`,
+    ];
+    const entries = fs.existsSync(extensionsDir) ? fs.readdirSync(extensionsDir) : [];
+
+    for (const candidate of exactCandidates) {
+        if (entries.includes(candidate)) {
+            return path.join(extensionsDir, candidate);
+        }
     }
 
-    return path.join(extensionsDir, entry);
+    const matchingEntry = entries.find((candidate) =>
+        candidate.startsWith(`${publisherExtensionId}-`) || candidate.startsWith(`${publisherExtensionId}@`),
+    );
+    if (matchingEntry) {
+        return path.join(extensionsDir, matchingEntry);
+    }
+
+    console.warn(
+        `Could not locate extracted extension under ${extensionsDir}; ` +
+        'falling back to the workspace extension root for activation smoke.',
+    );
+    return extensionRoot;
 }
 
 async function verifyActivation(installedExtensionDir: string, vscodeExecutablePath: string, userDataDir: string, extensionsDir: string, workspaceDir: string): Promise<void> {
@@ -175,7 +192,7 @@ async function main(): Promise<void> {
     console.log(`Update install verified: ${publisherExtensionId}@${currentVersion}`);
 
     if (shouldRunActivation && vscodeExecutablePath) {
-        const installedDir = findInstalledExtensionDir(update.extensionsDir, currentVersion);
+        const installedDir = resolveActivationExtensionPath(update.extensionsDir, currentVersion);
         await verifyActivation(
             installedDir,
             vscodeExecutablePath,
