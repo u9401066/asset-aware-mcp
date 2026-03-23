@@ -7,7 +7,7 @@ Supports both Ollama (local) and OpenAI backends.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -153,8 +153,69 @@ class LightRAGAdapter(KnowledgeGraphInterface):
         Args:
             rag: Optional pre-configured LightRAG instance
         """
+        if rag is not None and not hasattr(rag, "aquery"):
+            raise TypeError(
+                "LightRAGAdapter expects a LightRAG instance or None. "
+                "Pass no argument for the default configured adapter."
+            )
         self._rag = rag
         self._initialized = rag is not None
+
+    @staticmethod
+    def _build_query_param(
+        mode: str,
+        *,
+        user_prompt: str | None = None,
+        include_references: bool = False,
+    ) -> Any:
+        from lightrag import QueryParam  # type: ignore
+
+        return QueryParam(
+            mode=mode,
+            user_prompt=user_prompt,
+            include_references=include_references,
+        )
+
+    @staticmethod
+    def _normalize_query_result(
+        query: str,
+        requested_mode: str,
+        result: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Normalize LightRAG output into a stable MCP-friendly structure."""
+        data = cast("dict[str, Any]", result.get("data", {}))
+        metadata = cast("dict[str, Any]", result.get("metadata", {}))
+        llm_response = cast("dict[str, Any]", result.get("llm_response", {}))
+        entities = cast("list[dict[str, Any]]", data.get("entities", []))
+        relationships = cast("list[dict[str, Any]]", data.get("relationships", []))
+        chunks = cast("list[dict[str, Any]]", data.get("chunks", []))
+        references = cast("list[dict[str, Any]]", data.get("references", []))
+
+        return {
+            "success": result.get("status") == "success",
+            "status": result.get("status", "failure"),
+            "message": result.get("message", ""),
+            "query": query,
+            "mode": metadata.get("query_mode", metadata.get("mode", requested_mode)),
+            "answer": llm_response.get("content"),
+            "references": references,
+            "counts": {
+                "entities": len(entities),
+                "relationships": len(relationships),
+                "chunks": len(chunks),
+                "references": len(references),
+            },
+            "retrieval": {
+                "entities": entities,
+                "relationships": relationships,
+                "chunks": chunks,
+            },
+            "metadata": metadata,
+            "llm_response": {
+                "content": llm_response.get("content"),
+                "is_streaming": llm_response.get("is_streaming", False),
+            },
+        }
 
     async def _ensure_initialized(self) -> LightRAG:
         """Lazy initialization of LightRAG with Ollama or OpenAI backend."""
@@ -232,24 +293,89 @@ class LightRAGAdapter(KnowledgeGraphInterface):
 
         await rag.ainsert(prefixed_text)
 
-    async def query(self, query: str, mode: str = "hybrid") -> str:
+    async def query(
+        self,
+        query: str,
+        mode: str = "hybrid",
+        *,
+        user_prompt: str | None = None,
+        include_references: bool = False,
+    ) -> str:
         """
         Query the knowledge graph.
 
         Args:
             query: Natural language query
-            mode: Query mode - "local", "global", or "hybrid"
+            mode: Query mode - "local", "global", "hybrid", "mix", "naive", or "bypass"
+            user_prompt: Optional post-retrieval instruction for answer shaping
+            include_references: Include source reference list when supported
 
         Returns:
             Query result as string
         """
         rag = await self._ensure_initialized()
 
-        from lightrag import QueryParam  # type: ignore
+        param = self._build_query_param(
+            mode,
+            user_prompt=user_prompt,
+            include_references=include_references,
+        )
 
-        result = await rag.aquery(query, param=QueryParam(mode=mode))
+        result = await rag.aquery(query, param=param)
 
         return str(result) if result else ""
+
+    async def query_structured(
+        self,
+        query: str,
+        mode: str = "hybrid",
+        *,
+        user_prompt: str | None = None,
+        include_references: bool = True,
+    ) -> dict[str, Any]:
+        """Query LightRAG and return answer + references + retrieval metadata."""
+        rag = await self._ensure_initialized()
+        param = self._build_query_param(
+            mode,
+            user_prompt=user_prompt,
+            include_references=include_references,
+        )
+        result = await rag.aquery_llm(query, param=param)
+        return self._normalize_query_result(query, mode, result)
+
+    async def query_data(
+        self,
+        query: str,
+        mode: str = "hybrid",
+        *,
+        user_prompt: str | None = None,
+    ) -> dict[str, Any]:
+        """Query LightRAG retrieval layer without generating the final LLM answer."""
+        rag = await self._ensure_initialized()
+        param = self._build_query_param(mode, user_prompt=user_prompt)
+        result = await rag.aquery_data(query, param=param)
+        return self._normalize_query_result(query, mode, result)
+
+    async def delete_document(
+        self,
+        doc_id: str,
+        *,
+        delete_llm_cache: bool = False,
+    ) -> dict[str, Any]:
+        """Delete a document from LightRAG and keep graph/vector stores in sync."""
+        rag = await self._ensure_initialized()
+
+        result = await rag.adelete_by_doc_id(
+            doc_id,
+            delete_llm_cache=delete_llm_cache,
+        )
+        return {
+            "status": getattr(result, "status", "fail"),
+            "doc_id": getattr(result, "doc_id", doc_id),
+            "message": getattr(result, "message", ""),
+            "status_code": getattr(result, "status_code", 500),
+            "file_path": getattr(result, "file_path", None),
+        }
 
     async def extract_entities(self, text: str, limit: int = 5) -> list[str]:
         """

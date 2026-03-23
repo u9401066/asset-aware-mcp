@@ -403,9 +403,9 @@ export class SettingsPanel {
             <div class="form-group">
                 <label for="lightragDir">LightRAG Directory</label>
                 <p class="description">Directory for LightRAG knowledge graph data</p>
-                <input type="text" id="lightragDir" name="LIGHTRAG_DIR"
-                       value="${env['LIGHTRAG_DIR'] || './data/lightrag'}"
-                       placeholder="./data/lightrag">
+                <input type="text" id="lightragDir" name="LIGHTRAG_WORKING_DIR"
+                       value="${env['LIGHTRAG_WORKING_DIR'] || env['LIGHTRAG_DIR'] || './data/lightrag_db'}"
+                       placeholder="./data/lightrag_db">
             </div>
         </div>
 

@@ -6,7 +6,7 @@ Use cases for knowledge graph queries.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from src.domain.repositories import KnowledgeGraphInterface
@@ -36,13 +36,22 @@ class KnowledgeService:
         """Check if knowledge graph is available."""
         return self.knowledge_graph is not None and self.knowledge_graph.is_available
 
-    async def query(self, query: str, mode: str = "hybrid") -> str:
+    async def query(
+        self,
+        query: str,
+        mode: str = "hybrid",
+        *,
+        user_prompt: str | None = None,
+        include_references: bool = False,
+    ) -> str:
         """
         Query the knowledge graph.
 
         Args:
             query: Natural language query
-            mode: Query mode - "local", "global", or "hybrid"
+            mode: Query mode - "local", "global", "hybrid", "mix", "naive", or "bypass"
+            user_prompt: Optional post-retrieval instruction for answer shaping
+            include_references: Include reference list when supported
 
         Returns:
             Query result as string
@@ -53,10 +62,125 @@ class KnowledgeService:
             )
 
         try:
-            result = await self.knowledge_graph.query(query, mode=mode)
+            result = await self.knowledge_graph.query(
+                query,
+                mode=mode,
+                user_prompt=user_prompt,
+                include_references=include_references,
+            )
             return result or "No results found."
         except Exception as e:
             return f"Query failed: {e}"
+
+    async def query_structured(
+        self,
+        query: str,
+        mode: str = "hybrid",
+        *,
+        user_prompt: str | None = None,
+        include_references: bool = True,
+    ) -> dict[str, Any]:
+        """Return structured answer + references + retrieval metadata."""
+        if not self.is_available or self.knowledge_graph is None:
+            return {
+                "success": False,
+                "status": "failure",
+                "message": "Knowledge graph is not available. Please enable LightRAG in settings.",
+                "query": query,
+                "mode": mode,
+                "answer": None,
+                "references": [],
+                "counts": {
+                    "entities": 0,
+                    "relationships": 0,
+                    "chunks": 0,
+                    "references": 0,
+                },
+                "retrieval": {"entities": [], "relationships": [], "chunks": []},
+                "metadata": {},
+                "llm_response": {"content": None, "is_streaming": False},
+            }
+
+        try:
+            return await self.knowledge_graph.query_structured(
+                query,
+                mode=mode,
+                user_prompt=user_prompt,
+                include_references=include_references,
+            )
+        except Exception as e:
+            return {
+                "success": False,
+                "status": "failure",
+                "message": f"Query failed: {e}",
+                "query": query,
+                "mode": mode,
+                "answer": None,
+                "references": [],
+                "counts": {
+                    "entities": 0,
+                    "relationships": 0,
+                    "chunks": 0,
+                    "references": 0,
+                },
+                "retrieval": {"entities": [], "relationships": [], "chunks": []},
+                "metadata": {},
+                "llm_response": {"content": None, "is_streaming": False},
+            }
+
+    async def query_data(
+        self,
+        query: str,
+        mode: str = "hybrid",
+        *,
+        user_prompt: str | None = None,
+    ) -> dict[str, Any]:
+        """Return retrieval data and metadata without the final answer synthesis."""
+        if not self.is_available or self.knowledge_graph is None:
+            return {
+                "success": False,
+                "status": "failure",
+                "message": "Knowledge graph is not available. Please enable LightRAG in settings.",
+                "query": query,
+                "mode": mode,
+                "answer": None,
+                "references": [],
+                "counts": {
+                    "entities": 0,
+                    "relationships": 0,
+                    "chunks": 0,
+                    "references": 0,
+                },
+                "retrieval": {"entities": [], "relationships": [], "chunks": []},
+                "metadata": {},
+                "llm_response": {"content": None, "is_streaming": False},
+            }
+
+        try:
+            return await self.knowledge_graph.query_data(
+                query,
+                mode=mode,
+                user_prompt=user_prompt,
+            )
+        except Exception as e:
+            return {
+                "success": False,
+                "status": "failure",
+                "message": f"Query failed: {e}",
+                "query": query,
+                "mode": mode,
+                "answer": None,
+                "references": [],
+                "counts": {
+                    "entities": 0,
+                    "relationships": 0,
+                    "chunks": 0,
+                    "references": 0,
+                },
+                "retrieval": {"entities": [], "relationships": [], "chunks": []},
+                "metadata": {},
+                "llm_response": {"content": None, "is_streaming": False},
+            }
 
     async def compare_documents(self, question: str) -> str:
         """

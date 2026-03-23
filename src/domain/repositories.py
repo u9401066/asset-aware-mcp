@@ -133,8 +133,48 @@ class KnowledgeGraphInterface(ABC):
         ...
 
     @abstractmethod
-    async def query(self, query: str, mode: str = "hybrid") -> str:
+    async def query(
+        self,
+        query: str,
+        mode: str = "hybrid",
+        *,
+        user_prompt: str | None = None,
+        include_references: bool = False,
+    ) -> str:
         """Query the knowledge graph."""
+        ...
+
+    @abstractmethod
+    async def query_structured(
+        self,
+        query: str,
+        mode: str = "hybrid",
+        *,
+        user_prompt: str | None = None,
+        include_references: bool = True,
+    ) -> dict[str, Any]:
+        """Query the knowledge graph and return structured answer + citation data."""
+        ...
+
+    @abstractmethod
+    async def query_data(
+        self,
+        query: str,
+        mode: str = "hybrid",
+        *,
+        user_prompt: str | None = None,
+    ) -> dict[str, Any]:
+        """Query the knowledge graph and return retrieval data without LLM answer."""
+        ...
+
+    @abstractmethod
+    async def delete_document(
+        self,
+        doc_id: str,
+        *,
+        delete_llm_cache: bool = False,
+    ) -> dict[str, Any]:
+        """Delete a document from the knowledge graph."""
         ...
 
     @abstractmethod

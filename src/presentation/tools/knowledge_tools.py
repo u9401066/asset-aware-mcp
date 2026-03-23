@@ -24,8 +24,11 @@ else:
 async def consult_knowledge_graph(
     query: str,
     mode: str = "hybrid",
+    response_mode: str = "structured",
+    user_prompt: str | None = None,
+    include_references: bool = False,
     ctx: Context | None = None,
-) -> str:
+) -> dict[str, Any] | str:
     """
     Query the LightRAG knowledge graph for cross-document insights.
 
@@ -33,6 +36,9 @@ async def consult_knowledge_graph(
     - "local": Specific details from nearby context
     - "global": High-level patterns and themes
     - "hybrid": Both local and global (recommended for most queries)
+    - "mix": Knowledge graph + vector retrieval (recommended by newer LightRAG versions)
+    - "naive": Vector-only retrieval
+    - "bypass": Direct LLM answer path without retrieval
 
     Best for:
     - Comparing findings across multiple papers
@@ -41,18 +47,46 @@ async def consult_knowledge_graph(
 
     Args:
         query: Natural language question
-        mode: Query mode ("local", "global", or "hybrid")
+        mode: Query mode ("local", "global", "hybrid", "mix", "naive", or "bypass")
+        response_mode: "structured" (default), "data", or "text"
+        user_prompt: Optional instruction applied after retrieval, before answer generation
+        include_references: Include source reference list when LightRAG supports it
 
     Returns:
-        Answer synthesized from indexed documents
+        Structured MCP-friendly result by default, or plain text when response_mode="text"
 
     Example:
         consult_knowledge_graph("What are the dosing recommendations for remimazolam?")
         consult_knowledge_graph("Compare sedation outcomes between propofol and remimazolam", mode="global")
     """
+    if response_mode not in {"structured", "data", "text"}:
+        raise ValueError("response_mode must be one of: structured, data, text")
+
     await log_message(ctx, "info", f"consult_knowledge_graph start: mode={mode}")
     await report_progress(ctx, 10, message="Querying knowledge graph")
-    result = await knowledge_service.query(query, mode=mode)
+
+    result: dict[str, Any] | str
+    if response_mode == "text":
+        result = await knowledge_service.query(
+            query,
+            mode=mode,
+            user_prompt=user_prompt,
+            include_references=include_references,
+        )
+    elif response_mode == "data":
+        result = await knowledge_service.query_data(
+            query,
+            mode=mode,
+            user_prompt=user_prompt,
+        )
+    else:
+        result = await knowledge_service.query_structured(
+            query,
+            mode=mode,
+            user_prompt=user_prompt,
+            include_references=include_references,
+        )
+
     await report_progress(ctx, 100, message="Knowledge graph query finished")
     await log_message(ctx, "info", "consult_knowledge_graph complete")
     return result

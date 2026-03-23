@@ -29,12 +29,38 @@ async def test_delete_document_success() -> None:
 
 
 @pytest.mark.asyncio
-async def test_delete_document_adds_kg_warning() -> None:
+async def test_delete_document_removes_kg_entries() -> None:
     repository = MagicMock()
     repository.load_manifest.return_value = MagicMock(filename="paper.pdf")
     repository.delete_document.return_value = True
     knowledge_graph = MagicMock()
     knowledge_graph.is_available = True
+    knowledge_graph.delete_document = AsyncMock(
+        return_value={"status": "success", "message": "deleted"}
+    )
+
+    service = DocumentService(
+        repository=repository,
+        pdf_extractor=MagicMock(),
+        knowledge_graph=knowledge_graph,
+    )
+
+    result = await service.delete_document("doc_123")
+
+    assert result["success"] is True
+    assert result["warnings"] == []
+    assert result["knowledge_graph_status"] == "success"
+    knowledge_graph.delete_document.assert_awaited_once_with("doc_123")
+
+
+@pytest.mark.asyncio
+async def test_delete_document_warns_when_kg_delete_fails() -> None:
+    repository = MagicMock()
+    repository.load_manifest.return_value = MagicMock(filename="paper.pdf")
+    repository.delete_document.return_value = True
+    knowledge_graph = MagicMock()
+    knowledge_graph.is_available = True
+    knowledge_graph.delete_document = AsyncMock(side_effect=RuntimeError("boom"))
 
     service = DocumentService(
         repository=repository,
@@ -46,7 +72,7 @@ async def test_delete_document_adds_kg_warning() -> None:
 
     assert result["success"] is True
     assert result["warnings"]
-    assert "Knowledge graph entries were not removed" in result["warnings"][0]
+    assert "Knowledge graph deletion failed" in result["warnings"][0]
 
 
 @pytest.mark.asyncio

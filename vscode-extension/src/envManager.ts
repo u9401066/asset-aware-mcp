@@ -17,6 +17,7 @@ export interface EnvConfig {
     OPENAI_MODEL?: string;
     OPENAI_EMBEDDING_MODEL?: string;
     DATA_DIR?: string;
+    LIGHTRAG_WORKING_DIR?: string;
     LIGHTRAG_DIR?: string;
     ETL_PROFILE?: string;
     [key: string]: string | undefined;
@@ -31,7 +32,7 @@ const DEFAULT_ENV: EnvConfig = {
     OPENAI_MODEL: 'gpt-4o-mini',
     OPENAI_EMBEDDING_MODEL: 'text-embedding-3-small',
     DATA_DIR: './data',
-    LIGHTRAG_DIR: './data/lightrag',
+    LIGHTRAG_WORKING_DIR: './data/lightrag_db',
     ETL_PROFILE: 'default'
 };
 
@@ -215,7 +216,7 @@ export class EnvManager {
             '# Storage Settings',
             '# ============================================',
             `DATA_DIR=${env.DATA_DIR || './data'}`,
-            `LIGHTRAG_DIR=${env.LIGHTRAG_DIR || './data/lightrag'}`,
+            `LIGHTRAG_WORKING_DIR=${env.LIGHTRAG_WORKING_DIR || env.LIGHTRAG_DIR || './data/lightrag_db'}`,
             ''
         ];
 

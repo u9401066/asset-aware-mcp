@@ -1048,17 +1048,30 @@ class DocumentService:
             }
 
         warnings: list[str] = []
+        knowledge_graph_status: str | None = None
         if self.knowledge_graph and self.knowledge_graph.is_available:
-            warnings.append(
-                "Knowledge graph entries were not removed; only local document artifacts were deleted."
-            )
+            try:
+                kg_result = await self.knowledge_graph.delete_document(doc_id)
+                knowledge_graph_status = str(kg_result.get("status", "unknown"))
+                if knowledge_graph_status not in {"success", "not_found"}:
+                    warnings.append(
+                        "Knowledge graph deletion did not complete successfully; local artifacts were deleted first."
+                    )
+            except Exception as exc:
+                warnings.append(
+                    "Knowledge graph deletion failed; local artifacts were deleted first. "
+                    f"Reason: {exc}"
+                )
 
-        return {
+        result = {
             "success": True,
             "doc_id": doc_id,
             "filename": manifest.filename,
             "warnings": warnings,
         }
+        if knowledge_graph_status is not None:
+            result["knowledge_graph_status"] = knowledge_graph_status
+        return result
 
     async def convert_pdf_to_docx(
         self,

@@ -450,7 +450,7 @@ async def delete_document(doc_id: str) -> str:
     刪除已攝入的 PDF 文件及其本地 artifacts。
 
     會移除 data/{doc_id}/ 下的 manifest、markdown、images、blocks.json 等檔案。
-    注意：若啟用了知識圖譜，目前只會刪除本地 artifacts，不會同步刪除圖譜節點。
+    若啟用了 LightRAG，會一併嘗試刪除對應的知識圖譜文件索引。
     """
     result = await document_service.delete_document(doc_id)
     if not result.get("success"):
@@ -461,6 +461,10 @@ async def delete_document(doc_id: str) -> str:
         f"- **doc_id**: `{result.get('doc_id', '')}`",
         f"- **filename**: {result.get('filename', '')}",
     ]
+    if "knowledge_graph_status" in result:
+        lines.append(
+            f"- **knowledge_graph**: {result.get('knowledge_graph_status', 'unknown')}"
+        )
     for warning in result.get("warnings", []):
         lines.append(f"- **warning**: {warning}")
     return "\n".join(lines)

@@ -944,13 +944,88 @@ class TestKnowledgeTools:
         with patch(
             "src.presentation.tools.knowledge_tools.knowledge_service"
         ) as mock_svc:
-            mock_svc.query = AsyncMock(return_value="answer")
+            mock_svc.query_structured = AsyncMock(
+                return_value={"success": True, "answer": "answer", "references": []}
+            )
             from src.presentation.tools.knowledge_tools import consult_knowledge_graph
 
             result = await consult_knowledge_graph("test", ctx=fake_ctx)
 
-        assert result == "answer"
+        assert result == {"success": True, "answer": "answer", "references": []}
         assert fake_ctx.report_progress.await_count >= 2
+
+    async def test_consult_knowledge_graph_forwards_new_query_options(self) -> None:
+        """consult_knowledge_graph forwards include_references and user_prompt."""
+        with patch(
+            "src.presentation.tools.knowledge_tools.knowledge_service"
+        ) as mock_svc:
+            mock_svc.query_structured = AsyncMock(return_value={"success": True})
+            from src.presentation.tools.knowledge_tools import consult_knowledge_graph
+
+            result = await consult_knowledge_graph(
+                "test",
+                mode="mix",
+                user_prompt="Summarize as bullets",
+                include_references=True,
+            )
+
+        assert result == {"success": True}
+        mock_svc.query_structured.assert_awaited_once_with(
+            "test",
+            mode="mix",
+            user_prompt="Summarize as bullets",
+            include_references=True,
+        )
+
+    async def test_consult_knowledge_graph_supports_data_mode(self) -> None:
+        """consult_knowledge_graph can return retrieval-only structured data."""
+        with patch(
+            "src.presentation.tools.knowledge_tools.knowledge_service"
+        ) as mock_svc:
+            mock_svc.query_data = AsyncMock(
+                return_value={"success": True, "answer": None}
+            )
+            from src.presentation.tools.knowledge_tools import consult_knowledge_graph
+
+            result = await consult_knowledge_graph(
+                "test",
+                response_mode="data",
+            )
+
+        assert result == {"success": True, "answer": None}
+        mock_svc.query_data.assert_awaited_once_with(
+            "test",
+            mode="hybrid",
+            user_prompt=None,
+        )
+
+    async def test_consult_knowledge_graph_supports_text_mode(self) -> None:
+        """consult_knowledge_graph can still return plain text when requested."""
+        with patch(
+            "src.presentation.tools.knowledge_tools.knowledge_service"
+        ) as mock_svc:
+            mock_svc.query = AsyncMock(return_value="plain answer")
+            from src.presentation.tools.knowledge_tools import consult_knowledge_graph
+
+            result = await consult_knowledge_graph(
+                "test",
+                response_mode="text",
+            )
+
+        assert result == "plain answer"
+        mock_svc.query.assert_awaited_once_with(
+            "test",
+            mode="hybrid",
+            user_prompt=None,
+            include_references=False,
+        )
+
+    async def test_consult_knowledge_graph_rejects_invalid_response_mode(self) -> None:
+        """consult_knowledge_graph should fail fast on invalid response_mode."""
+        from src.presentation.tools.knowledge_tools import consult_knowledge_graph
+
+        with pytest.raises(ValueError, match="response_mode must be one of"):
+            await consult_knowledge_graph("test", response_mode="yaml")
 
 
 # ============================================================================
