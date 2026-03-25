@@ -57,6 +57,10 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 
 ## 🏗️ Architecture
 
+<p align="center">
+  <img src="docs/images/architecture-overview.jpg" alt="Asset-Aware MCP Architecture" width="700">
+</p>
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    AI Agent (Copilot)                   │
