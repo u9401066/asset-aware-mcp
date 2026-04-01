@@ -28,8 +28,11 @@ from src.infrastructure.docx_adapter import DocxAdapter
 from src.infrastructure.encoding_guard import (
     EncodingError,
     normalize_text_input,
+    read_text_file,
     sanitize_id_stem,
+    validate_docx_structure,
     validate_zip_magic,
+    write_utf8_text,
 )
 
 if TYPE_CHECKING:
@@ -135,14 +138,14 @@ class DocxService:
 
             # Save DFM (original format, for MCP tools)
             dfm_path = doc_dir / "content.dfm"
-            dfm_path.write_text(dfm_text, encoding="utf-8")
+            write_utf8_text(dfm_path, dfm_text, hint=str(dfm_path))
 
             # Render split format: clean MD + format YAML
             md_text, yaml_text = self.renderer.render_split(ir)
             md_path = doc_dir / "content.md"
-            md_path.write_text(md_text, encoding="utf-8")
+            write_utf8_text(md_path, md_text, hint=str(md_path))
             yaml_path = doc_dir / "format.yaml"
-            yaml_path.write_text(yaml_text, encoding="utf-8")
+            write_utf8_text(yaml_path, yaml_text, hint=str(yaml_path))
 
             # Save IR as JSON for round-trip
             self._save_ir(ir, doc_dir / "ir.json")
@@ -154,8 +157,8 @@ class DocxService:
                 md_text, yaml_text, repair_report = self.integrity.auto_repair_split(
                     md_text, yaml_text, ir
                 )
-                md_path.write_text(md_text, encoding="utf-8")
-                yaml_path.write_text(yaml_text, encoding="utf-8")
+                write_utf8_text(md_path, md_text, hint=str(md_path))
+                write_utf8_text(yaml_path, yaml_text, hint=str(yaml_path))
                 logger.info("Ingest auto-repair: %s", repair_report.to_summary())
 
             summary = ir.get_summary()
@@ -276,6 +279,7 @@ class DocxService:
                 # Move to same directory as original
                 dest = source_path.with_suffix(".docx")
                 shutil.move(str(converted), str(dest))
+                validate_docx_structure(dest)
                 return dest
         except FileNotFoundError:
             logger.error("LibreOffice not installed")
@@ -299,7 +303,7 @@ class DocxService:
         dfm_path = doc_dir / "content.dfm"
         if not dfm_path.exists():
             return None
-        return dfm_path.read_text(encoding="utf-8-sig")
+        return read_text_file(dfm_path, hint=f"DFM for {doc_id}")
 
     async def get_md(self, doc_id: str) -> str | None:
         """
@@ -312,7 +316,7 @@ class DocxService:
         md_path = doc_dir / "content.md"
         if not md_path.exists():
             return None
-        return md_path.read_text(encoding="utf-8-sig")
+        return read_text_file(md_path, hint=f"Markdown for {doc_id}")
 
     async def get_block_content(
         self, doc_id: str, block_id: str
@@ -429,8 +433,8 @@ class DocxService:
                         "success": False,
                         "error": "content.md or format.yaml not found",
                     }
-                md_content = md_path.read_text(encoding="utf-8-sig")
-                yaml_content = yaml_path.read_text(encoding="utf-8-sig")
+                md_content = read_text_file(md_path, hint=f"Markdown for {doc_id}")
+                yaml_content = read_text_file(yaml_path, hint=f"YAML for {doc_id}")
 
                 split_report = self.integrity.check_split_consistency(
                     md_content, yaml_content
@@ -452,7 +456,7 @@ class DocxService:
                     persisted_dfm = doc_dir / "content.dfm"
                     if not persisted_dfm.exists():
                         return {"success": False, "error": "No content provided"}
-                    dfm_text = persisted_dfm.read_text(encoding="utf-8-sig")
+                    dfm_text = read_text_file(persisted_dfm, hint=f"DFM for {doc_id}")
                 # Normalise user-supplied text: strip BOM, reject NUL bytes.
                 try:
                     dfm_text = normalize_text_input(dfm_text, hint="dfm_text")
@@ -654,6 +658,8 @@ class DocxService:
                 return save_result
 
             converted_pdf = self._convert_docx_file_to_pdf(temp_docx, target_pdf)
+            if converted_pdf is not None and not Path(converted_pdf).exists():
+                return {"success": False, "error": f"PDF conversion reported success but file is missing: {converted_pdf}"}
             if converted_pdf is None:
                 return {
                     "success": False,
@@ -714,6 +720,8 @@ class DocxService:
                 return save_result
 
             converted_doc = self._convert_docx_file_to_doc(temp_docx, target_doc)
+            if converted_doc is not None and not Path(converted_doc).exists():
+                return {"success": False, "error": f"DOC conversion reported success but file is missing: {converted_doc}"}
             if converted_doc is None:
                 return {
                     "success": False,
@@ -773,6 +781,8 @@ class DocxService:
                 return save_result
 
             converted_odt = self._convert_docx_file_to_odt(temp_docx, target_odt)
+            if converted_odt is not None and not Path(converted_odt).exists():
+                return {"success": False, "error": f"ODT conversion reported success but file is missing: {converted_odt}"}
             if converted_odt is None:
                 return {
                     "success": False,
@@ -822,7 +832,7 @@ class DocxService:
             p = Path(md_path)
             if not p.exists():
                 return {"success": False, "error": f"Markdown file not found: {p}"}
-            md_text = p.read_text(encoding="utf-8-sig")
+            md_text = read_text_file(p, hint=str(p))
 
         if not md_text:
             return {"success": False, "error": "No markdown content provided"}
@@ -847,6 +857,7 @@ class DocxService:
         try:
             if output_format == "docx":
                 converter.convert(md_text, out)
+                validate_docx_structure(out)
                 return {"success": True, "output_path": str(out), "format": "docx"}
 
             # For PDF/DOC/ODT: first create a temp docx, then convert via LibreOffice
@@ -860,6 +871,9 @@ class DocxService:
                     result = self._convert_docx_file_to_odt(tmp_docx, out)
                 else:  # doc
                     result = self._convert_docx_file_to_doc(tmp_docx, out)
+
+                if output_format == "docx" and result is not None:
+                    validate_docx_structure(Path(result))
 
                 if result is None:
                     return {

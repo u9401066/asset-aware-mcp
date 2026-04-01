@@ -16,6 +16,7 @@ from src.domain.entities import DocumentManifest, DocumentSummary
 from src.domain.repositories import DocumentRepository
 
 from .config import settings
+from .encoding_guard import read_text_file, write_utf8_text
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ class FileStorage(DocumentRepository):
         # Update manifest path
         manifest.manifest_path = str(manifest_path)
 
-        manifest_path.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+        write_utf8_text(manifest_path, manifest.model_dump_json(indent=2), hint=str(manifest_path))
 
     def load_manifest(self, doc_id: str) -> DocumentManifest | None:
         """Load document manifest by ID."""
@@ -68,7 +69,7 @@ class FileStorage(DocumentRepository):
             return None
 
         try:
-            data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            data = json.loads(read_text_file(manifest_path, hint=str(manifest_path)))
             return DocumentManifest.model_validate(data)
         except Exception:
             return None
@@ -77,7 +78,7 @@ class FileStorage(DocumentRepository):
         """Save markdown content and return path."""
         doc_dir = self.get_doc_dir(doc_id)
         markdown_path = doc_dir / f"{doc_id}_full.md"
-        markdown_path.write_text(content, encoding="utf-8")
+        write_utf8_text(markdown_path, content, hint=str(markdown_path))
         return markdown_path
 
     def load_markdown(self, doc_id: str) -> str | None:
@@ -88,7 +89,7 @@ class FileStorage(DocumentRepository):
         if not markdown_path.exists():
             return None
 
-        return markdown_path.read_text(encoding="utf-8")
+        return read_text_file(markdown_path, hint=str(markdown_path))
 
     def save_image(self, doc_id: str, image_id: str, data: bytes, ext: str) -> Path:
         """Save image and return path."""
@@ -179,7 +180,7 @@ class FileStorage(DocumentRepository):
                 continue
 
             try:
-                ir_data = json.loads(ir_path.read_text(encoding="utf-8"))
+                ir_data = json.loads(read_text_file(ir_path, hint=str(ir_path)))
             except Exception:
                 logger.warning("Failed to parse ir.json for %s", doc_dir.name)
                 continue

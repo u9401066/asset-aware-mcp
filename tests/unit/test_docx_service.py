@@ -90,7 +90,7 @@ async def test_convert_to_pdf_success(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(
         DocxService,
         "_convert_docx_file_to_pdf",
-        classmethod(lambda cls, docx_path, output_path: output_path),
+        classmethod(lambda cls, docx_path, output_path: (output_path.write_bytes(b"%PDF-1.4\n"), output_path)[1]),
     )
 
     result = await service.convert_to_pdf("docx_123", str(output_pdf))
@@ -130,7 +130,7 @@ async def test_convert_to_doc_success(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(
         DocxService,
         "_convert_docx_file_to_doc",
-        classmethod(lambda cls, docx_path, output_path: output_path),
+        classmethod(lambda cls, docx_path, output_path: (output_path.write_bytes(b"fake-doc"), output_path)[1]),
     )
 
     result = await service.convert_to_doc("docx_123", str(output_doc))

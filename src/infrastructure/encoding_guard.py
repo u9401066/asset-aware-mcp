@@ -220,3 +220,43 @@ def normalize_text_input(text: str, hint: str = "<input>") -> str:
         )
     # Normalise CRLF → LF
     return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
+
+def read_text_file(path: Path, *, hint: str | None = None) -> str:
+    """Read a text file as bytes, then decode through the guarded ladder.
+
+    Intended for markdown / yaml / json / user-editable text assets where
+    UTF-8 (optionally with BOM) is the expected canonical encoding.
+    """
+    data = path.read_bytes()
+    return safe_decode(data, hint=hint or str(path))
+
+
+def write_utf8_text(path: Path, text: str, *, hint: str | None = None) -> None:
+    """Normalise text and persist it as canonical UTF-8 without BOM."""
+    cleaned = normalize_text_input(text, hint=hint or str(path))
+    path.write_text(cleaned, encoding="utf-8")
+
+
+def validate_docx_structure(path: Path) -> None:
+    """Run lightweight DOCX post-conversion validation.
+
+    Checks ZIP magic plus presence of a few required container entries so
+    LibreOffice conversions fail clearly instead of surfacing later.
+    """
+    from zipfile import BadZipFile, ZipFile
+
+    validate_zip_magic(path)
+    required = {"[Content_Types].xml", "word/document.xml", "_rels/.rels"}
+    try:
+        with ZipFile(path, "r") as zf:
+            names = set(zf.namelist())
+    except BadZipFile as exc:
+        raise EncodingError(f"{path} is not a readable DOCX/ZIP archive: {exc}") from exc
+
+    missing = sorted(required - names)
+    if missing:
+        raise EncodingError(
+            f"{path} is missing required DOCX members: {', '.join(missing)}"
+        )

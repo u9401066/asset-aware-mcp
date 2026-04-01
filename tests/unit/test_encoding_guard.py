@@ -19,11 +19,14 @@ import pytest
 from src.infrastructure.encoding_guard import (
     EncodingError,
     normalize_text_input,
+    read_text_file,
     safe_decode,
     sanitize_id_stem,
     strip_bom,
     strip_bom_bytes,
+    validate_docx_structure,
     validate_zip_magic,
+    write_utf8_text,
 )
 
 # ============================================================================
@@ -272,3 +275,38 @@ class TestNormalizeTextInput:
     def test_hint_in_nul_error(self) -> None:
         with pytest.raises(EncodingError, match=r"my_file\.dfm"):
             normalize_text_input("bad\x00data", hint="my_file.dfm")
+
+
+
+class TestReadWriteUtf8Text:
+    def test_read_text_file_strips_utf8_bom(self, tmp_path: Path) -> None:
+        p = tmp_path / "bom.md"
+        p.write_bytes(b"\xef\xbb\xbfhello")
+        assert read_text_file(p) == "hello"
+
+    def test_write_utf8_text_normalizes_newlines(self, tmp_path: Path) -> None:
+        p = tmp_path / "out.md"
+        write_utf8_text(p, "a\r\nb\r")
+        assert p.read_text(encoding="utf-8") == "a\nb\n"
+
+    def test_write_utf8_text_rejects_nul(self, tmp_path: Path) -> None:
+        p = tmp_path / "bad.md"
+        with pytest.raises(EncodingError):
+            write_utf8_text(p, "abc\x00def")
+
+
+class TestValidateDocxStructure:
+    def test_valid_docx_structure_passes(self, tmp_path: Path) -> None:
+        z = tmp_path / "good.docx"
+        with zipfile.ZipFile(z, "w") as zf:
+            zf.writestr("[Content_Types].xml", b"ok")
+            zf.writestr("_rels/.rels", b"ok")
+            zf.writestr("word/document.xml", b"<w:document/>")
+        validate_docx_structure(z)
+
+    def test_missing_required_members_rejected(self, tmp_path: Path) -> None:
+        z = tmp_path / "bad.docx"
+        with zipfile.ZipFile(z, "w") as zf:
+            zf.writestr("[Content_Types].xml", b"ok")
+        with pytest.raises(EncodingError, match="missing required DOCX members"):
+            validate_docx_structure(z)

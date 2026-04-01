@@ -23,6 +23,7 @@ import logging
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, cast
 
+from src.infrastructure.encoding_guard import read_text_file, write_utf8_text
 from src.presentation.dependencies import (
     dfm_table_bridge,
     docx_service,
@@ -77,8 +78,8 @@ def _prepare_merged_save_input(
         if not md_path.exists() or not yaml_path.exists():
             return dfm_content, from_md, []
 
-        md_content = md_path.read_text(encoding="utf-8")
-        yaml_content = yaml_path.read_text(encoding="utf-8")
+        md_content = read_text_file(md_path, hint=str(md_path))
+        yaml_content = read_text_file(yaml_path, hint=str(yaml_path))
         split_report = docx_service.integrity.check_split_consistency(
             md_content, yaml_content
         )
@@ -734,7 +735,7 @@ async def docx_table_from_context(
         renderer = DfmRenderer()
         dfm_text = renderer.render(ir)
         dfm_path = doc_dir / "content.dfm"
-        dfm_path.write_text(dfm_text, encoding="utf-8")
+        write_utf8_text(dfm_path, dfm_text, hint=str(dfm_path))
         result_lines.append(f"- **DFM 已更新**: `{dfm_path}`")
 
     result_lines.append("")
@@ -788,7 +789,7 @@ async def docx_chart_data(
             import contextlib
 
             with contextlib.suppress(UnicodeDecodeError):
-                chart_xml = chart_path.read_text(encoding="utf-8")
+                chart_xml = read_text_file(chart_path, hint=str(chart_path))
 
     tc = dfm_table_bridge.extract_chart_data(block, chart_xml)
     if tc is None:
