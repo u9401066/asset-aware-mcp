@@ -32,6 +32,7 @@ from src.domain.docx_value_objects import (
     ImageAnchorType,
     TableCellAlign,
 )
+from src.infrastructure.encoding_guard import validate_zip_magic
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,10 @@ class DocxAdapter:
         assets_dir.mkdir(exist_ok=True)
         parts_dir = output_dir / "parts"
         parts_dir.mkdir(exist_ok=True)
+
+        # Guard: verify ZIP magic bytes before opening (fail-closed).
+        # EncodingError propagates up so callers can surface a clean message.
+        validate_zip_magic(docx_path)
 
         # Compute checksum
         checksum = self._compute_checksum(docx_path)

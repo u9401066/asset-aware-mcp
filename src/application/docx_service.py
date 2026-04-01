@@ -25,6 +25,12 @@ from src.domain.docx_entities import DfmBlock, DocxIR
 from src.infrastructure.dfm_parser import DfmParser
 from src.infrastructure.dfm_renderer import DfmRenderer
 from src.infrastructure.docx_adapter import DocxAdapter
+from src.infrastructure.encoding_guard import (
+    EncodingError,
+    normalize_text_input,
+    sanitize_id_stem,
+    validate_zip_magic,
+)
 
 if TYPE_CHECKING:
     from src.domain.repositories import DocumentRepository
@@ -99,10 +105,19 @@ class DocxService:
         if path.suffix.lower() not in (".docx", ".docm"):
             return {"success": False, "error": f"Not a docx file: {path}"}
 
+        # Reject files that are not actually ZIP archives (fail-closed).
         try:
-            # Generate doc_id from filename + hash
+            validate_zip_magic(path)
+        except EncodingError as exc:
+            return {"success": False, "error": str(exc)}
+
+        try:
+            # Generate doc_id from sanitized filename stem + content hash.
+            # sanitize_id_stem ensures the id is filesystem-safe even for
+            # filenames with CJK/accented/special characters.
             checksum = hashlib.sha256(path.read_bytes()).hexdigest()[:16]
-            doc_id = f"docx_{path.stem}_{checksum}"
+            safe_stem = sanitize_id_stem(path.stem)
+            doc_id = f"docx_{safe_stem}_{checksum}"
 
             # Set up output directory
             doc_dir = self.repository.get_doc_dir(doc_id)
@@ -284,7 +299,7 @@ class DocxService:
         dfm_path = doc_dir / "content.dfm"
         if not dfm_path.exists():
             return None
-        return dfm_path.read_text(encoding="utf-8")
+        return dfm_path.read_text(encoding="utf-8-sig")
 
     async def get_md(self, doc_id: str) -> str | None:
         """
@@ -297,7 +312,7 @@ class DocxService:
         md_path = doc_dir / "content.md"
         if not md_path.exists():
             return None
-        return md_path.read_text(encoding="utf-8")
+        return md_path.read_text(encoding="utf-8-sig")
 
     async def get_block_content(
         self, doc_id: str, block_id: str
@@ -414,8 +429,8 @@ class DocxService:
                         "success": False,
                         "error": "content.md or format.yaml not found",
                     }
-                md_content = md_path.read_text(encoding="utf-8")
-                yaml_content = yaml_path.read_text(encoding="utf-8")
+                md_content = md_path.read_text(encoding="utf-8-sig")
+                yaml_content = yaml_path.read_text(encoding="utf-8-sig")
 
                 split_report = self.integrity.check_split_consistency(
                     md_content, yaml_content
@@ -437,7 +452,12 @@ class DocxService:
                     persisted_dfm = doc_dir / "content.dfm"
                     if not persisted_dfm.exists():
                         return {"success": False, "error": "No content provided"}
-                    dfm_text = persisted_dfm.read_text(encoding="utf-8")
+                    dfm_text = persisted_dfm.read_text(encoding="utf-8-sig")
+                # Normalise user-supplied text: strip BOM, reject NUL bytes.
+                try:
+                    dfm_text = normalize_text_input(dfm_text, hint="dfm_text")
+                except EncodingError as exc:
+                    return {"success": False, "error": str(exc)}
                 parse_result = self.parser.parse(dfm_text)
 
             # Abort on format mismatch — prevents silent data loss
@@ -802,7 +822,7 @@ class DocxService:
             p = Path(md_path)
             if not p.exists():
                 return {"success": False, "error": f"Markdown file not found: {p}"}
-            md_text = p.read_text(encoding="utf-8")
+            md_text = p.read_text(encoding="utf-8-sig")
 
         if not md_text:
             return {"success": False, "error": "No markdown content provided"}

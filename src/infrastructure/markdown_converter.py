@@ -18,6 +18,8 @@ from docx import Document as create_document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Inches, Pt, RGBColor
 
+from src.infrastructure.encoding_guard import strip_bom
+
 logger = logging.getLogger(__name__)
 
 # Type alias ??python-docx's Document() is a factory function;
@@ -49,7 +51,9 @@ class MarkdownDocxConverter:
         """
         doc = create_document()
         self._set_default_style(doc)
-        # Normalize line endings (CRLF → LF) before splitting
+        # Strip any leading BOM that editors may inject, then normalise line
+        # endings (CRLF → LF) before splitting into lines.
+        md_text = strip_bom(md_text)
         lines = md_text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
         i = 0
         while i < len(lines):
