@@ -193,6 +193,7 @@ class TestSafeDecode:
         with pytest.raises(EncodingError, match=r"mixed\.txt") as exc_info:
             safe_decode(mixed, hint="mixed.txt")
         assert "not valid UTF-8" in str(exc_info.value)
+        assert "offset" in str(exc_info.value)
 
     def test_hint_appears_in_error(self) -> None:
         with pytest.raises(EncodingError, match="my_field"):

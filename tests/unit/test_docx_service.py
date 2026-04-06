@@ -373,7 +373,7 @@ async def test_save_docx_from_md_normalizes_multilingual_split_files(
     assert "\r" not in captured["md_content"]
     assert captured["yaml_content"].startswith("doc_id: docx_123\n")
     assert "\r" not in captured["yaml_content"]
-    assert (tmp_path / "content.dfm").read_bytes().startswith(b"\xef\xbb\xbf") is False
+    assert not (tmp_path / "content.dfm").read_bytes().startswith(b"\xef\xbb\xbf")
     assert (tmp_path / "content.md").read_text(encoding="utf-8") == (
         "# 病歷摘要\n\n患者：王小明 / 山田太郎 / 홍길동\n"
     )
