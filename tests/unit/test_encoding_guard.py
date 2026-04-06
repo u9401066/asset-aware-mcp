@@ -152,6 +152,10 @@ class TestSafeDecode:
         text = "你好世界"
         assert safe_decode(text.encode("utf-8")) == text
 
+    def test_utf8_multilingual_round_trip(self) -> None:
+        text = "繁體中文 / 简体中文 / 日本語 / 한국어 / English / 😀"
+        assert safe_decode(text.encode("utf-8")) == text
+
     def test_utf16_le_decoded(self) -> None:
         text = "hello"
         data = b"\xff\xfe" + text.encode("utf-16-le")
@@ -183,6 +187,11 @@ class TestSafeDecode:
         big5_bytes = "報告".encode("big5")
         with pytest.raises(EncodingError, match="not valid UTF-8"):
             safe_decode(big5_bytes)
+
+    def test_mixed_encoding_bytes_rejected(self) -> None:
+        mixed = "繁體".encode() + "報告".encode("big5")
+        with pytest.raises(EncodingError, match="not valid UTF-8"):
+            safe_decode(mixed, hint="mixed.txt")
 
     def test_hint_appears_in_error(self) -> None:
         with pytest.raises(EncodingError, match="my_field"):
@@ -293,6 +302,14 @@ class TestReadWriteUtf8Text:
         p = tmp_path / "bad.md"
         with pytest.raises(EncodingError):
             write_utf8_text(p, "abc\x00def")
+
+    def test_read_write_utf8_text_preserves_multilingual_content(self, tmp_path: Path) -> None:
+        p = tmp_path / "multilingual.md"
+        text = "# 病歷摘要\r\n\r\n患者：王小明 / 山田太郎 / 홍길동\r\nDiagnosis: café 😀\r\n"
+        write_utf8_text(p, text)
+
+        assert p.read_bytes().startswith(b"\xef\xbb\xbf") is False
+        assert read_text_file(p) == "# 病歷摘要\n\n患者：王小明 / 山田太郎 / 홍길동\nDiagnosis: café 😀\n"
 
 
 class TestValidateDocxStructure:

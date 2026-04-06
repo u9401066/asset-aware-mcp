@@ -279,3 +279,133 @@ async def test_save_docx_uses_persisted_dfm_when_no_inline_content(
     result = await service.save_docx("docx_123")
 
     assert result["success"] is True
+
+
+@pytest.mark.asyncio
+async def test_save_docx_from_md_normalizes_multilingual_split_files(
+    monkeypatch, tmp_path: Path
+):
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path
+
+    service = DocxService(repository=repository)
+    ir = DocxIR(
+        doc_id="docx_123",
+        source_path="/workspace/original.docx",
+        blocks=[
+            DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="原始內容"),
+        ],
+    )
+    (tmp_path / "content.md").write_bytes(
+        b"\xef\xbb\xbf"
+        b"---\r\n"
+        b"doc_id: docx_123\r\n"
+        b"---\r\n\r\n"
+        b"<!-- @p001 -->\r\n"
+        + "病歷摘要：王小明 / 山田太郎 / 홍길동\r\n".encode()
+    )
+    (tmp_path / "format.yaml").write_bytes(
+        b"\xef\xbb\xbf"
+        b"doc_id: docx_123\r\n"
+        b"source: demo.docx\r\n"
+        b"checksum: abc123\r\n"
+        b"blocks:\r\n"
+        b"  p001:\r\n"
+        b"    type: paragraph\r\n"
+    )
+    (tmp_path / "original.docx").write_bytes(b"docx")
+
+    captured: dict[str, str] = {}
+    parse_result = DfmParseResult(
+        doc_id="docx_123",
+        source="demo.docx",
+        checksum="abc123",
+        edits=[BlockEdit(block_id="p001", new_content="病歷摘要：王小明 / 山田太郎 / 홍길동")],
+    )
+
+    monkeypatch.setattr(service, "_load_ir", lambda doc_id: ir)
+
+    def fake_parse_split(md_content: str, yaml_content: str) -> DfmParseResult:
+        captured["md_content"] = md_content
+        captured["yaml_content"] = yaml_content
+        return parse_result
+
+    monkeypatch.setattr(service.parser, "parse_split", fake_parse_split)
+    monkeypatch.setattr(
+        service.integrity,
+        "check_pre_save",
+        lambda ir_obj, parsed: IntegrityReport(),
+    )
+    monkeypatch.setattr(service.parser, "apply_edits", lambda ir_obj, parsed: ir_obj)
+    monkeypatch.setattr(service, "_expected_changed_block_ids", lambda *_args: set())
+    monkeypatch.setattr(
+        service,
+        "_detect_unedited_block_mutations",
+        lambda *_args: [],
+    )
+    monkeypatch.setattr(
+        service.adapter,
+        "ir_to_docx",
+        lambda ir_obj, doc_dir, out: out,
+    )
+    monkeypatch.setattr(service, "_save_ir", lambda *_args: None)
+    monkeypatch.setattr(service, "_backup_before_overwrite", lambda *_args: None)
+    monkeypatch.setattr(service.renderer, "render", lambda ir_obj: "\ufeff更新後 DFM\r\n第二行\r\n")
+    monkeypatch.setattr(
+        service.renderer,
+        "render_split",
+        lambda ir_obj: (
+            "\ufeff# 病歷摘要\r\n\r\n患者：王小明 / 山田太郎 / 홍길동\r\n",
+            "\ufeffdoc_id: docx_123\r\nblocks: {}\r\n",
+        ),
+    )
+    monkeypatch.setattr(service, "_detect_content_drift", lambda *_args: [])
+    monkeypatch.setattr(
+        service.integrity,
+        "check_post_save",
+        lambda *_args: IntegrityReport(),
+    )
+
+    result = await service.save_docx("docx_123", from_md=True)
+
+    assert result["success"] is True
+    assert captured["md_content"].startswith("---\n")
+    assert "\r" not in captured["md_content"]
+    assert captured["yaml_content"].startswith("doc_id: docx_123\n")
+    assert "\r" not in captured["yaml_content"]
+    assert (tmp_path / "content.dfm").read_bytes().startswith(b"\xef\xbb\xbf") is False
+    assert (tmp_path / "content.md").read_text(encoding="utf-8") == (
+        "# 病歷摘要\n\n患者：王小明 / 山田太郎 / 홍길동\n"
+    )
+    assert (tmp_path / "format.yaml").read_text(encoding="utf-8") == (
+        "doc_id: docx_123\nblocks: {}\n"
+    )
+
+
+@pytest.mark.asyncio
+async def test_save_docx_from_md_rejects_mixed_encoded_markdown(
+    monkeypatch, tmp_path: Path
+):
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path
+
+    service = DocxService(repository=repository)
+    ir = DocxIR(
+        doc_id="docx_123",
+        source_path="/workspace/original.docx",
+        blocks=[
+            DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="原始內容"),
+        ],
+    )
+    (tmp_path / "content.md").write_bytes("繁體中文".encode() + "報告".encode("big5"))
+    (tmp_path / "format.yaml").write_text(
+        "doc_id: docx_123\nsource: demo.docx\nchecksum: abc123\nblocks: {}\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(service, "_load_ir", lambda doc_id: ir)
+
+    result = await service.save_docx("docx_123", from_md=True)
+
+    assert result["success"] is False
+    assert "not valid UTF-8" in result["error"]

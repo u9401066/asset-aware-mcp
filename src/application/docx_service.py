@@ -435,6 +435,8 @@ class DocxService:
                     }
                 md_content = read_text_file(md_path, hint=f"Markdown for {doc_id}")
                 yaml_content = read_text_file(yaml_path, hint=f"YAML for {doc_id}")
+                md_content = normalize_text_input(md_content, hint=f"Markdown for {doc_id}")
+                yaml_content = normalize_text_input(yaml_content, hint=f"YAML for {doc_id}")
 
                 split_report = self.integrity.check_split_consistency(
                     md_content, yaml_content
@@ -556,11 +558,11 @@ class DocxService:
 
             # Update all formats with current state
             updated_dfm = self.renderer.render(ir)
-            (doc_dir / "content.dfm").write_text(updated_dfm, encoding="utf-8")
+            write_utf8_text(doc_dir / "content.dfm", updated_dfm, hint=f"DFM for {doc_id}")
 
             md_text, yaml_text = self.renderer.render_split(ir)
-            (doc_dir / "content.md").write_text(md_text, encoding="utf-8")
-            (doc_dir / "format.yaml").write_text(yaml_text, encoding="utf-8")
+            write_utf8_text(doc_dir / "content.md", md_text, hint=f"Markdown for {doc_id}")
+            write_utf8_text(doc_dir / "format.yaml", yaml_text, hint=f"YAML for {doc_id}")
 
             # --- Content drift detection ---
             drift_issues = self._detect_content_drift(old_md_text, md_text)
