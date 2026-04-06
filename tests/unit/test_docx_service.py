@@ -409,3 +409,34 @@ async def test_save_docx_from_md_rejects_mixed_encoded_markdown(
 
     assert result["success"] is False
     assert "not valid UTF-8" in result["error"]
+
+
+@pytest.mark.asyncio
+async def test_save_docx_from_md_rejects_mixed_encoded_yaml(
+    monkeypatch, tmp_path: Path
+):
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path
+
+    service = DocxService(repository=repository)
+    ir = DocxIR(
+        doc_id="docx_123",
+        source_path="/workspace/original.docx",
+        blocks=[
+            DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="原始內容"),
+        ],
+    )
+    (tmp_path / "content.md").write_text(
+        "---\ndoc_id: docx_123\n---\n\n<!-- @p001 -->\n病歷摘要\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "format.yaml").write_bytes(
+        b"doc_id: docx_123\nsource: demo.docx\nchecksum: abc123\nblocks:\n" + "報告".encode("big5")
+    )
+
+    monkeypatch.setattr(service, "_load_ir", lambda doc_id: ir)
+
+    result = await service.save_docx("docx_123", from_md=True)
+
+    assert result["success"] is False
+    assert "not valid UTF-8" in result["error"]

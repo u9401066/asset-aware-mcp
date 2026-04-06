@@ -190,8 +190,9 @@ class TestSafeDecode:
 
     def test_mixed_encoding_bytes_rejected(self) -> None:
         mixed = "繁體".encode() + "報告".encode("big5")
-        with pytest.raises(EncodingError, match="not valid UTF-8"):
+        with pytest.raises(EncodingError, match=r"mixed\.txt") as exc_info:
             safe_decode(mixed, hint="mixed.txt")
+        assert "not valid UTF-8" in str(exc_info.value)
 
     def test_hint_appears_in_error(self) -> None:
         with pytest.raises(EncodingError, match="my_field"):
