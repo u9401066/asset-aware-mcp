@@ -2,7 +2,7 @@
 Presentation Layer - MCP Tools
 
 拆分自 server.py，按領域分模組：
-- document_tools: ETL + 文件管理工具 (11)
+- document_tools: ETL + 文件管理工具 (12)
 - docx_tools: Docx ↔ DFM 編輯 + 驗證 + Bridge 工具 (14)
 - section_tools: Section 導航工具 (5)
 - job_tools: 非同步 Job 管理工具 (3)
@@ -10,12 +10,13 @@ Presentation Layer - MCP Tools
 - table_tools: A2T 表格工具 (7) — v0.2.14 合併版
 - profile_tools: ETL Profile 設定工具 (5)
 
-Total: 47 tools
+Total: 48 tools
 """
 
 # Import all tools to register them with mcp
 from src.presentation.tools.document_tools import (
     convert_pdf_to_docx,
+    convert_pdf_to_pptx,
     delete_document,
     export_document_segmentation,
     fetch_document_asset,
@@ -83,6 +84,7 @@ __all__ = [
     "convert_docx_to_odt",
     "convert_docx_to_pdf",
     "convert_pdf_to_docx",
+    "convert_pdf_to_pptx",
     "delete_document",
     "delete_docx",
     "discover_sources",

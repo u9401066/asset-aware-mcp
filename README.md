@@ -69,7 +69,7 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP Server (Modular Presentation)            │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 47 tools in 7 modules                   │   │
+│  │ tools/: 48 tools in 7 modules                   │   │
 │  │   document (11) │ docx (14) │ section (5)       │   │
 │  │   job (3) │ knowledge (2) │ table (7) │ profile (5) │
 │  └─────────────────────────────────────────────────┘   │
@@ -145,6 +145,7 @@ Marker note:
 | `list_documents` | List all ingested documents and their asset counts |
 | `delete_document` | Delete an ingested PDF, its local artifacts, and LightRAG index entries when enabled |
 | `convert_pdf_to_docx` | Reconstruct a readable DOCX from extracted PDF content |
+| `convert_pdf_to_pptx` | Rebuild editable PPTX slides from extracted PDF markdown and figures |
 | `inspect_document_manifest` | Inspect document structure before fetching specific assets |
 | `fetch_document_asset` | Precisely retrieve tables (MD) / figures (B64) / sections |
 | `parse_pdf_structure` | Run high-precision Marker parsing and emit structured blocks |

@@ -124,7 +124,7 @@ src/
 ├── domain/          # 🔵 核心業務邏輯 (+docx_entities, docx_value_objects)
 ├── application/     # 🟢 使用案例 (+docx_service, dfm_table_bridge)
 ├── infrastructure/  # 🟠 外部依賴實作 (+docx_adapter, dfm_parser, dfm_renderer, docx_validator)
-└── presentation/    # 🔴 MCP Server (47 tools in 7 modules, 13 resources)
+└── presentation/    # 🔴 MCP Server (48 tools in 7 modules, 13 resources)
     ├── tools/
     │   ├── document_tools.py   # ETL + document management (11)
     │   ├── docx_tools.py       # Docx DFM + conversion (14) — core + validator + bridge

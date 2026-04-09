@@ -558,6 +558,27 @@ class TestDocumentTools:
             assert "✅" in result
             assert "converted.docx" in result
 
+    async def test_convert_pdf_to_pptx_success(self) -> None:
+        """convert_pdf_to_pptx returns output summary on success."""
+        with patch(
+            "src.presentation.tools.document_tools.document_service"
+        ) as mock_svc:
+            mock_svc.convert_pdf_to_pptx = AsyncMock(
+                return_value={
+                    "success": True,
+                    "doc_id": "doc_123",
+                    "mode": "content",
+                    "output_path": "/workspace/converted.pptx",
+                    "slides_created": 5,
+                    "figure_slides": 2,
+                }
+            )
+            from src.presentation.tools.document_tools import convert_pdf_to_pptx
+
+            result = await convert_pdf_to_pptx("doc_123")
+            assert "✅" in result
+            assert "converted.pptx" in result
+
     async def test_ingest_documents_sync_reports_context_progress(self) -> None:
         """ingest_documents emits MCP progress for synchronous ETL."""
         fake_ctx = MagicMock()
