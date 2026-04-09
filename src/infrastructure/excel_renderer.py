@@ -7,7 +7,7 @@ Handles Excel file generation using XlsxWriter with professional styling.
 from datetime import datetime
 from pathlib import Path
 
-import xlsxwriter
+import xlsxwriter  # type: ignore[import-untyped]
 
 from src.domain.repositories import TableRendererInterface
 from src.domain.table_entities import TableContext

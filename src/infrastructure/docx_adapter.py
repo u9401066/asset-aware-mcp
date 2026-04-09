@@ -15,7 +15,7 @@ import shutil
 from pathlib import Path
 from zipfile import ZipFile
 
-from lxml import etree
+from lxml import etree  # type: ignore[import-untyped]
 
 from src.domain.docx_entities import (
     CellFormat,

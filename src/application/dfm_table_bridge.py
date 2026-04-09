@@ -363,7 +363,7 @@ def _parse_chart_xml_to_table(
         TableContext with extracted data, or None on failure
     """
     try:
-        from lxml import etree
+        from lxml import etree  # type: ignore[import-untyped]
     except ImportError:
         logger.warning("lxml not available for chart XML parsing")
         return None
