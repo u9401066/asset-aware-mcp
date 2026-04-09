@@ -9,7 +9,7 @@
 ## 🆕 What's New in v0.6.3
 
 - **Citation-Aware LightRAG Release**: structured KG output, LightRAG deletion sync, env alignment, and hardened install smoke are now part of `v0.6.3`
-- **47 tools** across 7 modules
+- **48 tools** across 7 modules
 
 ## 🧪 Current Main Branch
 

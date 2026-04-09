@@ -140,6 +140,7 @@ Marker 說明：
 | `list_documents` | 列出所有已攝入文件與資產統計 |
 | `delete_document` | 刪除已攝入 PDF、本地 artifacts，以及啟用時對應的 LightRAG 索引 |
 | `convert_pdf_to_docx` | 將 PDF 內容層重建為可讀 DOCX |
+| `convert_pdf_to_pptx` | 依據 PDF Markdown 與圖像重建可編輯的 PPTX 投影片 |
 | `inspect_document_manifest` | 在抓取資產前先檢視文件結構 |
 | `fetch_document_asset` | 精確獲取表格 (MD) / 圖片 (B64) / 章節內容 |
 | `parse_pdf_structure` | 使用 Marker 進行高精度結構化 PDF 解析 |

@@ -8,6 +8,7 @@ Document Tools - ETL + 文件管理 MCP 工具
 - list_documents: 列出所有文件
 - delete_document: 刪除已攝入的 PDF 文件及本地 artifacts
 - convert_pdf_to_docx: 將 PDF 內容層重建為 DOCX
+- convert_pdf_to_pptx: 將 PDF Markdown 重建為可編輯 PPTX
 - inspect_document_manifest: 查看文件 Manifest
 - fetch_document_asset: 擷取文件資產
 """
@@ -506,6 +507,45 @@ async def convert_pdf_to_docx(
             f"- **output_path**: `{result.get('output_path', '')}`",
             f"- **figures_embedded**: {result.get('figures_embedded', 0)}",
             f"- **tables_found**: {result.get('tables_found', 0)}",
+        ]
+    )
+
+
+@mcp.tool()
+async def convert_pdf_to_pptx(
+    doc_id: str,
+    output_path: str | None = None,
+    mode: str = "content",
+    ctx: Context | None = None,
+) -> str:
+    """
+    將已攝入的 PDF 文件轉為 PPTX。
+
+    轉換範圍：
+    - `content`：依據 PDF ETL 的 Markdown/圖像生成可編輯投影片。
+    """
+    await log_message(ctx, "info", f"convert_pdf_to_pptx start: {doc_id}")
+    await report_progress(ctx, 10, message=f"Converting {doc_id} to PPTX")
+    result = await document_service.convert_pdf_to_pptx(
+        doc_id,
+        output_path,
+        mode=mode,
+    )
+    if not result.get("success"):
+        await log_message(ctx, "error", f"convert_pdf_to_pptx failed: {doc_id}")
+        return f"❌ 轉換失敗：{result.get('error', '未知錯誤')}"
+
+    await report_progress(ctx, 100, message=f"Finished PPTX conversion for {doc_id}")
+    await log_message(ctx, "info", f"convert_pdf_to_pptx complete: {doc_id}")
+
+    return "\n".join(
+        [
+            "✅ PDF → PPTX 轉換成功",
+            f"- **doc_id**: `{result.get('doc_id', '')}`",
+            f"- **mode**: {result.get('mode', mode)}",
+            f"- **output_path**: `{result.get('output_path', '')}`",
+            f"- **slides_created**: {result.get('slides_created', 0)}",
+            f"- **figure_slides**: {result.get('figure_slides', 0)}",
         ]
     )
 

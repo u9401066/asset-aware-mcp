@@ -17,6 +17,7 @@ Integration Tests — Marker ETL Pipeline
 from __future__ import annotations
 
 import json
+import importlib.util
 from pathlib import Path
 
 import pytest
@@ -28,7 +29,7 @@ import pytest
 try:
     from src.infrastructure.marker_adapter import MarkerPDFExtractor
 
-    MARKER_AVAILABLE = True
+    MARKER_AVAILABLE = importlib.util.find_spec("marker") is not None
 except ImportError:
     MARKER_AVAILABLE = False
 

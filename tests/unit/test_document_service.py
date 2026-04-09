@@ -120,6 +120,52 @@ async def test_convert_pdf_to_docx_success(monkeypatch, tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_convert_pdf_to_pptx_rejects_fidelity_mode() -> None:
+    service = DocumentService(repository=MagicMock(), pdf_extractor=MagicMock())
+
+    result = await service.convert_pdf_to_pptx("doc_123", mode="fidelity")
+
+    assert result["success"] is False
+    assert "content mode only" in result["error"]
+
+
+@pytest.mark.asyncio
+async def test_convert_pdf_to_pptx_success(monkeypatch, tmp_path: Path) -> None:
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path
+    repository.load_markdown.return_value = "# Slide 1\n\n- bullet"
+    repository.load_manifest.return_value = MagicMock(
+        title="Deck Title",
+        filename="slides.pdf",
+        assets=MagicMock(figures=[MagicMock(path=tmp_path / "fig1.png", caption="Cap")]),
+    )
+
+    service = DocumentService(repository=repository, pdf_extractor=MagicMock())
+
+    captured: dict[str, object] = {}
+
+    def fake_build(markdown, manifest, output_path):
+        captured["markdown"] = markdown
+        captured["output_path"] = output_path
+        return {"total_slides": 3, "figure_slides": 1}
+
+    monkeypatch.setattr(service, "_build_pptx_from_markdown", fake_build)
+
+    result = await service.convert_pdf_to_pptx("doc_123")
+
+    assert result == {
+        "success": True,
+        "doc_id": "doc_123",
+        "output_path": str(tmp_path / "converted_from_pdf.pptx"),
+        "mode": "content",
+        "slides_created": 3,
+        "figure_slides": 1,
+    }
+    assert captured["markdown"] == "# Slide 1\n\n- bullet"
+    assert captured["output_path"] == tmp_path / "converted_from_pdf.pptx"
+
+
+@pytest.mark.asyncio
 async def test_ingest_reports_progress_callback(tmp_path: Path) -> None:
     pdf_path = tmp_path / "paper.pdf"
     pdf_path.write_bytes(b"%PDF-1.4 test")
