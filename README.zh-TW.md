@@ -109,6 +109,20 @@ asset-aware-mcp/
 └── pyproject.toml           # uv 專案配置
 ```
 
+## 📐 架構圖
+
+專案視覺圖表。所有圖片套用一致的 GitHub README 風格。
+
+| 圖表 | 說明 |
+|-----|------|
+| [01 — 系統架構](docs/diagrams/01-system-architecture.jpg) | 完整架構：Telegram → Gateway → MCP Adapter → Ollama |
+| [02 — 資料結構](docs/diagrams/02-data-layout.jpg) | 48 工具分 7 大類 + 資料樹狀圖 |
+| [03 — PDF 解讀流程](docs/diagrams/03-pdf-ingestion-pipeline.jpg) | 7 階段流程：PDF 上傳 → 知識圖譜 |
+| [04 — DOCX 雙向編輯](docs/diagrams/04-docx-edit-pipeline.jpg) | DOCX 吃入 → TableContext 編輯 → 往返存檔 |
+| [05 — 知識圖譜搜尋](docs/diagrams/05-knowledge-graph-search.jpg) | 跨文件搜尋的三條平行路徑 |
+
+> 💡 所有生成 prompt 保存在 [docs/diagrams/prompts/README.md](docs/diagrams/prompts/README.md)，方便再生成時維持風格一致。
+
 ## 🚀 快速開始
 
 ```bash

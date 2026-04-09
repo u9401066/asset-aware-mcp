@@ -114,6 +114,20 @@ asset-aware-mcp/
 └── pyproject.toml           # uv Project Config
 ```
 
+## 📐 Architecture Diagrams
+
+Visual overview for the project. All diagrams use consistent GitHub README style.
+
+| Diagram | Description |
+|---------|-------------|
+| [01 — System Architecture](docs/diagrams/01-system-architecture.jpg) | Full stack: Telegram → Gateway → MCP Adapter → 3 MCP servers → Ollama |
+| [02 — Data Layout](docs/diagrams/02-data-layout.jpg) | 48 tools organized in 7 categories with asset-aware data tree |
+| [03 — PDF Ingestion Pipeline](docs/diagrams/03-pdf-ingestion-pipeline.jpg) | 7-stage flow from PDF upload to knowledge graph |
+| [04 — DOCX Bidirectional Edit](docs/diagrams/04-docx-edit-pipeline.jpg) | DOCX ingest → TableContext edit → round-trip save workflow |
+| [05 — Knowledge Graph Search](docs/diagrams/05-knowledge-graph-search.jpg) | Cross-document search with 3 parallel query paths |
+
+> 💡 All generation prompts are saved in [docs/diagrams/prompts/README.md](docs/diagrams/prompts/README.md) for style consistency and regeneration.
+
 ## 🚀 Quick Start
 
 ```bash
