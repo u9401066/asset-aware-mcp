@@ -120,6 +120,10 @@ asset-aware-mcp/
 | [03 — PDF 解讀流程](docs/diagrams/03-pdf-ingestion-pipeline.jpg) | 7 階段流程：PDF 上傳 → 知識圖譜 |
 | [04 — DOCX 雙向編輯](docs/diagrams/04-docx-edit-pipeline.jpg) | DOCX 吃入 → TableContext 編輯 → 往返存檔 |
 | [05 — 知識圖譜搜尋](docs/diagrams/05-knowledge-graph-search.jpg) | 跨文件搜尋的三條平行路徑 |
+| [06 — 安裝步驟](docs/diagrams/06-installation-steps.jpg) | 7 步驟從 clone 到驗證 |
+| [07 — PDF ETL 流程](docs/diagrams/07-pdf-etl-pipeline.jpg) | 雙引擎解析：PyMuPDF + Marker |
+| [08 — KG 架構](docs/diagrams/08-knowledge-graph-architecture.jpg) | lightrag-hku 三層知識圖譜架構 |
+| [08 — KG 架構](docs/diagrams/08-knowledge-graph-architecture.jpg) | lightrag-hku 三層知識圖譜架構 |
 
 > 💡 所有生成 prompt 保存在 [docs/diagrams/prompts/README.md](docs/diagrams/prompts/README.md)，方便再生成時維持風格一致。
 

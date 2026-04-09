@@ -125,6 +125,10 @@ Visual overview for the project. All diagrams use consistent GitHub README style
 | [03 — PDF Ingestion Pipeline](docs/diagrams/03-pdf-ingestion-pipeline.jpg) | 7-stage flow from PDF upload to knowledge graph |
 | [04 — DOCX Bidirectional Edit](docs/diagrams/04-docx-edit-pipeline.jpg) | DOCX ingest → TableContext edit → round-trip save workflow |
 | [05 — Knowledge Graph Search](docs/diagrams/05-knowledge-graph-search.jpg) | Cross-document search with 3 parallel query paths |
+| [06 — Installation Steps](docs/diagrams/06-installation-steps.jpg) | 7-step installation from clone to verification |
+| [07 — PDF ETL Pipeline](docs/diagrams/07-pdf-etl-pipeline.jpg) | Dual-engine parsing: PyMuPDF + Marker |
+| [08 — KG Architecture](docs/diagrams/08-knowledge-graph-architecture.jpg) | lightrag-hku 3-layer KG architecture |
+| [08 — KG Architecture](docs/diagrams/08-knowledge-graph-architecture.jpg) | lightrag-hku 3-layer KG architecture |
 
 > 💡 All generation prompts are saved in [docs/diagrams/prompts/README.md](docs/diagrams/prompts/README.md) for style consistency and regeneration.
 
