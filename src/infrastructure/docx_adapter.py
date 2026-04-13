@@ -605,9 +605,9 @@ class DocxAdapter:
             if style_el is not None:
                 table_style = style_el.get(f"{{{NS['w']}}}val")
 
-        # Parse rows and cells
+        # Parse rows and cells into a logical grid so merged cells keep their
+        # real column positions instead of shifting left/right.
         rows_data: list[list[str]] = []
-        col_count = 0
         merged_cells: list[MergedCell] = []
         cell_formats: dict[str, CellFormat] = {}
         col_widths: list[float] = []
@@ -620,68 +620,67 @@ class DocxAdapter:
                 if w:
                     col_widths.append(_twips_to_cm(int(w)))
 
-        # Parse rows
+        # Parse rows using logical column positions derived from gridSpan and
+        # row-level gridBefore/gridAfter metadata.
         for row_idx, tr_elem in enumerate(tbl_elem.findall(f"{{{NS['w']}}}tr")):
-            row_cells: list[str] = []
-            for col_idx, tc_elem in enumerate(tr_elem.findall(f"{{{NS['w']}}}tc")):
-                # Get cell text
-                cell_text = self._get_cell_text(tc_elem)
+            grid_before, grid_after = self._get_row_grid_offsets(tr_elem)
+            row_cells: list[str] = [""] * grid_before
+
+            for col_idx, col_span, vmerge_state, tc_elem in self._iter_row_cells(tr_elem):
+                while len(row_cells) < col_idx:
+                    row_cells.append("")
+
+                cell_text = (
+                    "" if vmerge_state == "continue" else self._get_cell_text(tc_elem)
+                )
                 row_cells.append(cell_text)
+                for _ in range(1, col_span):
+                    row_cells.append("")
 
-                # Check for merged cells
-                tc_pr = tc_elem.find(f"{{{NS['w']}}}tcPr")
-                if tc_pr is not None:
-                    # Horizontal merge
-                    grid_span = tc_pr.find(f"{{{NS['w']}}}gridSpan")
-                    col_span = 1
-                    if grid_span is not None:
-                        val = grid_span.get(f"{{{NS['w']}}}val")
-                        if val:
-                            col_span = int(val)
-
-                    # Vertical merge
-                    v_merge = tc_pr.find(f"{{{NS['w']}}}vMerge")
-                    if v_merge is not None:
-                        val = v_merge.get(f"{{{NS['w']}}}val")
-                        if val == "restart":
-                            # Count how many rows this spans
-                            row_span = self._count_vmerge(tbl_elem, row_idx, col_idx)
-                            if col_span > 1 or row_span > 1:
-                                merged_cells.append(
-                                    MergedCell(
-                                        row=row_idx,
-                                        col=col_idx,
-                                        row_span=row_span,
-                                        col_span=col_span,
-                                    )
-                                )
-                        # Continuation cell (merged into cell above)
-                    elif col_span > 1:
+                if vmerge_state == "restart":
+                    row_span = self._count_vmerge(tbl_elem, row_idx, col_idx, col_span)
+                    if col_span > 1 or row_span > 1:
                         merged_cells.append(
                             MergedCell(
                                 row=row_idx,
                                 col=col_idx,
-                                row_span=1,
+                                row_span=row_span,
                                 col_span=col_span,
                             )
                         )
+                elif vmerge_state is None and col_span > 1:
+                    merged_cells.append(
+                        MergedCell(
+                            row=row_idx,
+                            col=col_idx,
+                            row_span=1,
+                            col_span=col_span,
+                        )
+                    )
 
-                    # Cell formatting
+                tc_pr = tc_elem.find(f"{{{NS['w']}}}tcPr")
+                if tc_pr is not None:
                     cell_fmt = self._parse_cell_format(tc_pr, tc_elem)
-                    if cell_fmt:
+                    if cell_fmt and vmerge_state != "continue":
                         cell_formats[f"{row_idx}:{col_idx}"] = cell_fmt
 
+            if grid_after:
+                row_cells.extend([""] * grid_after)
+
             rows_data.append(row_cells)
-            col_count = max(col_count, len(row_cells))
 
         # Build markdown table
         md_table = self._rows_to_md_table(rows_data)
 
         # Check if table has nested tables (complex case)
-        nested_tables = tbl_elem.findall(f".//{{{NS['w']}}}tbl")
+        has_nested_tables = any(
+            tc_elem.find(f".//{{{NS['w']}}}tbl") is not None
+            for tr_elem in tbl_elem.findall(f"{{{NS['w']}}}tr")
+            for tc_elem in tr_elem.findall(f"{{{NS['w']}}}tc")
+        )
         is_nested = False
         raw_xml_ref = None
-        if nested_tables:
+        if has_nested_tables:
             # Save raw XML for complex nested tables
             raw_xml_ref = f"parts/nested_table_{block_id}.xml"
             xml_path = parts_dir / f"nested_table_{block_id}.xml"
@@ -1101,23 +1100,106 @@ class DocxAdapter:
             for r in runs[1:]
         )
 
+    def _get_row_grid_offsets(self, tr_elem: etree._Element) -> tuple[int, int]:
+        """Get omitted leading/trailing grid columns declared on a row."""
+        tr_pr = tr_elem.find(f"{{{NS['w']}}}trPr")
+        if tr_pr is None:
+            return 0, 0
+
+        grid_before = 0
+        grid_after = 0
+
+        before = tr_pr.find(f"{{{NS['w']}}}gridBefore")
+        if before is not None:
+            val = before.get(f"{{{NS['w']}}}val")
+            if val:
+                try:
+                    grid_before = max(0, int(val))
+                except ValueError:
+                    grid_before = 0
+
+        after = tr_pr.find(f"{{{NS['w']}}}gridAfter")
+        if after is not None:
+            val = after.get(f"{{{NS['w']}}}val")
+            if val:
+                try:
+                    grid_after = max(0, int(val))
+                except ValueError:
+                    grid_after = 0
+
+        return grid_before, grid_after
+
+    def _get_cell_grid_span(self, tc_pr: etree._Element | None) -> int:
+        """Get the logical column span for a table cell."""
+        if tc_pr is None:
+            return 1
+
+        grid_span = tc_pr.find(f"{{{NS['w']}}}gridSpan")
+        if grid_span is None:
+            return 1
+
+        val = grid_span.get(f"{{{NS['w']}}}val")
+        if not val:
+            return 1
+
+        try:
+            return max(1, int(val))
+        except ValueError:
+            return 1
+
+    def _get_vmerge_state(self, tc_pr: etree._Element | None) -> str | None:
+        """Return restart/continue for vertical merges, or None if not merged."""
+        if tc_pr is None:
+            return None
+
+        v_merge = tc_pr.find(f"{{{NS['w']}}}vMerge")
+        if v_merge is None:
+            return None
+
+        val = v_merge.get(f"{{{NS['w']}}}val")
+        if val == "restart":
+            return "restart"
+        return "continue"
+
+    def _iter_row_cells(
+        self, tr_elem: etree._Element
+    ) -> list[tuple[int, int, str | None, etree._Element]]:
+        """Return table cells with logical grid positions and merge metadata."""
+        logical_col, _ = self._get_row_grid_offsets(tr_elem)
+        cells: list[tuple[int, int, str | None, etree._Element]] = []
+
+        for tc_elem in tr_elem.findall(f"{{{NS['w']}}}tc"):
+            tc_pr = tc_elem.find(f"{{{NS['w']}}}tcPr")
+            col_span = self._get_cell_grid_span(tc_pr)
+            vmerge_state = self._get_vmerge_state(tc_pr)
+            cells.append((logical_col, col_span, vmerge_state, tc_elem))
+            logical_col += col_span
+
+        return cells
+
     def _count_vmerge(
-        self, tbl_elem: etree._Element, start_row: int, col_idx: int
+        self,
+        tbl_elem: etree._Element,
+        start_row: int,
+        logical_col: int,
+        col_span: int,
     ) -> int:
-        """Count how many rows are vertically merged starting from start_row."""
+        """Count how many rows are vertically merged from a logical grid slot."""
         rows = tbl_elem.findall(f"{{{NS['w']}}}tr")
         span = 1
+
         for row_idx in range(start_row + 1, len(rows)):
-            cells = rows[row_idx].findall(f"{{{NS['w']}}}tc")
-            if col_idx >= len(cells):
+            row_cells = self._iter_row_cells(rows[row_idx])
+            has_continuation = any(
+                cell_col == logical_col
+                and cell_span == col_span
+                and vmerge_state == "continue"
+                for cell_col, cell_span, vmerge_state, _ in row_cells
+            )
+            if not has_continuation:
                 break
-            tc_pr = cells[col_idx].find(f"{{{NS['w']}}}tcPr")
-            if tc_pr is not None:
-                v_merge = tc_pr.find(f"{{{NS['w']}}}vMerge")
-                if v_merge is not None and v_merge.get(f"{{{NS['w']}}}val") is None:
-                    span += 1
-                    continue
-            break
+            span += 1
+
         return span
 
     def _parse_cell_format(
@@ -1311,21 +1393,23 @@ class DocxAdapter:
         self._set_paragraph_text_preserving_runs(p_elem, new_text)
 
     def _update_table_text(self, tbl_elem: etree._Element, block: DfmBlock) -> None:
-        """Update text content of table cells from a DfmBlock."""
-        # Parse markdown table back to rows
+        """Update table cells using logical grid coordinates so merges stay aligned."""
         md_rows = self._parse_md_table(block.content)
         if not md_rows:
             return
 
         xml_rows = tbl_elem.findall(f"{{{NS['w']}}}tr")
 
-        for _row_idx, (xml_row, md_row) in enumerate(
-            zip(xml_rows, md_rows, strict=False)
-        ):
-            cells = xml_row.findall(f"{{{NS['w']}}}tc")
-            for _col_idx, (cell, md_cell) in enumerate(
-                zip(cells, md_row, strict=False)
-            ):
+        for row_idx, xml_row in enumerate(xml_rows):
+            if row_idx >= len(md_rows):
+                break
+
+            md_row = md_rows[row_idx]
+            for col_idx, _col_span, vmerge_state, cell in self._iter_row_cells(xml_row):
+                if vmerge_state == "continue" or col_idx >= len(md_row):
+                    continue
+
+                md_cell = md_row[col_idx]
                 if self._get_cell_text(cell).strip() == md_cell.strip():
                     continue
                 self._update_table_cell_text(cell, md_cell)

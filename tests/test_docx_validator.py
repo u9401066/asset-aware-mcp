@@ -134,6 +134,63 @@ def _make_table(rows: list[list[str]], style: str | None = None) -> etree._Eleme
     return tbl
 
 
+def _make_table_cell(
+    text: str = "",
+    *,
+    grid_span: int = 1,
+    v_merge: str | None = None,
+    children: list[etree._Element] | None = None,
+) -> etree._Element:
+    """Create a <w:tc> element with optional merge metadata and nested content."""
+    tc = etree.Element(f"{{{NS_W}}}tc")
+
+    tc_pr = None
+    if grid_span > 1 or v_merge is not None:
+        tc_pr = etree.SubElement(tc, f"{{{NS_W}}}tcPr")
+
+    if grid_span > 1 and tc_pr is not None:
+        etree.SubElement(
+            tc_pr,
+            f"{{{NS_W}}}gridSpan",
+            {f"{{{NS_W}}}val": str(grid_span)},
+        )
+
+    if v_merge is not None and tc_pr is not None:
+        attrs = {f"{{{NS_W}}}val": v_merge} if v_merge == "restart" else {}
+        etree.SubElement(tc_pr, f"{{{NS_W}}}vMerge", attrs)
+
+    tc.append(_make_paragraph(text))
+    if children:
+        for child in children:
+            tc.append(child)
+
+    return tc
+
+
+def _make_custom_table(
+    rows: list[list[etree._Element]], style: str | None = None
+) -> etree._Element:
+    """Create a <w:tbl> element from pre-built cell elements."""
+    tbl = etree.SubElement(etree.Element("dummy"), f"{{{NS_W}}}tbl")
+
+    if style:
+        tbl_pr = etree.SubElement(tbl, f"{{{NS_W}}}tblPr")
+        etree.SubElement(tbl_pr, f"{{{NS_W}}}tblStyle", {f"{{{NS_W}}}val": style})
+
+    for row_cells in rows:
+        tr = etree.SubElement(tbl, f"{{{NS_W}}}tr")
+        for cell in row_cells:
+            tr.append(cell)
+
+    return tbl
+
+
+def _read_document_xml(path: Path) -> etree._Element:
+    """Read and parse word/document.xml from a .docx file."""
+    with ZipFile(path, "r") as zf:
+        return etree.fromstring(zf.read("word/document.xml"))
+
+
 def _build_document_xml(
     paragraphs: list[etree._Element] | None = None,
     tables: list[etree._Element] | None = None,
@@ -728,6 +785,89 @@ class TestFullRoundTrip:
             f"Table diffs: {[(d.location, d.original, d.rebuilt) for d in report.table_diffs]}"
         )
 
+    def test_simple_table_not_marked_nested(self, tmp_docx_dir: Path):
+        """A plain top-level table must not be misclassified as nested."""
+        from src.infrastructure.docx_adapter import DocxAdapter
+
+        adapter = DocxAdapter()
+
+        original = tmp_docx_dir / "simple_table.docx"
+        _create_docx(
+            original,
+            tables=[_make_table([["A", "B"], ["1", "2"]])],
+        )
+
+        data_dir = tmp_docx_dir / "data"
+        data_dir.mkdir()
+        ir = adapter.parse_to_ir(original, data_dir)
+
+        table_block = ir.blocks[0]
+        assert table_block.is_nested is False
+        assert table_block.raw_xml_ref is None
+
+    def test_merged_table_parse_preserves_logical_columns(
+        self, tmp_docx_dir: Path
+    ):
+        """gridSpan cells must keep logical column positions in IR markdown."""
+        from src.infrastructure.docx_adapter import DocxAdapter
+
+        adapter = DocxAdapter()
+
+        original = tmp_docx_dir / "merged_table.docx"
+        _create_docx(
+            original,
+            tables=[
+                _make_custom_table(
+                    [
+                        [
+                            _make_table_cell("Merged", grid_span=2),
+                            _make_table_cell("Right"),
+                        ],
+                        [
+                            _make_table_cell("A"),
+                            _make_table_cell("B"),
+                            _make_table_cell("C"),
+                        ],
+                    ]
+                ),
+            ],
+        )
+
+        data_dir = tmp_docx_dir / "data"
+        data_dir.mkdir()
+        ir = adapter.parse_to_ir(original, data_dir)
+
+        table_block = ir.blocks[0]
+        rows = adapter._parse_md_table(table_block.content)
+        assert rows == [["Merged", "", "Right"], ["A", "B", "C"]]
+        assert [mc.to_dict() for mc in table_block.merged_cells] == [
+            {"row": 0, "col": 0, "row_span": 1, "col_span": 2}
+        ]
+
+    def test_multi_level_nested_table_marks_block_nested(
+        self, tmp_docx_dir: Path
+    ):
+        """Tables with descendant nested tables must be flagged and preserved."""
+        from src.infrastructure.docx_adapter import DocxAdapter
+
+        adapter = DocxAdapter()
+
+        deepest = _make_custom_table([[_make_table_cell("Deep")]])
+        inner = _make_custom_table([[_make_table_cell("", children=[deepest])]])
+        outer = _make_custom_table([[_make_table_cell("Outer", children=[inner])]])
+
+        original = tmp_docx_dir / "nested_table.docx"
+        _create_docx(original, tables=[outer])
+
+        data_dir = tmp_docx_dir / "data"
+        data_dir.mkdir()
+        ir = adapter.parse_to_ir(original, data_dir)
+
+        table_block = ir.blocks[0]
+        assert table_block.is_nested is True
+        assert table_block.raw_xml_ref is not None
+        assert (data_dir / table_block.raw_xml_ref).exists()
+
     def test_mixed_content_roundtrip(
         self, validator: DocxValidator, tmp_docx_dir: Path
     ):
@@ -922,6 +1062,60 @@ class TestEditRoundTrip:
         assert len(report.table_diffs) == 1
         assert "100" in report.table_diffs[0].original
         assert "200" in report.table_diffs[0].rebuilt
+
+    def test_merged_table_edit_updates_correct_xml_cell(self, tmp_docx_dir: Path):
+        """Editing a post-merge logical cell must update the correct physical tc."""
+        from src.infrastructure.docx_adapter import DocxAdapter
+
+        adapter = DocxAdapter()
+
+        original = tmp_docx_dir / "merged_edit.docx"
+        _create_docx(
+            original,
+            tables=[
+                _make_custom_table(
+                    [
+                        [
+                            _make_table_cell("Merged", grid_span=2),
+                            _make_table_cell("Right"),
+                        ],
+                        [
+                            _make_table_cell("A"),
+                            _make_table_cell("B"),
+                            _make_table_cell("C"),
+                        ],
+                    ]
+                ),
+            ],
+        )
+
+        data_dir = tmp_docx_dir / "data"
+        data_dir.mkdir()
+        ir = adapter.parse_to_ir(original, data_dir)
+
+        table_block = ir.blocks[0]
+        table_block.content = table_block.content.replace("Right", "Updated")
+
+        rebuilt = tmp_docx_dir / "rebuilt.docx"
+        adapter.ir_to_docx(ir, data_dir, rebuilt)
+
+        tree = _read_document_xml(rebuilt)
+        rows = tree.findall(f".//{{{NS_W}}}tbl/{{{NS_W}}}tr")
+        first_row_cells = rows[0].findall(f"{{{NS_W}}}tc")
+
+        merged_text = "".join(
+            t.text or "" for t in first_row_cells[0].findall(f".//{{{NS_W}}}t")
+        )
+        updated_text = "".join(
+            t.text or "" for t in first_row_cells[1].findall(f".//{{{NS_W}}}t")
+        )
+        grid_span = first_row_cells[0].find(f"{{{NS_W}}}tcPr/{{{NS_W}}}gridSpan")
+
+        assert len(first_row_cells) == 2
+        assert merged_text == "Merged"
+        assert updated_text == "Updated"
+        assert grid_span is not None
+        assert grid_span.get(f"{{{NS_W}}}val") == "2"
 
 
 # ============================================================================
