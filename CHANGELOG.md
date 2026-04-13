@@ -15,6 +15,8 @@
 - **DOCX save flow preserves untouched table structure more safely**
   - `save_docx` now stages rebuilt `.docx` and regenerated artifacts before validation succeeds, preventing failed saves from overwriting existing `content.md` / `content.dfm` / `ir.json`
   - table write-back skips untouched cells and preserves multi-paragraph cell structure when another cell is edited
+  - drift detection now normalizes markdown table padding before comparing shrinkage, preventing whitespace-only table re-rendering from being flagged as data loss
+  - `docx_table_from_context` now keeps `content.dfm`, `content.md`, and `format.yaml` in sync so subsequent `save_docx(from_md=True)` persists TableContext edits correctly
 
 ## [0.6.3] - 2026-03-23
 

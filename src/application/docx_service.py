@@ -566,8 +566,10 @@ class DocxService:
 
             # --- Fail-safe: reject output if severe content loss detected ---
             if old_md_text and not force:
-                old_len = len(old_md_text)
-                new_len = len(md_text)
+                normalized_old_md = self._normalize_md_for_drift(old_md_text)
+                normalized_new_md = self._normalize_md_for_drift(md_text)
+                old_len = len(normalized_old_md)
+                new_len = len(normalized_new_md)
                 if old_len > 100 and new_len < old_len * 0.5:
                     shrinkage_pct = (1 - new_len / old_len) * 100
                     logger.error(
@@ -995,6 +997,9 @@ class DocxService:
         if not old_md:
             return issues
 
+        old_md = DocxService._normalize_md_for_drift(old_md)
+        new_md = DocxService._normalize_md_for_drift(new_md)
+
         # --- Character-level shrinkage check ---
         old_len = len(old_md)
         new_len = len(new_md)
@@ -1048,6 +1053,42 @@ class DocxService:
             )
 
         return issues
+
+    @staticmethod
+    def _normalize_md_for_drift(md_text: str) -> str:
+        """Canonicalize markdown before drift comparison.
+
+        Pipe-table rendering pads cells to column widths for readability, while
+        edited tables may be re-rendered without the original padding. That kind
+        of whitespace-only normalization should not trigger the data-loss guard.
+        """
+        if not md_text:
+            return ""
+
+        lines = md_text.splitlines()
+        normalized: list[str] = []
+        index = 0
+        total = len(lines)
+
+        while index < total:
+            line = lines[index]
+            if line.strip().startswith("|"):
+                table_lines: list[str] = []
+                while index < total and lines[index].strip().startswith("|"):
+                    table_lines.append(lines[index].strip())
+                    index += 1
+
+                rows = DfmParser._parse_md_table("\n".join(table_lines))
+                if rows:
+                    normalized.append(DfmParser._rows_to_md_table(rows))
+                else:
+                    normalized.extend(line.rstrip() for line in table_lines)
+                continue
+
+            normalized.append(line.rstrip())
+            index += 1
+
+        return "\n".join(normalized)
 
     # ========================================================================
     # IR persistence

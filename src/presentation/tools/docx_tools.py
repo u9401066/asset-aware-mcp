@@ -734,9 +734,16 @@ async def docx_table_from_context(
 
         renderer = DfmRenderer()
         dfm_text = renderer.render(ir)
+        md_text, yaml_text = renderer.render_split(ir)
         dfm_path = doc_dir / "content.dfm"
+        md_path = doc_dir / "content.md"
+        yaml_path = doc_dir / "format.yaml"
         write_utf8_text(dfm_path, dfm_text, hint=str(dfm_path))
+        write_utf8_text(md_path, md_text, hint=str(md_path))
+        write_utf8_text(yaml_path, yaml_text, hint=str(yaml_path))
         result_lines.append(f"- **DFM 已更新**: `{dfm_path}`")
+        result_lines.append(f"- **Split Markdown 已更新**: `{md_path}`")
+        result_lines.append(f"- **格式 YAML 已更新**: `{yaml_path}`")
 
     result_lines.append("")
     result_lines.append(

@@ -307,6 +307,51 @@ class TestDocxTools:
             result = await list_docx_blocks("nonexistent")
             assert "❌" in result
 
+    async def test_docx_table_from_context_syncs_split_artifacts(
+        self, tmp_path: Path
+    ) -> None:
+        ir = DocxIR(
+            doc_id="doc123",
+            source_path="/workspace/demo.docx",
+            blocks=[
+                DfmBlock(
+                    id="t001",
+                    block_type=DfmBlockType.TABLE,
+                    content="| A |\n| --- |\n| old |",
+                )
+            ],
+        )
+        tc = TableContext(
+            id="tbl_ctx",
+            intent="summary",
+            title="T",
+            columns=[ColumnDef(name="A", type="text")],
+            rows=[{"A": "updated"}],
+            source_doc_id="doc123",
+            source_block_id="t001",
+        )
+
+        with patch("src.presentation.tools.docx_tools.table_service") as mock_table_svc:
+            with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
+                mock_table_svc._tables = {tc.id: tc}
+                mock_svc._load_ir.return_value = ir
+                mock_svc.repository.get_doc_dir.return_value = tmp_path
+                mock_svc._save_ir = MagicMock()
+
+                from src.presentation.tools.docx_tools import docx_table_from_context
+
+                result = await docx_table_from_context(
+                    "doc123", "t001", tc.id, save_dfm=True
+                )
+
+        assert "Split Markdown 已更新" in result
+        assert "格式 YAML 已更新" in result
+        assert (tmp_path / "content.dfm").exists()
+        assert (tmp_path / "content.md").exists()
+        assert (tmp_path / "format.yaml").exists()
+        assert "updated" in (tmp_path / "content.dfm").read_text(encoding="utf-8")
+        assert "updated" in (tmp_path / "content.md").read_text(encoding="utf-8")
+
     async def test_list_docx_blocks_empty(self) -> None:
         """list_docx_blocks handles empty doc."""
         with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:

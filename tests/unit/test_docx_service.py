@@ -174,6 +174,31 @@ def test_detect_unedited_block_mutations():
     assert issues == ["Block p002 changed without an explicit edit request"]
 
 
+def test_detect_content_drift_ignores_table_padding_only_changes():
+    old_md = (
+        "---\n"
+        "doc_id: docx_123\n"
+        "---\n\n"
+        "<!-- @t001 -->\n"
+        "| Very long heading                 | col_1      |\n"
+        "| --------------------------------- | ---------- |\n"
+        "| Item                              | Old value  |\n"
+    )
+    new_md = (
+        "---\n"
+        "doc_id: docx_123\n"
+        "---\n\n"
+        "<!-- @t001 -->\n"
+        "| Very long heading | col_1 |\n"
+        "| --- | --- |\n"
+        "| Item | Old value |\n"
+    )
+
+    issues = DocxService._detect_content_drift(old_md, new_md)
+
+    assert issues == []
+
+
 @pytest.mark.asyncio
 async def test_save_docx_fails_when_unedited_block_changes(monkeypatch, tmp_path: Path):
     repository = MagicMock()
@@ -379,6 +404,81 @@ async def test_save_docx_does_not_overwrite_artifacts_when_shrinkage_detected(
     assert not output_path.exists()
     save_ir_mock.assert_not_called()
     backup_mock.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_save_docx_does_not_fail_on_table_padding_normalization(
+    monkeypatch, tmp_path: Path
+):
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path
+
+    service = DocxService(repository=repository)
+    ir = DocxIR(
+        doc_id="docx_123",
+        source_path="/workspace/original.docx",
+        blocks=[
+            DfmBlock(
+                id="t001",
+                block_type=DfmBlockType.TABLE,
+                content="| Very long heading | col_1 |\n| --- | --- |\n| Item | Old value |",
+            ),
+        ],
+    )
+
+    padded_md = (
+        "---\n"
+        "doc_id: docx_123\n"
+        "---\n\n"
+        "<!-- @t001 -->\n"
+        "| Very long heading                 | col_1      |\n"
+        "| --------------------------------- | ---------- |\n"
+        "| Item                              | Old value  |\n"
+    )
+
+    (tmp_path / "content.md").write_text(padded_md, encoding="utf-8")
+    (tmp_path / "content.dfm").write_text("persisted dfm", encoding="utf-8")
+    (tmp_path / "format.yaml").write_text("doc_id: docx_123\nblocks: {}\n", encoding="utf-8")
+    (tmp_path / "ir.json").write_text('{"doc_id": "docx_123"}', encoding="utf-8")
+    (tmp_path / "original.docx").write_bytes(b"docx")
+
+    parse_result = DfmParseResult(doc_id="docx_123", source="demo.docx", checksum="", edits=[])
+
+    monkeypatch.setattr(service, "_load_ir", lambda _doc_id: ir)
+    monkeypatch.setattr(service.parser, "parse", lambda _dfm_text: parse_result)
+    monkeypatch.setattr(
+        service.integrity,
+        "check_pre_save",
+        lambda _ir_obj, _parsed: IntegrityReport(),
+    )
+    monkeypatch.setattr(service.parser, "apply_edits", lambda ir_obj, _parsed: ir_obj)
+    monkeypatch.setattr(service, "_expected_changed_block_ids", lambda *_args: set())
+    monkeypatch.setattr(service, "_detect_unedited_block_mutations", lambda *_args: [])
+    monkeypatch.setattr(
+        service.adapter,
+        "ir_to_docx",
+        lambda _ir_obj, _doc_dir, out: (out.write_bytes(b"docx"), out)[1],
+    )
+    monkeypatch.setattr(service, "_save_ir", lambda *_args: None)
+    monkeypatch.setattr(service, "_backup_before_overwrite", lambda *_args: None)
+    monkeypatch.setattr(service.renderer, "render", lambda _ir_obj: "updated dfm")
+    monkeypatch.setattr(
+        service.renderer,
+        "render_split",
+        lambda _ir_obj: (
+            "---\ndoc_id: docx_123\n---\n\n<!-- @t001 -->\n| Very long heading | col_1 |\n| --- | --- |\n| Item | Old value |\n",
+            "doc_id: docx_123\nblocks: {}\n",
+        ),
+    )
+    monkeypatch.setattr(
+        service.integrity,
+        "check_post_save",
+        lambda *_args: IntegrityReport(),
+    )
+
+    result = await service.save_docx("docx_123", "dummy", str(tmp_path / "output.docx"))
+
+    assert result["success"] is True
 
 
 @pytest.mark.asyncio
