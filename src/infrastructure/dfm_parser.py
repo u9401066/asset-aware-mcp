@@ -344,8 +344,11 @@ class DfmParser:
             new_content = edit.new_content
 
             if edit.table_rows is not None:
-                # Table: rebuild content from parsed rows
-                block.content = self._rows_to_md_table(edit.table_rows)
+                # Table: only rebuild when the user actually changed semantic
+                # cell content. This avoids needless normalization of untouched
+                # merged tables during split-format round trips.
+                if self._parse_md_table(block.content) != edit.table_rows:
+                    block.content = self._rows_to_md_table(edit.table_rows)
             elif edit.updated_runs is not None:
                 # Format block with YAML runs — check if content.md
                 # text diverges from runs' text (user edited content.md)

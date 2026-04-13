@@ -56,6 +56,7 @@ describe('AssetAwareMcpProvider', () => {
         assert.strictEqual(servers.length, 1);
         assert.deepStrictEqual(servers[0].args.slice(0, 5), ['run', '--python', '3.11', '--directory', tempDir]);
         assert.deepStrictEqual(servers[0].args.slice(5), ['python', '-m', 'src.server']);
+        assert.strictEqual(servers[0].env.UV_PROJECT_ENVIRONMENT, path.join(tempDir, '.venv-mcp'));
     });
 
     it('adds marker runtime args when marker backend is enabled', () => {

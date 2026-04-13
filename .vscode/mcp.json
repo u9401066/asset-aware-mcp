@@ -9,6 +9,8 @@
             "command": "uv",
             "args": [
                 "run",
+                "--python",
+                "3.11",
                 "--directory",
                 "${workspaceFolder}",
                 "python",
@@ -21,7 +23,8 @@
                 "OLLAMA_MODEL": "qwen2.5:7b",
                 "OLLAMA_EMBEDDING_MODEL": "nomic-embed-text",
                 "ENABLE_LIGHTRAG": "true",
-                "DATA_DIR": "${workspaceFolder}/data"
+                "DATA_DIR": "${workspaceFolder}/data",
+                "UV_PROJECT_ENVIRONMENT": "${workspaceFolder}/.venv-mcp"
             }
             // 移除 envFile 設定 - 如果需要使用 .env 檔案，請取消下行註解：
             // "envFile": "${workspaceFolder}/.env"

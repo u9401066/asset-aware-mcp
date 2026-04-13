@@ -7,6 +7,15 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **VS Code MCP dev startup no longer tries to recreate the workspace `.venv`**
+  - `.vscode/mcp.json` now pins `uv run` to Python 3.11 and uses a dedicated `.venv-mcp` project environment
+  - VS Code extension development mode now sets `UV_PROJECT_ENVIRONMENT=.venv-mcp`, avoiding Windows `Access denied` failures when the regular `.venv` is already in use
+- **DOCX save flow preserves untouched table structure more safely**
+  - `save_docx` now stages rebuilt `.docx` and regenerated artifacts before validation succeeds, preventing failed saves from overwriting existing `content.md` / `content.dfm` / `ir.json`
+  - table write-back skips untouched cells and preserves multi-paragraph cell structure when another cell is edited
+
 ## [0.6.3] - 2026-03-23
 
 ### Added

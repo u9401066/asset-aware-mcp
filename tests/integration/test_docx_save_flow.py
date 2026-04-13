@@ -20,7 +20,18 @@ def _build_sample_docx(path: Path) -> None:
     table = doc.add_table(rows=2, cols=1)
     table.cell(0, 0).text = "Drug"
     table.cell(1, 0).text = "Old value"
-    doc.save(path)
+    doc.save(str(path))
+
+
+def _build_multi_paragraph_table_docx(path: Path) -> None:
+    doc = Document()
+    table = doc.add_table(rows=2, cols=2)
+    table.cell(0, 0).paragraphs[0].text = "Question"
+    table.cell(0, 0).add_paragraph("Second line _____")
+    table.cell(0, 1).text = "Answer"
+    table.cell(1, 0).text = "Item"
+    table.cell(1, 1).text = "Old value"
+    doc.save(str(path))
 
 
 @pytest.fixture
@@ -144,3 +155,38 @@ class TestDocxSaveFlowIntegration:
         assert "Merged split value" in (doc_dir / "content.dfm").read_text(
             encoding="utf-8"
         )
+
+    @pytest.mark.asyncio
+    async def test_save_docx_from_md_preserves_untouched_multi_paragraph_cells(
+        self, temp_dir: Path, docx_stack
+    ) -> None:
+        repository, docx_service, _table_service, _dfm_table_bridge = docx_stack
+        sample = temp_dir / "multi-paragraph-table.docx"
+        _build_multi_paragraph_table_docx(sample)
+
+        result = await docx_service.ingest_docx(str(sample))
+        assert result["success"] is True
+        doc_id = str(result["doc_id"])
+
+        doc_dir = repository.get_doc_dir(doc_id)
+        md_path = doc_dir / "content.md"
+        md_text = md_path.read_text(encoding="utf-8")
+        md_path.write_text(
+            md_text.replace("Old value", "New value"),
+            encoding="utf-8",
+        )
+
+        output_path = temp_dir / "multi-paragraph-output.docx"
+        save_result = await docx_service.save_docx(
+            doc_id,
+            output_path=str(output_path),
+            from_md=True,
+        )
+
+        assert save_result["success"] is True
+        saved = Document(str(output_path))
+
+        untouched_cell = saved.tables[0].cell(0, 0)
+        assert untouched_cell.paragraphs[0].text == "Question"
+        assert untouched_cell.paragraphs[1].text == "Second line _____"
+        assert saved.tables[0].cell(1, 1).text == "New value"

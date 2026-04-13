@@ -12,6 +12,7 @@ import hashlib
 import logging
 import re
 import shutil
+from copy import deepcopy
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -1241,7 +1242,9 @@ class DocxAdapter:
         import zipfile
 
         # Read the existing zip
-        temp_path = docx_path.with_suffix(".tmp")
+        temp_path = docx_path.with_name(f"{docx_path.name}.rewrite")
+        if temp_path.exists():
+            temp_path.unlink()
 
         with zipfile.ZipFile(docx_path, "r") as zin:
             doc_xml = zin.read("word/document.xml")
@@ -1301,26 +1304,11 @@ class DocxAdapter:
 
     def _update_paragraph_text(self, p_elem: etree._Element, block: DfmBlock) -> None:
         """Update text content of a paragraph element from a DfmBlock."""
-        runs = p_elem.findall(f"{{{NS['w']}}}r")
-        if not runs:
-            return
-
         new_text = block.content
-        if not new_text:
+        if not new_text or self._get_paragraph_text(p_elem) == new_text:
             return
 
-        # Simple strategy: put all text into the first run, clear others
-        # This preserves the first run's formatting
-        first_run_t = runs[0].find(f"{{{NS['w']}}}t")
-        if first_run_t is not None:
-            first_run_t.text = new_text
-            first_run_t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
-
-        # Clear text from subsequent runs
-        for r in runs[1:]:
-            t_elem = r.find(f"{{{NS['w']}}}t")
-            if t_elem is not None:
-                t_elem.text = ""
+        self._set_paragraph_text_preserving_runs(p_elem, new_text)
 
     def _update_table_text(self, tbl_elem: etree._Element, block: DfmBlock) -> None:
         """Update text content of table cells from a DfmBlock."""
@@ -1338,34 +1326,44 @@ class DocxAdapter:
             for _col_idx, (cell, md_cell) in enumerate(
                 zip(cells, md_row, strict=False)
             ):
-                # Update first paragraph's text in the cell
-                paragraphs = cell.findall(f"{{{NS['w']}}}p")
-                if not paragraphs:
+                if self._get_cell_text(cell).strip() == md_cell.strip():
                     continue
+                self._update_table_cell_text(cell, md_cell)
 
-                first_p = paragraphs[0]
-                first_r = first_p.find(f"{{{NS['w']}}}r")
-                if first_r is not None:
-                    t_elem = first_r.find(f"{{{NS['w']}}}t")
-                    if t_elem is not None:
-                        t_elem.text = md_cell.strip()
-                        t_elem.set(
-                            "{http://www.w3.org/XML/1998/namespace}space",
-                            "preserve",
-                        )
+    def _update_table_cell_text(self, tc_elem: etree._Element, new_text: str) -> None:
+        """Update a single table cell while preserving paragraph structure."""
+        paragraphs = tc_elem.findall(f"{{{NS['w']}}}p")
+        if not paragraphs:
+            return
 
-                    # Clear text from subsequent runs in the first paragraph
-                    for r in first_p.findall(f"{{{NS['w']}}}r")[1:]:
-                        t = r.find(f"{{{NS['w']}}}t")
-                        if t is not None:
-                            t.text = ""
+        new_paragraphs = new_text.split("\n") if new_text else [""]
+        template = paragraphs[-1]
 
-                # Clear text from subsequent paragraphs in the cell
-                for p in paragraphs[1:]:
-                    for r in p.findall(f"{{{NS['w']}}}r"):
-                        t = r.find(f"{{{NS['w']}}}t")
-                        if t is not None:
-                            t.text = ""
+        while len(paragraphs) < len(new_paragraphs):
+            cloned = deepcopy(template)
+            self._set_paragraph_text_preserving_runs(cloned, "")
+            tc_elem.append(cloned)
+            paragraphs.append(cloned)
+
+        for idx, paragraph in enumerate(paragraphs):
+            text = new_paragraphs[idx] if idx < len(new_paragraphs) else ""
+            self._set_paragraph_text_preserving_runs(paragraph, text)
+
+    def _set_paragraph_text_preserving_runs(
+        self, p_elem: etree._Element, new_text: str
+    ) -> None:
+        """Write text into the first text node and clear the remaining text nodes."""
+        text_nodes = p_elem.findall(f".//{{{NS['w']}}}t")
+        if not text_nodes:
+            runs = p_elem.findall(f"{{{NS['w']}}}r")
+            first_run = runs[0] if runs else etree.SubElement(p_elem, f"{{{NS['w']}}}r")
+            text_nodes = [etree.SubElement(first_run, f"{{{NS['w']}}}t")]
+
+        text_nodes[0].text = new_text
+        text_nodes[0].set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+
+        for t_elem in text_nodes[1:]:
+            t_elem.text = ""
 
     @staticmethod
     def _parse_md_table(md_table: str) -> list[list[str]]:

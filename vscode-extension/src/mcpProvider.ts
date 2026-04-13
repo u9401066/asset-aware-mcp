@@ -141,6 +141,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
 
             // Set DATA_DIR relative to project
             envVars['DATA_DIR'] = path.join(mcpServerDir, 'data');
+            envVars['UV_PROJECT_ENVIRONMENT'] = path.join(mcpServerDir, '.venv-mcp');
 
             // Merge with .env file if exists
             if (fs.existsSync(envPath)) {
@@ -162,6 +163,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
                     'src.server',
                 ].join(' ')
             );
+            this.log('UV_PROJECT_ENVIRONMENT: ' + envVars['UV_PROJECT_ENVIRONMENT']);
 
             servers.push({
                 label: 'Asset-Aware MCP (Dev)',

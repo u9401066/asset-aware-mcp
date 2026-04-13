@@ -259,7 +259,7 @@ async def test_save_docx_uses_persisted_dfm_when_no_inline_content(
     monkeypatch.setattr(
         service.adapter,
         "ir_to_docx",
-        lambda ir_obj, doc_dir, out: out,
+        lambda ir_obj, doc_dir, out: (out.write_bytes(b"docx"), out)[1],
     )
     monkeypatch.setattr(service, "_save_ir", lambda *_args: None)
     monkeypatch.setattr(service, "_backup_before_overwrite", lambda *_args: None)
@@ -279,6 +279,106 @@ async def test_save_docx_uses_persisted_dfm_when_no_inline_content(
     result = await service.save_docx("docx_123")
 
     assert result["success"] is True
+
+
+@pytest.mark.asyncio
+async def test_save_docx_does_not_overwrite_artifacts_when_shrinkage_detected(
+    monkeypatch, tmp_path: Path
+):
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path
+
+    service = DocxService(repository=repository)
+    ir = DocxIR(
+        doc_id="docx_123",
+        source_path="/workspace/original.docx",
+        blocks=[
+            DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="Before"),
+        ],
+    )
+
+    original_md = (
+        "---\n"
+        "doc_id: docx_123\n"
+        "---\n\n"
+        "<!-- @p001 -->\n"
+        + ("Long original content " * 8)
+        + "\n"
+    )
+    original_dfm = "original dfm"
+    original_yaml = "doc_id: docx_123\nblocks: {}\n"
+    original_ir_text = "{\"doc_id\": \"docx_123\"}"
+
+    (tmp_path / "content.md").write_text(original_md, encoding="utf-8")
+    (tmp_path / "content.dfm").write_text(original_dfm, encoding="utf-8")
+    (tmp_path / "format.yaml").write_text(original_yaml, encoding="utf-8")
+    (tmp_path / "ir.json").write_text(original_ir_text, encoding="utf-8")
+    (tmp_path / "original.docx").write_bytes(b"docx")
+
+    parse_result = DfmParseResult(
+        doc_id="docx_123",
+        source="demo.docx",
+        checksum="",
+        edits=[BlockEdit(block_id="p001", new_content="After")],
+    )
+
+    monkeypatch.setattr(service, "_load_ir", lambda doc_id: ir)
+    monkeypatch.setattr(service.parser, "parse", lambda dfm_text: parse_result)
+    monkeypatch.setattr(
+        service.integrity,
+        "check_pre_save",
+        lambda ir_obj, parsed: IntegrityReport(),
+    )
+
+    def apply_edit(ir_obj, parsed):
+        ir_obj.find_block("p001").content = "After"
+        return ir_obj
+
+    monkeypatch.setattr(service.parser, "apply_edits", apply_edit)
+    monkeypatch.setattr(
+        service,
+        "_expected_changed_block_ids",
+        lambda *_args: {"p001"},
+    )
+    monkeypatch.setattr(
+        service,
+        "_detect_unedited_block_mutations",
+        lambda *_args: [],
+    )
+
+    def stage_docx(_ir_obj, _doc_dir, out_path):
+        out_path.write_bytes(b"docx")
+        return out_path
+
+    monkeypatch.setattr(service.adapter, "ir_to_docx", stage_docx)
+    save_ir_mock = MagicMock()
+    backup_mock = MagicMock()
+    monkeypatch.setattr(service, "_save_ir", save_ir_mock)
+    monkeypatch.setattr(service, "_backup_before_overwrite", backup_mock)
+    monkeypatch.setattr(service.renderer, "render", lambda ir_obj: "updated dfm")
+    monkeypatch.setattr(
+        service.renderer,
+        "render_split",
+        lambda ir_obj: ("tiny", "updated yaml"),
+    )
+    monkeypatch.setattr(
+        service.integrity,
+        "check_post_save",
+        lambda *_args: IntegrityReport(),
+    )
+
+    output_path = tmp_path / "output.docx"
+    result = await service.save_docx("docx_123", "dummy", str(output_path))
+
+    assert result["success"] is False
+    assert "Content shrunk by" in result["error"]
+    assert (tmp_path / "content.md").read_text(encoding="utf-8") == original_md
+    assert (tmp_path / "content.dfm").read_text(encoding="utf-8") == original_dfm
+    assert (tmp_path / "format.yaml").read_text(encoding="utf-8") == original_yaml
+    assert (tmp_path / "ir.json").read_text(encoding="utf-8") == original_ir_text
+    assert not output_path.exists()
+    save_ir_mock.assert_not_called()
+    backup_mock.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -346,7 +446,7 @@ async def test_save_docx_from_md_normalizes_multilingual_split_files(
     monkeypatch.setattr(
         service.adapter,
         "ir_to_docx",
-        lambda ir_obj, doc_dir, out: out,
+        lambda ir_obj, doc_dir, out: (out.write_bytes(b"docx"), out)[1],
     )
     monkeypatch.setattr(service, "_save_ir", lambda *_args: None)
     monkeypatch.setattr(service, "_backup_before_overwrite", lambda *_args: None)

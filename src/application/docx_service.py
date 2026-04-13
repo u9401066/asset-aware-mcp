@@ -538,17 +538,12 @@ class DocxService:
                     "warnings": unexpected_mutations,
                 }
 
-            # Determine output path
+            # Determine final output path and stage the rebuilt docx first so a
+            # failed validation cannot overwrite the requested output file.
             out = doc_dir / "output.docx" if output_path is None else Path(output_path)
-
-            # Rebuild docx
-            result_path = self.adapter.ir_to_docx(ir, doc_dir, out)
-
-            # Save updated IR
-            self._save_ir(ir, doc_dir / "ir.json")
-
-            # --- Auto-backup before overwrite ---
-            self._backup_before_overwrite(doc_dir)
+            staged_out = out.with_name(f".{out.name}.tmp")
+            if staged_out.exists():
+                staged_out.unlink()
 
             # Snapshot old content.md for drift detection
             old_md_path = doc_dir / "content.md"
@@ -556,13 +551,13 @@ class DocxService:
                 old_md_path.read_text(encoding="utf-8") if old_md_path.exists() else ""
             )
 
-            # Update all formats with current state
-            updated_dfm = self.renderer.render(ir)
-            write_utf8_text(doc_dir / "content.dfm", updated_dfm, hint=f"DFM for {doc_id}")
+            # Rebuild docx into a staged output file
+            result_path = self.adapter.ir_to_docx(ir, doc_dir, staged_out)
 
+            # Render updated artifacts in memory first; only commit them after
+            # validation succeeds.
+            updated_dfm = self.renderer.render(ir)
             md_text, yaml_text = self.renderer.render_split(ir)
-            write_utf8_text(doc_dir / "content.md", md_text, hint=f"Markdown for {doc_id}")
-            write_utf8_text(doc_dir / "format.yaml", yaml_text, hint=f"YAML for {doc_id}")
 
             # --- Content drift detection ---
             drift_issues = self._detect_content_drift(old_md_text, md_text)
@@ -582,6 +577,9 @@ class DocxService:
                         old_len,
                         new_len,
                     )
+                    staged_path = Path(result_path)
+                    if staged_path.exists():
+                        staged_path.unlink()
                     return {
                         "success": False,
                         "error": (
@@ -591,16 +589,26 @@ class DocxService:
                             f"Check .backups/ for recovery. "
                             f"Use force=True to override."
                         ),
-                        "output_path": str(result_path),
+                        "output_path": str(out),
                     }
 
             # --- Post-save integrity check ---
             original_path = doc_dir / "original.docx"
             post_report = self.integrity.check_post_save(original_path, result_path)
 
+            # --- Auto-backup before overwrite ---
+            self._backup_before_overwrite(doc_dir)
+
+            # Commit staged artifacts only after validation passes.
+            self._save_ir(ir, doc_dir / "ir.json")
+            write_utf8_text(doc_dir / "content.dfm", updated_dfm, hint=f"DFM for {doc_id}")
+            write_utf8_text(doc_dir / "content.md", md_text, hint=f"Markdown for {doc_id}")
+            write_utf8_text(doc_dir / "format.yaml", yaml_text, hint=f"YAML for {doc_id}")
+            Path(result_path).replace(out)
+
             result: dict[str, Any] = {
                 "success": True,
-                "output_path": str(result_path),
+                "output_path": str(out),
                 "integrity": post_report.to_summary(),
             }
             warnings = list(parse_result.errors)
@@ -914,8 +922,8 @@ class DocxService:
                 continue
 
             if edit.table_rows is not None:
-                expected_content = self.parser._rows_to_md_table(edit.table_rows)
-                if expected_content != block.content:
+                current_rows = self.parser._parse_md_table(block.content)
+                if current_rows != edit.table_rows:
                     changed_ids.add(edit.block_id)
                 continue
 
