@@ -90,7 +90,12 @@ async def test_convert_to_pdf_success(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(
         DocxService,
         "_convert_docx_file_to_pdf",
-        classmethod(lambda cls, docx_path, output_path: (output_path.write_bytes(b"%PDF-1.4\n"), output_path)[1]),
+        classmethod(
+            lambda cls, docx_path, output_path: (
+                output_path.write_bytes(b"%PDF-1.4\n"),
+                output_path,
+            )[1]
+        ),
     )
 
     result = await service.convert_to_pdf("docx_123", str(output_pdf))
@@ -130,7 +135,12 @@ async def test_convert_to_doc_success(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(
         DocxService,
         "_convert_docx_file_to_doc",
-        classmethod(lambda cls, docx_path, output_path: (output_path.write_bytes(b"fake-doc"), output_path)[1]),
+        classmethod(
+            lambda cls, docx_path, output_path: (
+                output_path.write_bytes(b"fake-doc"),
+                output_path,
+            )[1]
+        ),
     )
 
     result = await service.convert_to_doc("docx_123", str(output_doc))
@@ -326,13 +336,11 @@ async def test_save_docx_does_not_overwrite_artifacts_when_shrinkage_detected(
         "---\n"
         "doc_id: docx_123\n"
         "---\n\n"
-        "<!-- @p001 -->\n"
-        + ("Long original content " * 8)
-        + "\n"
+        "<!-- @p001 -->\n" + ("Long original content " * 8) + "\n"
     )
     original_dfm = "original dfm"
     original_yaml = "doc_id: docx_123\nblocks: {}\n"
-    original_ir_text = "{\"doc_id\": \"docx_123\"}"
+    original_ir_text = '{"doc_id": "docx_123"}'
 
     (tmp_path / "content.md").write_text(original_md, encoding="utf-8")
     (tmp_path / "content.dfm").write_text(original_dfm, encoding="utf-8")
@@ -438,11 +446,15 @@ async def test_save_docx_does_not_fail_on_table_padding_normalization(
 
     (tmp_path / "content.md").write_text(padded_md, encoding="utf-8")
     (tmp_path / "content.dfm").write_text("persisted dfm", encoding="utf-8")
-    (tmp_path / "format.yaml").write_text("doc_id: docx_123\nblocks: {}\n", encoding="utf-8")
+    (tmp_path / "format.yaml").write_text(
+        "doc_id: docx_123\nblocks: {}\n", encoding="utf-8"
+    )
     (tmp_path / "ir.json").write_text('{"doc_id": "docx_123"}', encoding="utf-8")
     (tmp_path / "original.docx").write_bytes(b"docx")
 
-    parse_result = DfmParseResult(doc_id="docx_123", source="demo.docx", checksum="", edits=[])
+    parse_result = DfmParseResult(
+        doc_id="docx_123", source="demo.docx", checksum="", edits=[]
+    )
 
     monkeypatch.setattr(service, "_load_ir", lambda _doc_id: ir)
     monkeypatch.setattr(service.parser, "parse", lambda _dfm_text: parse_result)
@@ -501,8 +513,7 @@ async def test_save_docx_from_md_normalizes_multilingual_split_files(
         b"---\r\n"
         b"doc_id: docx_123\r\n"
         b"---\r\n\r\n"
-        b"<!-- @p001 -->\r\n"
-        + "病歷摘要：王小明 / 山田太郎 / 홍길동\r\n".encode()
+        b"<!-- @p001 -->\r\n" + "病歷摘要：王小明 / 山田太郎 / 홍길동\r\n".encode()
     )
     (tmp_path / "format.yaml").write_bytes(
         b"\xef\xbb\xbf"
@@ -520,7 +531,11 @@ async def test_save_docx_from_md_normalizes_multilingual_split_files(
         doc_id="docx_123",
         source="demo.docx",
         checksum="abc123",
-        edits=[BlockEdit(block_id="p001", new_content="病歷摘要：王小明 / 山田太郎 / 홍길동")],
+        edits=[
+            BlockEdit(
+                block_id="p001", new_content="病歷摘要：王小明 / 山田太郎 / 홍길동"
+            )
+        ],
     )
 
     monkeypatch.setattr(service, "_load_ir", lambda doc_id: ir)
@@ -550,7 +565,9 @@ async def test_save_docx_from_md_normalizes_multilingual_split_files(
     )
     monkeypatch.setattr(service, "_save_ir", lambda *_args: None)
     monkeypatch.setattr(service, "_backup_before_overwrite", lambda *_args: None)
-    monkeypatch.setattr(service.renderer, "render", lambda ir_obj: "\ufeff更新後 DFM\r\n第二行\r\n")
+    monkeypatch.setattr(
+        service.renderer, "render", lambda ir_obj: "\ufeff更新後 DFM\r\n第二行\r\n"
+    )
     monkeypatch.setattr(
         service.renderer,
         "render_split",
@@ -631,7 +648,8 @@ async def test_save_docx_from_md_rejects_mixed_encoded_yaml(
         encoding="utf-8",
     )
     (tmp_path / "format.yaml").write_bytes(
-        b"doc_id: docx_123\nsource: demo.docx\nchecksum: abc123\nblocks:\n" + "報告".encode("big5")
+        b"doc_id: docx_123\nsource: demo.docx\nchecksum: abc123\nblocks:\n"
+        + "報告".encode("big5")
     )
 
     monkeypatch.setattr(service, "_load_ir", lambda doc_id: ir)

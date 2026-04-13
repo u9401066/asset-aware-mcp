@@ -288,7 +288,6 @@ class TestNormalizeTextInput:
             normalize_text_input("bad\x00data", hint="my_file.dfm")
 
 
-
 class TestReadWriteUtf8Text:
     def test_read_text_file_strips_utf8_bom(self, tmp_path: Path) -> None:
         p = tmp_path / "bom.md"
@@ -305,13 +304,18 @@ class TestReadWriteUtf8Text:
         with pytest.raises(EncodingError):
             write_utf8_text(p, "abc\x00def")
 
-    def test_read_write_utf8_text_preserves_multilingual_content(self, tmp_path: Path) -> None:
+    def test_read_write_utf8_text_preserves_multilingual_content(
+        self, tmp_path: Path
+    ) -> None:
         p = tmp_path / "multilingual.md"
         text = "# 病歷摘要\r\n\r\n患者：王小明 / 山田太郎 / 홍길동\r\nDiagnosis: café 😀\r\n"
         write_utf8_text(p, text)
 
         assert p.read_bytes().startswith(b"\xef\xbb\xbf") is False
-        assert read_text_file(p) == "# 病歷摘要\n\n患者：王小明 / 山田太郎 / 홍길동\nDiagnosis: café 😀\n"
+        assert (
+            read_text_file(p)
+            == "# 病歷摘要\n\n患者：王小明 / 山田太郎 / 홍길동\nDiagnosis: café 😀\n"
+        )
 
 
 class TestValidateDocxStructure:

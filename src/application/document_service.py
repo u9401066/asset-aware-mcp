@@ -1272,8 +1272,12 @@ class DocumentService:
         title_or_fallback = manifest.title or manifest.filename
         title_layout = self._get_slide_layout(presentation, 0)
         content_layout = self._get_slide_layout(presentation, 1, default_index=0)
-        figure_layout = self._get_slide_layout(presentation, 5, default_index=content_layout)
-        blank_layout = self._get_slide_layout(presentation, 6, default_index=content_layout)
+        figure_layout = self._get_slide_layout(
+            presentation, 5, default_index=content_layout
+        )
+        blank_layout = self._get_slide_layout(
+            presentation, 6, default_index=content_layout
+        )
 
         slides = self._segment_markdown_to_slides(markdown, title_or_fallback)
         for slide_title, items in slides:
@@ -1302,25 +1306,25 @@ class DocumentService:
             slide = presentation.slides.add_slide(figure_layout)
             if slide.shapes.title:
                 slide.shapes.title.text = (
-                    figure.caption
-                    or f"Figure {figure_index}"
-                    or title_or_fallback
+                    figure.caption or f"Figure {figure_index}" or title_or_fallback
                 )
 
             left = Inches(0.75)
             top = Inches(1.5)
             max_width = Inches(9)
             try:
-                slide.shapes.add_picture(str(figure_path), left=left, top=top, width=max_width)
+                slide.shapes.add_picture(
+                    str(figure_path), left=left, top=top, width=max_width
+                )
             except Exception:
                 slide = presentation.slides.add_slide(blank_layout)
                 if slide.shapes.title:
                     slide.shapes.title.text = (
-                        figure.caption
-                        or f"Figure {figure_index}"
-                        or title_or_fallback
+                        figure.caption or f"Figure {figure_index}" or title_or_fallback
                     )
-                slide.shapes.add_picture(str(figure_path), left=left, top=top, width=max_width)
+                slide.shapes.add_picture(
+                    str(figure_path), left=left, top=top, width=max_width
+                )
 
             figure_slides += 1
 

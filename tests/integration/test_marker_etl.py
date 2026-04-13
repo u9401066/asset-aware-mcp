@@ -14,10 +14,8 @@ Integration Tests — Marker ETL Pipeline
     - 測試 PDF 不存在時自動跳過
 """
 
-from __future__ import annotations
-
-import json
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest

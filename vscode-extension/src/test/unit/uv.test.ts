@@ -76,17 +76,17 @@ describe('uv path discovery', () => {
     });
 
     it('pins server version with --from when serverVersion provided', () => {
-        const launch = getUvxLaunch('uv', PREFERRED_RUNTIME_PYTHON, false, 'cpu', '0.6.3');
+        const launch = getUvxLaunch('uv', PREFERRED_RUNTIME_PYTHON, false, 'cpu', '0.6.4');
 
-        assert.deepStrictEqual(launch.args, ['--python', PREFERRED_RUNTIME_PYTHON, '--from', 'asset-aware-mcp==0.6.3']);
+        assert.deepStrictEqual(launch.args, ['--python', PREFERRED_RUNTIME_PYTHON, '--from', 'asset-aware-mcp==0.6.4']);
     });
 
     it('adds --upgrade flag when upgrade is true', () => {
-        const launch = getUvxLaunch('uv', PREFERRED_RUNTIME_PYTHON, false, 'cpu', '0.6.3', true);
+        const launch = getUvxLaunch('uv', PREFERRED_RUNTIME_PYTHON, false, 'cpu', '0.6.4', true);
 
         assert.ok(launch.args.includes('--upgrade'));
         assert.ok(launch.args.includes('--from'));
-        assert.ok(launch.args.includes('asset-aware-mcp==0.6.3'));
+        assert.ok(launch.args.includes('asset-aware-mcp==0.6.4'));
     });
 
     it('combines version pin, upgrade, and marker args', () => {

@@ -417,6 +417,7 @@ class DocxService:
             Result dict with output path and any errors.
         """
         doc_dir = self.repository.get_doc_dir(doc_id)
+        staged_path: Path | None = None
 
         # Load original IR
         ir = self._load_ir(doc_id)
@@ -435,8 +436,12 @@ class DocxService:
                     }
                 md_content = read_text_file(md_path, hint=f"Markdown for {doc_id}")
                 yaml_content = read_text_file(yaml_path, hint=f"YAML for {doc_id}")
-                md_content = normalize_text_input(md_content, hint=f"Markdown for {doc_id}")
-                yaml_content = normalize_text_input(yaml_content, hint=f"YAML for {doc_id}")
+                md_content = normalize_text_input(
+                    md_content, hint=f"Markdown for {doc_id}"
+                )
+                yaml_content = normalize_text_input(
+                    yaml_content, hint=f"YAML for {doc_id}"
+                )
 
                 split_report = self.integrity.check_split_consistency(
                     md_content, yaml_content
@@ -542,6 +547,7 @@ class DocxService:
             # failed validation cannot overwrite the requested output file.
             out = doc_dir / "output.docx" if output_path is None else Path(output_path)
             staged_out = out.with_name(f".{out.name}.tmp")
+            staged_path = staged_out
             if staged_out.exists():
                 staged_out.unlink()
 
@@ -603,9 +609,15 @@ class DocxService:
 
             # Commit staged artifacts only after validation passes.
             self._save_ir(ir, doc_dir / "ir.json")
-            write_utf8_text(doc_dir / "content.dfm", updated_dfm, hint=f"DFM for {doc_id}")
-            write_utf8_text(doc_dir / "content.md", md_text, hint=f"Markdown for {doc_id}")
-            write_utf8_text(doc_dir / "format.yaml", yaml_text, hint=f"YAML for {doc_id}")
+            write_utf8_text(
+                doc_dir / "content.dfm", updated_dfm, hint=f"DFM for {doc_id}"
+            )
+            write_utf8_text(
+                doc_dir / "content.md", md_text, hint=f"Markdown for {doc_id}"
+            )
+            write_utf8_text(
+                doc_dir / "format.yaml", yaml_text, hint=f"YAML for {doc_id}"
+            )
             Path(result_path).replace(out)
 
             result: dict[str, Any] = {
@@ -623,6 +635,8 @@ class DocxService:
             return result
 
         except Exception as e:
+            if staged_path is not None and staged_path.exists():
+                staged_path.unlink()
             logger.exception("Failed to save docx: %s", doc_id)
             return {"success": False, "error": str(e)}
 
@@ -671,7 +685,10 @@ class DocxService:
 
             converted_pdf = self._convert_docx_file_to_pdf(temp_docx, target_pdf)
             if converted_pdf is not None and not Path(converted_pdf).exists():
-                return {"success": False, "error": f"PDF conversion reported success but file is missing: {converted_pdf}"}
+                return {
+                    "success": False,
+                    "error": f"PDF conversion reported success but file is missing: {converted_pdf}",
+                }
             if converted_pdf is None:
                 return {
                     "success": False,
@@ -733,7 +750,10 @@ class DocxService:
 
             converted_doc = self._convert_docx_file_to_doc(temp_docx, target_doc)
             if converted_doc is not None and not Path(converted_doc).exists():
-                return {"success": False, "error": f"DOC conversion reported success but file is missing: {converted_doc}"}
+                return {
+                    "success": False,
+                    "error": f"DOC conversion reported success but file is missing: {converted_doc}",
+                }
             if converted_doc is None:
                 return {
                     "success": False,
@@ -794,7 +814,10 @@ class DocxService:
 
             converted_odt = self._convert_docx_file_to_odt(temp_docx, target_odt)
             if converted_odt is not None and not Path(converted_odt).exists():
-                return {"success": False, "error": f"ODT conversion reported success but file is missing: {converted_odt}"}
+                return {
+                    "success": False,
+                    "error": f"ODT conversion reported success but file is missing: {converted_odt}",
+                }
             if converted_odt is None:
                 return {
                     "success": False,

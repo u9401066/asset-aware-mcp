@@ -137,7 +137,9 @@ async def test_convert_pdf_to_pptx_success(monkeypatch, tmp_path: Path) -> None:
     repository.load_manifest.return_value = MagicMock(
         title="Deck Title",
         filename="slides.pdf",
-        assets=MagicMock(figures=[MagicMock(path=tmp_path / "fig1.png", caption="Cap")]),
+        assets=MagicMock(
+            figures=[MagicMock(path=tmp_path / "fig1.png", caption="Cap")]
+        ),
     )
 
     service = DocumentService(repository=repository, pdf_extractor=MagicMock())

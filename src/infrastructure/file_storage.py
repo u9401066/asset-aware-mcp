@@ -58,7 +58,9 @@ class FileStorage(DocumentRepository):
         # Update manifest path
         manifest.manifest_path = str(manifest_path)
 
-        write_utf8_text(manifest_path, manifest.model_dump_json(indent=2), hint=str(manifest_path))
+        write_utf8_text(
+            manifest_path, manifest.model_dump_json(indent=2), hint=str(manifest_path)
+        )
 
     def load_manifest(self, doc_id: str) -> DocumentManifest | None:
         """Load document manifest by ID."""

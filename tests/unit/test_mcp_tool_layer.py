@@ -331,18 +331,20 @@ class TestDocxTools:
             source_block_id="t001",
         )
 
-        with patch("src.presentation.tools.docx_tools.table_service") as mock_table_svc:
-            with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
-                mock_table_svc._tables = {tc.id: tc}
-                mock_svc._load_ir.return_value = ir
-                mock_svc.repository.get_doc_dir.return_value = tmp_path
-                mock_svc._save_ir = MagicMock()
+        with (
+            patch("src.presentation.tools.docx_tools.table_service") as mock_table_svc,
+            patch("src.presentation.tools.docx_tools.docx_service") as mock_svc,
+        ):
+            mock_table_svc._tables = {tc.id: tc}
+            mock_svc._load_ir.return_value = ir
+            mock_svc.repository.get_doc_dir.return_value = tmp_path
+            mock_svc._save_ir = MagicMock()
 
-                from src.presentation.tools.docx_tools import docx_table_from_context
+            from src.presentation.tools.docx_tools import docx_table_from_context
 
-                result = await docx_table_from_context(
-                    "doc123", "t001", tc.id, save_dfm=True
-                )
+            result = await docx_table_from_context(
+                "doc123", "t001", tc.id, save_dfm=True
+            )
 
         assert "Split Markdown 已更新" in result
         assert "格式 YAML 已更新" in result
