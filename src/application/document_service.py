@@ -44,6 +44,150 @@ if TYPE_CHECKING:
 
 
 ToolProgressCallback = Callable[[int, int, str, str], Awaitable[None] | None]
+PageRange = tuple[int, int]
+
+_PAGE_MARKER_RE = re.compile(r"<!-- Page (\d+) -->")
+
+
+def format_page_ranges(page_ranges: list[PageRange] | tuple[PageRange, ...]) -> str:
+    """Format normalized inclusive page ranges for logs and doc_id scopes."""
+    parts = []
+    for start_page, end_page in page_ranges:
+        if start_page == end_page:
+            parts.append(str(start_page))
+        else:
+            parts.append(f"{start_page}-{end_page}")
+    return ",".join(parts)
+
+
+def build_page_number_map(
+    page_ranges: list[PageRange] | tuple[PageRange, ...],
+) -> list[int]:
+    """Expand normalized ranges into a sequential subset→original page map."""
+    page_numbers: list[int] = []
+    for start_page, end_page in page_ranges:
+        page_numbers.extend(range(start_page, end_page + 1))
+    return page_numbers
+
+
+def normalize_page_ranges(
+    page_ranges: list[str] | None,
+    total_pages: int,
+) -> tuple[PageRange, ...]:
+    """Validate and merge user-supplied 1-indexed inclusive page ranges."""
+    if not page_ranges:
+        return ()
+
+    normalized: list[PageRange] = []
+    for raw_spec in page_ranges:
+        spec = raw_spec.strip()
+        if not spec:
+            continue
+
+        if "-" in spec:
+            start_text, end_text = spec.split("-", 1)
+            start_page = int(start_text)
+            end_page = int(end_text)
+        else:
+            start_page = int(spec)
+            end_page = start_page
+
+        if start_page < 1 or end_page < 1:
+            raise ValueError("Page numbers must be >= 1")
+        if start_page > end_page:
+            raise ValueError(f"Invalid page range: {spec}")
+        if end_page > total_pages:
+            raise ValueError(
+                f"Page range {spec} exceeds total page count {total_pages}"
+            )
+
+        normalized.append((start_page, end_page))
+
+    if not normalized:
+        return ()
+
+    normalized.sort()
+    merged: list[PageRange] = [normalized[0]]
+    for start_page, end_page in normalized[1:]:
+        prev_start, prev_end = merged[-1]
+        if start_page <= prev_end + 1:
+            merged[-1] = (prev_start, max(prev_end, end_page))
+        else:
+            merged.append((start_page, end_page))
+    return tuple(merged)
+
+
+def remap_page_number(page_number: int, page_map: list[int] | None) -> int:
+    """Translate subset-local page numbers back to original PDF page numbers."""
+    if not page_map or page_number < 1 or page_number > len(page_map):
+        return page_number
+    return page_map[page_number - 1]
+
+
+def build_doc_id_unique_suffix(
+    source_path: Path,
+    page_ranges: list[PageRange] | tuple[PageRange, ...] | None = None,
+) -> str:
+    """Build a stable DocId uniqueness suffix that includes page scoping."""
+    suffix = str(source_path.absolute())
+    if page_ranges:
+        suffix = f"{suffix}#pages={format_page_ranges(page_ranges)}"
+    return suffix
+
+
+def materialize_pdf_page_subset(
+    source_path: Path,
+    output_path: Path,
+    page_ranges: list[PageRange] | tuple[PageRange, ...],
+) -> Path:
+    """Persist a subset PDF containing only the requested inclusive page ranges."""
+    import fitz  # type: ignore
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    subset_pdf = fitz.open()
+    try:
+        with fitz.open(str(source_path)) as source_pdf:
+            for start_page, end_page in page_ranges:
+                subset_pdf.insert_pdf(
+                    source_pdf,
+                    from_page=start_page - 1,
+                    to_page=end_page - 1,
+                )
+        subset_pdf.save(output_path)
+    finally:
+        subset_pdf.close()
+    return output_path
+
+
+def remap_markdown_page_markers(markdown: str, page_map: list[int] | None) -> str:
+    """Rewrite subset-local markdown page markers to original PDF numbers."""
+    if not page_map:
+        return markdown
+
+    marker_index = 0
+
+    def replace_page_marker(match: re.Match[str]) -> str:
+        nonlocal marker_index
+        if marker_index >= len(page_map):
+            return match.group(0)
+        original_page = page_map[marker_index]
+        marker_index += 1
+        return f"<!-- Page {original_page} -->"
+
+    return _PAGE_MARKER_RE.sub(replace_page_marker, markdown)
+
+
+def remap_toc_pages(
+    toc: list[tuple[int, str, int]],
+    page_map: list[int] | None,
+) -> list[tuple[int, str, int]]:
+    """Translate PDF TOC page numbers from subset-local to original numbering."""
+    if not page_map:
+        return toc
+    return [
+        (level, title, remap_page_number(page_number, page_map))
+        for level, title, page_number in toc
+    ]
 
 
 async def _invoke_progress_callback(
@@ -109,6 +253,7 @@ class DocumentService:
         else:
             resolved_profile = ETLProfile.default()
 
+        self.profile = resolved_profile
         self.manifest_generator = ManifestGenerator(profile=resolved_profile)
 
     async def ingest(
@@ -121,6 +266,9 @@ class DocumentService:
         ocr_language: str = "eng",
         rotate_pages: bool = False,
         deskew: bool = False,
+        marker_max_pages_per_chunk: int = 0,
+        extract_figures: bool = True,
+        page_ranges: list[str] | None = None,
     ) -> list[IngestResult]:
         """
         Ingest multiple PDF files.
@@ -170,6 +318,9 @@ class DocumentService:
                     ocr_language=ocr_language,
                     rotate_pages=rotate_pages,
                     deskew=deskew,
+                    marker_max_pages_per_chunk=marker_max_pages_per_chunk,
+                    extract_figures=extract_figures,
+                    page_ranges=page_ranges,
                 )
             else:
                 result = await self._ingest_single(
@@ -179,6 +330,7 @@ class DocumentService:
                     ocr_language=ocr_language,
                     rotate_pages=rotate_pages,
                     deskew=deskew,
+                    page_ranges=page_ranges,
                 )
             results.append(result)
 
@@ -193,6 +345,7 @@ class DocumentService:
         ocr_language: str = "eng",
         rotate_pages: bool = False,
         deskew: bool = False,
+        page_ranges: list[str] | None = None,
     ) -> IngestResult:
         """Ingest a single PDF file."""
         start_time = time.time()
@@ -236,6 +389,14 @@ class DocumentService:
             )
 
         try:
+            total_page_count = self.pdf_extractor.get_page_count(path)
+            normalized_page_ranges = normalize_page_ranges(
+                page_ranges, total_page_count
+            )
+            page_map = build_page_number_map(normalized_page_ranges)
+            processed_page_count = len(page_map) if page_map else total_page_count
+            reported_page_count = total_page_count if page_map else processed_page_count
+
             # Generate unique doc_id
             await _invoke_progress_callback(
                 progress_callback,
@@ -244,10 +405,20 @@ class DocumentService:
                 "Preparing",
                 f"Preparing {path.name}",
             )
-            doc_id = DocId.generate(path.stem, str(path.absolute()))
+            doc_id = DocId.generate(
+                path.stem,
+                build_doc_id_unique_suffix(path, normalized_page_ranges),
+            )
             self._save_original_pdf_copy(doc_id.value, path)
 
             active_pdf_path = path
+            if normalized_page_ranges:
+                active_pdf_path = materialize_pdf_page_subset(
+                    path,
+                    self.repository.get_doc_dir(doc_id.value) / "selected_pages.pdf",
+                    normalized_page_ranges,
+                )
+
             current_step = 2
             if ocr_enabled:
                 await _invoke_progress_callback(
@@ -275,6 +446,7 @@ class DocumentService:
                 f"Extracting text from {path.name}",
             )
             markdown = self.pdf_extractor.extract_text(active_pdf_path)
+            markdown = remap_markdown_page_markers(markdown, page_map)
             current_step += 1
 
             # Step 2: Save markdown
@@ -296,7 +468,11 @@ class DocumentService:
                 "Extracting Figures",
                 f"Extracting figures from {path.name}",
             )
-            figures = await self._extract_and_save_images(doc_id.value, active_pdf_path)
+            figures = await self._extract_and_save_images(
+                doc_id.value,
+                active_pdf_path,
+                page_map=page_map or None,
+            )
             current_step += 1
 
             # Step 3.5: Extract tables (Docling enhanced)
@@ -307,7 +483,10 @@ class DocumentService:
                 "Extracting Tables",
                 f"Extracting tables from {path.name}",
             )
-            tables = await self._extract_tables(active_pdf_path)
+            tables = await self._extract_tables(
+                active_pdf_path,
+                page_map=page_map or None,
+            )
             apply_asset_line_spans(MarkdownLineSpanIndex(markdown), figures, tables)
             current_step += 1
 
@@ -319,14 +498,17 @@ class DocumentService:
                 "Reading Metadata",
                 f"Reading PDF metadata from {path.name}",
             )
-            page_count = self.pdf_extractor.get_page_count(active_pdf_path)
+            page_count = reported_page_count
             current_step += 1
 
             # Step 4.5: Get PDF built-in TOC and metadata title (if available)
             pdf_toc: list[tuple[int, str, int]] = []
             pdf_title = ""
             if hasattr(self.pdf_extractor, "get_toc"):
-                pdf_toc = self.pdf_extractor.get_toc(active_pdf_path)
+                pdf_toc = remap_toc_pages(
+                    self.pdf_extractor.get_toc(active_pdf_path),
+                    page_map or None,
+                )
             if hasattr(self.pdf_extractor, "get_title"):
                 pdf_title = self.pdf_extractor.get_title(active_pdf_path)
 
@@ -401,7 +583,7 @@ class DocumentService:
                 title=manifest.title,
                 success=True,
                 manifest=manifest,
-                pages_processed=page_count,
+                pages_processed=processed_page_count,
                 tables_found=len(manifest.assets.tables),
                 figures_found=len(manifest.assets.figures),
                 sections_found=len(manifest.assets.sections),
@@ -425,6 +607,9 @@ class DocumentService:
         ocr_language: str = "eng",
         rotate_pages: bool = False,
         deskew: bool = False,
+        marker_max_pages_per_chunk: int = 0,
+        extract_figures: bool = True,
+        page_ranges: list[str] | None = None,
     ) -> IngestResult:
         """
         Ingest a single PDF file using Marker for structured parsing.
@@ -464,6 +649,14 @@ class DocumentService:
             )
 
         try:
+            total_page_count = self.pdf_extractor.get_page_count(path)
+            normalized_page_ranges = normalize_page_ranges(
+                page_ranges, total_page_count
+            )
+            page_map = build_page_number_map(normalized_page_ranges)
+            processed_page_count = len(page_map) if page_map else total_page_count
+            reported_page_count = total_page_count if page_map else processed_page_count
+
             # Generate unique doc_id
             await _invoke_progress_callback(
                 progress_callback,
@@ -472,10 +665,20 @@ class DocumentService:
                 "Preparing",
                 f"Preparing {path.name}",
             )
-            doc_id = DocId.generate(path.stem, str(path.absolute()))
+            doc_id = DocId.generate(
+                path.stem,
+                build_doc_id_unique_suffix(path, normalized_page_ranges),
+            )
             self._save_original_pdf_copy(doc_id.value, path)
 
             active_pdf_path = path
+            if normalized_page_ranges:
+                active_pdf_path = materialize_pdf_page_subset(
+                    path,
+                    self.repository.get_doc_dir(doc_id.value) / "selected_pages.pdf",
+                    normalized_page_ranges,
+                )
+
             current_step = 2
             if ocr_enabled:
                 await _invoke_progress_callback(
@@ -502,7 +705,17 @@ class DocumentService:
                 "Parsing Structure",
                 f"Parsing structure from {path.name} with Marker",
             )
-            parse_result = self.marker_extractor.parse(active_pdf_path)
+            parse_result = self.marker_extractor.parse(
+                active_pdf_path,
+                extract_images=extract_figures,
+                max_pages_per_chunk=(
+                    marker_max_pages_per_chunk
+                    if marker_max_pages_per_chunk > 0
+                    else None
+                ),
+                page_map=page_map or None,
+                reported_page_count=reported_page_count if page_map else None,
+            )
             current_step += 1
 
             # Step 2: Save markdown
@@ -578,9 +791,7 @@ class DocumentService:
             current_step += 1
 
             # Step 7: Get page count
-            page_count = parse_result.page_count or self.pdf_extractor.get_page_count(
-                active_pdf_path
-            )
+            page_count = parse_result.page_count or reported_page_count
 
             # Step 8: Index in knowledge graph (if available)
             entities = []
@@ -645,7 +856,7 @@ class DocumentService:
                 title=manifest.title or parse_result.metadata.get("title", ""),
                 success=True,
                 manifest=manifest,
-                pages_processed=page_count,
+                pages_processed=processed_page_count,
                 tables_found=len(tables),
                 figures_found=len(figures),
                 sections_found=len(sections),
@@ -738,23 +949,51 @@ class DocumentService:
         except Exception:  # PIL can raise various errors
             return (0, 0)
 
+    @staticmethod
+    def _normalize_marker_image_key(value: str) -> str:
+        """Normalize a Marker image filename or block path to a comparable key."""
+        stem = Path(value).stem if "." in value else value
+        return stem if not stem.startswith("/") else stem.replace("/", "_")
+
+    @staticmethod
+    def _get_marker_image_blocks(blocks: list) -> list:
+        """Prefer semantic Figure blocks and only fall back to Picture blocks."""
+        figure_blocks = [block for block in blocks if block.block_type == "Figure"]
+        if figure_blocks:
+            return figure_blocks
+        return [block for block in blocks if block.block_type in {"Figure", "Picture"}]
+
+    def _get_min_figure_px(self) -> int:
+        """Return the configured minimum figure dimension threshold."""
+        return self.profile.filters.min_figure_px
+
     async def _save_marker_images(
         self, doc_id: str, parse_result: Any
     ) -> list[FigureAsset]:
         """Save images from Marker parse result."""
         figures = []
 
-        # Collect all Figure blocks for 1:1 matching with images
-        figure_blocks = [
-            block for block in parse_result.blocks if block.block_type == "Figure"
-        ]
+        image_blocks = self._get_marker_image_blocks(parse_result.blocks)
+        block_by_key = {
+            self._normalize_marker_image_key(block.metadata.get("id") or ""): block
+            for block in image_blocks
+            if block.metadata.get("id")
+        }
+        min_px = self._get_min_figure_px()
+        saved_count = 0
 
-        for idx, (img_name, img_bytes) in enumerate(parse_result.images.items(), 1):
+        for img_name, img_bytes in parse_result.images.items():
+            matched_block = block_by_key.get(self._normalize_marker_image_key(img_name))
+            if matched_block is None:
+                continue
+
+            width, height = self._get_image_dimensions(img_bytes)
+            if width < min_px or height < min_px:
+                continue
+
+            saved_count += 1
             ext = img_name.split(".")[-1] if "." in img_name else "png"
-            fig_id = f"fig_{idx}"
-            matched_block = (
-                figure_blocks[idx - 1] if idx - 1 < len(figure_blocks) else None
-            )
+            fig_id = f"fig_{matched_block.page}_{saved_count}"
 
             # Save image
             image_path = self.repository.save_image(
@@ -764,44 +1003,28 @@ class DocumentService:
                 ext=ext,
             )
 
-            # Match corresponding Figure block by index (1:1 mapping)
-            page = 1
-            caption = ""
-            if matched_block is not None:
-                page = matched_block.page
-                caption = matched_block.metadata.get("caption", "")
-
-            # Read actual image dimensions
-            width, height = self._get_image_dimensions(img_bytes)
-
             figures.append(
                 FigureAsset(
                     id=fig_id,
-                    page=page,
+                    page=matched_block.page,
                     path=str(image_path),
                     ext=ext,
                     width=width,
                     height=height,
-                    caption=caption,
+                    caption=str(matched_block.metadata.get("caption") or ""),
                     figure_type="",
                     source="marker",
-                    source_block_id=matched_block.block_id if matched_block else "",
-                    source_order=int(matched_block.metadata.get("source_order") or 0)
-                    if matched_block
-                    else 0,
+                    source_block_id=matched_block.block_id,
+                    source_order=int(matched_block.metadata.get("source_order") or 0),
                     line_start=int(matched_block.metadata.get("line_start"))
-                    if matched_block
-                    and isinstance(matched_block.metadata.get("line_start"), int)
+                    if isinstance(matched_block.metadata.get("line_start"), int)
                     else None,
                     line_end=int(matched_block.metadata.get("line_end"))
-                    if matched_block
-                    and isinstance(matched_block.metadata.get("line_end"), int)
+                    if isinstance(matched_block.metadata.get("line_end"), int)
                     else None,
                     line_source=str(
                         matched_block.metadata.get("line_match_strategy") or ""
-                    )
-                    if matched_block
-                    else "",
+                    ),
                 )
             )
 
@@ -906,7 +1129,11 @@ class DocumentService:
         return sections
 
     async def _extract_and_save_images(
-        self, doc_id: str, pdf_path: Path
+        self,
+        doc_id: str,
+        pdf_path: Path,
+        *,
+        page_map: list[int] | None = None,
     ) -> list[FigureAsset]:
         """Extract images from PDF, filter small icons, and associate captions."""
         figures = []
@@ -939,8 +1166,10 @@ class DocumentService:
             if w < min_px or h < min_px:
                 continue
 
+            original_page = remap_page_number(img_data["page"], page_map)
+
             # Generate figure ID: fig_{page}_{index}
-            fig_id = f"fig_{img_data['page']}_{img_data['index_on_page']}"
+            fig_id = f"fig_{original_page}_{img_data['index_on_page']}"
 
             # Save image
             image_path = self.repository.save_image(
@@ -966,7 +1195,7 @@ class DocumentService:
             figures.append(
                 FigureAsset(
                     id=fig_id,
-                    page=img_data["page"],
+                    page=original_page,
                     path=str(image_path),
                     ext=img_data["ext"],
                     width=w,
@@ -979,7 +1208,12 @@ class DocumentService:
 
         return figures
 
-    async def _extract_tables(self, pdf_path: Path) -> list[TableAsset]:
+    async def _extract_tables(
+        self,
+        pdf_path: Path,
+        *,
+        page_map: list[int] | None = None,
+    ) -> list[TableAsset]:
         """
         Extract tables from PDF.
 
@@ -1001,10 +1235,11 @@ class DocumentService:
 
             tables: list[TableAsset] = []
             for tab_data in raw_tables:
+                page_number = remap_page_number(tab_data.get("page", 1), page_map)
                 tables.append(
                     TableAsset(
                         id=tab_data.get("id", f"tab_{len(tables) + 1}"),
-                        page=tab_data.get("page", 1),
+                        page=page_number,
                         caption=tab_data.get("caption", ""),
                         preview=tab_data.get("preview", ""),
                         markdown=tab_data.get("markdown", ""),
@@ -1272,8 +1507,12 @@ class DocumentService:
         title_or_fallback = manifest.title or manifest.filename
         title_layout = self._get_slide_layout(presentation, 0)
         content_layout = self._get_slide_layout(presentation, 1, default_index=0)
-        figure_layout = self._get_slide_layout(presentation, 5, default_index=content_layout)
-        blank_layout = self._get_slide_layout(presentation, 6, default_index=content_layout)
+        figure_layout = self._get_slide_layout(
+            presentation, 5, default_index=content_layout
+        )
+        blank_layout = self._get_slide_layout(
+            presentation, 6, default_index=content_layout
+        )
 
         slides = self._segment_markdown_to_slides(markdown, title_or_fallback)
         for slide_title, items in slides:
@@ -1302,25 +1541,25 @@ class DocumentService:
             slide = presentation.slides.add_slide(figure_layout)
             if slide.shapes.title:
                 slide.shapes.title.text = (
-                    figure.caption
-                    or f"Figure {figure_index}"
-                    or title_or_fallback
+                    figure.caption or f"Figure {figure_index}" or title_or_fallback
                 )
 
             left = Inches(0.75)
             top = Inches(1.5)
             max_width = Inches(9)
             try:
-                slide.shapes.add_picture(str(figure_path), left=left, top=top, width=max_width)
+                slide.shapes.add_picture(
+                    str(figure_path), left=left, top=top, width=max_width
+                )
             except Exception:
                 slide = presentation.slides.add_slide(blank_layout)
                 if slide.shapes.title:
                     slide.shapes.title.text = (
-                        figure.caption
-                        or f"Figure {figure_index}"
-                        or title_or_fallback
+                        figure.caption or f"Figure {figure_index}" or title_or_fallback
                     )
-                slide.shapes.add_picture(str(figure_path), left=left, top=top, width=max_width)
+                slide.shapes.add_picture(
+                    str(figure_path), left=left, top=top, width=max_width
+                )
 
             figure_slides += 1
 

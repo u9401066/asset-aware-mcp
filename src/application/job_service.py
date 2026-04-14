@@ -235,6 +235,12 @@ class JobService:
                         ocr_language=job.parameters.get("ocr_language", "eng"),
                         rotate_pages=job.parameters.get("rotate_pages", False),
                         deskew=job.parameters.get("deskew", False),
+                        marker_max_pages_per_chunk=job.parameters.get(
+                            "marker_max_pages_per_chunk",
+                            0,
+                        ),
+                        extract_figures=job.parameters.get("extract_figures", True),
+                        page_ranges=job.parameters.get("page_ranges") or None,
                     )
                     result = results[0] if results else None
 

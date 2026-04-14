@@ -22,6 +22,13 @@ from typing import TYPE_CHECKING, Any
 
 from mcp.types import ImageContent, TextContent
 
+from src.application.document_service import (
+    build_doc_id_unique_suffix,
+    build_page_number_map,
+    format_page_ranges,
+    materialize_pdf_page_subset,
+    normalize_page_ranges,
+)
 from src.infrastructure.config import settings
 from src.presentation.dependencies import (
     asset_service,
@@ -30,6 +37,7 @@ from src.presentation.dependencies import (
     job_service,
     layout_visualizer,
     ocr_processor,
+    pdf_extractor,
     repository,
     segmentation_service,
 )
@@ -71,6 +79,9 @@ async def parse_pdf_structure(
     ocr_language: str = "eng",
     rotate_pages: bool = False,
     deskew: bool = False,
+    marker_max_pages_per_chunk: int = 0,
+    extract_figures: bool = True,
+    page_ranges: list[str] | None = None,
     ctx: Context | None = None,
 ) -> str:
     """
@@ -94,6 +105,9 @@ async def parse_pdf_structure(
     Args:
         pdf_path: PDF 檔案的絕對路徑
         output_dir: 輸出目錄（預設為 data/{doc_id}/）
+        marker_max_pages_per_chunk: 大型 PDF 時每個 Marker chunk 的最大頁數；0 表示整本一次處理
+        extract_figures: 是否輸出 figures/ 與 FigureAsset；大型檔建議可先關閉
+        page_ranges: 指定要攝入的頁段，例如 ["1-50", "120-160"]
 
     Returns:
         解析結果摘要和 doc_id
@@ -110,13 +124,26 @@ async def parse_pdf_structure(
     if not pdf_file.exists():
         return f"❌ File not found: {pdf_path}"
 
+    total_page_count = pdf_extractor.get_page_count(pdf_file)
+    normalized_page_ranges = normalize_page_ranges(page_ranges, total_page_count)
+    page_map = build_page_number_map(normalized_page_ranges)
+
     # Determine output directory (same convention as ingest_documents)
     if output_dir:
         out_path = Path(output_dir)
+        from src.domain.value_objects import DocId
+
+        doc_id_obj = DocId.generate(
+            pdf_file.stem,
+            build_doc_id_unique_suffix(pdf_file, normalized_page_ranges),
+        )
     else:
         from src.domain.value_objects import DocId
 
-        doc_id_obj = DocId.generate(pdf_file.stem, str(pdf_file.absolute()))
+        doc_id_obj = DocId.generate(
+            pdf_file.stem,
+            build_doc_id_unique_suffix(pdf_file, normalized_page_ranges),
+        )
         out_path = settings.data_dir / doc_id_obj.value
 
     try:
@@ -124,6 +151,13 @@ async def parse_pdf_structure(
         shutil.copy2(pdf_file, out_path / "original.pdf")
 
         active_pdf = pdf_file
+        if normalized_page_ranges:
+            active_pdf = materialize_pdf_page_subset(
+                pdf_file,
+                out_path / "selected_pages.pdf",
+                normalized_page_ranges,
+            )
+
         if ocr_enabled:
             await report_progress(
                 ctx, 15, message=f"Running OCR preprocessing for {pdf_file.name}"
@@ -145,7 +179,21 @@ async def parse_pdf_structure(
         await report_progress(
             ctx, 45, message=f"Parsing structure from {pdf_file.name}"
         )
-        manifest = extractor.extract_to_manifest(active_pdf, out_path)
+        parse_result = extractor.parse(
+            active_pdf,
+            extract_images=extract_figures,
+            max_pages_per_chunk=(
+                marker_max_pages_per_chunk if marker_max_pages_per_chunk > 0 else None
+            ),
+            page_map=page_map or None,
+            reported_page_count=total_page_count if page_map else None,
+        )
+        manifest = extractor.convert_to_manifest(
+            parse_result,
+            pdf_file,
+            out_path,
+            doc_id=doc_id_obj.value,
+        )
         await report_progress(ctx, 90, message=f"Finalizing assets for {pdf_file.name}")
 
         segmentation_path = ""
@@ -168,7 +216,10 @@ async def parse_pdf_structure(
             f"**doc_id:** `{manifest.doc_id}`",
             f"**Title:** {manifest.title or 'N/A'}",
             f"**Pages:** {manifest.page_count}",
+            f"**Pages Processed:** {len(page_map) or total_page_count}",
             f"**Time:** {elapsed:.1f}s",
+            f"**Chunk Size:** {marker_max_pages_per_chunk or 'full document'}",
+            f"**Extract Figures:** {'yes' if extract_figures else 'no'}",
             "",
             "## Assets Found",
             f"- **Sections:** {len(manifest.assets.sections)}",
@@ -182,6 +233,11 @@ async def parse_pdf_structure(
             f"- Original PDF: `{out_path / 'original.pdf'}`",
             "",
         ]
+        if normalized_page_ranges:
+            lines.insert(
+                7, f"**Page Ranges:** {format_page_ranges(normalized_page_ranges)}"
+            )
+            lines.insert(-1, f"- Selected PDF: `{out_path / 'selected_pages.pdf'}`")
         if segmentation_path:
             lines.insert(-1, f"- Segmentation: `{segmentation_path}`")
 
@@ -295,6 +351,9 @@ async def ingest_documents(
     ocr_language: str = "eng",
     rotate_pages: bool = False,
     deskew: bool = False,
+    marker_max_pages_per_chunk: int = 0,
+    extract_figures: bool = True,
+    page_ranges: list[str] | None = None,
     ctx: Context | None = None,
 ) -> str:
     """
@@ -312,6 +371,11 @@ async def ingest_documents(
         use_marker: If True, use Marker for structured parsing (slower but more accurate).
                    Produces blocks.json with bbox/coordinates for precise source tracking.
                    Default False uses PyMuPDF (faster but less structured).
+        marker_max_pages_per_chunk: When using Marker, split very large PDFs into fixed-size page chunks.
+                                    Set 0 to parse the whole document in one pass.
+        extract_figures: When using Marker, control whether image crops are extracted and saved.
+                         Disable this first for image-heavy textbooks to reduce memory pressure.
+        page_ranges: 1-indexed inclusive page ranges applied to every input file, e.g. ["1-50", "120-160"].
 
     Returns:
         - async_mode=True: Job ID for tracking progress with `get_job_status`
@@ -357,6 +421,9 @@ async def ingest_documents(
                 "ocr_language": ocr_language,
                 "rotate_pages": rotate_pages,
                 "deskew": deskew,
+                "marker_max_pages_per_chunk": marker_max_pages_per_chunk,
+                "extract_figures": extract_figures,
+                "page_ranges": page_ranges or [],
             },
         )
         await report_progress(ctx, 100, message=f"Created job {job.job_id}")
@@ -382,6 +449,9 @@ async def ingest_documents(
             ocr_language=ocr_language,
             rotate_pages=rotate_pages,
             deskew=deskew,
+            marker_max_pages_per_chunk=marker_max_pages_per_chunk,
+            extract_figures=extract_figures,
+            page_ranges=page_ranges,
         )
         await report_progress(ctx, 100, message="Synchronous ingestion finished")
         await log_message(ctx, "info", "ingest_documents sync completed")
@@ -394,6 +464,15 @@ async def ingest_documents(
             output_lines.append(
                 f"**OCR:** enabled ({ocr_language}, rotate_pages={rotate_pages}, deskew={deskew})\n"
             )
+        if use_marker:
+            output_lines.append(
+                f"**Marker chunk size:** {marker_max_pages_per_chunk or 'full document'}\n"
+            )
+            output_lines.append(
+                f"**Extract figures:** {'yes' if extract_figures else 'no'}\n"
+            )
+        if page_ranges:
+            output_lines.append(f"**Page ranges:** {', '.join(page_ranges)}\n")
 
         for result in results:
             if result.success:

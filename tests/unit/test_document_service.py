@@ -7,7 +7,37 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.application.document_service import DocumentService
+from src.application.document_service import (
+    DocumentService,
+    build_doc_id_unique_suffix,
+    format_page_ranges,
+    normalize_page_ranges,
+    remap_markdown_page_markers,
+)
+
+
+def test_normalize_page_ranges_merges_adjacent_ranges() -> None:
+    assert normalize_page_ranges(["1-3", "4", "8-9", "9-10"], 12) == (
+        (1, 4),
+        (8, 10),
+    )
+
+
+def test_normalize_page_ranges_rejects_out_of_bounds_pages() -> None:
+    with pytest.raises(ValueError, match="exceeds total page count"):
+        normalize_page_ranges(["3-12"], 10)
+
+
+def test_remap_markdown_page_markers_rewrites_subset_numbers() -> None:
+    markdown = "<!-- Page 1 -->\nA\n<!-- Page 2 -->\nB"
+    remapped = remap_markdown_page_markers(markdown, [10, 12])
+    assert remapped == "<!-- Page 10 -->\nA\n<!-- Page 12 -->\nB"
+
+
+def test_build_doc_id_unique_suffix_includes_page_ranges() -> None:
+    suffix = build_doc_id_unique_suffix(Path("paper.pdf"), ((3, 5), (9, 9)))
+    assert suffix.endswith("#pages=3-5,9")
+    assert format_page_ranges(((3, 5), (9, 9))) == "3-5,9"
 
 
 @pytest.mark.asyncio
@@ -137,7 +167,9 @@ async def test_convert_pdf_to_pptx_success(monkeypatch, tmp_path: Path) -> None:
     repository.load_manifest.return_value = MagicMock(
         title="Deck Title",
         filename="slides.pdf",
-        assets=MagicMock(figures=[MagicMock(path=tmp_path / "fig1.png", caption="Cap")]),
+        assets=MagicMock(
+            figures=[MagicMock(path=tmp_path / "fig1.png", caption="Cap")]
+        ),
     )
 
     service = DocumentService(repository=repository, pdf_extractor=MagicMock())
@@ -199,6 +231,110 @@ async def test_ingest_reports_progress_callback(tmp_path: Path) -> None:
     assert progress_events
     assert progress_events[-1][0] == progress_events[-1][1]
     assert progress_events[-1][2] == "Completed"
+
+
+@pytest.mark.asyncio
+async def test_ingest_scopes_doc_id_and_page_markers_for_page_ranges(
+    monkeypatch, tmp_path: Path
+) -> None:
+    pdf_path = tmp_path / "paper.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4 original")
+    doc_dir = tmp_path / "doc_pages"
+    doc_dir.mkdir()
+
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = doc_dir
+    repository.save_markdown.return_value = tmp_path / "content.md"
+    repository.save_manifest.return_value = None
+
+    extractor = MagicMock()
+
+    def fake_get_page_count(path: Path) -> int:
+        return 10 if path == pdf_path else 2
+
+    extractor.get_page_count.side_effect = fake_get_page_count
+    extractor.extract_text.return_value = (
+        "<!-- Page 1 -->\nAlpha\n<!-- Page 2 -->\nBeta"
+    )
+    extractor.get_toc.return_value = [(1, "Methods", 2)]
+    extractor.get_title.return_value = "Paper"
+
+    service = DocumentService(repository=repository, pdf_extractor=extractor)
+    service._extract_and_save_images = AsyncMock(return_value=[])
+    service._extract_tables = AsyncMock(return_value=[])
+
+    captured_suffix: dict[str, str] = {}
+
+    def fake_generate(_filename: str, unique_suffix: str):
+        captured_suffix["value"] = unique_suffix
+        return MagicMock(value="doc_pages")
+
+    monkeypatch.setattr(
+        "src.application.document_service.DocId.generate", fake_generate
+    )
+    monkeypatch.setattr(
+        "src.application.document_service.materialize_pdf_page_subset",
+        lambda _source_path, output_path, _page_ranges: (
+            output_path.write_bytes(b"%PDF-1.4 subset"),
+            output_path,
+        )[1],
+    )
+
+    results = await service.ingest([str(pdf_path)], page_ranges=["3-4"])
+
+    assert results[0].success is True
+    assert results[0].pages_processed == 2
+    assert captured_suffix["value"].endswith("#pages=3-4")
+    repository.save_markdown.assert_called_once_with(
+        "doc_pages",
+        "<!-- Page 3 -->\nAlpha\n<!-- Page 4 -->\nBeta",
+    )
+    manifest = repository.save_manifest.call_args.args[0]
+    assert manifest.page_count == 10
+
+
+@pytest.mark.asyncio
+async def test_ingest_remaps_table_and_image_pages_for_page_ranges(
+    monkeypatch, tmp_path: Path
+) -> None:
+    pdf_path = tmp_path / "paper.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4 original")
+    doc_dir = tmp_path / "doc_pages"
+    doc_dir.mkdir()
+
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = doc_dir
+    repository.save_markdown.return_value = tmp_path / "content.md"
+    repository.save_manifest.return_value = None
+
+    extractor = MagicMock()
+    extractor.get_page_count.side_effect = lambda path: 10 if path == pdf_path else 2
+    extractor.extract_text.return_value = "<!-- Page 1 -->\n# Title"
+    extractor.get_toc.return_value = []
+    extractor.get_title.return_value = "Paper"
+
+    service = DocumentService(repository=repository, pdf_extractor=extractor)
+    service._extract_and_save_images = AsyncMock(return_value=[MagicMock(page=3)])
+    service._extract_tables = AsyncMock(return_value=[MagicMock(page=4)])
+
+    monkeypatch.setattr(
+        "src.application.document_service.DocId.generate",
+        lambda *_args: MagicMock(value="doc_pages"),
+    )
+    monkeypatch.setattr(
+        "src.application.document_service.materialize_pdf_page_subset",
+        lambda _source_path, output_path, _page_ranges: (
+            output_path.write_bytes(b"%PDF-1.4 subset"),
+            output_path,
+        )[1],
+    )
+
+    await service.ingest([str(pdf_path)], page_ranges=["3-4"])
+
+    service._extract_and_save_images.assert_awaited_once()
+    assert service._extract_and_save_images.await_args.kwargs["page_map"] == [3, 4]
+    service._extract_tables.assert_awaited_once()
+    assert service._extract_tables.await_args.kwargs["page_map"] == [3, 4]
 
 
 @pytest.mark.asyncio

@@ -593,6 +593,9 @@ class TestDocumentTools:
             ocr_language="eng",
             rotate_pages=False,
             deskew=False,
+            marker_max_pages_per_chunk=0,
+            extract_figures=True,
+            page_ranges=None,
         ):
             assert progress_callback is not None
             await progress_callback(1, 4, "Extracting", "Extracting test.pdf")
@@ -627,7 +630,7 @@ class TestDocumentTools:
         assert fake_ctx.log.await_count >= 2
 
     async def test_ingest_documents_async_passes_use_marker_to_job(self) -> None:
-        """ingest_documents async job preserves use_marker in job parameters."""
+        """ingest_documents async job preserves Marker tuning parameters."""
         with patch("src.presentation.tools.document_tools.job_service") as mock_jobs:
             mock_jobs.create_ingest_job = AsyncMock(
                 return_value=MagicMock(job_id="job_123", estimated_duration_seconds=10)
@@ -635,7 +638,12 @@ class TestDocumentTools:
             from src.presentation.tools.document_tools import ingest_documents
 
             result = await ingest_documents(
-                ["workspace/test.pdf"], async_mode=True, use_marker=True
+                ["workspace/test.pdf"],
+                async_mode=True,
+                use_marker=True,
+                marker_max_pages_per_chunk=200,
+                extract_figures=False,
+                page_ranges=["1-50", "100-120"],
             )
 
         assert "job_123" in result
@@ -646,6 +654,9 @@ class TestDocumentTools:
             "ocr_language": "eng",
             "rotate_pages": False,
             "deskew": False,
+            "marker_max_pages_per_chunk": 200,
+            "extract_figures": False,
+            "page_ranges": ["1-50", "100-120"],
         }
 
     async def test_ingest_documents_async_passes_ocr_params_to_job(self) -> None:
@@ -673,6 +684,9 @@ class TestDocumentTools:
             "ocr_language": "chi_tra",
             "rotate_pages": True,
             "deskew": True,
+            "marker_max_pages_per_chunk": 0,
+            "extract_figures": True,
+            "page_ranges": [],
         }
 
     async def test_export_document_segmentation_success(self) -> None:

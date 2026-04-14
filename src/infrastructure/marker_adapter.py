@@ -13,6 +13,7 @@ Infrastructure Layer - Marker PDF Adapter
 from __future__ import annotations
 
 import json
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,10 @@ from src.domain.entities import (
     TableAsset,
 )
 from src.domain.line_spans import annotate_marker_blocks, apply_asset_line_spans
+
+AUTO_CHUNK_PAGE_THRESHOLD = 800
+AUTO_CHUNK_SIZE = 200
+AUTO_DISABLE_FIGURES_IMAGE_THRESHOLD = 2000
 
 
 def _coerce_metadata_int(metadata: dict[str, Any], key: str, default: int = 0) -> int:
@@ -101,36 +106,376 @@ class MarkerPDFExtractor:
             self._model_dict = create_model_dict()
         return self._model_dict
 
-    def parse(self, pdf_path: Path) -> MarkerParseResult:
-        """
-        完整解析 PDF 文件。
-
-        Args:
-            pdf_path: PDF 檔案路徑
-
-        Returns:
-            MarkerParseResult 包含 markdown, blocks, toc, images
-        """
+    def _get_converter(self, *, extract_images: bool) -> Any:
+        """建立可重用的 Marker converter。"""
         from marker.converters.pdf import PdfConverter  # type: ignore
+
+        return PdfConverter(
+            artifact_dict=self._get_models(),
+            config={"extract_images": extract_images},
+        )
+
+    @staticmethod
+    def _stringify_marker_block_id(value: Any) -> str:
+        """將 Marker block id 正規化為穩定的字串表示。"""
+        if value is None:
+            return ""
+        return str(value)
+
+    @staticmethod
+    def _normalize_marker_image_key(value: str) -> str:
+        """將 image filename / block path 正規化成可比對的 key。"""
+        stem = Path(value).stem if "." in value else value
+        return stem if not stem.startswith("/") else stem.replace("/", "_")
+
+    @staticmethod
+    def _shift_marker_block_reference(reference: str, page_offset: int) -> str:
+        """將 Marker block path 的 page id 平移到原始 PDF 座標。"""
+        if page_offset == 0 or not reference.startswith("/page/"):
+            return reference
+
+        parts = reference.split("/")
+        if len(parts) < 4:
+            return reference
+
+        try:
+            parts[2] = str(int(parts[2]) + page_offset)
+        except ValueError:
+            return reference
+        return "/".join(parts)
+
+    @staticmethod
+    def _shift_marker_image_name(image_name: str, page_offset: int) -> str:
+        """將 Marker renderer 產出的 image key page id 平移到原始 PDF 座標。"""
+        if page_offset == 0:
+            return image_name
+
+        stem, dot, ext = image_name.rpartition(".")
+        if not dot:
+            stem = image_name
+
+        parts = stem.split("_")
+        if len(parts) < 5 or parts[1] != "page":
+            return image_name
+
+        try:
+            parts[2] = str(int(parts[2]) + page_offset)
+        except ValueError:
+            return image_name
+
+        shifted = "_".join(parts)
+        return f"{shifted}.{ext}" if dot else shifted
+
+    @staticmethod
+    def _select_image_blocks(blocks: list[MarkerBlock]) -> list[MarkerBlock]:
+        """優先保留語意 Figure block，必要時退回 Picture block。"""
+        figure_blocks = [block for block in blocks if block.block_type == "Figure"]
+        if figure_blocks:
+            return figure_blocks
+        return [block for block in blocks if block.block_type in {"Figure", "Picture"}]
+
+    @staticmethod
+    def _remap_page_number(page_number: int, page_map: list[int] | None) -> int:
+        """將 subset-local 頁碼轉回原始 PDF 頁碼。"""
+        if not page_map or page_number < 1 or page_number > len(page_map):
+            return page_number
+        return page_map[page_number - 1]
+
+    def _remap_marker_image_name_to_original(
+        self,
+        image_name: str,
+        page_map: list[int] | None,
+    ) -> str:
+        """將 subset-local Marker image key 映射回原始頁碼。"""
+        if not page_map:
+            return image_name
+
+        stem, dot, ext = image_name.rpartition(".")
+        if not dot:
+            stem = image_name
+
+        parts = stem.split("_")
+        if len(parts) < 5 or parts[1] != "page":
+            return image_name
+
+        try:
+            local_page = int(parts[2]) + 1
+        except ValueError:
+            return image_name
+
+        original_page = self._remap_page_number(local_page, page_map)
+        parts[2] = str(original_page - 1)
+        remapped = "_".join(parts)
+        return f"{remapped}.{ext}" if dot else remapped
+
+    @staticmethod
+    def _count_pdf_pages(pdf_path: Path) -> int:
+        """快速取得 PDF 頁數。"""
+        import fitz  # type: ignore
+
+        with fitz.open(str(pdf_path)) as pdf:
+            return pdf.page_count
+
+    @staticmethod
+    def _count_embedded_image_refs(pdf_path: Path) -> int:
+        """估算 PDF 內嵌圖片數量，用於大檔自動策略。"""
+        import fitz  # type: ignore
+
+        image_count = 0
+        with fitz.open(str(pdf_path)) as pdf:
+            for page in pdf:
+                image_count += len(page.get_images(full=True))
+        return image_count
+
+    def _resolve_parse_strategy(
+        self,
+        pdf_path: Path,
+        *,
+        extract_images: bool,
+        max_pages_per_chunk: int | None,
+    ) -> tuple[int, bool, int | None, dict[str, Any]]:
+        """Resolve automatic chunking / figure extraction safeguards."""
+        total_pages = self._count_pdf_pages(pdf_path)
+        resolved_chunk_size = (
+            max_pages_per_chunk
+            if max_pages_per_chunk and max_pages_per_chunk > 0
+            else None
+        )
+        auto_chunk_applied = False
+        if resolved_chunk_size is None and total_pages > AUTO_CHUNK_PAGE_THRESHOLD:
+            resolved_chunk_size = AUTO_CHUNK_SIZE
+            auto_chunk_applied = True
+
+        resolved_extract_images = extract_images
+        detected_image_refs = None
+        auto_disable_figures_applied = False
+        if extract_images:
+            detected_image_refs = self._count_embedded_image_refs(pdf_path)
+            if detected_image_refs > AUTO_DISABLE_FIGURES_IMAGE_THRESHOLD:
+                resolved_extract_images = False
+                auto_disable_figures_applied = True
+
+        metadata: dict[str, Any] = {
+            "requested_extract_images": extract_images,
+            "requested_max_pages_per_chunk": max_pages_per_chunk or 0,
+            "resolved_extract_images": resolved_extract_images,
+            "resolved_max_pages_per_chunk": resolved_chunk_size or 0,
+            "auto_chunk_applied": auto_chunk_applied,
+            "auto_disable_figures_applied": auto_disable_figures_applied,
+        }
+        if detected_image_refs is not None:
+            metadata["detected_image_refs"] = detected_image_refs
+
+        return total_pages, resolved_extract_images, resolved_chunk_size, metadata
+
+    def _apply_page_map(
+        self,
+        parse_result: MarkerParseResult,
+        page_map: list[int],
+        *,
+        reported_page_count: int | None,
+    ) -> MarkerParseResult:
+        """將 subset-local parse result 的頁碼映射回原始 PDF。"""
+        mapped_blocks = [
+            MarkerBlock(
+                block_id=block.block_id,
+                block_type=block.block_type,
+                page=self._remap_page_number(block.page, page_map),
+                text=block.text,
+                bbox=list(block.bbox),
+                polygon=list(block.polygon),
+                section_hierarchy=dict(block.section_hierarchy),
+                children=list(block.children),
+                metadata=dict(block.metadata),
+            )
+            for block in parse_result.blocks
+        ]
+        mapped_toc: list[dict[str, Any]] = []
+        for item in parse_result.toc:
+            mapped_item = dict(item)
+            if isinstance(mapped_item.get("page"), int):
+                mapped_item["page"] = self._remap_page_number(
+                    mapped_item["page"],
+                    page_map,
+                )
+            mapped_toc.append(mapped_item)
+        mapped_images = {
+            self._remap_marker_image_name_to_original(image_name, page_map): image_bytes
+            for image_name, image_bytes in parse_result.images.items()
+        }
+        metadata = dict(parse_result.metadata)
+        metadata["selected_page_count"] = len(page_map)
+
+        return MarkerParseResult(
+            markdown=parse_result.markdown,
+            blocks=mapped_blocks,
+            toc=mapped_toc,
+            images=mapped_images,
+            metadata=metadata,
+            page_count=reported_page_count or max(page_map),
+        )
+
+    def _build_chunk_ranges(
+        self,
+        pdf_path: Path,
+        max_pages_per_chunk: int,
+    ) -> tuple[int, list[tuple[int, int]]]:
+        """根據頁數上限建立連續 page chunks。"""
+        import fitz  # type: ignore
+
+        with fitz.open(str(pdf_path)) as pdf:
+            total_pages = pdf.page_count
+
+        if total_pages <= 0:
+            return 0, []
+
+        chunk_ranges = []
+        for start_page in range(1, total_pages + 1, max_pages_per_chunk):
+            end_page = min(start_page + max_pages_per_chunk - 1, total_pages)
+            chunk_ranges.append((start_page, end_page))
+        return total_pages, chunk_ranges
+
+    def _materialize_chunk_pdfs(
+        self,
+        pdf_path: Path,
+        chunk_ranges: list[tuple[int, int]],
+        temp_dir: Path,
+    ) -> list[tuple[Path, int]]:
+        """將大型 PDF 拆成暫存 chunk PDFs，供 Marker 逐段解析。"""
+        import fitz  # type: ignore
+
+        chunk_paths: list[tuple[Path, int]] = []
+        with fitz.open(str(pdf_path)) as pdf:
+            for index, (start_page, end_page) in enumerate(chunk_ranges, 1):
+                chunk_pdf = fitz.open()
+                try:
+                    chunk_pdf.insert_pdf(
+                        pdf,
+                        from_page=start_page - 1,
+                        to_page=end_page - 1,
+                    )
+                    chunk_path = (
+                        temp_dir / f"chunk_{index:04d}_{start_page}_{end_page}.pdf"
+                    )
+                    chunk_pdf.save(chunk_path)
+                finally:
+                    chunk_pdf.close()
+
+                chunk_paths.append((chunk_path, start_page))
+        return chunk_paths
+
+    def _offset_blocks(
+        self,
+        blocks: list[MarkerBlock],
+        page_offset: int,
+    ) -> list[MarkerBlock]:
+        """將 chunk-local block 頁碼平移回原始 PDF。"""
+        if page_offset == 0:
+            return blocks
+
+        adjusted_blocks: list[MarkerBlock] = []
+        for block in blocks:
+            metadata = dict(block.metadata)
+            block_reference = metadata.get("id")
+            if isinstance(block_reference, str):
+                metadata["id"] = self._shift_marker_block_reference(
+                    block_reference,
+                    page_offset,
+                )
+            adjusted_blocks.append(
+                MarkerBlock(
+                    block_id=block.block_id,
+                    block_type=block.block_type,
+                    page=block.page + page_offset,
+                    text=block.text,
+                    bbox=list(block.bbox),
+                    polygon=list(block.polygon),
+                    section_hierarchy=dict(block.section_hierarchy),
+                    children=list(block.children),
+                    metadata=metadata,
+                )
+            )
+        return adjusted_blocks
+
+    def _merge_parse_results(
+        self,
+        chunk_results: list[MarkerParseResult],
+        total_pages: int,
+    ) -> MarkerParseResult:
+        """合併多個 chunk parse 結果，重建單一文件視圖。"""
+        markdown_parts = [
+            result.markdown.strip()
+            for result in chunk_results
+            if result.markdown.strip()
+        ]
+        merged_blocks: list[MarkerBlock] = []
+        merged_images: dict[str, bytes] = {}
+        merged_toc: list[dict[str, Any]] = []
+        block_counter = 0
+
+        for result in chunk_results:
+            merged_toc.extend(result.toc)
+            merged_images.update(result.images)
+            for block in result.blocks:
+                block_counter += 1
+                metadata = dict(block.metadata)
+                metadata["source_order"] = block_counter
+                merged_blocks.append(
+                    MarkerBlock(
+                        block_id=f"blk_{block_counter:04d}",
+                        block_type=block.block_type,
+                        page=block.page,
+                        text=block.text,
+                        bbox=list(block.bbox),
+                        polygon=list(block.polygon),
+                        section_hierarchy=dict(block.section_hierarchy),
+                        children=list(block.children),
+                        metadata=metadata,
+                    )
+                )
+
+        metadata = dict(chunk_results[0].metadata) if chunk_results else {}
+        if len(chunk_results) > 1:
+            metadata["chunk_count"] = len(chunk_results)
+
+        return MarkerParseResult(
+            markdown="\n\n".join(markdown_parts),
+            blocks=merged_blocks,
+            toc=merged_toc,
+            images=merged_images,
+            metadata=metadata,
+            page_count=total_pages,
+        )
+
+    def _parse_single_pdf(
+        self,
+        converter: Any,
+        pdf_path: Path,
+        *,
+        page_offset: int = 0,
+    ) -> MarkerParseResult:
+        """解析單一 PDF 或單一 chunk，並在必要時回填原始頁碼。"""
         from marker.output import text_from_rendered  # type: ignore
 
-        converter = PdfConverter(artifact_dict=self._get_models())
         rendered = converter(str(pdf_path))
 
-        # 提取 markdown 文字 (text_from_rendered returns tuple: (text, format, images_dict))
         result = text_from_rendered(rendered)
         markdown_text = result[0] if isinstance(result, tuple) else str(result)
 
-        # 解析 blocks
-        blocks = self._extract_blocks(rendered)
+        local_blocks = self._extract_blocks(rendered)
+        toc = self._extract_toc(rendered, blocks=local_blocks)
+        images = self._extract_images(rendered, local_blocks)
+        blocks = self._offset_blocks(local_blocks, page_offset)
 
-        # 提取 TOC
-        toc = self._extract_toc(rendered)
+        if page_offset:
+            for item in toc:
+                if isinstance(item.get("page"), int) and item["page"] > 0:
+                    item["page"] += page_offset
+            images = {
+                self._shift_marker_image_name(name, page_offset): data
+                for name, data in images.items()
+            }
 
-        # 提取圖片
-        images = self._extract_images(rendered)
-
-        # 取得 metadata
         metadata = self._extract_metadata(rendered)
 
         return MarkerParseResult(
@@ -141,6 +486,80 @@ class MarkerPDFExtractor:
             metadata=metadata,
             page_count=len(rendered.children) if hasattr(rendered, "children") else 0,
         )
+
+    def parse(
+        self,
+        pdf_path: Path,
+        *,
+        extract_images: bool = True,
+        max_pages_per_chunk: int | None = None,
+        page_map: list[int] | None = None,
+        reported_page_count: int | None = None,
+    ) -> MarkerParseResult:
+        """
+        完整解析 PDF 文件。
+
+        Args:
+            pdf_path: PDF 檔案路徑
+            extract_images: 是否在 render 階段擷取圖片
+            max_pages_per_chunk: 每個 Marker chunk 最多頁數；設定後會逐段解析避免 OOM
+            page_map: subset-local page index 對應的原始頁碼
+            reported_page_count: 要回報給 manifest 的總頁數（通常是原始 PDF 頁數）
+
+        Returns:
+            MarkerParseResult 包含 markdown, blocks, toc, images
+        """
+        (
+            total_pages,
+            resolved_extract_images,
+            resolved_chunk_size,
+            strategy_metadata,
+        ) = self._resolve_parse_strategy(
+            pdf_path,
+            extract_images=extract_images,
+            max_pages_per_chunk=max_pages_per_chunk,
+        )
+        converter = self._get_converter(extract_images=resolved_extract_images)
+
+        if resolved_chunk_size is None or resolved_chunk_size <= 0:
+            parse_result = self._parse_single_pdf(converter, pdf_path)
+        else:
+            _observed_pages, chunk_ranges = self._build_chunk_ranges(
+                pdf_path,
+                resolved_chunk_size,
+            )
+            if len(chunk_ranges) <= 1:
+                parse_result = self._parse_single_pdf(converter, pdf_path)
+            else:
+                chunk_results: list[MarkerParseResult] = []
+                with tempfile.TemporaryDirectory(
+                    prefix="marker_chunks_"
+                ) as temp_dir_name:
+                    chunk_paths = self._materialize_chunk_pdfs(
+                        pdf_path,
+                        chunk_ranges,
+                        Path(temp_dir_name),
+                    )
+                    for chunk_path, start_page in chunk_paths:
+                        chunk_results.append(
+                            self._parse_single_pdf(
+                                converter,
+                                chunk_path,
+                                page_offset=start_page - 1,
+                            )
+                        )
+
+                parse_result = self._merge_parse_results(chunk_results, total_pages)
+
+        if page_map:
+            parse_result = self._apply_page_map(
+                parse_result,
+                page_map,
+                reported_page_count=reported_page_count,
+            )
+
+        parse_result.metadata.update(strategy_metadata)
+        return parse_result
 
     def _extract_blocks(self, rendered: Any) -> list[MarkerBlock]:
         """從 rendered 結果提取結構化 blocks。"""
@@ -202,7 +621,7 @@ class MarkerPDFExtractor:
                 polygon=polygon,
                 section_hierarchy=current_hierarchy,
                 metadata={
-                    "id": getattr(node, "id", None),
+                    "id": self._stringify_marker_block_id(getattr(node, "id", None)),
                     "level": getattr(node, "level", None),
                     "source_order": block_counter,
                 },
@@ -223,7 +642,12 @@ class MarkerPDFExtractor:
 
         return blocks
 
-    def _extract_toc(self, rendered: Any) -> list[dict[str, Any]]:
+    def _extract_toc(
+        self,
+        rendered: Any,
+        *,
+        blocks: list[MarkerBlock] | None = None,
+    ) -> list[dict[str, Any]]:
         """提取目錄結構。"""
         toc = []
 
@@ -238,7 +662,7 @@ class MarkerPDFExtractor:
                 )
         else:
             # 從 SectionHeader blocks 建構 TOC
-            for block in self._extract_blocks(rendered):
+            for block in blocks or self._extract_blocks(rendered):
                 if block.block_type == "SectionHeader" and block.text:
                     toc.append(
                         {
@@ -250,13 +674,27 @@ class MarkerPDFExtractor:
 
         return toc
 
-    def _extract_images(self, rendered: Any) -> dict[str, bytes]:
-        """提取所有圖片。"""
+    def _extract_images(
+        self,
+        rendered: Any,
+        blocks: list[MarkerBlock],
+    ) -> dict[str, bytes]:
+        """提取與 Figure/Picture block 對應的圖片。"""
         images = {}
+        allowed_keys = {
+            self._normalize_marker_image_key(block.metadata.get("id") or "")
+            for block in self._select_image_blocks(blocks)
+            if block.metadata.get("id")
+        }
+
+        if not allowed_keys:
+            return images
 
         if hasattr(rendered, "images"):
             # Marker 的 images 是 dict[str, PIL.Image]
             for name, img in rendered.images.items():
+                if self._normalize_marker_image_key(name) not in allowed_keys:
+                    continue
                 try:
                     import io
 
@@ -282,6 +720,8 @@ class MarkerPDFExtractor:
         parse_result: MarkerParseResult,
         pdf_path: Path,
         output_dir: Path,
+        *,
+        doc_id: str | None = None,
     ) -> DocumentManifest:
         """
         將 Marker 解析結果轉換為 DocumentManifest。
@@ -297,7 +737,9 @@ class MarkerPDFExtractor:
         # 生成 doc_id (使用與 DocumentService 一致的慣例)
         from src.domain.value_objects import DocId
 
-        doc_id = DocId.generate(pdf_path.stem, str(pdf_path.absolute())).value
+        resolved_doc_id = (
+            doc_id or DocId.generate(pdf_path.stem, str(pdf_path.absolute())).value
+        )
 
         # 確保輸出目錄存在
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -462,7 +904,7 @@ class MarkerPDFExtractor:
 
         # 建立 DocumentManifest
         manifest = DocumentManifest(
-            doc_id=doc_id,
+            doc_id=resolved_doc_id,
             filename=pdf_path.name,
             title=parse_result.metadata.get("title", pdf_path.stem),
             toc=[item["title"] for item in parse_result.toc],
@@ -501,16 +943,34 @@ class MarkerPDFExtractor:
 
         return manifest
 
-    def extract_to_manifest(self, pdf_path: Path, output_dir: Path) -> DocumentManifest:
+    def extract_to_manifest(
+        self,
+        pdf_path: Path,
+        output_dir: Path,
+        *,
+        extract_images: bool = True,
+        max_pages_per_chunk: int | None = None,
+        page_map: list[int] | None = None,
+        reported_page_count: int | None = None,
+        doc_id: str | None = None,
+    ) -> DocumentManifest:
         """
         一站式 API：解析 PDF 並輸出 DocumentManifest。
 
         Args:
             pdf_path: PDF 檔案路徑
             output_dir: 輸出目錄
+            extract_images: 是否輸出圖片 assets
+            max_pages_per_chunk: 每個 chunk 的最大頁數
 
         Returns:
             DocumentManifest
         """
-        result = self.parse(pdf_path)
-        return self.convert_to_manifest(result, pdf_path, output_dir)
+        result = self.parse(
+            pdf_path,
+            extract_images=extract_images,
+            max_pages_per_chunk=max_pages_per_chunk,
+            page_map=page_map,
+            reported_page_count=reported_page_count,
+        )
+        return self.convert_to_manifest(result, pdf_path, output_dir, doc_id=doc_id)
