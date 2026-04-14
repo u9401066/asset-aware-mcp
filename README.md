@@ -150,6 +150,10 @@ uv run python -m src.presentation.server
 Runtime note:
 The VS Code extension prefers a managed Python 3.11 runtime when launching the MCP server via `uv` or `uvx`. This avoids native package builds on end-user machines, especially macOS systems without Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
 
+Installation scope note:
+- The VS Code extension installs once per user (global). The MCP server launched through `uvx asset-aware-mcp` reuses the user uv cache rather than reinstalling per workspace.
+- Runtime data stays with your repo: `.env` and `assetAwareMcp.dataDir` default to `./data`, so ingested assets remain scoped to the current workspace.
+
 Marker note:
 `marker-pdf` is now an optional dependency because it may pull in `torch`, `surya`, and platform-specific ML wheels. Default installs use the PyMuPDF backend only. Enable Marker only when you need `use_marker=True` or `parse_pdf_structure`.
 

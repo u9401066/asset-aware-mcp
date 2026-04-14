@@ -145,6 +145,11 @@ uv run python -m src.presentation.server
 Runtime 說明：
 VS Code 擴充套件在透過 `uv` / `uvx` 啟動 MCP server 時，會優先使用受管理的 Python 3.11 runtime。這可避免終端使用者機器上發生原生套件編譯，特別是未安裝 Xcode Command Line Tools 的 macOS；但專案本身仍保留對較新 Python 版本的相容性。
 
+安裝範圍說明：
+- VSIX 以使用者（全域）範圍安裝，不需要為每個 workspace 重複安裝。
+- MCP 伺服器透過 `uvx asset-aware-mcp` 啟動並重用使用者層級的 uv 快取，升級時也不會重新安裝整個環境。
+- 執行時資料留在 workspace：`.env` 與 `assetAwareMcp.dataDir` 預設指向 `./data`，讓攝入結果跟著專案存放，避免佔用全域資源。
+
 Marker 說明：
 `marker-pdf` 現在是可選依賴，因為它可能拉入 `torch`、`surya` 與平台相關的 ML wheels。預設安裝只使用 PyMuPDF 後端；只有在你真的需要 `use_marker=True` 或 `parse_pdf_structure` 時才建議額外安裝。
 

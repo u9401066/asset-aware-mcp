@@ -176,6 +176,11 @@ The extension prefers a managed Python 3.11 runtime when launching the MCP serve
 Marker note:
 The extension does not install Marker or torch by default. If you need `use_marker=True` workflows, enable `assetAwareMcp.enableMarkerBackend`. Keeping `assetAwareMcp.torchBackend=cpu` avoids most cross-platform wheel and CUDA mismatch issues.
 
+Installation scope & storage:
+- The VSIX installs as a user/global extension (standard VS Code behavior), so you do not need a separate install per workspace.
+- The MCP server is launched via `uvx asset-aware-mcp` and reused from your user-level uv cache; upgrades reuse the same cache.
+- Runtime data stays in the workspace: `.env` and `assetAwareMcp.dataDir` default to `./data` beside your repo, keeping ingested assets scoped per project.
+
 ## 🔧 Commands
 
 | Command | Description |
