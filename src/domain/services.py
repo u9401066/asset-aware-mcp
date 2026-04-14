@@ -6,6 +6,8 @@ Business logic that doesn't naturally fit within an entity.
 
 from __future__ import annotations
 
+from collections import Counter
+from pathlib import Path
 import re
 
 from .entities import (
@@ -41,6 +43,16 @@ class ManifestGenerator:
         self._toc_caption_re = self.profile.compile_toc_caption_re()
         self._section_noise_re = self.profile.compile_section_noise_re()
         self._title_noise_re = self.profile.compile_title_noise_re()
+        self._question_line_re = re.compile(r"^\d{1,3}\s*[\.、\)）].*")
+        self._number_only_re = re.compile(r"^\d{1,3}[\.、\)）]?$")
+        self._title_suffix_markers = (
+            "考試日期",
+            "筆試時間",
+            "考試時間",
+            "exam date",
+            "test date",
+            "time:",
+        )
 
     def generate(
         self,
@@ -91,8 +103,8 @@ class ManifestGenerator:
         # Build TOC from sections
         toc = [s.title for s in sections if s.level <= 2]
 
-        # Detect title: prefer PDF metadata > merge consecutive H1 > first heading
-        title = pdf_title or self._detect_title(markdown)
+        title = self._select_title(pdf_title, markdown, filename)
+        text_quality = self._summarize_text_quality(markdown, page_count)
 
         return DocumentManifest(
             doc_id=doc_id,
@@ -106,6 +118,12 @@ class ManifestGenerator:
             ),
             lightrag_entities=lightrag_entities or [],
             page_count=page_count,
+            text_quality_status=text_quality["status"],
+            visible_text_chars=text_quality["visible_text_chars"],
+            visible_text_lines=text_quality["visible_text_lines"],
+            repeated_line_ratio=text_quality["repeated_line_ratio"],
+            ocr_recommended=text_quality["ocr_recommended"],
+            text_quality_reason=text_quality["reason"],
             markdown_path=markdown_path,
             manifest_path="",  # Will be set by repository when saving
         )
@@ -228,14 +246,21 @@ class ManifestGenerator:
             page = int(match.group(1))
         return page
 
-    def _detect_title(self, markdown: str) -> str:
+    def _select_title(self, pdf_title: str, markdown: str, filename: str) -> str:
+        normalized_pdf_title = self._normalize_title(pdf_title)
+        if self._is_viable_title(normalized_pdf_title):
+            return normalized_pdf_title
+        return self._detect_title(markdown, filename)
+
+    def _detect_title(self, markdown: str, filename: str = "") -> str:
         """
         Detect document title from markdown.
 
         Strategy:
         1. Merge consecutive H1 headings (often split across lines in PDFs)
         2. If no H1, try consecutive H2 headings
-        3. Fallback to first non-empty line
+        3. Fallback to first viable non-empty line
+        4. Final fallback to filename stem
         """
         lines = markdown.split("\n")
 
@@ -253,13 +278,8 @@ class ManifestGenerator:
                     rf"^{re.escape(target_level)}\s+(.+)$", stripped
                 )
                 if header_match:
-                    title_text = header_match.group(1).strip()
-                    # Skip noise headings
-                    if (
-                        len(title_text) < 3
-                        or self._title_noise_re.match(title_text)
-                        or self._section_noise_re.match(title_text)
-                    ):
+                    title_text = self._normalize_title(header_match.group(1))
+                    if not self._is_viable_title(title_text):
                         if collecting:
                             break  # Stop collecting after noise
                         continue
@@ -272,13 +292,105 @@ class ManifestGenerator:
             if titles:
                 return " ".join(titles)
 
-        # Fallback: first non-empty line
-        for line in markdown.split("\n"):
-            line = line.strip()
-            if line and not line.startswith("<!--"):
-                return line[:100]
+        visible_line_counts = Counter(
+            self._normalize_visible_text(line.strip())
+            for line in lines
+            if line.strip() and not line.strip().startswith("<!--")
+        )
 
-        return ""
+        for line in lines:
+            stripped = line.strip()
+            if not stripped or stripped.startswith("<!--"):
+                continue
+            visible_text = self._normalize_visible_text(stripped)
+            if self._number_only_re.match(visible_text) or self._question_line_re.match(visible_text):
+                break
+            title_text = self._normalize_title(stripped)
+            if visible_line_counts.get(visible_text, 0) > 1:
+                continue
+            if self._is_viable_title(title_text):
+                return title_text[:120]
+
+        return self._filename_fallback_title(filename)
+
+    def _normalize_title(self, value: str) -> str:
+        normalized = value.replace("\u00a0", " ").replace("\uf0b7", " ")
+        normalized = normalized.replace("#", " ")
+        normalized = re.sub(r"[*_`~]+", "", normalized)
+        normalized = re.sub(r"\s+", " ", normalized).strip(" -:：,，")
+
+        lowered = normalized.lower()
+        for marker in self._title_suffix_markers:
+            marker_lower = marker.lower()
+            index = lowered.find(marker_lower)
+            if index > 0:
+                normalized = normalized[:index].rstrip(" -:：,，")
+                lowered = normalized.lower()
+
+        return normalized
+
+    def _is_viable_title(self, value: str) -> bool:
+        if len(value) < 3:
+            return False
+        if self._title_noise_re.match(value) or self._section_noise_re.match(value):
+            return False
+        if self._number_only_re.match(value):
+            return False
+        if self._question_line_re.match(value):
+            return False
+        return True
+
+    def _filename_fallback_title(self, filename: str) -> str:
+        if not filename:
+            return ""
+        return self._normalize_title(Path(filename).stem)
+
+    def _summarize_text_quality(self, markdown: str, page_count: int) -> dict[str, object]:
+        visible_lines = []
+        for line in markdown.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("<!--"):
+                continue
+            cleaned = self._normalize_visible_text(stripped)
+            if cleaned:
+                visible_lines.append(cleaned)
+
+        visible_text_chars = sum(len(line) for line in visible_lines)
+        visible_text_lines = len(visible_lines)
+        repeated_line_ratio = 0.0
+        if visible_lines:
+            unique_lines = len(Counter(visible_lines))
+            repeated_line_ratio = 1 - (unique_lines / visible_text_lines)
+
+        min_chars = max(80, page_count * 40)
+        low_text = visible_text_chars < min_chars
+        highly_repetitive = visible_text_lines >= 4 and repeated_line_ratio >= 0.45
+
+        reason_parts = []
+        if low_text:
+            reason_parts.append(
+                f"visible text is sparse ({visible_text_chars} chars across {page_count} pages)"
+            )
+        if highly_repetitive:
+            reason_parts.append(
+                f"visible text is highly repetitive ({repeated_line_ratio:.2f} repeated-line ratio)"
+            )
+
+        return {
+            "status": "low_text" if (low_text or highly_repetitive) else "ok",
+            "visible_text_chars": visible_text_chars,
+            "visible_text_lines": visible_text_lines,
+            "repeated_line_ratio": repeated_line_ratio,
+            "ocr_recommended": low_text or highly_repetitive,
+            "reason": "; ".join(reason_parts),
+        }
+
+    def _normalize_visible_text(self, value: str) -> str:
+        normalized = value.replace("\u00a0", " ").replace("\uf0b7", " ")
+        normalized = normalized.replace("#", " ")
+        normalized = re.sub(r"[*_`~]+", "", normalized)
+        normalized = re.sub(r"\s+", " ", normalized).strip()
+        return normalized
 
     def _sections_from_pdf_toc(
         self,

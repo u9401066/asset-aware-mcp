@@ -213,6 +213,30 @@ class DocumentManifest(BaseModel):
 
     # Metadata
     page_count: int = Field(0, description="Total number of pages")
+    text_quality_status: str = Field(
+        "ok",
+        description="Text extraction quality status: ok or low_text",
+    )
+    visible_text_chars: int = Field(
+        0,
+        description="Visible extracted text character count excluding page markers",
+    )
+    visible_text_lines: int = Field(
+        0,
+        description="Visible extracted text line count excluding blank lines and page markers",
+    )
+    repeated_line_ratio: float = Field(
+        0.0,
+        description="Fraction of visible lines that are repeated duplicates",
+    )
+    ocr_recommended: bool = Field(
+        False,
+        description="Whether OCR is recommended because extracted text looks too sparse or repetitive",
+    )
+    text_quality_reason: str = Field(
+        "",
+        description="Human-readable explanation for low text quality diagnostics",
+    )
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 
@@ -306,6 +330,8 @@ class DocumentSummary(BaseModel):
     table_count: int = 0
     figure_count: int = 0
     section_count: int = 0
+    text_quality_status: str = "ok"
+    ocr_recommended: bool = False
     created_at: datetime = Field(default_factory=datetime.now)
 
     @property

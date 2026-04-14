@@ -518,6 +518,9 @@ async def list_documents() -> str:
         output_lines.append(f"- **tables:** {doc.table_count}")
         output_lines.append(f"- **figures:** {doc.figure_count}")
         output_lines.append(f"- **sections:** {doc.section_count}")
+        output_lines.append(f"- **text_quality:** {doc.text_quality_status}")
+        if doc.ocr_recommended:
+            output_lines.append("- **ocr_recommended:** yes")
         output_lines.append(f"- **ingested:** {doc.ingested_at}")
         output_lines.append("")
 
@@ -657,6 +660,13 @@ async def inspect_document_manifest(doc_id: str) -> str:
     output_lines = [f"# Document Manifest: {manifest.title or manifest.filename}\n"]
     output_lines.append(f"**doc_id:** `{manifest.doc_id}`")
     output_lines.append(f"**pages:** {manifest.page_count}")
+    output_lines.append(f"**text_quality:** {manifest.text_quality_status}")
+    output_lines.append(f"**visible_text_chars:** {manifest.visible_text_chars}")
+    output_lines.append(f"**visible_text_lines:** {manifest.visible_text_lines}")
+    output_lines.append(f"**repeated_line_ratio:** {manifest.repeated_line_ratio:.2f}")
+    output_lines.append(f"**ocr_recommended:** {'yes' if manifest.ocr_recommended else 'no'}")
+    if manifest.text_quality_reason:
+        output_lines.append(f"**text_quality_reason:** {manifest.text_quality_reason}")
     output_lines.append(f"**ingested:** {manifest.ingested_at}")
 
     # Tables section

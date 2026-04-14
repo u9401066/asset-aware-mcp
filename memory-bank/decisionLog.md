@@ -1,8 +1,11 @@
 # Decision Log
 
 | Date | Decision | Rationale |
+| 2026-04-14 | **Manifest title fallback 必須在 question-first PDF 時退回 filename，而不是吃正文第一行** | 真實麻醉科考題 PDF（例如 111 年）首頁可能直接以 `1.` 開始，下一行就是題幹。若 title fallback 只抓第一個「看起來有字」的行，會把題幹誤存成文件標題，進而污染 `list_documents` 與 downstream prompt。正確策略是先清理 heading markdown noise；若正文已開始，就退回檔名 stem。 |
+| 2026-04-14 | **Manifest 必須顯式保存低文字品質診斷，讓 OCR 需求可被程式判斷** | 真實答案 PDF 可能只抽出極少且高度重複的文字，例如連續的 `本題送分`。若 manifest 沒有品質摘要，呼叫端只能誤以為文件正常 ingest。加入 `text_quality_status`、可視文字量、重複率與 `ocr_recommended`，才能在後續 workflow 中及早分流。 |
+
+| Date | Decision | Rationale |
 | 2026-03-23 | **LightRAG MCP 查詢預設改為 structured output，但保留 text/data 相容模式** | 這個 repo 的知識圖譜用途已從單純問答擴展到 citation-aware agent workflow。若繼續把 references 附加在純文字尾端，agent 需要再做 fragile parsing。改為預設回傳 `answer`、`references`、`metadata`、`retrieval`、`counts` 可直接支援引用與表格工作流；同時保留 `response_mode="text"` 和 `response_mode="data"`，降低對既有呼叫端的破壞性。 |
-| 2026-03-23 | **VS Code extension 的 LightRAG 路徑設定必須對齊後端 `LIGHTRAG_WORKING_DIR`** | extension 若持續寫入 legacy `LIGHTRAG_DIR`，會造成前端設定看似成功、後端實際讀不到同一路徑的隱性錯配。統一改為 `LIGHTRAG_WORKING_DIR`，並保留 fallback，可兼顧新舊環境。 |
 |------|----------|-----------|
 | 2026-03-19 | **agent asset 能力擴展採分段發布，不做單一大版本合併** | gap 修補涉及不同風險面：格式入口擴展、表格原生化、agent 理解增強、非 flow-based 特殊格式。若一次合併發布，測試面與回歸面會互相干擾，難以判斷品質退化來源。按 Release A/B/C/D 分段，可讓每次發布只承擔單一能力面風險。 |
 | 2026-03-18 | **section metadata 的最終真相必須在 manifest generator 收斂** | 如果 Marker ingest 先用 TOC + line index 算出 section，再由 `ManifestGenerator.generate()` 用另一套規則重建 sections，manifest、fetch、segmentation 會開始共享不同的 section 歸屬。改為讓 generator 接受預先計算好的 sections，並在 generator 階段統一回填 assets 的 `section_id` / `section_title`，可避免多重真相。 |

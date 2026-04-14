@@ -70,6 +70,63 @@ class TestManifestGenerator:
 
         assert title == "Test Document Title"
 
+    def test_detect_title_falls_back_to_filename_when_markdown_starts_with_question(
+        self, generator: ManifestGenerator
+    ):
+        """Question-first markdown should not use question numbers as title."""
+        markdown = """<!-- Page 1 -->
+1.
+69 歲男性骨釘拔除手術後於恢復室抱怨記得手術過程的細節。
+2.第二題題幹。
+"""
+
+        title = generator._detect_title(markdown, "111年筆試考題.pdf")
+
+        assert title == "111年筆試考題"
+
+    def test_detect_title_normalizes_markdown_artifacts_in_heading(
+        self, generator: ManifestGenerator
+    ):
+        """Heading titles should be cleaned before landing in manifest."""
+        markdown = """<!-- Page 1 -->
+# 台灣麻醉醫學會**109**#  年麻醉科專科醫師甄審筆試試卷 考試日期：109 年10 月11 日，# 筆試時間：# 9:30-11:30
+"""
+
+        title = generator._detect_title(markdown, "109年筆試考題.pdf")
+
+        assert title == "台灣麻醉醫學會109 年麻醉科專科醫師甄審筆試試卷"
+
+    def test_generate_includes_low_text_quality_diagnostics(
+        self, generator: ManifestGenerator
+    ):
+        """Sparse, repetitive text should be flagged for OCR follow-up."""
+        markdown = """<!-- Page 1 -->
+本題送分
+<!-- Page 2 -->
+本題送分
+<!-- Page 3 -->
+本題送分
+<!-- Page 4 -->
+本題送分
+<!-- Page 5 -->
+本題送分
+"""
+
+        manifest = generator.generate(
+            doc_id="doc_low_text",
+            filename="109年筆試考題答案.pdf",
+            markdown=markdown,
+            figures=[],
+            page_count=5,
+            markdown_path="/tmp/doc_low_text.md",
+        )
+
+        assert manifest.title == "109年筆試考題答案"
+        assert manifest.text_quality_status == "low_text"
+        assert manifest.ocr_recommended is True
+        assert manifest.visible_text_chars > 0
+        assert manifest.repeated_line_ratio > 0.5
+
     def test_toc_generation(self, generator: ManifestGenerator, sample_markdown: str):
         """Test table of contents generation."""
         manifest = generator.generate(

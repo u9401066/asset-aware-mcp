@@ -141,6 +141,8 @@ class FileStorage(DocumentRepository):
                         table_count=asset_summary.get("tables", 0),
                         figure_count=asset_summary.get("figures", 0),
                         section_count=asset_summary.get("sections", 0),
+                        text_quality_status=manifest.text_quality_status,
+                        ocr_recommended=manifest.ocr_recommended,
                         created_at=manifest.created_at,
                     )
                 )

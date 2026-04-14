@@ -7,6 +7,25 @@
 
 ## [Unreleased]
 
+## [0.6.6] - 2026-04-14
+
+### Changed
+
+- **Manifest title detection is more resilient on real exam PDFs**
+  - Markdown heading titles are now normalized before saving, stripping inline markdown noise such as `**` / `#`
+  - When a PDF starts directly with question content, title fallback now prefers the filename stem instead of misclassifying page numbers or question stems as the title
+
+### Added
+
+- **Manifest text-quality diagnostics for sparse extraction results**
+  - `DocumentManifest` now records `text_quality_status`, visible text counts, repeated-line ratio, and `ocr_recommended`
+  - `list_documents` and `inspect_document_manifest` now surface these diagnostics, making low-text scan failures easier to spot before downstream parsing
+
+### Fixed
+
+- **Low-text scanned PDFs no longer look deceptively healthy in manifest metadata**
+  - Repetitive outputs such as repeated `本題送分` are now flagged as `low_text` with an OCR recommendation instead of silently appearing as a normal document title
+
 ## [0.6.5] - 2026-04-14
 
 ### Added
