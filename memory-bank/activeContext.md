@@ -4,7 +4,7 @@
 
 ## Current Goals
 
-- 正在完成 0.6.4 release 收尾：large-PDF auto strategy / page-range ingestion 已落地，接下來補版本提交、tag、push 與父 repo pointer 更新。
+- 正在完成 0.6.5 release 收尾：large-PDF auto strategy / page-range ingestion 已落地，接下來補版本提交、tag、push 與父 repo pointer 更新。
 
 ## 🎯 當前焦點
 
@@ -13,8 +13,8 @@
 - **VS Code extension env key 已對齊**：設定面板與 `.env` 生成器改寫 `LIGHTRAG_WORKING_DIR`，同時保留 `LIGHTRAG_DIR` fallback
 - **目前正在做 release/push 前收尾**：補 README / CHANGELOG / extension README / ROADMAP / Memory Bank 對齊，準備跑 CI 等價驗證與分段提交
 
-- **0.6.4 release prep 已完成**：scoped large-PDF ingestion、page-range ingestion、changelog、README 與 extension metadata 已同步收斂，可建立新 tag
-- **當前版本真相為 0.6.4**：本次 patch 版本對外釋出 large-PDF auto strategy、page-range ingestion 與 page-scoped `doc_id` 修正
+- **0.6.5 release prep 已完成**：scoped large-PDF ingestion、page-range ingestion、changelog、README 與 extension metadata 已同步收斂，可建立新 tag
+- **當前版本真相為 0.6.5**：本次 patch 版本對外釋出 large-PDF auto strategy、page-range ingestion 與 page-scoped `doc_id` 修正
 - **Agent asset 全覆蓋規劃已補齊**：新增 `docs/agent-asset-gap-analysis.md`，明確拆成格式轉換、資產拆解、結構導航、語義理解四層，並量化目前完成度約 35%
 - **建議採分段發布**：先發格式入口補齊（RTF/TXT/MD/CSV/HTML），再發 XLSX 原生化，其次是 agent 理解增強，最後才是 PPTX/EPUB/EML 等高成本格式
 - **Section truth 已收斂**：manifest generator 現在是 section metadata 最終寫入點；Marker ingest 不再先算 section 再被 generator 用另一套規則覆蓋
