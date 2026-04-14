@@ -7,6 +7,26 @@
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-04-14
+
+### Added
+
+- **Scoped page-range ingestion for PDF workflows**
+  - `ingest_documents` 與 `parse_pdf_structure` 現在支援 `page_ranges`，只處理指定頁段並產生 `selected_pages.pdf`
+  - Markdown page markers、TOC、tables、images 與 Marker blocks 會 remap 回原始 PDF 頁碼，避免來源引用失真
+
+### Changed
+
+- **Large-PDF Marker parse 內建自動保護策略**
+  - 頁數超過 800 頁時會自動啟用 chunking，降低大文件解析時的記憶體壓力
+  - 遇到高圖片量 PDF 時會自動停用 figure extraction，避免產出量與解析成本失控
+
+### Fixed
+
+- **相同 PDF 不同頁段 ingest 的識別與來源穩定性**
+  - `doc_id` 現在會納入 page-range scope，避免相同來源 PDF 但不同頁段造成 collision
+  - subset ingestion 產物會保留原始頁碼語意，改善後續 source tracking 與 asset citation 一致性
+
 ## [0.6.3] - 2026-03-23
 
 ### Added

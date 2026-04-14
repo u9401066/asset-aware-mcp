@@ -6,9 +6,10 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-## 🆕 What's New in v0.6.3
+## 🆕 What's New in v0.6.4
 
-- **Citation-Aware LightRAG Release**: structured KG output, LightRAG deletion sync, env alignment, and hardened install smoke are now part of `v0.6.3`
+- **Scoped Large-PDF Ingestion Release**: `v0.6.4` adds automatic Marker chunking for PDFs over 800 pages and auto-disables figure extraction on image-heavy documents
+- **Real Page-Range Ingestion**: `ingest_documents` and `parse_pdf_structure` can now process selected page ranges while remapping citations and asset page numbers back to the original PDF
 - **48 tools** across 7 modules
 
 ## 🧪 Current Main Branch
