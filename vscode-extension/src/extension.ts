@@ -16,7 +16,7 @@ import { AssetAwareMcpProvider, LAST_SERVER_VERSION_KEY } from './mcpProvider';
 import { StatusBarManager } from './statusBar';
 import { SettingsPanel } from './settingsPanel';
 import { EnvManager } from './envManager';
-import { StatusTreeProvider } from './statusTreeProvider';
+import { InstallInfo, StatusTreeProvider } from './statusTreeProvider';
 import { DocumentTreeProvider } from './documentTreeProvider';
 import { TableTreeProvider } from './tableTreeProvider';
 import { DfmEditorService, DfmLanguageFeatures } from './dfm';
@@ -188,6 +188,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     log('Extension is activating...');
 
     extensionContext = context;
+    const installInfo = getInstallInfo(context);
+    log(`Install scope: ${installInfo.scope}`);
+    log(`Extension path: ${installInfo.path}`);
 
     try {
         // Step 1: Initialize status bar
@@ -217,11 +220,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         // Step 3: Initialize env manager
         log('Step 3: Initializing env manager...');
-        envManager = new EnvManager(getStorageRoot());
+        const storageRoot = getStorageRoot();
+        envManager = new EnvManager(storageRoot);
 
         // Step 4: Initialize tree providers
         log('Step 4: Initializing tree providers...');
-        statusTreeProvider = new StatusTreeProvider(envManager);
+        statusTreeProvider = new StatusTreeProvider(envManager, installInfo, storageRoot);
         documentTreeProvider = new DocumentTreeProvider(envManager);
         tableTreeProvider = new TableTreeProvider(envManager);
 
@@ -239,7 +243,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         } else {
             log(`Server version matches: ${currentVersion} (using cache)`);
         }
-        mcpProvider = new AssetAwareMcpProvider(getStorageRoot(), outputChannel, context, needsUpgrade);
+        mcpProvider = new AssetAwareMcpProvider(storageRoot, outputChannel, context, needsUpgrade);
         // Persist current version so next launch won't trigger upgrade again
         context.globalState.update(LAST_SERVER_VERSION_KEY, currentVersion);
 
@@ -309,10 +313,22 @@ function getPrimaryWorkspaceRoot(): string | undefined {
     return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 }
 
+function getInstallInfo(context: vscode.ExtensionContext): InstallInfo {
+    switch (context.extensionMode) {
+        case vscode.ExtensionMode.Development:
+            return { scope: 'Workspace (development)', path: context.extensionUri.fsPath };
+        case vscode.ExtensionMode.Test:
+            return { scope: 'Workspace (test)', path: context.extensionUri.fsPath };
+        default:
+            return { scope: 'User (global)', path: context.extensionUri.fsPath };
+    }
+}
+
 function getStorageRoot(): string {
     const workspaceRoot = getPrimaryWorkspaceRoot();
     const root = workspaceRoot ?? extensionContext.globalStorageUri.fsPath;
     fs.mkdirSync(root, { recursive: true });
+    log(`Storage root set to ${root} (${workspaceRoot ? 'workspace' : 'global storage fallback'})`);
     return root;
 }
 

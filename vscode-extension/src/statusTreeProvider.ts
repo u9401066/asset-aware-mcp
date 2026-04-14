@@ -7,14 +7,23 @@
 import * as vscode from 'vscode';
 import { EnvManager } from './envManager';
 
+export interface InstallInfo {
+    scope: string;
+    path: string;
+}
+
 export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
     private _onDidChangeTreeData = new vscode.EventEmitter<StatusItem | undefined | void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
     private envManager: EnvManager;
+    private installInfo: InstallInfo;
+    private storageRoot: string;
 
-    constructor(envManager: EnvManager) {
+    constructor(envManager: EnvManager, installInfo: InstallInfo, storageRoot: string) {
         this.envManager = envManager;
+        this.installInfo = installInfo;
+        this.storageRoot = storageRoot;
     }
 
     async refresh(): Promise<void> {
@@ -35,6 +44,21 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
     private async getRootItems(): Promise<StatusItem[]> {
         const items: StatusItem[] = [];
         const env = await this.envManager.readEnv();
+
+        // Extension install scope and storage root
+        items.push(new StatusItem(
+            'Install Scope',
+            this.installInfo.scope,
+            vscode.TreeItemCollapsibleState.None,
+            'globe'
+        ));
+
+        items.push(new StatusItem(
+            'Storage Root',
+            this.storageRoot,
+            vscode.TreeItemCollapsibleState.None,
+            'file-directory'
+        ));
 
         // Configuration file status
         const envExists = this.envManager.exists();
@@ -77,7 +101,7 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
         // Data Directory
         const dataDir = this.envManager.getDataDir();
         items.push(new StatusItem(
-            'Data Directory',
+            'Data Directory (workspace)',
             dataDir,
             vscode.TreeItemCollapsibleState.None,
             'folder'
