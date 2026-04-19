@@ -664,7 +664,9 @@ async def inspect_document_manifest(doc_id: str) -> str:
     output_lines.append(f"**visible_text_chars:** {manifest.visible_text_chars}")
     output_lines.append(f"**visible_text_lines:** {manifest.visible_text_lines}")
     output_lines.append(f"**repeated_line_ratio:** {manifest.repeated_line_ratio:.2f}")
-    output_lines.append(f"**ocr_recommended:** {'yes' if manifest.ocr_recommended else 'no'}")
+    output_lines.append(
+        f"**ocr_recommended:** {'yes' if manifest.ocr_recommended else 'no'}"
+    )
     if manifest.text_quality_reason:
         output_lines.append(f"**text_quality_reason:** {manifest.text_quality_reason}")
     output_lines.append(f"**ingested:** {manifest.ingested_at}")

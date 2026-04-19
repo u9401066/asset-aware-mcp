@@ -37,6 +37,7 @@ echo -e "${GREEN}✓ Static analysis passed${NC}"
 echo -e "\n${YELLOW}🧪 Step 2: Running Tests${NC}"
 
 uv run pytest tests/unit -v --tb=short
+uv run pytest tests/integration/test_docx_complex_sample_roundtrip.py -v --tb=short
 
 echo -e "${GREEN}✓ Tests passed${NC}"
 

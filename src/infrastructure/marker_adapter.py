@@ -214,7 +214,7 @@ class MarkerPDFExtractor:
         import fitz  # type: ignore
 
         with fitz.open(str(pdf_path)) as pdf:
-            return pdf.page_count
+            return int(pdf.page_count)
 
     @staticmethod
     def _count_embedded_image_refs(pdf_path: Path) -> int:
@@ -680,7 +680,7 @@ class MarkerPDFExtractor:
         blocks: list[MarkerBlock],
     ) -> dict[str, bytes]:
         """提取與 Figure/Picture block 對應的圖片。"""
-        images = {}
+        images: dict[str, bytes] = {}
         allowed_keys = {
             self._normalize_marker_image_key(block.metadata.get("id") or "")
             for block in self._select_image_blocks(blocks)

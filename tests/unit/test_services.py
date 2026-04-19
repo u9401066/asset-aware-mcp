@@ -118,7 +118,7 @@ class TestManifestGenerator:
             markdown=markdown,
             figures=[],
             page_count=5,
-            markdown_path="/tmp/doc_low_text.md",
+            markdown_path="doc_low_text.md",
         )
 
         assert manifest.title == "109年筆試考題答案"

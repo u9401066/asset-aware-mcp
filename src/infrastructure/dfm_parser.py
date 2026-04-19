@@ -344,7 +344,11 @@ class DfmParser:
             new_content = edit.new_content
 
             if edit.table_rows is not None:
-                # Table: rebuild content from parsed rows
+                current_rows = self._parse_md_table(block.content)
+                if self._normalize_table_rows(
+                    edit.table_rows
+                ) == self._normalize_table_rows(current_rows):
+                    continue
                 block.content = self._rows_to_md_table(edit.table_rows)
             elif edit.updated_runs is not None:
                 # Format block with YAML runs — check if content.md
@@ -358,13 +362,20 @@ class DfmParser:
                     )
                     block.content = new_content
                 else:
+                    if runs_text == block.content and [
+                        run.to_dict() for run in edit.updated_runs
+                    ] == [run.to_dict() for run in block.runs]:
+                        continue
                     block.runs = edit.updated_runs
                     block.content = runs_text
             elif block.runs:
-                # Apply format merge strategy
+                if new_content == old_content:
+                    continue
                 block.runs = self._merge_runs(block.runs, old_content, new_content)
                 block.content = new_content
             else:
+                if new_content == block.content:
+                    continue
                 block.content = new_content
 
         from datetime import datetime
@@ -770,6 +781,13 @@ class DfmParser:
             escaped = [c.replace("\n", "<br>") for c in padded[: len(rows[0])]]
             lines.append("| " + " | ".join(escaped) + " |")
         return "\n".join(lines)
+
+    @staticmethod
+    def _normalize_table_rows(rows: list[list[str]] | None) -> list[list[str]]:
+        """Normalize parsed markdown-table rows for semantic equality checks."""
+        if not rows:
+            return []
+        return [[cell.strip() for cell in row] for row in rows]
 
     # ========================================================================
     # Format merge strategy

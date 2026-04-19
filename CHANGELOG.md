@@ -7,6 +7,29 @@
 
 ## [Unreleased]
 
+## [0.6.7] - 2026-04-19
+
+### Added
+
+- **Complex DOCX round-trip release gate**
+  - Added `tests/integration/test_docx_complex_sample_roundtrip.py` to CI and release workflows so the real nested-table sample DOCX is validated before every tagged release
+  - `scripts/release.sh` now runs the same complex DOCX round-trip smoke test locally before packaging
+
+### Changed
+
+- **VS Code Marketplace branding now matches the current product family**
+  - Extension icon, banner styling, and gallery banner color are aligned with the dark navy / teal / gold visual language used by `Academic Figures MCP` and `MedPaper Assistant`
+  - Extension README release highlights are updated for the DOCX round-trip hardening release
+
+### Fixed
+
+- **DOCX DFM round-trip fidelity for nested tables and no-op rebuilds**
+  - Nested tables are now extracted as first-class editable blocks, validated recursively, and written back correctly when edited
+  - No-op `from_md=True` saves preserve byte-identical output for the validated sample DOCX
+- **Release workflow blockers**
+  - Fixed newline normalization so UTF-8 markdown and manifest reads stay canonical across Windows and Linux
+  - Fixed repo-wide Ruff and MyPy issues that previously broke the release workflow
+
 ## [0.6.6] - 2026-04-14
 
 ### Changed

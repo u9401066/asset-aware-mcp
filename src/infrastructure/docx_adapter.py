@@ -161,7 +161,14 @@ class DocxAdapter:
 
         return ir
 
-    def ir_to_docx(self, ir: DocxIR, data_dir: Path, output_path: Path) -> Path:
+    def ir_to_docx(
+        self,
+        ir: DocxIR,
+        data_dir: Path,
+        output_path: Path,
+        *,
+        changed_block_ids: set[str] | None = None,
+    ) -> Path:
         """
         Rebuild a .docx file from a DocxIR.
 
@@ -189,7 +196,11 @@ class DocxAdapter:
             content_map[block.id] = block
 
         # Modify document.xml in-place within the zip
-        self._update_document_xml(output_path, ir)
+        self._update_document_xml(
+            output_path,
+            ir,
+            changed_block_ids=changed_block_ids,
+        )
 
         return output_path
 
@@ -593,10 +604,32 @@ class DocxAdapter:
         assets_dir: Path,
         parts_dir: Path,
     ) -> None:
-        """Parse a <w:tbl> element into a DfmBlock."""
+        """Parse a <w:tbl> element into a DfmBlock plus any nested child tables."""
+        block, nested_blocks = self._build_table_block(
+            tbl_elem,
+            ir,
+            rels,
+            assets_dir,
+            parts_dir,
+        )
+        ir.add_block(block)
+        for nested_block in nested_blocks:
+            ir.add_block(nested_block)
+
+    def _build_table_block(
+        self,
+        tbl_elem: etree._Element,
+        ir: DocxIR,
+        rels: dict[str, dict[str, str]],
+        assets_dir: Path,
+        parts_dir: Path,
+        *,
+        parent_cell: str | None = None,
+        parent_table_id: str | None = None,
+    ) -> tuple[DfmBlock, list[DfmBlock]]:
+        """Build a table block and recursively extract nested child table blocks."""
         block_id = ir.next_block_id(DfmBlockType.TABLE)
 
-        # Table style
         tbl_pr = tbl_elem.find(f"{{{NS['w']}}}tblPr")
         table_style = None
         if tbl_pr is not None:
@@ -604,14 +637,13 @@ class DocxAdapter:
             if style_el is not None:
                 table_style = style_el.get(f"{{{NS['w']}}}val")
 
-        # Parse rows and cells
         rows_data: list[list[str]] = []
-        col_count = 0
         merged_cells: list[MergedCell] = []
         cell_formats: dict[str, CellFormat] = {}
         col_widths: list[float] = []
+        nested_blocks: list[DfmBlock] = []
+        has_nested_descendants = False
 
-        # Try to get column widths from tblGrid
         tbl_grid = tbl_elem.find(f"{{{NS['w']}}}tblGrid")
         if tbl_grid is not None:
             for grid_col in tbl_grid.findall(f"{{{NS['w']}}}gridCol"):
@@ -619,18 +651,26 @@ class DocxAdapter:
                 if w:
                     col_widths.append(_twips_to_cm(int(w)))
 
-        # Parse rows
         for row_idx, tr_elem in enumerate(tbl_elem.findall(f"{{{NS['w']}}}tr")):
             row_cells: list[str] = []
             for col_idx, tc_elem in enumerate(tr_elem.findall(f"{{{NS['w']}}}tc")):
-                # Get cell text
-                cell_text = self._get_cell_text(tc_elem)
+                cell_text, child_nested_blocks = self._extract_cell_content(
+                    tc_elem,
+                    ir,
+                    rels,
+                    assets_dir,
+                    parts_dir,
+                    parent_cell=f"{row_idx}:{col_idx}",
+                    parent_table_id=block_id,
+                )
                 row_cells.append(cell_text)
+                nested_blocks.extend(child_nested_blocks)
+                has_nested_descendants = has_nested_descendants or bool(
+                    child_nested_blocks
+                )
 
-                # Check for merged cells
                 tc_pr = tc_elem.find(f"{{{NS['w']}}}tcPr")
                 if tc_pr is not None:
-                    # Horizontal merge
                     grid_span = tc_pr.find(f"{{{NS['w']}}}gridSpan")
                     col_span = 1
                     if grid_span is not None:
@@ -638,12 +678,10 @@ class DocxAdapter:
                         if val:
                             col_span = int(val)
 
-                    # Vertical merge
                     v_merge = tc_pr.find(f"{{{NS['w']}}}vMerge")
                     if v_merge is not None:
                         val = v_merge.get(f"{{{NS['w']}}}val")
                         if val == "restart":
-                            # Count how many rows this spans
                             row_span = self._count_vmerge(tbl_elem, row_idx, col_idx)
                             if col_span > 1 or row_span > 1:
                                 merged_cells.append(
@@ -654,7 +692,6 @@ class DocxAdapter:
                                         col_span=col_span,
                                     )
                                 )
-                        # Continuation cell (merged into cell above)
                     elif col_span > 1:
                         merged_cells.append(
                             MergedCell(
@@ -665,41 +702,80 @@ class DocxAdapter:
                             )
                         )
 
-                    # Cell formatting
                     cell_fmt = self._parse_cell_format(tc_pr, tc_elem)
                     if cell_fmt:
                         cell_formats[f"{row_idx}:{col_idx}"] = cell_fmt
 
             rows_data.append(row_cells)
-            col_count = max(col_count, len(row_cells))
 
-        # Build markdown table
         md_table = self._rows_to_md_table(rows_data)
-
-        # Check if table has nested tables (complex case)
-        nested_tables = tbl_elem.findall(f".//{{{NS['w']}}}tbl")
-        is_nested = False
         raw_xml_ref = None
-        if nested_tables:
-            # Save raw XML for complex nested tables
+        if has_nested_descendants or parent_cell is not None:
             raw_xml_ref = f"parts/nested_table_{block_id}.xml"
             xml_path = parts_dir / f"nested_table_{block_id}.xml"
             xml_path.write_bytes(etree.tostring(tbl_elem, xml_declaration=True))
-            is_nested = True
 
-        ir.add_block(
-            DfmBlock(
-                id=block_id,
-                block_type=DfmBlockType.TABLE,
-                content=md_table,
-                table_style=table_style,
-                col_widths=col_widths,
-                merged_cells=merged_cells,
-                cell_formats=cell_formats,
-                is_nested=is_nested,
-                raw_xml_ref=raw_xml_ref,
-            )
+        metadata: dict[str, str | bool] = {}
+        if parent_table_id is not None:
+            metadata["parent_table_id"] = parent_table_id
+        if has_nested_descendants:
+            metadata["contains_nested_tables"] = True
+
+        block = DfmBlock(
+            id=block_id,
+            block_type=DfmBlockType.TABLE,
+            content=md_table,
+            table_style=table_style,
+            col_widths=col_widths,
+            merged_cells=merged_cells,
+            cell_formats=cell_formats,
+            is_nested=has_nested_descendants or parent_cell is not None,
+            parent_cell=parent_cell,
+            raw_xml_ref=raw_xml_ref,
+            metadata=metadata,
         )
+        return block, nested_blocks
+
+    def _extract_cell_content(
+        self,
+        tc_elem: etree._Element,
+        ir: DocxIR,
+        rels: dict[str, dict[str, str]],
+        assets_dir: Path,
+        parts_dir: Path,
+        *,
+        parent_cell: str,
+        parent_table_id: str,
+    ) -> tuple[str, list[DfmBlock]]:
+        """Extract direct cell content while preserving nested table boundaries."""
+        segments: list[str] = []
+        nested_blocks: list[DfmBlock] = []
+
+        for child in tc_elem:
+            tag = etree.QName(child.tag).localname
+            if tag == "tcPr":
+                continue
+            if tag == "p":
+                segments.append(self._get_paragraph_text(child))
+                continue
+            if tag == "tbl":
+                nested_block, child_nested_blocks = self._build_table_block(
+                    child,
+                    ir,
+                    rels,
+                    assets_dir,
+                    parts_dir,
+                    parent_cell=parent_cell,
+                    parent_table_id=parent_table_id,
+                )
+                nested_blocks.append(nested_block)
+                nested_blocks.extend(child_nested_blocks)
+                segments.append(self._nested_table_marker(nested_block.id))
+
+        while segments and not segments[-1]:
+            segments.pop()
+
+        return "\n".join(segments), nested_blocks
 
     def _parse_drawing(
         self,
@@ -1226,11 +1302,26 @@ class DocxAdapter:
 
         return "\n".join(lines)
 
+    @staticmethod
+    def _nested_table_marker(block_id: str) -> str:
+        """Return the inline placeholder used for nested tables inside cell text."""
+        return f"[[NESTED_TABLE:{block_id}]]"
+
+    @classmethod
+    def _nested_table_marker_match(cls, value: str) -> re.Match[str] | None:
+        """Match a nested-table placeholder token."""
+        return re.fullmatch(r"\[\[NESTED_TABLE:(t\d{3})\]\]", value.strip())
+
     # ========================================================================
     # Private: Rebuild docx from IR
     # ========================================================================
 
-    def _update_document_xml(self, docx_path: Path, ir: DocxIR) -> None:
+    def _update_document_xml(
+        self,
+        docx_path: Path,
+        ir: DocxIR,
+        changed_block_ids: set[str] | None = None,
+    ) -> None:
         """
         Update document.xml within the docx zip with modified text from IR.
 
@@ -1250,7 +1341,11 @@ class DocxAdapter:
                 for item in zin.infolist():
                     if item.filename == "word/document.xml":
                         # Modify document.xml
-                        modified_xml = self._apply_text_changes(doc_xml, ir)
+                        modified_xml = self._apply_text_changes(
+                            doc_xml,
+                            ir,
+                            changed_block_ids,
+                        )
                         zout.writestr(item, modified_xml)
                     else:
                         zout.writestr(item, zin.read(item.filename))
@@ -1258,7 +1353,12 @@ class DocxAdapter:
         # Replace original with modified
         temp_path.replace(docx_path)
 
-    def _apply_text_changes(self, doc_xml: bytes, ir: DocxIR) -> bytes:
+    def _apply_text_changes(
+        self,
+        doc_xml: bytes,
+        ir: DocxIR,
+        changed_block_ids: set[str] | None = None,
+    ) -> bytes:
         """
         Apply text changes from IR blocks back to document.xml.
 
@@ -1270,27 +1370,60 @@ class DocxAdapter:
         if body is None:
             return doc_xml
 
+        top_level_blocks = [
+            block
+            for block in ir.blocks
+            if not (
+                block.block_type == DfmBlockType.TABLE and block.parent_cell is not None
+            )
+        ]
         block_idx = 0
+        nested_blocks_by_parent: dict[str, dict[str, list[DfmBlock]]] = {}
+        for block in ir.blocks:
+            if block.block_type != DfmBlockType.TABLE or block.parent_cell is None:
+                continue
+            parent_id = str(block.metadata.get("parent_table_id", ""))
+            if not parent_id:
+                continue
+            nested_blocks_by_parent.setdefault(parent_id, {}).setdefault(
+                block.parent_cell,
+                [],
+            ).append(block)
 
         for element in body:
             tag = etree.QName(element.tag).localname
 
             if tag == "p":
-                if block_idx < len(ir.blocks):
-                    block = ir.blocks[block_idx]
+                if block_idx < len(top_level_blocks):
+                    block = top_level_blocks[block_idx]
                     if block.block_type in (
                         DfmBlockType.PARAGRAPH,
                         DfmBlockType.HEADING,
                         DfmBlockType.LIST_ITEM,
                         DfmBlockType.FORMAT,
                         DfmBlockType.CAPTION,
-                    ):
+                    ) and (changed_block_ids is None or block.id in changed_block_ids):
                         self._update_paragraph_text(element, block)
                     block_idx += 1
-            elif tag == "tbl" and block_idx < len(ir.blocks):
-                block = ir.blocks[block_idx]
+            elif tag == "tbl" and block_idx < len(top_level_blocks):
+                block = top_level_blocks[block_idx]
                 if block.block_type == DfmBlockType.TABLE:
-                    self._update_table_text(element, block)
+                    should_update_self = (
+                        changed_block_ids is None or block.id in changed_block_ids
+                    )
+                    has_nested_updates = self._table_has_changed_nested_descendant(
+                        block.id,
+                        nested_blocks_by_parent,
+                        changed_block_ids,
+                    )
+                    if should_update_self or has_nested_updates:
+                        self._update_table_text(
+                            element,
+                            block,
+                            nested_blocks_by_parent,
+                            changed_block_ids,
+                            update_direct_text=should_update_self,
+                        )
                 block_idx += 1
 
         return bytes(
@@ -1305,67 +1438,161 @@ class DocxAdapter:
         if not runs:
             return
 
-        new_text = block.content
-        if not new_text:
-            return
+        if block.runs:
+            runs_text = "".join(run.text for run in block.runs)
+            text_segments = (
+                [run.text for run in block.runs]
+                if runs_text == block.content
+                else [block.content]
+            )
+        else:
+            text_segments = [block.content]
+        if not text_segments:
+            text_segments = [""]
 
-        # Simple strategy: put all text into the first run, clear others
-        # This preserves the first run's formatting
-        first_run_t = runs[0].find(f"{{{NS['w']}}}t")
-        if first_run_t is not None:
-            first_run_t.text = new_text
-            first_run_t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+        self._set_run_texts(runs, text_segments)
 
-        # Clear text from subsequent runs
-        for r in runs[1:]:
-            t_elem = r.find(f"{{{NS['w']}}}t")
-            if t_elem is not None:
-                t_elem.text = ""
-
-    def _update_table_text(self, tbl_elem: etree._Element, block: DfmBlock) -> None:
+    def _update_table_text(
+        self,
+        tbl_elem: etree._Element,
+        block: DfmBlock,
+        nested_blocks_by_parent: dict[str, dict[str, list[DfmBlock]]],
+        changed_block_ids: set[str] | None = None,
+        *,
+        update_direct_text: bool = True,
+    ) -> None:
         """Update text content of table cells from a DfmBlock."""
-        # Parse markdown table back to rows
         md_rows = self._parse_md_table(block.content)
         if not md_rows:
             return
 
         xml_rows = tbl_elem.findall(f"{{{NS['w']}}}tr")
 
-        for _row_idx, (xml_row, md_row) in enumerate(
+        for row_idx, (xml_row, md_row) in enumerate(
             zip(xml_rows, md_rows, strict=False)
         ):
             cells = xml_row.findall(f"{{{NS['w']}}}tc")
-            for _col_idx, (cell, md_cell) in enumerate(
-                zip(cells, md_row, strict=False)
-            ):
-                # Update first paragraph's text in the cell
-                paragraphs = cell.findall(f"{{{NS['w']}}}p")
-                if not paragraphs:
+            for col_idx, (cell, md_cell) in enumerate(zip(cells, md_row, strict=False)):
+                nested_blocks = nested_blocks_by_parent.get(block.id, {}).get(
+                    f"{row_idx}:{col_idx}",
+                    [],
+                )
+                self._update_table_cell(
+                    cell,
+                    md_cell.strip(),
+                    nested_blocks,
+                    nested_blocks_by_parent,
+                    changed_block_ids,
+                    update_direct_text=update_direct_text,
+                )
+
+    def _update_table_cell(
+        self,
+        cell: etree._Element,
+        cell_text: str,
+        nested_blocks: list[DfmBlock],
+        nested_blocks_by_parent: dict[str, dict[str, list[DfmBlock]]],
+        changed_block_ids: set[str] | None = None,
+        *,
+        update_direct_text: bool = True,
+    ) -> None:
+        """Update a table cell while preserving nested table boundaries."""
+        desired_items = cell_text.split("\n") if cell_text else []
+        direct_children = [
+            child for child in cell if etree.QName(child.tag).localname != "tcPr"
+        ]
+        last_paragraph: etree._Element | None = None
+        nested_iter = iter(nested_blocks)
+
+        for child in direct_children:
+            tag = etree.QName(child.tag).localname
+            if tag == "p":
+                next_text = self._get_paragraph_text(child)
+                if update_direct_text:
+                    next_text = ""
+                    if desired_items and not self._nested_table_marker_match(
+                        desired_items[0]
+                    ):
+                        next_text = desired_items.pop(0)
+                    self._set_paragraph_plain_text(child, next_text)
+                last_paragraph = child
+                continue
+
+            if tag != "tbl":
+                continue
+
+            nested_block = next(nested_iter, None)
+            if desired_items and self._nested_table_marker_match(desired_items[0]):
+                desired_items.pop(0)
+            if nested_block is None:
+                continue
+            if changed_block_ids is None or nested_block.id in changed_block_ids:
+                self._update_table_text(
+                    child,
+                    nested_block,
+                    nested_blocks_by_parent,
+                    changed_block_ids,
+                )
+
+        leftover_text = [
+            item for item in desired_items if not self._nested_table_marker_match(item)
+        ]
+        if update_direct_text and leftover_text and last_paragraph is not None:
+            current_text = self._get_paragraph_text(last_paragraph)
+            suffix = "\n".join(leftover_text)
+            merged = f"{current_text}\n{suffix}" if current_text else suffix
+            self._set_paragraph_plain_text(last_paragraph, merged)
+
+    def _table_has_changed_nested_descendant(
+        self,
+        table_id: str,
+        nested_blocks_by_parent: dict[str, dict[str, list[DfmBlock]]],
+        changed_block_ids: set[str] | None,
+    ) -> bool:
+        """Return whether a table has any changed nested descendant blocks."""
+        if changed_block_ids is None:
+            return True
+
+        child_groups = nested_blocks_by_parent.get(table_id, {})
+        for child_blocks in child_groups.values():
+            for child_block in child_blocks:
+                if child_block.id in changed_block_ids:
+                    return True
+                if self._table_has_changed_nested_descendant(
+                    child_block.id,
+                    nested_blocks_by_parent,
+                    changed_block_ids,
+                ):
+                    return True
+        return False
+
+    def _set_paragraph_plain_text(self, p_elem: etree._Element, text: str) -> None:
+        """Replace the visible text in a paragraph while preserving existing runs."""
+        runs = p_elem.findall(f"{{{NS['w']}}}r")
+        if not runs:
+            return
+        self._set_run_texts(runs, [text])
+
+    def _set_run_texts(self, runs: list[etree._Element], segments: list[str]) -> None:
+        """Assign visible text across existing XML runs without rewriting structure."""
+        normalized_segments = list(segments) if segments else [""]
+        for index, r_elem in enumerate(runs):
+            t_elem = r_elem.find(f"{{{NS['w']}}}t")
+            if t_elem is None:
+                if index < len(normalized_segments) and normalized_segments[index]:
+                    t_elem = etree.SubElement(r_elem, f"{{{NS['w']}}}t")
+                else:
                     continue
 
-                first_p = paragraphs[0]
-                first_r = first_p.find(f"{{{NS['w']}}}r")
-                if first_r is not None:
-                    t_elem = first_r.find(f"{{{NS['w']}}}t")
-                    if t_elem is not None:
-                        t_elem.text = md_cell.strip()
-                        t_elem.set(
-                            "{http://www.w3.org/XML/1998/namespace}space",
-                            "preserve",
-                        )
+            text = (
+                normalized_segments[index] if index < len(normalized_segments) else ""
+            )
+            if index == len(runs) - 1 and len(normalized_segments) > len(runs):
+                tail = normalized_segments[index:]
+                text = "".join(tail)
 
-                    # Clear text from subsequent runs in the first paragraph
-                    for r in first_p.findall(f"{{{NS['w']}}}r")[1:]:
-                        t = r.find(f"{{{NS['w']}}}t")
-                        if t is not None:
-                            t.text = ""
-
-                # Clear text from subsequent paragraphs in the cell
-                for p in paragraphs[1:]:
-                    for r in p.findall(f"{{{NS['w']}}}r"):
-                        t = r.find(f"{{{NS['w']}}}t")
-                        if t is not None:
-                            t.text = ""
+            t_elem.text = text
+            t_elem.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
 
     @staticmethod
     def _parse_md_table(md_table: str) -> list[list[str]]:

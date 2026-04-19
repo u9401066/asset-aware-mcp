@@ -2,7 +2,7 @@
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
     "description": "Medical RAG MCP Server with precise document asset retrieval and Docx editing (DFM) — tables, figures, sections from PDFs + .docx/.doc round-trip with integrity validation",
-    "version": "0.6.6",
+    "version": "0.6.7",
     "publisher": "u9401066",
     "engines": {
         "vscode": "^1.96.0"
@@ -24,7 +24,7 @@
     ],
     "icon": "resources/icon.png",
     "galleryBanner": {
-        "color": "#1e1e1e",
+        "color": "#16395B",
         "theme": "dark"
     },
     "badges": [

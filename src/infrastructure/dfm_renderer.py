@@ -208,6 +208,10 @@ class DfmRenderer:
                 meta["parent_cell"] = block.parent_cell
             if block.raw_xml_ref:
                 meta["raw_xml_ref"] = block.raw_xml_ref
+            if block.metadata.get("parent_table_id"):
+                meta["parent_table_id"] = block.metadata["parent_table_id"]
+            if block.metadata.get("contains_nested_tables"):
+                meta["contains_nested_tables"] = True
             return meta
 
         if bt == DfmBlockType.IMAGE:

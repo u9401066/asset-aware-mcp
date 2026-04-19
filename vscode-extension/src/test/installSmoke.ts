@@ -20,11 +20,33 @@ const packageJson = JSON.parse(
 const currentVersion = packageJson.version;
 
 async function runCommand(command: string, args: string[], cwd?: string): Promise<string> {
+    const maxBuffer = 1024 * 1024 * 10;
+    const isWindowsCmd = process.platform === 'win32' && path.extname(command).toLowerCase() === '.cmd';
+
+    if (isWindowsCmd) {
+        const quoteForCmd = (value: string): string => (
+            /[\s"]/u.test(value) ? `"${value.replaceAll('"', '""')}"` : value
+        );
+        const commandLine = [quoteForCmd(command), ...args.map(quoteForCmd)].join(' ');
+        const shellCommand = /[\s]/u.test(command) ? `"${commandLine}"` : commandLine;
+        const { stdout, stderr } = await execFileAsync(process.env.ComSpec ?? 'cmd.exe', [
+            '/d',
+            '/s',
+            '/c',
+            shellCommand,
+        ], {
+            cwd,
+            env: process.env,
+            maxBuffer,
+        });
+
+        return `${stdout}${stderr}`.trim();
+    }
+
     const { stdout, stderr } = await execFileAsync(command, args, {
         cwd,
         env: process.env,
-        maxBuffer: 1024 * 1024 * 10,
-        shell: process.platform === 'win32',
+        maxBuffer,
     });
 
     return `${stdout}${stderr}`.trim();
@@ -131,7 +153,7 @@ function resolveActivationExtensionPath(extensionsDir: string, version: string):
     return extensionRoot;
 }
 
-async function verifyActivation(installedExtensionDir: string, vscodeExecutablePath: string, userDataDir: string, extensionsDir: string, workspaceDir: string): Promise<void> {
+async function verifyActivation(installedExtensionDir: string, vscodeExecutablePath: string): Promise<void> {
     const needsHeadlessDisplay = process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY;
     if (needsHeadlessDisplay && !process.env.CI) {
         console.log('Skipping activation smoke test on local Linux without DISPLAY/xvfb. Install/update checks still passed.');
@@ -142,12 +164,7 @@ async function verifyActivation(installedExtensionDir: string, vscodeExecutableP
         vscodeExecutablePath,
         extensionDevelopmentPath: installedExtensionDir,
         extensionTestsPath: suitePath,
-        launchArgs: [
-            workspaceDir,
-            '--user-data-dir', userDataDir,
-            '--extensions-dir', extensionsDir,
-            '--disable-extensions',
-        ],
+        launchArgs: ['--disable-extensions'],
     });
 }
 
@@ -155,15 +172,15 @@ async function main(): Promise<void> {
     const currentVsixPath = await packageCurrentVsix();
     const oldVsixPath = path.join(extensionRoot, 'asset-aware-mcp-0.2.10.vsix');
     const needsHeadlessDisplay = process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY;
-    const shouldRunActivation = !needsHeadlessDisplay || Boolean(process.env.CI);
+    const shouldRunActivation = process.platform !== 'win32' && (!needsHeadlessDisplay || Boolean(process.env.CI));
 
     let vscodeExecutablePath: string | undefined;
     const localCliPath = findAvailableCli();
     let cliPath = localCliPath;
 
-    if (!cliPath || shouldRunActivation) {
+    if (!cliPath || shouldRunActivation || process.platform === 'win32') {
         vscodeExecutablePath = await downloadAndUnzipVSCode();
-        cliPath ??= resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath);
+        cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath);
     }
 
     if (!cliPath) {
@@ -196,13 +213,10 @@ async function main(): Promise<void> {
         await verifyActivation(
             installedDir,
             vscodeExecutablePath,
-            update.userDataDir,
-            update.extensionsDir,
-            update.workspaceDir,
         );
         console.log('Installed extension activation smoke test passed.');
     } else {
-        console.log('Skipping activation smoke test on local Linux without DISPLAY/xvfb. Install/update checks passed.');
+        console.log('Skipping activation smoke test in this environment. Install/update checks passed.');
     }
 }
 

@@ -11,6 +11,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -435,8 +436,12 @@ class DocxService:
                     }
                 md_content = read_text_file(md_path, hint=f"Markdown for {doc_id}")
                 yaml_content = read_text_file(yaml_path, hint=f"YAML for {doc_id}")
-                md_content = normalize_text_input(md_content, hint=f"Markdown for {doc_id}")
-                yaml_content = normalize_text_input(yaml_content, hint=f"YAML for {doc_id}")
+                md_content = normalize_text_input(
+                    md_content, hint=f"Markdown for {doc_id}"
+                )
+                yaml_content = normalize_text_input(
+                    yaml_content, hint=f"YAML for {doc_id}"
+                )
 
                 split_report = self.integrity.check_split_consistency(
                     md_content, yaml_content
@@ -541,8 +546,17 @@ class DocxService:
             # Determine output path
             out = doc_dir / "output.docx" if output_path is None else Path(output_path)
 
-            # Rebuild docx
-            result_path = self.adapter.ir_to_docx(ir, doc_dir, out)
+            original_path = doc_dir / "original.docx"
+            if not expected_changed_ids:
+                shutil.copy2(original_path, out)
+                result_path = out
+            else:
+                result_path = self.adapter.ir_to_docx(
+                    ir,
+                    doc_dir,
+                    out,
+                    changed_block_ids=expected_changed_ids,
+                )
 
             # Save updated IR
             self._save_ir(ir, doc_dir / "ir.json")
@@ -558,11 +572,17 @@ class DocxService:
 
             # Update all formats with current state
             updated_dfm = self.renderer.render(ir)
-            write_utf8_text(doc_dir / "content.dfm", updated_dfm, hint=f"DFM for {doc_id}")
+            write_utf8_text(
+                doc_dir / "content.dfm", updated_dfm, hint=f"DFM for {doc_id}"
+            )
 
             md_text, yaml_text = self.renderer.render_split(ir)
-            write_utf8_text(doc_dir / "content.md", md_text, hint=f"Markdown for {doc_id}")
-            write_utf8_text(doc_dir / "format.yaml", yaml_text, hint=f"YAML for {doc_id}")
+            write_utf8_text(
+                doc_dir / "content.md", md_text, hint=f"Markdown for {doc_id}"
+            )
+            write_utf8_text(
+                doc_dir / "format.yaml", yaml_text, hint=f"YAML for {doc_id}"
+            )
 
             # --- Content drift detection ---
             drift_issues = self._detect_content_drift(old_md_text, md_text)
@@ -595,7 +615,6 @@ class DocxService:
                     }
 
             # --- Post-save integrity check ---
-            original_path = doc_dir / "original.docx"
             post_report = self.integrity.check_post_save(original_path, result_path)
 
             result: dict[str, Any] = {
@@ -661,7 +680,10 @@ class DocxService:
 
             converted_pdf = self._convert_docx_file_to_pdf(temp_docx, target_pdf)
             if converted_pdf is not None and not Path(converted_pdf).exists():
-                return {"success": False, "error": f"PDF conversion reported success but file is missing: {converted_pdf}"}
+                return {
+                    "success": False,
+                    "error": f"PDF conversion reported success but file is missing: {converted_pdf}",
+                }
             if converted_pdf is None:
                 return {
                     "success": False,
@@ -723,7 +745,10 @@ class DocxService:
 
             converted_doc = self._convert_docx_file_to_doc(temp_docx, target_doc)
             if converted_doc is not None and not Path(converted_doc).exists():
-                return {"success": False, "error": f"DOC conversion reported success but file is missing: {converted_doc}"}
+                return {
+                    "success": False,
+                    "error": f"DOC conversion reported success but file is missing: {converted_doc}",
+                }
             if converted_doc is None:
                 return {
                     "success": False,
@@ -784,7 +809,10 @@ class DocxService:
 
             converted_odt = self._convert_docx_file_to_odt(temp_docx, target_odt)
             if converted_odt is not None and not Path(converted_odt).exists():
-                return {"success": False, "error": f"ODT conversion reported success but file is missing: {converted_odt}"}
+                return {
+                    "success": False,
+                    "error": f"ODT conversion reported success but file is missing: {converted_odt}",
+                }
             if converted_odt is None:
                 return {
                     "success": False,
@@ -914,8 +942,10 @@ class DocxService:
                 continue
 
             if edit.table_rows is not None:
-                expected_content = self.parser._rows_to_md_table(edit.table_rows)
-                if expected_content != block.content:
+                current_rows = self.parser._parse_md_table(block.content)
+                if self._normalize_table_rows(
+                    edit.table_rows
+                ) != self._normalize_table_rows(current_rows):
                     changed_ids.add(edit.block_id)
                 continue
 
@@ -933,6 +963,15 @@ class DocxService:
                 changed_ids.add(edit.block_id)
 
         return changed_ids
+
+    @staticmethod
+    def _normalize_table_rows(
+        rows: list[list[str]] | None,
+    ) -> list[list[str]]:
+        """Normalize parsed markdown-table rows for semantic equality checks."""
+        if not rows:
+            return []
+        return [[cell.strip() for cell in row] for row in rows]
 
     def _detect_unedited_block_mutations(
         self,
@@ -987,6 +1026,9 @@ class DocxService:
         if not old_md:
             return issues
 
+        old_md = DocxService._normalize_markdown_for_drift(old_md)
+        new_md = DocxService._normalize_markdown_for_drift(new_md)
+
         # --- Character-level shrinkage check ---
         old_len = len(old_md)
         new_len = len(new_md)
@@ -1019,7 +1061,7 @@ class DocxService:
         lost_lines = [
             ln for ln in old_lines if ln not in new_lines_set and len(ln) > 20
         ]
-        if lost_lines:
+        if len(lost_lines) >= 3:
             preview = lost_lines[:5]
             issues.append(
                 IntegrityIssue(
@@ -1040,6 +1082,27 @@ class DocxService:
             )
 
         return issues
+
+    @staticmethod
+    def _normalize_markdown_for_drift(markdown: str) -> str:
+        """Normalize markdown table padding so drift checks focus on semantic loss."""
+        normalized_lines: list[str] = []
+        for line in markdown.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("|") and stripped.endswith("|"):
+                raw_cells = [cell.strip() for cell in stripped.split("|")[1:-1]]
+                if re.match(r"^\|[\s\-:|]+\|$", stripped):
+                    normalized_lines.append(
+                        "| " + " | ".join("---" for _ in raw_cells) + " |"
+                    )
+                else:
+                    normalized_lines.append("| " + " | ".join(raw_cells) + " |")
+                continue
+            normalized_lines.append(
+                stripped if stripped.startswith("<!--") else line.rstrip()
+            )
+
+        return "\n".join(normalized_lines)
 
     # ========================================================================
     # IR persistence

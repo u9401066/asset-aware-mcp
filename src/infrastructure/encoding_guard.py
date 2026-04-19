@@ -42,7 +42,7 @@ _ZIP_MAGIC = b"PK\x03\x04"
 
 # BOM byte sequences, longest first so we strip the right one.
 _BOMS: list[tuple[bytes, str]] = [
-    (b"\xff\xfe\x00\x00", "UTF-32 LE"),   # must precede UTF-16 LE
+    (b"\xff\xfe\x00\x00", "UTF-32 LE"),  # must precede UTF-16 LE
     (b"\x00\x00\xfe\xff", "UTF-32 BE"),
     (b"\xff\xfe", "UTF-16 LE"),
     (b"\xfe\xff", "UTF-16 BE"),
@@ -54,6 +54,7 @@ _BOMS: list[tuple[bytes, str]] = [
 # Custom exception
 # ============================================================================
 
+
 class EncodingError(ValueError):
     """Raised when input violates encoding expectations."""
 
@@ -61,6 +62,7 @@ class EncodingError(ValueError):
 # ============================================================================
 # Public API
 # ============================================================================
+
 
 def validate_zip_magic(path: Path) -> None:
     """Verify that *path* starts with the ZIP magic bytes.
@@ -104,7 +106,7 @@ def strip_bom_bytes(data: bytes) -> tuple[bytes, str | None]:
     """
     for bom_bytes, bom_name in _BOMS:
         if data.startswith(bom_bytes):
-            return data[len(bom_bytes):], bom_name
+            return data[len(bom_bytes) :], bom_name
     return data, None
 
 
@@ -132,7 +134,9 @@ def safe_decode(data: bytes, hint: str = "<unknown>") -> str:
     # UTF-16 with explicit BOM — delegate to Python's UTF-16 codec
     if bom_name in ("UTF-16 LE", "UTF-16 BE"):
         try:
-            return stripped.decode("utf-16-le" if bom_name == "UTF-16 LE" else "utf-16-be")
+            return stripped.decode(
+                "utf-16-le" if bom_name == "UTF-16 LE" else "utf-16-be"
+            )
         except UnicodeDecodeError as exc:
             raise EncodingError(
                 f"Failed to decode {hint!r} as {bom_name}: {exc}"
@@ -222,7 +226,6 @@ def normalize_text_input(text: str, hint: str = "<input>") -> str:
     return text.replace("\r\n", "\n").replace("\r", "\n")
 
 
-
 def read_text_file(path: Path, *, hint: str | None = None) -> str:
     """Read a text file as bytes, then decode through the guarded ladder.
 
@@ -230,13 +233,17 @@ def read_text_file(path: Path, *, hint: str | None = None) -> str:
     UTF-8 (optionally with BOM) is the expected canonical encoding.
     """
     data = path.read_bytes()
-    return safe_decode(data, hint=hint or str(path))
+    return normalize_text_input(
+        safe_decode(data, hint=hint or str(path)),
+        hint=hint or str(path),
+    )
 
 
 def write_utf8_text(path: Path, text: str, *, hint: str | None = None) -> None:
     """Normalise text and persist it as canonical UTF-8 without BOM."""
     cleaned = normalize_text_input(text, hint=hint or str(path))
-    path.write_text(cleaned, encoding="utf-8")
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(cleaned)
 
 
 def validate_docx_structure(path: Path) -> None:
@@ -253,7 +260,9 @@ def validate_docx_structure(path: Path) -> None:
         with ZipFile(path, "r") as zf:
             names = set(zf.namelist())
     except BadZipFile as exc:
-        raise EncodingError(f"{path} is not a readable DOCX/ZIP archive: {exc}") from exc
+        raise EncodingError(
+            f"{path} is not a readable DOCX/ZIP archive: {exc}"
+        ) from exc
 
     missing = sorted(required - names)
     if missing:

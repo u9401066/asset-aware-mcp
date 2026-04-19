@@ -6,9 +6,10 @@ Business logic that doesn't naturally fit within an entity.
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from pathlib import Path
-import re
+from typing import TypedDict
 
 from .entities import (
     DocumentAssets,
@@ -19,6 +20,15 @@ from .entities import (
 )
 from .etl_profile import ETLProfile
 from .line_spans import MarkdownLineSpanIndex
+
+
+class TextQualitySummary(TypedDict):
+    status: str
+    visible_text_chars: int
+    visible_text_lines: int
+    repeated_line_ratio: float
+    ocr_recommended: bool
+    reason: str
 
 
 class ManifestGenerator:
@@ -303,7 +313,9 @@ class ManifestGenerator:
             if not stripped or stripped.startswith("<!--"):
                 continue
             visible_text = self._normalize_visible_text(stripped)
-            if self._number_only_re.match(visible_text) or self._question_line_re.match(visible_text):
+            if self._number_only_re.match(visible_text) or self._question_line_re.match(
+                visible_text
+            ):
                 break
             title_text = self._normalize_title(stripped)
             if visible_line_counts.get(visible_text, 0) > 1:
@@ -336,16 +348,18 @@ class ManifestGenerator:
             return False
         if self._number_only_re.match(value):
             return False
-        if self._question_line_re.match(value):
-            return False
-        return True
+        return not self._question_line_re.match(value)
 
     def _filename_fallback_title(self, filename: str) -> str:
         if not filename:
             return ""
         return self._normalize_title(Path(filename).stem)
 
-    def _summarize_text_quality(self, markdown: str, page_count: int) -> dict[str, object]:
+    def _summarize_text_quality(
+        self,
+        markdown: str,
+        page_count: int,
+    ) -> TextQualitySummary:
         visible_lines = []
         for line in markdown.splitlines():
             stripped = line.strip()

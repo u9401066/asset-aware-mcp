@@ -236,6 +236,7 @@ jobs:
             tests/test_docx_validator.py \
             tests/test_dfm_table_bridge.py \
             tests/test_mcp_tools.py \
+            tests/integration/test_docx_complex_sample_roundtrip.py \
             -v --timeout=120 --junitxml=junit-integration.xml
 
       - name: Upload Integration Test Results

@@ -642,16 +642,13 @@ class DocxValidator:
     def _extract_table(self, tbl_elem: etree._Element) -> dict[str, Any]:
         """Extract table data for comparison."""
         rows: list[list[str]] = []
+        nested_tables: list[dict[str, Any]] = []
         for tr_elem in tbl_elem.findall(f"{{{NS['w']}}}tr"):
             row_cells: list[str] = []
             for tc_elem in tr_elem.findall(f"{{{NS['w']}}}tc"):
-                cell_parts = []
-                for p in tc_elem.findall(f"{{{NS['w']}}}p"):
-                    text_parts = [
-                        t.text for t in p.findall(f".//{{{NS['w']}}}t") if t.text
-                    ]
-                    cell_parts.append("".join(text_parts))
-                row_cells.append("\n".join(cell_parts))
+                cell_text, child_nested_tables = self._extract_table_cell(tc_elem)
+                row_cells.append(cell_text)
+                nested_tables.extend(child_nested_tables)
             rows.append(row_cells)
 
         # Table style
@@ -667,7 +664,46 @@ class DocxValidator:
             "row_count": len(rows),
             "col_count": max((len(r) for r in rows), default=0),
             "style": table_style,
+            "nested_tables": nested_tables,
         }
+
+    def _extract_table_cell(
+        self, tc_elem: etree._Element
+    ) -> tuple[str, list[dict[str, Any]]]:
+        """Extract direct cell text and recursively capture nested tables."""
+        cell_parts: list[str] = []
+        nested_tables: list[dict[str, Any]] = []
+
+        for child in tc_elem:
+            tag = etree.QName(child.tag).localname
+            if tag == "tcPr":
+                continue
+            if tag == "p":
+                text_parts = [
+                    t.text for t in child.findall(f".//{{{NS['w']}}}t") if t.text
+                ]
+                cell_parts.append("".join(text_parts))
+                continue
+            if tag == "tbl":
+                nested = self._extract_table(child)
+                nested_tables.append(nested)
+                cell_parts.append(f"[NestedTable]{self._table_to_text(nested)}")
+
+        return "\n".join(cell_parts), nested_tables
+
+    def _table_to_text(self, table: dict[str, Any]) -> str:
+        """Serialize a table deterministically for nested-cell comparisons."""
+        row_lines = [" || ".join(row) for row in table["rows"]]
+        nested_lines = [self._table_to_text(child) for child in table["nested_tables"]]
+        return "\n".join(row_lines + nested_lines)
+
+    def _flatten_tables(self, tables: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Return a flat list of top-level and nested tables."""
+        flat: list[dict[str, Any]] = []
+        for table in tables:
+            flat.append(table)
+            flat.extend(self._flatten_tables(table["nested_tables"]))
+        return flat
 
     # ========================================================================
     # Comparison methods
@@ -724,45 +760,37 @@ class DocxValidator:
     ) -> None:
         """Compare structural element counts."""
         # Character volume computation
-        orig_total_chars = sum(len(p) for p in orig["paragraphs"])
-        rebuilt_total_chars = sum(len(p) for p in rebuilt["paragraphs"])
+        orig_tables = self._flatten_tables(orig["tables"])
+        rebuilt_tables = self._flatten_tables(rebuilt["tables"])
 
         # Table cell content volume
         orig_nonempty_cells = 0
-        orig_total_cell_chars = 0
-        for tbl in orig["tables"]:
+        for tbl in orig_tables:
             for row in tbl["rows"]:
                 for cell in row:
                     if cell.strip():
                         orig_nonempty_cells += 1
-                        orig_total_cell_chars += len(cell)
 
         rebuilt_nonempty_cells = 0
-        rebuilt_total_cell_chars = 0
-        for tbl in rebuilt["tables"]:
+        for tbl in rebuilt_tables:
             for row in tbl["rows"]:
                 for cell in row:
                     if cell.strip():
                         rebuilt_nonempty_cells += 1
-                        rebuilt_total_cell_chars += len(cell)
 
         orig_stats = {
             "paragraphs": len(orig["paragraphs"]),
-            "tables": len(orig["tables"]),
+            "tables": len(orig_tables),
             "media_files": len(orig["media"]),
             "xml_parts": len(orig["xml_parts"]),
-            "total_chars": orig_total_chars,
             "table_nonempty_cells": orig_nonempty_cells,
-            "table_cell_chars": orig_total_cell_chars,
         }
         rebuilt_stats = {
             "paragraphs": len(rebuilt["paragraphs"]),
-            "tables": len(rebuilt["tables"]),
+            "tables": len(rebuilt_tables),
             "media_files": len(rebuilt["media"]),
             "xml_parts": len(rebuilt["xml_parts"]),
-            "total_chars": rebuilt_total_chars,
             "table_nonempty_cells": rebuilt_nonempty_cells,
-            "table_cell_chars": rebuilt_total_cell_chars,
         }
 
         report.original_stats = orig_stats
@@ -877,8 +905,8 @@ class DocxValidator:
         report: ValidationReport,
     ) -> None:
         """Compare table content cell by cell."""
-        orig_tables = orig["tables"]
-        rebuilt_tables = rebuilt["tables"]
+        orig_tables = self._flatten_tables(orig["tables"])
+        rebuilt_tables = self._flatten_tables(rebuilt["tables"])
 
         if not orig_tables and not rebuilt_tables:
             report.table_score = 1.0

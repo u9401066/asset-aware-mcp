@@ -6,10 +6,13 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-## 🆕 What's New in v0.6.5
+![Asset-Aware MCP marketplace banner](resources/banner.png)
 
-- **Scoped Large-PDF Ingestion Release**: `v0.6.5` adds automatic Marker chunking for PDFs over 800 pages and auto-disables figure extraction on image-heavy documents
-- **Real Page-Range Ingestion**: `ingest_documents` and `parse_pdf_structure` can now process selected page ranges while remapping citations and asset page numbers back to the original PDF
+## 🆕 What's New in v0.6.7
+
+- **DOCX round-trip hardening**: complex nested-table DOCX files now survive DFM ingest, no-op rebuild, and nested-table edits without structural drift
+- **Byte-identical no-op rebuilds**: `save_docx(..., from_md=True)` now preserves the original DOCX bytes when content is unchanged
+- **Release-gated sample validation**: the real complex sample DOCX is now part of CI and release checks before packaging
 - **48 tools** across 7 modules
 
 ## 🧪 Current Main Branch
