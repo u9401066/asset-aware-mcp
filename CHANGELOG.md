@@ -7,6 +7,26 @@
 
 ## [Unreleased]
 
+## [0.6.8] - 2026-04-19
+
+### Added
+
+- **Public synthetic DOCX release fixture**
+  - `tests/integration/test_docx_complex_sample_roundtrip.py` now builds its own complex DOCX with nested tables, merged cells, mixed formatting, and multi-paragraph table cells
+  - Tagged releases and local release prep now validate DOCX round-trip behavior without depending on confidential repository-local files
+
+### Fixed
+
+- **Release pipeline confidentiality regression**
+  - Replaced the internal sample DOCX dependency in CI and release gates with a self-contained synthetic fixture so tagged builds can pass on GitHub Actions
+  - Preserved the same critical checks: byte-identical no-op rebuilds and nested-table edit write-back validation
+
+### Changed
+
+- **Release metadata synced to 0.6.8**
+  - Python package, runtime version metadata, VS Code extension manifest, and release-facing docs now point to the same patch version
+  - Extension release notes now describe the public synthetic DOCX validation gate instead of an internal sample
+
 ## [0.6.7] - 2026-04-19
 
 ### Added

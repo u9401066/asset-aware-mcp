@@ -8,11 +8,11 @@
 
 ![Asset-Aware MCP marketplace banner](resources/banner.png)
 
-## 🆕 What's New in v0.6.7
+## 🆕 What's New in v0.6.8
 
 - **DOCX round-trip hardening**: complex nested-table DOCX files now survive DFM ingest, no-op rebuild, and nested-table edits without structural drift
 - **Byte-identical no-op rebuilds**: `save_docx(..., from_md=True)` now preserves the original DOCX bytes when content is unchanged
-- **Release-gated sample validation**: the real complex sample DOCX is now part of CI and release checks before packaging
+- **Public release-gated validation**: CI and tagged releases now use a synthetic complex DOCX fixture, so no confidential sample documents are shipped
 - **48 tools** across 7 modules
 
 ## 🧪 Current Main Branch
