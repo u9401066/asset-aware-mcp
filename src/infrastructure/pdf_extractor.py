@@ -8,7 +8,13 @@ Key feature: Extracts images WITH page numbers for verification.
 from __future__ import annotations
 
 import logging
+import multiprocessing
+import os
 import re
+import signal
+import shutil
+import subprocess
+import threading
 from dataclasses import dataclass
 from pathlib import Path  # noqa: TC003
 from typing import Any
@@ -21,6 +27,59 @@ from src.domain.repositories import PDFExtractorInterface
 from .config import settings
 
 logger = logging.getLogger(__name__)
+DEFAULT_TABLE_TIMEOUT_SECONDS = 4.0
+DEFAULT_TABLE_DOCUMENT_TIMEOUT_SECONDS = 25.0
+DEFAULT_TEXT_DOCUMENT_TIMEOUT_SECONDS = 30.0
+DEFAULT_IMAGE_DOCUMENT_TIMEOUT_SECONDS = 25.0
+DEFAULT_CAPTION_DOCUMENT_TIMEOUT_SECONDS = 20.0
+DEFAULT_IMAGE_STRATEGY_TIMEOUT_SECONDS = 3.0
+
+
+def _extract_tables_worker(pdf_path_str: str, queue: Any) -> None:
+    """Run PyMuPDF table extraction in a child process."""
+    try:
+        extractor = PyMuPDFExtractor()
+        tables = extractor._extract_tables_direct(Path(pdf_path_str))
+        queue.put(("ok", tables))
+    except Exception as exc:  # pragma: no cover - worker isolation path
+        queue.put(("error", str(exc)))
+
+
+def _extract_text_worker(pdf_path_str: str, queue: Any) -> None:
+    """Run rich PyMuPDF text extraction in a child process."""
+    try:
+        extractor = PyMuPDFExtractor()
+        markdown = extractor._extract_text_direct(Path(pdf_path_str))
+        queue.put(("ok", markdown))
+    except Exception as exc:  # pragma: no cover - worker isolation path
+        queue.put(("error", str(exc)))
+
+
+def _extract_images_worker(pdf_path_str: str, queue: Any) -> None:
+    """Run PyMuPDF image extraction in a child process."""
+    try:
+        extractor = PyMuPDFExtractor()
+        images = extractor._extract_images_direct(Path(pdf_path_str))
+        queue.put(("ok", images))
+    except Exception as exc:  # pragma: no cover - worker isolation path
+        queue.put(("error", str(exc)))
+
+
+def _extract_figure_captions_worker(pdf_path_str: str, queue: Any) -> None:
+    """Run PyMuPDF figure caption extraction in a child process."""
+    try:
+        extractor = PyMuPDFExtractor()
+        captions = extractor._extract_figure_captions_direct(Path(pdf_path_str))
+        queue.put(("ok", captions))
+    except Exception as exc:  # pragma: no cover - worker isolation path
+        queue.put(("error", str(exc)))
+
+
+def _env_flag(name: str, default: bool) -> bool:
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    return raw_value.strip().lower() not in {"0", "false", "no", "off"}
 
 
 @dataclass
@@ -80,6 +139,55 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         Returns:
             Markdown-formatted text with page markers
         """
+        raw_timeout = os.environ.get(
+            "PYMUPDF_TEXT_DOCUMENT_TIMEOUT_SECONDS",
+            str(DEFAULT_TEXT_DOCUMENT_TIMEOUT_SECONDS),
+        )
+        try:
+            timeout_seconds = float(raw_timeout)
+        except ValueError:
+            timeout_seconds = DEFAULT_TEXT_DOCUMENT_TIMEOUT_SECONDS
+
+        if timeout_seconds <= 0:
+            return self._extract_text_direct(pdf_path)
+
+        ctx = multiprocessing.get_context("fork")
+        queue = ctx.Queue()
+        process = ctx.Process(
+            target=_extract_text_worker,
+            args=(str(pdf_path), queue),
+            daemon=True,
+        )
+        process.start()
+        process.join(timeout_seconds)
+
+        if process.is_alive():
+            process.terminate()
+            process.join(5)
+            logger.warning(
+                "PyMuPDF rich text extraction timed out for %s after %.1fs; using fast text fallback",
+                pdf_path,
+                timeout_seconds,
+            )
+            return self._extract_text_fast(pdf_path)
+
+        try:
+            status, payload = queue.get_nowait()
+        except Exception:
+            return self._extract_text_fast(pdf_path)
+
+        if status == "ok" and isinstance(payload, str):
+            return payload
+
+        logger.warning(
+            "PyMuPDF rich text extraction worker failed for %s: %s; using fast text fallback",
+            pdf_path,
+            payload,
+        )
+        return self._extract_text_fast(pdf_path)
+
+    def _extract_text_direct(self, pdf_path: Path) -> str:
+        """Original rich text extraction with font-aware heading heuristics."""
         doc = fitz.open(str(pdf_path))
         text_parts = []
 
@@ -100,6 +208,46 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         # Post-process: merge consecutive same-level headings
         # (PDF wraps long headings across multiple lines, each becoming a separate # heading)
         return self._merge_consecutive_headings(raw_markdown)
+
+    def _extract_text_fast(self, pdf_path: Path) -> str:
+        """Fast fallback text extraction that preserves page markers."""
+        pdftotext_bin = shutil.which("pdftotext")
+        if pdftotext_bin:
+            try:
+                result = subprocess.run(
+                    [pdftotext_bin, "-layout", "-enc", "UTF-8", str(pdf_path), "-"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                raw_pages = result.stdout.split("\f")
+                text_parts: list[str] = []
+                page_counter = 0
+                for page_text in raw_pages:
+                    if not page_text.strip() and page_counter >= len(raw_pages) - 1:
+                        continue
+                    page_counter += 1
+                    text_parts.append(f"\n<!-- Page {page_counter} -->\n")
+                    if page_text.strip():
+                        text_parts.append(page_text.strip())
+                if text_parts:
+                    return "\n".join(text_parts)
+            except Exception:
+                logger.debug("pdftotext fallback failed", exc_info=True)
+
+        doc = fitz.open(str(pdf_path))
+        text_parts: list[str] = []
+
+        try:
+            for page_num, page in enumerate(doc):
+                text_parts.append(f"\n<!-- Page {page_num + 1} -->\n")
+                page_text = page.get_text("text")
+                if page_text:
+                    text_parts.append(page_text.strip())
+        finally:
+            doc.close()
+
+        return "\n".join(text_parts)
 
     def _merge_consecutive_headings(self, markdown: str) -> str:
         """
@@ -274,6 +422,67 @@ class PyMuPDFExtractor(PDFExtractorInterface):
 
     def extract_images(self, pdf_path: Path) -> list[dict]:
         """
+        Extract images from PDF in a child process with a document timeout.
+
+        A handful of textbook chapters can spend minutes inside PyMuPDF image
+        heuristics. Running image extraction in a subprocess lets the chapter
+        ingest continue even when a difficult document exceeds the budget.
+        """
+        if not _env_flag("PYMUPDF_ENABLE_VECTOR_IMAGES", True) and not _env_flag(
+            "PYMUPDF_ENABLE_REGION_IMAGES",
+            True,
+        ):
+            return self._extract_images_fast(pdf_path)
+
+        raw_timeout = os.environ.get(
+            "PYMUPDF_IMAGE_DOCUMENT_TIMEOUT_SECONDS",
+            str(DEFAULT_IMAGE_DOCUMENT_TIMEOUT_SECONDS),
+        )
+        try:
+            timeout_seconds = float(raw_timeout)
+        except ValueError:
+            timeout_seconds = DEFAULT_IMAGE_DOCUMENT_TIMEOUT_SECONDS
+
+        if timeout_seconds <= 0:
+            return self._extract_images_direct(pdf_path)
+
+        ctx = multiprocessing.get_context("fork")
+        queue = ctx.Queue()
+        process = ctx.Process(
+            target=_extract_images_worker,
+            args=(str(pdf_path), queue),
+            daemon=True,
+        )
+        process.start()
+        process.join(timeout_seconds)
+
+        if process.is_alive():
+            process.terminate()
+            process.join(5)
+            logger.warning(
+                "PyMuPDF image extraction timed out for %s after %.1fs; using xobject-only fallback",
+                pdf_path,
+                timeout_seconds,
+            )
+            return self._extract_images_fast(pdf_path)
+
+        try:
+            status, payload = queue.get_nowait()
+        except Exception:
+            return self._extract_images_fast(pdf_path)
+
+        if status == "ok" and isinstance(payload, list):
+            return payload
+
+        logger.warning(
+            "PyMuPDF image extraction worker failed for %s: %s; using xobject-only fallback",
+            pdf_path,
+            payload,
+        )
+        return self._extract_images_fast(pdf_path)
+
+    def _extract_images_direct(self, pdf_path: Path) -> list[dict]:
+        """
         Extract all images from PDF with page numbers using multi-strategy approach.
 
         Strategy:
@@ -325,47 +534,96 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                         continue
 
                 # Strategy 2: Vector graphics detection
-                try:
-                    vector_images = self._extract_vector_graphics_regions(page)
-                    for idx, vector_image in enumerate(vector_images):
-                        # Check if this overlaps with existing XObject images
-                        if not self._overlaps_existing_images(
-                            vector_image["bbox"], page_images_found
-                        ):
-                            images.append(
-                                {
-                                    "page": page_num + 1,
-                                    "image_bytes": vector_image["image"],
-                                    "ext": vector_image["ext"],
-                                    "width": vector_image["width"],
-                                    "height": vector_image["height"],
-                                    "index_on_page": 900 + idx,  # 900+ for vector
-                                }
-                            )
-                except Exception:
-                    logger.debug("Vector graphics extraction failed", exc_info=True)
+                if _env_flag("PYMUPDF_ENABLE_VECTOR_IMAGES", True):
+                    try:
+                        vector_images = self._run_with_timeout(
+                            lambda: self._extract_vector_graphics_regions(page),
+                            env_var="PYMUPDF_IMAGE_TIMEOUT_SECONDS",
+                            default_seconds=DEFAULT_IMAGE_STRATEGY_TIMEOUT_SECONDS,
+                            operation="vector graphics extraction",
+                        )
+                        for idx, vector_image in enumerate(vector_images):
+                            # Check if this overlaps with existing XObject images
+                            if not self._overlaps_existing_images(
+                                vector_image["bbox"], page_images_found
+                            ):
+                                images.append(
+                                    {
+                                        "page": page_num + 1,
+                                        "image_bytes": vector_image["image"],
+                                        "ext": vector_image["ext"],
+                                        "width": vector_image["width"],
+                                        "height": vector_image["height"],
+                                        "index_on_page": 900 + idx,  # 900+ for vector
+                                    }
+                                )
+                    except Exception:
+                        logger.debug(
+                            "Vector graphics extraction failed", exc_info=True
+                        )
 
                 # Strategy 3: Smart region detection (find non-text areas)
-                try:
-                    region_images = self._extract_non_text_regions(page)
-                    for idx, region_image in enumerate(region_images):
-                        # Check if already captured
-                        if not self._overlaps_existing_images(
-                            region_image["bbox"], page_images_found
-                        ):
-                            images.append(
-                                {
-                                    "page": page_num + 1,
-                                    "image_bytes": region_image["image"],
-                                    "ext": region_image["ext"],
-                                    "width": region_image["width"],
-                                    "height": region_image["height"],
-                                    "index_on_page": 800 + idx,  # 800+ for regions
-                                }
-                            )
-                except Exception:
-                    logger.debug("Region detection failed", exc_info=True)
+                if _env_flag("PYMUPDF_ENABLE_REGION_IMAGES", True):
+                    try:
+                        region_images = self._run_with_timeout(
+                            lambda: self._extract_non_text_regions(page),
+                            env_var="PYMUPDF_IMAGE_TIMEOUT_SECONDS",
+                            default_seconds=DEFAULT_IMAGE_STRATEGY_TIMEOUT_SECONDS,
+                            operation="smart region extraction",
+                        )
+                        for idx, region_image in enumerate(region_images):
+                            # Check if already captured
+                            if not self._overlaps_existing_images(
+                                region_image["bbox"], page_images_found
+                            ):
+                                images.append(
+                                    {
+                                        "page": page_num + 1,
+                                        "image_bytes": region_image["image"],
+                                        "ext": region_image["ext"],
+                                        "width": region_image["width"],
+                                        "height": region_image["height"],
+                                        "index_on_page": 800 + idx,  # 800+ for regions
+                                    }
+                                )
+                    except Exception:
+                        logger.debug("Region detection failed", exc_info=True)
 
+        finally:
+            doc.close()
+
+        return images
+
+    def _extract_images_fast(self, pdf_path: Path) -> list[dict]:
+        """Fast fallback that only extracts embedded XObject images."""
+        doc = fitz.open(str(pdf_path))
+        images: list[dict[str, Any]] = []
+
+        try:
+            for page_num, page in enumerate(doc):
+                page_images = page.get_images(full=True)
+                for img_index, img in enumerate(page_images):
+                    try:
+                        image_data = self._extract_single_image(doc, img)
+                        if not image_data:
+                            continue
+                        images.append(
+                            {
+                                "page": page_num + 1,
+                                "image_bytes": image_data["image"],
+                                "ext": image_data["ext"],
+                                "width": image_data["width"],
+                                "height": image_data["height"],
+                                "index_on_page": img_index + 1,
+                            }
+                        )
+                    except Exception:
+                        logger.debug(
+                            "Fast image extraction failed on page %d",
+                            page_num,
+                            exc_info=True,
+                        )
+                        continue
         finally:
             doc.close()
 
@@ -706,6 +964,62 @@ class PyMuPDFExtractor(PDFExtractorInterface):
 
     def extract_tables(self, pdf_path: Path) -> list[dict]:
         """
+        Extract tables from PDF using a child process with a document timeout.
+
+        PyMuPDF's table finder can occasionally hang on complex textbook pages.
+        Running it in a subprocess lets us preserve full document ingest while
+        safely dropping tables for the problematic document if it exceeds the
+        configured timeout.
+        """
+        raw_timeout = os.environ.get(
+            "PYMUPDF_TABLE_DOCUMENT_TIMEOUT_SECONDS",
+            str(DEFAULT_TABLE_DOCUMENT_TIMEOUT_SECONDS),
+        )
+        try:
+            timeout_seconds = float(raw_timeout)
+        except ValueError:
+            timeout_seconds = DEFAULT_TABLE_DOCUMENT_TIMEOUT_SECONDS
+
+        if timeout_seconds <= 0:
+            return self._extract_tables_direct(pdf_path)
+
+        ctx = multiprocessing.get_context("fork")
+        queue = ctx.Queue()
+        process = ctx.Process(
+            target=_extract_tables_worker,
+            args=(str(pdf_path), queue),
+            daemon=True,
+        )
+        process.start()
+        process.join(timeout_seconds)
+
+        if process.is_alive():
+            process.terminate()
+            process.join(5)
+            logger.warning(
+                "PyMuPDF table extraction timed out for %s after %.1fs; skipping tables for this document",
+                pdf_path,
+                timeout_seconds,
+            )
+            return []
+
+        try:
+            status, payload = queue.get_nowait()
+        except Exception:
+            return []
+
+        if status == "ok" and isinstance(payload, list):
+            return payload
+
+        logger.warning(
+            "PyMuPDF table extraction worker failed for %s: %s",
+            pdf_path,
+            payload,
+        )
+        return []
+
+    def _extract_tables_direct(self, pdf_path: Path) -> list[dict]:
+        """
         Extract tables from PDF using PyMuPDF's find_tables().
 
         Note: This is a heuristic-based approach, not as accurate as
@@ -725,7 +1039,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             for page_num, page in enumerate(doc):
                 try:
                     # PyMuPDF's experimental table finder
-                    page_tables = page.find_tables()
+                    page_tables = self._find_tables_with_timeout(page)
 
                     for tab in page_tables:
                         table_index += 1
@@ -790,6 +1104,80 @@ class PyMuPDFExtractor(PDFExtractorInterface):
 
         return tables
 
+    def _find_tables_with_timeout(self, page: fitz.Page) -> Any:
+        """
+        Run PyMuPDF's experimental table finder with a per-page timeout.
+
+        Some textbook pages trigger very slow `find_tables()` scans and can stall a
+        whole batch ingest. Timing out the problematic page is preferable to
+        aborting the entire chapter/document.
+        """
+        raw_timeout = os.environ.get(
+            "PYMUPDF_TABLE_TIMEOUT_SECONDS",
+            str(DEFAULT_TABLE_TIMEOUT_SECONDS),
+        )
+        try:
+            timeout_seconds = float(raw_timeout)
+        except ValueError:
+            timeout_seconds = DEFAULT_TABLE_TIMEOUT_SECONDS
+
+        return self._run_with_timeout(
+            page.find_tables,
+            timeout_seconds=timeout_seconds,
+            operation="table extraction",
+        )
+
+    def _run_with_timeout(
+        self,
+        func: Any,
+        *,
+        timeout_seconds: float | None = None,
+        env_var: str | None = None,
+        default_seconds: float = DEFAULT_IMAGE_STRATEGY_TIMEOUT_SECONDS,
+        operation: str = "operation",
+    ) -> Any:
+        """
+        Execute a callable with an optional wall-clock timeout.
+
+        Timeout guards are best-effort and only active on Unix main-thread runs.
+        When unavailable, the callable executes normally.
+        """
+        if timeout_seconds is None:
+            raw_timeout = os.environ.get(env_var or "", str(default_seconds))
+            try:
+                timeout_seconds = float(raw_timeout)
+            except ValueError:
+                timeout_seconds = default_seconds
+
+        if (
+            timeout_seconds <= 0
+            or not hasattr(signal, "setitimer")
+            or threading.current_thread() is not threading.main_thread()
+        ):
+            return func()
+
+        def _handle_timeout(_signum: int, _frame: Any) -> None:
+            raise TimeoutError(
+                f"PyMuPDF {operation} timed out after {timeout_seconds:.1f}s"
+            )
+
+        previous_handler = signal.getsignal(signal.SIGALRM)
+        previous_timer = signal.getitimer(signal.ITIMER_REAL)
+
+        try:
+            signal.signal(signal.SIGALRM, _handle_timeout)
+            signal.setitimer(signal.ITIMER_REAL, timeout_seconds)
+            return func()
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, previous_handler)
+            if previous_timer != (0.0, 0.0):
+                signal.setitimer(
+                    signal.ITIMER_REAL,
+                    previous_timer[0],
+                    previous_timer[1],
+                )
+
     def _detect_table_caption(
         self, page: fitz.Page, table: Any, table_index: int
     ) -> str:
@@ -846,6 +1234,55 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             Dict mapping page number (1-indexed) to list of caption dicts:
             [{"number": "1", "caption": "Figure 1. Description..."}]
         """
+        raw_timeout = os.environ.get(
+            "PYMUPDF_CAPTION_DOCUMENT_TIMEOUT_SECONDS",
+            str(DEFAULT_CAPTION_DOCUMENT_TIMEOUT_SECONDS),
+        )
+        try:
+            timeout_seconds = float(raw_timeout)
+        except ValueError:
+            timeout_seconds = DEFAULT_CAPTION_DOCUMENT_TIMEOUT_SECONDS
+
+        if timeout_seconds <= 0:
+            return self._extract_figure_captions_direct(pdf_path)
+
+        ctx = multiprocessing.get_context("fork")
+        queue = ctx.Queue()
+        process = ctx.Process(
+            target=_extract_figure_captions_worker,
+            args=(str(pdf_path), queue),
+            daemon=True,
+        )
+        process.start()
+        process.join(timeout_seconds)
+
+        if process.is_alive():
+            process.terminate()
+            process.join(5)
+            logger.warning(
+                "PyMuPDF figure caption extraction timed out for %s after %.1fs; skipping captions",
+                pdf_path,
+                timeout_seconds,
+            )
+            return {}
+
+        try:
+            status, payload = queue.get_nowait()
+        except Exception:
+            return {}
+
+        if status == "ok" and isinstance(payload, dict):
+            return payload
+
+        logger.warning(
+            "PyMuPDF figure caption extraction worker failed for %s: %s; skipping captions",
+            pdf_path,
+            payload,
+        )
+        return {}
+
+    def _extract_figure_captions_direct(self, pdf_path: Path) -> dict[int, list[dict]]:
+        """Extract figure captions directly without worker isolation."""
         doc = fitz.open(str(pdf_path))
         captions: dict[int, list[dict]] = {}
 

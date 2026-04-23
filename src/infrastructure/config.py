@@ -52,6 +52,10 @@ class Settings(BaseSettings):
         default="default",
         description="ETL extraction profile: 'default', 'arxiv', 'nature', 'ieee', 'elsevier'",
     )
+    etl_profile_json: Path | None = Field(
+        default=None,
+        description="Optional JSON file path for a custom ETL extraction profile",
+    )
 
     # OpenAI settings (optional, if using OpenAI backend)
     openai_api_key: str = Field(

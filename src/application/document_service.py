@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import hashlib
 import re
 import shutil
 import time
@@ -567,6 +568,9 @@ class DocumentService:
 
             # Step 7: Save manifest
             self.repository.save_manifest(manifest)
+            blocks_data = self._build_pymupdf_blocks(markdown, manifest)
+            if blocks_data:
+                self._save_blocks_json(doc_id.value, blocks_data)
             await _invoke_progress_callback(
                 progress_callback,
                 total_steps,
@@ -755,7 +759,11 @@ class DocumentService:
                 "Extracting Figures",
                 f"Extracting figures from {path.name}",
             )
-            figures = await self._save_marker_images(doc_id.value, parse_result)
+            figures = await self._save_marker_images(
+                doc_id.value,
+                parse_result,
+                pdf_path=path,
+            )
             current_step += 1
 
             # Step 5: Convert Marker blocks to TableAsset
@@ -903,6 +911,201 @@ class DocumentService:
         )
         return blocks_path
 
+    def _build_pymupdf_blocks(
+        self,
+        markdown: str,
+        manifest: DocumentManifest,
+    ) -> list[dict[str, Any]]:
+        """
+        Synthesize structured blocks for non-Marker ingests.
+
+        PyMuPDF mode does not emit native layout blocks, but the downstream
+        textbook workflows still require searchable blocks.json entries with
+        persisted line metadata. We derive paragraph/header blocks directly
+        from markdown and enrich them with section hierarchy plus any figure
+        or table assets that already carry line spans.
+        """
+        index = MarkdownLineSpanIndex(markdown)
+        lines = markdown.splitlines()
+        section_lookup = {section.start_line: section for section in index.sections}
+        blocks: list[dict[str, Any]] = []
+        block_order = 0
+        text_counter = 0
+        current_page = 1
+        line_index = 0
+
+        while line_index < len(lines):
+            raw_line = lines[line_index]
+            page_match = re.search(r"<!-- Page (\d+) -->", raw_line)
+            if page_match:
+                current_page = int(page_match.group(1))
+                line_index += 1
+                continue
+
+            stripped = raw_line.strip()
+            if not stripped:
+                line_index += 1
+                continue
+
+            section = section_lookup.get(line_index)
+            if section is not None:
+                block_order += 1
+                blocks.append(
+                    self._make_block_dict(
+                        block_id=f"md_sec_{len(blocks) + 1}",
+                        block_type="SectionHeader",
+                        page=current_page,
+                        text=section.title,
+                        line_start=section.start_line,
+                        line_end=min(section.start_line + 1, len(lines)),
+                        section_hierarchy=self._section_hierarchy_for_line(
+                            index.sections,
+                            section.start_line,
+                        ),
+                        source_order=block_order,
+                    )
+                )
+                line_index += 1
+                continue
+
+            start_line = line_index
+            paragraph_lines: list[str] = []
+            while line_index < len(lines):
+                candidate = lines[line_index]
+                if re.search(r"<!-- Page (\d+) -->", candidate):
+                    break
+                if not candidate.strip():
+                    break
+                if line_index in section_lookup:
+                    break
+                paragraph_lines.append(candidate.strip())
+                line_index += 1
+
+            paragraph_text = "\n".join(paragraph_lines).strip()
+            if paragraph_text:
+                block_order += 1
+                text_counter += 1
+                blocks.append(
+                    self._make_block_dict(
+                        block_id=f"md_txt_{text_counter}",
+                        block_type="Text",
+                        page=current_page,
+                        text=paragraph_text,
+                        line_start=start_line,
+                        line_end=line_index,
+                        section_hierarchy=self._section_hierarchy_for_line(
+                            index.sections,
+                            start_line,
+                        ),
+                        source_order=block_order,
+                    )
+                )
+
+            if line_index == start_line:
+                line_index += 1
+
+        for table in sorted(
+            manifest.assets.tables,
+            key=lambda item: (item.page, item.line_start or 0, item.id),
+        ):
+            if table.line_start is None or table.line_end is None:
+                continue
+            block_order += 1
+            blocks.append(
+                self._make_block_dict(
+                    block_id=table.source_block_id or f"asset_{table.id}",
+                    block_type="Table",
+                    page=table.page,
+                    text=table.markdown or table.preview or table.caption,
+                    line_start=table.line_start,
+                    line_end=table.line_end,
+                    section_hierarchy=self._section_hierarchy_for_line(
+                        index.sections,
+                        table.line_start,
+                    ),
+                    source_order=max(block_order, table.source_order or 0),
+                )
+            )
+
+        for figure in sorted(
+            manifest.assets.figures,
+            key=lambda item: (item.page, item.line_start or 0, item.id),
+        ):
+            if figure.line_start is None or figure.line_end is None:
+                continue
+            block_order += 1
+            blocks.append(
+                self._make_block_dict(
+                    block_id=figure.source_block_id or f"asset_{figure.id}",
+                    block_type="Figure",
+                    page=figure.page,
+                    text=figure.caption or figure.id,
+                    line_start=figure.line_start,
+                    line_end=figure.line_end,
+                    section_hierarchy=self._section_hierarchy_for_line(
+                        index.sections,
+                        figure.line_start,
+                    ),
+                    source_order=max(block_order, figure.source_order or 0),
+                )
+            )
+
+        blocks.sort(
+            key=lambda item: (
+                int(item.get("page") or 0),
+                int(((item.get("metadata") or {}).get("line_start")) or 0),
+                float(((item.get("metadata") or {}).get("source_order")) or 0),
+                str(item.get("block_id") or ""),
+            )
+        )
+        return blocks
+
+    @staticmethod
+    def _make_block_dict(
+        *,
+        block_id: str,
+        block_type: str,
+        page: int,
+        text: str,
+        line_start: int,
+        line_end: int,
+        section_hierarchy: dict[str, str],
+        source_order: int,
+    ) -> dict[str, Any]:
+        return {
+            "block_id": block_id,
+            "block_type": block_type,
+            "page": int(page or 1),
+            "text": text,
+            "bbox": [],
+            "polygon": [],
+            "section_hierarchy": section_hierarchy,
+            "metadata": {
+                "line_start": line_start,
+                "line_end": line_end,
+                "line_match_strategy": "markdown-struct",
+                "line_match_confidence": 1.0,
+                "source_order": source_order,
+            },
+        }
+
+    @staticmethod
+    def _section_hierarchy_for_line(
+        sections: list[Any],
+        line_number: int,
+    ) -> dict[str, str]:
+        containing = [
+            section
+            for section in sections
+            if section.start_line <= line_number < section.end_line
+        ]
+        containing.sort(key=lambda section: (section.level, section.start_line))
+        return {
+            str(index + 1): str(section.title)
+            for index, section in enumerate(containing)
+            if str(section.title).strip()
+        }
+
     def _save_original_pdf_copy(self, doc_id: str, source_path: Path) -> None:
         """Persist the original PDF for overlay inspection and downstream tooling."""
         doc_dir = self.repository.get_doc_dir(doc_id)
@@ -950,6 +1153,20 @@ class DocumentService:
             return (0, 0)
 
     @staticmethod
+    def _image_variance(img_bytes: bytes) -> float:
+        """Estimate whether an image has enough visual variation to be useful."""
+        try:
+            import io
+
+            from PIL import Image, ImageStat
+
+            img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+            stat = ImageStat.Stat(img)
+            return float(sum(stat.var) / len(stat.var))
+        except Exception:
+            return 0.0
+
+    @staticmethod
     def _normalize_marker_image_key(value: str) -> str:
         """Normalize a Marker image filename or block path to a comparable key."""
         stem = Path(value).stem if "." in value else value
@@ -967,24 +1184,84 @@ class DocumentService:
         """Return the configured minimum figure dimension threshold."""
         return self.profile.filters.min_figure_px
 
+    @staticmethod
+    def _render_pdf_block_image(
+        pdf_path: Path,
+        *,
+        page_number: int,
+        bbox: list[float],
+        zoom: float = 2.0,
+        padding: float = 6.0,
+    ) -> bytes | None:
+        """Render a PDF clip from a semantic Marker block bbox."""
+        if len(bbox) != 4 or page_number < 1:
+            return None
+
+        try:
+            import fitz
+        except Exception:
+            return None
+
+        try:
+            with fitz.open(str(pdf_path)) as doc:
+                if page_number > len(doc):
+                    return None
+                page = doc[page_number - 1]
+                clip = fitz.Rect(*bbox)
+                if clip.is_empty:
+                    return None
+                clip = clip + (-padding, -padding, padding, padding)
+                clip = clip & page.rect
+                if clip.is_empty:
+                    return None
+                pix = page.get_pixmap(
+                    matrix=fitz.Matrix(zoom, zoom),
+                    clip=clip,
+                    alpha=False,
+                )
+                return pix.tobytes("png")
+        except Exception:
+            return None
+
     async def _save_marker_images(
-        self, doc_id: str, parse_result: Any
+        self, doc_id: str, parse_result: Any, *, pdf_path: Path
     ) -> list[FigureAsset]:
         """Save images from Marker parse result."""
         figures = []
 
         image_blocks = self._get_marker_image_blocks(parse_result.blocks)
-        block_by_key = {
-            self._normalize_marker_image_key(block.metadata.get("id") or ""): block
-            for block in image_blocks
-            if block.metadata.get("id")
-        }
         min_px = self._get_min_figure_px()
         saved_count = 0
 
-        for img_name, img_bytes in parse_result.images.items():
-            matched_block = block_by_key.get(self._normalize_marker_image_key(img_name))
-            if matched_block is None:
+        for matched_block in image_blocks:
+            block_key = self._normalize_marker_image_key(
+                str(matched_block.metadata.get("id") or "")
+            )
+            img_bytes = (
+                parse_result.images.get(block_key)
+                or next(
+                    (
+                        payload
+                        for name, payload in parse_result.images.items()
+                        if self._normalize_marker_image_key(name) == block_key
+                    ),
+                    None,
+                )
+            )
+            ext = "png"
+            if img_bytes is None:
+                img_bytes = self._render_pdf_block_image(
+                    pdf_path,
+                    page_number=matched_block.page,
+                    bbox=list(matched_block.bbox),
+                )
+            else:
+                for name in parse_result.images:
+                    if self._normalize_marker_image_key(name) == block_key and "." in name:
+                        ext = name.split(".")[-1]
+                        break
+
+            if img_bytes is None:
                 continue
 
             width, height = self._get_image_dimensions(img_bytes)
@@ -992,7 +1269,6 @@ class DocumentService:
                 continue
 
             saved_count += 1
-            ext = img_name.split(".")[-1] if "." in img_name else "png"
             fig_id = f"fig_{matched_block.page}_{saved_count}"
 
             # Save image
@@ -1135,10 +1411,12 @@ class DocumentService:
         *,
         page_map: list[int] | None = None,
     ) -> list[FigureAsset]:
-        """Extract images from PDF, filter small icons, and associate captions."""
+        """Extract images from PDF with conservative filtering for textbook figures."""
         figures = []
 
         raw_images = self.pdf_extractor.extract_images(pdf_path)
+        if not raw_images:
+            return figures
 
         # Detect source from extractor type
         source = "pymupdf"
@@ -1150,61 +1428,126 @@ class DocumentService:
         if hasattr(self.pdf_extractor, "extract_figure_captions"):
             page_captions = self.pdf_extractor.extract_figure_captions(pdf_path)
 
-        # Track which captions have been used (per page)
-        used_captions: dict[int, set[int]] = {}
+        min_px = 50
+        if hasattr(self.pdf_extractor, "profile"):
+            min_px = self.pdf_extractor.profile.filters.min_figure_px
+        elif hasattr(self.pdf_extractor, "_MIN_FIGURE_PX"):
+            min_px = self.pdf_extractor._MIN_FIGURE_PX
+
+        candidates_by_page: dict[int, list[dict[str, Any]]] = {}
+        seen_hashes_by_page: dict[int, set[str]] = {}
 
         for img_data in raw_images:
+            image_bytes = img_data["image_bytes"]
             w = img_data["width"]
             h = img_data["height"]
 
-            # Filter small images (icons, logos, decorations)
-            min_px = 50
-            if hasattr(self.pdf_extractor, "profile"):
-                min_px = self.pdf_extractor.profile.filters.min_figure_px
-            elif hasattr(self.pdf_extractor, "_MIN_FIGURE_PX"):
-                min_px = self.pdf_extractor._MIN_FIGURE_PX
             if w < min_px or h < min_px:
                 continue
 
-            original_page = remap_page_number(img_data["page"], page_map)
+            longest_edge = max(w, h)
+            shortest_edge = max(min(w, h), 1)
+            aspect_ratio = longest_edge / shortest_edge
+            if aspect_ratio >= 8.0:
+                continue
 
-            # Generate figure ID: fig_{page}_{index}
-            fig_id = f"fig_{original_page}_{img_data['index_on_page']}"
+            variance = self._image_variance(image_bytes)
+            if variance < 5.0:
+                continue
 
-            # Save image
-            image_path = self.repository.save_image(
-                doc_id=doc_id,
-                image_id=fig_id,
-                data=img_data["image_bytes"],
-                ext=img_data["ext"],
+            page_num = int(img_data["page"])
+            image_hash = hashlib.sha1(image_bytes).hexdigest()
+            page_hashes = seen_hashes_by_page.setdefault(page_num, set())
+            if image_hash in page_hashes:
+                continue
+            page_hashes.add(image_hash)
+
+            area = w * h
+            score = float(area) + (variance * 1500.0)
+            if variance >= 15.0:
+                score += 50_000.0
+            if area >= 40_000:
+                score += 25_000.0
+
+            candidates_by_page.setdefault(page_num, []).append(
+                {
+                    **img_data,
+                    "variance": variance,
+                    "area": area,
+                    "score": score,
+                }
             )
 
-            # Associate caption: pick next unused caption on same page
-            caption = img_data.get("caption", "")
-            if not caption:
-                page_num = img_data["page"]
-                caps = page_captions.get(page_num, [])
-                if page_num not in used_captions:
-                    used_captions[page_num] = set()
-                for idx, cap in enumerate(caps):
-                    if idx not in used_captions[page_num]:
-                        caption = cap["caption"]
-                        used_captions[page_num].add(idx)
-                        break
+        # Track which captions have been used (per page)
+        used_captions: dict[int, set[int]] = {}
 
-            figures.append(
-                FigureAsset(
-                    id=fig_id,
-                    page=original_page,
-                    path=str(image_path),
+        for page_num in sorted(candidates_by_page):
+            candidates = sorted(
+                candidates_by_page[page_num],
+                key=lambda item: (
+                    float(item["score"]),
+                    int(item["area"]),
+                    float(item["variance"]),
+                ),
+                reverse=True,
+            )
+            caption_count = len(page_captions.get(page_num, []))
+            if caption_count > 0:
+                high_quality = [
+                    item
+                    for item in candidates
+                    if float(item["variance"]) >= 15.0 or int(item["area"]) >= 30_000
+                ]
+                candidates = high_quality or candidates[:1]
+                candidates = candidates[: max(caption_count * 4, 4)]
+            else:
+                candidates = [
+                    item
+                    for item in candidates
+                    if float(item["variance"]) >= 15.0 and int(item["area"]) >= 40_000
+                ][:2]
+
+            for local_index, img_data in enumerate(candidates, start=1):
+                w = img_data["width"]
+                h = img_data["height"]
+                original_page = remap_page_number(page_num, page_map)
+
+                # Generate figure ID using the curated local page order.
+                fig_id = f"fig_{original_page}_{local_index}"
+
+                # Save image
+                image_path = self.repository.save_image(
+                    doc_id=doc_id,
+                    image_id=fig_id,
+                    data=img_data["image_bytes"],
                     ext=img_data["ext"],
-                    width=w,
-                    height=h,
-                    caption=caption,
-                    figure_type="",
-                    source=source,
                 )
-            )
+
+                # Associate caption: pick next unused caption on same page
+                caption = img_data.get("caption", "")
+                if not caption:
+                    caps = page_captions.get(page_num, [])
+                    if page_num not in used_captions:
+                        used_captions[page_num] = set()
+                    for idx, cap in enumerate(caps):
+                        if idx not in used_captions[page_num]:
+                            caption = cap["caption"]
+                            used_captions[page_num].add(idx)
+                            break
+
+                figures.append(
+                    FigureAsset(
+                        id=fig_id,
+                        page=original_page,
+                        path=str(image_path),
+                        ext=img_data["ext"],
+                        width=w,
+                        height=h,
+                        caption=caption,
+                        figure_type="",
+                        source=source,
+                    )
+                )
 
         return figures
 

@@ -7,6 +7,7 @@ Presentation Layer - Dependency Container (Composition Root)
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 from src.application.asset_service import AssetService
@@ -39,9 +40,12 @@ if TYPE_CHECKING:
 try:
     from src.domain.etl_profile import ETLProfileRegistry
 
-    etl_profile = ETLProfileRegistry.get(settings.etl_profile)
-except KeyError:
-    # Fallback to default if configured profile not found
+    if settings.etl_profile_json:
+        etl_profile = ETLProfileRegistry.load_from_json(settings.etl_profile_json)
+    else:
+        etl_profile = ETLProfileRegistry.get(settings.etl_profile)
+except (FileNotFoundError, KeyError, json.JSONDecodeError):
+    # Fallback to default if configured profile cannot be loaded
     etl_profile = ETLProfile.default()
 
 repository = FileStorage(settings.data_dir)

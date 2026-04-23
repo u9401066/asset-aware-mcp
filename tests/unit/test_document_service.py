@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -14,6 +16,8 @@ from src.application.document_service import (
     normalize_page_ranges,
     remap_markdown_page_markers,
 )
+from src.domain.etl_profile import ETLProfile
+from src.infrastructure.marker_adapter import MarkerBlock
 
 
 def test_normalize_page_ranges_merges_adjacent_ranges() -> None:
@@ -234,6 +238,55 @@ async def test_ingest_reports_progress_callback(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_save_marker_images_falls_back_to_bbox_render(
+    monkeypatch, tmp_path: Path
+) -> None:
+    repository = MagicMock()
+    repository.save_image.return_value = tmp_path / "fig_7_1.png"
+    service = DocumentService(
+        repository=repository,
+        pdf_extractor=MagicMock(),
+        profile=ETLProfile.default(),
+    )
+
+    block = MarkerBlock(
+        block_id="blk_0001",
+        block_type="Figure",
+        page=7,
+        text="",
+        bbox=[10.0, 20.0, 110.0, 180.0],
+        metadata={"id": "/page/6/Figure/0", "caption": "Figure 49.5", "source_order": 1},
+    )
+    parse_result = SimpleNamespace(
+        blocks=[block],
+        images={},
+    )
+
+    def fake_render(*args, **kwargs):
+        return (
+            b"\x89PNG\r\n\x1a\n"
+            b"\x00\x00\x00\rIHDR"
+            b"\x00\x00\x00d\x00\x00\x00x\x08\x02\x00\x00\x00"
+            b"\x00\x00\x00\x00"
+        )
+
+    monkeypatch.setattr(service, "_render_pdf_block_image", fake_render)
+    monkeypatch.setattr(service, "_get_image_dimensions", lambda _: (100, 120))
+
+    figures = await service._save_marker_images(
+        "doc_test",
+        parse_result,
+        pdf_path=tmp_path / "source.pdf",
+    )
+
+    assert len(figures) == 1
+    assert figures[0].id == "fig_7_1"
+    assert figures[0].page == 7
+    assert figures[0].caption == "Figure 49.5"
+    repository.save_image.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_ingest_scopes_doc_id_and_page_markers_for_page_ranges(
     monkeypatch, tmp_path: Path
 ) -> None:
@@ -371,3 +424,57 @@ async def test_ingest_overwrites_stale_original_pdf_copy(
 
     assert results[0].success is True
     assert (doc_dir / "original.pdf").read_bytes() == b"%PDF-1.4 fresh"
+
+
+@pytest.mark.asyncio
+async def test_pymupdf_ingest_persists_searchable_blocks_json(
+    monkeypatch, tmp_path: Path
+) -> None:
+    pdf_path = tmp_path / "chapter.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4 original")
+    doc_dir = tmp_path / "doc_blocks"
+    doc_dir.mkdir()
+
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = doc_dir
+    repository.save_markdown.return_value = doc_dir / "content.md"
+    repository.save_manifest.return_value = None
+
+    extractor = MagicMock()
+    extractor.extract_text.return_value = (
+        "<!-- Page 1 -->\n# Airway Management\n\nDifficult mask ventilation predicts "
+        "difficult intubation.\n\n<!-- Page 2 -->\n## Rescue Strategy\n\nUse oxygenation first."
+    )
+    extractor.get_page_count.return_value = 2
+    extractor.get_toc.return_value = []
+    extractor.get_title.return_value = "Airway Management"
+
+    service = DocumentService(repository=repository, pdf_extractor=extractor)
+    service._extract_and_save_images = AsyncMock(return_value=[])
+    service._extract_tables = AsyncMock(return_value=[])
+
+    monkeypatch.setattr(
+        "src.application.document_service.DocId.generate",
+        lambda *_args: MagicMock(value="doc_blocks"),
+    )
+
+    results = await service.ingest([str(pdf_path)])
+
+    assert results[0].success is True
+    blocks_path = doc_dir / "blocks.json"
+    assert blocks_path.exists()
+
+    blocks = json.loads(blocks_path.read_text(encoding="utf-8"))
+    assert any(block["block_type"] == "SectionHeader" for block in blocks)
+    text_blocks = [block for block in blocks if block["block_type"] == "Text"]
+    assert text_blocks
+    assert any(
+        "difficult mask ventilation predicts difficult intubation"
+        in block["text"].lower()
+        for block in text_blocks
+    )
+    assert all(
+        isinstance((block.get("metadata") or {}).get("line_start"), int)
+        and isinstance((block.get("metadata") or {}).get("line_end"), int)
+        for block in blocks
+    )
