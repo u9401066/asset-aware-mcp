@@ -12,7 +12,7 @@
 | 2 | README 更新 | `readme-updater` | ✅ |
 | 3 | CHANGELOG 更新 | `changelog-updater` | ✅ |
 | 4 | ROADMAP 標記 | `roadmap-updater` | ✅ |
-| 5 | 架構文檔（如有變更） | `arch-updater` | ✅ |
+| 5 | 架構文檔（如有變更） | `ddd-architect` | ✅ |
 
 ## 第 1.1 條：Push 後檢查 CI 狀態
 
@@ -55,7 +55,7 @@
 
 | 分支 | 用途 | 保護 |
 |------|------|------|
-| `main` | 穩定版本 | ✅ |
+| `master` | 穩定版本 | ✅ |
 | `develop` | 開發整合 | ✅ |
 | `feature/*` | 功能開發 | ❌ |
 | `hotfix/*` | 緊急修復 | ❌ |

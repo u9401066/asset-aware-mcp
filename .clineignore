@@ -1,0 +1,61 @@
+# Cline ignore file
+# Keep indexing fast and avoid pulling large/binary artifacts into context.
+
+# VCS + editor junk
+.git/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage/
+htmlcov/
+
+# Python environments
+.venv/
+**/.venv/
+venv/
+**/venv/
+__pycache__/
+*.pyc
+
+# Node / VS Code extension outputs
+node_modules/
+**/node_modules/
+vscode-extension/out/
+vscode-extension/.vscode-test/
+vscode-extension/*.vsix
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+*.egg
+*.whl
+
+# Processed data and large test fixtures
+data/
+test_data/
+test_pdfs/
+MagicMock/
+lightrag_db/
+
+# Large/binary documents (often ignored by git anyway)
+*.pdf
+*.doc
+*.docx
+*.pptx
+*.xlsx
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.zip
+*.tar
+*.gz
+
+# Secrets
+.env
+.env.*
+secrets/
+*.pem
+*.key

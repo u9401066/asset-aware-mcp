@@ -1,4 +1,3 @@
-```markdown
 ---
 name: pdf-asset-extractor
 description: MCP tools for PDF ingestion → extract figures, tables, sections → build knowledge graph. Transforms PDF into queryable assets (images, tables, text) with cross-document RAG. Triggers: PDF, ingest, extract, 圖片, 表格, figure, table, manifest, knowledge graph, 知識圖譜, RAG, 文獻分析.
@@ -377,5 +376,4 @@ graph TD
 - **節點**: 383
 - **關係**: 99
 - 可使用 `export_knowledge_graph` 視覺化
-```
 ```
