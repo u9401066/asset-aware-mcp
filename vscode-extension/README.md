@@ -6,13 +6,13 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://github.com/u9401066/asset-aware-mcp/raw/master/resources/banner.png)
 
-## 🆕 What's New in v0.6.10
+## 🆕 What's New in v0.6.11
 
+- **Marketplace banner fixed**: README banner image now points to a real tracked `resources/banner.png`, so VSIX/Marketplace render correctly
 - **Cline harness included**: `.clinerules/` rules, workflows (`/full-check.md`, `/release-publish.md`, `/skills-audit.md`, `/mcp-setup.md`), and a project skill under `.cline/skills/`
 - **Skill discovery fixed**: all `.claude/skills/*/SKILL.md` descriptions are now valid YAML frontmatter so Cline can index them reliably
-- **One-command MCP setup**: `scripts/install_cline_mcp.py --write` registers this repo as a local STDIO MCP server in `cline_mcp_settings.json` (and adds `mcpRules` triggers)
 - **48 tools** across 7 modules
 
 ## 🧪 Current Main Branch

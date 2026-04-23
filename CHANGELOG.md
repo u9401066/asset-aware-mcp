@@ -7,6 +7,13 @@
 
 ## [Unreleased]
 
+## [0.6.11] - 2026-04-23
+
+### Fixed
+
+- **VS Code Marketplace banner rendering**
+  - Added a tracked `resources/banner.png` and updated the extension README to reference it so the VSIX/Marketplace no longer show a broken banner image
+
 ## [0.6.10] - 2026-04-23
 
 ### Added
