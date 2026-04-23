@@ -255,7 +255,11 @@ async def test_save_marker_images_falls_back_to_bbox_render(
         page=7,
         text="",
         bbox=[10.0, 20.0, 110.0, 180.0],
-        metadata={"id": "/page/6/Figure/0", "caption": "Figure 49.5", "source_order": 1},
+        metadata={
+            "id": "/page/6/Figure/0",
+            "caption": "Figure 49.5",
+            "source_order": 1,
+        },
     )
     parse_result = SimpleNamespace(
         blocks=[block],

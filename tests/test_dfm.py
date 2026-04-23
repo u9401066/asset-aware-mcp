@@ -257,7 +257,7 @@ class TestDocxAdapterParsing:
     def test_numbered_paragraph_without_list_style_is_list_item(self):
         p = etree.fromstring(
             f"""
-            <w:p xmlns:w="{NS['w']}">
+            <w:p xmlns:w="{NS["w"]}">
               <w:pPr>
                 <w:pStyle w:val="Normal"/>
                 <w:numPr>
@@ -288,7 +288,7 @@ class TestDocxAdapterParsing:
     def test_corrupt_numbering_values_do_not_abort_paragraph_parse(self):
         p = etree.fromstring(
             f"""
-            <w:p xmlns:w="{NS['w']}">
+            <w:p xmlns:w="{NS["w"]}">
               <w:pPr>
                 <w:numPr>
                   <w:ilvl w:val="not-an-int"/>
@@ -315,7 +315,7 @@ class TestDocxAdapterParsing:
     def test_hyperlink_runs_are_parsed_and_cleared_on_edit(self):
         p = etree.fromstring(
             f"""
-            <w:p xmlns:w="{NS['w']}" xmlns:r="{NS['r']}">
+            <w:p xmlns:w="{NS["w"]}" xmlns:r="{NS["r"]}">
               <w:r><w:t>Prefix </w:t></w:r>
               <w:hyperlink r:id="rId1">
                 <w:r><w:t>LINK</w:t></w:r>
@@ -652,7 +652,10 @@ class TestDfmParser:
         assert parser._md_to_plain("~~strike~~") == "strike"
         assert parser._md_to_plain("^super^") == "super"
         literal = r"x \~not sub\~ y \^not super\^ z \\ slash \*stars\*"
-        assert parser._md_to_plain(literal) == "x ~not sub~ y ^not super^ z \\ slash *stars*"
+        assert (
+            parser._md_to_plain(literal)
+            == "x ~not sub~ y ^not super^ z \\ slash *stars*"
+        )
 
     def test_parse_md_table(self, parser: DfmParser):
         table = "| A | B |\n| --- | --- |\n| 1 | 2 |\n| 3 | 4 |"

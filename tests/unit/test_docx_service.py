@@ -334,7 +334,9 @@ async def test_save_docx_rejects_shrinkage_before_writing_output_or_state(
         lambda *_args: [],
     )
     monkeypatch.setattr(service.renderer, "render", lambda ir_obj: "tiny dfm")
-    monkeypatch.setattr(service.renderer, "render_split", lambda ir_obj: ("tiny", "yaml"))
+    monkeypatch.setattr(
+        service.renderer, "render_split", lambda ir_obj: ("tiny", "yaml")
+    )
     monkeypatch.setattr(service.adapter, "ir_to_docx", MagicMock())
     monkeypatch.setattr(service, "_save_ir", MagicMock())
     monkeypatch.setattr(service, "_backup_before_overwrite", MagicMock())

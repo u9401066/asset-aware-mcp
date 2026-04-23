@@ -845,9 +845,7 @@ class DfmParser:
             # Pad row to match header width
             padded = row + [""] * (len(rows[0]) - len(row))
             # Escape newlines in cell content for markdown table
-            escaped = [
-                DfmParser._escape_table_cell(c) for c in padded[: len(rows[0])]
-            ]
+            escaped = [DfmParser._escape_table_cell(c) for c in padded[: len(rows[0])]]
             lines.append("| " + " | ".join(escaped) + " |")
         return "\n".join(lines)
 

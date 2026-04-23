@@ -1264,16 +1264,13 @@ class DocumentService:
             block_key = self._normalize_marker_image_key(
                 str(matched_block.metadata.get("id") or "")
             )
-            img_bytes = (
-                parse_result.images.get(block_key)
-                or next(
-                    (
-                        payload
-                        for name, payload in parse_result.images.items()
-                        if self._normalize_marker_image_key(name) == block_key
-                    ),
-                    None,
-                )
+            img_bytes = parse_result.images.get(block_key) or next(
+                (
+                    payload
+                    for name, payload in parse_result.images.items()
+                    if self._normalize_marker_image_key(name) == block_key
+                ),
+                None,
             )
             ext = "png"
             if img_bytes is None and pdf_path is not None:
@@ -1284,7 +1281,10 @@ class DocumentService:
                 )
             else:
                 for name in parse_result.images:
-                    if self._normalize_marker_image_key(name) == block_key and "." in name:
+                    if (
+                        self._normalize_marker_image_key(name) == block_key
+                        and "." in name
+                    ):
                         ext = name.split(".")[-1]
                         break
 

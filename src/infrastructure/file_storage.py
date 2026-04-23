@@ -157,9 +157,7 @@ class FileStorage(DocumentRepository):
         """Save citation-ready evidence spans as JSONL."""
         doc_dir = self.get_doc_dir(doc_id)
         index_path = doc_dir / "citation_index.jsonl"
-        payload = "\n".join(
-            span.model_dump_json(exclude_none=True) for span in spans
-        )
+        payload = "\n".join(span.model_dump_json(exclude_none=True) for span in spans)
         if payload:
             payload += "\n"
         write_utf8_text(index_path, payload, hint=str(index_path))
@@ -176,7 +174,9 @@ class FileStorage(DocumentRepository):
             return []
         spans: list[EvidenceSpan] = []
         try:
-            for raw_line in read_text_file(index_path, hint=str(index_path)).splitlines():
+            for raw_line in read_text_file(
+                index_path, hint=str(index_path)
+            ).splitlines():
                 if raw_line.strip():
                     spans.append(EvidenceSpan.model_validate_json(raw_line))
         except Exception:

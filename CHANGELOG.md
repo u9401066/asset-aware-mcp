@@ -7,6 +7,20 @@
 
 ## [Unreleased]
 
+## [0.6.10] - 2026-04-23
+
+### Added
+
+- **Cline-first project harness**
+  - Added `.clinerules/` rules plus workflows for full verification, release publishing, skills auditing, and MCP setup
+  - Added a project skill under `.cline/skills/` and helper scripts for version reading and skill validation
+  - Added `scripts/install_cline_mcp.py` to register this repo as a local STDIO MCP server in Cline’s `cline_mcp_settings.json` (including `mcpRules` trigger scaffolding)
+
+### Fixed
+
+- **Cline skill discovery**
+  - Quoted YAML frontmatter `description` fields across `.claude/skills/` so embedded `Triggers:` text does not break YAML parsing and prevent Cline from indexing skills
+
 ## [0.6.9] - 2026-04-23
 
 ### Fixed

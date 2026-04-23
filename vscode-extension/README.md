@@ -8,11 +8,11 @@
 
 ![Asset-Aware MCP marketplace banner](resources/banner.png)
 
-## 🆕 What's New in v0.6.9
+## 🆕 What's New in v0.6.10
 
-- **DFM messy-document hardening**: literal Markdown symbols, marker-looking comments, multi-line list items, hyperlink runs, and literal table pipes now survive round-trip more reliably
-- **Fail-closed table safety**: row/column structural table edits are rejected until full XML row/column mutation is implemented, preventing false-success truncation
-- **Safer DFM save flow**: MCP fenced JSON/English labels parse correctly, source DOCX disk conflicts are detected before overwrite, and save failures include diagnostics
+- **Cline harness included**: `.clinerules/` rules, workflows (`/full-check.md`, `/release-publish.md`, `/skills-audit.md`, `/mcp-setup.md`), and a project skill under `.cline/skills/`
+- **Skill discovery fixed**: all `.claude/skills/*/SKILL.md` descriptions are now valid YAML frontmatter so Cline can index them reliably
+- **One-command MCP setup**: `scripts/install_cline_mcp.py --write` registers this repo as a local STDIO MCP server in `cline_mcp_settings.json` (and adds `mcpRules` triggers)
 - **48 tools** across 7 modules
 
 ## 🧪 Current Main Branch

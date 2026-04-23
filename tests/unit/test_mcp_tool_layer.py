@@ -1321,7 +1321,8 @@ class TestJobServiceConcurrency:
         await store.create(job)
 
         service = JobService(
-            job_store=store, document_service=FailingDocumentService()  # type: ignore[arg-type]
+            job_store=store,
+            document_service=FailingDocumentService(),  # type: ignore[arg-type]
         )
 
         await service._process_ingest_job(job.job_id)

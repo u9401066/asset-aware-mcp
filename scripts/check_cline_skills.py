@@ -13,11 +13,9 @@ Each skill directory must contain a SKILL.md with YAML frontmatter including:
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import yaml
-
 
 SKILL_ROOTS = (
     Path(".cline/skills"),
@@ -37,7 +35,9 @@ def parse_frontmatter(text: str, *, path: Path) -> dict[str, str]:
             end = idx
             break
     if end is None:
-        raise ValueError(f"{path}: unterminated YAML frontmatter (missing closing '---')")
+        raise ValueError(
+            f"{path}: unterminated YAML frontmatter (missing closing '---')"
+        )
 
     frontmatter = "\n".join(lines[1:end]).strip() + "\n"
     try:
@@ -101,7 +101,9 @@ def validate_skill_dir(skill_dir: Path) -> list[str]:
 def iter_skill_dirs(root: Path) -> list[Path]:
     if not root.is_dir():
         return []
-    return sorted([p for p in root.iterdir() if p.is_dir() and not p.name.startswith(".")])
+    return sorted(
+        [p for p in root.iterdir() if p.is_dir() and not p.name.startswith(".")]
+    )
 
 
 def main() -> int:
@@ -113,7 +115,9 @@ def main() -> int:
             errors.extend(validate_skill_dir(skill_dir))
 
     if checked == 0:
-        print("No project skills found under .cline/skills/, .clinerules/skills/, or .claude/skills/")
+        print(
+            "No project skills found under .cline/skills/, .clinerules/skills/, or .claude/skills/"
+        )
         return 1
 
     if errors:

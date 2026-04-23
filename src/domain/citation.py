@@ -328,8 +328,14 @@ def _iter_line_units(
         if line and not set(line) <= {"|", "-", ":", " "}:
             start_delta = len(raw_line) - len(raw_line.lstrip())
             end_delta = len(raw_line.rstrip())
-            start = None if absolute_start is None else absolute_start + offset + start_delta
-            end = None if absolute_start is None else absolute_start + offset + end_delta
+            start = (
+                None
+                if absolute_start is None
+                else absolute_start + offset + start_delta
+            )
+            end = (
+                None if absolute_start is None else absolute_start + offset + end_delta
+            )
             units.append(("line", line, start, end))
         offset += len(raw_line)
     return units

@@ -87,7 +87,11 @@ class DfmRenderer:
         marker = f"<!-- @{block.id} -->"
 
         if bt == DfmBlockType.PARAGRAPH:
-            md_text = self._runs_to_md(block.runs) if block.runs else self._escape_md(block.content)
+            md_text = (
+                self._runs_to_md(block.runs)
+                if block.runs
+                else self._escape_md(block.content)
+            )
             return f"{marker}\n{md_text}"
 
         if bt == DfmBlockType.HEADING:
@@ -101,11 +105,21 @@ class DfmRenderer:
                 if block.style_name and "number" in block.style_name.lower()
                 else "-"
             )
-            md_text = self._runs_to_md(block.runs) if block.runs else self._escape_md(block.content)
-            return f"{marker}\n{self._format_list_markdown(md_text, indent, marker_char)}"
+            md_text = (
+                self._runs_to_md(block.runs)
+                if block.runs
+                else self._escape_md(block.content)
+            )
+            return (
+                f"{marker}\n{self._format_list_markdown(md_text, indent, marker_char)}"
+            )
 
         if bt == DfmBlockType.FORMAT:
-            md_text = self._runs_to_md(block.runs) if block.runs else self._escape_md(block.content)
+            md_text = (
+                self._runs_to_md(block.runs)
+                if block.runs
+                else self._escape_md(block.content)
+            )
             return f"{marker}\n{md_text}"
 
         if bt == DfmBlockType.TABLE:
@@ -426,7 +440,11 @@ class DfmRenderer:
         header = f"<!-- @b:{block.id}{style_attr} -->"
 
         # Convert runs to Markdown formatting
-        md_text = self._runs_to_md(block.runs) if block.runs else self._escape_md(block.content)
+        md_text = (
+            self._runs_to_md(block.runs)
+            if block.runs
+            else self._escape_md(block.content)
+        )
         return f"{header}\n{md_text}"
 
     def _render_heading(self, block: DfmBlock) -> str:
@@ -454,7 +472,11 @@ class DfmRenderer:
         else:
             marker = "-"
 
-        md_text = self._runs_to_md(block.runs) if block.runs else self._escape_md(block.content)
+        md_text = (
+            self._runs_to_md(block.runs)
+            if block.runs
+            else self._escape_md(block.content)
+        )
         return f"{header}\n{self._format_list_markdown(md_text, indent, marker)}"
 
     def _render_format(self, block: DfmBlock) -> str:
@@ -472,7 +494,11 @@ class DfmRenderer:
         header += f"\n{yaml_str}\n-->"
 
         # Fallback editable text
-        fallback = self._runs_to_md(block.runs) if block.runs else self._escape_md(block.content)
+        fallback = (
+            self._runs_to_md(block.runs)
+            if block.runs
+            else self._escape_md(block.content)
+        )
         return f"{header}\n{fallback}\n<!-- /dfm:format -->"
 
     def _render_caption(self, block: DfmBlock) -> str:

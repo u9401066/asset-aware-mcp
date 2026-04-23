@@ -560,9 +560,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                                     }
                                 )
                     except Exception:
-                        logger.debug(
-                            "Vector graphics extraction failed", exc_info=True
-                        )
+                        logger.debug("Vector graphics extraction failed", exc_info=True)
 
                 # Strategy 3: Smart region detection (find non-text areas)
                 if _env_flag("PYMUPDF_ENABLE_REGION_IMAGES", True):

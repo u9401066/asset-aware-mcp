@@ -37,9 +37,10 @@ def test_build_evidence_spans_records_sentence_offsets_and_hashes() -> None:
     assert sentence.char_end is not None
     assert markdown[sentence.char_start : sentence.char_end] == sentence.text
     assert sentence.byte_start == len(markdown[: sentence.char_start].encode("utf-8"))
-    assert sentence.text_sha256 == hashlib.sha256(
-        sentence.text.encode("utf-8")
-    ).hexdigest()
+    assert (
+        sentence.text_sha256
+        == hashlib.sha256(sentence.text.encode("utf-8")).hexdigest()
+    )
     assert sentence.bbox == [1.0, 2.0, 3.0, 4.0]
     assert sentence.section_hierarchy == ["Results"]
     assert sentence.craap.assessment_version == "craap-v1"
