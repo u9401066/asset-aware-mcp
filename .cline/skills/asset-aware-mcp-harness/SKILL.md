@@ -1,6 +1,6 @@
 ---
 name: asset-aware-mcp-harness
-description: Cline harness for this repo (rules + workflows + checks). Triggers: cline harness, full check, release checklist, workflow, 文檔工作流, DFM, citation-ready.
+description: "Cline harness for this repo (rules + workflows + checks). Triggers: cline harness, full check, release checklist, workflow, 文檔工作流, DFM, citation-ready."
 ---
 
 # asset-aware-mcp: Cline Harness Skill

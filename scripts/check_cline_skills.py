@@ -16,6 +16,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import yaml
+
 
 SKILL_ROOTS = (
     Path(".cline/skills"),
@@ -37,30 +39,30 @@ def parse_frontmatter(text: str, *, path: Path) -> dict[str, str]:
     if end is None:
         raise ValueError(f"{path}: unterminated YAML frontmatter (missing closing '---')")
 
-    meta: dict[str, str] = {}
-    for raw_line in lines[1:end]:
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
+    frontmatter = "\n".join(lines[1:end]).strip() + "\n"
+    try:
+        meta = yaml.safe_load(frontmatter)
+    except yaml.YAMLError as exc:
+        raise ValueError(f"{path}: invalid YAML frontmatter: {exc}") from exc
+
+    if meta is None:
+        return {}
+    if not isinstance(meta, dict):
+        raise ValueError(f"{path}: YAML frontmatter must be a mapping/dict")
+
+    # Normalize to strings for required keys; keep as raw for any extras.
+    normalized: dict[str, str] = {}
+    for key, value in meta.items():
+        if not isinstance(key, str):
             continue
+        if isinstance(value, str):
+            normalized[key] = value
+        elif value is None:
+            normalized[key] = ""
+        else:
+            normalized[key] = str(value)
 
-        if ":" not in line:
-            # Allow complex YAML we don't parse here; we only require name/description.
-            continue
-
-        key, value = line.split(":", 1)
-        key = key.strip()
-        value = value.strip()
-        if not key:
-            continue
-
-        if (value.startswith('"') and value.endswith('"')) or (
-            value.startswith("'") and value.endswith("'")
-        ):
-            value = value[1:-1]
-
-        meta[key] = value
-
-    return meta
+    return normalized
 
 
 def validate_skill_dir(skill_dir: Path) -> list[str]:
@@ -126,4 +128,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
