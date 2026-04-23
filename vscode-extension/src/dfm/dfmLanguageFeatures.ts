@@ -23,7 +23,7 @@ export const DFM_PATTERNS = {
     stylesOpen: /^<!--\s*dfm:styles\s*$/,
     /** Protected block types */
     protectedTypes: new Set([
-        'chart', 'toc', 'header', 'footer', 'field', 'macro', 'break',
+        'chart', 'toc', 'header', 'footer', 'field', 'citation', 'macro', 'break',
         'bookmark', 'styles',
     ]),
     /** Editable compound types */

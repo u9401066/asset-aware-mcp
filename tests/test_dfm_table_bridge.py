@@ -170,6 +170,9 @@ class TestTableContextToMd:
         )
         md = _table_context_to_md(tc)
         assert "a\\|b" in md
+        rows = _parse_md_table(md)
+        assert rows is not None
+        assert rows[1][0] == "a|b"
 
     def test_newline_in_cell_escaped(self):
         """Newlines in cell values must survive markdown round-trip."""

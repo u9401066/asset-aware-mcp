@@ -368,7 +368,7 @@ function registerCommands(context: vscode.ExtensionContext): void {
                 vscode.ViewColumn.One,
                 { enableScripts: true }
             );
-            panel.webview.html = getStatusWebviewContent(status);
+            panel.webview.html = getStatusWebviewContent(status, panel.webview);
         })
     );
 
@@ -686,16 +686,32 @@ async function getExtensionStatus(): Promise<ExtensionStatus> {
     };
 }
 
-function getStatusWebviewContent(status: ExtensionStatus): string {
+function escapeHtml(value: string): string {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getStatusWebviewContent(status: ExtensionStatus, webview: vscode.Webview): string {
     const checkmark = '✅';
     const cross = '❌';
     const warning = '⚠️';
+    const vscodeVersion = escapeHtml(status.vscodeVersion);
+    const envPath = escapeHtml(status.envPath);
+    const llmBackend = escapeHtml(status.llmBackend.toUpperCase());
+    const ollamaHost = escapeHtml(status.ollamaHost);
+    const ollamaModel = escapeHtml(status.ollamaModel);
+    const dataDir = escapeHtml(status.dataDir);
 
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline';">
     <title>Asset-Aware MCP Status</title>
     <style>
         body { font-family: var(--vscode-font-family); padding: 20px; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
@@ -713,32 +729,32 @@ function getStatusWebviewContent(status: ExtensionStatus): string {
     </style>
 </head>
 <body>
-    <h1>📚 Asset-Aware MCP Status</h1>
-    <div class="section">
-        <h2>VS Code Environment</h2>
-        <div class="item"><span>VS Code Version:</span><span class="info">${status.vscodeVersion}</span></div>
-        <div class="item"><span>MCP API Available:</span><span class="status ${status.mcpApiAvailable ? 'ok' : 'error'}">${status.mcpApiAvailable ? checkmark + ' Yes' : cross + ' No (Need VS Code 1.96+ & Copilot)'}</span></div>
-    </div>
-    <div class="section">
-        <h2>Configuration</h2>
-        <div class="item"><span>.env File:</span><span class="status ${status.envExists ? 'ok' : 'error'}">${status.envExists ? checkmark + ' Exists' : cross + ' Missing'}</span></div>
-        <div class="item"><span>Path:</span><code>${status.envPath}</code></div>
-        <div class="item"><span>LLM Backend:</span><span class="info">${status.llmBackend.toUpperCase()}</span></div>
-    </div>
-    <div class="section">
-        <h2>Ollama Connection</h2>
-        <div class="item"><span>Host:</span><code>${status.ollamaHost}</code></div>
-        <div class="item"><span>Model:</span><span>${status.ollamaModel}</span></div>
-        <div class="item"><span>Status:</span><span class="status ${status.ollamaConnected ? 'ok' : 'error'}">${status.ollamaConnected ? checkmark + ' Connected' : cross + ' Disconnected'}</span></div>
-    </div>
+	    <h1>📚 Asset-Aware MCP Status</h1>
+	    <div class="section">
+	        <h2>VS Code Environment</h2>
+	        <div class="item"><span>VS Code Version:</span><span class="info">${vscodeVersion}</span></div>
+	        <div class="item"><span>MCP API Available:</span><span class="status ${status.mcpApiAvailable ? 'ok' : 'error'}">${status.mcpApiAvailable ? checkmark + ' Yes' : cross + ' No (Need VS Code 1.96+ & Copilot)'}</span></div>
+	    </div>
+	    <div class="section">
+	        <h2>Configuration</h2>
+	        <div class="item"><span>.env File:</span><span class="status ${status.envExists ? 'ok' : 'error'}">${status.envExists ? checkmark + ' Exists' : cross + ' Missing'}</span></div>
+	        <div class="item"><span>Path:</span><code>${envPath}</code></div>
+	        <div class="item"><span>LLM Backend:</span><span class="info">${llmBackend}</span></div>
+	    </div>
+	    <div class="section">
+	        <h2>Ollama Connection</h2>
+	        <div class="item"><span>Host:</span><code>${ollamaHost}</code></div>
+	        <div class="item"><span>Model:</span><span>${ollamaModel}</span></div>
+	        <div class="item"><span>Status:</span><span class="status ${status.ollamaConnected ? 'ok' : 'error'}">${status.ollamaConnected ? checkmark + ' Connected' : cross + ' Disconnected'}</span></div>
+	    </div>
     <div class="section">
         <h2>OpenAI</h2>
         <div class="item"><span>API Key:</span><span class="status ${status.openaiConfigured ? 'ok' : 'warning'}">${status.openaiConfigured ? checkmark + ' Configured' : warning + ' Not configured'}</span></div>
     </div>
-    <div class="section">
-        <h2>Documents</h2>
-        <div class="item"><span>Data Directory:</span><code>${status.dataDir}</code></div>
-        <div class="item"><span>Ingested Documents:</span><span class="info">${status.documentCount}</span></div>
+	    <div class="section">
+	        <h2>Documents</h2>
+	        <div class="item"><span>Data Directory:</span><code>${dataDir}</code></div>
+	        <div class="item"><span>Ingested Documents:</span><span class="info">${status.documentCount}</span></div>
     </div>
 </body>
 </html>`;

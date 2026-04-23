@@ -36,6 +36,30 @@ describe('EnvManager', () => {
         assert.strictEqual(manager.getManifestPath('doc_beta'), path.join(docDir, 'manifest.json'));
         assert.deepStrictEqual(manager.readManifest('doc_beta'), { title: 'Beta' });
     });
+
+    it('persists the canonical LightRAG embedding model key', async () => {
+        const manager = new EnvManager(tempDir);
+
+        await manager.updateEnv('LIGHTRAG_EMBEDDING_MODEL', 'text-embedding-3-large');
+
+        const content = fs.readFileSync(path.join(tempDir, '.env'), 'utf8');
+        assert.ok(content.includes('LIGHTRAG_EMBEDDING_MODEL=text-embedding-3-large'));
+        assert.strictEqual(content.includes('OPENAI_EMBEDDING_MODEL='), false);
+
+        const env = await manager.readEnv();
+        assert.strictEqual(env.LIGHTRAG_EMBEDDING_MODEL, 'text-embedding-3-large');
+        assert.strictEqual(env.OPENAI_EMBEDDING_MODEL, 'text-embedding-3-large');
+    });
+
+    it('maps legacy OpenAI embedding env key into LightRAG canonical key', async () => {
+        fs.writeFileSync(path.join(tempDir, '.env'), 'OPENAI_EMBEDDING_MODEL=text-embedding-legacy\n');
+        const manager = new EnvManager(tempDir);
+
+        const env = await manager.readEnv();
+
+        assert.strictEqual(env.LIGHTRAG_EMBEDDING_MODEL, 'text-embedding-legacy');
+        assert.strictEqual(env.OPENAI_EMBEDDING_MODEL, 'text-embedding-legacy');
+    });
 });
 
 describe('DfmSessionManager path normalization', () => {

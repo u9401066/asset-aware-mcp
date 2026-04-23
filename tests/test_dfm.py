@@ -11,8 +11,10 @@ Tests cover:
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 
 import pytest
+from lxml import etree
 
 from src.domain.docx_entities import (
     CellFormat,
@@ -29,6 +31,7 @@ from src.domain.docx_value_objects import (
 )
 from src.infrastructure.dfm_parser import DfmParser
 from src.infrastructure.dfm_renderer import DfmRenderer
+from src.infrastructure.docx_adapter import NS, DocxAdapter
 
 # ============================================================================
 # Fixtures
@@ -122,12 +125,14 @@ class TestDfmBlockType:
         assert DfmBlockType.PARAGRAPH.is_editable
         assert DfmBlockType.HEADING.is_editable
         assert DfmBlockType.TABLE.is_editable
+        assert not DfmBlockType.CITATION.is_editable
         assert not DfmBlockType.CHART.is_editable
         assert not DfmBlockType.MACRO.is_editable
 
     def test_protected_types(self):
         assert DfmBlockType.CHART.is_protected
         assert DfmBlockType.TOC.is_protected
+        assert DfmBlockType.CITATION.is_protected
         assert DfmBlockType.MACRO.is_protected
         assert not DfmBlockType.PARAGRAPH.is_protected
         assert not DfmBlockType.HEADING.is_protected
@@ -246,6 +251,102 @@ class TestDfmBlock:
             runs=[FormatRun(text="only one")],
         )
         assert not b.has_mixed_format
+
+
+class TestDocxAdapterParsing:
+    def test_numbered_paragraph_without_list_style_is_list_item(self):
+        p = etree.fromstring(
+            f"""
+            <w:p xmlns:w="{NS['w']}">
+              <w:pPr>
+                <w:pStyle w:val="Normal"/>
+                <w:numPr>
+                  <w:ilvl w:val="2"/>
+                  <w:numId w:val="7"/>
+                </w:numPr>
+              </w:pPr>
+              <w:r><w:t>Nested numbered item</w:t></w:r>
+            </w:p>
+            """
+        )
+        ir = DocxIR(
+            doc_id="test_doc_001",
+            source_path="test.docx",
+            source_filename="test.docx",
+            checksum="abc123",
+            created_at=datetime(2025, 1, 1, 12, 0, 0),
+        )
+
+        DocxAdapter()._parse_paragraph(p, ir, {}, Path.cwd())
+
+        assert len(ir.blocks) == 1
+        block = ir.blocks[0]
+        assert block.block_type == DfmBlockType.LIST_ITEM
+        assert block.list_level == 2
+        assert block.num_id == 7
+
+    def test_corrupt_numbering_values_do_not_abort_paragraph_parse(self):
+        p = etree.fromstring(
+            f"""
+            <w:p xmlns:w="{NS['w']}">
+              <w:pPr>
+                <w:numPr>
+                  <w:ilvl w:val="not-an-int"/>
+                  <w:numId w:val="also-bad"/>
+                </w:numPr>
+              </w:pPr>
+              <w:r><w:t>Converted list-ish text</w:t></w:r>
+            </w:p>
+            """
+        )
+        ir = DocxIR(
+            doc_id="test_doc_001",
+            source_path="test.docx",
+            source_filename="test.docx",
+            checksum="abc123",
+            created_at=datetime(2025, 1, 1, 12, 0, 0),
+        )
+
+        DocxAdapter()._parse_paragraph(p, ir, {}, Path.cwd())
+
+        assert len(ir.blocks) == 1
+        assert ir.blocks[0].block_type == DfmBlockType.PARAGRAPH
+
+    def test_hyperlink_runs_are_parsed_and_cleared_on_edit(self):
+        p = etree.fromstring(
+            f"""
+            <w:p xmlns:w="{NS['w']}" xmlns:r="{NS['r']}">
+              <w:r><w:t>Prefix </w:t></w:r>
+              <w:hyperlink r:id="rId1">
+                <w:r><w:t>LINK</w:t></w:r>
+              </w:hyperlink>
+              <w:r><w:t> Suffix</w:t></w:r>
+            </w:p>
+            """
+        )
+        ir = DocxIR(
+            doc_id="test_doc_001",
+            source_path="test.docx",
+            source_filename="test.docx",
+            checksum="abc123",
+            created_at=datetime(2025, 1, 1, 12, 0, 0),
+        )
+        adapter = DocxAdapter()
+
+        adapter._parse_paragraph(p, ir, {}, Path.cwd())
+        assert ir.blocks[0].content == "Prefix LINK Suffix"
+
+        adapter._update_paragraph_text(
+            p,
+            DfmBlock(
+                id="p001",
+                block_type=DfmBlockType.PARAGRAPH,
+                content="Replacement",
+            ),
+        )
+
+        assert adapter._get_paragraph_text(p) == "Replacement"
+        assert p.find(f"{{{NS['w']}}}hyperlink") is not None
 
 
 class TestDocxIR:
@@ -513,12 +614,45 @@ class TestDfmParser:
         assert len(edits) == 1
         assert edits[0].block_type == DfmBlockType.BREAK
 
+    @pytest.mark.parametrize(
+        "block_type, block_id",
+        [
+            (DfmBlockType.FIELD, "f001"),
+            (DfmBlockType.HEADER, "hdr001"),
+            (DfmBlockType.FOOTER, "ftr001"),
+        ],
+    )
+    def test_protected_compound_blocks_do_not_swallow_following_edits(
+        self,
+        renderer: DfmRenderer,
+        parser: DfmParser,
+        block_type: DfmBlockType,
+        block_id: str,
+    ):
+        ir = DocxIR(doc_id="docx_1", source_path="demo.docx", checksum="abc")
+        ir.blocks.append(DfmBlock(id=block_id, block_type=block_type, content=""))
+        ir.blocks.append(
+            DfmBlock(
+                id="p001",
+                block_type=DfmBlockType.PARAGRAPH,
+                content="Original paragraph",
+            )
+        )
+
+        dfm = renderer.render(ir).replace("Original paragraph", "Edited paragraph")
+        result = parser.parse(dfm)
+
+        edit = next(e for e in result.edits if e.block_id == "p001")
+        assert edit.new_content == "Edited paragraph"
+
     def test_md_to_plain(self, parser: DfmParser):
         assert parser._md_to_plain("**bold**") == "bold"
         assert parser._md_to_plain("*italic*") == "italic"
         assert parser._md_to_plain("***both***") == "both"
         assert parser._md_to_plain("~~strike~~") == "strike"
         assert parser._md_to_plain("^super^") == "super"
+        literal = r"x \~not sub\~ y \^not super\^ z \\ slash \*stars\*"
+        assert parser._md_to_plain(literal) == "x ~not sub~ y ^not super^ z \\ slash *stars*"
 
     def test_parse_md_table(self, parser: DfmParser):
         table = "| A | B |\n| --- | --- |\n| 1 | 2 |\n| 3 | 4 |"
@@ -556,6 +690,25 @@ class TestDfmParser:
         assert parsed is not None
         assert parsed[1][0] == "A\nB\nC"
         assert parsed[2][0] == "Simple"
+
+    def test_md_table_escaped_pipe_roundtrip(self, parser: DfmParser):
+        """Round-trip: literal pipes inside cells must not create columns."""
+        original = [["A", "B"], ["x|y", r"path\name"]]
+        md = parser._rows_to_md_table(original)
+        parsed = parser._parse_md_table(md)
+        assert parsed == original
+
+    def test_docx_adapter_table_builder_escapes_literal_pipes(self, parser: DfmParser):
+        md = DocxAdapter._rows_to_md_table([["A", "B"], ["x|y", "z"]])
+        parsed = parser._parse_md_table(md)
+        assert parsed == [["A", "B"], ["x|y", "z"]]
+
+    def test_docx_adapter_table_parser_handles_escaped_literal_pipes(self):
+        md = "| A | B |\n| --- | --- |\n| x\\|y | z |"
+
+        parsed = DocxAdapter._parse_md_table(md)
+
+        assert parsed == [["A", "B"], ["x|y", "z"]]
 
 
 # ============================================================================
@@ -616,6 +769,95 @@ class TestRoundTrip:
         edit_ids = {e.block_id for e in parse_result.edits}
         original_ids = {b.id for b in sample_ir.blocks}
         assert original_ids.issubset(edit_ids)
+
+    def test_split_noop_preserves_literal_markdown_and_marker_comments(
+        self, renderer: DfmRenderer, parser: DfmParser
+    ):
+        content = (
+            "Keep *literal* **stars** ~~tildes~~ ^carets^ "
+            "<!-- @p999 --> <!-- @b:p999 -->"
+        )
+        ir = DocxIR(
+            doc_id="test_doc_001",
+            source_path="test.docx",
+            source_filename="test.docx",
+            checksum="abc123",
+            created_at=datetime(2025, 1, 1, 12, 0, 0),
+            blocks=[
+                DfmBlock(
+                    id="p001",
+                    block_type=DfmBlockType.PARAGRAPH,
+                    content=content,
+                )
+            ],
+        )
+
+        md_text, yaml_text = renderer.render_split(ir)
+        parse_result = parser.parse_split(md_text, yaml_text)
+        updated = parser.apply_edits(ir, parse_result)
+
+        assert parse_result.errors == []
+        assert "\\*" in md_text
+        assert "\\<!--" in md_text
+        assert updated.find_block("p001").content == content
+
+    def test_single_dfm_noop_preserves_literal_markdown_and_marker_comments(
+        self, renderer: DfmRenderer, parser: DfmParser
+    ):
+        content = "Keep *literal* and <!-- @b:p999 --> as text"
+        ir = DocxIR(
+            doc_id="test_doc_001",
+            source_path="test.docx",
+            source_filename="test.docx",
+            checksum="abc123",
+            created_at=datetime(2025, 1, 1, 12, 0, 0),
+            blocks=[
+                DfmBlock(
+                    id="p001",
+                    block_type=DfmBlockType.PARAGRAPH,
+                    content=content,
+                )
+            ],
+        )
+
+        dfm_text = renderer.render(ir)
+        parse_result = parser.parse(dfm_text)
+        updated = parser.apply_edits(ir, parse_result)
+
+        assert parse_result.errors == []
+        assert updated.find_block("p001").content == content
+
+    def test_multiline_list_item_roundtrips_in_split_and_single_dfm(
+        self, renderer: DfmRenderer, parser: DfmParser
+    ):
+        content = "first line\nsecond line with *literal* marker"
+        ir = DocxIR(
+            doc_id="test_doc_001",
+            source_path="test.docx",
+            source_filename="test.docx",
+            checksum="abc123",
+            created_at=datetime(2025, 1, 1, 12, 0, 0),
+            blocks=[
+                DfmBlock(
+                    id="l001",
+                    block_type=DfmBlockType.LIST_ITEM,
+                    content=content,
+                    list_level=1,
+                )
+            ],
+        )
+
+        md_text, yaml_text = renderer.render_split(ir)
+        split_result = parser.parse_split(md_text, yaml_text)
+        split_updated = parser.apply_edits(ir, split_result)
+
+        dfm_text = renderer.render(split_updated)
+        single_result = parser.parse(dfm_text)
+        single_updated = parser.apply_edits(split_updated, single_result)
+
+        assert split_result.errors == []
+        assert single_result.errors == []
+        assert single_updated.find_block("l001").content == content
 
     def test_apply_edits_paragraph(
         self, renderer: DfmRenderer, parser: DfmParser, sample_ir: DocxIR

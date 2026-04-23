@@ -7,9 +7,10 @@ Integration Tests — Marker ETL Pipeline
 對應規格：docs/marker-etl-spec.md Section 5.3
 
 執行方式：
-    pytest tests/integration/test_marker_etl.py -v
+    RUN_MARKER_INTEGRATION=1 pytest tests/integration/test_marker_etl.py -v
 
 跳過條件：
+    - 未設定 RUN_MARKER_INTEGRATION=1 時自動跳過（避免預設測試 OOM）
     - Marker 未安裝時自動跳過
     - 測試 PDF 不存在時自動跳過
 """
@@ -18,6 +19,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -25,6 +27,13 @@ import pytest
 # ============================================================================
 # Skip conditions
 # ============================================================================
+
+RUN_MARKER_INTEGRATION = os.getenv("RUN_MARKER_INTEGRATION") == "1"
+
+pytestmark = pytest.mark.skipif(
+    not RUN_MARKER_INTEGRATION,
+    reason="Set RUN_MARKER_INTEGRATION=1 to run heavyweight Marker integration tests.",
+)
 
 try:
     from src.infrastructure.marker_adapter import MarkerPDFExtractor

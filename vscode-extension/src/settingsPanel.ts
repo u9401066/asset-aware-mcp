@@ -8,6 +8,37 @@
 import * as vscode from 'vscode';
 import { EnvManager } from './envManager';
 
+function escapeHtml(value: string): string {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getNonce(): string {
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let nonce = '';
+    for (let i = 0; i < 32; i++) {
+        nonce += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+    }
+    return nonce;
+}
+
+const ALLOWED_ENV_KEYS = new Set([
+    'LLM_BACKEND',
+    'ETL_PROFILE',
+    'OLLAMA_HOST',
+    'OLLAMA_MODEL',
+    'OLLAMA_EMBEDDING_MODEL',
+    'OPENAI_API_KEY',
+    'OPENAI_MODEL',
+    'LIGHTRAG_EMBEDDING_MODEL',
+    'DATA_DIR',
+    'LIGHTRAG_WORKING_DIR',
+]);
+
 export class SettingsPanel {
     public static currentPanel: SettingsPanel | undefined;
     private readonly _panel: vscode.WebviewPanel;
@@ -27,7 +58,9 @@ export class SettingsPanel {
             async (message) => {
                 switch (message.command) {
                     case 'save':
-                        await this._saveSettings(message.settings);
+                        if (message.settings && typeof message.settings === 'object') {
+                            await this._saveSettings(message.settings as Record<string, string>);
+                        }
                         break;
                     case 'testOllama':
                         await this._testOllamaConnection(message.host);
@@ -85,6 +118,9 @@ export class SettingsPanel {
         try {
             // Update each setting
             for (const [key, value] of Object.entries(settings)) {
+                if (!ALLOWED_ENV_KEYS.has(key)) {
+                    continue;
+                }
                 await this._envManager.updateEnv(key, value);
             }
 
@@ -138,11 +174,16 @@ export class SettingsPanel {
     }
 
     private _getHtmlContent(env: Record<string, string>): string {
+        const nonce = getNonce();
+        const webview = this._panel.webview;
+        const value = (key: string, fallback = '') => escapeHtml(env[key] || fallback);
+
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
     <title>Asset-Aware MCP Settings</title>
     <style>
         * {
@@ -318,7 +359,7 @@ export class SettingsPanel {
             <div class="form-group">
                 <label for="etlProfile">Document Format Profile</label>
                 <p class="description">Different journals/formats need different extraction settings. Choose a profile that matches your documents.</p>
-                <select id="etlProfile" name="ETL_PROFILE" onchange="setProfile(this.value)">
+                <select id="etlProfile" name="ETL_PROFILE">
                     <option value="default" ${env['ETL_PROFILE'] === 'default' || !env['ETL_PROFILE'] ? 'selected' : ''}>Default (General purpose)</option>
                     <option value="arxiv" ${env['ETL_PROFILE'] === 'arxiv' ? 'selected' : ''}>arXiv (Double-column preprints)</option>
                     <option value="nature" ${env['ETL_PROFILE'] === 'nature' ? 'selected' : ''}>Nature/Scientific Reports</option>
@@ -336,9 +377,9 @@ export class SettingsPanel {
                 <label for="ollamaHost">Ollama Host URL</label>
                 <div class="input-group">
                     <input type="text" id="ollamaHost" name="OLLAMA_HOST"
-                           value="${env['OLLAMA_HOST'] || 'http://localhost:11434'}"
+                           value="${value('OLLAMA_HOST', 'http://localhost:11434')}"
                            placeholder="http://localhost:11434">
-                    <button type="button" class="btn btn-secondary" onclick="testOllama()">Test Connection</button>
+                    <button type="button" id="testOllamaButton" class="btn btn-secondary">Test Connection</button>
                 </div>
             </div>
 
@@ -346,7 +387,7 @@ export class SettingsPanel {
                 <label for="ollamaModel">LLM Model</label>
                 <p class="description">Model for text generation (e.g., qwen2.5:7b, llama3.2)</p>
                 <input type="text" id="ollamaModel" name="OLLAMA_MODEL"
-                       value="${env['OLLAMA_MODEL'] || 'qwen2.5:7b'}"
+                       value="${value('OLLAMA_MODEL', 'qwen2.5:7b')}"
                        placeholder="qwen2.5:7b">
             </div>
 
@@ -354,7 +395,7 @@ export class SettingsPanel {
                 <label for="ollamaEmbeddingModel">Embedding Model</label>
                 <p class="description">Model for text embeddings (e.g., nomic-embed-text)</p>
                 <input type="text" id="ollamaEmbeddingModel" name="OLLAMA_EMBEDDING_MODEL"
-                       value="${env['OLLAMA_EMBEDDING_MODEL'] || 'nomic-embed-text'}"
+                       value="${value('OLLAMA_EMBEDDING_MODEL', 'nomic-embed-text')}"
                        placeholder="nomic-embed-text">
             </div>
         </div>
@@ -367,9 +408,9 @@ export class SettingsPanel {
                 <p class="description">Your OpenAI API key (starts with sk-)</p>
                 <div class="input-group">
                     <input type="password" id="openaiApiKey" name="OPENAI_API_KEY"
-                           value="${env['OPENAI_API_KEY'] || ''}"
+                           value="${value('OPENAI_API_KEY')}"
                            placeholder="sk-...">
-                    <button type="button" class="toggle-visibility" onclick="togglePassword('openaiApiKey')">👁️</button>
+                    <button type="button" id="toggleOpenaiApiKey" class="toggle-visibility">👁️</button>
                 </div>
                 <p class="hint">Get your API key from <a href="https://platform.openai.com/api-keys">OpenAI Dashboard</a></p>
             </div>
@@ -377,14 +418,14 @@ export class SettingsPanel {
             <div class="form-group">
                 <label for="openaiModel">Model</label>
                 <input type="text" id="openaiModel" name="OPENAI_MODEL"
-                       value="${env['OPENAI_MODEL'] || 'gpt-4o-mini'}"
+                       value="${value('OPENAI_MODEL', 'gpt-4o-mini')}"
                        placeholder="gpt-4o-mini">
             </div>
 
             <div class="form-group">
                 <label for="openaiEmbeddingModel">Embedding Model</label>
-                <input type="text" id="openaiEmbeddingModel" name="OPENAI_EMBEDDING_MODEL"
-                       value="${env['OPENAI_EMBEDDING_MODEL'] || 'text-embedding-3-small'}"
+                <input type="text" id="openaiEmbeddingModel" name="LIGHTRAG_EMBEDDING_MODEL"
+                       value="${escapeHtml(env['LIGHTRAG_EMBEDDING_MODEL'] || env['OPENAI_EMBEDDING_MODEL'] || 'text-embedding-3-small')}"
                        placeholder="text-embedding-3-small">
             </div>
         </div>
@@ -396,7 +437,7 @@ export class SettingsPanel {
                 <label for="dataDir">Data Directory</label>
                 <p class="description">Directory for storing processed documents and manifests</p>
                 <input type="text" id="dataDir" name="DATA_DIR"
-                       value="${env['DATA_DIR'] || './data'}"
+                       value="${value('DATA_DIR', './data')}"
                        placeholder="./data">
             </div>
 
@@ -404,18 +445,18 @@ export class SettingsPanel {
                 <label for="lightragDir">LightRAG Directory</label>
                 <p class="description">Directory for LightRAG knowledge graph data</p>
                 <input type="text" id="lightragDir" name="LIGHTRAG_WORKING_DIR"
-                       value="${env['LIGHTRAG_WORKING_DIR'] || env['LIGHTRAG_DIR'] || './data/lightrag_db'}"
+                       value="${escapeHtml(env['LIGHTRAG_WORKING_DIR'] || env['LIGHTRAG_DIR'] || './data/lightrag_db')}"
                        placeholder="./data/lightrag_db">
             </div>
         </div>
 
         <div class="actions">
-            <button type="button" class="btn btn-secondary" onclick="refreshForm()">↻ Refresh</button>
+            <button type="button" id="refreshButton" class="btn btn-secondary">↻ Refresh</button>
             <button type="submit" class="btn">💾 Save Settings</button>
         </div>
     </form>
 
-    <script>
+    <script nonce="${nonce}">
         const vscode = acquireVsCodeApi();
 
         // Toggle backend sections visibility
@@ -428,6 +469,14 @@ export class SettingsPanel {
         }
 
         document.getElementById('llmBackend').addEventListener('change', updateSectionVisibility);
+        document.getElementById('etlProfile').addEventListener('change', (event) => {
+            setProfile(event.target.value);
+        });
+        document.getElementById('testOllamaButton').addEventListener('click', testOllama);
+        document.getElementById('toggleOpenaiApiKey').addEventListener('click', () => {
+            togglePassword('openaiApiKey');
+        });
+        document.getElementById('refreshButton').addEventListener('click', refreshForm);
         updateSectionVisibility();
 
         // Form submission

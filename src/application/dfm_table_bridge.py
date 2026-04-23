@@ -22,6 +22,7 @@ from src.domain.docx_entities import (
 )
 from src.domain.docx_value_objects import DfmBlockType
 from src.domain.table_entities import ColumnDef, TableContext
+from src.infrastructure.dfm_parser import DfmParser
 
 logger = logging.getLogger(__name__)
 
@@ -295,8 +296,7 @@ def _parse_md_table(text: str) -> list[list[str]] | None:
             continue
         if not line.startswith("|"):
             continue
-        cells = line.split("|")
-        cells = [c.strip() for c in cells[1:-1]]
+        cells = DfmParser._split_md_table_row(line)
         # Restore escaped newlines
         cells = [c.replace("<br>", "\n") for c in cells]
         rows.append(cells)
@@ -319,7 +319,7 @@ def _table_context_to_md(tc: TableContext) -> str:
     for row in tc.rows:
         cells = [str(row.get(c, "")) for c in col_names]
         # Escape pipe characters and newlines in cell content
-        cells = [c.replace("|", "\\|").replace("\n", "<br>") for c in cells]
+        cells = [DfmParser._escape_table_cell(c) for c in cells]
         lines.append("| " + " | ".join(cells) + " |")
 
     return "\n".join(lines)
@@ -363,7 +363,7 @@ def _parse_chart_xml_to_table(
         TableContext with extracted data, or None on failure
     """
     try:
-        from lxml import etree
+        from lxml import etree  # type: ignore[import-untyped]
     except ImportError:
         logger.warning("lxml not available for chart XML parsing")
         return None

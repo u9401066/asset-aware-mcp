@@ -2,7 +2,7 @@
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
     "description": "Medical RAG MCP Server with precise document asset retrieval and Docx editing (DFM) — tables, figures, sections from PDFs + .docx/.doc round-trip with integrity validation",
-    "version": "0.6.8",
+    "version": "0.6.9",
     "publisher": "u9401066",
     "engines": {
         "vscode": "^1.96.0"
@@ -144,6 +144,11 @@
                     "default": "gpt-4o-mini",
                     "description": "OpenAI model name"
                 },
+                "assetAwareMcp.openaiEmbeddingModel": {
+                    "type": "string",
+                    "default": "text-embedding-3-small",
+                    "description": "OpenAI embedding model name for LightRAG"
+                },
                 "assetAwareMcp.dataDir": {
                     "type": "string",
                     "default": "./data",
@@ -216,19 +221,11 @@
             "editor/title": [
                 {
                     "command": "assetAwareMcp.saveDfmToDocx",
-                    "when": "resourceExtname == .dfm",
+                    "when": "resourceExtname == .dfm && assetAwareMcp.dfmTracked",
                     "group": "navigation"
                 }
             ]
         },
-        "keybindings": [
-            {
-                "command": "assetAwareMcp.saveDfmToDocx",
-                "key": "ctrl+shift+s",
-                "mac": "cmd+shift+s",
-                "when": "resourceExtname == .dfm"
-            }
-        ],
         "walkthroughs": [
             {
                 "id": "assetAwareMcp.welcome",

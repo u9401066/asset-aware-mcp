@@ -200,6 +200,7 @@ class JobService:
             total_steps = max(total_files, 1) * steps_per_file
             job.update_progress(total=total_steps)
             await self.job_store.update(job)
+            failed_files: list[dict[str, str]] = []
 
             for i, file_path in enumerate(job.input_files):
                 filename = Path(file_path).name
@@ -247,7 +248,12 @@ class JobService:
                     if result is not None and result.success:
                         job.output_doc_ids.append(result.doc_id)
                     else:
-                        error_msg = result.error if result else "No result returned"
+                        error_msg = (
+                            result.error
+                            if result is not None and result.error is not None
+                            else "No result returned"
+                        )
+                        failed_files.append({"file": file_path, "error": error_msg})
                         logger.warning(f"Failed to process {filename}: {error_msg}")
                         job.update_progress(
                             step=base_step + steps_per_file,
@@ -260,30 +266,53 @@ class JobService:
                 except asyncio.CancelledError:
                     raise  # Re-raise cancellation
                 except Exception as e:
+                    error_msg = str(e)
+                    failed_files.append({"file": file_path, "error": error_msg})
                     logger.error(f"Error processing {filename}: {e}")
                     job.update_progress(
                         step=base_step + steps_per_file,
                         total=total_steps,
                         phase="Failed",
-                        message=f"[{i + 1}/{total_files}] Error processing {filename}: {e}",
+                        message=f"[{i + 1}/{total_files}] Error processing {filename}: {error_msg}",
                     )
                     await self.job_store.update(job)
 
-            # Complete job
-            job.complete(
-                result={
-                    "files_processed": total_files,
-                    "documents_created": len(job.output_doc_ids),
-                    "doc_ids": job.output_doc_ids,
-                }
-            )
-            job.progress.message = (
-                f"Completed! Created {len(job.output_doc_ids)} document(s)"
-            )
+            result_payload = {
+                "files_processed": total_files,
+                "files_failed": len(failed_files),
+                "documents_created": len(job.output_doc_ids),
+                "doc_ids": job.output_doc_ids,
+                "failed_files": failed_files,
+            }
+            if failed_files:
+                error_msg = (
+                    f"{len(failed_files)}/{total_files} file(s) failed during ingestion"
+                )
+                job.fail(error_msg)
+                job.result = result_payload
+                job.update_progress(
+                    step=total_steps,
+                    total=total_steps,
+                    phase="Failed",
+                    message=error_msg,
+                )
+            else:
+                # Complete job only when every input file succeeded.
+                job.complete(result=result_payload)
+                job.update_progress(
+                    step=total_steps,
+                    total=total_steps,
+                    phase="Completed",
+                    message=f"Completed! Created {len(job.output_doc_ids)} document(s)",
+                )
             await self.job_store.update(job)
 
             logger.info(
-                f"Job {job_id} completed: {len(job.output_doc_ids)}/{total_files} files processed"
+                "Job %s finished with status=%s: %d/%d files processed",
+                job_id,
+                job.status.value,
+                len(job.output_doc_ids),
+                total_files,
             )
 
         except asyncio.CancelledError:

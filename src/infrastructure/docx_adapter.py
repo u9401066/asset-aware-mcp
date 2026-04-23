@@ -15,7 +15,7 @@ import shutil
 from pathlib import Path
 from zipfile import ZipFile
 
-from lxml import etree
+from lxml import etree  # type: ignore[import-untyped]
 
 from src.domain.docx_entities import (
     CellFormat,
@@ -32,6 +32,7 @@ from src.domain.docx_value_objects import (
     ImageAnchorType,
     TableCellAlign,
 )
+from src.infrastructure.dfm_parser import DfmParser
 from src.infrastructure.encoding_guard import validate_zip_magic
 
 logger = logging.getLogger(__name__)
@@ -79,6 +80,16 @@ def _twips_to_cm(twips: int) -> float:
 def _half_pt_to_pt(half_pt: int) -> float:
     """Convert half-points to points."""
     return half_pt * HALF_POINTS_TO_PT
+
+
+def _safe_int(value: str | None, default: int | None = None) -> int | None:
+    """Parse an OpenXML integer attribute without trusting converted DOCX."""
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 
 class DocxAdapter:
@@ -450,12 +461,15 @@ class DocxAdapter:
                     runs=runs,
                 )
             )
-        elif style_name and (
-            "list" in style_name.lower() or "bullet" in style_name.lower()
-        ):
+            return
+        list_level = self._get_list_level(ppr)
+        num_id = self._get_num_id(ppr)
+        style_looks_list = bool(
+            style_name
+            and ("list" in style_name.lower() or "bullet" in style_name.lower())
+        )
+        if num_id is not None or style_looks_list:
             # List item
-            list_level = self._get_list_level(ppr)
-            num_id = self._get_num_id(ppr)
             block_id = ir.next_block_id(DfmBlockType.LIST_ITEM)
             ir.add_block(
                 DfmBlock(
@@ -499,7 +513,7 @@ class DocxAdapter:
     def _parse_runs(self, p_elem: etree._Element) -> list[FormatRun]:
         """Parse all <w:r> elements in a paragraph into FormatRuns."""
         runs = []
-        for r_elem in p_elem.findall(f"{{{NS['w']}}}r"):
+        for r_elem in self._iter_text_runs(p_elem):
             text_parts = []
             for child in r_elem:
                 tag = etree.QName(child.tag).localname
@@ -1125,7 +1139,9 @@ class DocxAdapter:
         if outline is not None:
             val = outline.get(f"{{{NS['w']}}}val")
             if val is not None:
-                return int(val)
+                parsed = _safe_int(val)
+                if parsed is not None:
+                    return parsed
 
         # Also check style name for heading pattern
         style = self._get_style_name(ppr)
@@ -1144,8 +1160,9 @@ class DocxAdapter:
             ilvl = num_pr.find(f"{{{NS['w']}}}ilvl")
             if ilvl is not None:
                 val = ilvl.get(f"{{{NS['w']}}}val")
-                if val:
-                    return int(val)
+                parsed = _safe_int(val)
+                if parsed is not None:
+                    return parsed
         return 0
 
     def _get_num_id(self, ppr: etree._Element | None) -> int | None:
@@ -1157,8 +1174,9 @@ class DocxAdapter:
             num_id = num_pr.find(f"{{{NS['w']}}}numId")
             if num_id is not None:
                 val = num_id.get(f"{{{NS['w']}}}val")
-                if val:
-                    return int(val)
+                parsed = _safe_int(val)
+                if parsed is not None:
+                    return parsed
         return None
 
     def _has_mixed_formatting(self, runs: list[FormatRun]) -> bool:
@@ -1265,10 +1283,15 @@ class DocxAdapter:
             while len(row) < max_cols:
                 row.append("")
 
-        # Clean cell text (escape newlines for markdown, strip)
+        # Clean cell text (escape table delimiters/newlines for markdown, strip)
         for row in rows:
             for i, cell in enumerate(row):
-                row[i] = cell.replace("\n", "<br>").strip()
+                row[i] = (
+                    cell.replace("\\", "\\\\")
+                    .replace("|", "\\|")
+                    .replace("\n", "<br>")
+                    .strip()
+                )
 
         # Calculate column widths
         widths = [0] * max_cols
@@ -1434,7 +1457,7 @@ class DocxAdapter:
 
     def _update_paragraph_text(self, p_elem: etree._Element, block: DfmBlock) -> None:
         """Update text content of a paragraph element from a DfmBlock."""
-        runs = p_elem.findall(f"{{{NS['w']}}}r")
+        runs = self._iter_text_runs(p_elem)
         if not runs:
             return
 
@@ -1568,10 +1591,14 @@ class DocxAdapter:
 
     def _set_paragraph_plain_text(self, p_elem: etree._Element, text: str) -> None:
         """Replace the visible text in a paragraph while preserving existing runs."""
-        runs = p_elem.findall(f"{{{NS['w']}}}r")
+        runs = self._iter_text_runs(p_elem)
         if not runs:
             return
         self._set_run_texts(runs, [text])
+
+    def _iter_text_runs(self, p_elem: etree._Element) -> list[etree._Element]:
+        """Return paragraph runs in document order, including hyperlink/SDT runs."""
+        return list(p_elem.findall(f".//{{{NS['w']}}}r"))
 
     def _set_run_texts(self, runs: list[etree._Element], segments: list[str]) -> None:
         """Assign visible text across existing XML runs without rewriting structure."""
@@ -1605,7 +1632,7 @@ class DocxAdapter:
             # Skip separator row
             if re.match(r"^\|[\s\-:|]+\|$", line):
                 continue
-            cells = [c.strip() for c in line.split("|")[1:-1]]
+            cells = DfmParser._split_md_table_row(line)
             # Restore escaped newlines (<br> → real newline)
             cells = [c.replace("<br>", "\n") for c in cells]
             rows.append(cells)

@@ -69,15 +69,16 @@ class TestConvertBlocksToJson:
         assert result[0]["bbox"] == [10.0, 20.0, 500.0, 40.0]
         assert result[0]["section_hierarchy"] == {"1": "Intro"}
 
-    def test_text_truncation(self, mock_service: DocumentService):
-        """長文字被截斷至 500 字元。"""
+    def test_text_preserved_with_preview(self, mock_service: DocumentService):
+        """Full block text is preserved for citation-ready verification."""
         long_text = "A" * 1000
         blocks = [
             MarkerBlock(block_id="blk_0001", block_type="Text", page=1, text=long_text),
         ]
         result = mock_service._convert_blocks_to_json(blocks)
 
-        assert len(result[0]["text"]) == 500
+        assert len(result[0]["text"]) == 1000
+        assert len(result[0]["text_preview"]) == 500
 
     def test_empty_text_handled(self, mock_service: DocumentService):
         """空文字正確處理。"""

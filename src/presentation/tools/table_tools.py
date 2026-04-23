@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from src.presentation.dependencies import (
     document_service,
+    repository,
     table_service,
 )
 from src.presentation.mcp_app import mcp
@@ -26,10 +27,37 @@ from src.presentation.mcp_context import log_message, report_progress
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import Context
+
+    from src.domain.citation import EvidenceSpan
 else:
     Context = Any
 
 logger = logging.getLogger(__name__)
+
+
+def _span_asset_ref(span: EvidenceSpan) -> dict[str, Any]:
+    ref: dict[str, Any] = {
+        "source_type": "span",
+        "doc_id": span.doc_id,
+        "span_id": span.span_id,
+        "block_id": span.block_id,
+        "page": span.page,
+        "source_revision_id": span.source_revision_id,
+        "locator_version": span.locator_version,
+        "quote": span.text,
+        "quote_sha256": span.text_sha256,
+        "excerpt": span.text[:200],
+        "craap": span.craap.model_dump(exclude_none=True),
+    }
+    if span.line_start is not None and span.line_end is not None:
+        ref["line_range"] = [span.line_start, span.line_end]
+    if span.char_start is not None and span.char_end is not None:
+        ref["char_range"] = [span.char_start, span.char_end]
+    if span.byte_start is not None and span.byte_end is not None:
+        ref["byte_range"] = [span.byte_start, span.byte_end]
+    if span.bbox:
+        ref["bbox"] = span.bbox
+    return ref
 
 # ============================================================================
 # 1. plan_table — 規劃 + 模板
@@ -1162,10 +1190,18 @@ async def discover_sources(
                 continue
 
             doc_results = []
+            query_lower = query.lower()
+
+            # Search citation-ready evidence spans first for precise support.
+            for span in repository.load_citation_index(doc_id):
+                if query_lower not in span.text.lower():
+                    continue
+                doc_results.append(_span_asset_ref(span))
+                if len(doc_results) >= limit:
+                    break
 
             # Search sections
             if manifest.assets.sections:
-                query_lower = query.lower()
                 for sec in manifest.assets.sections:
                     if (
                         query_lower in (sec.title or "").lower()
@@ -1199,9 +1235,11 @@ async def discover_sources(
                 found_any = True
                 lines.append(f"## 📄 {doc_id} ({manifest.title})")
                 for r in doc_results[:limit]:
+                    asset_label = r.get("asset_id") or r.get("span_id") or "source"
+                    display_label = r.get("label") or r.get("excerpt") or asset_label
                     lines.append(
-                        f"  - **{r['source_type']}** `{r['asset_id']}`: "
-                        f"{r['label']} (p.{r.get('page', '?')})"
+                        f"  - **{r['source_type']}** `{asset_label}`: "
+                        f"{display_label} (p.{r.get('page', '?')})"
                     )
                     lines.append(
                         f"    ```json\n    {json.dumps(r, ensure_ascii=False)}\n    ```"

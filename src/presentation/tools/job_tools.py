@@ -71,6 +71,11 @@ async def get_job_status(job_id: str) -> str:
     if job.error:
         lines.append(f"\n**Error:** {job.error}")
 
+    if job.result and job.result.get("failed_files"):
+        lines.append("\n**Failed Files:**")
+        for item in job.result["failed_files"]:
+            lines.append(f"  - `{item.get('file', '')}`: {item.get('error', '')}")
+
     if job.status == JobStatus.COMPLETED and job.result:
         lines.append("\n---")
         lines.append("✅ **Job completed successfully!**")

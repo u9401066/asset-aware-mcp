@@ -72,7 +72,7 @@ asset_service = AssetService(repository=repository)
 knowledge_service = KnowledgeService(knowledge_graph=knowledge_graph)
 job_service = JobService(job_store=job_store, document_service=document_service)
 segmentation_service = SegmentationService(repository=repository)
-section_service = SectionService(data_dir=settings.data_dir)
+section_service = SectionService(repository=repository)
 table_service = TableService(
     table_output_dir=settings.table_output_dir,
     table_renderer=excel_renderer,

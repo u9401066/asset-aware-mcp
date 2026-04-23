@@ -2,6 +2,9 @@
 Unit tests for TableService.
 """
 
+from pathlib import Path
+from zipfile import ZipFile
+
 import pytest
 
 from src.application.table_service import TableService
@@ -126,3 +129,42 @@ async def test_render_table_excel(table_service, tmp_path):
     assert result["success"] is True
     assert "test_output" in result["file_path"]
     assert result["file_path"].endswith(".xlsx")
+
+
+@pytest.mark.asyncio
+async def test_render_table_sanitizes_excel_filename(table_service, tmp_path):
+    columns = [{"name": "Drug", "type": "text"}]
+    table_id = table_service.create_table("comparison", "Test", columns)
+    table_service.add_rows(table_id, [{"Drug": "A"}])
+
+    result = await table_service.render_table(
+        table_id, format="excel", filename="../evil report"
+    )
+
+    file_path = Path(result["file_path"])
+    assert file_path.parent == tmp_path.resolve()
+    assert file_path.name.startswith("evil_report_")
+
+
+@pytest.mark.asyncio
+async def test_render_table_disables_formula_injection(table_service):
+    columns = [{"name": "Drug", "type": "text"}, {"name": "Reference", "type": "url"}]
+    table_id = table_service.create_table("comparison", "Test", columns)
+    table_service.add_rows(
+        table_id,
+        [
+            {
+                "Drug": '=HYPERLINK("https://evil.example","click")',
+                "Reference": '=cmd|"/C calc"!A0',
+            }
+        ],
+    )
+
+    result = await table_service.render_table(
+        table_id, format="excel", filename="formula_probe"
+    )
+
+    with ZipFile(result["file_path"]) as workbook:
+        sheet_xml = workbook.read("xl/worksheets/sheet1.xml").decode("utf-8")
+
+    assert "<f>" not in sheet_xml

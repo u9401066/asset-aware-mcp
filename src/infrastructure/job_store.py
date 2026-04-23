@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -18,6 +19,8 @@ if TYPE_CHECKING:
     from src.domain.job import Job, JobSummary
 
 logger = logging.getLogger(__name__)
+
+_JOB_ID_RE = re.compile(r"^job_[A-Za-z0-9_:-]+$")
 
 
 class FileJobStore(JobStoreInterface):
@@ -34,12 +37,20 @@ class FileJobStore(JobStoreInterface):
         Args:
             data_dir: Base data directory
         """
-        self.jobs_dir = Path(data_dir) / "jobs"
+        self.jobs_dir = (Path(data_dir) / "jobs").resolve()
         self.jobs_dir.mkdir(parents=True, exist_ok=True)
 
     def _job_path(self, job_id: str) -> Path:
-        """Get file path for a job."""
-        return self.jobs_dir / f"{job_id}.json"
+        """Get file path for a job while preventing path traversal."""
+        if not _JOB_ID_RE.fullmatch(job_id):
+            raise ValueError(f"Invalid job id: {job_id}")
+
+        path = (self.jobs_dir / f"{job_id}.json").resolve()
+        try:
+            path.relative_to(self.jobs_dir)
+        except ValueError as exc:
+            raise ValueError(f"Job path escapes storage root: {job_id}") from exc
+        return path
 
     async def create(self, job: Job) -> Job:
         """Create a new job."""
@@ -57,7 +68,10 @@ class FileJobStore(JobStoreInterface):
         """Get a job by ID."""
         from src.domain.job import Job
 
-        path = self._job_path(job_id)
+        try:
+            path = self._job_path(job_id)
+        except ValueError:
+            return None
         if not path.exists():
             return None
 
@@ -80,7 +94,10 @@ class FileJobStore(JobStoreInterface):
 
     async def delete(self, job_id: str) -> bool:
         """Delete a job."""
-        path = self._job_path(job_id)
+        try:
+            path = self._job_path(job_id)
+        except ValueError:
+            return False
         if path.exists():
             path.unlink()
             logger.info(f"Deleted job: {job_id}")

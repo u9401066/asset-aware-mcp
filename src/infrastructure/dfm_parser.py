@@ -211,7 +211,7 @@ class DfmParser:
             while content_lines and content_lines[-1].strip() == "":
                 content_lines.pop()
 
-            raw_content = "\n".join(content_lines).strip()
+            raw_content = "\n".join(content_lines).strip("\n")
 
             # Look up metadata
             meta = block_meta.get(block_id, {})
@@ -250,16 +250,14 @@ class DfmParser:
                     edit.new_content = self._md_to_plain(raw_content)
 
             elif bt == DfmBlockType.LIST_ITEM:
-                lm = _LIST_ITEM_RE.match(raw_content)
-                if lm:
-                    edit.new_content = self._md_to_plain(lm.group(2))
-                else:
-                    edit.new_content = self._md_to_plain(raw_content)
+                edit.new_content = self._md_to_plain(
+                    self._strip_list_markdown(raw_content)
+                )
 
             elif bt == DfmBlockType.CAPTION:
                 # Strip italic markers
                 clean = raw_content.strip("*").strip()
-                edit.new_content = clean
+                edit.new_content = self._md_to_plain(clean)
 
             else:
                 # Paragraph etc.
@@ -542,7 +540,7 @@ class DfmParser:
             clean_content = heading_m.group(2)
         elif list_m:
             block_type = DfmBlockType.LIST_ITEM
-            clean_content = list_m.group(2)
+            clean_content = self._strip_list_markdown(raw_content)
         elif (
             raw_content.startswith("*")
             and not raw_content.startswith("**")
@@ -564,6 +562,27 @@ class DfmParser:
             )
         )
         return i
+
+    @staticmethod
+    def _strip_list_markdown(raw_content: str) -> str:
+        """Remove only the first list marker while keeping continuation lines."""
+        lines = raw_content.splitlines()
+        if not lines:
+            return raw_content
+
+        first = _LIST_ITEM_RE.match(lines[0])
+        if not first:
+            return raw_content
+
+        indent = first.group(1)
+        continuation_prefix = indent + "  "
+        stripped = [first.group(2)]
+        for line in lines[1:]:
+            if line.startswith(continuation_prefix):
+                stripped.append(line[len(continuation_prefix) :])
+            else:
+                stripped.append(line)
+        return "\n".join(stripped)
 
     def _parse_compound_block(
         self,
@@ -602,12 +621,21 @@ class DfmParser:
         # Find closing tag
         close_tag = f"<!-- /dfm:{block_type_str} -->"
         content_lines: list[str] = []
+        found_close = False
         while i < len(lines):
             if lines[i].strip() == close_tag:
                 i += 1
+                found_close = True
                 break
             content_lines.append(lines[i])
             i += 1
+
+        if not found_close:
+            result.errors.append(
+                f"MISSING_CLOSE_TAG: Compound block {block_id} "
+                f"({block_type_str}) missing {close_tag}"
+            )
+            return start + 1
 
         content = "\n".join(content_lines).strip()
 
@@ -689,12 +717,22 @@ class DfmParser:
         # Find closing tag
         close_tag = f"<!-- /dfm:{block_type_str} -->"
         content_lines: list[str] = []
+        content_start = i
+        found_close = False
         while i < len(lines):
             if lines[i].strip() == close_tag:
                 i += 1
+                found_close = True
                 break
             content_lines.append(lines[i])
             i += 1
+
+        if not found_close:
+            result.errors.append(
+                f"MISSING_CLOSE_TAG: Compound block {block_id} "
+                f"({block_type_str}) missing {close_tag}"
+            )
+            return content_start
 
         content = "\n".join(content_lines).strip()
 
@@ -754,13 +792,42 @@ class DfmParser:
                 continue
             if not line.startswith("|"):
                 continue
-            # Split by pipes, strip outer empties
-            cells = line.split("|")
-            cells = [c.strip() for c in cells[1:-1]]  # Remove first/last empty
+            cells = DfmParser._split_md_table_row(line)
             # Restore escaped newlines (<br> → real newline)
             cells = [c.replace("<br>", "\n") for c in cells]
             rows.append(cells)
         return rows if rows else None
+
+    @staticmethod
+    def _split_md_table_row(line: str) -> list[str]:
+        """Split a Markdown pipe-table row while respecting escaped pipes."""
+        cells: list[str] = []
+        current: list[str] = []
+        escaped = False
+
+        for char in line.strip():
+            if escaped:
+                current.append(char)
+                escaped = False
+                continue
+            if char == "\\":
+                escaped = True
+                continue
+            if char == "|":
+                cells.append("".join(current).strip())
+                current = []
+                continue
+            current.append(char)
+
+        if escaped:
+            current.append("\\")
+        cells.append("".join(current).strip())
+
+        if cells and cells[0] == "":
+            cells = cells[1:]
+        if cells and cells[-1] == "":
+            cells = cells[:-1]
+        return cells
 
     @staticmethod
     def _rows_to_md_table(rows: list[list[str]]) -> str:
@@ -778,9 +845,16 @@ class DfmParser:
             # Pad row to match header width
             padded = row + [""] * (len(rows[0]) - len(row))
             # Escape newlines in cell content for markdown table
-            escaped = [c.replace("\n", "<br>") for c in padded[: len(rows[0])]]
+            escaped = [
+                DfmParser._escape_table_cell(c) for c in padded[: len(rows[0])]
+            ]
             lines.append("| " + " | ".join(escaped) + " |")
         return "\n".join(lines)
+
+    @staticmethod
+    def _escape_table_cell(cell: str) -> str:
+        """Escape Markdown table delimiters while preserving cell text."""
+        return cell.replace("\\", "\\\\").replace("|", "\\|").replace("\n", "<br>")
 
     @staticmethod
     def _normalize_table_rows(rows: list[list[str]] | None) -> list[list[str]]:
@@ -890,18 +964,27 @@ class DfmParser:
     @staticmethod
     def _md_to_plain(text: str) -> str:
         """Strip common Markdown formatting to get plain text."""
+        escaped_tokens: dict[str, str] = {}
+
+        def protect_escaped(match: re.Match) -> str:
+            token = f"\u0000ESC{len(escaped_tokens)}\u0000"
+            escaped_tokens[token] = match.group(1)
+            return token
+
+        text = re.sub(r"\\([\\*~^])", protect_escaped, text)
         # Bold+italic
-        text = re.sub(r"\*{3}(.+?)\*{3}", r"\1", text)
+        text = re.sub(r"(?<!\\)\*{3}(.+?)(?<!\\)\*{3}", r"\1", text)
         # Bold
-        text = re.sub(r"\*{2}(.+?)\*{2}", r"\1", text)
+        text = re.sub(r"(?<!\\)\*{2}(.+?)(?<!\\)\*{2}", r"\1", text)
         # Italic
         text = re.sub(r"(?<!\\)\*(.+?)(?<!\\)\*", r"\1", text)
         # Strikethrough
-        text = re.sub(r"~~(.+?)~~", r"\1", text)
+        text = re.sub(r"(?<!\\)~~(.+?)(?<!\\)~~", r"\1", text)
         # Superscript
-        text = re.sub(r"\^(.+?)\^", r"\1", text)
+        text = re.sub(r"(?<!\\)\^(.+?)(?<!\\)\^", r"\1", text)
         # Subscript (pandoc-style)
-        text = re.sub(r"~(.+?)~", r"\1", text)
-        # Unescape after stripping markers
-        text = DfmParser._unescape_md(text)
+        text = re.sub(r"(?<!\\)~(?!~)(.+?)(?<!\\)~", r"\1", text)
+        for token, value in escaped_tokens.items():
+            text = text.replace(token, value)
+        text = text.replace("\\<!--", "<!--")
         return text

@@ -89,6 +89,7 @@ export const window = {
     showOpenDialog: async () => undefined,
     showSaveDialog: async () => undefined,
     showQuickPick: async () => undefined,
+    withProgress: async (_options: any, task: any) => task({ report() { /* no-op */ } }),
     activeTextEditor: undefined as any,
     onDidChangeActiveTextEditor: () => ({ dispose() { /* no-op */ } }),
 };

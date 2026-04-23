@@ -24,7 +24,7 @@ describe('AssetAwareMcpProvider', () => {
     function makeContext(overrides: Record<string, any> = {}) {
         return {
             globalState: { get: () => undefined },
-            extension: { packageJSON: { version: '0.6.8' } },
+            extension: { packageJSON: { version: '0.6.9' } },
             ...overrides,
         } as any;
     }
@@ -39,7 +39,7 @@ describe('AssetAwareMcpProvider', () => {
         assert.ok(servers[0].args.includes('--python'));
         assert.ok(servers[0].args.includes('3.11'));
         assert.ok(servers[0].args.includes('--from'));
-        assert.ok(servers[0].args.includes('asset-aware-mcp==0.6.8'));
+        assert.ok(servers[0].args.includes('asset-aware-mcp==0.6.9'));
         assert.strictEqual(servers[0].args[servers[0].args.length - 1], 'asset-aware-mcp');
     });
 
@@ -79,7 +79,7 @@ describe('AssetAwareMcpProvider', () => {
 
         assert.ok(servers[0].args.includes('--upgrade'));
         assert.ok(servers[0].args.includes('--from'));
-        assert.ok(servers[0].args.includes('asset-aware-mcp==0.6.8'));
+        assert.ok(servers[0].args.includes('asset-aware-mcp==0.6.9'));
     });
 
     it('does not add --upgrade flag when needsUpgrade is false', () => {
@@ -89,5 +89,57 @@ describe('AssetAwareMcpProvider', () => {
 
         assert.ok(!servers[0].args.includes('--upgrade'));
         assert.ok(servers[0].args.includes('--from'));
+    });
+
+    it('merges workspace .env in production mode', () => {
+        fs.writeFileSync(
+            path.join(tempDir, '.env'),
+            'OLLAMA_MODEL=from-env\nDATA_DIR=custom-data\nLIGHTRAG_EMBEDDING_MODEL=text-embedding-3-large\n',
+        );
+        const provider = new AssetAwareMcpProvider(tempDir, undefined, makeContext());
+
+        const servers = provider.provideMcpServerDefinitions({} as any) as any[];
+
+        assert.strictEqual(servers[0].env.OLLAMA_MODEL, 'from-env');
+        assert.strictEqual(
+            servers[0].env.DATA_DIR,
+            path.resolve(tempDir, 'custom-data'),
+        );
+        assert.strictEqual(
+            servers[0].env.LIGHTRAG_EMBEDDING_MODEL,
+            'text-embedding-3-large',
+        );
+    });
+
+    it('passes OpenAI embedding setting to Python runtime env', () => {
+        __setConfigurationValue('assetAwareMcp.openaiApiKey', 'sk-test');
+        __setConfigurationValue('assetAwareMcp.openaiEmbeddingModel', 'text-embedding-3-large');
+        const provider = new AssetAwareMcpProvider(tempDir, undefined, makeContext());
+
+        const servers = provider.provideMcpServerDefinitions({} as any) as any[];
+
+        assert.strictEqual(
+            servers[0].env.LIGHTRAG_EMBEDDING_MODEL,
+            'text-embedding-3-large',
+        );
+    });
+
+    it('maps legacy OPENAI_EMBEDDING_MODEL .env values to LIGHTRAG_EMBEDDING_MODEL', () => {
+        fs.writeFileSync(
+            path.join(tempDir, '.env'),
+            'OPENAI_EMBEDDING_MODEL=text-embedding-legacy\n',
+        );
+        const provider = new AssetAwareMcpProvider(tempDir, undefined, makeContext());
+
+        const servers = provider.provideMcpServerDefinitions({} as any) as any[];
+
+        assert.strictEqual(
+            servers[0].env.LIGHTRAG_EMBEDDING_MODEL,
+            'text-embedding-legacy',
+        );
+        assert.strictEqual(
+            servers[0].env.OPENAI_EMBEDDING_MODEL,
+            'text-embedding-legacy',
+        );
     });
 });

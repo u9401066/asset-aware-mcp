@@ -10,22 +10,27 @@
 # ============================================================================
 
 # Stage 1: Builder — install dependencies
-FROM python:3.12-slim AS builder
+FROM python:3.12-slim-bookworm AS builder
 
-RUN apt-get update \
+RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && ln -s /root/.local/bin/uv /usr/local/bin/uv
 
 WORKDIR /app
-COPY pyproject.toml ./
-# Install runtime deps only (no dev)
-RUN uv pip install --system --no-cache "." \
+COPY pyproject.toml uv.lock README.md ./
+COPY src/ ./src/
+
+# Install locked runtime deps first, then the local project without re-resolving.
+RUN uv export --frozen --no-dev --no-emit-project --format requirements-txt -o requirements.txt \
+    && uv pip install --system --no-cache -r requirements.txt \
+    && uv pip install --system --no-cache --no-deps "." \
     && rm -rf /root/.cache
 
 # Stage 2: Runtime
-FROM python:3.12-slim AS runtime
+FROM python:3.12-slim-bookworm AS runtime
 
 # Security: non-root user
 RUN groupadd -r mcp && useradd -r -g mcp -d /app -s /sbin/nologin mcp
@@ -53,7 +58,7 @@ USER mcp
 
 # Health metadata
 LABEL maintainer="u9401066@gap.kmu.edu.tw" \
-      version="0.3.3" \
+      version="0.6.9" \
       description="Asset-Aware Medical RAG MCP Server"
 
 ENTRYPOINT ["python", "-m", "src.presentation.server"]

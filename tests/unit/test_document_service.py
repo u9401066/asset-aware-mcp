@@ -391,6 +391,58 @@ async def test_ingest_remaps_table_and_image_pages_for_page_ranges(
 
 
 @pytest.mark.asyncio
+async def test_ingest_ocr_runs_on_page_range_subset(
+    monkeypatch, tmp_path: Path
+) -> None:
+    pdf_path = tmp_path / "paper.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4 original")
+    doc_dir = tmp_path / "doc_pages"
+    doc_dir.mkdir()
+
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = doc_dir
+    repository.save_markdown.return_value = tmp_path / "content.md"
+    repository.save_manifest.return_value = None
+
+    extractor = MagicMock()
+    extractor.get_page_count.side_effect = lambda path: 10 if path == pdf_path else 2
+    extractor.extract_text.return_value = "<!-- Page 1 -->\n# Title"
+    extractor.get_toc.return_value = []
+    extractor.get_title.return_value = "Paper"
+
+    service = DocumentService(repository=repository, pdf_extractor=extractor)
+    service._extract_and_save_images = AsyncMock(return_value=[])
+    service._extract_tables = AsyncMock(return_value=[])
+
+    monkeypatch.setattr(
+        "src.application.document_service.DocId.generate",
+        lambda *_args: MagicMock(value="doc_pages"),
+    )
+    monkeypatch.setattr(
+        "src.application.document_service.materialize_pdf_page_subset",
+        lambda _source_path, output_path, _page_ranges: (
+            output_path.write_bytes(b"%PDF-1.4 subset"),
+            output_path,
+        )[1],
+    )
+
+    captured: dict[str, Path] = {}
+
+    def fake_ocr(_doc_id: str, source_path: Path, **_kwargs) -> Path:
+        captured["source_path"] = source_path
+        ocr_path = doc_dir / "ocr_processed.pdf"
+        ocr_path.write_bytes(b"%PDF-1.4 ocr")
+        return ocr_path
+
+    monkeypatch.setattr(service, "_preprocess_pdf_with_ocr", fake_ocr)
+
+    await service.ingest([str(pdf_path)], ocr_enabled=True, page_ranges=["3-4"])
+
+    assert captured["source_path"] == doc_dir / "selected_pages.pdf"
+    extractor.extract_text.assert_called_once_with(doc_dir / "ocr_processed.pdf")
+
+
+@pytest.mark.asyncio
 async def test_ingest_overwrites_stale_original_pdf_copy(
     monkeypatch, tmp_path: Path
 ) -> None:
@@ -439,6 +491,13 @@ async def test_pymupdf_ingest_persists_searchable_blocks_json(
     repository.get_doc_dir.return_value = doc_dir
     repository.save_markdown.return_value = doc_dir / "content.md"
     repository.save_manifest.return_value = None
+    repository.save_blocks.side_effect = lambda _doc_id, blocks: (
+        (doc_dir / "blocks.json").write_text(
+            json.dumps(blocks, ensure_ascii=False), encoding="utf-8"
+        ),
+        doc_dir / "blocks.json",
+    )[1]
+    repository.save_citation_index.return_value = doc_dir / "citation_index.jsonl"
 
     extractor = MagicMock()
     extractor.extract_text.return_value = (

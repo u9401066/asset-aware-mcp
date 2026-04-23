@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import shutil
-from pathlib import Path  # noqa: TC003
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from src.domain.citation import EvidenceSpan
 from src.domain.entities import DocumentManifest, DocumentSummary
 from src.domain.repositories import DocumentRepository
 
@@ -19,6 +20,13 @@ from .config import settings
 from .encoding_guard import read_text_file, write_utf8_text
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+_DOC_ID_RE = re.compile(r"^(?:doc|docx)_[a-z0-9_]+$")
+_SAFE_COMPONENT_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
+_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 
 class FileStorage(DocumentRepository):
@@ -41,14 +49,34 @@ class FileStorage(DocumentRepository):
         Args:
             base_dir: Base directory for storage (default: settings.data_dir)
         """
-        self.base_dir = base_dir or settings.data_dir
+        self.base_dir = (base_dir or settings.data_dir).resolve()
         self.base_dir.mkdir(parents=True, exist_ok=True)
+
+    def _resolve_doc_dir(self, doc_id: str, *, create: bool = False) -> Path:
+        """Resolve a document directory while preventing path traversal."""
+        if not _DOC_ID_RE.fullmatch(doc_id):
+            raise ValueError(f"Invalid document id: {doc_id}")
+
+        doc_dir = (self.base_dir / doc_id).resolve()
+        try:
+            doc_dir.relative_to(self.base_dir)
+        except ValueError as exc:
+            raise ValueError(f"Document path escapes storage root: {doc_id}") from exc
+
+        if create:
+            doc_dir.mkdir(parents=True, exist_ok=True)
+        return doc_dir
+
+    @staticmethod
+    def _validate_safe_component(value: str, *, label: str) -> str:
+        """Validate a single filename component used below a document dir."""
+        if not _SAFE_COMPONENT_RE.fullmatch(value):
+            raise ValueError(f"Invalid {label}: {value}")
+        return value
 
     def get_doc_dir(self, doc_id: str) -> Path:
         """Get directory for a specific document."""
-        doc_dir = self.base_dir / doc_id
-        doc_dir.mkdir(parents=True, exist_ok=True)
-        return doc_dir
+        return self._resolve_doc_dir(doc_id, create=True)
 
     def save_manifest(self, manifest: DocumentManifest) -> None:
         """Save document manifest as JSON."""
@@ -64,7 +92,10 @@ class FileStorage(DocumentRepository):
 
     def load_manifest(self, doc_id: str) -> DocumentManifest | None:
         """Load document manifest by ID."""
-        doc_dir = self.get_doc_dir(doc_id)
+        try:
+            doc_dir = self._resolve_doc_dir(doc_id)
+        except ValueError:
+            return None
         manifest_path = doc_dir / f"{doc_id}_manifest.json"
 
         if not manifest_path.exists():
@@ -85,7 +116,10 @@ class FileStorage(DocumentRepository):
 
     def load_markdown(self, doc_id: str) -> str | None:
         """Load markdown content by doc ID."""
-        doc_dir = self.get_doc_dir(doc_id)
+        try:
+            doc_dir = self._resolve_doc_dir(doc_id)
+        except ValueError:
+            return None
         markdown_path = doc_dir / f"{doc_id}_full.md"
 
         if not markdown_path.exists():
@@ -93,24 +127,90 @@ class FileStorage(DocumentRepository):
 
         return read_text_file(markdown_path, hint=str(markdown_path))
 
+    def save_blocks(self, doc_id: str, blocks: list[dict[str, Any]]) -> Path:
+        """Save structured blocks for a document."""
+        doc_dir = self.get_doc_dir(doc_id)
+        blocks_path = doc_dir / "blocks.json"
+        write_utf8_text(
+            blocks_path,
+            json.dumps(blocks, ensure_ascii=False, indent=2),
+            hint=str(blocks_path),
+        )
+        return blocks_path
+
+    def load_blocks(self, doc_id: str) -> list[dict[str, Any]] | None:
+        """Load structured blocks for a document."""
+        try:
+            doc_dir = self._resolve_doc_dir(doc_id)
+        except ValueError:
+            return None
+        blocks_path = doc_dir / "blocks.json"
+        if not blocks_path.exists():
+            return None
+        try:
+            data = json.loads(read_text_file(blocks_path, hint=str(blocks_path)))
+        except Exception:
+            return None
+        return data if isinstance(data, list) else None
+
+    def save_citation_index(self, doc_id: str, spans: list[EvidenceSpan]) -> Path:
+        """Save citation-ready evidence spans as JSONL."""
+        doc_dir = self.get_doc_dir(doc_id)
+        index_path = doc_dir / "citation_index.jsonl"
+        payload = "\n".join(
+            span.model_dump_json(exclude_none=True) for span in spans
+        )
+        if payload:
+            payload += "\n"
+        write_utf8_text(index_path, payload, hint=str(index_path))
+        return index_path
+
+    def load_citation_index(self, doc_id: str) -> list[EvidenceSpan]:
+        """Load citation-ready evidence spans."""
+        try:
+            doc_dir = self._resolve_doc_dir(doc_id)
+        except ValueError:
+            return []
+        index_path = doc_dir / "citation_index.jsonl"
+        if not index_path.exists():
+            return []
+        spans: list[EvidenceSpan] = []
+        try:
+            for raw_line in read_text_file(index_path, hint=str(index_path)).splitlines():
+                if raw_line.strip():
+                    spans.append(EvidenceSpan.model_validate_json(raw_line))
+        except Exception:
+            logger.warning("Failed to parse citation index for %s", doc_id)
+            return []
+        return spans
+
     def save_image(self, doc_id: str, image_id: str, data: bytes, ext: str) -> Path:
         """Save image and return path."""
         doc_dir = self.get_doc_dir(doc_id)
         images_dir = doc_dir / "images"
         images_dir.mkdir(exist_ok=True)
 
-        image_path = images_dir / f"{image_id}.{ext}"
+        safe_image_id = self._validate_safe_component(image_id, label="image id")
+        safe_ext = ext.lower().lstrip(".")
+        if safe_ext not in _IMAGE_EXTENSIONS:
+            raise ValueError(f"Unsupported image extension: {ext}")
+
+        image_path = images_dir / f"{safe_image_id}.{safe_ext}"
         image_path.write_bytes(data)
         return image_path
 
     def load_image(self, doc_id: str, image_id: str) -> bytes | None:
         """Load image bytes by ID."""
-        doc_dir = self.get_doc_dir(doc_id)
+        try:
+            doc_dir = self._resolve_doc_dir(doc_id)
+            safe_image_id = self._validate_safe_component(image_id, label="image id")
+        except ValueError:
+            return None
         images_dir = doc_dir / "images"
 
         # Try common extensions
         for ext in ["png", "jpg", "jpeg", "gif", "webp"]:
-            image_path = images_dir / f"{image_id}.{ext}"
+            image_path = images_dir / f"{safe_image_id}.{ext}"
             if image_path.exists():
                 return image_path.read_bytes()
 
@@ -153,16 +253,27 @@ class FileStorage(DocumentRepository):
 
     def document_exists(self, doc_id: str) -> bool:
         """Check if document exists."""
-        manifest_path = self.base_dir / doc_id / f"{doc_id}_manifest.json"
+        try:
+            doc_dir = self._resolve_doc_dir(doc_id)
+        except ValueError:
+            return False
+        manifest_path = doc_dir / f"{doc_id}_manifest.json"
         return manifest_path.exists()
 
     def delete_document(self, doc_id: str) -> bool:
         """Delete a stored document directory and all of its artifacts."""
-        doc_dir = self.base_dir / doc_id
+        try:
+            doc_dir = self._resolve_doc_dir(doc_id)
+        except ValueError:
+            return False
         if not doc_dir.exists() or not doc_dir.is_dir():
             return False
 
-        shutil.rmtree(doc_dir, ignore_errors=True)
+        try:
+            shutil.rmtree(doc_dir)
+        except OSError:
+            logger.warning("Failed to delete document directory: %s", doc_dir)
+            return False
         return not doc_dir.exists()
 
     def list_docx_documents(self) -> list[dict[str, Any]]:

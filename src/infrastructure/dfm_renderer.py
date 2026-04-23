@@ -87,12 +87,12 @@ class DfmRenderer:
         marker = f"<!-- @{block.id} -->"
 
         if bt == DfmBlockType.PARAGRAPH:
-            md_text = self._runs_to_md(block.runs) if block.runs else block.content
+            md_text = self._runs_to_md(block.runs) if block.runs else self._escape_md(block.content)
             return f"{marker}\n{md_text}"
 
         if bt == DfmBlockType.HEADING:
             prefix = "#" * min(block.level, 6)
-            return f"{marker}\n{prefix} {block.content}"
+            return f"{marker}\n{prefix} {self._escape_md(block.content)}"
 
         if bt == DfmBlockType.LIST_ITEM:
             indent = "  " * block.list_level
@@ -101,18 +101,18 @@ class DfmRenderer:
                 if block.style_name and "number" in block.style_name.lower()
                 else "-"
             )
-            md_text = self._runs_to_md(block.runs) if block.runs else block.content
-            return f"{marker}\n{indent}{marker_char} {md_text}"
+            md_text = self._runs_to_md(block.runs) if block.runs else self._escape_md(block.content)
+            return f"{marker}\n{self._format_list_markdown(md_text, indent, marker_char)}"
 
         if bt == DfmBlockType.FORMAT:
-            md_text = self._runs_to_md(block.runs) if block.runs else block.content
+            md_text = self._runs_to_md(block.runs) if block.runs else self._escape_md(block.content)
             return f"{marker}\n{md_text}"
 
         if bt == DfmBlockType.TABLE:
             return f"{marker}\n{block.content}"
 
         if bt == DfmBlockType.CAPTION:
-            return f"{marker}\n*{block.content}*"
+            return f"{marker}\n*{self._escape_md(block.content)}*"
 
         if bt == DfmBlockType.IMAGE:
             alt = block.image_alt or block.content
@@ -124,13 +124,13 @@ class DfmRenderer:
 
         if bt == DfmBlockType.FOOTNOTE:
             fn_id = block.footnote_id or 0
-            return f"{marker}\n[^{fn_id}]: {block.content}"
+            return f"{marker}\n[^{fn_id}]: {self._escape_md(block.content)}"
 
         if bt == DfmBlockType.CITATION:
-            return f"{marker}\n{block.content}"
+            return f"{marker}\n{self._escape_md(block.content)}"
 
         if bt == DfmBlockType.REVISION:
-            return f"{marker}\n{block.content}"
+            return f"{marker}\n{self._escape_md(block.content)}"
 
         # Protected blocks → placeholder
         if bt == DfmBlockType.CHART:
@@ -426,7 +426,7 @@ class DfmRenderer:
         header = f"<!-- @b:{block.id}{style_attr} -->"
 
         # Convert runs to Markdown formatting
-        md_text = self._runs_to_md(block.runs) if block.runs else block.content
+        md_text = self._runs_to_md(block.runs) if block.runs else self._escape_md(block.content)
         return f"{header}\n{md_text}"
 
     def _render_heading(self, block: DfmBlock) -> str:
@@ -434,7 +434,7 @@ class DfmRenderer:
         style_attr = f" s:{block.style_name}" if block.style_name else ""
         header = f"<!-- @b:{block.id}{style_attr} -->"
         prefix = "#" * min(block.level, 6)
-        return f"{header}\n{prefix} {block.content}"
+        return f"{header}\n{prefix} {self._escape_md(block.content)}"
 
     def _render_list_item(self, block: DfmBlock) -> str:
         """Render a list item."""
@@ -454,8 +454,8 @@ class DfmRenderer:
         else:
             marker = "-"
 
-        md_text = self._runs_to_md(block.runs) if block.runs else block.content
-        return f"{header}\n{indent}{marker} {md_text}"
+        md_text = self._runs_to_md(block.runs) if block.runs else self._escape_md(block.content)
+        return f"{header}\n{self._format_list_markdown(md_text, indent, marker)}"
 
     def _render_format(self, block: DfmBlock) -> str:
         """Render a mixed-format paragraph with YAML runs metadata."""
@@ -472,14 +472,14 @@ class DfmRenderer:
         header += f"\n{yaml_str}\n-->"
 
         # Fallback editable text
-        fallback = self._runs_to_md(block.runs) if block.runs else block.content
+        fallback = self._runs_to_md(block.runs) if block.runs else self._escape_md(block.content)
         return f"{header}\n{fallback}\n<!-- /dfm:format -->"
 
     def _render_caption(self, block: DfmBlock) -> str:
         """Render a caption."""
         style_attr = f" s:{block.style_name}" if block.style_name else ""
         header = f"<!-- @b:{block.id}{style_attr} -->"
-        return f"{header}\n*{block.content}*"
+        return f"{header}\n*{self._escape_md(block.content)}*"
 
     # ========================================================================
     # Table
@@ -612,7 +612,11 @@ class DfmRenderer:
 
         yaml_str = yaml.dump(meta, default_flow_style=False, allow_unicode=True).strip()
 
-        return f"<!-- dfm:header @b:{block.id}\n{yaml_str}\n-->"
+        return (
+            f"<!-- dfm:header @b:{block.id}\n{yaml_str}\n-->\n"
+            f"*[頁首已保留，請於 Word 中編輯]*\n"
+            f"<!-- /dfm:header -->"
+        )
 
     def _render_footer(self, block: DfmBlock) -> str:
         """Render a page footer (protected)."""
@@ -626,7 +630,11 @@ class DfmRenderer:
 
         yaml_str = yaml.dump(meta, default_flow_style=False, allow_unicode=True).strip()
 
-        return f"<!-- dfm:footer @b:{block.id}\n{yaml_str}\n-->"
+        return (
+            f"<!-- dfm:footer @b:{block.id}\n{yaml_str}\n-->\n"
+            f"*[頁尾已保留，請於 Word 中編輯]*\n"
+            f"<!-- /dfm:footer -->"
+        )
 
     def _render_field(self, block: DfmBlock) -> str:
         """Render a field code (protected)."""
@@ -640,7 +648,11 @@ class DfmRenderer:
 
         yaml_str = yaml.dump(meta, default_flow_style=False, allow_unicode=True).strip()
 
-        return f"<!-- dfm:field @b:{block.id}\n{yaml_str}\n-->"
+        return (
+            f"<!-- dfm:field @b:{block.id}\n{yaml_str}\n-->\n"
+            f"*[欄位已保留，請於 Word 中編輯]*\n"
+            f"<!-- /dfm:field -->"
+        )
 
     def _render_break(self, block: DfmBlock) -> str:
         """Render a page/section break."""
@@ -757,10 +769,21 @@ class DfmRenderer:
         """Escape Markdown-special characters so they survive round-trip."""
         # Backslash must be first to avoid double-escaping
         text = text.replace("\\", "\\\\")
+        # Keep literal marker-looking comments from being parsed as DFM block IDs.
+        text = text.replace("<!--", "\\<!--")
         text = text.replace("*", "\\*")
         text = text.replace("~", "\\~")
         text = text.replace("^", "\\^")
         return text
+
+    @staticmethod
+    def _format_list_markdown(md_text: str, indent: str, marker: str) -> str:
+        """Render a possibly multi-line list item with safe continuations."""
+        lines = md_text.split("\n")
+        first = lines[0] if lines else ""
+        rendered = [f"{indent}{marker} {first}"]
+        rendered.extend(f"{indent}  {line}" for line in lines[1:])
+        return "\n".join(rendered)
 
     @staticmethod
     def _runs_to_md(runs: list[FormatRun]) -> str:

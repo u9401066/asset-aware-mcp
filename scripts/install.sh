@@ -609,8 +609,7 @@ main() {
         ok "src package importable"
         checks_passed=$((checks_passed + 1))
     else
-        warn "src package not importable (may need PYTHONPATH)"
-        checks_passed=$((checks_passed + 1))  # non-critical
+        error "src package not importable"
     fi
 
     # Check 3: MCP server module loadable
@@ -618,8 +617,7 @@ main() {
         ok "MCP server module loadable"
         checks_passed=$((checks_passed + 1))
     else
-        warn "MCP server module not loadable (optional components may be missing)"
-        checks_passed=$((checks_passed + 1))  # non-critical
+        error "MCP server module not loadable"
     fi
 
     # ========================================================================
@@ -630,6 +628,12 @@ main() {
     echo "  Installation Complete!"
     echo "======================================================"
     echo ""
+    if [ "$checks_passed" -ne "$checks_total" ]; then
+        error "Checks passed: ${checks_passed}/${checks_total}"
+        error "Installation verification failed. Please fix the errors above and re-run this script."
+        exit 1
+    fi
+
     ok "Checks passed: ${checks_passed}/${checks_total}"
     echo ""
     info "Quick start:"

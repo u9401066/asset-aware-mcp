@@ -8,7 +8,17 @@
  */
 
 import * as assert from 'assert';
-import { DfmSessionManager, DfmSession } from '../../dfm/dfmEditorService';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import * as vscode from 'vscode';
+import {
+    DfmEditorService,
+    DfmSessionManager,
+    DfmSession,
+    IngestResult,
+    SaveResult,
+} from '../../dfm/dfmEditorService';
 import {
     DFM_PATTERNS,
     computeFoldingRanges,
@@ -35,7 +45,27 @@ function makeSession(overrides: Partial<DfmSession> = {}): DfmSession {
         dataDir: overrides.dataDir ?? '/path/to/data',
         createdAt: overrides.createdAt ?? Date.now(),
         dirty: overrides.dirty ?? false,
+        sourceMtimeMs: overrides.sourceMtimeMs,
     };
+}
+
+class TestDfmEditorService extends DfmEditorService {
+    parseIngest(text: string): IngestResult {
+        return this.parseIngestResult(text);
+    }
+
+    parseSave(text: string): SaveResult {
+        return this.parseSaveResult(text);
+    }
+}
+
+class FailingSaveDfmEditorService extends DfmEditorService {
+    saveAttempts = 0;
+
+    async saveDfmToDocx(_dfmPath: string, _outputPath?: string): Promise<boolean> {
+        this.saveAttempts += 1;
+        return false;
+    }
 }
 
 // ── DfmSessionManager Tests ──────────────────────────────────
@@ -159,6 +189,230 @@ describe('DfmSessionManager', () => {
     });
 });
 
+describe('DfmEditorService MCP result handling', () => {
+    let service: TestDfmEditorService;
+
+    beforeEach(() => {
+        service = new TestDfmEditorService({} as any);
+        (vscode.workspace as any).textDocuments = [];
+    });
+
+    afterEach(() => {
+        service.dispose();
+        (vscode.workspace as any).textDocuments = [];
+    });
+
+    it('parses Markdown ingest_docx output from the Python MCP tool', () => {
+        const parsed = service.parseIngest(
+            [
+                '✅ Docx 攝入成功',
+                '',
+                '- **doc_id**: `docx_demo_abc123`',
+                '- **總區塊數**: 12',
+                '- **可編輯區塊**: 7',
+                '- **資產數**: 2',
+                '- **DFM 路徑**: `/tmp/data/docx_demo_abc123/content.dfm`',
+            ].join('\n'),
+        );
+
+        assert.strictEqual(parsed.doc_id, 'docx_demo_abc123');
+        assert.strictEqual(parsed.blocks, 12);
+        assert.strictEqual(parsed.editable_blocks, 7);
+        assert.strictEqual(parsed.assets, 2);
+        assert.strictEqual(parsed.data_dir, '/tmp/data/docx_demo_abc123');
+    });
+
+    it('parses Markdown save_docx output from the Python MCP tool', () => {
+        const parsed = service.parseSave(
+            [
+                '✅ Docx 儲存成功',
+                '- **輸出路徑**: `/tmp/data/docx_demo_abc123/output.docx`',
+                '- **完整性**: OK',
+            ].join('\n'),
+        );
+
+        assert.strictEqual(parsed.output_path, '/tmp/data/docx_demo_abc123/output.docx');
+        assert.strictEqual(parsed.saved, '/tmp/data/docx_demo_abc123/output.docx');
+        assert.strictEqual(parsed.blocks_updated, 0);
+    });
+
+    it('parses fenced JSON ingest_docx output with alias keys', () => {
+        const parsed = service.parseIngest(
+            [
+                '```json',
+                JSON.stringify({
+                    docId: 'docx_demo_json',
+                    dfmPath: '/tmp/data/docx_demo_json/content.dfm',
+                    total_blocks: 9,
+                    asset_count: 3,
+                    editableBlocks: 5,
+                }),
+                '```',
+            ].join('\n'),
+        );
+
+        assert.strictEqual(parsed.doc_id, 'docx_demo_json');
+        assert.strictEqual(parsed.blocks, 9);
+        assert.strictEqual(parsed.assets, 3);
+        assert.strictEqual(parsed.editable_blocks, 5);
+    });
+
+    it('parses English Markdown save_docx output', () => {
+        const parsed = service.parseSave(
+            [
+                'Saved successfully',
+                '- **Output path**: `/tmp/data/docx_demo/output.docx`',
+                '- **Integrity**: OK',
+            ].join('\n'),
+        );
+
+        assert.strictEqual(parsed.output_path, '/tmp/data/docx_demo/output.docx');
+    });
+
+    it('saves a dirty DFM buffer before asking the MCP server to rebuild', async () => {
+        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dfm-save-'));
+        const dfmPath = path.join(tempDir, 'content.dfm');
+        const sourceDocx = path.join(tempDir, 'source.docx');
+        const serverOutput = path.join(tempDir, 'server-output.docx');
+        fs.writeFileSync(serverOutput, 'docx-output');
+
+        service.sessions.addSession(makeSession({
+            docId: 'docx_demo_abc123',
+            dfmPath,
+            docxPath: sourceDocx,
+            dataDir: tempDir,
+        }));
+
+        let savedBuffer = false;
+        (vscode.workspace as any).textDocuments = [{
+            uri: vscode.Uri.file(dfmPath),
+            isDirty: true,
+            save: async () => {
+                savedBuffer = true;
+                return true;
+            },
+        }];
+        (vscode.lm as any).tools = [{ name: 'save_docx' }];
+        (vscode.lm as any).invokeTool = async (_name: string, request: any) => {
+            assert.deepStrictEqual(request.input, { doc_id: 'docx_demo_abc123' });
+            return {
+                content: [
+                    new vscode.LanguageModelTextPart(
+                        `✅ Docx 儲存成功\n- **輸出路徑**: \`${serverOutput}\`\n- **完整性**: OK`,
+                    ),
+                ],
+            };
+        };
+
+        const ok = await service.saveDfmToDocx(dfmPath);
+
+        assert.strictEqual(ok, true);
+        assert.strictEqual(savedBuffer, true);
+        assert.strictEqual(fs.readFileSync(sourceDocx, 'utf8'), 'docx-output');
+    });
+
+    it('blocks overwriting a source DOCX that changed after the DFM session opened', async () => {
+        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dfm-conflict-'));
+        const dfmPath = path.join(tempDir, 'content.dfm');
+        const sourceDocx = path.join(tempDir, 'source.docx');
+        const serverOutput = path.join(tempDir, 'server-output.docx');
+        fs.writeFileSync(sourceDocx, 'original');
+        fs.writeFileSync(serverOutput, 'docx-output');
+
+        const initialMtime = fs.statSync(sourceDocx).mtimeMs;
+        service.sessions.addSession(makeSession({
+            docId: 'docx_demo_abc123',
+            dfmPath,
+            docxPath: sourceDocx,
+            dataDir: tempDir,
+            sourceMtimeMs: initialMtime - 10000,
+        }));
+
+        const originalWarning = vscode.window.showWarningMessage;
+        try {
+            (vscode.window as any).showWarningMessage = async () => 'Cancel';
+            (vscode.workspace as any).textDocuments = [];
+            (vscode.lm as any).tools = [{ name: 'save_docx' }];
+            (vscode.lm as any).invokeTool = async () => ({
+                content: [
+                    new vscode.LanguageModelTextPart(
+                        `✅ Docx 儲存成功\n- **輸出路徑**: \`${serverOutput}\``,
+                    ),
+                ],
+            });
+
+            const ok = await service.saveDfmToDocx(dfmPath);
+
+            assert.strictEqual(ok, false);
+            assert.strictEqual(fs.readFileSync(sourceDocx, 'utf8'), 'original');
+        } finally {
+            (vscode.window as any).showWarningMessage = originalWarning;
+        }
+    });
+
+    it('keeps the DFM session open when close-session Save fails', async () => {
+        const serviceWithFailingSave = new FailingSaveDfmEditorService({} as any);
+        const originalWarning = vscode.window.showWarningMessage;
+        const session = makeSession({ dirty: true });
+        serviceWithFailingSave.sessions.addSession(session);
+
+        try {
+            (vscode.window as any).showWarningMessage = async () => 'Save';
+
+            await serviceWithFailingSave.closeSession(session.dfmPath);
+
+            assert.strictEqual(serviceWithFailingSave.saveAttempts, 1);
+            assert.ok(serviceWithFailingSave.sessions.getSessionByDfm(session.dfmPath));
+        } finally {
+            (vscode.window as any).showWarningMessage = originalWarning;
+            serviceWithFailingSave.dispose();
+        }
+    });
+
+    it('does not override VS Code Save As for DFM files', () => {
+        const packageJsonPath = path.join(__dirname, '..', '..', '..', 'package.json');
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+
+        const keybindings = packageJson.contributes.keybindings ?? [];
+        assert.strictEqual(
+            keybindings.some((binding: any) => binding.key === 'ctrl+shift+s' || binding.mac === 'cmd+shift+s'),
+            false,
+        );
+
+        const editorTitleItems = packageJson.contributes.menus['editor/title'];
+        const saveCommand = editorTitleItems.find((item: any) => item.command === 'assetAwareMcp.saveDfmToDocx');
+        assert.ok(saveCommand.when.includes('assetAwareMcp.dfmTracked'));
+    });
+
+    it('restores persisted DFM sessions after service recreation', () => {
+        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dfm-restore-'));
+        const dfmPath = path.join(tempDir, 'content.dfm');
+        const docxPath = path.join(tempDir, 'source.docx');
+        fs.writeFileSync(dfmPath, 'dfm');
+        fs.writeFileSync(docxPath, 'docx');
+
+        const persisted = makeSession({
+            docId: 'docx_demo_restore',
+            dfmPath,
+            docxPath,
+            dataDir: tempDir,
+        });
+        const restoredService = new TestDfmEditorService({
+            workspaceState: {
+                get: () => [persisted],
+                update: async () => undefined,
+            },
+        } as any);
+
+        try {
+            assert.ok(restoredService.sessions.getSessionByDfm(dfmPath));
+            assert.ok(restoredService.sessions.getSessionByDocx(docxPath));
+        } finally {
+            restoredService.dispose();
+        }
+    });
+});
+
 // ── DFM Pattern Tests ────────────────────────────────────────
 
 describe('DFM_PATTERNS', () => {
@@ -224,6 +478,7 @@ describe('DFM_PATTERNS', () => {
             assert.strictEqual(DFM_PATTERNS.protectedTypes.has('toc'), true);
             assert.strictEqual(DFM_PATTERNS.protectedTypes.has('header'), true);
             assert.strictEqual(DFM_PATTERNS.protectedTypes.has('footer'), true);
+            assert.strictEqual(DFM_PATTERNS.protectedTypes.has('citation'), true);
             assert.strictEqual(DFM_PATTERNS.protectedTypes.has('macro'), true);
         });
 

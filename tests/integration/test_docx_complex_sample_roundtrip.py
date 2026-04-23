@@ -139,7 +139,7 @@ async def test_complex_sample_noop_roundtrip_is_binary_identical(
     }
     assert {block.parent_cell for block in nested_tables} == {"1:0"}
 
-    output = temp_dir / "sample-roundtrip.docx"
+    output = temp_dir / doc_id / "sample-roundtrip.docx"
     save = await service.save_docx(doc_id, output_path=str(output), from_md=True)
 
     assert save["success"] is True
@@ -170,7 +170,7 @@ async def test_complex_sample_nested_table_edit_writes_back(temp_dir: Path) -> N
     assert old_value in md_text
     md_path.write_text(md_text.replace(old_value, new_value, 1), encoding="utf-8")
 
-    output = temp_dir / "sample-nested-edit.docx"
+    output = doc_dir / "sample-nested-edit.docx"
     save = await service.save_docx(doc_id, output_path=str(output), from_md=True)
 
     assert save["success"] is True

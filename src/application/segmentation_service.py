@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import TYPE_CHECKING
 
+from src.application.output_paths import resolve_document_output_path
 from src.domain.entities import DocumentManifest, FigureAsset, TableAsset
 from src.domain.line_spans import annotate_marker_blocks
 from src.domain.reading_order import ReadingOrderPolicy
 from src.domain.segmentation import DocumentSegment, DocumentSegmentation
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from src.domain.repositories import DocumentRepository
 
 
@@ -33,20 +35,23 @@ class SegmentationService:
             raise ValueError(f"Document not found: {doc_id}")
 
         doc_dir = self.repository.get_doc_dir(doc_id)
-        blocks_path = doc_dir / "blocks.json"
         markdown = self.repository.load_markdown(doc_id) or ""
+        blocks = self.repository.load_blocks(doc_id)
+        if not isinstance(blocks, list):
+            blocks_path = doc_dir / "blocks.json"
+            blocks = (
+                json.loads(blocks_path.read_text(encoding="utf-8"))
+                if blocks_path.exists()
+                else None
+            )
 
-        if blocks_path.exists():
-            blocks = json.loads(blocks_path.read_text(encoding="utf-8"))
+        if blocks is not None:
             if markdown and any(
                 not isinstance((block.get("metadata") or {}).get("line_start"), int)
                 for block in blocks
             ):
                 annotate_marker_blocks(markdown, blocks)
-                blocks_path.write_text(
-                    json.dumps(blocks, ensure_ascii=False, indent=2),
-                    encoding="utf-8",
-                )
+                self.repository.save_blocks(doc_id, blocks)
             segments = self._segments_from_blocks(manifest, blocks)
             backend = "marker"
         else:
@@ -82,7 +87,12 @@ class SegmentationService:
             limit=limit,
         )
         doc_dir = self.repository.get_doc_dir(doc_id)
-        target = Path(output_path) if output_path else doc_dir / "segmentation.json"
+        target = resolve_document_output_path(
+            doc_dir,
+            output_path,
+            default_name="segmentation.json",
+            allowed_suffixes={".json"},
+        )
         target.write_text(
             segmentation.model_dump_json(indent=2, exclude_none=True),
             encoding="utf-8",

@@ -5,6 +5,8 @@ End-to-end test: Ingest a real PDF and verify the pipeline.
 import asyncio
 from pathlib import Path
 
+import pytest
+
 from src.application.document_service import DocumentService
 from src.infrastructure.config import settings
 from src.infrastructure.file_storage import FileStorage
@@ -18,8 +20,7 @@ async def test_ingest_real_pdf():
     pdf_path = Path("data/samples/attention_is_all_you_need.pdf")
 
     if not pdf_path.exists():
-        print(f"❌ PDF not found: {pdf_path}")
-        return
+        pytest.skip(f"PDF not found: {pdf_path}")
 
     print(f"📄 Testing with: {pdf_path.name}")
     print(f"   Size: {pdf_path.stat().st_size / 1024:.1f} KB")
@@ -41,8 +42,7 @@ async def test_ingest_real_pdf():
     result = results[0]
 
     if not result.success:
-        print(f"❌ Ingest failed: {result.error}")
-        return
+        pytest.fail(f"Ingest failed: {result.error}")
 
     print("✅ Ingest successful!")
     print(f"   doc_id: {result.doc_id}")

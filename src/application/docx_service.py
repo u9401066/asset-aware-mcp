@@ -22,7 +22,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from src.application.dfm_integrity import DfmIntegrityChecker, IntegrityIssue
+from src.application.output_paths import resolve_document_output_path
 from src.domain.docx_entities import DfmBlock, DocxIR
+from src.domain.docx_value_objects import DfmBlockType
 from src.infrastructure.dfm_parser import DfmParser
 from src.infrastructure.dfm_renderer import DfmRenderer
 from src.infrastructure.docx_adapter import DocxAdapter
@@ -53,12 +55,21 @@ class DocxService:
     4. list_blocks: Summary of all blocks in the document
     """
 
-    def __init__(self, repository: DocumentRepository):
+    def __init__(
+        self,
+        repository: DocumentRepository,
+        export_root: Path | None = None,
+    ):
         self.repository = repository
         self.adapter = DocxAdapter()
         self.renderer = DfmRenderer()
         self.parser = DfmParser()
         self.integrity = DfmIntegrityChecker()
+        repo_base = getattr(repository, "base_dir", None)
+        if export_root is None and isinstance(repo_base, str | os.PathLike):
+            export_root = Path(repo_base) / "exports"
+        self.export_root = (export_root or Path.cwd() / "exports").resolve()
+        self.export_root.mkdir(parents=True, exist_ok=True)
 
     # ========================================================================
     # Ingest
@@ -400,6 +411,7 @@ class DocxService:
         *,
         from_md: bool = False,
         force: bool = False,
+        _allow_external_output: bool = False,
     ) -> dict[str, Any]:
         """
         Save edited content back to a .docx file.
@@ -510,6 +522,17 @@ class DocxService:
 
             # --- Pre-save integrity check + auto-repair ---
             pre_report = self.integrity.check_pre_save(ir, parse_result)
+            table_shape_errors = self._validate_table_edit_shapes(ir, parse_result)
+            if table_shape_errors:
+                return {
+                    "success": False,
+                    "error": (
+                        "Table structural edits are not supported by safe DOCX "
+                        "write-back. Preserve the original row/column shape, or "
+                        "rebuild the table in Word."
+                    ),
+                    "warnings": table_shape_errors,
+                }
             for edit in parse_result.edits:
                 if edit.table_rows:
                     block = ir.find_block(edit.block_id)
@@ -543,26 +566,19 @@ class DocxService:
                     "warnings": unexpected_mutations,
                 }
 
-            # Determine output path
-            out = doc_dir / "output.docx" if output_path is None else Path(output_path)
-
-            original_path = doc_dir / "original.docx"
-            if not expected_changed_ids:
-                shutil.copy2(original_path, out)
-                result_path = out
+            if _allow_external_output and output_path is not None:
+                out = Path(output_path)
+                out.parent.mkdir(parents=True, exist_ok=True)
             else:
-                result_path = self.adapter.ir_to_docx(
-                    ir,
-                    doc_dir,
-                    out,
-                    changed_block_ids=expected_changed_ids,
-                )
-
-            # Save updated IR
-            self._save_ir(ir, doc_dir / "ir.json")
-
-            # --- Auto-backup before overwrite ---
-            self._backup_before_overwrite(doc_dir)
+                try:
+                    out = resolve_document_output_path(
+                        doc_dir,
+                        output_path,
+                        default_name="output.docx",
+                        allowed_suffixes={".docx"},
+                    )
+                except ValueError as e:
+                    return {"success": False, "error": str(e)}
 
             # Snapshot old content.md for drift detection
             old_md_path = doc_dir / "content.md"
@@ -570,19 +586,10 @@ class DocxService:
                 old_md_path.read_text(encoding="utf-8") if old_md_path.exists() else ""
             )
 
-            # Update all formats with current state
+            # Render new artifacts before touching disk so fail-safe checks can abort
+            # without leaving partially updated DFM state or output files behind.
             updated_dfm = self.renderer.render(ir)
-            write_utf8_text(
-                doc_dir / "content.dfm", updated_dfm, hint=f"DFM for {doc_id}"
-            )
-
             md_text, yaml_text = self.renderer.render_split(ir)
-            write_utf8_text(
-                doc_dir / "content.md", md_text, hint=f"Markdown for {doc_id}"
-            )
-            write_utf8_text(
-                doc_dir / "format.yaml", yaml_text, hint=f"YAML for {doc_id}"
-            )
 
             # --- Content drift detection ---
             drift_issues = self._detect_content_drift(old_md_text, md_text)
@@ -611,8 +618,34 @@ class DocxService:
                             f"Check .backups/ for recovery. "
                             f"Use force=True to override."
                         ),
-                        "output_path": str(result_path),
                     }
+
+            original_path = doc_dir / "original.docx"
+            if not expected_changed_ids:
+                shutil.copy2(original_path, out)
+                result_path = out
+            else:
+                result_path = self.adapter.ir_to_docx(
+                    ir,
+                    doc_dir,
+                    out,
+                    changed_block_ids=expected_changed_ids,
+                )
+
+            # --- Auto-backup before overwriting DFM state ---
+            self._backup_before_overwrite(doc_dir)
+
+            # Save updated IR and synchronized editable artifacts.
+            self._save_ir(ir, doc_dir / "ir.json")
+            write_utf8_text(
+                doc_dir / "content.dfm", updated_dfm, hint=f"DFM for {doc_id}"
+            )
+            write_utf8_text(
+                doc_dir / "content.md", md_text, hint=f"Markdown for {doc_id}"
+            )
+            write_utf8_text(
+                doc_dir / "format.yaml", yaml_text, hint=f"YAML for {doc_id}"
+            )
 
             # --- Post-save integrity check ---
             post_report = self.integrity.check_post_save(original_path, result_path)
@@ -666,15 +699,26 @@ class DocxService:
         if dfm_text is None:
             return {"success": False, "error": f"DFM not found for {doc_id}"}
 
-        target_pdf = (
-            Path(output_path) if output_path is not None else doc_dir / "output.pdf"
-        )
+        try:
+            target_pdf = resolve_document_output_path(
+                doc_dir,
+                output_path,
+                default_name="output.pdf",
+                allowed_suffixes={".pdf"},
+            )
+        except ValueError as e:
+            return {"success": False, "error": str(e)}
 
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             tmp_dir = Path(tmp_dir_name)
             temp_docx = tmp_dir / f"{doc_id}.docx"
 
-            save_result = await self.save_docx(doc_id, dfm_text, str(temp_docx))
+            save_result = await self.save_docx(
+                doc_id,
+                dfm_text,
+                str(temp_docx),
+                _allow_external_output=True,
+            )
             if not save_result.get("success"):
                 return save_result
 
@@ -731,15 +775,26 @@ class DocxService:
         if dfm_text is None:
             return {"success": False, "error": f"DFM not found for {doc_id}"}
 
-        target_doc = (
-            Path(output_path) if output_path is not None else doc_dir / "output.doc"
-        )
+        try:
+            target_doc = resolve_document_output_path(
+                doc_dir,
+                output_path,
+                default_name="output.doc",
+                allowed_suffixes={".doc"},
+            )
+        except ValueError as e:
+            return {"success": False, "error": str(e)}
 
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             tmp_dir = Path(tmp_dir_name)
             temp_docx = tmp_dir / f"{doc_id}.docx"
 
-            save_result = await self.save_docx(doc_id, dfm_text, str(temp_docx))
+            save_result = await self.save_docx(
+                doc_id,
+                dfm_text,
+                str(temp_docx),
+                _allow_external_output=True,
+            )
             if not save_result.get("success"):
                 return save_result
 
@@ -795,15 +850,26 @@ class DocxService:
         if dfm_text is None:
             return {"success": False, "error": f"DFM not found for {doc_id}"}
 
-        target_odt = (
-            Path(output_path) if output_path is not None else doc_dir / "output.odt"
-        )
+        try:
+            target_odt = resolve_document_output_path(
+                doc_dir,
+                output_path,
+                default_name="output.odt",
+                allowed_suffixes={".odt"},
+            )
+        except ValueError as e:
+            return {"success": False, "error": str(e)}
 
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             tmp_dir = Path(tmp_dir_name)
             temp_docx = tmp_dir / f"{doc_id}.docx"
 
-            save_result = await self.save_docx(doc_id, dfm_text, str(temp_docx))
+            save_result = await self.save_docx(
+                doc_id,
+                dfm_text,
+                str(temp_docx),
+                _allow_external_output=True,
+            )
             if not save_result.get("success"):
                 return save_result
 
@@ -849,7 +915,8 @@ class DocxService:
         Args:
             md_text: Markdown content as a string.
             md_path: Path to a .md file (used if md_text is None).
-            output_path: Where to write the output file.
+            output_path: Where to write the output file. Absolute paths must stay
+                under the configured export root; relative paths are resolved there.
             output_format: "docx", "pdf", "doc", or "odt".
 
         Returns:
@@ -874,13 +941,14 @@ class DocxService:
                 "error": f"Unsupported format: {output_format}. Use docx, pdf, doc, or odt.",
             }
 
-        # Resolve output path
-        if output_path:
-            out = Path(output_path)
-        elif md_path:
-            out = Path(md_path).with_suffix(f".{output_format}")
-        else:
-            out = Path(f"output.{output_format}")
+        try:
+            out = self._resolve_export_output_path(
+                md_path=md_path,
+                output_path=output_path,
+                output_format=output_format,
+            )
+        except ValueError as exc:
+            return {"success": False, "error": str(exc)}
 
         converter = MarkdownDocxConverter()
 
@@ -923,6 +991,37 @@ class DocxService:
             logger.exception("export_from_markdown failed")
             return {"success": False, "error": str(e)}
 
+    def _resolve_export_output_path(
+        self,
+        *,
+        md_path: str | None,
+        output_path: str | None,
+        output_format: str,
+    ) -> Path:
+        suffix = f".{output_format}"
+        if output_path:
+            candidate = Path(output_path)
+        else:
+            stem = sanitize_id_stem(Path(md_path).stem) if md_path else "output"
+            candidate = Path(f"{stem}{suffix}")
+
+        if candidate.suffix.lower() != suffix:
+            raise ValueError(f"Output path must end with {suffix}")
+
+        if not candidate.is_absolute():
+            candidate = self.export_root / candidate
+        resolved = candidate.resolve()
+
+        try:
+            resolved.relative_to(self.export_root)
+        except ValueError as exc:
+            raise ValueError(
+                f"Output path must stay within export root: {self.export_root}"
+            ) from exc
+
+        resolved.parent.mkdir(parents=True, exist_ok=True)
+        return resolved
+
     @staticmethod
     def _block_signature(block: DfmBlock) -> dict[str, Any]:
         """Build a comparable snapshot for a DFM block."""
@@ -963,6 +1062,43 @@ class DocxService:
                 changed_ids.add(edit.block_id)
 
         return changed_ids
+
+    def _validate_table_edit_shapes(
+        self,
+        ir: DocxIR,
+        parse_result: Any,
+    ) -> list[str]:
+        """Reject table row/column shape edits until XML structure edits exist."""
+        errors: list[str] = []
+        for edit in parse_result.edits:
+            if edit.table_rows is None:
+                continue
+
+            block = ir.find_block(edit.block_id)
+            if block is None or block.block_type != DfmBlockType.TABLE:
+                continue
+
+            original_rows = self.parser._parse_md_table(block.content)
+            edited_rows = edit.table_rows
+            if not original_rows or not edited_rows:
+                continue
+
+            original_row_count = len(original_rows)
+            edited_row_count = len(edited_rows)
+            if edited_row_count != original_row_count:
+                errors.append(
+                    f"Table {edit.block_id} row count changed "
+                    f"({original_row_count} -> {edited_row_count})"
+                )
+
+            original_col_count = len(original_rows[0]) if original_rows[0] else 0
+            for row_index, row in enumerate(edited_rows):
+                if len(row) != original_col_count:
+                    errors.append(
+                        f"Table {edit.block_id} row {row_index} column count changed "
+                        f"({original_col_count} -> {len(row)})"
+                    )
+        return errors
 
     @staticmethod
     def _normalize_table_rows(
@@ -1242,9 +1378,25 @@ class DocxService:
             "updated_at": ir.updated_at.isoformat(),
             "_id_counters": ir._id_counters,
         }
-        path.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = json.dumps(data, ensure_ascii=False, indent=2)
+        tmp_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                "w",
+                encoding="utf-8",
+                dir=path.parent,
+                prefix=f".{path.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as tmp:
+                tmp.write(payload)
+                tmp.write("\n")
+                tmp_path = Path(tmp.name)
+            tmp_path.replace(path)
+        finally:
+            if tmp_path is not None and tmp_path.exists():
+                tmp_path.unlink()
 
     def _load_ir(self, doc_id: str) -> DocxIR | None:
         """Load IR from JSON file."""

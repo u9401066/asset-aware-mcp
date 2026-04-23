@@ -1,6 +1,6 @@
 [project]
 name = "asset-aware-mcp"
-version = "0.6.8"
+version = "0.6.9"
 description = "Medical RAG with Asset-Aware MCP - Precise PDF asset retrieval (tables, figures, sections) for AI Agents"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -126,6 +126,16 @@ module = [
     "fitz.*",
     "pymupdf.*",
     "surya.*",
+]
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = [
+    "lxml",
+    "lxml.*",
+    "xlsxwriter",
+    "xlsxwriter.*",
 ]
 ignore_missing_imports = true
 follow_imports = "skip"

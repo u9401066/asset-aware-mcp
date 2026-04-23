@@ -7,6 +7,24 @@
 
 ## [Unreleased]
 
+## [0.6.9] - 2026-04-23
+
+### Fixed
+
+- **DFM messy-document hardening**
+  - Escapes literal Markdown syntax and marker-looking comments so no-op saves preserve text such as `*literal*`, `~~literal~~`, `^literal^`, and `<!-- @... -->`
+  - Preserves multi-line list-item continuation text and detects list paragraphs from Word `numPr` metadata even when converted files use `Normal` style
+  - Parses and updates hyperlink-contained runs in document order so edited paragraphs do not leave stale linked text behind
+
+- **DOCX table write-back safety**
+  - Preserves literal pipes inside table cells all the way through final XML write-back
+  - Fails closed on row/column structural table edits until XML row/column insertion is implemented, preventing false-success saves where IR changes but DOCX output is truncated
+
+- **VS Code DFM save robustness**
+  - Accepts fenced JSON, alias keys, and English/Chinese Markdown MCP result labels
+  - Blocks accidental overwrite when the source DOCX changed on disk after a DFM session was opened
+  - Keeps failure diagnostics visible when `save_docx` rejects malformed DFM/table edits
+
 ## [0.6.8] - 2026-04-19
 
 ### Added

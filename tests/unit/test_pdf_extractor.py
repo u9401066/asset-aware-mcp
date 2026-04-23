@@ -59,7 +59,7 @@ def test_extract_figure_captions_returns_worker_payload(monkeypatch) -> None:
 
     extractor = PyMuPDFExtractor()
 
-    result = extractor.extract_figure_captions(Path("/tmp/test.pdf"))
+    result = extractor.extract_figure_captions(Path("test.pdf"))
 
     assert result == expected
     assert process.join_calls == [20.0]
@@ -77,7 +77,7 @@ def test_extract_figure_captions_times_out_and_returns_empty(monkeypatch) -> Non
 
     extractor = PyMuPDFExtractor()
 
-    result = extractor.extract_figure_captions(Path("/tmp/test.pdf"))
+    result = extractor.extract_figure_captions(Path("test.pdf"))
 
     assert result == {}
     assert process.join_calls == [20.0, 5]

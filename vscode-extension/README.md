@@ -8,11 +8,11 @@
 
 ![Asset-Aware MCP marketplace banner](resources/banner.png)
 
-## 🆕 What's New in v0.6.8
+## 🆕 What's New in v0.6.9
 
-- **DOCX round-trip hardening**: complex nested-table DOCX files now survive DFM ingest, no-op rebuild, and nested-table edits without structural drift
-- **Byte-identical no-op rebuilds**: `save_docx(..., from_md=True)` now preserves the original DOCX bytes when content is unchanged
-- **Public release-gated validation**: CI and tagged releases now use a synthetic complex DOCX fixture, so no confidential sample documents are shipped
+- **DFM messy-document hardening**: literal Markdown symbols, marker-looking comments, multi-line list items, hyperlink runs, and literal table pipes now survive round-trip more reliably
+- **Fail-closed table safety**: row/column structural table edits are rejected until full XML row/column mutation is implemented, preventing false-success truncation
+- **Safer DFM save flow**: MCP fenced JSON/English labels parse correctly, source DOCX disk conflicts are detected before overwrite, and save failures include diagnostics
 - **48 tools** across 7 modules
 
 ## 🧪 Current Main Branch

@@ -157,6 +157,17 @@ class TestSectionServiceLoad:
         tree = service._load_tree("nonexistent_doc")
         assert tree is None
 
+    def test_load_tree_rejects_doc_id_path_traversal(self, temp_dir: Path):
+        """doc_id cannot escape the configured data directory."""
+        outside = temp_dir.parent / "doc_escape_123"
+        outside.mkdir(exist_ok=True)
+        (outside / "blocks.json").write_text("[]", encoding="utf-8")
+        service = SectionService(data_dir=temp_dir)
+
+        tree = service._load_tree("../doc_escape_123")
+
+        assert tree is None
+
     def test_cache_works(self, setup_data_dir):
         """快取機制：第二次不重新載入。"""
         data_dir, doc_id = setup_data_dir

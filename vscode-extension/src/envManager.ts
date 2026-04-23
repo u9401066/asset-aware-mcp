@@ -15,6 +15,8 @@ export interface EnvConfig {
     OLLAMA_EMBEDDING_MODEL?: string;
     OPENAI_API_KEY?: string;
     OPENAI_MODEL?: string;
+    LIGHTRAG_EMBEDDING_MODEL?: string;
+    /** Legacy alias retained when reading older .env files. */
     OPENAI_EMBEDDING_MODEL?: string;
     DATA_DIR?: string;
     LIGHTRAG_WORKING_DIR?: string;
@@ -30,7 +32,7 @@ const DEFAULT_ENV: EnvConfig = {
     OLLAMA_EMBEDDING_MODEL: 'nomic-embed-text',
     OPENAI_API_KEY: '',
     OPENAI_MODEL: 'gpt-4o-mini',
-    OPENAI_EMBEDDING_MODEL: 'text-embedding-3-small',
+    LIGHTRAG_EMBEDDING_MODEL: 'text-embedding-3-small',
     DATA_DIR: './data',
     LIGHTRAG_WORKING_DIR: './data/lightrag_db',
     ETL_PROFILE: 'default'
@@ -108,6 +110,7 @@ export class EnvManager {
      */
     private parseEnvContent(content: string): EnvConfig {
         const env: EnvConfig = { ...DEFAULT_ENV };
+        const explicitKeys = new Set<string>();
         const lines = content.split('\n');
 
         for (const line of lines) {
@@ -130,7 +133,15 @@ export class EnvManager {
                 }
 
                 env[key] = value;
+                explicitKeys.add(key);
             }
+        }
+
+        if (!explicitKeys.has('LIGHTRAG_EMBEDDING_MODEL') && env.OPENAI_EMBEDDING_MODEL) {
+            env.LIGHTRAG_EMBEDDING_MODEL = env.OPENAI_EMBEDDING_MODEL;
+        }
+        if (!env.OPENAI_EMBEDDING_MODEL && env.LIGHTRAG_EMBEDDING_MODEL) {
+            env.OPENAI_EMBEDDING_MODEL = env.LIGHTRAG_EMBEDDING_MODEL;
         }
 
         return env;
@@ -210,7 +221,7 @@ export class EnvManager {
             '# ============================================',
             `OPENAI_API_KEY=${env.OPENAI_API_KEY || ''}`,
             `OPENAI_MODEL=${env.OPENAI_MODEL || 'gpt-4o-mini'}`,
-            `OPENAI_EMBEDDING_MODEL=${env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small'}`,
+            `LIGHTRAG_EMBEDDING_MODEL=${env.LIGHTRAG_EMBEDDING_MODEL || env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small'}`,
             '',
             '# ============================================',
             '# Storage Settings',

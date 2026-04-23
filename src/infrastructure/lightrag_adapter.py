@@ -291,7 +291,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
         # Add doc_id as metadata prefix for traceability
         prefixed_text = f"[Document: {doc_id}]\n\n{text}"
 
-        await rag.ainsert(prefixed_text)
+        await rag.ainsert(prefixed_text, ids=doc_id)
 
     async def query(
         self,

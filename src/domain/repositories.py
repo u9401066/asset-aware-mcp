@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from .citation import EvidenceSpan
     from .entities import DocumentManifest, DocumentSummary
     from .job import Job, JobSummary
     from .table_entities import TableContext
@@ -44,6 +45,26 @@ class DocumentRepository(ABC):
     @abstractmethod
     def load_markdown(self, doc_id: str) -> str | None:
         """Load markdown content by doc ID."""
+        ...
+
+    @abstractmethod
+    def save_blocks(self, doc_id: str, blocks: list[dict[str, Any]]) -> Path:
+        """Save structured document blocks."""
+        ...
+
+    @abstractmethod
+    def load_blocks(self, doc_id: str) -> list[dict[str, Any]] | None:
+        """Load structured document blocks."""
+        ...
+
+    @abstractmethod
+    def save_citation_index(self, doc_id: str, spans: list[EvidenceSpan]) -> Path:
+        """Save citation-ready evidence spans."""
+        ...
+
+    @abstractmethod
+    def load_citation_index(self, doc_id: str) -> list[EvidenceSpan]:
+        """Load citation-ready evidence spans."""
         ...
 
     @abstractmethod

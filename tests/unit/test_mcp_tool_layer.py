@@ -141,6 +141,21 @@ class TestDocxTools:
             result = await save_docx("doc123", "# edited content")
             assert "❌" in result
 
+    async def test_save_docx_failure_includes_warnings(self) -> None:
+        """save_docx returns diagnostic warnings on failure."""
+        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
+            mock_svc.save_docx = AsyncMock(
+                return_value={
+                    "success": False,
+                    "error": "shape mismatch",
+                    "warnings": ["Table t001 row count changed"],
+                }
+            )
+            from src.presentation.tools.docx_tools import save_docx
+
+            result = await save_docx("doc123", "# edited content")
+            assert "Table t001 row count changed" in result
+
     async def test_save_docx_success(self) -> None:
         """save_docx returns success with path."""
         with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
@@ -443,6 +458,104 @@ class TestDocxTools:
             _, kwargs = mock_validator.validate.call_args
             assert kwargs["strict"] is True
 
+    async def test_docx_validate_roundtrip_rejects_output_escape(
+        self, tmp_path: Path
+    ) -> None:
+        """docx_validate_roundtrip keeps rebuilt artifacts inside the doc dir."""
+        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
+            doc_dir = tmp_path / "docx_123"
+            doc_dir.mkdir()
+            (doc_dir / "original.docx").write_bytes(b"docx")
+
+            mock_svc.repository.get_doc_dir.return_value = doc_dir
+            mock_svc._load_ir.return_value = {"doc_id": "docx_123"}
+
+            from src.presentation.tools.docx_tools import docx_validate_roundtrip
+
+            result = await docx_validate_roundtrip(
+                "docx_123", output_path="../escape.docx"
+            )
+
+            assert "❌" in result
+            assert "document directory" in result
+            mock_svc.adapter.ir_to_docx.assert_not_called()
+
+    async def test_docx_table_from_context_rejects_cross_document_context(
+        self,
+    ) -> None:
+        """docx_table_from_context refuses TableContext from another doc."""
+        with patch("src.presentation.tools.docx_tools.table_service") as mock_table_svc:
+            tc = TableContext(
+                id="tbl_ctx",
+                intent="summary",
+                title="T",
+                columns=[ColumnDef(name="A", type="text")],
+                rows=[{"A": "new"}],
+                source_doc_id="docx_other",
+                source_block_id="t001",
+            )
+            mock_table_svc._tables = {tc.id: tc}
+
+            from src.presentation.tools.docx_tools import docx_table_from_context
+
+            result = await docx_table_from_context("docx_123", "t001", tc.id)
+
+            assert "❌" in result
+            assert "docx_other" in result
+
+    async def test_docx_table_from_context_updates_all_dfm_artifacts(
+        self, tmp_path: Path
+    ) -> None:
+        """docx_table_from_context keeps content.dfm/content.md/format.yaml in sync."""
+        with (
+            patch("src.presentation.tools.docx_tools.docx_service") as mock_svc,
+            patch("src.presentation.tools.docx_tools.table_service") as mock_table_svc,
+            patch("src.presentation.tools.docx_tools.dfm_table_bridge") as mock_bridge,
+            patch("src.infrastructure.dfm_renderer.DfmRenderer") as mock_renderer_cls,
+        ):
+            doc_dir = tmp_path / "docx_123"
+            doc_dir.mkdir()
+            ir = DocxIR(doc_id="docx_123", source_path="workspace/test.docx")
+            ir.add_block(
+                DfmBlock(
+                    id="t001",
+                    block_type=DfmBlockType.TABLE,
+                    content="| A |\n| --- |\n| old |",
+                )
+            )
+            tc = TableContext(
+                id="tbl_ctx",
+                intent="summary",
+                title="T",
+                columns=[ColumnDef(name="A", type="text")],
+                rows=[{"A": "new"}],
+                source_doc_id="docx_123",
+                source_block_id="t001",
+            )
+            mock_table_svc._tables = {tc.id: tc}
+            mock_svc._load_ir.return_value = ir
+            mock_svc.repository.get_doc_dir.return_value = doc_dir
+
+            def apply_table(ir_obj, block_id, _table_ctx):
+                ir_obj.find_block(block_id).content = "| A |\n| --- |\n| new |"
+                return ir_obj
+
+            mock_bridge.apply_table_context_to_ir.side_effect = apply_table
+            renderer = mock_renderer_cls.return_value
+            renderer.render.return_value = "dfm text"
+            renderer.render_split.return_value = ("md text", "yaml text")
+
+            from src.presentation.tools.docx_tools import docx_table_from_context
+
+            result = await docx_table_from_context("docx_123", "t001", tc.id)
+
+            assert "✅" in result
+            assert (doc_dir / "content.dfm").read_text(encoding="utf-8") == "dfm text"
+            assert (doc_dir / "content.md").read_text(encoding="utf-8") == "md text"
+            assert (doc_dir / "format.yaml").read_text(encoding="utf-8") == "yaml text"
+            mock_svc._backup_before_overwrite.assert_called_once_with(doc_dir)
+            mock_svc._save_ir.assert_called_once_with(ir, doc_dir / "ir.json")
+
 
 # ============================================================================
 # Job Tools
@@ -508,14 +621,71 @@ class TestDocumentTools:
 
     async def test_search_source_location_no_blocks(self) -> None:
         """search_source_location returns error when blocks.json missing."""
-        with patch("src.presentation.tools.document_tools.settings") as mock_settings:
-            mock_settings.data_dir = Path("/tmp/nonexistent")  # noqa: S108
+        with patch("src.presentation.tools.document_tools.repository") as mock_repo:
+            mock_repo.load_blocks.return_value = None
             from src.presentation.tools.document_tools import (
                 search_source_location,
             )
 
-            result = await search_source_location("doc123", "test query")
+            result = await search_source_location("doc_123", "test query")
             assert "❌" in result
+
+    async def test_find_evidence_spans_returns_span_asset_ref(self) -> None:
+        """find_evidence_spans returns citation-ready span refs."""
+        from src.domain.citation import EvidenceSpan
+
+        span = EvidenceSpan.create(
+            doc_id="doc_123",
+            source_revision_id="rev",
+            span_kind="sentence",
+            text="Needle guidance reduced complications.",
+            block_id="blk_1",
+            page=2,
+            line_start=5,
+            line_end=6,
+            char_start=40,
+            char_end=78,
+            markdown="x" * 40 + "Needle guidance reduced complications.",
+        )
+        with patch("src.presentation.tools.document_tools.repository") as mock_repo:
+            mock_repo.load_citation_index.return_value = [span]
+            from src.presentation.tools.document_tools import find_evidence_spans
+
+            result = await find_evidence_spans("doc_123", "reduced")
+
+        assert span.span_id in result
+        assert "AssetRef" in result
+        assert '"source_type": "span"' in result
+        assert '"char_range"' in result
+
+    async def test_verify_citation_ref_detects_valid_span(self) -> None:
+        """verify_citation_ref validates quote hash and source revision."""
+        from src.domain.citation import EvidenceSpan
+
+        span = EvidenceSpan.create(
+            doc_id="doc_123",
+            source_revision_id="rev",
+            span_kind="sentence",
+            text="Exact quote for verification.",
+            block_id="blk_1",
+            page=1,
+        )
+        ref = {
+            "source_type": "span",
+            "doc_id": "doc_123",
+            "span_id": span.span_id,
+            "source_revision_id": "rev",
+            "quote": span.text,
+            "quote_sha256": span.text_sha256,
+        }
+        with patch("src.presentation.tools.document_tools.repository") as mock_repo:
+            mock_repo.load_citation_index.return_value = [span]
+            from src.presentation.tools.document_tools import verify_citation_ref
+
+            result = await verify_citation_ref(ref)
+
+        assert "verified" in result
+        assert span.span_id in result
 
     async def test_delete_document_success(self) -> None:
         """delete_document returns formatted summary on success."""
@@ -1108,6 +1278,63 @@ class TestJobServiceConcurrency:
 
         with pytest.raises(RuntimeError, match="Too many concurrent jobs"):
             await service.create_ingest_job(["/test.pdf"])
+
+    async def test_ingest_job_failure_is_not_marked_completed(self) -> None:
+        """Failed file results must not be reported as a green completed job."""
+        from src.application.job_service import JobService
+        from src.domain.entities import IngestResult
+        from src.domain.job import Job, JobProgress, JobStatus, JobType
+
+        class MemoryJobStore:
+            def __init__(self) -> None:
+                self.jobs: dict[str, Job] = {}
+
+            async def create(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+            async def get(self, job_id: str) -> Job | None:
+                return self.jobs.get(job_id)
+
+            async def update(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+        class FailingDocumentService:
+            async def ingest(self, *_args, **_kwargs):
+                return [
+                    IngestResult(
+                        doc_id="",
+                        filename="bad.pdf",
+                        success=False,
+                        error="bad pdf",
+                    )
+                ]
+
+        store = MemoryJobStore()
+        job = Job(
+            job_id="job_test_failure",
+            job_type=JobType.INGEST_PDF,
+            input_files=["bad.pdf"],
+            progress=JobProgress(total_steps=8),
+        )
+        await store.create(job)
+
+        service = JobService(
+            job_store=store, document_service=FailingDocumentService()  # type: ignore[arg-type]
+        )
+
+        await service._process_ingest_job(job.job_id)
+
+        stored = await store.get(job.job_id)
+        assert stored is not None
+        assert stored.status == JobStatus.FAILED
+        assert stored.error == "1/1 file(s) failed during ingestion"
+        assert stored.result is not None
+        assert stored.result["files_failed"] == 1
+        assert stored.result["failed_files"] == [
+            {"file": "bad.pdf", "error": "bad pdf"}
+        ]
 
 
 # ============================================================================

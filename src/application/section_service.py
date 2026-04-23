@@ -7,12 +7,17 @@ Application Layer - Section Service
 from __future__ import annotations
 
 import json
+import re
 from typing import TYPE_CHECKING, Literal
 
 from src.domain.section_tree import SectionTree, build_section_tree_from_blocks
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from src.domain.repositories import DocumentRepository
+
+_DOC_ID_RE = re.compile(r"^(?:doc|docx)_[a-z0-9_]+$")
 
 
 class SectionService:
@@ -25,23 +30,41 @@ class SectionService:
     - 快取管理
     """
 
-    def __init__(self, data_dir: Path):
+    def __init__(
+        self,
+        data_dir: Path | None = None,
+        repository: DocumentRepository | None = None,
+    ):
         """
         初始化 Section Service。
 
         Args:
             data_dir: 資料目錄（data/{doc_id}/ 結構）
         """
-        self.data_dir = data_dir
+        if data_dir is None and repository is None:
+            raise ValueError("SectionService requires data_dir or repository")
+        self.data_dir = data_dir.resolve() if data_dir is not None else None
+        self.repository = repository
         self._tree_cache: dict[str, SectionTree] = {}
+
+    def _get_doc_dir(self, doc_id: str) -> Path:
+        if self.repository is not None:
+            return self.repository.get_doc_dir(doc_id)
+        if self.data_dir is None:
+            raise ValueError("data_dir is not configured")
+        if not _DOC_ID_RE.fullmatch(doc_id):
+            raise ValueError(f"Invalid document id: {doc_id}")
+        doc_dir = (self.data_dir / doc_id).resolve()
+        doc_dir.relative_to(self.data_dir)
+        return doc_dir
 
     def _get_blocks_path(self, doc_id: str) -> Path:
         """取得 blocks.json 路徑。"""
-        return self.data_dir / doc_id / "blocks.json"
+        return self._get_doc_dir(doc_id) / "blocks.json"
 
     def _get_manifest_path(self, doc_id: str) -> Path:
         """取得 manifest.json 路徑。"""
-        return self.data_dir / doc_id / f"{doc_id}_manifest.json"
+        return self._get_doc_dir(doc_id) / f"{doc_id}_manifest.json"
 
     def _load_tree(self, doc_id: str) -> SectionTree | None:
         """
@@ -58,7 +81,10 @@ class SectionService:
             return self._tree_cache[doc_id]
 
         # 載入 blocks.json
-        blocks_path = self._get_blocks_path(doc_id)
+        try:
+            blocks_path = self._get_blocks_path(doc_id)
+        except ValueError:
+            return None
         if not blocks_path.exists():
             return None
 

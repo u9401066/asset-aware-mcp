@@ -24,14 +24,14 @@ class DfmBlockType(str, Enum):
     IMAGE = "image"  # Inline/anchored image
     CAPTION = "caption"  # Figure/table caption
     FOOTNOTE = "footnote"  # Footnote content
-    CITATION = "citation"  # Bibliography citation field
 
-    # Protected blocks (read-only, binary or XML preserved)
+    # Protected blocks (read-only, binary, field, or XML preserved)
     CHART = "chart"  # Embedded Excel chart
     TOC = "toc"  # Table of Contents field
     HEADER = "header"  # Page header
     FOOTER = "footer"  # Page footer
     FIELD = "field"  # Field code (PAGE, REF, etc.)
+    CITATION = "citation"  # Bibliography citation field
     BREAK = "break"  # Page/section break
     MACRO = "macro"  # VBA macro
     OLE = "ole"  # OLE embedded object
@@ -67,7 +67,6 @@ _EDITABLE_TYPES = frozenset(
         DfmBlockType.IMAGE,
         DfmBlockType.CAPTION,
         DfmBlockType.FOOTNOTE,
-        DfmBlockType.CITATION,
     }
 )
 
@@ -78,6 +77,7 @@ _PROTECTED_TYPES = frozenset(
         DfmBlockType.HEADER,
         DfmBlockType.FOOTER,
         DfmBlockType.FIELD,
+        DfmBlockType.CITATION,
         DfmBlockType.MACRO,
         DfmBlockType.OLE,
     }

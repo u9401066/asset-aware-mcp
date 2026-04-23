@@ -6,19 +6,32 @@ Handles Excel file generation using XlsxWriter with professional styling.
 
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlparse
 
 import xlsxwriter
 
 from src.domain.repositories import TableRendererInterface
 from src.domain.table_entities import TableContext
+from src.infrastructure.encoding_guard import sanitize_id_stem
 
 
 class ExcelRenderer(TableRendererInterface):
     """Renderer for professional Excel tables."""
 
     def __init__(self, output_dir: Path) -> None:
-        self.output_dir = output_dir
+        self.output_dir = output_dir.resolve()
         self.output_dir.mkdir(parents=True, exist_ok=True)
+
+    def _build_output_path(self, filename: str, timestamp: str) -> Path:
+        """Build a safe output path below the configured output directory."""
+        safe_stem = sanitize_id_stem(Path(filename).stem or filename, maxlen=80)
+        return self.output_dir / f"{safe_stem}_{timestamp}.xlsx"
+
+    @staticmethod
+    def _is_safe_url(value: str) -> bool:
+        """Allow only ordinary HTTP(S) hyperlinks in generated workbooks."""
+        parsed = urlparse(value)
+        return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
     def render(self, context: TableContext, filename: str) -> Path:
         """
@@ -32,9 +45,15 @@ class ExcelRenderer(TableRendererInterface):
             Path to the generated file
         """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file_path = self.output_dir / f"{filename}_{timestamp}.xlsx"
+        file_path = self._build_output_path(filename, timestamp)
 
-        workbook = xlsxwriter.Workbook(str(file_path))
+        workbook = xlsxwriter.Workbook(
+            str(file_path),
+            {
+                "strings_to_formulas": False,
+                "strings_to_urls": False,
+            },
+        )
         worksheet = workbook.add_worksheet("Data")
 
         # Define Formats
@@ -101,12 +120,12 @@ class ExcelRenderer(TableRendererInterface):
                 # Write value
                 if col.type == "number" and isinstance(val, int | float):
                     worksheet.write_number(current_row, col_idx, val, fmt)
-                elif col.type == "url" and val:
+                elif col.type == "url" and val and self._is_safe_url(str(val)):
                     worksheet.write_url(
                         current_row, col_idx, str(val), string=str(val), cell_format=fmt
                     )
                 else:
-                    worksheet.write(
+                    worksheet.write_string(
                         current_row, col_idx, str(val) if val is not None else "", fmt
                     )
 

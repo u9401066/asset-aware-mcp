@@ -12,6 +12,7 @@ from .chunking import (
     get_chunker,
     smart_chunk,
 )
+from .citation import CraapAssessment, CraapDimension, EvidenceSpan
 from .entities import (
     DocumentAssets,
     DocumentManifest,
@@ -53,6 +54,8 @@ __all__ = [
     "ChunkConfig",
     "ChunkingStrategy",
     "ColumnDef",
+    "CraapAssessment",
+    "CraapDimension",
     "DocId",
     "DocumentAssets",
     "DocumentManifest",
@@ -62,6 +65,7 @@ __all__ = [
     "DocumentType",
     "ETLProfile",
     "ETLProfileRegistry",
+    "EvidenceSpan",
     "FetchResult",
     "FigureAsset",
     "FigureTableFilter",

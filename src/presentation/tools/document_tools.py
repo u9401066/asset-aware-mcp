@@ -15,6 +15,7 @@ Document Tools - ETL + 文件管理 MCP 工具
 
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 from pathlib import Path
@@ -29,6 +30,11 @@ from src.application.document_service import (
     materialize_pdf_page_subset,
     normalize_page_ranges,
 )
+from src.application.output_paths import (
+    resolve_document_output_dir,
+    resolve_document_output_path,
+)
+from src.domain.citation import EvidenceSpan, build_evidence_spans
 from src.infrastructure.config import settings
 from src.presentation.dependencies import (
     asset_service,
@@ -69,6 +75,53 @@ def _format_line_range(start_line: int | None, end_line: int | None) -> str | No
     ):
         return None
     return _display_line_range(start_line, end_line)
+
+
+def _asset_ref_from_span(span: EvidenceSpan) -> dict[str, Any]:
+    ref: dict[str, Any] = {
+        "source_type": "span",
+        "doc_id": span.doc_id,
+        "span_id": span.span_id,
+        "block_id": span.block_id,
+        "page": span.page,
+        "source_revision_id": span.source_revision_id,
+        "locator_version": span.locator_version,
+        "quote": span.text,
+        "quote_sha256": span.text_sha256,
+        "excerpt": span.text[:200],
+        "craap": span.craap.model_dump(exclude_none=True),
+    }
+    if span.asset_id:
+        ref["asset_id"] = span.asset_id
+    if span.line_start is not None and span.line_end is not None:
+        ref["line_range"] = [span.line_start, span.line_end]
+    if span.char_start is not None and span.char_end is not None:
+        ref["char_range"] = [span.char_start, span.char_end]
+    if span.byte_start is not None and span.byte_end is not None:
+        ref["byte_range"] = [span.byte_start, span.byte_end]
+    if span.bbox:
+        ref["bbox"] = span.bbox
+    return ref
+
+
+def _load_or_build_evidence_spans(doc_id: str) -> list[EvidenceSpan]:
+    spans = repository.load_citation_index(doc_id)
+    if spans:
+        return spans
+
+    markdown = repository.load_markdown(doc_id)
+    blocks = repository.load_blocks(doc_id)
+    if not markdown or blocks is None:
+        return []
+
+    spans = build_evidence_spans(
+        doc_id=doc_id,
+        markdown=markdown,
+        blocks=blocks,
+        source_backend="unknown",
+    )
+    repository.save_citation_index(doc_id, spans)
+    return spans
 
 
 @mcp.tool()
@@ -128,26 +181,22 @@ async def parse_pdf_structure(
     normalized_page_ranges = normalize_page_ranges(page_ranges, total_page_count)
     page_map = build_page_number_map(normalized_page_ranges)
 
-    # Determine output directory (same convention as ingest_documents)
-    if output_dir:
-        out_path = Path(output_dir)
-        from src.domain.value_objects import DocId
+    from src.domain.value_objects import DocId
 
-        doc_id_obj = DocId.generate(
-            pdf_file.stem,
-            build_doc_id_unique_suffix(pdf_file, normalized_page_ranges),
+    doc_id_obj = DocId.generate(
+        pdf_file.stem,
+        build_doc_id_unique_suffix(pdf_file, normalized_page_ranges),
+    )
+    try:
+        out_path = resolve_document_output_dir(
+            settings.data_dir,
+            output_dir,
+            default_name=doc_id_obj.value,
         )
-    else:
-        from src.domain.value_objects import DocId
-
-        doc_id_obj = DocId.generate(
-            pdf_file.stem,
-            build_doc_id_unique_suffix(pdf_file, normalized_page_ranges),
-        )
-        out_path = settings.data_dir / doc_id_obj.value
+    except ValueError as e:
+        return f"❌ {e!s}"
 
     try:
-        out_path.mkdir(parents=True, exist_ok=True)
         shutil.copy2(pdf_file, out_path / "original.pdf")
 
         active_pdf = pdf_file
@@ -165,7 +214,7 @@ async def parse_pdf_structure(
             if ocr_processor is None:
                 return "❌ OCR processor not configured."
             active_pdf = ocr_processor.preprocess_pdf(
-                pdf_file,
+                active_pdf,
                 out_path / "ocr_processed.pdf",
                 language=ocr_language,
                 rotate_pages=rotate_pages,
@@ -282,17 +331,18 @@ async def search_source_location(
     Returns:
         匹配的區塊列表，包含頁碼和位置
     """
-    blocks_path = settings.data_dir / doc_id / "blocks.json"
+    try:
+        blocks_data = repository.load_blocks(doc_id)
+    except ValueError as e:
+        return f"❌ Invalid doc_id: {e!s}"
 
-    if not blocks_path.exists():
+    if blocks_data is None:
         return (
             f"❌ Blocks not found for doc_id: {doc_id}. "
             "Run `ingest_documents` with `use_marker=True` first."
         )
 
     try:
-        blocks_data = json.loads(blocks_path.read_text(encoding="utf-8"))
-
         if block_types:
             blocks_data = [b for b in blocks_data if b.get("block_type") in block_types]
 
@@ -340,6 +390,131 @@ async def search_source_location(
 
     except Exception as e:
         return f"❌ Search failed: {e!s}"
+
+
+@mcp.tool()
+async def find_evidence_spans(
+    doc_id: str,
+    query: str = "",
+    span_id: str = "",
+    span_kinds: list[str] | None = None,
+    limit: int = 10,
+) -> str:
+    """
+    Search citation-ready evidence spans with exact locator metadata.
+
+    Returns span-level AssetRef JSON that can be passed to table_cite.
+    """
+    spans = _load_or_build_evidence_spans(doc_id)
+    if not spans:
+        return (
+            f"❌ Citation index not found for doc_id: {doc_id}. "
+            "Run ingest_documents again or ensure blocks.json/full markdown exist."
+        )
+
+    if span_id:
+        spans = [span for span in spans if span.span_id == span_id]
+    if query:
+        query_lower = query.lower()
+        spans = [span for span in spans if query_lower in span.text.lower()]
+    if span_kinds:
+        allowed_kinds = {kind.lower() for kind in span_kinds}
+        spans = [span for span in spans if span.span_kind.lower() in allowed_kinds]
+
+    if not spans:
+        target = span_id or query
+        return f"No evidence spans found for `{target}` in doc_id: {doc_id}"
+
+    lines = [
+        f"# Evidence Spans: {doc_id}",
+        "",
+        f"**Found:** {len(spans)}",
+        "",
+    ]
+    for index, span in enumerate(spans[: max(1, min(limit, 50))], 1):
+        line_range = _format_line_range(span.line_start, span.line_end)
+        char_range = (
+            f"{span.char_start}-{span.char_end}"
+            if span.char_start is not None and span.char_end is not None
+            else "?"
+        )
+        quote = span.text[:500] + ("..." if len(span.text) > 500 else "")
+        lines.extend(
+            [
+                f"## Span {index}: `{span.span_id}`",
+                f"- **Kind:** {span.span_kind}",
+                f"- **Block:** `{span.block_id}`",
+                f"- **Page:** {span.page or '?'}",
+                f"- **Lines:** {line_range or '?'}",
+                f"- **Chars:** {char_range}",
+                f"- **SHA256:** `{span.text_sha256}`",
+                (
+                    "- **CRAAP:** "
+                    f"currency={span.craap.currency.status}, "
+                    f"relevance={span.craap.relevance.status}, "
+                    f"authority={span.craap.authority.status}, "
+                    f"accuracy={span.craap.accuracy.status}, "
+                    f"purpose={span.craap.purpose.status}"
+                ),
+                "",
+                f"> {quote}",
+                "",
+                "AssetRef:",
+                "```json",
+                json.dumps(_asset_ref_from_span(span), ensure_ascii=False, indent=2),
+                "```",
+                "",
+            ]
+        )
+
+    if len(spans) > limit:
+        lines.append(f"_...and {len(spans) - limit} more spans_")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def verify_citation_ref(ref: dict[str, Any]) -> str:
+    """Verify a span-level AssetRef against the persisted citation index."""
+    if ref.get("source_type") != "span":
+        return "❌ Only span-level AssetRef objects can be verified by this tool."
+
+    doc_id = str(ref.get("doc_id") or "")
+    span_id = str(ref.get("span_id") or "")
+    if not doc_id or not span_id:
+        return "❌ Citation ref must include doc_id and span_id."
+
+    spans = _load_or_build_evidence_spans(doc_id)
+    span = next((item for item in spans if item.span_id == span_id), None)
+    if span is None:
+        return f"❌ Citation span not found: {span_id}"
+
+    issues: list[str] = []
+    if ref.get("source_revision_id") != span.source_revision_id:
+        issues.append("source_revision_id mismatch")
+
+    quote = str(ref.get("quote") or "")
+    quote_sha256 = str(ref.get("quote_sha256") or "")
+    if quote and quote not in span.text:
+        issues.append("quote is not contained in indexed span text")
+    if quote_sha256:
+        expected = hashlib.sha256((quote or span.text).encode("utf-8")).hexdigest()
+        if quote_sha256 != expected and quote_sha256 != span.text_sha256:
+            issues.append("quote_sha256 mismatch")
+
+    status = "✅ Citation ref verified" if not issues else "⚠️ Citation ref mismatch"
+    lines = [
+        status,
+        f"- **doc_id:** `{doc_id}`",
+        f"- **span_id:** `{span_id}`",
+        f"- **page:** {span.page or '?'}",
+        f"- **lines:** {_format_line_range(span.line_start, span.line_end) or '?'}",
+        f"- **char_range:** {span.char_start}-{span.char_end}",
+        f"- **text_sha256:** `{span.text_sha256}`",
+    ]
+    if issues:
+        lines.append(f"- **issues:** {', '.join(issues)}")
+    return "\n".join(lines)
 
 
 @mcp.tool()
@@ -792,13 +967,27 @@ async def visualize_document_layout(
     await report_progress(
         ctx, 55, message=f"Rendering layout overlay for {doc_id} page {page}"
     )
+    doc_dir = repository.get_doc_dir(doc_id)
+    safe_output_path = None
+    if output_path:
+        try:
+            safe_output_path = str(
+                resolve_document_output_path(
+                    doc_dir,
+                    output_path,
+                    default_name=f"layout_page_{page}.png",
+                    allowed_suffixes={".png"},
+                )
+            )
+        except ValueError as e:
+            return [TextContent(type="text", text=f"❌ {e!s}")]
     overlay = layout_visualizer.render_page_overlay(
-        repository.get_doc_dir(doc_id),
+        doc_dir,
         segmentation,
         page,
         show_labels=show_labels,
         include_reading_order=include_reading_order,
-        output_path=output_path,
+        output_path=safe_output_path,
     )
 
     await report_progress(
@@ -842,11 +1031,15 @@ async def ocr_pdf_document(
     if ocr_processor is None:
         return "❌ OCR processor not configured."
 
-    target = (
-        Path(output_path)
-        if output_path
-        else pdf_file.with_name(f"{pdf_file.stem}.ocr.pdf")
-    )
+    try:
+        target = resolve_document_output_path(
+            pdf_file.parent,
+            output_path,
+            default_name=f"{pdf_file.stem}.ocr.pdf",
+            allowed_suffixes={".pdf"},
+        )
+    except ValueError as e:
+        return f"❌ {e!s}"
     result = ocr_processor.preprocess_pdf(
         pdf_file,
         target,

@@ -23,6 +23,7 @@ import logging
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, cast
 
+from src.application.output_paths import resolve_document_output_path
 from src.infrastructure.encoding_guard import read_text_file, write_utf8_text
 from src.presentation.dependencies import (
     dfm_table_bridge,
@@ -273,7 +274,13 @@ async def save_docx(
 
     if not result.get("success"):
         await log_message(ctx, "error", f"save_docx failed: {doc_id}")
-        return f"❌ 儲存失敗：{result.get('error', '未知錯誤')}"
+        lines = [f"❌ 儲存失敗：{result.get('error', '未知錯誤')}"]
+        warnings = result.get("warnings", [])
+        if warnings:
+            lines.append("")
+            lines.append("⚠️ 診斷：")
+            lines.extend(f"  - {warning}" for warning in warnings[:10])
+        return "\n".join(lines)
 
     await report_progress(ctx, 100, message=f"Finished saving {doc_id}")
     await log_message(ctx, "info", f"save_docx complete: {doc_id}")
@@ -516,8 +523,6 @@ async def docx_validate_roundtrip(
     Returns:
         Markdown 格式的驗證報告（含保真度分數和差異列表）
     """
-    from pathlib import Path
-
     await log_message(ctx, "info", f"docx_validate_roundtrip start: {doc_id}")
     await report_progress(ctx, 10, message=f"Loading original DOCX for {doc_id}")
     doc_dir = docx_service.repository.get_doc_dir(doc_id)
@@ -534,10 +539,15 @@ async def docx_validate_roundtrip(
         return f"❌ 找不到 IR：{doc_id}\n請先用 ingest_docx 攝入。"
 
     # Determine output path
-    if output_path:
-        rebuilt_path = Path(output_path)
-    else:
-        rebuilt_path = doc_dir / "roundtrip_validation.docx"
+    try:
+        rebuilt_path = resolve_document_output_path(
+            doc_dir,
+            output_path,
+            default_name="roundtrip_validation.docx",
+            allowed_suffixes={".docx"},
+        )
+    except ValueError as e:
+        return f"❌ {e!s}"
 
     # Rebuild docx from current IR state
     try:
@@ -678,6 +688,16 @@ async def docx_table_from_context(
         return (
             f"❌ 找不到 TableContext `{table_id}`，請先用 docx_table_to_context 轉換。"
         )
+    if getattr(tc, "source_doc_id", "") and tc.source_doc_id != doc_id:
+        return (
+            f"❌ 寫回失敗：TableContext `{table_id}` 屬於文件 "
+            f"`{tc.source_doc_id}`，不能寫入 `{doc_id}`。"
+        )
+    if getattr(tc, "source_block_id", "") and tc.source_block_id != block_id:
+        return (
+            f"❌ 寫回失敗：TableContext `{table_id}` 來源區塊是 "
+            f"`{tc.source_block_id}`，不能寫入 `{block_id}`。"
+        )
 
     ir = docx_service._load_ir(doc_id)
     if ir is None:
@@ -718,6 +738,7 @@ async def docx_table_from_context(
                 )
 
     doc_dir = docx_service.repository.get_doc_dir(doc_id)
+    docx_service._backup_before_overwrite(doc_dir)
     docx_service._save_ir(ir, doc_dir / "ir.json")
 
     result_lines = [
@@ -734,9 +755,16 @@ async def docx_table_from_context(
 
         renderer = DfmRenderer()
         dfm_text = renderer.render(ir)
+        md_text, yaml_text = renderer.render_split(ir)
         dfm_path = doc_dir / "content.dfm"
+        md_path = doc_dir / "content.md"
+        yaml_path = doc_dir / "format.yaml"
         write_utf8_text(dfm_path, dfm_text, hint=str(dfm_path))
+        write_utf8_text(md_path, md_text, hint=str(md_path))
+        write_utf8_text(yaml_path, yaml_text, hint=str(yaml_path))
         result_lines.append(f"- **DFM 已更新**: `{dfm_path}`")
+        result_lines.append(f"- **Split Markdown 已更新**: `{md_path}`")
+        result_lines.append(f"- **Format YAML 已更新**: `{yaml_path}`")
 
     result_lines.append("")
     result_lines.append(

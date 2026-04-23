@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from src.domain.citation import EvidenceSpan
 from src.domain.entities import DocumentAssets, DocumentManifest
 from src.infrastructure.file_storage import FileStorage
 
@@ -196,6 +197,57 @@ class TestFileStorage:
     def test_delete_document_missing(self, storage: FileStorage):
         """Deleting a missing document returns False."""
         assert storage.delete_document("doc_missing") is False
+
+    def test_rejects_doc_id_path_traversal(self, storage: FileStorage, temp_dir: Path):
+        """Document IDs cannot escape the configured storage root."""
+        outside_dir = temp_dir.parent / "should_not_delete"
+        outside_dir.mkdir(exist_ok=True)
+
+        with pytest.raises(ValueError):
+            storage.get_doc_dir("../should_not_delete")
+
+        assert storage.load_manifest("../should_not_delete") is None
+        assert storage.document_exists("../should_not_delete") is False
+        assert storage.delete_document("../should_not_delete") is False
+        assert outside_dir.exists()
+
+    def test_rejects_unsafe_image_components(self, storage: FileStorage):
+        """Image IDs and extensions are treated as filename components."""
+        with pytest.raises(ValueError):
+            storage.save_image("doc_test_abc123", "../fig", b"data", "png")
+
+        with pytest.raises(ValueError):
+            storage.save_image("doc_test_abc123", "fig_1", b"data", "../png")
+
+    def test_save_and_load_blocks(self, storage: FileStorage):
+        """Structured blocks use repository path validation."""
+        blocks = [{"block_id": "blk_1", "text": "exact evidence"}]
+
+        path = storage.save_blocks("doc_test_abc123", blocks)
+
+        assert path.name == "blocks.json"
+        assert storage.load_blocks("doc_test_abc123") == blocks
+        assert storage.load_blocks("../escape") is None
+
+    def test_save_and_load_citation_index(self, storage: FileStorage):
+        """Citation index round-trips exact span metadata."""
+        span = EvidenceSpan.create(
+            doc_id="doc_test_abc123",
+            source_revision_id="rev",
+            span_kind="sentence",
+            text="Exact evidence sentence.",
+            block_id="blk_1",
+            char_start=0,
+            char_end=24,
+            markdown="Exact evidence sentence.",
+        )
+
+        path = storage.save_citation_index("doc_test_abc123", [span])
+        loaded = storage.load_citation_index("doc_test_abc123")
+
+        assert path.name == "citation_index.jsonl"
+        assert loaded == [span]
+        assert storage.load_citation_index("../escape") == []
 
     def test_list_docx_documents(self, storage: FileStorage):
         """Test listing DOCX/DFM documents from repository layout."""

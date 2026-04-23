@@ -928,7 +928,8 @@ class MarkerPDFExtractor:
                 "block_id": b.block_id,
                 "block_type": b.block_type,
                 "page": b.page,
-                "text": b.text[:500] if b.text else "",  # 截斷避免過大
+                "text": b.text or "",
+                "text_preview": (b.text[:500] if b.text else ""),
                 "bbox": b.bbox,
                 "section_hierarchy": b.section_hierarchy,
                 "metadata": b.metadata,

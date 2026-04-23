@@ -227,7 +227,7 @@ class TestExportFromMarkdown:
         from src.application.docx_service import DocxService
 
         repo = MagicMock()
-        return DocxService(repo)
+        return DocxService(repo, export_root=tmp_path)
 
     @pytest.mark.asyncio
     async def test_export_docx_from_text(self, mock_service, tmp_path):
@@ -287,4 +287,28 @@ class TestExportFromMarkdown:
             output_format="docx",
         )
         assert result["success"] is True
-        assert result["output_path"].endswith(".docx")
+        assert Path(result["output_path"]) == tmp_path / "notes.docx"
+
+    @pytest.mark.asyncio
+    async def test_export_rejects_output_outside_export_root(
+        self, mock_service, tmp_path
+    ):
+        result = await mock_service.export_from_markdown(
+            md_text="# Hello",
+            output_path=str(tmp_path.parent / "outside.docx"),
+            output_format="docx",
+        )
+
+        assert result["success"] is False
+        assert "export root" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_export_rejects_wrong_output_suffix(self, mock_service, tmp_path):
+        result = await mock_service.export_from_markdown(
+            md_text="# Hello",
+            output_path=str(tmp_path / "wrong.pdf"),
+            output_format="docx",
+        )
+
+        assert result["success"] is False
+        assert "must end with .docx" in result["error"]

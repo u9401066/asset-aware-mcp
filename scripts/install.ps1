@@ -322,8 +322,7 @@ function Main {
         Write-Ok "src package importable"
         $checksPassed++
     } catch {
-        Write-Warn "src package not importable (may need PYTHONPATH)"
-        $checksPassed++  # non-critical
+        Write-Err "src package not importable"
     }
 
     # Check 3: MCP module
@@ -332,8 +331,7 @@ function Main {
         Write-Ok "MCP server module loadable"
         $checksPassed++
     } catch {
-        Write-Warn "MCP server module not loadable (optional components may be missing)"
-        $checksPassed++  # non-critical
+        Write-Err "MCP server module not loadable"
     }
 
     # ========================================================================
@@ -344,6 +342,12 @@ function Main {
     Write-Host "|  Installation Complete!                         |" -ForegroundColor Green
     Write-Host "+=================================================+" -ForegroundColor Green
     Write-Host ""
+    if ($checksPassed -ne $checksTotal) {
+        Write-Err "Checks passed: ${checksPassed}/${checksTotal}"
+        Write-Err "Installation verification failed. Please fix the errors above and re-run this script."
+        exit 1
+    }
+
     Write-Ok "Checks passed: ${checksPassed}/${checksTotal}"
     Write-Host ""
     Write-Info "Quick start:"

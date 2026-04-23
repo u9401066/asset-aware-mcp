@@ -292,6 +292,121 @@ async def test_save_docx_uses_persisted_dfm_when_no_inline_content(
 
 
 @pytest.mark.asyncio
+async def test_save_docx_rejects_shrinkage_before_writing_output_or_state(
+    monkeypatch, tmp_path: Path
+):
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path
+
+    service = DocxService(repository=repository)
+    ir = DocxIR(
+        doc_id="docx_123",
+        source_path="/workspace/original.docx",
+        blocks=[
+            DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="Before"),
+        ],
+    )
+    (tmp_path / "content.md").write_text("A" * 200, encoding="utf-8")
+    (tmp_path / "content.dfm").write_text("persisted dfm", encoding="utf-8")
+    (tmp_path / "format.yaml").write_text("doc_id: docx_123\n", encoding="utf-8")
+    (tmp_path / "ir.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "original.docx").write_bytes(b"docx")
+
+    parse_result = DfmParseResult(
+        doc_id="docx_123",
+        source="demo.docx",
+        checksum="",
+        edits=[BlockEdit(block_id="p001", new_content="tiny")],
+    )
+
+    monkeypatch.setattr(service, "_load_ir", lambda doc_id: ir)
+    monkeypatch.setattr(service.parser, "parse", lambda dfm_text: parse_result)
+    monkeypatch.setattr(
+        service.integrity,
+        "check_pre_save",
+        lambda ir_obj, parsed: IntegrityReport(),
+    )
+    monkeypatch.setattr(service.parser, "apply_edits", lambda ir_obj, parsed: ir_obj)
+    monkeypatch.setattr(service, "_expected_changed_block_ids", lambda *_args: {"p001"})
+    monkeypatch.setattr(
+        service,
+        "_detect_unedited_block_mutations",
+        lambda *_args: [],
+    )
+    monkeypatch.setattr(service.renderer, "render", lambda ir_obj: "tiny dfm")
+    monkeypatch.setattr(service.renderer, "render_split", lambda ir_obj: ("tiny", "yaml"))
+    monkeypatch.setattr(service.adapter, "ir_to_docx", MagicMock())
+    monkeypatch.setattr(service, "_save_ir", MagicMock())
+    monkeypatch.setattr(service, "_backup_before_overwrite", MagicMock())
+
+    result = await service.save_docx("docx_123", "dummy")
+
+    assert result["success"] is False
+    assert "Content shrunk" in result["error"]
+    service.adapter.ir_to_docx.assert_not_called()
+    service._save_ir.assert_not_called()
+    service._backup_before_overwrite.assert_not_called()
+    assert not (tmp_path / "output.docx").exists()
+
+
+@pytest.mark.asyncio
+async def test_save_docx_rejects_table_shape_edits_before_writing(
+    monkeypatch, tmp_path: Path
+):
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path
+
+    service = DocxService(repository=repository)
+    ir = DocxIR(
+        doc_id="docx_123",
+        source_path="/workspace/original.docx",
+        blocks=[
+            DfmBlock(
+                id="t001",
+                block_type=DfmBlockType.TABLE,
+                content="| A |\n| --- |\n| old |",
+            ),
+        ],
+    )
+    (tmp_path / "content.dfm").write_text("persisted dfm", encoding="utf-8")
+    (tmp_path / "original.docx").write_bytes(b"docx")
+
+    parse_result = DfmParseResult(
+        doc_id="docx_123",
+        source="demo.docx",
+        checksum="",
+        edits=[
+            BlockEdit(
+                block_id="t001",
+                new_content="",
+                table_rows=[["A"], ["old"], ["new row"]],
+            )
+        ],
+    )
+
+    monkeypatch.setattr(service, "_load_ir", lambda doc_id: ir)
+    monkeypatch.setattr(service.parser, "parse", lambda dfm_text: parse_result)
+    monkeypatch.setattr(
+        service.integrity,
+        "check_pre_save",
+        lambda ir_obj, parsed: IntegrityReport(),
+    )
+    monkeypatch.setattr(service.adapter, "ir_to_docx", MagicMock())
+    monkeypatch.setattr(service, "_save_ir", MagicMock())
+    monkeypatch.setattr(service, "_backup_before_overwrite", MagicMock())
+
+    result = await service.save_docx("docx_123", "dummy")
+
+    assert result["success"] is False
+    assert "Table structural edits" in result["error"]
+    assert any("row count changed" in warning for warning in result["warnings"])
+    service.adapter.ir_to_docx.assert_not_called()
+    service._save_ir.assert_not_called()
+    service._backup_before_overwrite.assert_not_called()
+    assert not (tmp_path / "output.docx").exists()
+
+
+@pytest.mark.asyncio
 async def test_save_docx_from_md_normalizes_multilingual_split_files(
     monkeypatch, tmp_path: Path
 ):

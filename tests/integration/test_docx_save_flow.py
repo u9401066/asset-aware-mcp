@@ -60,7 +60,7 @@ class TestDocxSaveFlowIntegration:
         repository, docx_service, table_service, dfm_table_bridge = docx_stack
         doc_id = await _ingest_sample_docx(docx_service, temp_dir)
         block_id = _get_first_table_block_id(docx_service, doc_id)
-        output_path = temp_dir / "inline-output.docx"
+        output_path = repository.get_doc_dir(doc_id) / "inline-output.docx"
 
         with (
             patch("src.presentation.tools.docx_tools.docx_service", docx_service),
@@ -99,14 +99,37 @@ class TestDocxSaveFlowIntegration:
         )
 
     @pytest.mark.asyncio
+    async def test_save_docx_preserves_literal_pipe_in_table_cell(
+        self, temp_dir: Path, docx_stack
+    ) -> None:
+        repository, docx_service, _table_service, _dfm_table_bridge = docx_stack
+        doc_id = await _ingest_sample_docx(docx_service, temp_dir)
+        doc_dir = repository.get_doc_dir(doc_id)
+        output_path = doc_dir / "pipe-output.docx"
+
+        dfm_text = await docx_service.get_dfm(doc_id)
+        assert dfm_text is not None
+        dfm_text = dfm_text.replace("Old value", "Dose A\\|Dose B")
+
+        result = await docx_service.save_docx(
+            doc_id,
+            dfm_text,
+            output_path=str(output_path),
+        )
+
+        assert result["success"] is True
+        saved = Document(str(output_path))
+        assert saved.tables[0].cell(1, 0).text == "Dose A|Dose B"
+
+    @pytest.mark.asyncio
     async def test_save_docx_merges_split_md_and_table_context_into_real_docx(
         self, temp_dir: Path, docx_stack
     ) -> None:
         repository, docx_service, table_service, dfm_table_bridge = docx_stack
         doc_id = await _ingest_sample_docx(docx_service, temp_dir)
         block_id = _get_first_table_block_id(docx_service, doc_id)
-        output_path = temp_dir / "split-output.docx"
         doc_dir = repository.get_doc_dir(doc_id)
+        output_path = doc_dir / "split-output.docx"
 
         with (
             patch("src.presentation.tools.docx_tools.docx_service", docx_service),

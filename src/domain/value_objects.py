@@ -31,6 +31,7 @@ SourceType = Literal[
     "figure",  # PDF 圖片
     "table",  # PDF 表格
     "full_text",  # PDF 全文
+    "span",  # citation-ready evidence span
     "kg_entity",  # 知識圖譜實體
     "external",  # 外部 URL / DOI
     "user_input",  # 使用者直接提供的文字
@@ -62,20 +63,38 @@ class AssetRef:
     # 定位（PDF 資產用）
     doc_id: str = ""
     asset_id: str = ""
+    block_id: str = ""
+    span_id: str = ""
     page: int | None = None
     line_range: tuple[int, int] | None = None
+    char_range: tuple[int, int] | None = None
+    byte_range: tuple[int, int] | None = None
+    bbox: tuple[float, float, float, float] | None = None
+    source_revision_id: str = ""
+    locator_version: str = ""
 
     # 外部來源
     url: str = ""
 
     # 通用
     excerpt: str = ""  # 來源節錄 ≤200 chars（驗證用）
+    quote: str = ""  # Exact cited quote when narrower than the source span
+    quote_sha256: str = ""
     label: str = ""  # 人類可讀標籤
+    craap: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         """Validate and truncate excerpt."""
         if self.excerpt and len(self.excerpt) > 200:
             object.__setattr__(self, "excerpt", self.excerpt[:200])
+        if self.quote and not self.quote_sha256:
+            import hashlib
+
+            object.__setattr__(
+                self,
+                "quote_sha256",
+                hashlib.sha256(self.quote.encode("utf-8")).hexdigest(),
+            )
 
     @classmethod
     def from_doc_asset(
@@ -134,6 +153,8 @@ class AssetRef:
             return f"[user_input] {self.excerpt[:50]}"
         if self.source_type == "kg_entity":
             return f"consult_knowledge_graph('{self.label}')"
+        if self.source_type == "span":
+            return f"find_evidence_spans('{self.doc_id}', span_id='{self.span_id}')"
         return (
             f"fetch_document_asset('{self.doc_id}', "
             f"'{self.source_type}', '{self.asset_id}')"
@@ -152,6 +173,8 @@ class AssetRef:
         parts = [self.doc_id]
         if self.asset_id:
             parts.append(self.asset_id)
+        if self.span_id:
+            parts.append(self.span_id)
         if self.page:
             parts.append(f"p.{self.page}")
         return "/".join(parts)
@@ -163,16 +186,36 @@ class AssetRef:
             d["doc_id"] = self.doc_id
         if self.asset_id:
             d["asset_id"] = self.asset_id
+        if self.block_id:
+            d["block_id"] = self.block_id
+        if self.span_id:
+            d["span_id"] = self.span_id
         if self.page is not None:
             d["page"] = self.page
         if self.line_range is not None:
             d["line_range"] = list(self.line_range)
+        if self.char_range is not None:
+            d["char_range"] = list(self.char_range)
+        if self.byte_range is not None:
+            d["byte_range"] = list(self.byte_range)
+        if self.bbox is not None:
+            d["bbox"] = list(self.bbox)
+        if self.source_revision_id:
+            d["source_revision_id"] = self.source_revision_id
+        if self.locator_version:
+            d["locator_version"] = self.locator_version
         if self.url:
             d["url"] = self.url
         if self.excerpt:
             d["excerpt"] = self.excerpt
+        if self.quote:
+            d["quote"] = self.quote
+        if self.quote_sha256:
+            d["quote_sha256"] = self.quote_sha256
         if self.label:
             d["label"] = self.label
+        if self.craap is not None:
+            d["craap"] = self.craap
         return d
 
     @classmethod
@@ -181,15 +224,37 @@ class AssetRef:
         line_range = data.get("line_range")
         if line_range and isinstance(line_range, list):
             line_range = tuple(line_range)  # type: ignore[assignment]
+        char_range = data.get("char_range")
+        if char_range and isinstance(char_range, list):
+            char_range = tuple(char_range)  # type: ignore[assignment]
+        byte_range = data.get("byte_range")
+        if byte_range and isinstance(byte_range, list):
+            byte_range = tuple(byte_range)  # type: ignore[assignment]
+        bbox = data.get("bbox")
+        if bbox and isinstance(bbox, list):
+            bbox = tuple(float(item) for item in bbox)  # type: ignore[assignment]
+        craap = data.get("craap")
+        if not isinstance(craap, dict):
+            craap = None
         return cls(
             source_type=data["source_type"],
             doc_id=data.get("doc_id", ""),
             asset_id=data.get("asset_id", ""),
+            block_id=data.get("block_id", ""),
+            span_id=data.get("span_id", ""),
             page=data.get("page"),
             line_range=line_range,  # type: ignore[arg-type]
+            char_range=char_range,  # type: ignore[arg-type]
+            byte_range=byte_range,  # type: ignore[arg-type]
+            bbox=bbox,  # type: ignore[arg-type]
+            source_revision_id=data.get("source_revision_id", ""),
+            locator_version=data.get("locator_version", ""),
             url=data.get("url", ""),
             excerpt=data.get("excerpt", ""),
+            quote=data.get("quote", ""),
+            quote_sha256=data.get("quote_sha256", ""),
             label=data.get("label", ""),
+            craap=craap,
         )
 
 

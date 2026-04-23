@@ -130,6 +130,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
         if (openaiKey) {
             envVars['OPENAI_API_KEY'] = openaiKey;
             envVars['OPENAI_MODEL'] = config.get('openaiModel', 'gpt-4o-mini');
+            envVars['LIGHTRAG_EMBEDDING_MODEL'] = config.get('openaiEmbeddingModel', 'text-embedding-3-small');
         }
 
         if (mcpServerDir) {
@@ -146,6 +147,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
             if (fs.existsSync(envPath)) {
                 const fileEnv = this.parseEnvFile(envPath);
                 Object.assign(envVars, fileEnv);
+                this.normalizeEmbeddingEnv(envVars);
                 this.log('Merged .env file settings');
             }
 
@@ -177,8 +179,16 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
             // Production Mode: Use uvx to run from PyPI
             this.log('Production Mode: Using uvx to run from PyPI');
 
+            const workspaceEnvPath = path.join(this.workspaceRoot, '.env');
+            if (fs.existsSync(workspaceEnvPath)) {
+                const fileEnv = this.parseEnvFile(workspaceEnvPath);
+                Object.assign(envVars, fileEnv);
+                this.normalizeEmbeddingEnv(envVars);
+                this.log('Merged workspace .env file settings');
+            }
+
             // Set DATA_DIR to workspace or user's home
-            const dataDir = config.get<string>('dataDir', './data');
+            const dataDir = envVars['DATA_DIR'] || config.get<string>('dataDir', './data');
             if (path.isAbsolute(dataDir)) {
                 envVars['DATA_DIR'] = dataDir;
             } else {
@@ -302,5 +312,16 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
         }
 
         return env;
+    }
+
+    private normalizeEmbeddingEnv(envVars: Record<string, string>): void {
+        const canonical = envVars['LIGHTRAG_EMBEDDING_MODEL'];
+        const legacy = envVars['OPENAI_EMBEDDING_MODEL'];
+        if (!canonical && legacy) {
+            envVars['LIGHTRAG_EMBEDDING_MODEL'] = legacy;
+        }
+        if (canonical && !legacy) {
+            envVars['OPENAI_EMBEDDING_MODEL'] = canonical;
+        }
     }
 }

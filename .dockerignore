@@ -18,16 +18,23 @@ venv/
 
 # Data (mount as volume instead)
 data/
+test_pdfs/
+
+# VS Code extension is packaged separately from the server image.
+vscode-extension/
 
 # Dev tools
 .git/
 .github/
+.academic-figures/
+.claude/
 .pre-commit-config.yaml
 .ruff_cache/
 .mypy_cache/
 .pytest_cache/
 htmlcov/
 coverage.xml
+.coverage
 
 # Tests
 tests/
@@ -38,6 +45,13 @@ docs/
 *.md
 !README.md
 LICENSE
+
+# Local sample documents
+*.doc
+*.docx
+*.pdf
+*.pptx
+*.xlsx
 
 # Memory bank
 memory-bank/

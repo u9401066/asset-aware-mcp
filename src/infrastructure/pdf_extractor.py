@@ -11,12 +11,12 @@ import logging
 import multiprocessing
 import os
 import re
-import signal
 import shutil
+import signal
 import subprocess
 import threading
 from dataclasses import dataclass
-from pathlib import Path  # noqa: TC003
+from pathlib import Path
 from typing import Any
 
 import fitz  # type: ignore # PyMuPDF
@@ -221,17 +221,17 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                     text=True,
                 )
                 raw_pages = result.stdout.split("\f")
-                text_parts: list[str] = []
+                fallback_text_parts: list[str] = []
                 page_counter = 0
                 for page_text in raw_pages:
                     if not page_text.strip() and page_counter >= len(raw_pages) - 1:
                         continue
                     page_counter += 1
-                    text_parts.append(f"\n<!-- Page {page_counter} -->\n")
+                    fallback_text_parts.append(f"\n<!-- Page {page_counter} -->\n")
                     if page_text.strip():
-                        text_parts.append(page_text.strip())
-                if text_parts:
-                    return "\n".join(text_parts)
+                        fallback_text_parts.append(page_text.strip())
+                if fallback_text_parts:
+                    return "\n".join(fallback_text_parts)
             except Exception:
                 logger.debug("pdftotext fallback failed", exc_info=True)
 
@@ -537,7 +537,9 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                 if _env_flag("PYMUPDF_ENABLE_VECTOR_IMAGES", True):
                     try:
                         vector_images = self._run_with_timeout(
-                            lambda: self._extract_vector_graphics_regions(page),
+                            lambda page=page: self._extract_vector_graphics_regions(
+                                page
+                            ),
                             env_var="PYMUPDF_IMAGE_TIMEOUT_SECONDS",
                             default_seconds=DEFAULT_IMAGE_STRATEGY_TIMEOUT_SECONDS,
                             operation="vector graphics extraction",
@@ -566,7 +568,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                 if _env_flag("PYMUPDF_ENABLE_REGION_IMAGES", True):
                     try:
                         region_images = self._run_with_timeout(
-                            lambda: self._extract_non_text_regions(page),
+                            lambda page=page: self._extract_non_text_regions(page),
                             env_var="PYMUPDF_IMAGE_TIMEOUT_SECONDS",
                             default_seconds=DEFAULT_IMAGE_STRATEGY_TIMEOUT_SECONDS,
                             operation="smart region extraction",

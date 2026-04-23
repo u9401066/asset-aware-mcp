@@ -7,16 +7,17 @@ Supports multiple PDF backends for flexible extraction.
 
 from __future__ import annotations
 
-import inspect
-import json
 import hashlib
+import inspect
 import re
 import shutil
 import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
+from src.application.output_paths import resolve_document_output_path
+from src.domain.citation import build_evidence_spans
 from src.domain.entities import (
     DocumentManifest,
     DocumentSummary,
@@ -431,7 +432,7 @@ class DocumentService:
                 )
                 active_pdf_path = self._preprocess_pdf_with_ocr(
                     doc_id.value,
-                    path,
+                    active_pdf_path,
                     language=ocr_language,
                     rotate_pages=rotate_pages,
                     deskew=deskew,
@@ -571,6 +572,12 @@ class DocumentService:
             blocks_data = self._build_pymupdf_blocks(markdown, manifest)
             if blocks_data:
                 self._save_blocks_json(doc_id.value, blocks_data)
+                self._save_citation_index(
+                    doc_id.value,
+                    markdown,
+                    blocks_data,
+                    source_backend="pymupdf",
+                )
             await _invoke_progress_callback(
                 progress_callback,
                 total_steps,
@@ -694,7 +701,7 @@ class DocumentService:
                 )
                 active_pdf_path = self._preprocess_pdf_with_ocr(
                     doc_id.value,
-                    path,
+                    active_pdf_path,
                     language=ocr_language,
                     rotate_pages=rotate_pages,
                     deskew=deskew,
@@ -749,6 +756,12 @@ class DocumentService:
             )
             blocks_data = self._convert_blocks_to_json(parse_result.blocks)
             self._save_blocks_json(doc_id.value, blocks_data)
+            self._save_citation_index(
+                doc_id.value,
+                parse_result.markdown,
+                blocks_data,
+                source_backend="marker",
+            )
             current_step += 1
 
             # Step 4: Extract and save images from Marker result
@@ -889,7 +902,8 @@ class DocumentService:
                 "block_id": b.block_id,
                 "block_type": b.block_type,
                 "page": b.page,
-                "text": b.text[:500] if b.text else "",  # Truncate to avoid huge files
+                "text": b.text or "",
+                "text_preview": (b.text[:500] if b.text else ""),
                 "bbox": b.bbox,
                 "polygon": b.polygon,
                 "section_hierarchy": b.section_hierarchy,
@@ -900,16 +914,24 @@ class DocumentService:
 
     def _save_blocks_json(self, doc_id: str, blocks_data: list[dict]) -> Path:
         """Save blocks.json to repository."""
-        # Get the document directory from repository
-        doc_dir = self.repository.get_doc_dir(doc_id)
-        doc_dir.mkdir(parents=True, exist_ok=True)
+        return self.repository.save_blocks(doc_id, blocks_data)
 
-        blocks_path = doc_dir / "blocks.json"
-        blocks_path.write_text(
-            json.dumps(blocks_data, ensure_ascii=False, indent=2),
-            encoding="utf-8",
+    def _save_citation_index(
+        self,
+        doc_id: str,
+        markdown: str,
+        blocks_data: list[dict[str, Any]],
+        *,
+        source_backend: str,
+    ) -> Path:
+        """Build and persist citation-ready spans for downstream references."""
+        spans = build_evidence_spans(
+            doc_id=doc_id,
+            markdown=markdown,
+            blocks=blocks_data,
+            source_backend=source_backend,
         )
-        return blocks_path
+        return self.repository.save_citation_index(doc_id, spans)
 
     def _build_pymupdf_blocks(
         self,
@@ -1210,7 +1232,12 @@ class DocumentService:
                 clip = fitz.Rect(*bbox)
                 if clip.is_empty:
                     return None
-                clip = clip + (-padding, -padding, padding, padding)
+                clip = fitz.Rect(
+                    clip.x0 - padding,
+                    clip.y0 - padding,
+                    clip.x1 + padding,
+                    clip.y1 + padding,
+                )
                 clip = clip & page.rect
                 if clip.is_empty:
                     return None
@@ -1219,15 +1246,15 @@ class DocumentService:
                     clip=clip,
                     alpha=False,
                 )
-                return pix.tobytes("png")
+                return cast("bytes", pix.tobytes("png"))
         except Exception:
             return None
 
     async def _save_marker_images(
-        self, doc_id: str, parse_result: Any, *, pdf_path: Path
+        self, doc_id: str, parse_result: Any, *, pdf_path: Path | None = None
     ) -> list[FigureAsset]:
         """Save images from Marker parse result."""
-        figures = []
+        figures: list[FigureAsset] = []
 
         image_blocks = self._get_marker_image_blocks(parse_result.blocks)
         min_px = self._get_min_figure_px()
@@ -1249,7 +1276,7 @@ class DocumentService:
                 )
             )
             ext = "png"
-            if img_bytes is None:
+            if img_bytes is None and pdf_path is not None:
                 img_bytes = self._render_pdf_block_image(
                     pdf_path,
                     page_number=matched_block.page,
@@ -1412,7 +1439,7 @@ class DocumentService:
         page_map: list[int] | None = None,
     ) -> list[FigureAsset]:
         """Extract images from PDF with conservative filtering for textbook figures."""
-        figures = []
+        figures: list[FigureAsset] = []
 
         raw_images = self.pdf_extractor.extract_images(pdf_path)
         if not raw_images:
@@ -1456,7 +1483,7 @@ class DocumentService:
                 continue
 
             page_num = int(img_data["page"])
-            image_hash = hashlib.sha1(image_bytes).hexdigest()
+            image_hash = hashlib.sha256(image_bytes).hexdigest()
             page_hashes = seen_hashes_by_page.setdefault(page_num, set())
             if image_hash in page_hashes:
                 continue
@@ -1686,11 +1713,15 @@ class DocumentService:
             }
 
         doc_dir = self.repository.get_doc_dir(doc_id)
-        out_path = (
-            Path(output_path)
-            if output_path is not None
-            else doc_dir / "converted_from_pdf.docx"
-        )
+        try:
+            out_path = resolve_document_output_path(
+                doc_dir,
+                output_path,
+                default_name="converted_from_pdf.docx",
+                allowed_suffixes={".docx"},
+            )
+        except ValueError as e:
+            return {"success": False, "error": str(e)}
 
         try:
             self._build_docx_from_markdown(markdown, manifest, out_path)
@@ -1740,11 +1771,15 @@ class DocumentService:
             }
 
         doc_dir = self.repository.get_doc_dir(doc_id)
-        out_path = (
-            Path(output_path)
-            if output_path is not None
-            else doc_dir / "converted_from_pdf.pptx"
-        )
+        try:
+            out_path = resolve_document_output_path(
+                doc_dir,
+                output_path,
+                default_name="converted_from_pdf.pptx",
+                allowed_suffixes={".pptx"},
+            )
+        except ValueError as e:
+            return {"success": False, "error": str(e)}
 
         try:
             build_stats = self._build_pptx_from_markdown(markdown, manifest, out_path)
