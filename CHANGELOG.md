@@ -7,6 +7,14 @@
 
 ## [Unreleased]
 
+## [0.6.13] - 2026-04-24
+
+### Fixed
+
+- **Windows package-content CI guard**
+  - Replaced the VSIX package-content test's `npx vsce ls` subprocess call with VSCE's JS `listFiles()` API
+  - Keeps the same `--no-dependencies` package-scope semantics while avoiding Windows `spawn EINVAL` failures in GitHub Actions
+
 ## [0.6.12] - 2026-04-24
 
 ### Added

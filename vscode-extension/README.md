@@ -6,10 +6,11 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.12/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.13/resources/banner.png)
 
-## 🆕 What's New in v0.6.12
+## 🆕 What's New in v0.6.13
 
+- **Windows CI package guard fixed**: VSIX package-content verification now uses the VSCE JS API directly instead of spawning `npx`, so the guard works consistently on Windows, macOS, and Linux
 - **Release gates hardened**: CI, local release prep, and tagged release publish now share artifact audits, full Python tests, Cline harness validation, and VSIX package-content checks
 - **VSIX install smoke tightened**: packaged extension smoke tests now fail if the installed extension cannot be found, and CI requires activation under `xvfb`
 - **Marketplace banner retained safely**: README banner remains release-pinned to tracked `resources/banner.png` while package checks prevent test files from leaking into the VSIX

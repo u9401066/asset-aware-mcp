@@ -1,8 +1,6 @@
-import { execFile } from 'child_process';
 import * as path from 'path';
-import { promisify } from 'util';
+import { listFiles, PackageManager } from '@vscode/vsce';
 
-const execFileAsync = promisify(execFile);
 const extensionRoot = path.resolve(__dirname, '../..');
 
 const requiredFiles = [
@@ -33,17 +31,10 @@ const forbiddenFiles = [
 ];
 
 async function listPackageFiles(): Promise<string[]> {
-    const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-    const { stdout } = await execFileAsync(npxCommand, ['vsce', 'ls', '--no-dependencies'], {
+    return await listFiles({
         cwd: extensionRoot,
-        env: process.env,
-        maxBuffer: 1024 * 1024 * 10,
+        packageManager: PackageManager.None,
     });
-
-    return stdout
-        .split(/\r?\n/u)
-        .map((line) => line.trim())
-        .filter(Boolean);
 }
 
 function assertPackageContents(files: string[]): void {
