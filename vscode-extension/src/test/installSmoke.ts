@@ -18,6 +18,8 @@ const packageJson = JSON.parse(
     fs.readFileSync(path.join(extensionRoot, 'package.json'), 'utf8'),
 ) as { version: string };
 const currentVersion = packageJson.version;
+const requireActivation = process.argv.includes('--require-activation') ||
+    process.env.ASSET_AWARE_MCP_REQUIRE_ACTIVATION === '1';
 
 async function runCommand(command: string, args: string[], cwd?: string): Promise<string> {
     const maxBuffer = 1024 * 1024 * 10;
@@ -146,20 +148,13 @@ function resolveActivationExtensionPath(extensionsDir: string, version: string):
         return path.join(extensionsDir, matchingEntry);
     }
 
-    console.warn(
-        `Could not locate extracted extension under ${extensionsDir}; ` +
-        'falling back to the workspace extension root for activation smoke.',
+    throw new Error(
+        `Could not locate installed extension under ${extensionsDir}. ` +
+        `Entries: ${entries.length > 0 ? entries.join(', ') : '(empty)'}`,
     );
-    return extensionRoot;
 }
 
 async function verifyActivation(installedExtensionDir: string, vscodeExecutablePath: string): Promise<void> {
-    const needsHeadlessDisplay = process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY;
-    if (needsHeadlessDisplay && !process.env.CI) {
-        console.log('Skipping activation smoke test on local Linux without DISPLAY/xvfb. Install/update checks still passed.');
-        return;
-    }
-
     await runTests({
         vscodeExecutablePath,
         extensionDevelopmentPath: installedExtensionDir,
@@ -169,10 +164,18 @@ async function verifyActivation(installedExtensionDir: string, vscodeExecutableP
 }
 
 async function main(): Promise<void> {
+    const needsHeadlessDisplay = process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY;
+    if (requireActivation && process.platform === 'win32') {
+        throw new Error('Activation smoke is not supported on Windows by this script; unset --require-activation.');
+    }
+    if (requireActivation && needsHeadlessDisplay) {
+        throw new Error('Activation smoke requires DISPLAY/WAYLAND_DISPLAY on Linux. Run with xvfb-run or a desktop session.');
+    }
+
+    const shouldRunActivation = process.platform !== 'win32' &&
+        (requireActivation || !needsHeadlessDisplay || Boolean(process.env.CI));
     const currentVsixPath = await packageCurrentVsix();
     const oldVsixPath = path.join(extensionRoot, 'asset-aware-mcp-0.2.10.vsix');
-    const needsHeadlessDisplay = process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY;
-    const shouldRunActivation = process.platform !== 'win32' && (!needsHeadlessDisplay || Boolean(process.env.CI));
 
     let vscodeExecutablePath: string | undefined;
     const localCliPath = findAvailableCli();
@@ -216,7 +219,10 @@ async function main(): Promise<void> {
         );
         console.log('Installed extension activation smoke test passed.');
     } else {
-        console.log('Skipping activation smoke test in this environment. Install/update checks passed.');
+        console.log(
+            'Skipping activation smoke test in this environment. ' +
+            'Install/update checks passed; run with xvfb-run or --require-activation to require activation.',
+        );
     }
 }
 

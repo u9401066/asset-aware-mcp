@@ -21,6 +21,13 @@ Run the full local verification gates for this repo.
 
 If any step fails, stop and report the failures.
 
+## Step 1.1: Release harness audit
+<execute_command>
+<command>python3 scripts/audit_release_harness.py</command>
+</execute_command>
+
+If it fails, stop and report the drift before changing release logic.
+
 ## Step 2: VS Code extension tests
 <execute_command>
 <command>(cd vscode-extension && npm run test:ci)</command>
@@ -28,10 +35,15 @@ If any step fails, stop and report the failures.
 
 If it fails, stop and report the failures.
 
-## Step 2.1 (Optional): VSIX install smoke test
-This is required in CI and is recommended before a release.
+## Step 2.1: VSIX install/update smoke test
+This is required before release. Activation smoke is required for release environments that can provide a display.
+<execute_command>
+<command>(cd vscode-extension && npm run test:install-smoke)</command>
+</execute_command>
+
 - Windows/macOS: run `npm run test:install-smoke`
-- Linux: run `xvfb-run -a npm run test:install-smoke` (requires `xvfb` and a few desktop libs)
+- Linux install/update only: run `npm run test:install-smoke`
+- Linux with activation required: run `xvfb-run -a npm run test:install-smoke -- --require-activation` (requires `xvfb` and a few desktop libs)
 
 ## Step 3: Docker smoke import
 <execute_command>
@@ -47,6 +59,10 @@ If it fails, stop and report the failures.
 ## Step 4: Packaging sanity check
 <execute_command>
 <command>uv build</command>
+</execute_command>
+
+<execute_command>
+<command>python3 scripts/audit_release_artifacts.py</command>
 </execute_command>
 
 ## Step 5: Diff hygiene

@@ -1,19 +1,19 @@
-# Progress (Updated: 2026-04-14)
+# Progress (Updated: 2026-04-24)
 
 ## Done
 
-- 釐清 VSIX 安裝範圍：擴充套件保持全域安裝、狀態面板新增 Install Scope/Storage Root 顯示，且 README（含 zh-TW）/ extension README 說明資料仍存於 workspace `./data` 以避免重複安裝
-- 完成 0.6.6 patch release 內容：修正 manifest title detection 在真實考題 PDF 上把頁碼/題幹誤當標題的問題，並新增低文字品質診斷欄位 (`text_quality_status` / `ocr_recommended` 等)
-- `ManifestGenerator` 現在會先正規化 heading title、遇到 question-first PDF 退回 filename stem、並對低文字或高重複內容產生 OCR 建議
-- `list_documents` / `inspect_document_manifest` 已顯示文字品質摘要，讓掃描型答案 PDF 不再只顯示模糊 title
-- focused validation 完成：`uv run pytest tests/unit/test_services.py -q` 通過，且真實 `109/111/112` 題本與 `109` 答案本的 title / low-text 診斷皆符合預期
-- 完成 0.6.5 版本號同步到 Python package、extension package、package-lock、版本測試與 changelog
-- 確認 scoped large-PDF / page-range ingestion 關聯測試在 uv 環境通過，Python release metadata 已對齊 0.6.5
+- 完成 0.6.12 release hardening：CI、tagged release workflow、local `scripts/release.sh` 已收斂到同一組 release gates
+- 新增 `scripts/audit_release_harness.py` 檢查 Cline rules/workflows/skills/MCP setup 是否維持可讀與可發版狀態
+- 新增 `scripts/audit_release_artifacts.py` 檢查 Python sdist/wheel 與 VSIX 內容，避免大型或不應發布的檔案混入 artifact
+- VSIX package 現在排除 `out/test/**`，並有 `npm run test:package-contents` 在 CI/local release 先擋住 compiled test leakage
+- VS Code extension install smoke 現在不再 fallback 到 workspace root；CI 會在 Linux `xvfb` 下要求 activation 成功
+- Release workflow 會在 publish 前驗證 tag/input version、Python metadata、VSIX manifest 三者一致
+- 已將 Python package、Docker label、runtime version、VSIX manifest、version-pin tests、README banner 與 changelog 對齊到 0.6.12
 
 ## Doing
 
-- 建立 v0.6.6 release commit、tag 並推送
+- 執行 0.6.12 post-bump full verification，通過後建立 release commit、push `master`，並推送 annotated tag `v0.6.12`
 
 ## Next
 
-- 如需正式對外發布到套件平台，再執行 PyPI / VS Code Marketplace 發布流程
+- 觀察 GitHub Actions tagged release：PyPI / VS Code Marketplace 發布 jobs 應使用已驗證 artifact 與版本一致性 gate

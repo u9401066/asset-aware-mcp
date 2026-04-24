@@ -35,6 +35,20 @@ If any tests have version pins/expectations, update them too.
 Execute the steps in `.clinerules/workflows/full-check.md` in this task.
 If anything fails, stop and report the failures.
 
+VSIX install/activation smoke is required for release. On Linux, prefer:
+<execute_command>
+<command>(cd vscode-extension && xvfb-run -a npm run test:install-smoke -- --require-activation)</command>
+</execute_command>
+
+Validate release harness parity and built artifacts:
+<execute_command>
+<command>python3 scripts/audit_release_harness.py</command>
+</execute_command>
+
+<execute_command>
+<command>python3 scripts/audit_release_artifacts.py</command>
+</execute_command>
+
 ## Step 5: Commit
 Stage changes, then create a release commit.
 

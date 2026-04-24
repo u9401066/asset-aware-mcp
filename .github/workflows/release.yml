@@ -38,17 +38,63 @@ jobs:
       - name: Set up Python
         run: uv python install ${{ env.PYTHON_VERSION }}
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
       - name: Install dependencies
         run: |
           uv sync
+
+      - name: Resolve and validate release version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ERROR: invalid release version: $VERSION"
+            exit 1
+          fi
+
+          PYTHON_VERSION="$(python3 scripts/get_version.py --strict-semver)"
+          VSCODE_VERSION="$(node -p "require('./vscode-extension/package.json').version")"
+          if [ "$PYTHON_VERSION" != "$VERSION" ] || [ "$VSCODE_VERSION" != "$VERSION" ]; then
+            echo "ERROR: release version mismatch"
+            echo "  requested/tag: $VERSION"
+            echo "  pyproject:     $PYTHON_VERSION"
+            echo "  VSIX package:  $VSCODE_VERSION"
+            exit 1
+          fi
 
       - name: Run tests
         run: |
           uv run ruff check .
           uv run ruff format --check .
           uv run mypy src/ --ignore-missing-imports
-          uv run pytest tests/unit -v
-          uv run pytest tests/integration/test_docx_complex_sample_roundtrip.py -v
+          uv run pytest
+
+      - name: Audit release harness
+        run: python3 scripts/audit_release_harness.py
+
+      - name: Run VS Code extension CI
+        run: |
+          cd vscode-extension
+          npm ci
+          npm run test:ci
+
+      - name: Install Linux desktop smoke dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb unzip libgbm1 libgtk-3-0 libnss3 libxss1 libasound2t64
+
+      - name: Run VSIX install and activation smoke test
+        run: |
+          cd vscode-extension
+          xvfb-run -a npm run test:install-smoke -- --require-activation
 
   # ==========================================
   # 發布到 PyPI
@@ -75,6 +121,9 @@ jobs:
         run: |
           uv build
 
+      - name: Audit Python release artifacts
+        run: python3 scripts/audit_release_artifacts.py
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
@@ -99,15 +148,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Compile extension
-        run: npm run compile
+      - name: Run extension CI
+        run: npm run test:ci
 
       - name: Package extension
-        run: npx vsce package
+        run: npx vsce package --no-dependencies
 
       - name: Verify VSIX integrity
+        id: verify
         run: |
           VSIX_FILE=$(ls -1 asset-aware-mcp-*.vsix | head -1)
           if [ -z "$VSIX_FILE" ] || [ ! -f "$VSIX_FILE" ]; then
@@ -121,10 +171,15 @@ jobs:
           fi
 
           unzip -t "$VSIX_FILE" >/dev/null
+          if unzip -Z1 "$VSIX_FILE" | grep -E '^extension/out/test/'; then
+            echo "ERROR: VSIX contains compiled test files"
+            exit 1
+          fi
+          echo "vsix_file=$VSIX_FILE" >> "$GITHUB_OUTPUT"
           echo "Verified VSIX: $VSIX_FILE"
 
       - name: Publish to VS Code Marketplace
-        run: npx vsce publish -p ${{ secrets.VSCE_PAT }}
+        run: npx vsce publish --packagePath "${{ steps.verify.outputs.vsix_file }}" -p ${{ secrets.VSCE_PAT }}
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
@@ -166,11 +221,16 @@ jobs:
         run: |
           # Extract changelog for current version
           VERSION="${{ steps.version.outputs.version }}"
-          sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | head -n -1 > release_notes.md || echo "See CHANGELOG.md for details" > release_notes.md
+          sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | head -n -1 > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "See CHANGELOG.md for details" > release_notes.md
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: "v${{ steps.version.outputs.version }}"
+          target_commitish: ${{ github.sha }}
           name: "v${{ steps.version.outputs.version }}"
           body_path: release_notes.md
           files: |

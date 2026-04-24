@@ -6,13 +6,13 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://github.com/u9401066/asset-aware-mcp/raw/master/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.12/resources/banner.png)
 
-## 🆕 What's New in v0.6.11
+## 🆕 What's New in v0.6.12
 
-- **Marketplace banner fixed**: README banner image now points to a real tracked `resources/banner.png`, so VSIX/Marketplace render correctly
-- **Cline harness included**: `.clinerules/` rules, workflows (`/full-check.md`, `/release-publish.md`, `/skills-audit.md`, `/mcp-setup.md`), and a project skill under `.cline/skills/`
-- **Skill discovery fixed**: all `.claude/skills/*/SKILL.md` descriptions are now valid YAML frontmatter so Cline can index them reliably
+- **Release gates hardened**: CI, local release prep, and tagged release publish now share artifact audits, full Python tests, Cline harness validation, and VSIX package-content checks
+- **VSIX install smoke tightened**: packaged extension smoke tests now fail if the installed extension cannot be found, and CI requires activation under `xvfb`
+- **Marketplace banner retained safely**: README banner remains release-pinned to tracked `resources/banner.png` while package checks prevent test files from leaking into the VSIX
 - **48 tools** across 7 modules
 
 ## 🧪 Current Main Branch
@@ -293,7 +293,7 @@ If the extension fails to start or the MCP server doesn't appear:
 
 - [GitHub Repository](https://github.com/u9401066/asset-aware-mcp)
 - [PyPI Package](https://pypi.org/project/asset-aware-mcp/)
-- [Technical Specification](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/spec.md)
+- [Technical Specification](https://github.com/u9401066/asset-aware-mcp/blob/master/docs/spec.md)
 
 ## 📝 License
 

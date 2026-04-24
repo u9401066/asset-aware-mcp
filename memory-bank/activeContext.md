@@ -4,17 +4,15 @@
 
 ## Current Goals
 
-- 正在完成 0.6.5 release 收尾：large-PDF auto strategy / page-range ingestion 已落地，接下來補版本提交、tag、push 與父 repo pointer 更新。
+- 正在完成 0.6.12 release 收尾：release/CI/Cline/VSIX hardening 已落地，接下來執行完整 post-bump 驗證、建立 release commit、push `master`，並推送 annotated tag `v0.6.12`。
 
 ## 🎯 當前焦點
 
-- **LightRAG citation-aware MCP output 已落地**：`consult_knowledge_graph` 預設回傳 structured payload，支援 `response_mode=structured|data|text`
-- **LightRAG 與文件刪除流程已同步**：`delete_document` 現在會嘗試同步刪除知識圖譜索引，並在 MCP 結果中回傳 `knowledge_graph_status`
-- **VS Code extension env key 已對齊**：設定面板與 `.env` 生成器改寫 `LIGHTRAG_WORKING_DIR`，同時保留 `LIGHTRAG_DIR` fallback
-- **目前正在做 release/push 前收尾**：補 README / CHANGELOG / extension README / ROADMAP / Memory Bank 對齊，準備跑 CI 等價驗證與分段提交
-
-- **0.6.5 release prep 已完成**：scoped large-PDF ingestion、page-range ingestion、changelog、README 與 extension metadata 已同步收斂，可建立新 tag
-- **當前版本真相為 0.6.5**：本次 patch 版本對外釋出 large-PDF auto strategy、page-range ingestion 與 page-scoped `doc_id` 修正
+- **Release gate parity 已落地**：GitHub CI、tagged release workflow、local `scripts/release.sh` 現在共享 Python/extension/Cline/artifact/Docker/version consistency 檢查
+- **VSIX 發布安全已加固**：package content test 會拒絕 `out/test/**`，publish workflow 只發布已驗證的 `.vsix`
+- **VSIX install smoke 已 fail-closed**：安裝後找不到 extension 不再 fallback 到 workspace root；Linux CI 會在 `xvfb` 下要求 extension activation 成功
+- **Cline harness 可發版檢查已制度化**：新增 release harness audit，覆蓋 `.clinerules` workflows、`.cline/skills`、`.claude/skills` 與 Cline MCP setup helper
+- **當前版本真相為 0.6.12**：本次 patch 版本對外釋出 release workflow parity、artifact audit、VSIX package-content guard 與 activation smoke hardening
 - **Agent asset 全覆蓋規劃已補齊**：新增 `docs/agent-asset-gap-analysis.md`，明確拆成格式轉換、資產拆解、結構導航、語義理解四層，並量化目前完成度約 35%
 - **建議採分段發布**：先發格式入口補齊（RTF/TXT/MD/CSV/HTML），再發 XLSX 原生化，其次是 agent 理解增強，最後才是 PPTX/EPUB/EML 等高成本格式
 - **Section truth 已收斂**：manifest generator 現在是 section metadata 最終寫入點；Marker ingest 不再先算 section 再被 generator 用另一套規則覆蓋
@@ -156,4 +154,4 @@ src/
 2. **文件缺乏**: API Reference, Examples, FAQ
 
 ---
-*Last updated: 2026-03-23*
+*Last updated: 2026-04-24*

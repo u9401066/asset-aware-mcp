@@ -2,7 +2,7 @@
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
     "description": "Medical RAG MCP Server with precise document asset retrieval and Docx editing (DFM) — tables, figures, sections from PDFs + .docx/.doc round-trip with integrity validation",
-    "version": "0.6.11",
+    "version": "0.6.12",
     "publisher": "u9401066",
     "engines": {
         "vscode": "^1.96.0"
@@ -269,8 +269,9 @@
         "lint:fix": "eslint . --fix",
         "test": "npm run compile && node ./out/test/runTest.js",
         "test:unit": "npm run compile && mocha --require out/test/unit/setup.js 'out/test/unit/**/*.test.js' --timeout 5000",
+        "test:package-contents": "npm run compile && node ./out/test/packageContents.js",
         "test:install-smoke": "npm run compile && node ./out/test/installSmoke.js",
-        "test:ci": "npm run lint && npm run test:unit",
+        "test:ci": "npm run lint && npm run test:unit && npm run test:package-contents",
         "package": "vsce package"
     },
     "devDependencies": {

@@ -24,8 +24,8 @@ paths:
 - `uv run ruff format --check .`
 - `uv run mypy src --ignore-missing-imports`
 - `uv run pytest`
-- `(cd vscode-extension && npm run test:ci)`
-- VSIX install smoke test (recommended; required in CI): `npm run test:install-smoke` (Linux: `xvfb-run -a ...`)
+- `(cd vscode-extension && npm run test:ci)` (includes VSIX package-contents guard)
+- VSIX install smoke test (recommended; required in CI): `npm run test:install-smoke` (Linux activation: `xvfb-run -a npm run test:install-smoke -- --require-activation`)
 - Docker smoke import: `docker build ...` + `python -c "import src.presentation.server"`
 - `uv build`
 - `git diff --check`

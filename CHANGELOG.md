@@ -7,6 +7,28 @@
 
 ## [Unreleased]
 
+## [0.6.12] - 2026-04-24
+
+### Added
+
+- **Release artifact audit gates**
+  - Added `scripts/audit_release_artifacts.py` to verify Python sdists/wheels and VSIX packages before publishing
+  - Added `scripts/audit_release_harness.py` to ensure Cline rules, workflows, skills, and local MCP setup stay readable by Cline
+  - Added a VSIX package-content test so compiled test files are rejected before marketplace packaging
+
+### Changed
+
+- **Release workflow parity**
+  - Local `scripts/release.sh`, GitHub CI, and tagged release workflow now run the same high-signal gates: full `uv run pytest`, extension `npm run test:ci`, release harness audit, artifact audit, Docker import smoke, and version consistency checks
+  - Tagged releases now validate the tag/input version against both `pyproject.toml` and the VS Code extension manifest before publish jobs run
+
+### Fixed
+
+- **VSIX install and publish safety**
+  - VSIX smoke tests now fail fast if the packaged extension cannot be resolved from the installed VS Code extension directory
+  - Linux CI now requires VS Code extension activation under `xvfb` instead of accepting a silent headless skip
+  - The VSIX package excludes `out/test/**`, preventing compiled test artifacts from shipping
+
 ## [0.6.11] - 2026-04-23
 
 ### Fixed

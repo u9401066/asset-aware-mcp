@@ -36,10 +36,16 @@ echo -e "${GREEN}✓ Static analysis passed${NC}"
 # =============================================================================
 echo -e "\n${YELLOW}🧪 Step 2: Running Tests${NC}"
 
-uv run pytest tests/unit -v --tb=short
-uv run pytest tests/integration/test_docx_complex_sample_roundtrip.py -v --tb=short
+uv run pytest
 
 echo -e "${GREEN}✓ Tests passed${NC}"
+
+echo -e "\n${YELLOW}🤖 Step 2.1: Cline Harness Checks${NC}"
+
+python3 scripts/check_cline_skills.py
+python3 scripts/audit_release_harness.py
+
+echo -e "${GREEN}✓ Cline harness checks passed${NC}"
 
 # =============================================================================
 # 3. Python 套件建置
@@ -51,6 +57,7 @@ rm -rf dist/ build/ *.egg-info/
 
 # 建置套件
 uv build
+python3 scripts/audit_release_artifacts.py
 
 echo "Built packages:"
 ls -la dist/
@@ -64,11 +71,16 @@ echo -e "\n${YELLOW}🧩 Step 4: Building VS Code Extension${NC}"
 
 cd vscode-extension
 
-# 安裝依賴
-npm install
+# 安裝依賴並執行 extension CI（包含 VSIX contents guard）
+npm ci
+npm run test:ci
 
-# 編譯
-npm run compile
+# VSIX 安裝/更新 smoke；Linux 若有 xvfb 則要求 activation smoke
+if [[ "$(uname -s)" == "Linux" ]] && command -v xvfb-run >/dev/null 2>&1; then
+    xvfb-run -a npm run test:install-smoke -- --require-activation
+else
+    npm run test:install-smoke
+fi
 
 # 打包
 npx vsce package --no-dependencies
@@ -79,6 +91,18 @@ ls -la *.vsix
 cd ..
 
 echo -e "${GREEN}✓ VS Code extension built${NC}"
+
+python3 scripts/audit_release_artifacts.py
+
+# =============================================================================
+# 4.1 Docker Smoke
+# =============================================================================
+echo -e "\n${YELLOW}🐳 Step 4.1: Docker Smoke${NC}"
+
+docker build -t asset-aware-mcp:smoke .
+docker run --rm --entrypoint python asset-aware-mcp:smoke -c "import src.presentation.server; print('server import ok')"
+
+echo -e "${GREEN}✓ Docker smoke passed${NC}"
 
 # =============================================================================
 # 5. 檢查清單
@@ -108,8 +132,8 @@ check_file "vscode-extension/resources/icon.png"
 # =============================================================================
 echo -e "\n${YELLOW}📌 Version Information${NC}"
 
-PYTHON_VERSION=$(grep 'version = ' pyproject.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
-VSCODE_VERSION=$(grep '"version"' vscode-extension/package.json | head -1 | sed 's/.*"\([0-9.]*\)".*/\1/')
+PYTHON_VERSION=$(python3 scripts/get_version.py --strict-semver)
+VSCODE_VERSION=$(node -p "require('./vscode-extension/package.json').version")
 
 echo "  Python package: v$PYTHON_VERSION"
 echo "  VS Code extension: v$VSCODE_VERSION"
@@ -120,6 +144,8 @@ if [ "$PYTHON_VERSION" != "$VSCODE_VERSION" ]; then
     echo "  VSCode:  $VSCODE_VERSION"
     exit 1
 fi
+
+git diff --check
 
 # =============================================================================
 # 完成
@@ -132,4 +158,4 @@ echo -e "\n${YELLOW}Next steps:${NC}"
 echo "  1. PyPI (Test):   uv publish --repository testpypi"
 echo "  2. PyPI (Prod):   uv publish"
 echo "  3. VS Code:       cd vscode-extension && npx vsce publish"
-echo "  4. GitHub:        git tag v$PYTHON_VERSION && git push --tags"
+echo "  4. GitHub:        git tag -a v$PYTHON_VERSION -m \"Release v$PYTHON_VERSION\" && git push origin v$PYTHON_VERSION"

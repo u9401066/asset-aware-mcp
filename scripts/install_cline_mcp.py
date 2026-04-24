@@ -37,9 +37,45 @@ def detect_uv() -> str:
     return uv
 
 
-def candidate_settings_paths(home: Path) -> list[Path]:
-    # Cline CLI default
-    paths = [home / ".cline" / "data" / "settings" / "cline_mcp_settings.json"]
+def cli_settings_path(cline_root: Path) -> Path:
+    """Return the Cline CLI MCP settings path for a config root."""
+    return cline_root / "data" / "settings" / "cline_mcp_settings.json"
+
+
+def dedupe_paths(paths: list[Path]) -> list[Path]:
+    seen: set[Path] = set()
+    unique: list[Path] = []
+    for path in paths:
+        resolved = path.expanduser()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        unique.append(resolved)
+    return unique
+
+
+def candidate_cli_settings_paths(
+    home: Path, *, cline_dir: Path | None = None
+) -> list[Path]:
+    """Return creatable Cline CLI settings paths."""
+    custom_roots: list[Path] = []
+    if cline_dir is not None:
+        custom_roots.append(cline_dir)
+    if env_cline_dir := os.environ.get("CLINE_DIR"):
+        custom_roots.append(Path(env_cline_dir))
+
+    roots = custom_roots if custom_roots else [home / ".cline"]
+    paths = [cli_settings_path(root) for root in roots]
+    return dedupe_paths(paths)
+
+
+def candidate_settings_paths(
+    home: Path, *, cline_dir: Path | None = None, include_vscode: bool = True
+) -> list[Path]:
+    # Cline CLI default and custom config roots.
+    paths = candidate_cli_settings_paths(home, cline_dir=cline_dir)
+    if not include_vscode:
+        return dedupe_paths(paths)
 
     # VS Code extension globalStorage (common locations)
     # Docs show macOS location:
@@ -63,7 +99,7 @@ def candidate_settings_paths(home: Path) -> list[Path]:
         paths.append(home / ".vscode-server" / "data" / ext_subpath)
         paths.append(home / ".vscode-server-insiders" / "data" / ext_subpath)
 
-    return paths
+    return dedupe_paths(paths)
 
 
 def load_json(path: Path) -> dict:
@@ -175,6 +211,18 @@ def main() -> int:
         help="Explicit cline_mcp_settings.json path(s) to update (repeatable).",
     )
     parser.add_argument(
+        "--cline-dir",
+        default=None,
+        help="Cline CLI config root; updates <dir>/data/settings/cline_mcp_settings.json.",
+    )
+    parser.add_argument(
+        "--only-cli",
+        "--no-vscode",
+        action="store_true",
+        dest="only_cli",
+        help="Only update Cline CLI settings; skip VS Code globalStorage settings files.",
+    )
+    parser.add_argument(
         "--no-rules",
         action="store_true",
         help="Do not add/update mcpRules for auto-selection triggers.",
@@ -192,16 +240,19 @@ def main() -> int:
 
     home = Path.home()
     targets = [Path(p).expanduser() for p in args.path] if args.path else []
+    explicit_targets = bool(targets)
+    cline_dir = Path(args.cline_dir).expanduser() if args.cline_dir else None
+    creatable_cli_targets = set(candidate_cli_settings_paths(home, cline_dir=cline_dir))
     if not targets:
-        targets = candidate_settings_paths(home)
+        targets = candidate_settings_paths(
+            home, cline_dir=cline_dir, include_vscode=not args.only_cli
+        )
 
     updated_any = False
     for path in targets:
-        # Only create brand-new files for the CLI default path; other paths are updated only if they exist.
-        is_cli_default = path == (
-            home / ".cline" / "data" / "settings" / "cline_mcp_settings.json"
-        )
-        if not path.exists() and not is_cli_default:
+        # Create brand-new files for CLI config roots and explicit --path values.
+        can_create = explicit_targets or path in creatable_cli_targets
+        if not path.exists() and not can_create:
             continue
 
         settings = load_json(path)

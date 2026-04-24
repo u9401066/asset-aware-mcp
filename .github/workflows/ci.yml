@@ -89,11 +89,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Run VS Code extension unit tests
+      - name: Run VS Code extension CI
         run: |
           cd vscode-extension
           npm ci
-          npm run test:unit
+          npm run test:ci
 
       - name: Run VSIX install smoke test
         run: |
@@ -124,12 +124,12 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Run VS Code extension unit tests
+      - name: Run VS Code extension CI
         shell: pwsh
         run: |
           cd vscode-extension
           npm ci
-          npm run test:unit
+          npm run test:ci
 
       - name: Run VSIX install smoke test
         shell: pwsh
@@ -166,7 +166,8 @@ jobs:
         run: |
           cd vscode-extension
           npm ci
-          xvfb-run -a npm run test:install-smoke
+          npm run test:ci
+          xvfb-run -a npm run test:install-smoke -- --require-activation
 
   # ==========================================
   # Python 單元測試

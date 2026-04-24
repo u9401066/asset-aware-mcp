@@ -9,3 +9,8 @@ It uses `uv run` so the server runs from the workspace and loads the repo `.env`
 </execute_command>
 
 After it writes settings, restart Cline (or reload the VS Code window) and confirm the server is enabled in the MCP Servers UI.
+
+For custom Cline CLI config roots, use:
+<execute_command>
+<command>python3 scripts/install_cline_mcp.py --cline-dir "$CLINE_DIR" --only-cli --write</command>
+</execute_command>
