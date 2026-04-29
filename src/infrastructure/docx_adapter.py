@@ -54,6 +54,16 @@ NS = {
     "rel": "http://schemas.openxmlformats.org/package/2006/relationships",
 }
 
+_REVISION_TAG_TYPES = {
+    "ins": "insert",
+    "del": "delete",
+    "moveFrom": "move_from",
+    "moveTo": "move_to",
+    "rPrChange": "format",
+    "pPrChange": "paragraph_format",
+}
+_NON_VISIBLE_REVISION_TAGS = {"del", "moveFrom"}
+
 # EMU to cm conversion (1 cm = 360000 EMU)
 EMU_PER_CM = 360000
 # Twips to cm conversion (1 cm = 567 twips)
@@ -400,12 +410,20 @@ class DocxAdapter:
             # If paragraph has only drawing (no text), don't create text block
             text = self._get_paragraph_text(p_elem)
             if not text.strip():
+                self._add_revision_blocks(p_elem, ir, scope="paragraph")
                 return
 
         # Check for field codes (TOC, PAGE, etc.)
         fld_chars = p_elem.findall(f".//{{{NS['w']}}}fldChar")
         if fld_chars:
             self._parse_field_paragraph(p_elem, ir)
+            source_block_id = ir.blocks[-1].id if ir.blocks else None
+            self._add_revision_blocks(
+                p_elem,
+                ir,
+                scope="paragraph",
+                source_block_id=source_block_id,
+            )
             return
 
         # Check for page/section break
@@ -421,6 +439,12 @@ class DocxAdapter:
                         content="",
                         break_type=BreakType.PAGE,
                     )
+                )
+                self._add_revision_blocks(
+                    p_elem,
+                    ir,
+                    scope="paragraph",
+                    source_block_id=block_id,
                 )
                 return
 
@@ -444,6 +468,12 @@ class DocxAdapter:
                     style_name=style_name,
                 )
             )
+            self._add_revision_blocks(
+                p_elem,
+                ir,
+                scope="paragraph",
+                source_block_id=block_id,
+            )
             return
 
         # Determine block type
@@ -460,6 +490,12 @@ class DocxAdapter:
                     level=level,
                     runs=runs,
                 )
+            )
+            self._add_revision_blocks(
+                p_elem,
+                ir,
+                scope="paragraph",
+                source_block_id=block_id,
             )
             return
         list_level = self._get_list_level(ppr)
@@ -482,6 +518,12 @@ class DocxAdapter:
                     runs=runs,
                 )
             )
+            self._add_revision_blocks(
+                p_elem,
+                ir,
+                scope="paragraph",
+                source_block_id=block_id,
+            )
         elif style_name and "caption" in style_name.lower():
             # Caption
             block_id = ir.next_block_id(DfmBlockType.CAPTION)
@@ -493,6 +535,12 @@ class DocxAdapter:
                     style_name=style_name,
                     runs=runs,
                 )
+            )
+            self._add_revision_blocks(
+                p_elem,
+                ir,
+                scope="paragraph",
+                source_block_id=block_id,
             )
         else:
             # Check if mixed format
@@ -508,6 +556,12 @@ class DocxAdapter:
                     style_name=style_name,
                     runs=runs,
                 )
+            )
+            self._add_revision_blocks(
+                p_elem,
+                ir,
+                scope="paragraph",
+                source_block_id=block_id,
             )
 
     def _parse_runs(self, p_elem: etree._Element) -> list[FormatRun]:
@@ -627,6 +681,13 @@ class DocxAdapter:
             parts_dir,
         )
         ir.add_block(block)
+        self._add_revision_blocks(
+            tbl_elem,
+            ir,
+            scope="table",
+            source_block_id=block.id,
+            context_text=block.content,
+        )
         for nested_block in nested_blocks:
             ir.add_block(nested_block)
 
@@ -1098,13 +1159,97 @@ class DocxAdapter:
     # Private: XML text extraction helpers
     # ========================================================================
 
+    def _add_revision_blocks(
+        self,
+        elem: etree._Element,
+        ir: DocxIR,
+        *,
+        scope: str,
+        source_block_id: str | None = None,
+        context_text: str | None = None,
+    ) -> None:
+        """Expose Word tracked changes as read-only DFM revision blocks."""
+        fallback_context = context_text
+        if fallback_context is None and self._local_name(elem) == "p":
+            fallback_context = self._get_paragraph_text(elem)
+
+        for revision_elem in self._iter_revision_elements(elem):
+            revision_tag = self._local_name(revision_elem)
+            revision_type = _REVISION_TAG_TYPES[revision_tag]
+            revision_text = self._get_revision_text(revision_elem).strip()
+            if not revision_text:
+                revision_text = (fallback_context or "").strip()
+            if not revision_text:
+                revision_text = "[tracked format change]"
+
+            metadata: dict[str, str | bool] = {
+                "source_tag": f"w:{revision_tag}",
+                "scope": scope,
+                "visible_in_current_text": revision_tag
+                not in _NON_VISIBLE_REVISION_TAGS,
+            }
+            revision_id = revision_elem.get(f"{{{NS['w']}}}id")
+            if revision_id:
+                metadata["revision_id"] = revision_id
+            if source_block_id:
+                metadata["source_block_id"] = source_block_id
+
+            ir.add_block(
+                DfmBlock(
+                    id=ir.next_block_id(DfmBlockType.REVISION),
+                    block_type=DfmBlockType.REVISION,
+                    content=revision_text,
+                    revision_type=revision_type,
+                    revision_author=revision_elem.get(f"{{{NS['w']}}}author"),
+                    revision_date=revision_elem.get(f"{{{NS['w']}}}date"),
+                    metadata=metadata,
+                )
+            )
+
+    def _iter_revision_elements(self, elem: etree._Element) -> list[etree._Element]:
+        """Return top-level tracked-change elements within an XML subtree."""
+        revisions = []
+        for candidate in elem.iter():
+            if candidate is elem:
+                continue
+            tag = self._local_name(candidate)
+            if tag not in _REVISION_TAG_TYPES:
+                continue
+            if self._has_revision_ancestor(candidate, elem):
+                continue
+            revisions.append(candidate)
+        return revisions
+
+    def _has_revision_ancestor(
+        self,
+        elem: etree._Element,
+        stop: etree._Element,
+    ) -> bool:
+        parent = elem.getparent()
+        while parent is not None and parent is not stop:
+            if self._local_name(parent) in _REVISION_TAG_TYPES:
+                return True
+            parent = parent.getparent()
+        return False
+
+    def _get_revision_text(self, revision_elem: etree._Element) -> str:
+        """Extract inserted/deleted revision text, including w:delText nodes."""
+        parts: list[str] = []
+        for child in revision_elem.iter():
+            tag = self._local_name(child)
+            if tag in {"t", "delText"} and child.text:
+                parts.append(child.text)
+            elif tag == "tab":
+                parts.append("\t")
+            elif tag == "br":
+                br_type = child.get(f"{{{NS['w']}}}type")
+                if br_type != "page":
+                    parts.append("\n")
+        return "".join(parts)
+
     def _get_paragraph_text(self, p_elem: etree._Element) -> str:
         """Get concatenated text from a paragraph element."""
-        parts = []
-        for t_elem in p_elem.findall(f".//{{{NS['w']}}}t"):
-            if t_elem.text:
-                parts.append(t_elem.text)
-        return "".join(parts)
+        return "".join(run.text for run in self._parse_runs(p_elem))
 
     def _get_cell_text(self, tc_elem: etree._Element) -> str:
         """Get text from a table cell, joining paragraphs with newlines."""
@@ -1117,9 +1262,29 @@ class DocxAdapter:
         """Get all text from any element tree."""
         parts = []
         for t_elem in elem.findall(f".//{{{NS['w']}}}t"):
+            if self._has_ancestor_with_local_name(t_elem, _NON_VISIBLE_REVISION_TAGS):
+                continue
             if t_elem.text:
                 parts.append(t_elem.text)
         return " ".join(parts)
+
+    @staticmethod
+    def _local_name(elem: etree._Element) -> str:
+        if not isinstance(elem.tag, str):
+            return ""
+        return str(etree.QName(elem.tag).localname)
+
+    def _has_ancestor_with_local_name(
+        self,
+        elem: etree._Element,
+        names: set[str],
+    ) -> bool:
+        parent = elem.getparent()
+        while parent is not None:
+            if self._local_name(parent) in names:
+                return True
+            parent = parent.getparent()
+        return False
 
     def _get_style_name(self, ppr: etree._Element | None) -> str | None:
         """Get paragraph style name from pPr."""
@@ -1399,6 +1564,7 @@ class DocxAdapter:
             if not (
                 block.block_type == DfmBlockType.TABLE and block.parent_cell is not None
             )
+            and block.block_type != DfmBlockType.REVISION
         ]
         block_idx = 0
         nested_blocks_by_parent: dict[str, dict[str, list[DfmBlock]]] = {}
@@ -1598,7 +1764,12 @@ class DocxAdapter:
 
     def _iter_text_runs(self, p_elem: etree._Element) -> list[etree._Element]:
         """Return paragraph runs in document order, including hyperlink/SDT runs."""
-        return list(p_elem.findall(f".//{{{NS['w']}}}r"))
+        runs = []
+        for r_elem in p_elem.findall(f".//{{{NS['w']}}}r"):
+            if self._has_ancestor_with_local_name(r_elem, _NON_VISIBLE_REVISION_TAGS):
+                continue
+            runs.append(r_elem)
+        return runs
 
     def _set_run_texts(self, runs: list[etree._Element], segments: list[str]) -> None:
         """Assign visible text across existing XML runs without rewriting structure."""

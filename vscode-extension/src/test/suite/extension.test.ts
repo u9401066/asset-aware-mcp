@@ -30,6 +30,8 @@ suite('Extension Test Suite', () => {
         const expectedCommands = [
             'assetAwareMcp.setupWizard',
             'assetAwareMcp.openSettings',
+            'assetAwareMcp.installAssistantAssets',
+            'assetAwareMcp.configureExternalMcp',
             'assetAwareMcp.showStatus',
             'assetAwareMcp.checkConnection',
             'assetAwareMcp.editEnv',

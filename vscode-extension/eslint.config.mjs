@@ -19,6 +19,16 @@ export default tseslint.config(
     },
   },
   {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        Buffer: 'readonly',
+        console: 'readonly',
+        process: 'readonly',
+      },
+    },
+  },
+  {
     ignores: ['out/', 'dist/', '.vscode-test/', '*.vsix', '**/*.d.ts', 'eslint.config.mjs'],
   }
 );

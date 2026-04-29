@@ -1,6 +1,7 @@
 # Decision Log
 
 | Date | Decision | Rationale |
+| 2026-04-29 | **Word Track Changes 在 DFM 中作為唯讀 `dfm:revision` review annotation，而不是正文 edit target** | 追蹤修訂是審查/ provenance 訊號，若讓 parser 把 `dfm:revision` 當正文回寫，會讓刪除文字、移動文字或格式修訂污染正常段落對位。將 revision block 設為 protected，並在 metadata 保存 `revision_id`、`source_tag`、`scope`、`source_block_id` 與 `visible_in_current_text`，可讓使用者與 agent 檢查修改來源，同時避免 DFM→DOCX round-trip 誤寫。 |
 | 2026-04-24 | **已發布版本若揭露 CI-only defect，採下一個 patch 版本修正，不覆寫既有 PyPI/Marketplace artifact** | `v0.6.12` tagged release 已成功發布到 PyPI 與 VS Code Marketplace；同一版本 artifact 不應被重打或覆寫。Windows branch CI 揭露的是 package-content guard 的 subprocess portability defect，因此正確補救是發布 `v0.6.13` corrective release，保留不可變 artifact 歷史並讓最終新版指向全綠 commit。 |
 | 2026-04-24 | **Release、CI、Cline harness 與 VSIX artifact 檢查必須共用可重跑的 audit scripts** | 發版風險主要來自各路徑 gate 不一致：local release 可過但 tag workflow 失敗，或 VSIX 內混入 compiled tests。將 Cline harness、Python artifacts、VSIX package contents、version sync 與 activation smoke 收斂到 script/CI/release workflow，可讓 MEM+GIT+PUSH+TAG 前後使用同一套 production-grade 檢查。 |
 | 2026-04-14 | **Manifest title fallback 必須在 question-first PDF 時退回 filename，而不是吃正文第一行** | 真實麻醉科考題 PDF（例如 111 年）首頁可能直接以 `1.` 開始，下一行就是題幹。若 title fallback 只抓第一個「看起來有字」的行，會把題幹誤存成文件標題，進而污染 `list_documents` 與 downstream prompt。正確策略是先清理 heading markdown noise；若正文已開始，就退回檔名 stem。 |

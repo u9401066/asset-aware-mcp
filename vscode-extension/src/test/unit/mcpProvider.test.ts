@@ -24,7 +24,7 @@ describe('AssetAwareMcpProvider', () => {
     function makeContext(overrides: Record<string, any> = {}) {
         return {
             globalState: { get: () => undefined },
-            extension: { packageJSON: { version: '0.6.13' } },
+            extension: { packageJSON: { version: '0.6.14' } },
             ...overrides,
         } as any;
     }
@@ -39,7 +39,7 @@ describe('AssetAwareMcpProvider', () => {
         assert.ok(servers[0].args.includes('--python'));
         assert.ok(servers[0].args.includes('3.11'));
         assert.ok(servers[0].args.includes('--from'));
-        assert.ok(servers[0].args.includes('asset-aware-mcp==0.6.13'));
+        assert.ok(servers[0].args.includes('asset-aware-mcp==0.6.14'));
         assert.strictEqual(servers[0].args[servers[0].args.length - 1], 'asset-aware-mcp');
     });
 
@@ -79,7 +79,7 @@ describe('AssetAwareMcpProvider', () => {
 
         assert.ok(servers[0].args.includes('--upgrade'));
         assert.ok(servers[0].args.includes('--from'));
-        assert.ok(servers[0].args.includes('asset-aware-mcp==0.6.13'));
+        assert.ok(servers[0].args.includes('asset-aware-mcp==0.6.14'));
     });
 
     it('does not add --upgrade flag when needsUpgrade is false', () => {

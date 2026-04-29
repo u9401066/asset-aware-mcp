@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Validate that project skills are discoverable by Cline.
+"""Validate that project assistant skills have valid SKILL.md metadata.
 
 Checks skill directories under:
 - .cline/skills/
 - .clinerules/skills/
 - .claude/skills/
+- .codex/skills/
 
 Each skill directory must contain a SKILL.md with YAML frontmatter including:
 - name (must match the directory name exactly)
@@ -21,6 +22,7 @@ SKILL_ROOTS = (
     Path(".cline/skills"),
     Path(".clinerules/skills"),
     Path(".claude/skills"),
+    Path(".codex/skills"),
 )
 
 
@@ -116,7 +118,7 @@ def main() -> int:
 
     if checked == 0:
         print(
-            "No project skills found under .cline/skills/, .clinerules/skills/, or .claude/skills/"
+            "No project skills found under .cline/skills/, .clinerules/skills/, .claude/skills/, or .codex/skills/"
         )
         return 1
 

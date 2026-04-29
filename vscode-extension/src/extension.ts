@@ -20,6 +20,10 @@ import { InstallInfo, StatusTreeProvider } from './statusTreeProvider';
 import { DocumentTreeProvider } from './documentTreeProvider';
 import { TableTreeProvider } from './tableTreeProvider';
 import { DfmEditorService, DfmLanguageFeatures } from './dfm';
+import { installAssistantAssets } from './assistantAssets';
+import { installClineMcpServer } from './clineMcpConfig';
+import { installCodexMcpServer } from './codexMcpConfig';
+import { installCopilotMcpConfig } from './copilotMcpConfig';
 import {
     DEFAULT_TORCH_BACKEND,
     findUvPath,
@@ -42,6 +46,8 @@ let dfmEditorService: DfmEditorService;
 let dfmLanguageFeatures: DfmLanguageFeatures;
 let extensionContext: vscode.ExtensionContext;
 let outputChannel: vscode.OutputChannel;
+let resolvedUvPath: string | null = null;
+let runtimeSyncListenersRegistered = false;
 
 // Context keys
 const CONTEXT_READY = 'assetAwareMcp.ready';
@@ -203,6 +209,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         log('Step 2: Checking uv installation...');
         statusBar.setStatus('initializing', 'Asset-Aware MCP: Checking uv...');
         const uvPath = await ensureUvInstalled();
+        resolvedUvPath = uvPath;
         if (!uvPath) {
             log('uv not available - MCP server will not function');
             statusBar.setStatus('warning', 'Asset-Aware MCP: uv not installed');
@@ -266,6 +273,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // Step 6: Register commands
         log('Step 6: Registering commands...');
         registerCommands(context);
+
+        // Step 6a: Configure external MCP consumers and assistant assets
+        log('Step 6a: Synchronizing MCP consumers and assistant assets...');
+        if (uvPath) {
+            syncExternalMcpConsumers(context, uvPath, needsUpgrade, true);
+            registerRuntimeSyncListeners(context);
+        }
+        await installAssistantAssets(context);
 
         // Step 6b: Initialize DFM editor service
         log('Step 6b: Initializing DFM editor service...');
@@ -332,6 +347,76 @@ function getStorageRoot(): string {
     return root;
 }
 
+function syncExternalMcpConsumers(
+    context: vscode.ExtensionContext,
+    uvPath: string,
+    _needsUpgrade: boolean = false,
+    notifyUser: boolean = false,
+): void {
+    const updatedConsumers: string[] = [];
+
+    try {
+        if (installCopilotMcpConfig(context, uvPath, false)) {
+            updatedConsumers.push('Copilot');
+            log('Copilot workspace MCP config updated');
+        }
+    } catch (error) {
+        log('Failed to update Copilot MCP config: ' + String(error));
+    }
+
+    try {
+        if (installClineMcpServer(context, uvPath, false)) {
+            updatedConsumers.push('Cline');
+            log('Cline MCP config updated');
+        }
+    } catch (error) {
+        log('Failed to update Cline MCP config: ' + String(error));
+    }
+
+    try {
+        if (installCodexMcpServer(context, uvPath, false)) {
+            updatedConsumers.push('Codex');
+            log('Codex MCP config updated');
+        }
+    } catch (error) {
+        log('Failed to update Codex MCP config: ' + String(error));
+    }
+
+    if (notifyUser && updatedConsumers.length > 0) {
+        vscode.window.showInformationMessage(
+            `Asset-Aware MCP configured for ${updatedConsumers.join(', ')}. Reload the relevant client if it was already open.`,
+        );
+    }
+}
+
+function registerRuntimeSyncListeners(context: vscode.ExtensionContext): void {
+    if (runtimeSyncListenersRegistered) {
+        return;
+    }
+
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration((event) => {
+            if (!event.affectsConfiguration('assetAwareMcp') || !resolvedUvPath) {
+                return;
+            }
+            syncExternalMcpConsumers(context, resolvedUvPath);
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeWorkspaceFolders(() => {
+            if (resolvedUvPath) {
+                syncExternalMcpConsumers(context, resolvedUvPath);
+            }
+            installAssistantAssets(context).catch((error) => {
+                log('Failed to sync assistant assets after workspace change: ' + String(error));
+            });
+        }),
+    );
+
+    runtimeSyncListenersRegistered = true;
+}
+
 /**
  * Register extension commands
  */
@@ -345,6 +430,25 @@ function registerCommands(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.openSettings', async () => {
             SettingsPanel.createOrShow(context.extensionUri, envManager);
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('assetAwareMcp.installAssistantAssets', async () => {
+            await installAssistantAssets(context, 'manual');
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('assetAwareMcp.configureExternalMcp', async () => {
+            if (!resolvedUvPath) {
+                resolvedUvPath = await ensureUvInstalled();
+            }
+            if (!resolvedUvPath) {
+                vscode.window.showErrorMessage('Asset-Aware MCP requires uv before MCP clients can be configured.');
+                return;
+            }
+            syncExternalMcpConsumers(context, resolvedUvPath, false, true);
         })
     );
 

@@ -93,6 +93,7 @@ jobs:
         run: |
           cd vscode-extension
           npm ci
+          npm run sync-assets:check
           npm run test:ci
 
       - name: Run VSIX install smoke test
@@ -129,6 +130,7 @@ jobs:
         run: |
           cd vscode-extension
           npm ci
+          npm run sync-assets:check
           npm run test:ci
 
       - name: Run VSIX install smoke test
@@ -166,6 +168,7 @@ jobs:
         run: |
           cd vscode-extension
           npm ci
+          npm run sync-assets:check
           npm run test:ci
           xvfb-run -a npm run test:install-smoke -- --require-activation
 

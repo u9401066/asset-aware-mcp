@@ -133,6 +133,7 @@ class TestDfmBlockType:
         assert DfmBlockType.CHART.is_protected
         assert DfmBlockType.TOC.is_protected
         assert DfmBlockType.CITATION.is_protected
+        assert DfmBlockType.REVISION.is_protected
         assert DfmBlockType.MACRO.is_protected
         assert not DfmBlockType.PARAGRAPH.is_protected
         assert not DfmBlockType.HEADING.is_protected
@@ -348,6 +349,120 @@ class TestDocxAdapterParsing:
         assert adapter._get_paragraph_text(p) == "Replacement"
         assert p.find(f"{{{NS['w']}}}hyperlink") is not None
 
+    def test_tracked_insert_and_delete_are_exposed_as_revision_blocks(self):
+        p = etree.fromstring(
+            f"""
+            <w:p xmlns:w="{NS["w"]}">
+              <w:r><w:t>Keep </w:t></w:r>
+              <w:ins w:id="1" w:author="Alice" w:date="2026-04-29T01:02:03Z">
+                <w:r><w:t>added</w:t></w:r>
+              </w:ins>
+              <w:del w:id="2" w:author="Bob" w:date="2026-04-29T02:03:04Z">
+                <w:r><w:delText>removed</w:delText></w:r>
+              </w:del>
+              <w:r><w:t> tail</w:t></w:r>
+            </w:p>
+            """
+        )
+        ir = DocxIR(
+            doc_id="test_doc_001",
+            source_path="test.docx",
+            source_filename="test.docx",
+            checksum="abc123",
+            created_at=datetime(2025, 1, 1, 12, 0, 0),
+        )
+
+        DocxAdapter()._parse_paragraph(p, ir, {}, Path.cwd())
+
+        assert ir.blocks[0].content == "Keep added tail"
+        revisions = ir.get_blocks_by_type(DfmBlockType.REVISION)
+        assert [block.revision_type for block in revisions] == ["insert", "delete"]
+        assert [block.content for block in revisions] == ["added", "removed"]
+        assert revisions[0].revision_author == "Alice"
+        assert revisions[0].metadata["revision_id"] == "1"
+        assert revisions[0].metadata["source_tag"] == "w:ins"
+        assert revisions[0].metadata["source_block_id"] == ir.blocks[0].id
+        assert revisions[1].revision_author == "Bob"
+        assert revisions[1].metadata["visible_in_current_text"] is False
+
+    def test_table_tracked_changes_are_exposed_without_polluting_cell_text(
+        self,
+        tmp_path: Path,
+    ):
+        tbl = etree.fromstring(
+            f"""
+            <w:tbl xmlns:w="{NS["w"]}">
+              <w:tr>
+                <w:tc>
+                  <w:p>
+                    <w:r><w:t>A </w:t></w:r>
+                    <w:del w:id="3" w:author="Reviewer">
+                      <w:r><w:delText>B</w:delText></w:r>
+                    </w:del>
+                    <w:ins w:id="4" w:author="Reviewer">
+                      <w:r><w:t>C</w:t></w:r>
+                    </w:ins>
+                  </w:p>
+                </w:tc>
+              </w:tr>
+            </w:tbl>
+            """
+        )
+        ir = DocxIR(doc_id="test_doc_001", source_path="test.docx")
+
+        DocxAdapter()._parse_table(tbl, ir, {}, tmp_path, tmp_path)
+
+        table_block = ir.blocks[0]
+        assert table_block.block_type == DfmBlockType.TABLE
+        assert "A C" in table_block.content
+        assert "B" not in table_block.content
+        revisions = ir.get_blocks_by_type(DfmBlockType.REVISION)
+        assert [block.revision_type for block in revisions] == ["delete", "insert"]
+        assert [block.content for block in revisions] == ["B", "C"]
+        assert revisions[0].metadata["source_block_id"] == table_block.id
+
+    def test_revision_blocks_do_not_shift_docx_writeback_alignment(self):
+        doc_xml = f"""
+        <w:document xmlns:w="{NS["w"]}">
+          <w:body>
+            <w:p><w:r><w:t>One</w:t></w:r></w:p>
+            <w:p><w:r><w:t>Two</w:t></w:r></w:p>
+          </w:body>
+        </w:document>
+        """.encode()
+        ir = DocxIR(
+            doc_id="test_doc_001",
+            source_path="test.docx",
+            blocks=[
+                DfmBlock(
+                    id="p001",
+                    block_type=DfmBlockType.PARAGRAPH,
+                    content="One",
+                ),
+                DfmBlock(
+                    id="rev001",
+                    block_type=DfmBlockType.REVISION,
+                    content="deleted",
+                    revision_type="delete",
+                ),
+                DfmBlock(
+                    id="p002",
+                    block_type=DfmBlockType.PARAGRAPH,
+                    content="Changed two",
+                ),
+            ],
+        )
+
+        updated = DocxAdapter()._apply_text_changes(
+            doc_xml,
+            ir,
+            changed_block_ids={"p002"},
+        )
+
+        tree = etree.fromstring(updated)
+        texts = [t.text for t in tree.findall(f".//{{{NS['w']}}}t")]
+        assert texts == ["One", "Changed two"]
+
 
 class TestDocxIR:
     def test_next_block_id(self):
@@ -451,6 +566,36 @@ class TestDfmRenderer:
         assert "<!-- dfm:table @b:t001" in result
         assert "<!-- /dfm:table -->" in result
         assert "| A | B |" in result
+
+    def test_render_revision_includes_track_change_metadata(
+        self,
+        renderer: DfmRenderer,
+    ):
+        block = DfmBlock(
+            id="rev001",
+            block_type=DfmBlockType.REVISION,
+            content="removed text",
+            revision_type="delete",
+            revision_author="Alice",
+            revision_date="2026-04-29T01:02:03Z",
+            metadata={
+                "revision_id": "7",
+                "source_tag": "w:del",
+                "scope": "paragraph",
+                "source_block_id": "p001",
+                "visible_in_current_text": False,
+            },
+        )
+
+        result = renderer._render_revision(block)
+
+        assert "<!-- dfm:revision @b:rev001" in result
+        assert "type: delete" in result
+        assert "revision_id: '7'" in result
+        assert "source_tag: w:del" in result
+        assert "source_block_id: p001" in result
+        assert "visible_in_current_text: false" in result
+        assert "removed text" in result
 
     def test_render_table_with_merged_cells(self, renderer: DfmRenderer):
         block = DfmBlock(

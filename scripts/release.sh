@@ -73,6 +73,7 @@ cd vscode-extension
 
 # 安裝依賴並執行 extension CI（包含 VSIX contents guard）
 npm ci
+npm run sync-assets:check
 npm run test:ci
 
 # VSIX 安裝/更新 smoke；Linux 若有 xvfb 則要求 activation smoke

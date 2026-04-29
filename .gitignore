@@ -60,6 +60,9 @@ data/
 # LightRAG
 lightrag_db/
 
+# PubMed Search MCP local pipeline state
+.pubmed-search/
+
 # Test data (large PDF files)
 test_data/
 test_pdfs/

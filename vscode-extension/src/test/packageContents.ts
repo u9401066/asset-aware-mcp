@@ -12,6 +12,12 @@ const requiredFiles = [
     'resources/walkthrough/setup.md',
     'resources/walkthrough/configure.md',
     'resources/walkthrough/start.md',
+    'resources/repo-assets/asset-aware/AGENTS.md',
+    'resources/repo-assets/asset-aware/.github/copilot-instructions.md',
+    'resources/repo-assets/asset-aware/.github/agents/asset-aware-document.agent.md',
+    'resources/repo-assets/asset-aware/.cline/skills/asset-aware-mcp-harness/SKILL.md',
+    'resources/repo-assets/asset-aware/.codex/skills/asset-aware-mcp-harness/SKILL.md',
+    'resources/repo-assets/asset-aware/.clinerules/workflows/full-check.md',
     'out/extension.js',
 ];
 
@@ -19,6 +25,7 @@ const forbiddenPrefixes = [
     'out/test/',
     'src/',
     'node_modules/',
+    'scripts/',
     '.github/',
     '.vscode/',
     '.vscode-test/',

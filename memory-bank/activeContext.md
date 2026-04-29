@@ -4,7 +4,7 @@
 
 ## Current Goals
 
-- 正在完成 0.6.13 corrective release 收尾：0.6.12 已發布但 Windows branch CI 揭露 package-content guard 的跨平台 subprocess 問題；本輪修正後重新驗證、push、tag `v0.6.13`。
+- 正在完成 0.6.14 release prep：整合 Asset-Aware VSIX assistant harness auto-sync、Copilot/Cline/Codex MCP config conservative merge，以及 DOCX Track Changes → DFM revision review blocks；本輪會完成 MEM+GIT+PUSH+TAG 發布。
 
 ## 🎯 當前焦點
 
@@ -12,7 +12,7 @@
 - **VSIX 發布安全已加固**：package content test 會拒絕 `out/test/**`，publish workflow 只發布已驗證的 `.vsix`
 - **VSIX install smoke 已 fail-closed**：安裝後找不到 extension 不再 fallback 到 workspace root；Linux CI 會在 `xvfb` 下要求 extension activation 成功
 - **Cline harness 可發版檢查已制度化**：新增 release harness audit，覆蓋 `.clinerules` workflows、`.cline/skills`、`.claude/skills` 與 Cline MCP setup helper
-- **當前版本真相為 0.6.13**：本次 patch 版本保留 0.6.12 release hardening，並修正 Windows CI 上 VSIX package-content guard 的 `spawn EINVAL`
+- **當前版本真相為 0.6.14**：本次 patch 版本保留 0.6.13 release hardening，並新增 VSIX assistant harness auto-sync / external MCP conservative merge / DOCX Track Changes DFM review support
 - **Agent asset 全覆蓋規劃已補齊**：新增 `docs/agent-asset-gap-analysis.md`，明確拆成格式轉換、資產拆解、結構導航、語義理解四層，並量化目前完成度約 35%
 - **建議採分段發布**：先發格式入口補齊（RTF/TXT/MD/CSV/HTML），再發 XLSX 原生化，其次是 agent 理解增強，最後才是 PPTX/EPUB/EML 等高成本格式
 - **Section truth 已收斂**：manifest generator 現在是 section metadata 最終寫入點；Marker ingest 不再先算 section 再被 generator 用另一套規則覆蓋

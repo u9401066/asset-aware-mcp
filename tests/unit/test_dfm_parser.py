@@ -49,6 +49,30 @@ Editable paragraph
     assert [edit.block_id for edit in result.edits] == ["p001"]
 
 
+def test_parse_dfm_skips_revision_review_blocks():
+    parser = DfmParser()
+    dfm_text = """---
+doc_id: docx_123
+source: demo.docx
+checksum: abc
+---
+
+<!-- dfm:revision @b:rev001
+type: delete
+source_tag: w:del
+-->
+Edited review text should stay read-only
+<!-- /dfm:revision -->
+
+<!-- @b:p001 -->
+Editable paragraph
+"""
+
+    result = parser.parse(dfm_text)
+
+    assert [edit.block_id for edit in result.edits] == ["p001"]
+
+
 def test_apply_edits_keeps_table_markdown_when_rows_are_semantically_unchanged():
     parser = DfmParser()
     original_table = (

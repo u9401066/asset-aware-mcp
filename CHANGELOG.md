@@ -7,6 +7,28 @@
 
 ## [Unreleased]
 
+## [0.6.14] - 2026-04-29
+
+### Added
+
+- **VSIX assistant harness auto-sync**
+  - Added Asset-Aware bundled harness assets for Copilot, Cline, and Codex and syncs them into the VSIX under `resources/repo-assets/asset-aware/**`
+  - Extension startup and commands can install/update assistant harness files while preserving custom user instructions and unrelated workspace assets
+
+- **Copilot/Cline/Codex MCP configuration merge**
+  - Added conservative MCP config helpers for Copilot workspace MCP, Cline MCP settings, and Codex `config.toml`
+  - Existing custom servers, Cline `alwaysAllow`, Codex comments, and unrelated MCP entries are preserved; duplicate Asset-Aware entries are avoided
+
+- **DOCX Track Changes review blocks**
+  - DOCX `w:ins`, `w:del`, `w:moveFrom`, `w:moveTo`, and common format changes now render as read-only `dfm:revision` blocks
+  - Revision metadata includes author/date, revision id, OOXML source tag, scope, source block id, and whether the change is visible in current text
+
+### Changed
+
+- **Release and artifact gates**
+  - Release checks now include assistant asset sync, MCP config merge tests, Cline skill validation, VSIX install smoke, artifact audit, Docker smoke, and VSIX package-content checks
+  - `.pubmed-search/` local pipeline state is ignored so runtime literature-search artifacts do not leak into Asset-Aware releases
+
 ## [0.6.13] - 2026-04-24
 
 ### Fixed

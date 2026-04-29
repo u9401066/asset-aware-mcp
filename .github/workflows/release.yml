@@ -84,6 +84,7 @@ jobs:
         run: |
           cd vscode-extension
           npm ci
+          npm run sync-assets:check
           npm run test:ci
 
       - name: Install Linux desktop smoke dependencies
@@ -151,7 +152,9 @@ jobs:
         run: npm ci
 
       - name: Run extension CI
-        run: npm run test:ci
+        run: |
+          npm run sync-assets:check
+          npm run test:ci
 
       - name: Package extension
         run: npx vsce package --no-dependencies

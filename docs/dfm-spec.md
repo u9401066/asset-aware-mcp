@@ -360,10 +360,21 @@ height_cm: 6.0
 type: "insert"
 author: "Dr. Wang"
 date: "2026-02-20T14:30:00"
+revision_id: "42"
+source_tag: "w:ins"
+scope: "paragraph"
+source_block_id: "p003"
+visible_in_current_text: true
 -->
 ~~刪除的文字~~**新增的文字**
 <!-- /dfm:revision -->
 ```
+
+`dfm:revision` 是 Word Track Changes 的唯讀審查區塊，不會在 DFM
+回寫時被當成正文編輯。`source_tag` 對應原始 OOXML 修訂節點，例如
+`w:ins`、`w:del`、`w:moveFrom`、`w:moveTo`、`w:rPrChange` 或
+`w:pPrChange`；`visible_in_current_text` 可協助 agent 區分目前正文可見的
+插入/移入文字與已刪除/移出的文字。
 
 ## 5. 格式合併策略
 

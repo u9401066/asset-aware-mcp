@@ -96,18 +96,30 @@ export const window = {
 
 // Workspace mock
 const configurationValues = new Map<string, unknown>();
+const installedExtensions = new Set<string>();
 
 export function __setConfigurationValue(key: string, value: unknown): void {
     configurationValues.set(key, value);
 }
 
+export function __setExtensionInstalled(id: string, installed: boolean): void {
+    if (installed) {
+        installedExtensions.add(id);
+    } else {
+        installedExtensions.delete(id);
+    }
+}
+
 export function __resetConfiguration(): void {
     configurationValues.clear();
+    installedExtensions.clear();
 }
 
 export const workspace = {
     onDidChangeTextDocument: () => ({ dispose() { /* no-op */ } }),
     onDidCloseTextDocument: () => ({ dispose() { /* no-op */ } }),
+    onDidChangeConfiguration: () => ({ dispose() { /* no-op */ } }),
+    onDidChangeWorkspaceFolders: () => ({ dispose() { /* no-op */ } }),
     openTextDocument: async (path: string) => ({ uri: Uri.file(path), getText: () => '' }),
     getConfiguration: () => ({
         get: (key: string, defaultValue?: any) => configurationValues.has(`assetAwareMcp.${key}`)
@@ -139,7 +151,7 @@ export enum ProgressLocation {
 
 // Extensions mock
 export const extensions = {
-    getExtension: () => undefined,
+    getExtension: (id: string) => installedExtensions.has(id) ? { id } : undefined,
 };
 
 // Env mock

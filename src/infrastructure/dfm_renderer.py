@@ -336,6 +336,15 @@ class DfmRenderer:
                 meta["revision_author"] = block.revision_author
             if block.revision_date:
                 meta["revision_date"] = block.revision_date
+            for key in (
+                "revision_id",
+                "source_tag",
+                "scope",
+                "source_block_id",
+                "visible_in_current_text",
+            ):
+                if key in block.metadata:
+                    meta[key] = block.metadata[key]
             return meta
 
         return meta
@@ -777,6 +786,15 @@ class DfmRenderer:
             meta["author"] = block.revision_author
         if block.revision_date:
             meta["date"] = block.revision_date
+        for key in (
+            "revision_id",
+            "source_tag",
+            "scope",
+            "source_block_id",
+            "visible_in_current_text",
+        ):
+            if key in block.metadata:
+                meta[key] = block.metadata[key]
 
         yaml_str = yaml.dump(meta, default_flow_style=False, allow_unicode=True).strip()
 

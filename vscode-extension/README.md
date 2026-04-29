@@ -6,14 +6,14 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.13/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.14/resources/banner.png)
 
-## 🆕 What's New in v0.6.13
+## 🆕 What's New in v0.6.14
 
-- **Windows CI package guard fixed**: VSIX package-content verification now uses the VSCE JS API directly instead of spawning `npx`, so the guard works consistently on Windows, macOS, and Linux
-- **Release gates hardened**: CI, local release prep, and tagged release publish now share artifact audits, full Python tests, Cline harness validation, and VSIX package-content checks
-- **VSIX install smoke tightened**: packaged extension smoke tests now fail if the installed extension cannot be found, and CI requires activation under `xvfb`
-- **Marketplace banner retained safely**: README banner remains release-pinned to tracked `resources/banner.png` while package checks prevent test files from leaking into the VSIX
+- **Assistant harness auto-sync**: VSIX startup installs/updates bundled Asset-Aware Copilot, Cline, and Codex harness assets without overwriting user customizations
+- **External MCP config merge**: Copilot, Cline, and Codex MCP settings are conservatively merged so existing custom servers stay intact and duplicate Asset-Aware entries are avoided
+- **Word Track Changes in DFM**: DOCX tracked insertions, deletions, moves, and common format revisions are exposed as read-only `dfm:revision` review blocks
+- **Release gates hardened**: asset sync, MCP merge tests, Cline skill validation, install smoke, artifact audit, Docker smoke, and package-content checks are part of the release path
 - **48 tools** across 7 modules
 
 ## 🧪 Current Main Branch

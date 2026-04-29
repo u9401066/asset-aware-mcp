@@ -45,6 +45,7 @@ def main() -> int:
         require_text(
             ".github/workflows/ci.yml",
             [
+                "sync-assets:check",
                 "npm run test:ci",
                 "xvfb-run -a npm run test:install-smoke -- --require-activation",
             ],
@@ -62,6 +63,7 @@ def main() -> int:
                 "python3 scripts/check_cline_skills.py",
                 "python3 scripts/audit_release_harness.py",
                 "python3 scripts/audit_release_artifacts.py",
+                "npm run sync-assets:check",
                 "npm run test:ci",
                 "npm run test:install-smoke -- --require-activation",
                 "docker build",
@@ -76,6 +78,7 @@ def main() -> int:
             [
                 "python3 scripts/audit_release_harness.py",
                 "python3 scripts/audit_release_artifacts.py",
+                "npm run sync-assets:check",
                 "npm run test:install-smoke",
                 "docker build",
                 "docker run",
@@ -98,6 +101,26 @@ def main() -> int:
             "vscode-extension/.vscodeignore",
             [
                 "out/test/**",
+            ],
+        )
+    )
+    errors.extend(
+        require_text(
+            "vscode-extension/src/test/packageContents.ts",
+            [
+                "resources/repo-assets/asset-aware/AGENTS.md",
+                "resources/repo-assets/asset-aware/.cline/skills/asset-aware-mcp-harness/SKILL.md",
+            ],
+        )
+    )
+    errors.extend(
+        require_text(
+            "vscode-extension/package.json",
+            [
+                "sync-assets",
+                "sync-assets:check",
+                "assetAwareMcp.configureExternalMcp",
+                "assetAwareMcp.installAssistantAssets",
             ],
         )
     )

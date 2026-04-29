@@ -2,7 +2,7 @@
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
     "description": "Medical RAG MCP Server with precise document asset retrieval and Docx editing (DFM) — tables, figures, sections from PDFs + .docx/.doc round-trip with integrity validation",
-    "version": "0.6.13",
+    "version": "0.6.14",
     "publisher": "u9401066",
     "engines": {
         "vscode": "^1.96.0"
@@ -53,6 +53,14 @@
             {
                 "command": "assetAwareMcp.openSettings",
                 "title": "Asset-Aware MCP: Open Settings Panel"
+            },
+            {
+                "command": "assetAwareMcp.installAssistantAssets",
+                "title": "Asset-Aware MCP: Install/Update Assistant Harness Assets"
+            },
+            {
+                "command": "assetAwareMcp.configureExternalMcp",
+                "title": "Asset-Aware MCP: Configure Copilot/Cline/Codex MCP"
             },
             {
                 "command": "assetAwareMcp.showStatus",
@@ -167,6 +175,26 @@
                         "auto"
                     ],
                     "description": "Torch backend to request when the optional Marker backend is enabled. Use cpu for the safest cross-platform install."
+                },
+                "assetAwareMcp.installAssistantAssets": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Automatically install/update bundled Copilot, Cline, and Codex harness assets into the active workspace."
+                },
+                "assetAwareMcp.installCopilotWorkspaceConfig": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Automatically merge an Asset-Aware MCP server entry into the workspace .vscode/mcp.json for GitHub Copilot."
+                },
+                "assetAwareMcp.installClineConfig": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Force writing Cline MCP settings even if the Cline extension/global storage is not detected."
+                },
+                "assetAwareMcp.installCodexConfig": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Force writing Codex MCP settings even if CODEX_HOME or ~/.codex does not already exist."
                 }
             }
         },
@@ -261,7 +289,9 @@
         ]
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile",
+        "sync-assets": "node ./scripts/sync-assistant-assets.mjs",
+        "sync-assets:check": "node ./scripts/check-sync-assets.mjs",
+        "vscode:prepublish": "npm run sync-assets && npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile",
@@ -271,8 +301,8 @@
         "test:unit": "npm run compile && mocha --require out/test/unit/setup.js 'out/test/unit/**/*.test.js' --timeout 5000",
         "test:package-contents": "npm run compile && node ./out/test/packageContents.js",
         "test:install-smoke": "npm run compile && node ./out/test/installSmoke.js",
-        "test:ci": "npm run lint && npm run test:unit && npm run test:package-contents",
-        "package": "vsce package"
+        "test:ci": "npm run sync-assets:check && npm run lint && npm run test:unit && npm run test:package-contents",
+        "package": "npm run sync-assets && vsce package"
     },
     "devDependencies": {
         "@types/mocha": "^10.0.10",

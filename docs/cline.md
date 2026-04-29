@@ -10,6 +10,7 @@ This repo includes a Cline-oriented harness so agents can work consistently acro
 - Project skills can live in:
   - `.cline/skills/` (recommended by Cline)
   - `.claude/skills/` (already used in this repo; Cline supports it too)
+  - `.codex/skills/` (validated for Codex harness parity)
 - Enable Skills in Cline: Settings → Features → Enable Skills.
 - Tip: Skill YAML frontmatter is parsed strictly. If `description:` includes text like `Triggers: ...`, wrap the whole description in quotes.
 
@@ -27,7 +28,16 @@ This repo includes a Cline-oriented harness so agents can work consistently acro
 
 ## MCP Server Setup (Asset-Aware MCP)
 
-This repo includes a helper to register `asset-aware-mcp` as a Cline MCP server using the standard `cline_mcp_settings.json` file.
+The VSIX now auto-configures MCP access when the extension activates:
+
+- Copilot: merges `asset-aware-mcp` into workspace `.vscode/mcp.json`
+- Cline: merges `asset-aware-mcp` into Cline `cline_mcp_settings.json`
+- Codex: merges `[mcp_servers.asset-aware-mcp]` into `~/.codex/config.toml`
+- Harness assets: installs/updates `AGENTS.md`, `.github/copilot-instructions.md`, `.github/agents/asset-aware-document.agent.md`, `.cline/skills/asset-aware-mcp-harness`, `.codex/skills/asset-aware-mcp-harness`, and `.clinerules`
+
+All merges are conservative: unrelated servers, custom same-key servers, Cline `alwaysAllow`, and Codex comments are preserved.
+
+The repo also includes a CLI helper to register `asset-aware-mcp` as a Cline MCP server using the standard `cline_mcp_settings.json` file.
 
 - Guided workflow: `/mcp-setup.md`
 - Script (idempotent): `python3 scripts/install_cline_mcp.py --write`
