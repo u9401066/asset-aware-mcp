@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -289,6 +290,94 @@ async def test_save_docx_uses_persisted_dfm_when_no_inline_content(
     result = await service.save_docx("docx_123")
 
     assert result["success"] is True
+
+
+@pytest.mark.asyncio
+async def test_save_docx_passes_track_change_context_to_adapter(
+    monkeypatch, tmp_path: Path
+):
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path
+
+    service = DocxService(repository=repository)
+    ir = DocxIR(
+        doc_id="docx_123",
+        source_path="/workspace/original.docx",
+        blocks=[
+            DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="Before"),
+        ],
+    )
+    (tmp_path / "content.dfm").write_text("persisted dfm", encoding="utf-8")
+    (tmp_path / "original.docx").write_bytes(b"docx")
+
+    parse_result = DfmParseResult(
+        doc_id="docx_123",
+        source="demo.docx",
+        checksum="",
+        edits=[BlockEdit(block_id="p001", new_content="After")],
+    )
+
+    monkeypatch.setattr(service, "_load_ir", lambda doc_id: ir)
+    monkeypatch.setattr(service.parser, "parse", lambda dfm_text: parse_result)
+    monkeypatch.setattr(
+        service.integrity,
+        "check_pre_save",
+        lambda ir_obj, parsed: IntegrityReport(),
+    )
+
+    def apply_edits(ir_obj, parsed):
+        ir_obj.find_block("p001").content = "After"
+        return ir_obj
+
+    monkeypatch.setattr(service.parser, "apply_edits", apply_edits)
+    monkeypatch.setattr(
+        service.adapter,
+        "ir_to_docx",
+        MagicMock(side_effect=lambda ir_obj, doc_dir, out, **kwargs: out),
+    )
+    monkeypatch.setattr(service, "_save_ir", lambda *_args: None)
+    monkeypatch.setattr(service, "_backup_before_overwrite", lambda *_args: None)
+    monkeypatch.setattr(service.renderer, "render", lambda ir_obj: "updated dfm")
+    monkeypatch.setattr(
+        service.renderer,
+        "render_split",
+        lambda ir_obj: ("updated md", "updated yaml"),
+    )
+    monkeypatch.setattr(service, "_detect_content_drift", lambda *_args: [])
+    monkeypatch.setattr(
+        service.integrity,
+        "check_post_save",
+        lambda *_args: IntegrityReport(),
+    )
+
+    result = await service.save_docx(
+        "docx_123",
+        "dummy",
+        track_changes=True,
+        revision_author="AI Reviewer",
+    )
+
+    assert result["success"] is True
+    assert result["track_changes"] is True
+    assert result["revision_author"] == "AI Reviewer"
+    assert result["revision_records"] == 2
+    sidecar = tmp_path / "revisions.jsonl"
+    assert result["revision_sidecar_path"] == str(sidecar)
+    records = [
+        json.loads(line)
+        for line in sidecar.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert [record["op"] for record in records] == ["delete", "insert"]
+    assert records[0]["block_id"] == "p001"
+    assert records[0]["old_text"] == "Before"
+    assert records[1]["new_text"] == "After"
+    assert records[0]["old_text_hash"].startswith("sha256:")
+    assert records[1]["locator"]["block_id"] == "p001"
+    call_kwargs = service.adapter.ir_to_docx.call_args.kwargs
+    assert call_kwargs["track_changes"] is True
+    assert call_kwargs["revision_author"] == "AI Reviewer"
+    assert call_kwargs["original_ir"].find_block("p001").content == "Before"
 
 
 @pytest.mark.asyncio

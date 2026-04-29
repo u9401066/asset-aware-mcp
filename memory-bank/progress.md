@@ -2,9 +2,18 @@
 
 ## Done
 
+- 完成 opt-in DFM→DOCX Track Changes emission：`save_docx(track_changes=True)` 會以原始 IR / edited IR 產生 token-level `w:del`/`w:ins`，同步啟用 `word/settings.xml` 的 `w:trackRevisions`，並支援表格儲存格文字 diff
+- 完成 Track Changes citation-ready sidecar：`save_docx(track_changes=True)` 現在同步輸出 `revisions.jsonl`，每筆 record 含 `doc_id`、`source_revision_id`、`revision_id`、`block_id`、`op`、old/new text hash、char/byte range、context 與 locator，可銜接 MedPaper/Foam block anchor
+- 完成 Track Changes write-back 修正後審查 findings：保留單一 hyperlink/SDT wrapper，依 run span 套用 revision run properties，避免 mixed-format 段落全部退化為第一 run 樣式
+- 完成 DocxValidator run-level formatting gate：格式比對由 first-run sampling 改為逐 run + run count strict diff，補上 later-run regression test
+- 完成 save_docx reserved-name fail-closed：明確拒絕輸出到 `original.docx`、`ir.json`、`content.*` 等 document state artifact
+- 完成 VSIX assistant asset non-destructive sync：新增 workspace manifest，只有未被使用者修改的 extension-managed assets 會自動更新；custom same-path harness 會保留
+- 完成 VSIX bundled harness 自洽性修正：`.github/bylaws/**` 與 `.claude/skills/**` 已納入 `resources/repo-assets/asset-aware/**`、sync script 與 package contents audit
+- 完成 Copilot/Cline/Codex MCP config fail-closed：malformed JSON / suspicious TOML / unreadable config 會跳過寫入，避免把 custom server 或 unrelated entries 從原檔移除
+- 完成 MedPaper LLM wiki / Foam 對齊契約文件：`docs/medpaper-llm-wiki-foam-alignment.md` 明確 Asset-Aware 作為 locator/provenance authority，MedPaper 作為 Foam materializer
 - 完成 DOCX Track Changes → DFM review annotation 支援：`w:ins`、`w:del`、`w:moveFrom`、`w:moveTo` 與常見 paragraph/run format change 會輸出為唯讀 `dfm:revision` 區塊，並保留 revision id、author/date、source OOXML tag、scope、source block 與 visible-in-current-text metadata
-- 完成 0.6.14 release version bump：Python package、Docker label、runtime version、VSIX manifest/lock、README banner、CHANGELOG 與 Memory Bank 已對齊到 0.6.14
-- 完成 0.6.14 local release verification：Ruff、format、MyPy、full pytest、Cline skill audit、release harness audit、VSIX asset sync、extension CI、VSIX install/update smoke、Docker smoke、uv build、artifact audit、VSIX asset-content audit、diff hygiene 全部通過
+- 完成 0.6.15 final local verification：Ruff、format、MyPy、full pytest (`667 passed, 21 skipped`)、Cline skill audit、release harness audit、VSIX `npm run test:ci` (`93 passing`, package contents 67 files)、VSIX install/update smoke、uv build、VSIX package、artifact audit、Docker build/import smoke、version sync、diff hygiene 全部通過；activation smoke 因本機無 `DISPLAY`/`xvfb-run` 正常跳過
+- 完成 0.6.15 release version bump：Python package、Docker label、runtime version、VSIX manifest/lock、README banner、CHANGELOG 與 Memory Bank 已對齊到 0.6.15
 - 完成 0.6.12 release hardening：CI、tagged release workflow、local `scripts/release.sh` 已收斂到同一組 release gates
 - 完成 0.6.13 corrective fix：VSIX package-content guard 改用 VSCE `listFiles()` API，避免 Windows `npx` subprocess `spawn EINVAL`
 - 新增 `scripts/audit_release_harness.py` 檢查 Cline rules/workflows/skills/MCP setup 是否維持可讀與可發版狀態
@@ -16,11 +25,9 @@
 
 ## Doing
 
-- 執行 0.6.14 full verification；通過後建立 release commit、push `master`，並推送 annotated tag `v0.6.14`
-- 本機缺 `xvfb-run` 且 sudo 需要密碼，因此 activation-required VSIX smoke 只能交給 GitHub CI/release workflow 的 `xvfb-run -a npm run test:install-smoke -- --require-activation` gate；本機已通過 fresh/update install smoke
+- 0.6.15 local release gates 已完成；接著 commit、push、建立並推送 `v0.6.15` tag
 
 ## Next
 
-- 建立 0.6.14 release commit，push `master`，建立並推送 annotated tag `v0.6.14`
-- 若要讓 AI 在 DFM 中做出的修改回寫成真正 Word Track Changes，下一步需新增 opt-in 的 DFM→DOCX diff emission：比較原始 block 與 edited block，產生 `w:del`/`w:ins`，並更新 `word/settings.xml` 的 track revisions 設定
+- 若要再提升 citation-ready 到「Word revision id ↔ sidecar record」完全對位，可在 OOXML emission 時把 `w:id` 回填到 `revisions.jsonl`，目前 sidecar 已提供 block/span/hash/range 級對位
 - 觀察 GitHub Actions tagged release：PyPI / VS Code Marketplace 發布 jobs 應使用已驗證 artifact 與版本一致性 gate

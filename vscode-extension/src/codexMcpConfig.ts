@@ -186,7 +186,26 @@ function ensureTrailingBlankLine(content: string): string {
     return content + '\n\n';
 }
 
-function readConfig(configPath: string): string {
+function warnSkippedConfigWrite(configPath: string, reason: string): void {
+    vscode.window.showWarningMessage(
+        `Asset-Aware MCP skipped updating ${configPath}: ${reason}`,
+    );
+}
+
+function hasSuspiciousTomlSyntax(content: string): boolean {
+    for (const rawLine of content.split(/\r?\n/)) {
+        const line = rawLine.trim();
+        if (!line || line.startsWith('#')) {
+            continue;
+        }
+        if (line.startsWith('[') && !/^\[\[?[^\]]+\]\]?(?:\s*#.*)?$/.test(line)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function readConfig(configPath: string): string | undefined {
     if (!fs.existsSync(configPath)) {
         return '';
     }
@@ -198,7 +217,8 @@ function readConfig(configPath: string): string {
         } catch {
             // Best-effort backup only.
         }
-        return '';
+        warnSkippedConfigWrite(configPath, 'the file could not be read. Please fix permissions and retry.');
+        return undefined;
     }
 }
 
@@ -231,6 +251,13 @@ export function installCodexMcpServer(
     }
 
     let content = readConfig(configPath);
+    if (content === undefined) {
+        return false;
+    }
+    if (hasSuspiciousTomlSyntax(content)) {
+        warnSkippedConfigWrite(configPath, 'the TOML structure looks malformed. Please fix the file and retry.');
+        return false;
+    }
     const original = content;
     const stripped = stripManagedBlock(content, ASSET_AWARE_SERVER_KEY);
     if (stripped.blockedByCustom) {
@@ -253,6 +280,9 @@ export function removeCodexMcpServer(): boolean {
     }
 
     const original = readConfig(configPath);
+    if (original === undefined) {
+        return false;
+    }
     const stripped = stripManagedBlock(original, ASSET_AWARE_SERVER_KEY);
     if (stripped.blockedByCustom || !stripped.removed) {
         return false;
@@ -267,4 +297,5 @@ export const __test__ = {
     renderManagedBlock,
     stripManagedBlock,
     extractManagedBlock,
+    hasSuspiciousTomlSyntax,
 };

@@ -3,9 +3,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const extensionRoot = path.resolve(scriptDir, '..');
-const repoRoot = path.resolve(extensionRoot, '..');
-const assetRoot = path.join(extensionRoot, 'resources', 'repo-assets', 'asset-aware');
+const extensionRoot = process.env.ASSET_AWARE_EXTENSION_ROOT
+    ? path.resolve(process.env.ASSET_AWARE_EXTENSION_ROOT)
+    : path.resolve(scriptDir, '..');
+const repoRoot = process.env.ASSET_AWARE_REPO_ROOT
+    ? path.resolve(process.env.ASSET_AWARE_REPO_ROOT)
+    : path.resolve(extensionRoot, '..');
+const assetRoot = process.env.ASSET_AWARE_ASSET_ROOT
+    ? path.resolve(process.env.ASSET_AWARE_ASSET_ROOT)
+    : path.join(extensionRoot, 'resources', 'repo-assets', 'asset-aware');
 
 const clineRuleFiles = [
     '00-project.md',
@@ -31,6 +37,14 @@ const mappings = [
     {
         source: path.join(repoRoot, '.github', 'agents', 'asset-aware-document.agent.md'),
         target: path.join(assetRoot, '.github', 'agents', 'asset-aware-document.agent.md'),
+    },
+    {
+        source: path.join(repoRoot, '.github', 'bylaws'),
+        target: path.join(assetRoot, '.github', 'bylaws'),
+    },
+    {
+        source: path.join(repoRoot, '.claude', 'skills'),
+        target: path.join(assetRoot, '.claude', 'skills'),
     },
     {
         source: path.join(repoRoot, '.cline', 'skills', 'asset-aware-mcp-harness'),

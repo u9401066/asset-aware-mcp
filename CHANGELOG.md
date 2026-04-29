@@ -7,6 +7,48 @@
 
 ## [Unreleased]
 
+## [0.6.15] - 2026-04-29
+
+### Added
+
+- **Opt-in DFM → DOCX Track Changes emission**
+  - `save_docx(track_changes=True)` now writes AI/DFM text edits as native Word `w:del` / `w:ins` revisions
+  - Generated revisions include configurable author metadata and enable `w:trackRevisions` in `word/settings.xml`
+  - Paragraph and table-cell edits are covered, with token-level diff chunks that preserve whitespace for reviewable provenance
+
+- **MedPaper LLM wiki / Foam alignment contract**
+  - Added a repo-local contract documenting how Asset-Aware assets and evidence spans should promote into MedPaper Foam notes without losing provenance
+  - Defines required identity, source revision, locator, hash, context, asset relationship, and CRAAP fields for wiki-ready assets
+
+- **Citation-ready DOCX revision sidecar**
+  - `save_docx(track_changes=True)` now emits `revisions.jsonl` with block ids, old/new text hashes, char/byte ranges, context, and locator metadata
+  - MCP output reports the sidecar path and record count so downstream tools can promote accepted edits without recomputing diffs
+
+### Fixed
+
+- **VSIX external MCP upgrade propagation**
+  - Copilot, Cline, and Codex MCP config sync now receives the activation-time `needsUpgrade` flag
+  - Added tests proving external MCP entries include `--upgrade` when the VSIX server version changes while preserving custom/idempotent merge behavior
+
+- **VSIX assistant harness preservation**
+  - Assistant asset sync now uses a workspace manifest and preserves same-path user edits instead of overwriting them on startup/update
+  - Bundled VSIX assets now include `.github/bylaws/**` and `.claude/skills/**`, keeping Copilot instructions self-contained after install
+  - `npm run sync-assets:check` now compares against a temporary expected snapshot instead of mutating the tracked asset directory during a check
+
+- **MCP config fail-closed behavior**
+  - Copilot and Cline malformed JSON is backed up and skipped rather than replaced with a blank config
+  - Codex suspicious TOML/read failures are skipped with a warning so custom settings remain in place
+
+### Changed
+
+- **DOCX validation with Track Changes**
+  - DOCX validator now treats inserted revision text as visible text and excludes deleted/moved-from text during fidelity comparison
+  - Formatting validation now compares every run and run count, so later-run regressions fail strict validation instead of being hidden by first-run sampling
+
+- **DOCX Track Changes write-back**
+  - Revision runs now preserve matching run-level style where possible and keep a single hyperlink/SDT wrapper around tracked text
+  - Document-scoped output paths now explicitly reject reserved source/state files such as `original.docx`, `ir.json`, and `content.md`
+
 ## [0.6.14] - 2026-04-29
 
 ### Added

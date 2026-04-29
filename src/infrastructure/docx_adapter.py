@@ -12,6 +12,9 @@ import hashlib
 import logging
 import re
 import shutil
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from difflib import SequenceMatcher
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -63,6 +66,8 @@ _REVISION_TAG_TYPES = {
     "pPrChange": "paragraph_format",
 }
 _NON_VISIBLE_REVISION_TAGS = {"del", "moveFrom"}
+_DIFF_TOKEN_RE = re.compile(r"\s+|\S+")
+_XML_SPACE = "{http://www.w3.org/XML/1998/namespace}space"
 
 # EMU to cm conversion (1 cm = 360000 EMU)
 EMU_PER_CM = 360000
@@ -100,6 +105,29 @@ def _safe_int(value: str | None, default: int | None = None) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+@dataclass
+class _TrackChangeContext:
+    """Shared state for one DOCX tracked-change write operation."""
+
+    author: str
+    date: str
+    next_id: int = 1
+
+    def take_id(self) -> str:
+        revision_id = str(self.next_id)
+        self.next_id += 1
+        return revision_id
+
+
+@dataclass
+class _RunStyleSpan:
+    """Character span mapped to the run properties that styled it."""
+
+    start: int
+    end: int
+    rpr: etree._Element | None = None
 
 
 class DocxAdapter:
@@ -189,17 +217,26 @@ class DocxAdapter:
         output_path: Path,
         *,
         changed_block_ids: set[str] | None = None,
+        original_ir: DocxIR | None = None,
+        track_changes: bool = False,
+        revision_author: str = "Asset-Aware MCP",
     ) -> Path:
         """
         Rebuild a .docx file from a DocxIR.
 
         Uses the original.docx as base and replaces text content
-        according to the modified IR blocks.
+        according to the modified IR blocks. When ``track_changes`` is enabled,
+        changed text is emitted as Word revisions (``w:del``/``w:ins``) by
+        diffing ``original_ir`` against ``ir``.
 
         Args:
             ir: The (possibly modified) intermediate representation
             data_dir: Directory containing original.docx, parts/, assets/
             output_path: Where to write the output .docx
+            changed_block_ids: Optional set of block ids that may be written
+            original_ir: Original IR before edits, required for precise diffs
+            track_changes: If True, write textual edits as Word Track Changes
+            revision_author: Author recorded on generated revision elements
 
         Returns:
             Path to the generated .docx file
@@ -211,16 +248,14 @@ class DocxAdapter:
         # Copy original as base
         shutil.copy2(original, output_path)
 
-        # Build block ID → new content mapping
-        content_map = {}
-        for block in ir.blocks:
-            content_map[block.id] = block
-
         # Modify document.xml in-place within the zip
         self._update_document_xml(
             output_path,
             ir,
             changed_block_ids=changed_block_ids,
+            original_ir=original_ir,
+            track_changes=track_changes,
+            revision_author=revision_author,
         )
 
         return output_path
@@ -1509,6 +1544,10 @@ class DocxAdapter:
         docx_path: Path,
         ir: DocxIR,
         changed_block_ids: set[str] | None = None,
+        *,
+        original_ir: DocxIR | None = None,
+        track_changes: bool = False,
+        revision_author: str = "Asset-Aware MCP",
     ) -> None:
         """
         Update document.xml within the docx zip with modified text from IR.
@@ -1533,8 +1572,14 @@ class DocxAdapter:
                             doc_xml,
                             ir,
                             changed_block_ids,
+                            original_ir=original_ir,
+                            track_changes=track_changes,
+                            revision_author=revision_author,
                         )
                         zout.writestr(item, modified_xml)
+                    elif item.filename == "word/settings.xml" and track_changes:
+                        settings_xml = zin.read(item.filename)
+                        zout.writestr(item, self._enable_track_revisions(settings_xml))
                     else:
                         zout.writestr(item, zin.read(item.filename))
 
@@ -1546,6 +1591,10 @@ class DocxAdapter:
         doc_xml: bytes,
         ir: DocxIR,
         changed_block_ids: set[str] | None = None,
+        *,
+        original_ir: DocxIR | None = None,
+        track_changes: bool = False,
+        revision_author: str = "Asset-Aware MCP",
     ) -> bytes:
         """
         Apply text changes from IR blocks back to document.xml.
@@ -1557,6 +1606,19 @@ class DocxAdapter:
         body = tree.find(f".//{{{NS['w']}}}body")
         if body is None:
             return doc_xml
+
+        original_blocks = (
+            {block.id: block for block in original_ir.blocks} if original_ir else {}
+        )
+        revision_context = (
+            _TrackChangeContext(
+                author=revision_author or "Asset-Aware MCP",
+                date=self._revision_timestamp(),
+                next_id=self._max_revision_id(tree) + 1,
+            )
+            if track_changes
+            else None
+        )
 
         top_level_blocks = [
             block
@@ -1592,7 +1654,18 @@ class DocxAdapter:
                         DfmBlockType.FORMAT,
                         DfmBlockType.CAPTION,
                     ) and (changed_block_ids is None or block.id in changed_block_ids):
-                        self._update_paragraph_text(element, block)
+                        original_block = original_blocks.get(block.id)
+                        original_text = (
+                            self._block_write_text(original_block)
+                            if original_block is not None
+                            else self._get_paragraph_text(element)
+                        )
+                        self._update_paragraph_text(
+                            element,
+                            block,
+                            revision_context=revision_context,
+                            original_text=original_text,
+                        )
                     block_idx += 1
             elif tag == "tbl" and block_idx < len(top_level_blocks):
                 block = top_level_blocks[block_idx]
@@ -1612,6 +1685,7 @@ class DocxAdapter:
                             nested_blocks_by_parent,
                             changed_block_ids,
                             update_direct_text=should_update_self,
+                            revision_context=revision_context,
                         )
                 block_idx += 1
 
@@ -1621,8 +1695,32 @@ class DocxAdapter:
             )
         )
 
-    def _update_paragraph_text(self, p_elem: etree._Element, block: DfmBlock) -> None:
+    def _update_paragraph_text(
+        self,
+        p_elem: etree._Element,
+        block: DfmBlock,
+        *,
+        revision_context: _TrackChangeContext | None = None,
+        original_text: str | None = None,
+    ) -> None:
         """Update text content of a paragraph element from a DfmBlock."""
+        if revision_context is not None:
+            desired_text = self._block_write_text(block)
+            baseline_text = (
+                original_text
+                if original_text is not None
+                else self._get_paragraph_text(p_elem)
+            )
+            if baseline_text != desired_text:
+                self._replace_paragraph_with_tracked_change(
+                    p_elem,
+                    baseline_text,
+                    desired_text,
+                    revision_context,
+                    new_runs=block.runs,
+                )
+                return
+
         runs = self._iter_text_runs(p_elem)
         if not runs:
             return
@@ -1641,6 +1739,11 @@ class DocxAdapter:
 
         self._set_run_texts(runs, text_segments)
 
+    @staticmethod
+    def _block_write_text(block: DfmBlock) -> str:
+        """Return the exact visible text intended for DOCX write-back."""
+        return block.plain_text if block.runs else block.content
+
     def _update_table_text(
         self,
         tbl_elem: etree._Element,
@@ -1649,6 +1752,7 @@ class DocxAdapter:
         changed_block_ids: set[str] | None = None,
         *,
         update_direct_text: bool = True,
+        revision_context: _TrackChangeContext | None = None,
     ) -> None:
         """Update text content of table cells from a DfmBlock."""
         md_rows = self._parse_md_table(block.content)
@@ -1673,6 +1777,7 @@ class DocxAdapter:
                     nested_blocks_by_parent,
                     changed_block_ids,
                     update_direct_text=update_direct_text,
+                    revision_context=revision_context,
                 )
 
     def _update_table_cell(
@@ -1684,6 +1789,7 @@ class DocxAdapter:
         changed_block_ids: set[str] | None = None,
         *,
         update_direct_text: bool = True,
+        revision_context: _TrackChangeContext | None = None,
     ) -> None:
         """Update a table cell while preserving nested table boundaries."""
         desired_items = cell_text.split("\n") if cell_text else []
@@ -1703,7 +1809,11 @@ class DocxAdapter:
                         desired_items[0]
                     ):
                         next_text = desired_items.pop(0)
-                    self._set_paragraph_plain_text(child, next_text)
+                    self._set_paragraph_plain_text(
+                        child,
+                        next_text,
+                        revision_context=revision_context,
+                    )
                 last_paragraph = child
                 continue
 
@@ -1721,6 +1831,7 @@ class DocxAdapter:
                     nested_block,
                     nested_blocks_by_parent,
                     changed_block_ids,
+                    revision_context=revision_context,
                 )
 
         leftover_text = [
@@ -1730,7 +1841,11 @@ class DocxAdapter:
             current_text = self._get_paragraph_text(last_paragraph)
             suffix = "\n".join(leftover_text)
             merged = f"{current_text}\n{suffix}" if current_text else suffix
-            self._set_paragraph_plain_text(last_paragraph, merged)
+            self._set_paragraph_plain_text(
+                last_paragraph,
+                merged,
+                revision_context=revision_context,
+            )
 
     def _table_has_changed_nested_descendant(
         self,
@@ -1755,12 +1870,438 @@ class DocxAdapter:
                     return True
         return False
 
-    def _set_paragraph_plain_text(self, p_elem: etree._Element, text: str) -> None:
+    def _set_paragraph_plain_text(
+        self,
+        p_elem: etree._Element,
+        text: str,
+        *,
+        revision_context: _TrackChangeContext | None = None,
+    ) -> None:
         """Replace the visible text in a paragraph while preserving existing runs."""
+        if revision_context is not None:
+            original_text = self._get_paragraph_text(p_elem)
+            if original_text != text:
+                self._replace_paragraph_with_tracked_change(
+                    p_elem,
+                    original_text,
+                    text,
+                    revision_context,
+                )
+                return
+
         runs = self._iter_text_runs(p_elem)
         if not runs:
             return
         self._set_run_texts(runs, [text])
+
+    def _replace_paragraph_with_tracked_change(
+        self,
+        p_elem: etree._Element,
+        old_text: str,
+        new_text: str,
+        revision_context: _TrackChangeContext,
+        *,
+        new_runs: list[FormatRun] | None = None,
+    ) -> None:
+        """Rewrite a paragraph's textual content as native Word revisions."""
+        old_spans = self._paragraph_run_style_spans(p_elem)
+        new_spans = self._format_run_style_spans(new_runs or [])
+        target = self._track_change_rewrite_target(p_elem)
+        self._remove_textual_children(target)
+
+        for op, text, old_start, old_end, new_start, new_end in self._diff_text_ops(
+            old_text, new_text
+        ):
+            if not text:
+                continue
+            if op == "equal":
+                self._append_text_with_style_spans(
+                    target,
+                    text,
+                    old_spans,
+                    old_start,
+                    old_end,
+                )
+            elif op == "delete":
+                self._append_revision_text_with_style_spans(
+                    target,
+                    "del",
+                    text,
+                    revision_context,
+                    old_spans,
+                    old_start,
+                    old_end,
+                )
+            elif op == "insert":
+                spans = new_spans or old_spans
+                span_start = new_start if new_spans else old_start
+                span_end = new_end if new_spans else old_start
+                self._append_revision_text_with_style_spans(
+                    target,
+                    "ins",
+                    text,
+                    revision_context,
+                    spans,
+                    span_start,
+                    span_end,
+                )
+
+    def _diff_text_chunks(self, old_text: str, new_text: str) -> list[tuple[str, str]]:
+        """Return stable token-level chunks for Word revision emission."""
+        return [
+            (op, text)
+            for op, text, _old_start, _old_end, _new_start, _new_end in self._diff_text_ops(
+                old_text, new_text
+            )
+        ]
+
+    def _diff_text_ops(
+        self, old_text: str, new_text: str
+    ) -> list[tuple[str, str, int, int, int, int]]:
+        """Return token-level diff ops with source offsets for styling/provenance."""
+        old_tokens = self._tokenize_diff_text(old_text)
+        new_tokens = self._tokenize_diff_text(new_text)
+        old_offsets = self._token_offsets(old_tokens)
+        new_offsets = self._token_offsets(new_tokens)
+        matcher = SequenceMatcher(None, old_tokens, new_tokens, autojunk=False)
+
+        chunks: list[tuple[str, str, int, int, int, int]] = []
+        for tag, old_start, old_end, new_start, new_end in matcher.get_opcodes():
+            old_char_start = old_offsets[old_start]
+            old_char_end = old_offsets[old_end]
+            new_char_start = new_offsets[new_start]
+            new_char_end = new_offsets[new_end]
+            if tag == "equal":
+                chunks.append(
+                    (
+                        "equal",
+                        "".join(new_tokens[new_start:new_end]),
+                        old_char_start,
+                        old_char_end,
+                        new_char_start,
+                        new_char_end,
+                    )
+                )
+            elif tag == "delete":
+                chunks.append(
+                    (
+                        "delete",
+                        "".join(old_tokens[old_start:old_end]),
+                        old_char_start,
+                        old_char_end,
+                        new_char_start,
+                        new_char_end,
+                    )
+                )
+            elif tag == "insert":
+                chunks.append(
+                    (
+                        "insert",
+                        "".join(new_tokens[new_start:new_end]),
+                        old_char_start,
+                        old_char_end,
+                        new_char_start,
+                        new_char_end,
+                    )
+                )
+            else:
+                chunks.append(
+                    (
+                        "delete",
+                        "".join(old_tokens[old_start:old_end]),
+                        old_char_start,
+                        old_char_end,
+                        new_char_start,
+                        new_char_start,
+                    )
+                )
+                chunks.append(
+                    (
+                        "insert",
+                        "".join(new_tokens[new_start:new_end]),
+                        old_char_start,
+                        old_char_start,
+                        new_char_start,
+                        new_char_end,
+                    )
+                )
+        return chunks
+
+    @staticmethod
+    def _tokenize_diff_text(text: str) -> list[str]:
+        """Tokenize while preserving whitespace so diff chunks quote exactly."""
+        if not text:
+            return []
+        return _DIFF_TOKEN_RE.findall(text)
+
+    @staticmethod
+    def _token_offsets(tokens: list[str]) -> list[int]:
+        offsets = [0]
+        cursor = 0
+        for token in tokens:
+            cursor += len(token)
+            offsets.append(cursor)
+        return offsets
+
+    def _track_change_rewrite_target(self, p_elem: etree._Element) -> etree._Element:
+        """Preserve a single hyperlink/SDT wrapper when all text lives inside it."""
+        textual_children = [
+            child
+            for child in p_elem
+            if self._local_name(child) != "pPr"
+            and self._is_textual_paragraph_child(child)
+        ]
+        if len(textual_children) != 1:
+            return p_elem
+
+        child = textual_children[0]
+        tag = self._local_name(child)
+        if tag == "hyperlink":
+            return child
+        if tag == "sdt":
+            content = child.find(f"{{{NS['w']}}}sdtContent")
+            if content is not None:
+                return content
+        return p_elem
+
+    def _paragraph_run_style_spans(self, p_elem: etree._Element) -> list[_RunStyleSpan]:
+        spans: list[_RunStyleSpan] = []
+        cursor = 0
+        for r_elem in self._iter_text_runs(p_elem):
+            text = self._run_visible_text(r_elem)
+            if not text:
+                continue
+            rpr = r_elem.find(f"{{{NS['w']}}}rPr")
+            spans.append(
+                _RunStyleSpan(
+                    start=cursor,
+                    end=cursor + len(text),
+                    rpr=self._clone_rpr(rpr),
+                )
+            )
+            cursor += len(text)
+        return spans
+
+    def _format_run_style_spans(self, runs: list[FormatRun]) -> list[_RunStyleSpan]:
+        spans: list[_RunStyleSpan] = []
+        cursor = 0
+        for run in runs:
+            if not run.text:
+                continue
+            spans.append(
+                _RunStyleSpan(
+                    start=cursor,
+                    end=cursor + len(run.text),
+                    rpr=self._format_run_to_rpr(run),
+                )
+            )
+            cursor += len(run.text)
+        return spans
+
+    def _append_revision_text_with_style_spans(
+        self,
+        parent: etree._Element,
+        tag: str,
+        text: str,
+        revision_context: _TrackChangeContext,
+        spans: list[_RunStyleSpan],
+        source_start: int,
+        source_end: int,
+    ) -> None:
+        revision = etree.SubElement(parent, f"{{{NS['w']}}}{tag}")
+        revision.set(f"{{{NS['w']}}}id", revision_context.take_id())
+        revision.set(f"{{{NS['w']}}}author", revision_context.author)
+        revision.set(f"{{{NS['w']}}}date", revision_context.date)
+        self._append_text_with_style_spans(
+            revision,
+            text,
+            spans,
+            source_start,
+            source_end,
+            text_tag="delText" if tag == "del" else "t",
+        )
+
+    def _append_text_with_style_spans(
+        self,
+        parent: etree._Element,
+        text: str,
+        spans: list[_RunStyleSpan],
+        source_start: int,
+        source_end: int,
+        *,
+        text_tag: str = "t",
+    ) -> None:
+        if not text:
+            return
+        if not spans or source_end <= source_start:
+            self._append_text_run(
+                parent,
+                text,
+                text_tag=text_tag,
+                rpr_template=self._style_at_offset(spans, source_start),
+            )
+            return
+
+        emitted_until = 0
+        for span in spans:
+            overlap_start = max(source_start, span.start)
+            overlap_end = min(source_end, span.end)
+            if overlap_end <= overlap_start:
+                continue
+
+            chunk_start = overlap_start - source_start
+            chunk_end = overlap_end - source_start
+            if chunk_start > emitted_until:
+                self._append_text_run(
+                    parent,
+                    text[emitted_until:chunk_start],
+                    text_tag=text_tag,
+                    rpr_template=self._style_at_offset(
+                        spans, source_start + emitted_until
+                    ),
+                )
+            self._append_text_run(
+                parent,
+                text[chunk_start:chunk_end],
+                text_tag=text_tag,
+                rpr_template=span.rpr,
+            )
+            emitted_until = chunk_end
+
+        if emitted_until < len(text):
+            self._append_text_run(
+                parent,
+                text[emitted_until:],
+                text_tag=text_tag,
+                rpr_template=self._style_at_offset(spans, source_start + emitted_until),
+            )
+
+    def _style_at_offset(
+        self, spans: list[_RunStyleSpan], offset: int
+    ) -> etree._Element | None:
+        if not spans:
+            return None
+        previous = spans[0]
+        for span in spans:
+            if span.start <= offset < span.end:
+                return self._clone_rpr(span.rpr)
+            if span.end <= offset:
+                previous = span
+        return self._clone_rpr(previous.rpr)
+
+    def _run_visible_text(self, r_elem: etree._Element) -> str:
+        parts: list[str] = []
+        for child in r_elem:
+            tag = self._local_name(child)
+            if tag in {"t", "delText"} and child.text:
+                parts.append(child.text)
+            elif tag == "tab":
+                parts.append("\t")
+            elif tag == "br":
+                br_type = child.get(f"{{{NS['w']}}}type")
+                if br_type != "page":
+                    parts.append("\n")
+        return "".join(parts)
+
+    def _format_run_to_rpr(self, run: FormatRun) -> etree._Element | None:
+        rpr = etree.Element(f"{{{NS['w']}}}rPr")
+        if run.bold:
+            etree.SubElement(rpr, f"{{{NS['w']}}}b")
+        if run.italic:
+            etree.SubElement(rpr, f"{{{NS['w']}}}i")
+        if run.underline:
+            etree.SubElement(rpr, f"{{{NS['w']}}}u", {f"{{{NS['w']}}}val": "single"})
+        if run.font_name:
+            etree.SubElement(
+                rpr,
+                f"{{{NS['w']}}}rFonts",
+                {
+                    f"{{{NS['w']}}}ascii": run.font_name,
+                    f"{{{NS['w']}}}hAnsi": run.font_name,
+                },
+            )
+        if run.font_size:
+            etree.SubElement(
+                rpr,
+                f"{{{NS['w']}}}sz",
+                {f"{{{NS['w']}}}val": str(int(run.font_size / HALF_POINTS_TO_PT))},
+            )
+        if run.color:
+            etree.SubElement(
+                rpr,
+                f"{{{NS['w']}}}color",
+                {f"{{{NS['w']}}}val": run.color.lstrip("#")},
+            )
+        return rpr if len(rpr) > 0 else None
+
+    def _clone_rpr(self, rpr: etree._Element | None) -> etree._Element | None:
+        return etree.fromstring(etree.tostring(rpr)) if rpr is not None else None
+
+    def _remove_textual_children(self, p_elem: etree._Element) -> None:
+        """Remove paragraph text containers while preserving non-textual anchors."""
+        for child in list(p_elem):
+            if self._local_name(child) == "pPr":
+                continue
+            if self._is_textual_paragraph_child(child):
+                p_elem.remove(child)
+
+    def _is_textual_paragraph_child(self, elem: etree._Element) -> bool:
+        tag = self._local_name(elem)
+        if tag in {"del", "ins", "moveFrom", "moveTo"}:
+            return True
+        if tag in {"hyperlink", "sdt"}:
+            return self._element_has_textual_content(elem)
+        if tag == "r":
+            return self._element_has_textual_content(elem)
+        return False
+
+    def _element_has_textual_content(self, elem: etree._Element) -> bool:
+        text_tags = {"t", "delText", "instrText", "tab", "br"}
+        return any(self._local_name(child) in text_tags for child in elem.iter())
+
+    def _append_revision_run(
+        self,
+        parent: etree._Element,
+        tag: str,
+        text: str,
+        revision_context: _TrackChangeContext,
+        *,
+        rpr_template: etree._Element | None = None,
+    ) -> None:
+        revision = etree.SubElement(parent, f"{{{NS['w']}}}{tag}")
+        revision.set(f"{{{NS['w']}}}id", revision_context.take_id())
+        revision.set(f"{{{NS['w']}}}author", revision_context.author)
+        revision.set(f"{{{NS['w']}}}date", revision_context.date)
+        self._append_text_run(
+            revision,
+            text,
+            text_tag="delText" if tag == "del" else "t",
+            rpr_template=rpr_template,
+        )
+
+    def _append_text_run(
+        self,
+        parent: etree._Element,
+        text: str,
+        *,
+        text_tag: str = "t",
+        rpr_template: etree._Element | None = None,
+    ) -> None:
+        run = etree.SubElement(parent, f"{{{NS['w']}}}r")
+        if rpr_template is not None:
+            run.append(etree.fromstring(etree.tostring(rpr_template)))
+        for part in re.split(r"(\t|\n)", text):
+            if not part:
+                continue
+            if part == "\t":
+                etree.SubElement(run, f"{{{NS['w']}}}tab")
+                continue
+            if part == "\n":
+                etree.SubElement(run, f"{{{NS['w']}}}br")
+                continue
+            text_elem = etree.SubElement(run, f"{{{NS['w']}}}{text_tag}")
+            text_elem.text = part
+            text_elem.set(_XML_SPACE, "preserve")
 
     def _iter_text_runs(self, p_elem: etree._Element) -> list[etree._Element]:
         """Return paragraph runs in document order, including hyperlink/SDT runs."""
@@ -1790,7 +2331,43 @@ class DocxAdapter:
                 text = "".join(tail)
 
             t_elem.text = text
-            t_elem.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+            t_elem.set(_XML_SPACE, "preserve")
+
+    @staticmethod
+    def _revision_timestamp() -> str:
+        """Return an OOXML-compatible UTC timestamp."""
+        return (
+            datetime.now(timezone.utc)
+            .replace(microsecond=0)
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
+
+    def _max_revision_id(self, tree: etree._Element) -> int:
+        """Find the highest existing Word revision id to avoid collisions."""
+        max_id = 0
+        for elem in tree.iter():
+            if self._local_name(elem) not in _REVISION_TAG_TYPES:
+                continue
+            revision_id = _safe_int(elem.get(f"{{{NS['w']}}}id"), default=0)
+            if revision_id is not None:
+                max_id = max(max_id, revision_id)
+        return max_id
+
+    def _enable_track_revisions(self, settings_xml: bytes) -> bytes:
+        """Ensure Word's settings part records Track Changes as enabled."""
+        try:
+            tree = etree.fromstring(settings_xml)
+        except etree.XMLSyntaxError:
+            return settings_xml
+
+        if tree.find(f"{{{NS['w']}}}trackRevisions") is None:
+            etree.SubElement(tree, f"{{{NS['w']}}}trackRevisions")
+        return bytes(
+            etree.tostring(
+                tree, xml_declaration=True, encoding="UTF-8", standalone=True
+            )
+        )
 
     @staticmethod
     def _parse_md_table(md_table: str) -> list[list[str]]:

@@ -24,7 +24,7 @@ describe('copilotMcpConfig', () => {
     function makeContext(): any {
         return {
             globalStorageUri: { fsPath: path.join(tempDir, 'globalStorage', 'u9401066.asset-aware-mcp') },
-            extension: { packageJSON: { version: '0.6.14' } },
+            extension: { packageJSON: { version: '0.6.15' } },
         };
     }
 
@@ -60,6 +60,14 @@ describe('copilotMcpConfig', () => {
         assert.ok(settings.servers['asset-aware-mcp']);
     });
 
+    it('includes --upgrade when activation detected a server version change', () => {
+        const updated = installCopilotMcpConfig(makeContext(), '/usr/bin/uv', true);
+
+        assert.strictEqual(updated, true);
+        const settings = readMcpJson();
+        assert.ok(settings.servers['asset-aware-mcp'].args.includes('--upgrade'));
+    });
+
     it('does not overwrite a custom server using the same key', () => {
         fs.mkdirSync(path.join(tempDir, '.vscode'), { recursive: true });
         fs.writeFileSync(path.join(tempDir, '.vscode', 'mcp.json'), JSON.stringify({
@@ -73,5 +81,17 @@ describe('copilotMcpConfig', () => {
         assert.strictEqual(updated, false);
         const settings = readMcpJson();
         assert.strictEqual(settings.servers['asset-aware-mcp'].command, 'custom');
+    });
+
+    it('skips malformed JSON instead of replacing it with a blank config', () => {
+        const configPath = path.join(tempDir, '.vscode', 'mcp.json');
+        fs.mkdirSync(path.dirname(configPath), { recursive: true });
+        fs.writeFileSync(configPath, '{ "servers": {');
+
+        const updated = installCopilotMcpConfig(makeContext(), '/usr/bin/uv');
+
+        assert.strictEqual(updated, false);
+        assert.strictEqual(fs.readFileSync(configPath, 'utf-8'), '{ "servers": {');
+        assert.ok(fs.readdirSync(path.dirname(configPath)).some((name) => name.includes('.invalid.')));
     });
 });

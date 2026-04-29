@@ -26,7 +26,13 @@ function getCopilotMcpConfigPath(workspaceRoot: string): string {
     return path.join(workspaceRoot, '.vscode', 'mcp.json');
 }
 
-function readCopilotSettings(configPath: string): CopilotMcpSettings {
+function warnSkippedConfigWrite(configPath: string): void {
+    vscode.window.showWarningMessage(
+        `Asset-Aware MCP skipped updating ${configPath} because it could not be parsed. Please fix the file and retry.`,
+    );
+}
+
+function readCopilotSettings(configPath: string): CopilotMcpSettings | undefined {
     if (!fs.existsSync(configPath)) {
         return { servers: {} };
     }
@@ -44,7 +50,8 @@ function readCopilotSettings(configPath: string): CopilotMcpSettings {
         } catch {
             // Best-effort backup only.
         }
-        return { servers: {} };
+        warnSkippedConfigWrite(configPath);
+        return undefined;
     }
 }
 
@@ -87,6 +94,9 @@ export function installCopilotMcpConfig(
 
     const configPath = getCopilotMcpConfigPath(workspaceRoot);
     const settings = readCopilotSettings(configPath);
+    if (!settings) {
+        return false;
+    }
     const launch = buildAssetAwareLaunchSpec(context, uvPath, { workspaceRoot, needsUpgrade });
     const nextEntry: CopilotMcpServerEntry = {
         type: 'stdio',
@@ -122,6 +132,9 @@ export function removeCopilotMcpConfig(): boolean {
     }
 
     const settings = readCopilotSettings(configPath);
+    if (!settings) {
+        return false;
+    }
     const existing = settings.servers[ASSET_AWARE_SERVER_KEY];
     if (!existing || !isAssetAwareLaunch(existing.command, existing.args)) {
         return false;

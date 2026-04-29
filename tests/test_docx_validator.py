@@ -113,6 +113,28 @@ def _make_paragraph(
     return p
 
 
+def _make_runs_paragraph(runs: list[dict[str, object]]) -> etree._Element:
+    """Create a paragraph with multiple formatted runs."""
+    p = etree.SubElement(etree.Element("dummy"), f"{{{NS_W}}}p")
+    for run in runs:
+        r = etree.SubElement(p, f"{{{NS_W}}}r")
+        rpr = etree.SubElement(r, f"{{{NS_W}}}rPr")
+        if run.get("bold"):
+            etree.SubElement(rpr, f"{{{NS_W}}}b")
+        if run.get("italic"):
+            etree.SubElement(rpr, f"{{{NS_W}}}i")
+        if run.get("underline"):
+            etree.SubElement(rpr, f"{{{NS_W}}}u", {f"{{{NS_W}}}val": "single"})
+        if color := run.get("color"):
+            etree.SubElement(rpr, f"{{{NS_W}}}color", {f"{{{NS_W}}}val": str(color)})
+        if len(rpr) == 0:
+            r.remove(rpr)
+        t = etree.SubElement(r, f"{{{NS_W}}}t")
+        t.text = str(run.get("text", ""))
+        t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+    return p
+
+
 def _make_table(rows: list[list[str]], style: str | None = None) -> etree._Element:
     """Create a <w:tbl> element."""
     tbl = etree.SubElement(etree.Element("dummy"), f"{{{NS_W}}}tbl")
@@ -512,6 +534,44 @@ class TestValidateFormattingDiffs:
         report = validator.validate(original, modified)
         assert report.format_score < 1.0
         assert any(d.attribute == "color" for d in report.format_diffs)
+
+    def test_later_run_format_difference_fails_strict_gate(
+        self, validator: DocxValidator, tmp_docx_dir: Path
+    ):
+        """Detect formatting regressions beyond the first run."""
+        original = tmp_docx_dir / "original.docx"
+        modified = tmp_docx_dir / "modified.docx"
+
+        _create_docx(
+            original,
+            paragraphs=[
+                _make_runs_paragraph(
+                    [
+                        {"text": "first "},
+                        {"text": "second", "italic": True, "color": "FF0000"},
+                    ]
+                )
+            ],
+        )
+        _create_docx(
+            modified,
+            paragraphs=[
+                _make_runs_paragraph(
+                    [
+                        {"text": "first "},
+                        {"text": "second", "color": "FF0000"},
+                    ]
+                )
+            ],
+        )
+
+        report = validator.validate(original, modified, strict=True)
+        assert report.format_score < 1.0
+        assert report.strict_passed is False
+        assert any(
+            d.location == "paragraph 1/run 2" and d.attribute == "italic"
+            for d in report.format_diffs
+        )
 
 
 # ============================================================================

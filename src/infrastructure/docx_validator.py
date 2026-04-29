@@ -35,6 +35,7 @@ NS = {
     "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
     "rel": "http://schemas.openxmlformats.org/package/2006/relationships",
 }
+_NON_VISIBLE_REVISION_TAGS = {"del", "moveFrom"}
 
 
 @dataclass
@@ -566,7 +567,9 @@ class DocxValidator:
 
         # Runs with formatting
         runs = []
-        for r_elem in p_elem.findall(f"{{{NS['w']}}}r"):
+        for r_elem in p_elem.findall(f".//{{{NS['w']}}}r"):
+            if self._has_ancestor_with_local_name(r_elem, _NON_VISIBLE_REVISION_TAGS):
+                continue
             text_parts = []
             for child in r_elem:
                 child_tag = etree.QName(child.tag).localname
@@ -680,7 +683,12 @@ class DocxValidator:
                 continue
             if tag == "p":
                 text_parts = [
-                    t.text for t in child.findall(f".//{{{NS['w']}}}t") if t.text
+                    t.text
+                    for t in child.findall(f".//{{{NS['w']}}}t")
+                    if t.text
+                    and not self._has_ancestor_with_local_name(
+                        t, _NON_VISIBLE_REVISION_TAGS
+                    )
                 ]
                 cell_parts.append("".join(text_parts))
                 continue
@@ -690,6 +698,24 @@ class DocxValidator:
                 cell_parts.append(f"[NestedTable]{self._table_to_text(nested)}")
 
         return "\n".join(cell_parts), nested_tables
+
+    @staticmethod
+    def _local_name(elem: etree._Element) -> str:
+        if not isinstance(elem.tag, str):
+            return ""
+        return str(etree.QName(elem.tag).localname)
+
+    def _has_ancestor_with_local_name(
+        self,
+        elem: etree._Element,
+        names: set[str],
+    ) -> bool:
+        parent = elem.getparent()
+        while parent is not None:
+            if self._local_name(parent) in names:
+                return True
+            parent = parent.getparent()
+        return False
 
     def _table_to_text(self, table: dict[str, Any]) -> str:
         """Serialize a table deterministically for nested-cell comparisons."""
@@ -869,8 +895,22 @@ class DocxValidator:
             orig_runs = orig_paras[i]["runs"]
             rebuilt_runs = rebuilt_paras[i]["runs"]
 
-            # Compare format attributes of first run (primary format)
-            if orig_runs and rebuilt_runs:
+            if len(orig_runs) != len(rebuilt_runs):
+                total_checks += 1
+                report.format_diffs.append(
+                    FormatDiff(
+                        index=i,
+                        location=f"paragraph {i + 1}",
+                        attribute="run_count",
+                        original=str(len(orig_runs)),
+                        rebuilt=str(len(rebuilt_runs)),
+                    )
+                )
+            else:
+                total_checks += 1
+                matches += 1
+
+            for run_index in range(min(len(orig_runs), len(rebuilt_runs))):
                 for attr in [
                     "bold",
                     "italic",
@@ -879,8 +919,8 @@ class DocxValidator:
                     "color",
                     "underline",
                 ]:
-                    orig_val = orig_runs[0].get(attr)
-                    rebuilt_val = rebuilt_runs[0].get(attr)
+                    orig_val = orig_runs[run_index].get(attr)
+                    rebuilt_val = rebuilt_runs[run_index].get(attr)
                     if orig_val is not None or rebuilt_val is not None:
                         total_checks += 1
                         if orig_val == rebuilt_val:
@@ -889,7 +929,7 @@ class DocxValidator:
                             report.format_diffs.append(
                                 FormatDiff(
                                     index=i,
-                                    location=f"paragraph {i + 1}",
+                                    location=f"paragraph {i + 1}/run {run_index + 1}",
                                     attribute=attr,
                                     original=str(orig_val),
                                     rebuilt=str(rebuilt_val),

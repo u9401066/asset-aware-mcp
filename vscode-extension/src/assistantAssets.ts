@@ -1,8 +1,13 @@
 import * as fs from 'fs';
+import { createHash } from 'crypto';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
 type InstallMode = 'auto' | 'manual';
+type ManagedAssetManifest = {
+    version: 1;
+    files: Record<string, { sha256: string }>;
+};
 
 interface InstallSummary {
     installed: number;
@@ -20,6 +25,8 @@ function createSummary(): InstallSummary {
     };
 }
 
+const MANIFEST_RELATIVE_PATH = path.join('.asset-aware-mcp', 'assistant-assets.json');
+
 function getAssetPath(context: vscode.ExtensionContext, ...segments: string[]): string {
     return path.join(context.extensionPath, 'resources', 'repo-assets', 'asset-aware', ...segments);
 }
@@ -33,6 +40,37 @@ function readUtf8IfExists(filePath: string): string | undefined {
         return undefined;
     }
     return fs.readFileSync(filePath, 'utf-8');
+}
+
+function sha256(content: string): string {
+    return createHash('sha256').update(content, 'utf-8').digest('hex');
+}
+
+function normalizeManifestPath(workspaceRoot: string, destinationPath: string): string {
+    return path.relative(workspaceRoot, destinationPath).replaceAll(path.sep, '/');
+}
+
+function loadManifest(workspaceRoot: string): ManagedAssetManifest {
+    const manifestPath = path.join(workspaceRoot, MANIFEST_RELATIVE_PATH);
+    if (!fs.existsSync(manifestPath)) {
+        return { version: 1, files: {} };
+    }
+
+    try {
+        const parsed = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) as ManagedAssetManifest;
+        if (parsed.version !== 1 || !parsed.files || typeof parsed.files !== 'object') {
+            return { version: 1, files: {} };
+        }
+        return parsed;
+    } catch {
+        return { version: 1, files: {} };
+    }
+}
+
+function saveManifest(workspaceRoot: string, manifest: ManagedAssetManifest): void {
+    const manifestPath = path.join(workspaceRoot, MANIFEST_RELATIVE_PATH);
+    ensureParentDirectory(manifestPath);
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
 }
 
 function isAssetAwareCopilotInstructions(content: string): boolean {
@@ -56,6 +94,43 @@ function copyBundledFile(sourcePath: string, destinationPath: string): boolean {
     return true;
 }
 
+function syncManagedFile(
+    sourcePath: string,
+    destinationPath: string,
+    workspaceRoot: string,
+    manifest: ManagedAssetManifest,
+    summary: InstallSummary,
+): void {
+    const incoming = fs.readFileSync(sourcePath, 'utf-8');
+    const incomingHash = sha256(incoming);
+    const relativePath = normalizeManifestPath(workspaceRoot, destinationPath);
+    const existing = readUtf8IfExists(destinationPath);
+
+    if (existing === undefined) {
+        copyBundledFile(sourcePath, destinationPath);
+        manifest.files[relativePath] = { sha256: incomingHash };
+        summary.installed++;
+        return;
+    }
+
+    const existingHash = sha256(existing);
+    if (existingHash === incomingHash) {
+        manifest.files[relativePath] = { sha256: incomingHash };
+        return;
+    }
+
+    const priorHash = manifest.files[relativePath]?.sha256;
+    if (priorHash && existingHash === priorHash) {
+        copyBundledFile(sourcePath, destinationPath);
+        manifest.files[relativePath] = { sha256: incomingHash };
+        summary.updated++;
+        return;
+    }
+
+    // Fail closed: without a matching manifest hash, treat the file as user-owned.
+    summary.preserved++;
+}
+
 function collectFilesRecursive(rootDir: string): string[] {
     const files: string[] = [];
 
@@ -74,8 +149,9 @@ function collectFilesRecursive(rootDir: string): string[] {
 function syncManagedDirectory(
     sourceDir: string,
     destinationDir: string,
+    workspaceRoot: string,
+    manifest: ManagedAssetManifest,
     summary: InstallSummary,
-    overwriteExisting: boolean,
 ): void {
     if (!fs.existsSync(sourceDir)) {
         summary.missingSources.push(sourceDir);
@@ -85,22 +161,7 @@ function syncManagedDirectory(
     for (const sourceFile of collectFilesRecursive(sourceDir)) {
         const relativePath = path.relative(sourceDir, sourceFile);
         const destinationFile = path.join(destinationDir, relativePath);
-        const alreadyExists = fs.existsSync(destinationFile);
-
-        if (alreadyExists && !overwriteExisting) {
-            summary.preserved++;
-            continue;
-        }
-
-        if (!copyBundledFile(sourceFile, destinationFile)) {
-            continue;
-        }
-
-        if (alreadyExists) {
-            summary.updated++;
-        } else {
-            summary.installed++;
-        }
+        syncManagedFile(sourceFile, destinationFile, workspaceRoot, manifest, summary);
     }
 }
 
@@ -109,6 +170,8 @@ function syncFileWithDetector(
     destinationPath: string,
     detector: (content: string) => boolean,
     summary: InstallSummary,
+    workspaceRoot: string,
+    manifest: ManagedAssetManifest,
     mode: InstallMode,
 ): void {
     if (!fs.existsSync(sourcePath)) {
@@ -117,16 +180,8 @@ function syncFileWithDetector(
     }
 
     const existing = readUtf8IfExists(destinationPath);
-    if (!existing) {
-        copyBundledFile(sourcePath, destinationPath);
-        summary.installed++;
-        return;
-    }
-
-    if (detector(existing)) {
-        if (copyBundledFile(sourcePath, destinationPath)) {
-            summary.updated++;
-        }
+    if (existing === undefined || detector(existing)) {
+        syncManagedFile(sourcePath, destinationPath, workspaceRoot, manifest, summary);
         return;
     }
 
@@ -168,12 +223,15 @@ export async function installAssistantAssets(
 
     const workspaceRoot = workspaceFolder.uri.fsPath;
     const summary = createSummary();
+    const manifest = loadManifest(workspaceRoot);
 
     syncFileWithDetector(
         getAssetPath(context, 'AGENTS.md'),
         path.join(workspaceRoot, 'AGENTS.md'),
         isAssetAwareAgentsFile,
         summary,
+        workspaceRoot,
+        manifest,
         mode,
     );
     syncFileWithDetector(
@@ -181,33 +239,55 @@ export async function installAssistantAssets(
         path.join(workspaceRoot, '.github', 'copilot-instructions.md'),
         isAssetAwareCopilotInstructions,
         summary,
+        workspaceRoot,
+        manifest,
         mode,
     );
 
     syncManagedDirectory(
         getAssetPath(context, '.github', 'agents'),
         path.join(workspaceRoot, '.github', 'agents'),
+        workspaceRoot,
+        manifest,
         summary,
-        true,
+    );
+    syncManagedDirectory(
+        getAssetPath(context, '.github', 'bylaws'),
+        path.join(workspaceRoot, '.github', 'bylaws'),
+        workspaceRoot,
+        manifest,
+        summary,
+    );
+    syncManagedDirectory(
+        getAssetPath(context, '.claude', 'skills'),
+        path.join(workspaceRoot, '.claude', 'skills'),
+        workspaceRoot,
+        manifest,
+        summary,
     );
     syncManagedDirectory(
         getAssetPath(context, '.cline', 'skills'),
         path.join(workspaceRoot, '.cline', 'skills'),
+        workspaceRoot,
+        manifest,
         summary,
-        true,
     );
     syncManagedDirectory(
         getAssetPath(context, '.codex', 'skills'),
         path.join(workspaceRoot, '.codex', 'skills'),
+        workspaceRoot,
+        manifest,
         summary,
-        true,
     );
     syncManagedDirectory(
         getAssetPath(context, '.clinerules'),
         path.join(workspaceRoot, '.clinerules'),
+        workspaceRoot,
+        manifest,
         summary,
-        true,
     );
+
+    saveManifest(workspaceRoot, manifest);
 
     if (mode === 'manual') {
         if (summary.missingSources.length > 0) {

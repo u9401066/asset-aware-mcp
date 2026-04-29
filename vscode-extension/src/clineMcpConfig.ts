@@ -32,7 +32,13 @@ function getClineMcpSettingsPath(context: vscode.ExtensionContext): string {
     return path.join(globalStorageDir, CLINE_EXTENSION_ID, CLINE_SETTINGS_SUBDIR, CLINE_MCP_SETTINGS_FILE);
 }
 
-function readClineSettings(settingsPath: string): ClineMcpSettings {
+function warnSkippedSettingsWrite(settingsPath: string): void {
+    vscode.window.showWarningMessage(
+        `Asset-Aware MCP skipped updating ${settingsPath} because it could not be parsed. Please fix the file and retry.`,
+    );
+}
+
+function readClineSettings(settingsPath: string): ClineMcpSettings | undefined {
     if (!fs.existsSync(settingsPath)) {
         return { mcpServers: {} };
     }
@@ -51,7 +57,8 @@ function readClineSettings(settingsPath: string): ClineMcpSettings {
         } catch {
             // Best-effort backup only.
         }
-        return { mcpServers: {} };
+        warnSkippedSettingsWrite(settingsPath);
+        return undefined;
     }
 }
 
@@ -153,6 +160,9 @@ export function installClineMcpServer(
 
     const settingsPath = getClineMcpSettingsPath(context);
     const settings = readClineSettings(settingsPath);
+    if (!settings) {
+        return false;
+    }
     const launch = buildAssetAwareLaunchSpec(context, uvPath, { needsUpgrade });
     const nextEntry: ClineMcpServerEntry = {
         command: launch.command,
@@ -188,6 +198,9 @@ export function removeClineMcpServer(context: vscode.ExtensionContext): boolean 
     }
 
     const settings = readClineSettings(settingsPath);
+    if (!settings) {
+        return false;
+    }
     const existing = settings.mcpServers[ASSET_AWARE_SERVER_KEY];
     if (!existing || !isAssetAwareLaunch(existing.command, existing.args)) {
         return false;

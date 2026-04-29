@@ -24,7 +24,7 @@ describe('codexMcpConfig', () => {
         process.env.CODEX_HOME = tempDir;
         context = {
             globalStorageUri: { fsPath: path.join(tempDir, 'globalStorage', 'u9401066.asset-aware-mcp') },
-            extension: { packageJSON: { version: '0.6.14' } },
+            extension: { packageJSON: { version: '0.6.15' } },
         };
         (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];
         __resetConfiguration();
@@ -81,6 +81,13 @@ describe('codexMcpConfig', () => {
         assert.strictEqual((content.match(/\[mcp_servers\.asset-aware-mcp\.env\]/g) ?? []).length, 1);
     });
 
+    it('includes --upgrade when activation detected a server version change', () => {
+        assert.strictEqual(installCodexMcpServer(context, '/usr/bin/uv', true), true);
+
+        const content = fs.readFileSync(path.join(tempDir, 'config.toml'), 'utf-8');
+        assert.ok(content.includes('"--upgrade"'));
+    });
+
     it('does not overwrite a custom same-key block', () => {
         fs.writeFileSync(path.join(tempDir, 'config.toml'), [
             '[mcp_servers.asset-aware-mcp]',
@@ -94,6 +101,22 @@ describe('codexMcpConfig', () => {
         assert.strictEqual(updated, false);
         const content = fs.readFileSync(path.join(tempDir, 'config.toml'), 'utf-8');
         assert.ok(content.includes('command = "custom"'));
+    });
+
+    it('skips suspicious TOML instead of appending a managed block', () => {
+        const configPath = path.join(tempDir, 'config.toml');
+        fs.writeFileSync(configPath, [
+            '[mcp_servers.asset-aware-mcp',
+            'command = "broken"',
+            '',
+        ].join('\n'));
+
+        const updated = installCodexMcpServer(context, '/usr/bin/uv');
+
+        assert.strictEqual(updated, false);
+        const content = fs.readFileSync(configPath, 'utf-8');
+        assert.ok(!content.includes('Managed by asset-aware-mcp VS Code extension'));
+        assert.ok(__test__.hasSuspiciousTomlSyntax(content));
     });
 
     it('removes managed blocks while preserving unrelated content', () => {

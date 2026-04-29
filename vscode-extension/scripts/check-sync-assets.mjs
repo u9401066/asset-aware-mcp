@@ -1,11 +1,13 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const extensionRoot = path.resolve(scriptDir, '..');
+const repoRoot = path.resolve(extensionRoot, '..');
 const assetRoot = path.join(extensionRoot, 'resources', 'repo-assets', 'asset-aware');
 const syncScript = path.join(scriptDir, 'sync-assistant-assets.mjs');
 
@@ -70,13 +72,25 @@ function diffSnapshots(before, after) {
     return changes;
 }
 
-const before = snapshotDirectory(assetRoot);
-execFileSync(process.execPath, [syncScript], {
-    cwd: extensionRoot,
-    stdio: 'inherit',
-});
-const after = snapshotDirectory(assetRoot);
-const changes = diffSnapshots(before, after);
+const expectedRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'asset-aware-assets-check-'));
+const expectedAssetRoot = path.join(expectedRoot, 'asset-aware');
+
+let changes;
+try {
+    execFileSync(process.execPath, [syncScript], {
+        cwd: extensionRoot,
+        stdio: 'inherit',
+        env: {
+            ...process.env,
+            ASSET_AWARE_REPO_ROOT: repoRoot,
+            ASSET_AWARE_EXTENSION_ROOT: extensionRoot,
+            ASSET_AWARE_ASSET_ROOT: expectedAssetRoot,
+        },
+    });
+    changes = diffSnapshots(snapshotDirectory(assetRoot), snapshotDirectory(expectedAssetRoot));
+} finally {
+    fs.rmSync(expectedRoot, { recursive: true, force: true });
+}
 
 if (changes.length > 0) {
     console.error('Assistant assets are not synchronized with their source files.');

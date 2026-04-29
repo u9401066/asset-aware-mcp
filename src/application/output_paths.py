@@ -11,6 +11,7 @@ def resolve_document_output_path(
     *,
     default_name: str,
     allowed_suffixes: set[str] | None = None,
+    reserved_names: set[str] | None = None,
 ) -> Path:
     """Resolve an output path while keeping writes inside a document directory."""
     base_dir = doc_dir.resolve()
@@ -29,6 +30,14 @@ def resolve_document_output_path(
     if allowed_suffixes is not None and resolved.suffix.lower() not in allowed_suffixes:
         suffixes = ", ".join(sorted(allowed_suffixes))
         raise ValueError(f"Output path must use one of: {suffixes}")
+
+    if reserved_names and resolved.name.lower() in {
+        name.lower() for name in reserved_names
+    }:
+        names = ", ".join(sorted(reserved_names))
+        raise ValueError(
+            f"Output path must not overwrite reserved document files: {names}"
+        )
 
     resolved.parent.mkdir(parents=True, exist_ok=True)
     return resolved

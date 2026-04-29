@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import patch
+from zipfile import ZipFile
 
 import pytest
 from docx import Document
+from lxml import etree
 
 from src.application.dfm_table_bridge import DfmTableBridge
 from src.application.docx_service import DocxService
@@ -120,6 +122,73 @@ class TestDocxSaveFlowIntegration:
         assert result["success"] is True
         saved = Document(str(output_path))
         assert saved.tables[0].cell(1, 0).text == "Dose A|Dose B"
+
+    @pytest.mark.asyncio
+    async def test_save_docx_can_emit_native_word_track_changes(
+        self, temp_dir: Path, docx_stack
+    ) -> None:
+        repository, docx_service, _table_service, _dfm_table_bridge = docx_stack
+        doc_id = await _ingest_sample_docx(docx_service, temp_dir)
+        doc_dir = repository.get_doc_dir(doc_id)
+        output_path = doc_dir / "tracked-output.docx"
+
+        dfm_text = await docx_service.get_dfm(doc_id)
+        assert dfm_text is not None
+        dfm_text = dfm_text.replace("Intro paragraph", "Reviewed paragraph")
+        dfm_text = dfm_text.replace("Old value", "Tracked value")
+
+        result = await docx_service.save_docx(
+            doc_id,
+            dfm_text,
+            output_path=str(output_path),
+            track_changes=True,
+            revision_author="Asset-Aware Test",
+        )
+
+        assert result["success"] is True
+        assert result["track_changes"] is True
+
+        with ZipFile(output_path) as zf:
+            document_xml = zf.read("word/document.xml")
+            settings_xml = zf.read("word/settings.xml")
+
+        document_tree = etree.fromstring(document_xml)
+        settings_tree = etree.fromstring(settings_xml)
+        w_ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+
+        deletions = document_tree.findall(".//w:del", namespaces=w_ns)
+        insertions = document_tree.findall(".//w:ins", namespaces=w_ns)
+        assert deletions
+        assert insertions
+        assert all(
+            deletion.get(f"{{{w_ns['w']}}}author") == "Asset-Aware Test"
+            for deletion in deletions
+        )
+        assert all(
+            insertion.get(f"{{{w_ns['w']}}}author") == "Asset-Aware Test"
+            for insertion in insertions
+        )
+        deleted_text = "".join(
+            text.text or ""
+            for text in document_tree.findall(".//w:delText", namespaces=w_ns)
+        )
+        inserted_text = "".join(
+            text.text or ""
+            for insertion in insertions
+            for text in insertion.findall(".//w:t", namespaces=w_ns)
+        )
+        assert "Intro" in deleted_text
+        assert "Old" in deleted_text
+        assert "Reviewed" in inserted_text
+        assert "Tracked" in inserted_text
+        assert settings_tree.find("w:trackRevisions", namespaces=w_ns) is not None
+        assert result["revision_records"] >= 2
+        sidecar_path = Path(result["revision_sidecar_path"])
+        assert sidecar_path.exists()
+        sidecar_text = sidecar_path.read_text(encoding="utf-8")
+        assert '"block_id"' in sidecar_text
+        assert '"old_char_range"' in sidecar_text
+        assert '"new_text_hash"' in sidecar_text
 
     @pytest.mark.asyncio
     async def test_save_docx_merges_split_md_and_table_context_into_real_docx(

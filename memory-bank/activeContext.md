@@ -4,15 +4,20 @@
 
 ## Current Goals
 
-- 正在完成 0.6.14 release prep：整合 Asset-Aware VSIX assistant harness auto-sync、Copilot/Cline/Codex MCP config conservative merge，以及 DOCX Track Changes → DFM revision review blocks；本輪會完成 MEM+GIT+PUSH+TAG 發布。
+- 正在完成 0.6.15 release prep：整合 subagent corrective review findings，完成 VSIX harness 非破壞性同步、Copilot/Cline/Codex MCP fail-closed merge、DFM→DOCX Track Changes sidecar、MedPaper LLM wiki/Foam 對齊文件，並進行 MEM+GIT+PUSH+TAG 發布。
 
 ## 🎯 當前焦點
 
+- **當前版本真相為 0.6.15**：本次 patch 版本包含 0.6.14 VSIX harness/MCP merge 基礎，並補上 subagent review 找到的 release-path 與 DFM citation-ready 缺口
+- **VSIX assistant assets 改為 manifest-based non-destructive sync**：啟動時只會更新「先前由 extension 寫入且未被使用者修改」的檔案；同路徑自訂檔會保留，避免吃掉 custom harness
+- **VSIX bundled harness 自洽性補齊**：`sync-assets`/VSIX package 現在包含 `.github/bylaws/**` 與 `.claude/skills/**`，避免 Copilot instructions 引用不存在的 harness assets
+- **MCP config merge fail-closed**：Copilot/Cline malformed JSON 與 Codex suspicious TOML/read failures 會備份/警告並跳過寫入，不再用空白 config 覆蓋原檔
+- **DFM→DOCX Track Changes citation-ready sidecar**：`save_docx(track_changes=True)` 會輸出 `revisions.jsonl`，每筆 delete/insert chunk 含 block id、old/new text hash、char/byte range、context 與 locator
+- **DocxValidator 格式 gate 強化**：格式比較已由第一 run 抽樣改成逐 run 比對，strict gate 可抓到 later-run italic/color/underline 等回歸
+- **Track Changes XML 寫回加固**：單一 hyperlink/SDT 包裹的文字修訂會保留外層容器；revision runs 依來源/updated run span 套用樣式，不再全部使用第一個 run 樣式
+- **MedPaper/Foam 對齊邊界已文件化**：Asset-Aware 作為 decomposition/locator authority，MedPaper 作為 Foam note writer；對齊驗證以 stable identity、source revision、locator range、hash、context、CRAAP scaffold 與 `revisions.jsonl` 為 gate
 - **Release gate parity 已落地**：GitHub CI、tagged release workflow、local `scripts/release.sh` 現在共享 Python/extension/Cline/artifact/Docker/version consistency 檢查
-- **VSIX 發布安全已加固**：package content test 會拒絕 `out/test/**`，publish workflow 只發布已驗證的 `.vsix`
-- **VSIX install smoke 已 fail-closed**：安裝後找不到 extension 不再 fallback 到 workspace root；Linux CI 會在 `xvfb` 下要求 extension activation 成功
-- **Cline harness 可發版檢查已制度化**：新增 release harness audit，覆蓋 `.clinerules` workflows、`.cline/skills`、`.claude/skills` 與 Cline MCP setup helper
-- **當前版本真相為 0.6.14**：本次 patch 版本保留 0.6.13 release hardening，並新增 VSIX assistant harness auto-sync / external MCP conservative merge / DOCX Track Changes DFM review support
+- **0.6.15 local gates 已完成**：Ruff、format、MyPy、full pytest、Cline/release harness audit、VSIX CI/package contents、VSIX install/update smoke、uv build、VSIX package、artifact audit、Docker smoke、version sync 與 diff hygiene 已通過；activation smoke 因本機無 display/xvfb 跳過
 - **Agent asset 全覆蓋規劃已補齊**：新增 `docs/agent-asset-gap-analysis.md`，明確拆成格式轉換、資產拆解、結構導航、語義理解四層，並量化目前完成度約 35%
 - **建議採分段發布**：先發格式入口補齊（RTF/TXT/MD/CSV/HTML），再發 XLSX 原生化，其次是 agent 理解增強，最後才是 PPTX/EPUB/EML 等高成本格式
 - **Section truth 已收斂**：manifest generator 現在是 section metadata 最終寫入點；Marker ingest 不再先算 section 再被 generator 用另一套規則覆蓋

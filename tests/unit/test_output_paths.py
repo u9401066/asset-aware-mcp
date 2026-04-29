@@ -52,6 +52,20 @@ def test_resolve_document_output_path_rejects_wrong_suffix(tmp_path: Path) -> No
         )
 
 
+def test_resolve_document_output_path_rejects_reserved_name(tmp_path: Path) -> None:
+    doc_dir = tmp_path / "doc_test_abc123"
+    doc_dir.mkdir()
+
+    with pytest.raises(ValueError, match="reserved document files"):
+        resolve_document_output_path(
+            doc_dir,
+            "original.docx",
+            default_name="output.docx",
+            allowed_suffixes={".docx"},
+            reserved_names={"original.docx", "ir.json", "content.md"},
+        )
+
+
 def test_resolve_document_output_dir_rejects_parent_escape(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="Output directory must stay within"):
         resolve_document_output_dir(

@@ -172,6 +172,37 @@ class TestDocxTools:
             assert "✅" in result
             assert "output.docx" in result
 
+    async def test_save_docx_forwards_track_change_options(self) -> None:
+        """save_docx can opt into native Word Track Changes."""
+        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
+            mock_svc.save_docx = AsyncMock(
+                return_value={
+                    "success": True,
+                    "output_path": "/data/doc123/output.docx",
+                    "integrity": "OK",
+                    "track_changes": True,
+                    "revision_author": "AI Reviewer",
+                    "track_change_blocks": 1,
+                    "revision_sidecar_path": "/data/doc123/revisions.jsonl",
+                    "revision_records": 2,
+                }
+            )
+            from src.presentation.tools.docx_tools import save_docx
+
+            result = await save_docx(
+                "doc123",
+                "# content",
+                track_changes=True,
+                revision_author="AI Reviewer",
+            )
+
+            assert "追蹤修訂" in result
+            assert "revisions.jsonl" in result
+            assert "2 records" in result
+            call_args = mock_svc.save_docx.await_args
+            assert call_args.kwargs["track_changes"] is True
+            assert call_args.kwargs["revision_author"] == "AI Reviewer"
+
     async def test_save_docx_merges_inline_dfm_with_pending_table_context(self) -> None:
         """save_docx should merge editor DFM edits with pending TableContext changes."""
         with (

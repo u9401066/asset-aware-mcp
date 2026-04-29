@@ -15,6 +15,8 @@ const requiredFiles = [
     'resources/repo-assets/asset-aware/AGENTS.md',
     'resources/repo-assets/asset-aware/.github/copilot-instructions.md',
     'resources/repo-assets/asset-aware/.github/agents/asset-aware-document.agent.md',
+    'resources/repo-assets/asset-aware/.github/bylaws/ddd-architecture.md',
+    'resources/repo-assets/asset-aware/.claude/skills/pdf-asset-extractor/SKILL.md',
     'resources/repo-assets/asset-aware/.cline/skills/asset-aware-mcp-harness/SKILL.md',
     'resources/repo-assets/asset-aware/.codex/skills/asset-aware-mcp-harness/SKILL.md',
     'resources/repo-assets/asset-aware/.clinerules/workflows/full-check.md',

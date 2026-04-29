@@ -18,6 +18,7 @@ import tempfile
 from copy import deepcopy
 from dataclasses import asdict
 from datetime import datetime
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -42,6 +43,16 @@ if TYPE_CHECKING:
     from src.domain.repositories import DocumentRepository
 
 logger = logging.getLogger(__name__)
+
+RESERVED_DOCX_ARTIFACT_NAMES = {
+    "content.dfm",
+    "content.md",
+    "format.yaml",
+    "ir.json",
+    "original.docx",
+    "revisions.jsonl",
+}
+_REVISION_TOKEN_RE = re.compile(r"\s+|\S+")
 
 
 class DocxService:
@@ -411,6 +422,8 @@ class DocxService:
         *,
         from_md: bool = False,
         force: bool = False,
+        track_changes: bool = False,
+        revision_author: str = "Asset-Aware MCP",
         _allow_external_output: bool = False,
     ) -> dict[str, Any]:
         """
@@ -425,6 +438,8 @@ class DocxService:
             dfm_text: Edited DFM content (ignored if from_md=True)
             output_path: Output .docx path (default: data/{doc_id}/output.docx)
             from_md: If True, read content.md + format.yaml instead of dfm_text
+            track_changes: If True, emit DFM edits as native Word revisions
+            revision_author: Author recorded on generated Word revisions
 
         Returns:
             Result dict with output path and any errors.
@@ -576,6 +591,7 @@ class DocxService:
                         output_path,
                         default_name="output.docx",
                         allowed_suffixes={".docx"},
+                        reserved_names=RESERVED_DOCX_ARTIFACT_NAMES,
                     )
                 except ValueError as e:
                     return {"success": False, "error": str(e)}
@@ -625,11 +641,22 @@ class DocxService:
                 shutil.copy2(original_path, out)
                 result_path = out
             else:
+                adapter_kwargs: dict[str, Any] = {
+                    "changed_block_ids": expected_changed_ids,
+                }
+                if track_changes:
+                    adapter_kwargs.update(
+                        {
+                            "original_ir": original_ir,
+                            "track_changes": True,
+                            "revision_author": revision_author or "Asset-Aware MCP",
+                        }
+                    )
                 result_path = self.adapter.ir_to_docx(
                     ir,
                     doc_dir,
                     out,
-                    changed_block_ids=expected_changed_ids,
+                    **adapter_kwargs,
                 )
 
             # --- Auto-backup before overwriting DFM state ---
@@ -654,7 +681,20 @@ class DocxService:
                 "success": True,
                 "output_path": str(result_path),
                 "integrity": post_report.to_summary(),
+                "track_changes": track_changes,
             }
+            if track_changes:
+                result["revision_author"] = revision_author or "Asset-Aware MCP"
+                result["track_change_blocks"] = len(expected_changed_ids)
+                revision_sidecar, revision_count = self._write_revision_sidecar(
+                    doc_dir,
+                    original_ir,
+                    ir,
+                    expected_changed_ids,
+                    result_path,
+                )
+                result["revision_sidecar_path"] = str(revision_sidecar)
+                result["revision_records"] = revision_count
             warnings = list(parse_result.errors)
             for issue in pre_report.issues + post_report.issues:
                 if issue.severity in ("error", "warning"):
@@ -667,6 +707,169 @@ class DocxService:
         except Exception as e:
             logger.exception("Failed to save docx: %s", doc_id)
             return {"success": False, "error": str(e)}
+
+    def _write_revision_sidecar(
+        self,
+        doc_dir: Path,
+        original_ir: DocxIR,
+        updated_ir: DocxIR,
+        changed_block_ids: set[str],
+        output_docx: Path,
+    ) -> tuple[Path, int]:
+        """Write machine-readable DFM edit spans for citation-ready consumers."""
+        original_blocks = {block.id: block for block in original_ir.blocks}
+        records: list[dict[str, Any]] = []
+
+        for block in updated_ir.blocks:
+            if block.id not in changed_block_ids:
+                continue
+            original_block = original_blocks.get(block.id)
+            if original_block is None:
+                continue
+
+            old_text = self._block_write_text(original_block)
+            new_text = self._block_write_text(block)
+            if old_text == new_text:
+                continue
+
+            records.extend(
+                self._revision_records_for_block(
+                    updated_ir,
+                    block,
+                    old_text,
+                    new_text,
+                    output_docx,
+                    start_index=len(records),
+                )
+            )
+
+        sidecar_path = doc_dir / "revisions.jsonl"
+        with sidecar_path.open("w", encoding="utf-8") as f:
+            for record in records:
+                f.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
+        return sidecar_path, len(records)
+
+    def _revision_records_for_block(
+        self,
+        ir: DocxIR,
+        block: DfmBlock,
+        old_text: str,
+        new_text: str,
+        output_docx: Path,
+        *,
+        start_index: int,
+    ) -> list[dict[str, Any]]:
+        records: list[dict[str, Any]] = []
+        old_tokens = _REVISION_TOKEN_RE.findall(old_text)
+        new_tokens = _REVISION_TOKEN_RE.findall(new_text)
+        old_offsets = self._token_offsets(old_tokens)
+        new_offsets = self._token_offsets(new_tokens)
+        matcher = SequenceMatcher(None, old_tokens, new_tokens, autojunk=False)
+
+        for tag, old_start, old_end, new_start, new_end in matcher.get_opcodes():
+            if tag == "equal":
+                continue
+            old_char_range = [old_offsets[old_start], old_offsets[old_end]]
+            new_char_range = [new_offsets[new_start], new_offsets[new_end]]
+            if tag in {"delete", "replace"} and old_char_range[0] != old_char_range[1]:
+                records.append(
+                    self._build_revision_record(
+                        ir,
+                        block,
+                        output_docx,
+                        op="delete",
+                        old_text=old_text,
+                        new_text=new_text,
+                        old_char_range=old_char_range,
+                        new_char_range=[new_char_range[0], new_char_range[0]],
+                        index=start_index + len(records) + 1,
+                    )
+                )
+            if tag in {"insert", "replace"} and new_char_range[0] != new_char_range[1]:
+                records.append(
+                    self._build_revision_record(
+                        ir,
+                        block,
+                        output_docx,
+                        op="insert",
+                        old_text=old_text,
+                        new_text=new_text,
+                        old_char_range=[old_char_range[0], old_char_range[0]],
+                        new_char_range=new_char_range,
+                        index=start_index + len(records) + 1,
+                    )
+                )
+        return records
+
+    def _build_revision_record(
+        self,
+        ir: DocxIR,
+        block: DfmBlock,
+        output_docx: Path,
+        *,
+        op: str,
+        old_text: str,
+        new_text: str,
+        old_char_range: list[int],
+        new_char_range: list[int],
+        index: int,
+    ) -> dict[str, Any]:
+        old_quote = old_text[old_char_range[0] : old_char_range[1]]
+        new_quote = new_text[new_char_range[0] : new_char_range[1]]
+        return {
+            "schema": "asset-aware.docx-revisions.v1",
+            "doc_id": ir.doc_id,
+            "source_revision_id": ir.checksum,
+            "revision_id": f"{block.id}:rev{index:04d}",
+            "block_id": block.id,
+            "block_type": block.block_type.value,
+            "op": op,
+            "output_docx": str(output_docx),
+            "old_text": old_quote,
+            "new_text": new_quote,
+            "old_text_hash": self._sha256_text(old_quote),
+            "new_text_hash": self._sha256_text(new_quote),
+            "old_char_range": old_char_range,
+            "new_char_range": new_char_range,
+            "old_byte_range": self._byte_range(old_text, old_char_range),
+            "new_byte_range": self._byte_range(new_text, new_char_range),
+            "old_context": self._range_context(old_text, old_char_range),
+            "new_context": self._range_context(new_text, new_char_range),
+            "locator": {
+                "doc_id": ir.doc_id,
+                "block_id": block.id,
+                "source_revision_id": ir.checksum,
+                "old_char_range": old_char_range,
+                "new_char_range": new_char_range,
+            },
+        }
+
+    @staticmethod
+    def _block_write_text(block: DfmBlock) -> str:
+        return block.plain_text if block.runs else block.content
+
+    @staticmethod
+    def _token_offsets(tokens: list[str]) -> list[int]:
+        offsets = [0]
+        cursor = 0
+        for token in tokens:
+            cursor += len(token)
+            offsets.append(cursor)
+        return offsets
+
+    @staticmethod
+    def _byte_range(text: str, char_range: list[int]) -> list[int]:
+        start, end = char_range
+        return [len(text[:start].encode("utf-8")), len(text[:end].encode("utf-8"))]
+
+    @staticmethod
+    def _range_context(text: str, char_range: list[int], radius: int = 40) -> str:
+        start, end = char_range
+        return text[max(0, start - radius) : min(len(text), end + radius)]
+
+    @staticmethod
+    def _sha256_text(text: str) -> str:
+        return f"sha256:{hashlib.sha256(text.encode('utf-8')).hexdigest()}"
 
     async def convert_to_pdf(
         self,

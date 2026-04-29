@@ -350,13 +350,13 @@ function getStorageRoot(): string {
 function syncExternalMcpConsumers(
     context: vscode.ExtensionContext,
     uvPath: string,
-    _needsUpgrade: boolean = false,
+    needsUpgrade: boolean = false,
     notifyUser: boolean = false,
 ): void {
     const updatedConsumers: string[] = [];
 
     try {
-        if (installCopilotMcpConfig(context, uvPath, false)) {
+        if (installCopilotMcpConfig(context, uvPath, needsUpgrade)) {
             updatedConsumers.push('Copilot');
             log('Copilot workspace MCP config updated');
         }
@@ -365,7 +365,7 @@ function syncExternalMcpConsumers(
     }
 
     try {
-        if (installClineMcpServer(context, uvPath, false)) {
+        if (installClineMcpServer(context, uvPath, needsUpgrade)) {
             updatedConsumers.push('Cline');
             log('Cline MCP config updated');
         }
@@ -374,7 +374,7 @@ function syncExternalMcpConsumers(
     }
 
     try {
-        if (installCodexMcpServer(context, uvPath, false)) {
+        if (installCodexMcpServer(context, uvPath, needsUpgrade)) {
             updatedConsumers.push('Codex');
             log('Codex MCP config updated');
         }

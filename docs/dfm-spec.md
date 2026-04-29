@@ -466,10 +466,23 @@ Presentation Layer:
 ### 8.3 `save_docx`
 
 ```
-輸入: doc_id (str), output_path (str, optional)
+輸入: doc_id (str), output_path (str, optional), track_changes (bool, optional)
 輸出: 儲存結果摘要
 流程: 讀取 content.dfm → 解析 → 合併回 IR → 重建 docx
 ```
+
+`track_changes=True` 為 opt-in 行為；預設仍使用原本的直接文字回寫。啟用後，
+`save_docx` 會比較原始 IR 與 edited IR，將文字級差異寫成真正 Word Track
+Changes：刪除片段使用 `w:del` + `w:delText`，新增片段使用 `w:ins` + `w:t`，
+並在 `word/settings.xml` 補上 `w:trackRevisions`。這讓使用者可在 Word 中逐項
+接受/拒絕 AI 於 DFM 中造成的修改，也讓 citation-ready 拆解可以保留「哪一段
+原文被哪一段新文取代」的細顆粒審查線索。
+
+同時會寫出 `revisions.jsonl` sidecar。每筆 record 使用
+`asset-aware.docx-revisions.v1` schema，包含 `doc_id`、`source_revision_id`、
+`revision_id`、`block_id`、`op`、old/new text hash、char/byte range、短 context
+與 locator 欄位。下游若要建立 Foam/LLM wiki citation anchor，應以這份 sidecar
+銜接 Word 可視修訂與 Asset-Aware 的 block/span locator，而不是重新猜測 diff。
 
 ### 8.4 `list_docx_blocks`
 

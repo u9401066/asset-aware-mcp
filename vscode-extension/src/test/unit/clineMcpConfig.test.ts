@@ -17,7 +17,7 @@ describe('clineMcpConfig', () => {
             globalStorageUri: {
                 fsPath: path.join(tempDir, 'globalStorage', 'u9401066.asset-aware-mcp'),
             },
-            extension: { packageJSON: { version: '0.6.14' } },
+            extension: { packageJSON: { version: '0.6.15' } },
         };
         settingsPath = path.join(tempDir, 'globalStorage', 'saoudrizwan.claude-dev', 'settings', 'cline_mcp_settings.json');
         (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];
@@ -82,6 +82,16 @@ describe('clineMcpConfig', () => {
         assert.deepStrictEqual(entry.alwaysAllow, ['ingest_pdf']);
     });
 
+    it('includes --upgrade when activation detected a server version change', () => {
+        fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+
+        const updated = installClineMcpServer(context, '/usr/bin/uv', true);
+
+        assert.strictEqual(updated, true);
+        const entry = readSettings().mcpServers['asset-aware-mcp'];
+        assert.ok(entry.args.includes('--upgrade'));
+    });
+
     it('does not overwrite a custom same-key server', () => {
         fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
         fs.writeFileSync(settingsPath, JSON.stringify({
@@ -94,6 +104,17 @@ describe('clineMcpConfig', () => {
 
         assert.strictEqual(updated, false);
         assert.strictEqual(readSettings().mcpServers['asset-aware-mcp'].command, 'custom');
+    });
+
+    it('skips malformed JSON instead of replacing it with a blank config', () => {
+        fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+        fs.writeFileSync(settingsPath, '{ "mcpServers": {');
+
+        const updated = installClineMcpServer(context, '/usr/bin/uv');
+
+        assert.strictEqual(updated, false);
+        assert.strictEqual(fs.readFileSync(settingsPath, 'utf-8'), '{ "mcpServers": {');
+        assert.ok(fs.readdirSync(path.dirname(settingsPath)).some((name) => name.includes('.invalid.')));
     });
 
     it('removes only the managed server', () => {

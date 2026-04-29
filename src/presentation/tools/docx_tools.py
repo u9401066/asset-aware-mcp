@@ -220,6 +220,8 @@ async def save_docx(
     output_path: str | None = None,
     from_md: bool = False,
     force: bool = False,
+    track_changes: bool = False,
+    revision_author: str = "Asset-Aware MCP",
     ctx: Context | None = None,
 ) -> str:
     """
@@ -238,12 +240,17 @@ async def save_docx(
     安全機制：若內容萎縮 > 50%，預設拒絕輸出（疑似資料遺失）。
     使用 force=True 強制輸出。
 
+    若 track_changes=True，會將 DFM 中的文字修改以真正 Word Track
+    Changes (`w:del`/`w:ins`) 寫回，供使用者在 Word 中逐項審查。
+
     Args:
         doc_id: 文件 ID
         dfm_content: 編輯後的 DFM 全文（from_md=True 時可省略）
         output_path: 輸出路徑（預設為 data/{doc_id}/output.docx）
         from_md: 若為 True，從磁碟讀取 content.md + format.yaml 而非使用 dfm_content
         force: 若為 True，即使偵測到嚴重內容萎縮仍強制輸出
+        track_changes: 若為 True，以 Word Track Changes 寫入文字 diff
+        revision_author: 產生追蹤修訂時使用的作者名稱
 
     Returns:
         儲存結果
@@ -263,7 +270,13 @@ async def save_docx(
     )
     await report_progress(ctx, 45, message=f"Writing DOCX for {doc_id}")
     result = await docx_service.save_docx(
-        doc_id, dfm_content, output_path, from_md=from_md, force=force
+        doc_id,
+        dfm_content,
+        output_path,
+        from_md=from_md,
+        force=force,
+        track_changes=track_changes,
+        revision_author=revision_author,
     )
     logger.info(
         "save_docx done | doc_id=%s | success=%s | integrity=%s",
@@ -295,6 +308,19 @@ async def save_docx(
         lines.append(
             f"- **自動同步的表格變更**: {len(synced_table_ids)} 個 TableContext"
         )
+
+    if result.get("track_changes"):
+        lines.append(
+            "- **追蹤修訂**: 已寫入 Word Track Changes "
+            f"({result.get('track_change_blocks', 0)} 個區塊, "
+            f"author={result.get('revision_author', revision_author)})"
+        )
+        if result.get("revision_sidecar_path"):
+            lines.append(
+                "- **修訂 sidecar**: "
+                f"`{result.get('revision_sidecar_path')}` "
+                f"({result.get('revision_records', 0)} records)"
+            )
 
     warnings = result.get("warnings", [])
     if warnings:

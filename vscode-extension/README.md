@@ -6,9 +6,9 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.14/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.15/resources/banner.png)
 
-## 🆕 What's New in v0.6.14
+## 🆕 What's New in v0.6.15
 
 - **Assistant harness auto-sync**: VSIX startup installs/updates bundled Asset-Aware Copilot, Cline, and Codex harness assets without overwriting user customizations
 - **External MCP config merge**: Copilot, Cline, and Codex MCP settings are conservatively merged so existing custom servers stay intact and duplicate Asset-Aware entries are avoided

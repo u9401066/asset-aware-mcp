@@ -463,6 +463,174 @@ class TestDocxAdapterParsing:
         texts = [t.text for t in tree.findall(f".//{{{NS['w']}}}t")]
         assert texts == ["One", "Changed two"]
 
+    def test_dfm_writeback_can_emit_word_track_changes(self):
+        doc_xml = f"""
+        <w:document xmlns:w="{NS["w"]}">
+          <w:body>
+            <w:p><w:r><w:t>Hello old world</w:t></w:r></w:p>
+          </w:body>
+        </w:document>
+        """.encode()
+        original_ir = DocxIR(
+            doc_id="test_doc_001",
+            source_path="test.docx",
+            blocks=[
+                DfmBlock(
+                    id="p001",
+                    block_type=DfmBlockType.PARAGRAPH,
+                    content="Hello old world",
+                )
+            ],
+        )
+        updated_ir = DocxIR(
+            doc_id="test_doc_001",
+            source_path="test.docx",
+            blocks=[
+                DfmBlock(
+                    id="p001",
+                    block_type=DfmBlockType.PARAGRAPH,
+                    content="Hello new world",
+                )
+            ],
+        )
+
+        updated = DocxAdapter()._apply_text_changes(
+            doc_xml,
+            updated_ir,
+            changed_block_ids={"p001"},
+            original_ir=original_ir,
+            track_changes=True,
+            revision_author="AI Reviewer",
+        )
+
+        tree = etree.fromstring(updated)
+        delete = tree.find(f".//{{{NS['w']}}}del")
+        insert = tree.find(f".//{{{NS['w']}}}ins")
+        assert delete is not None
+        assert insert is not None
+        assert delete.get(f"{{{NS['w']}}}author") == "AI Reviewer"
+        assert insert.get(f"{{{NS['w']}}}author") == "AI Reviewer"
+        assert delete.find(f".//{{{NS['w']}}}delText").text == "old"
+        assert insert.find(f".//{{{NS['w']}}}t").text == "new"
+
+    def test_dfm_track_changes_preserve_single_hyperlink_wrapper(self):
+        doc_xml = f"""
+        <w:document xmlns:w="{NS["w"]}" xmlns:r="{NS["r"]}">
+          <w:body>
+            <w:p>
+              <w:hyperlink r:id="rId5">
+                <w:r><w:t>Link old</w:t></w:r>
+              </w:hyperlink>
+            </w:p>
+          </w:body>
+        </w:document>
+        """.encode()
+        original_ir = DocxIR(
+            doc_id="test_doc_001",
+            source_path="test.docx",
+            blocks=[
+                DfmBlock(
+                    id="p001",
+                    block_type=DfmBlockType.PARAGRAPH,
+                    content="Link old",
+                )
+            ],
+        )
+        updated_ir = DocxIR(
+            doc_id="test_doc_001",
+            source_path="test.docx",
+            blocks=[
+                DfmBlock(
+                    id="p001",
+                    block_type=DfmBlockType.PARAGRAPH,
+                    content="Link new",
+                )
+            ],
+        )
+
+        updated = DocxAdapter()._apply_text_changes(
+            doc_xml,
+            updated_ir,
+            changed_block_ids={"p001"},
+            original_ir=original_ir,
+            track_changes=True,
+            revision_author="AI Reviewer",
+        )
+
+        tree = etree.fromstring(updated)
+        hyperlink = tree.find(f".//{{{NS['w']}}}hyperlink")
+        assert hyperlink is not None
+        assert hyperlink.get(f"{{{NS['r']}}}id") == "rId5"
+        assert hyperlink.find(f".//{{{NS['w']}}}del") is not None
+        assert hyperlink.find(f".//{{{NS['w']}}}ins") is not None
+
+    def test_dfm_track_changes_use_matching_run_style_for_later_runs(self):
+        doc_xml = f"""
+        <w:document xmlns:w="{NS["w"]}">
+          <w:body>
+            <w:p>
+              <w:r><w:t>Plain </w:t></w:r>
+              <w:r><w:rPr><w:i/></w:rPr><w:t>old</w:t></w:r>
+            </w:p>
+          </w:body>
+        </w:document>
+        """.encode()
+        original_ir = DocxIR(
+            doc_id="test_doc_001",
+            source_path="test.docx",
+            blocks=[
+                DfmBlock(
+                    id="p001",
+                    block_type=DfmBlockType.FORMAT,
+                    content="Plain old",
+                    runs=[
+                        FormatRun(text="Plain "),
+                        FormatRun(text="old", italic=True),
+                    ],
+                )
+            ],
+        )
+        updated_ir = DocxIR(
+            doc_id="test_doc_001",
+            source_path="test.docx",
+            blocks=[
+                DfmBlock(
+                    id="p001",
+                    block_type=DfmBlockType.FORMAT,
+                    content="Plain new",
+                    runs=[
+                        FormatRun(text="Plain "),
+                        FormatRun(text="new", italic=True),
+                    ],
+                )
+            ],
+        )
+
+        updated = DocxAdapter()._apply_text_changes(
+            doc_xml,
+            updated_ir,
+            changed_block_ids={"p001"},
+            original_ir=original_ir,
+            track_changes=True,
+            revision_author="AI Reviewer",
+        )
+
+        tree = etree.fromstring(updated)
+        delete = tree.find(f".//{{{NS['w']}}}del")
+        insert = tree.find(f".//{{{NS['w']}}}ins")
+        assert delete is not None
+        assert insert is not None
+        assert delete.find(f".//{{{NS['w']}}}rPr/{{{NS['w']}}}i") is not None
+        assert insert.find(f".//{{{NS['w']}}}rPr/{{{NS['w']}}}i") is not None
+
+    def test_dfm_track_changes_enable_word_settings(self):
+        settings_xml = f'<w:settings xmlns:w="{NS["w"]}"/>'.encode()
+
+        updated = DocxAdapter()._enable_track_revisions(settings_xml)
+
+        tree = etree.fromstring(updated)
+        assert tree.find(f"{{{NS['w']}}}trackRevisions") is not None
+
 
 class TestDocxIR:
     def test_next_block_id(self):
