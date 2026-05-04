@@ -29,7 +29,7 @@ describe('assistantAssets', () => {
     function makeContext(): any {
         return {
             extensionPath: extensionRoot,
-            extension: { packageJSON: { version: '0.6.15' } },
+            extension: { packageJSON: { version: '0.6.16' } },
         };
     }
 
@@ -66,5 +66,25 @@ describe('assistantAssets', () => {
 
         assert.strictEqual(fs.readFileSync(workspaceSkillPath, 'utf-8'), 'user customization\n');
         assert.strictEqual(summary?.preserved, 1);
+    });
+
+    it('migrates legacy detector-managed AGENTS.md without a manifest hash', async () => {
+        writeBundledAsset(
+            'AGENTS.md',
+            '# Asset-Aware MCP Codex Harness\ncitation-ready document workflows\nversion two\n',
+        );
+        fs.writeFileSync(
+            path.join(workspaceRoot, 'AGENTS.md'),
+            '# Asset-Aware MCP Codex Harness\ncitation-ready document workflows\nversion one\n',
+            'utf-8',
+        );
+
+        const summary = await installAssistantAssets(makeContext());
+
+        assert.strictEqual(
+            fs.readFileSync(path.join(workspaceRoot, 'AGENTS.md'), 'utf-8'),
+            '# Asset-Aware MCP Codex Harness\ncitation-ready document workflows\nversion two\n',
+        );
+        assert.strictEqual(summary?.updated, 1);
     });
 });

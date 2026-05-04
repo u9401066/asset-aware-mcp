@@ -54,6 +54,31 @@ def test_add_rows_persistence(table_service, tmp_path):
     assert context.rows[0]["Drug"] == "Remimazolam"
 
 
+def test_load_existing_tables_includes_non_tbl_context_ids(tmp_path):
+    from src.infrastructure.excel_renderer import ExcelRenderer
+
+    table_id = "dfm_docx123_table1"
+    (tmp_path / f"{table_id}.json").write_text(
+        """{
+  "id": "dfm_docx123_table1",
+  "intent": "summary",
+  "title": "DFM Table",
+  "columns": [{"name": "Finding", "type": "text", "required": true}],
+  "rows": [{"Finding": "A"}],
+  "created_at": "2026-04-29"
+}""",
+        encoding="utf-8",
+    )
+
+    service = TableService(
+        table_output_dir=tmp_path,
+        table_renderer=ExcelRenderer(tmp_path),
+    )
+
+    context = service.get_table_context(table_id)
+    assert context.rows == [{"Finding": "A"}]
+
+
 def test_update_delete_row(table_service):
     columns = [{"name": "Drug", "type": "text"}]
     table_id = table_service.create_table("comparison", "Test", columns)
@@ -67,6 +92,46 @@ def test_update_delete_row(table_service):
     table_service.delete_row(table_id, 0)
     assert table_service.get_table_context(table_id).row_count == 1
     assert table_service.get_table_context(table_id).rows[0]["Drug"] == "B"
+
+
+def test_update_cell_removes_stale_citation(table_service):
+    columns = [{"name": "Drug", "type": "text"}]
+    table_id = table_service.create_table("comparison", "Test", columns)
+    table_service.add_rows(table_id, [{"Drug": "A"}])
+    table_service.add_citation(
+        table_id,
+        0,
+        "Drug",
+        [{"source_type": "user_input", "excerpt": "A"}],
+    )
+
+    result = table_service.update_cell(table_id, 0, "Drug", "B")
+
+    assert result["citation_removed"] is True
+    assert table_service.get_cell(table_id, 0, "Drug")["citation"] is None
+
+
+def test_update_row_removes_citations_only_for_changed_cells(table_service):
+    columns = [{"name": "Drug", "type": "text"}, {"name": "Dose", "type": "text"}]
+    table_id = table_service.create_table("comparison", "Test", columns)
+    table_service.add_rows(table_id, [{"Drug": "A", "Dose": "1 mg"}])
+    table_service.add_citation(
+        table_id,
+        0,
+        "Drug",
+        [{"source_type": "user_input", "excerpt": "A"}],
+    )
+    table_service.add_citation(
+        table_id,
+        0,
+        "Dose",
+        [{"source_type": "user_input", "excerpt": "1 mg"}],
+    )
+
+    table_service.update_row(table_id, 0, {"Drug": "B", "Dose": "1 mg"})
+
+    assert table_service.get_cell(table_id, 0, "Drug")["citation"] is None
+    assert table_service.get_cell(table_id, 0, "Dose")["citation"] is not None
 
 
 def test_delete_table(table_service, tmp_path):
@@ -168,3 +233,17 @@ async def test_render_table_disables_formula_injection(table_service):
         sheet_xml = workbook.read("xl/worksheets/sheet1.xml").decode("utf-8")
 
     assert "<f>" not in sheet_xml
+
+
+@pytest.mark.asyncio
+async def test_render_table_html(table_service):
+    columns = [{"name": "Drug", "type": "text"}]
+    table_id = table_service.create_table("comparison", "Test <Unsafe>", columns)
+    table_service.add_rows(table_id, [{"Drug": "<script>"}])
+
+    result = await table_service.render_table(table_id, format="html")
+
+    assert result["success"] is True
+    assert result["format"] == "html"
+    assert "<table>" in result["content"]
+    assert "&lt;script&gt;" in result["content"]

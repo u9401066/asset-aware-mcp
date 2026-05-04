@@ -24,7 +24,7 @@ describe('AssetAwareMcpProvider', () => {
     function makeContext(overrides: Record<string, any> = {}) {
         return {
             globalState: { get: () => undefined },
-            extension: { packageJSON: { version: '0.6.15' } },
+            extension: { packageJSON: { version: '0.6.16' } },
             ...overrides,
         } as any;
     }
@@ -39,7 +39,7 @@ describe('AssetAwareMcpProvider', () => {
         assert.ok(servers[0].args.includes('--python'));
         assert.ok(servers[0].args.includes('3.11'));
         assert.ok(servers[0].args.includes('--from'));
-        assert.ok(servers[0].args.includes('asset-aware-mcp==0.6.15'));
+        assert.ok(servers[0].args.includes('asset-aware-mcp==0.6.16'));
         assert.strictEqual(servers[0].args[servers[0].args.length - 1], 'asset-aware-mcp');
     });
 
@@ -56,6 +56,22 @@ describe('AssetAwareMcpProvider', () => {
         assert.strictEqual(servers.length, 1);
         assert.deepStrictEqual(servers[0].args.slice(0, 5), ['run', '--python', '3.11', '--directory', tempDir]);
         assert.deepStrictEqual(servers[0].args.slice(5), ['python', '-m', 'src.server']);
+    });
+
+    it('adds marker extra in development mode when marker backend is enabled', () => {
+        fs.mkdirSync(path.join(tempDir, 'src'), { recursive: true });
+        fs.writeFileSync(path.join(tempDir, 'src', 'server.py'), 'def main():\n    pass\n');
+        fs.writeFileSync(path.join(tempDir, 'pyproject.toml'), '[project]\nname = "asset-aware-mcp"\n');
+        (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];
+        __setConfigurationValue('assetAwareMcp.enableMarkerBackend', true);
+
+        const provider = new AssetAwareMcpProvider(tempDir, undefined, makeContext());
+
+        const servers = provider.provideMcpServerDefinitions({} as any) as any[];
+
+        assert.ok(servers[0].args.includes('--extra'));
+        assert.ok(servers[0].args.includes('marker'));
+        assert.ok(!servers[0].args.includes('marker-pdf'));
     });
 
     it('adds marker runtime args when marker backend is enabled', () => {
@@ -79,7 +95,7 @@ describe('AssetAwareMcpProvider', () => {
 
         assert.ok(servers[0].args.includes('--upgrade'));
         assert.ok(servers[0].args.includes('--from'));
-        assert.ok(servers[0].args.includes('asset-aware-mcp==0.6.15'));
+        assert.ok(servers[0].args.includes('asset-aware-mcp==0.6.16'));
     });
 
     it('does not add --upgrade flag when needsUpgrade is false', () => {

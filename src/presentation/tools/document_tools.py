@@ -35,6 +35,12 @@ from src.application.output_paths import (
     resolve_document_output_path,
 )
 from src.domain.citation import EvidenceSpan, build_evidence_spans
+from src.domain.marker_errors import (
+    MarkerBackendUnavailable,
+    format_marker_failure,
+    is_marker_backend_unavailable,
+    is_marker_resource_error,
+)
 from src.infrastructure.config import settings
 from src.presentation.dependencies import (
     asset_service,
@@ -158,7 +164,7 @@ async def parse_pdf_structure(
     Args:
         pdf_path: PDF 檔案的絕對路徑
         output_dir: 輸出目錄（預設為 data/{doc_id}/）
-        marker_max_pages_per_chunk: 大型 PDF 時每個 Marker chunk 的最大頁數；0 表示整本一次處理
+        marker_max_pages_per_chunk: 每個 Marker chunk 的最大頁數；0 表示使用安全自動策略
         extract_figures: 是否輸出 figures/ 與 FigureAsset；大型檔建議可先關閉
         page_ranges: 指定要攝入的頁段，例如 ["1-50", "120-160"]
 
@@ -177,9 +183,13 @@ async def parse_pdf_structure(
     if not pdf_file.exists():
         return f"❌ File not found: {pdf_path}"
 
-    total_page_count = pdf_extractor.get_page_count(pdf_file)
-    normalized_page_ranges = normalize_page_ranges(page_ranges, total_page_count)
-    page_map = build_page_number_map(normalized_page_ranges)
+    try:
+        total_page_count = pdf_extractor.get_page_count(pdf_file)
+        normalized_page_ranges = normalize_page_ranges(page_ranges, total_page_count)
+        page_map = build_page_number_map(normalized_page_ranges)
+    except Exception as e:
+        await log_message(ctx, "error", f"parse_pdf_structure invalid input: {e}")
+        return f"❌ Invalid PDF or page range: {e!s}"
 
     from src.domain.value_objects import DocId
 
@@ -267,7 +277,7 @@ async def parse_pdf_structure(
             f"**Pages:** {manifest.page_count}",
             f"**Pages Processed:** {len(page_map) or total_page_count}",
             f"**Time:** {elapsed:.1f}s",
-            f"**Chunk Size:** {marker_max_pages_per_chunk or 'full document'}",
+            f"**Chunk Size:** {marker_max_pages_per_chunk or 'auto'}",
             f"**Extract Figures:** {'yes' if extract_figures else 'no'}",
             "",
             "## Assets Found",
@@ -304,11 +314,22 @@ async def parse_pdf_structure(
         )
         return "\n".join(lines)
 
+    except MarkerBackendUnavailable as e:
+        await log_message(ctx, "error", f"parse_pdf_structure unavailable: {e}")
+        return "# ❌ Marker Backend Not Available\n\n" + format_marker_failure(e)
     except RuntimeError as e:
         await log_message(ctx, "error", f"parse_pdf_structure unavailable: {e}")
+        if is_marker_backend_unavailable(e):
+            return "# ❌ Marker Backend Not Available\n\n" + format_marker_failure(e)
+        if is_marker_resource_error(e):
+            return "# ❌ Marker Resource Limit\n\n" + format_marker_failure(e)
         return f"❌ Marker parsing unavailable: {e!s}"
     except Exception as e:
         await log_message(ctx, "error", f"parse_pdf_structure failed: {e}")
+        if is_marker_backend_unavailable(e):
+            return "# ❌ Marker Backend Not Available\n\n" + format_marker_failure(e)
+        if is_marker_resource_error(e):
+            return "# ❌ Marker Resource Limit\n\n" + format_marker_failure(e)
         return f"❌ Marker parsing failed: {e!s}"
 
 
@@ -546,8 +567,8 @@ async def ingest_documents(
         use_marker: If True, use Marker for structured parsing (slower but more accurate).
                    Produces blocks.json with bbox/coordinates for precise source tracking.
                    Default False uses PyMuPDF (faster but less structured).
-        marker_max_pages_per_chunk: When using Marker, split very large PDFs into fixed-size page chunks.
-                                    Set 0 to parse the whole document in one pass.
+        marker_max_pages_per_chunk: When using Marker, split PDFs into fixed-size page chunks.
+                                    Set 0 to use the safe automatic strategy.
         extract_figures: When using Marker, control whether image crops are extracted and saved.
                          Disable this first for image-heavy textbooks to reduce memory pressure.
         page_ranges: 1-indexed inclusive page ranges applied to every input file, e.g. ["1-50", "120-160"].
@@ -588,19 +609,25 @@ async def ingest_documents(
 
     if async_mode:
         await report_progress(ctx, 20, message="Creating background ETL job")
-        job = await job_service.create_ingest_job(
-            file_paths,
-            parameters={
-                "use_marker": use_marker,
-                "ocr_enabled": ocr_enabled,
-                "ocr_language": ocr_language,
-                "rotate_pages": rotate_pages,
-                "deskew": deskew,
-                "marker_max_pages_per_chunk": marker_max_pages_per_chunk,
-                "extract_figures": extract_figures,
-                "page_ranges": page_ranges or [],
-            },
-        )
+        try:
+            job = await job_service.create_ingest_job(
+                file_paths,
+                parameters={
+                    "use_marker": use_marker,
+                    "ocr_enabled": ocr_enabled,
+                    "ocr_language": ocr_language,
+                    "rotate_pages": rotate_pages,
+                    "deskew": deskew,
+                    "marker_max_pages_per_chunk": marker_max_pages_per_chunk,
+                    "extract_figures": extract_figures,
+                    "page_ranges": page_ranges or [],
+                },
+            )
+        except RuntimeError as e:
+            await log_message(
+                ctx, "error", f"ingest_documents job creation failed: {e}"
+            )
+            return f"# ❌ Could Not Create ETL Job\n\n{e!s}"
         await report_progress(ctx, 100, message=f"Created job {job.job_id}")
         await log_message(ctx, "info", f"ingest_documents job created: {job.job_id}")
 
@@ -641,7 +668,7 @@ async def ingest_documents(
             )
         if use_marker:
             output_lines.append(
-                f"**Marker chunk size:** {marker_max_pages_per_chunk or 'full document'}\n"
+                f"**Marker chunk size:** {marker_max_pages_per_chunk or 'auto'}\n"
             )
             output_lines.append(
                 f"**Extract figures:** {'yes' if extract_figures else 'no'}\n"
@@ -664,6 +691,8 @@ async def ingest_documents(
                 )
                 if result.backend == "marker":
                     output_lines.append("- **blocks.json:** ✅ Created")
+                for warning in result.warnings:
+                    output_lines.append(f"- **warning:** {warning}")
             else:
                 output_lines.append(f"\n## ❌ {result.filename}")
                 output_lines.append(f"- **error:** {result.error}")

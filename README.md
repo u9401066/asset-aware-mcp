@@ -69,8 +69,8 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP Server (Modular Presentation)            │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 48 tools in 7 modules                   │   │
-│  │   document (11) │ docx (14) │ section (5)       │   │
+│  │ tools/: 50 tools in 7 modules                   │   │
+│  │   document (14) │ docx (14) │ section (5)       │   │
 │  │   job (3) │ knowledge (2) │ table (7) │ profile (5) │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │
@@ -121,16 +121,16 @@ Visual overview for the project. All diagrams use consistent GitHub README style
 | Diagram | Description |
 |---------|-------------|
 | [01 — System Architecture](docs/diagrams/01-system-architecture.jpg) | Full stack: Telegram → Gateway → MCP Adapter → 3 MCP servers → Ollama |
-| [02 — Data Layout](docs/diagrams/02-data-layout.jpg) | 48 tools organized in 7 categories with asset-aware data tree |
+| [02 — Data Layout](docs/diagrams/02-data-layout.jpg) | 50 tools organized in 7 categories with asset-aware data tree |
 | [03 — PDF Ingestion Pipeline](docs/diagrams/03-pdf-ingestion-pipeline.jpg) | 7-stage flow from PDF upload to knowledge graph |
 | [04 — DOCX Bidirectional Edit](docs/diagrams/04-docx-edit-pipeline.jpg) | DOCX ingest → TableContext edit → round-trip save workflow |
 | [05 — Knowledge Graph Search](docs/diagrams/05-knowledge-graph-search.jpg) | Cross-document search with 3 parallel query paths |
 | [06 — Installation Steps](docs/diagrams/06-installation-steps.jpg) | 7-step installation from clone to verification |
 | [07 — PDF ETL Pipeline](docs/diagrams/07-pdf-etl-pipeline.jpg) | Dual-engine parsing: PyMuPDF + Marker |
 | [08 — KG Architecture](docs/diagrams/08-knowledge-graph-architecture.jpg) | lightrag-hku 3-layer KG architecture |
-| [08 — KG Architecture](docs/diagrams/08-knowledge-graph-architecture.jpg) | lightrag-hku 3-layer KG architecture |
+| [09 — Agent Harness Concept](docs/diagrams/09-agent-harness-concept.jpg) | Assistant harness model for stateless agents |
 
-> 💡 All generation prompts are saved in [docs/diagrams/prompts/README.md](docs/diagrams/prompts/README.md) for style consistency and regeneration.
+> 💡 All generation prompts are saved in [docs/diagrams/ALL-PROMPTS.md](docs/diagrams/ALL-PROMPTS.md) for style consistency and regeneration.
 
 ## 🚀 Quick Start
 
@@ -140,6 +140,8 @@ uv sync
 
 # Optional: install Marker backend only if you need structured parsing
 uv sync --extra marker
+# Backward-compatible alias for older docs/scripts
+uv sync --extra pdf
 
 # Run MCP Server
 uv run python -m src.presentation.server
@@ -155,7 +157,7 @@ Installation scope note:
 - Runtime data stays with your repo: `.env` and `assetAwareMcp.dataDir` default to `./data`, so ingested assets remain scoped to the current workspace.
 
 Marker note:
-`marker-pdf` is now an optional dependency because it may pull in `torch`, `surya`, and platform-specific ML wheels. Default installs use the PyMuPDF backend only. Enable Marker only when you need `use_marker=True` or `parse_pdf_structure`.
+`marker-pdf` is now an optional dependency because it may pull in `torch`, `surya`, and platform-specific ML wheels. Default installs use the PyMuPDF backend only. Enable Marker only when you need `use_marker=True` or `parse_pdf_structure`. Install the extra in the same environment that launches the MCP server; if Marker hits memory pressure, retry with `extract_figures=False` and `marker_max_pages_per_chunk=1`, or use the PyMuPDF fallback path.
 
 ## 🔌 MCP Tools
 
@@ -267,7 +269,7 @@ Different journals/formats need different extraction settings. Use these tools t
 
 Installation guidance:
 - Default install: `uv sync`
-- Install Marker backend only when needed: `uv sync --extra marker`
+- Install Marker backend only when needed: `uv sync --extra marker` (`uv sync --extra pdf` is kept as a compatibility alias)
 - Safer extension Marker setup: enable Marker backend in settings and keep `torchBackend=cpu` unless you explicitly need GPU wheels
 
 - [Technical Spec](docs/spec.md) - Detailed technical specification

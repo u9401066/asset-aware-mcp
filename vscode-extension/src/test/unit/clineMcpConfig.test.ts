@@ -17,7 +17,7 @@ describe('clineMcpConfig', () => {
             globalStorageUri: {
                 fsPath: path.join(tempDir, 'globalStorage', 'u9401066.asset-aware-mcp'),
             },
-            extension: { packageJSON: { version: '0.6.15' } },
+            extension: { packageJSON: { version: '0.6.16' } },
         };
         settingsPath = path.join(tempDir, 'globalStorage', 'saoudrizwan.claude-dev', 'settings', 'cline_mcp_settings.json');
         (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];

@@ -7,6 +7,47 @@
 
 ## [Unreleased]
 
+## [0.6.16] - 2026-05-04
+
+### Added
+
+- **Marker / LightRAG corrective issue report**
+  - Added `docs/asset-aware-mcp-issue-report-20260429.md` as the traceable source report for the Marker dependency, virtualenv, LightRAG, and OOM findings that drove this patch
+
+### Fixed
+
+- **Marker optional backend reliability**
+  - Marker is preflighted before tool execution so missing `marker-pdf` returns actionable install guidance instead of a raw import error
+  - Catchable Marker OOM/resource failures now report chunking/fallback guidance, and document ingest can fall back to PyMuPDF with warnings
+  - Local VSIX/dev launches include `uv run --extra marker` when the Marker backend is enabled, with `pdf` kept as a compatibility extra alias
+  - Marker page-range parsing now remaps block metadata ids back to original PDF pages, keeping image/block provenance aligned
+
+- **Segmentation and citation provenance**
+  - PyMuPDF synthetic `blocks.json` entries now carry `source_backend=pymupdf`, and segmentation export infers the backend from block metadata instead of assuming Marker
+  - LightRAG entity extraction now includes the source text context in its query prompt and still degrades gracefully when unavailable
+
+- **A2T table safety**
+  - `table://{table_id}/content` validates table ids before reading Markdown files, preventing path traversal through resource ids
+  - Editing a cited table cell or row now removes stale citations for changed cells while preserving citations for unchanged cells
+  - Table service startup reloads persisted non-`tbl_*.json` contexts such as DFM/chart bridge tables
+  - Markdown and HTML table renders now return inline content through the MCP tool instead of requiring a file path
+
+- **DOCX/OCR/PyMuPDF edge cases**
+  - LibreOffice legacy-format conversion refuses to overwrite an existing sibling `.docx`
+  - OCR language normalization now strips/lowercases unknown aliases, and PyMuPDF worker isolation falls back to `spawn` on platforms without `fork`
+  - `parse_pdf_structure` now catches invalid page ranges before partial output setup, and async ingest job creation reports queue-limit errors as MCP-friendly messages
+
+- **VSIX assistant harness migration**
+  - Legacy detector-managed Asset-Aware harness files without a manifest hash can migrate to the bundled version, while custom same-path files remain preserved
+  - Local-source MCP config env resolution now uses the detected source root for `.env` and relative `DATA_DIR`
+
+### Changed
+
+- **Release and documentation hygiene**
+  - CI/release dependency installation now uses `uv sync --frozen` with `uv lock --check` in the tagged release workflow
+  - README, diagram docs, bundled Copilot instructions, and Marker docs now report the current `50 tools / 13 resources` and updated Marker install command
+  - Research assistant agent instructions were simplified around clear PubMed Search MCP vs Zotero Keeper ownership boundaries
+
 ## [0.6.15] - 2026-04-29
 
 ### Added

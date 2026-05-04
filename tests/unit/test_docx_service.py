@@ -36,6 +36,34 @@ def test_find_libreoffice_binary_uses_soffice_on_macos(monkeypatch):
     )
 
 
+def test_libreoffice_conversion_refuses_to_overwrite_existing_docx(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "legacy.doc"
+    source.write_bytes(b"legacy")
+    existing_docx = tmp_path / "legacy.docx"
+    existing_docx.write_bytes(b"keep-me")
+
+    def fake_run(command, **_kwargs):
+        out_dir = Path(command[command.index("--outdir") + 1])
+        (out_dir / "legacy.docx").write_bytes(b"converted")
+        return MagicMock(returncode=0, stderr="")
+
+    monkeypatch.setattr(
+        DocxService, "_find_libreoffice_binary", staticmethod(lambda: "soffice")
+    )
+    monkeypatch.setattr("src.application.docx_service.subprocess.run", fake_run)
+    monkeypatch.setattr(
+        "src.application.docx_service.validate_docx_structure", MagicMock()
+    )
+
+    result = DocxService._convert_to_docx_via_libreoffice(source)
+
+    assert result is None
+    assert existing_docx.read_bytes() == b"keep-me"
+
+
 @pytest.mark.asyncio
 async def test_delete_docx_success():
     repository = MagicMock()

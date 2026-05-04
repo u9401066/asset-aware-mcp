@@ -18,8 +18,6 @@ from .config import settings
 if TYPE_CHECKING:
     from lightrag import LightRAG  # type: ignore
 
-from lightrag.base import EmbeddingFunc  # type: ignore
-
 # ============================================================================
 # Ollama LLM Functions for LightRAG
 # ============================================================================
@@ -227,6 +225,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
 
         try:
             from lightrag import LightRAG  # type: ignore
+            from lightrag.base import EmbeddingFunc  # type: ignore
 
             # Ensure working directory exists
             working_dir = settings.lightrag_working_dir
@@ -275,7 +274,8 @@ class LightRAGAdapter(KnowledgeGraphInterface):
 
         except ImportError as e:
             raise RuntimeError(
-                "LightRAG not installed. Install with: uv add lightrag-hku"
+                "LightRAG backend is not available. Install `lightrag-hku` "
+                "(not the unrelated `lightrag` package) with `uv sync` for this project."
             ) from e
 
     async def insert(self, doc_id: str, text: str) -> None:
@@ -397,9 +397,13 @@ class LightRAGAdapter(KnowledgeGraphInterface):
             # Use local mode for entity-focused extraction
             from lightrag import QueryParam  # type: ignore
 
+            context = text.strip()
+            if len(context) > 4000:
+                context = context[:4000] + "\n...[truncated]"
             result = await rag.aquery(
                 f"List the top {limit} most important entities (people, organizations, "
-                f"medical terms, drugs, diseases) mentioned in this context.",
+                f"medical terms, drugs, diseases) mentioned in this context.\n\n"
+                f"Context:\n{context}",
                 param=QueryParam(mode="local"),
             )
 
@@ -607,10 +611,11 @@ class LightRAGAdapter(KnowledgeGraphInterface):
             return False
 
         try:
-            import lightrag  # type: ignore # noqa: F401
+            from lightrag import LightRAG, QueryParam  # type: ignore # noqa: F401
+            from lightrag.base import EmbeddingFunc  # type: ignore # noqa: F401
 
             return True
-        except ImportError:
+        except (ImportError, AttributeError):
             return False
 
 

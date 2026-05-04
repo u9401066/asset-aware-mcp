@@ -650,6 +650,75 @@ class TestDocumentTools:
         result = await parse_pdf_structure("/nonexistent/file.pdf")
         assert "❌" in result
 
+    async def test_parse_pdf_structure_reports_missing_marker_backend(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """parse_pdf_structure returns actionable install guidance when marker is absent."""
+        pdf_path = tmp_path / "paper.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 test")
+
+        from src.domain.marker_errors import MarkerBackendUnavailable
+        from src.presentation.tools import document_tools
+
+        monkeypatch.setattr(document_tools.settings, "data_dir", tmp_path / "data")
+        monkeypatch.setattr(document_tools.pdf_extractor, "get_page_count", lambda _: 1)
+        monkeypatch.setattr(
+            document_tools,
+            "get_marker_extractor",
+            MagicMock(side_effect=MarkerBackendUnavailable("No module named 'marker'")),
+        )
+
+        result = await document_tools.parse_pdf_structure(str(pdf_path))
+
+        assert "Marker Backend Not Available" in result
+        assert "uv sync --extra marker" in result
+        assert "virtual environment" in result
+
+    async def test_parse_pdf_structure_reports_marker_resource_limit(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """parse_pdf_structure gives chunk/fallback guidance for catchable OOM errors."""
+        pdf_path = tmp_path / "paper.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 test")
+
+        from src.presentation.tools import document_tools
+
+        marker = MagicMock()
+        marker.parse.side_effect = RuntimeError("CUDA out of memory")
+
+        monkeypatch.setattr(document_tools.settings, "data_dir", tmp_path / "data")
+        monkeypatch.setattr(document_tools.pdf_extractor, "get_page_count", lambda _: 1)
+        monkeypatch.setattr(document_tools, "get_marker_extractor", lambda: marker)
+
+        result = await document_tools.parse_pdf_structure(str(pdf_path))
+
+        assert "Marker Resource Limit" in result
+        assert "marker_max_pages_per_chunk=1" in result
+        assert "use_marker=False" in result
+
+    async def test_parse_pdf_structure_reports_invalid_page_range_before_work(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        pdf_path = tmp_path / "paper.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 test")
+
+        from src.presentation.tools import document_tools
+
+        monkeypatch.setattr(document_tools.pdf_extractor, "get_page_count", lambda _: 1)
+
+        result = await document_tools.parse_pdf_structure(
+            str(pdf_path),
+            page_ranges=["2"],
+        )
+
+        assert "Invalid PDF or page range" in result
+
     async def test_search_source_location_no_blocks(self) -> None:
         """search_source_location returns error when blocks.json missing."""
         with patch("src.presentation.tools.document_tools.repository") as mock_repo:
@@ -832,10 +901,16 @@ class TestDocumentTools:
 
     async def test_ingest_documents_async_passes_use_marker_to_job(self) -> None:
         """ingest_documents async job preserves Marker tuning parameters."""
-        with patch("src.presentation.tools.document_tools.job_service") as mock_jobs:
+        with (
+            patch("src.presentation.tools.document_tools.job_service") as mock_jobs,
+            patch(
+                "src.presentation.tools.document_tools.get_marker_extractor"
+            ) as mock_marker,
+        ):
             mock_jobs.create_ingest_job = AsyncMock(
                 return_value=MagicMock(job_id="job_123", estimated_duration_seconds=10)
             )
+            mock_marker.return_value = MagicMock()
             from src.presentation.tools.document_tools import ingest_documents
 
             result = await ingest_documents(
@@ -889,6 +964,19 @@ class TestDocumentTools:
             "extract_figures": True,
             "page_ranges": [],
         }
+
+    async def test_ingest_documents_async_reports_job_creation_limit(self) -> None:
+        """ingest_documents returns an MCP error instead of raising when job queue is full."""
+        with patch("src.presentation.tools.document_tools.job_service") as mock_jobs:
+            mock_jobs.create_ingest_job = AsyncMock(
+                side_effect=RuntimeError("Too many concurrent jobs")
+            )
+            from src.presentation.tools.document_tools import ingest_documents
+
+            result = await ingest_documents(["workspace/test.pdf"], async_mode=True)
+
+        assert "Could Not Create ETL Job" in result
+        assert "Too many concurrent jobs" in result
 
     async def test_export_document_segmentation_success(self) -> None:
         """export_document_segmentation writes schema summary."""

@@ -520,6 +520,14 @@ class TestSaveMarkerImagesFigureMatching:
 class TestMarkerChunking:
     """測試大型 PDF chunked Marker parsing。"""
 
+    @pytest.fixture(autouse=True)
+    def _skip_marker_backend_preflight(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            MarkerPDFExtractor,
+            "require_backend_available",
+            staticmethod(lambda: None),
+        )
+
     def test_parse_passes_extract_images_to_converter(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -753,6 +761,56 @@ class TestMarkerChunking:
         assert result.metadata["auto_chunk_applied"] is True
         assert result.metadata["resolved_max_pages_per_chunk"] == 200
 
+    def test_parse_auto_chunks_short_ocr_heavy_range_by_default(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        pdf_path = tmp_path / "ocr_heavy.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 test")
+
+        extractor = MarkerPDFExtractor()
+        converter = object()
+        observed_chunk_size: dict[str, int] = {}
+
+        monkeypatch.setattr(extractor, "_count_pdf_pages", lambda _pdf_path: 12)
+        monkeypatch.setattr(
+            extractor,
+            "_count_embedded_image_refs",
+            lambda _pdf_path: 0,
+        )
+        monkeypatch.setattr(
+            extractor,
+            "_get_converter",
+            lambda *, extract_images: converter,
+        )
+        monkeypatch.setattr(
+            extractor,
+            "_build_chunk_ranges",
+            lambda _pdf_path, max_pages: (
+                observed_chunk_size.setdefault("value", max_pages),
+                (12, [(1, max_pages)]),
+            )[1],
+        )
+        monkeypatch.setattr(
+            extractor,
+            "_parse_single_pdf",
+            lambda _converter, _pdf_path, *, page_offset=0: MarkerParseResult(
+                markdown="# Chunk",
+                blocks=[],
+                toc=[],
+                images={},
+                metadata={},
+                page_count=12,
+            ),
+        )
+
+        result = extractor.parse(pdf_path)
+
+        assert observed_chunk_size["value"] == 1
+        assert result.metadata["auto_chunk_applied"] is True
+        assert result.metadata["resolved_max_pages_per_chunk"] == 1
+
     def test_parse_remaps_subset_local_pages_back_to_original(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -803,5 +861,6 @@ class TestMarkerChunking:
 
         assert result.page_count == 300
         assert result.blocks[0].page == 10
+        assert result.blocks[0].metadata["id"] == "/page/9/Figure/1"
         assert result.toc[0]["page"] == 12
         assert set(result.images) == {"_page_9_Figure_1.png"}

@@ -151,12 +151,18 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
                 this.log('Merged .env file settings');
             }
 
+            const localRunArgs = getUvRunArgs(PREFERRED_RUNTIME_PYTHON, enableMarkerBackend);
+            this.log('Marker backend enabled: ' + String(enableMarkerBackend));
+            if (enableMarkerBackend) {
+                this.log('Local source launch will include: --extra marker');
+            }
+
             this.log(
                 'Command: '
                 + uvCommand
                 + ' '
                 + [
-                    ...getUvRunArgs(PREFERRED_RUNTIME_PYTHON),
+                    ...localRunArgs,
                     '--directory',
                     mcpServerDir,
                     'python',
@@ -169,7 +175,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
                 label: 'Asset-Aware MCP (Dev)',
                 command: uvCommand,
                 args: [
-                    ...getUvRunArgs(PREFERRED_RUNTIME_PYTHON),
+                    ...localRunArgs,
                     '--directory', mcpServerDir,
                     'python', '-m', 'src.server'
                 ],

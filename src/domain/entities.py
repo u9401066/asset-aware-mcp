@@ -267,6 +267,7 @@ class IngestResult(BaseModel):
     title: str = ""
     success: bool = True
     error: str | None = None
+    warnings: list[str] = Field(default_factory=list)
     manifest: DocumentManifest | None = None
 
     # Processing stats

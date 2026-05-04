@@ -82,6 +82,14 @@ def _env_flag(name: str, default: bool) -> bool:
     return raw_value.strip().lower() not in {"0", "false", "no", "off"}
 
 
+def _get_pdf_worker_context() -> Any:
+    """Prefer fork isolation when available, otherwise use spawn for portability."""
+    try:
+        return multiprocessing.get_context("fork")
+    except (RuntimeError, ValueError):
+        return multiprocessing.get_context("spawn")
+
+
 @dataclass
 class ExtractedImage:
     """Data class for extracted image information."""
@@ -151,7 +159,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         if timeout_seconds <= 0:
             return self._extract_text_direct(pdf_path)
 
-        ctx = multiprocessing.get_context("fork")
+        ctx = _get_pdf_worker_context()
         queue = ctx.Queue()
         process = ctx.Process(
             target=_extract_text_worker,
@@ -446,7 +454,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         if timeout_seconds <= 0:
             return self._extract_images_direct(pdf_path)
 
-        ctx = multiprocessing.get_context("fork")
+        ctx = _get_pdf_worker_context()
         queue = ctx.Queue()
         process = ctx.Process(
             target=_extract_images_worker,
@@ -983,7 +991,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         if timeout_seconds <= 0:
             return self._extract_tables_direct(pdf_path)
 
-        ctx = multiprocessing.get_context("fork")
+        ctx = _get_pdf_worker_context()
         queue = ctx.Queue()
         process = ctx.Process(
             target=_extract_tables_worker,
@@ -1246,7 +1254,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         if timeout_seconds <= 0:
             return self._extract_figure_captions_direct(pdf_path)
 
-        ctx = multiprocessing.get_context("fork")
+        ctx = _get_pdf_worker_context()
         queue = ctx.Queue()
         process = ctx.Process(
             target=_extract_figure_captions_worker,

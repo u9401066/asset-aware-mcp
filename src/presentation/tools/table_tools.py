@@ -438,11 +438,18 @@ async def _table_render(
     result = await table_service.render_table(table_id, fmt, filename)
     await report_progress(ctx, 100, message=f"Rendered table {table_id}")
     await log_message(ctx, "info", f"table_render complete: {table_id}")
+    if result.get("file_path"):
+        return (
+            f"✅ Rendered!\n"
+            f"- **Format:** {result['format']}\n"
+            f"- **Path:** `{result['file_path']}`\n"
+            f"- **Rows:** {result['row_count']}"
+        )
     return (
         f"✅ Rendered!\n"
         f"- **Format:** {result['format']}\n"
-        f"- **Path:** `{result['file_path']}`\n"
-        f"- **Rows:** {result['row_count']}"
+        f"- **Rows:** {result['row_count']}\n\n"
+        f"{result.get('content', '')}"
     )
 
 

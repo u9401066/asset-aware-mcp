@@ -73,8 +73,12 @@ export async function getUvVersion(uvPath: string): Promise<string> {
     return stdout.trim();
 }
 
-export function getUvRunArgs(pythonVersion: string = PREFERRED_RUNTIME_PYTHON): string[] {
-    return ['run', '--python', pythonVersion];
+export function getUvRunArgs(
+    pythonVersion: string = PREFERRED_RUNTIME_PYTHON,
+    withMarker: boolean = false,
+): string[] {
+    const markerArgs = withMarker ? ['--extra', 'marker'] : [];
+    return ['run', '--python', pythonVersion, ...markerArgs];
 }
 
 export function getMarkerRuntimeArgs(torchBackend: string = DEFAULT_TORCH_BACKEND): string[] {

@@ -222,7 +222,7 @@ wheels = [
 
 [[package]]
 name = "asset-aware-mcp"
-version = "0.6.15"
+version = "0.6.16"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -247,6 +247,9 @@ dependencies = [
 marker = [
     { name = "marker-pdf" },
 ]
+pdf = [
+    { name = "marker-pdf" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -268,6 +271,7 @@ requires-dist = [
     { name = "lightrag-hku", specifier = ">=1.4.11" },
     { name = "lxml", specifier = ">=5.0.0" },
     { name = "marker-pdf", marker = "extra == 'marker'", specifier = ">=1.10.2" },
+    { name = "marker-pdf", marker = "extra == 'pdf'", specifier = ">=1.10.2" },
     { name = "mcp", specifier = ">=1.0.0" },
     { name = "mistralai", specifier = ">=1.0.0" },
     { name = "pillow", specifier = ">=10.0.0" },
@@ -281,7 +285,7 @@ requires-dist = [
     { name = "tabulate", specifier = ">=0.9.0" },
     { name = "xlsxwriter", specifier = ">=3.2.9" },
 ]
-provides-extras = ["marker"]
+provides-extras = ["marker", "pdf"]
 
 [package.metadata.requires-dev]
 dev = [

@@ -32,6 +32,11 @@ from src.domain.line_spans import (
     annotate_marker_blocks,
     apply_asset_line_spans,
 )
+from src.domain.marker_errors import (
+    format_marker_failure,
+    is_marker_backend_unavailable,
+    is_marker_resource_error,
+)
 from src.domain.services import ManifestGenerator
 from src.domain.value_objects import DocId
 
@@ -334,6 +339,13 @@ class DocumentService:
                     deskew=deskew,
                     page_ranges=page_ranges,
                 )
+                if use_marker and result.success:
+                    result.backend = "pymupdf_fallback"
+                    result.warnings.append(
+                        "Marker was requested but the extractor was not configured; "
+                        "used PyMuPDF fallback. Install Marker with `uv sync --extra marker` "
+                        "in the MCP server environment for structured blocks."
+                    )
             results.append(result)
 
         return results
@@ -886,13 +898,39 @@ class DocumentService:
             )
 
         except Exception as e:
-            import traceback
+            marker_message = format_marker_failure(e)
+            if is_marker_backend_unavailable(e) or is_marker_resource_error(e):
+                fallback_result = await self._ingest_single(
+                    file_path,
+                    progress_callback=progress_callback,
+                    ocr_enabled=ocr_enabled,
+                    ocr_language=ocr_language,
+                    rotate_pages=rotate_pages,
+                    deskew=deskew,
+                    page_ranges=page_ranges,
+                )
+                if fallback_result.success:
+                    fallback_result.backend = "pymupdf_fallback"
+                    fallback_result.warnings.append(
+                        f"Marker parse failed and PyMuPDF fallback was used. {marker_message}"
+                    )
+                    return fallback_result
+
+                return IngestResult(
+                    doc_id="",
+                    filename=path.name,
+                    success=False,
+                    error=(
+                        f"{marker_message}\n"
+                        f"PyMuPDF fallback also failed: {fallback_result.error}"
+                    ),
+                )
 
             return IngestResult(
                 doc_id="",
                 filename=path.name,
                 success=False,
-                error=f"Marker parsing failed: {e!s}\n{traceback.format_exc()}",
+                error=marker_message,
             )
 
     def _convert_blocks_to_json(self, blocks: list) -> list[dict]:
@@ -1107,6 +1145,7 @@ class DocumentService:
                 "line_end": line_end,
                 "line_match_strategy": "markdown-struct",
                 "line_match_confidence": 1.0,
+                "source_backend": "pymupdf",
                 "source_order": source_order,
             },
         }

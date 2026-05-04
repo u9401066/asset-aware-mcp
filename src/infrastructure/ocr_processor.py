@@ -46,7 +46,7 @@ class OCRProcessor:
 
     def normalize_language(self, language: str) -> str:
         normalized = language.strip().lower()
-        return LANGUAGE_ALIASES.get(normalized, language)
+        return LANGUAGE_ALIASES.get(normalized, normalized)
 
     def preprocess_pdf(
         self,

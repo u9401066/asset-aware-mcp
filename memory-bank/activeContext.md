@@ -4,11 +4,14 @@
 
 ## Current Goals
 
-- 正在完成 0.6.15 release prep：整合 subagent corrective review findings，完成 VSIX harness 非破壞性同步、Copilot/Cline/Codex MCP fail-closed merge、DFM→DOCX Track Changes sidecar、MedPaper LLM wiki/Foam 對齊文件，並進行 MEM+GIT+PUSH+TAG 發布。
+- 正在完成 0.6.16 release prep：整合 multi-agent repo review 修正，完成 Marker/LightRAG/PyMuPDF/segmentation/table/DOCX/VSIX/release hygiene 補強，並進行 MEM+GIT+PUSH+TAG 發布。
 
 ## 🎯 當前焦點
 
-- **當前版本真相為 0.6.15**：本次 patch 版本包含 0.6.14 VSIX harness/MCP merge 基礎，並補上 subagent review 找到的 release-path 與 DFM citation-ready 缺口
+- **當前版本真相為 0.6.16**：本次 patch 版本以 2026-04-29 issue report 與 5-agent repo review 為依據，修正 Marker optional backend、LightRAG prompt、PyMuPDF segmentation provenance、A2T table citation safety、DOCX legacy conversion overwrite、VSIX harness migration 與 release/docs drift
+- **0.6.16 local gates 已完成**：full `uv run pytest -q` → `686 passed, 21 skipped`；Ruff、format、MyPy、`uv lock --check`、VSIX `npm run test:ci`、sync-assets check、package contents 與 `git diff --check` 均通過
+- **Release hygiene 更新**：CI/release 改用 `uv sync --frozen` / `uv lock --check`；README/diagram/Copilot harness/Marker docs 更新為 50 tools / 13 resources；VSIX README banner/version 已對齊 `v0.6.16`
+- **Workspace git policy 本輪決策**：納入 tracked workspace 變更與新 regression tests；忽略 `.asset-aware-mcp/` 與 `.vscode/mcp.json.invalid.*.bak` 這類本機 runtime/backup 產物
 - **VSIX assistant assets 改為 manifest-based non-destructive sync**：啟動時只會更新「先前由 extension 寫入且未被使用者修改」的檔案；同路徑自訂檔會保留，避免吃掉 custom harness
 - **VSIX bundled harness 自洽性補齊**：`sync-assets`/VSIX package 現在包含 `.github/bylaws/**` 與 `.claude/skills/**`，避免 Copilot instructions 引用不存在的 harness assets
 - **MCP config merge fail-closed**：Copilot/Cline malformed JSON 與 Codex suspicious TOML/read failures 會備份/警告並跳過寫入，不再用空白 config 覆蓋原檔
@@ -127,7 +130,7 @@ src/
 ├── domain/          # 🔵 核心業務邏輯 (+docx_entities, docx_value_objects)
 ├── application/     # 🟢 使用案例 (+docx_service, dfm_table_bridge)
 ├── infrastructure/  # 🟠 外部依賴實作 (+docx_adapter, dfm_parser, dfm_renderer, docx_validator)
-└── presentation/    # 🔴 MCP Server (48 tools in 7 modules, 13 resources)
+└── presentation/    # 🔴 MCP Server (50 tools in 7 modules, 13 resources)
     ├── tools/
     │   ├── document_tools.py   # ETL + document management (11)
     │   ├── docx_tools.py       # Docx DFM + conversion (14) — core + validator + bridge

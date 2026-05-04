@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import src.infrastructure.pdf_extractor as pdf_extractor
 from src.infrastructure.pdf_extractor import PyMuPDFExtractor
 
 
@@ -82,3 +83,22 @@ def test_extract_figure_captions_times_out_and_returns_empty(monkeypatch) -> Non
     assert result == {}
     assert process.join_calls == [20.0, 5]
     assert process.terminated is True
+
+
+def test_pdf_worker_context_falls_back_to_spawn(monkeypatch) -> None:
+    calls: list[str] = []
+    spawn_context = object()
+
+    def fake_get_context(method: str) -> object:
+        calls.append(method)
+        if method == "fork":
+            raise ValueError("fork is not available")
+        return spawn_context
+
+    monkeypatch.setattr(
+        "src.infrastructure.pdf_extractor.multiprocessing.get_context",
+        fake_get_context,
+    )
+
+    assert pdf_extractor._get_pdf_worker_context() is spawn_context
+    assert calls == ["fork", "spawn"]

@@ -20,6 +20,7 @@ from src.application.section_service import SectionService
 from src.application.segmentation_service import SegmentationService
 from src.application.table_service import TableService
 from src.domain.etl_profile import ETLProfile
+from src.domain.marker_errors import MarkerBackendUnavailable
 from src.infrastructure.config import settings
 from src.infrastructure.excel_renderer import ExcelRenderer
 from src.infrastructure.file_storage import FileStorage
@@ -102,6 +103,11 @@ def get_marker_extractor() -> MarkerPDFExtractor:
                 "Marker backend is not installed. Install it with `uv sync --extra marker` "
                 "for local/dev usage, or enable the Marker backend in the VS Code extension settings."
             ) from exc
+
+        try:
+            MarkerPDFExtractor.require_backend_available()
+        except MarkerBackendUnavailable:
+            raise
 
         marker_extractor = MarkerPDFExtractor()
     return marker_extractor

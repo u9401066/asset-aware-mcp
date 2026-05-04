@@ -45,7 +45,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync
+          uv lock --check
+          uv sync --frozen
 
       - name: Resolve and validate release version
         run: |

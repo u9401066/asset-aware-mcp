@@ -132,13 +132,18 @@ export function buildAssetAwareLaunchSpec(
 ): AssetAwareLaunchSpec {
     const workspaceRoot = options.workspaceRoot ?? getPrimaryWorkspaceRoot();
     const localSource = findLocalAssetAwareSource(workspaceRoot, workspaceRoot);
-    const env = buildAssetAwareEnv(context, workspaceRoot);
+    const envRoot = localSource ?? workspaceRoot;
+    const env = buildAssetAwareEnv(context, envRoot);
+    const config = vscode.workspace.getConfiguration('assetAwareMcp');
 
     if (localSource) {
         return {
             command: uvPath,
             args: [
-                ...getUvRunArgs(PREFERRED_RUNTIME_PYTHON),
+                ...getUvRunArgs(
+                    PREFERRED_RUNTIME_PYTHON,
+                    config.get('enableMarkerBackend', false),
+                ),
                 '--directory',
                 localSource,
                 'python',
@@ -150,7 +155,6 @@ export function buildAssetAwareLaunchSpec(
         };
     }
 
-    const config = vscode.workspace.getConfiguration('assetAwareMcp');
     const serverVersion = context.extension?.packageJSON?.version as string | undefined;
     const launch = getUvxLaunch(
         uvPath,

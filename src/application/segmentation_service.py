@@ -52,8 +52,8 @@ class SegmentationService:
             ):
                 annotate_marker_blocks(markdown, blocks)
                 self.repository.save_blocks(doc_id, blocks)
-            segments = self._segments_from_blocks(manifest, blocks)
-            backend = "marker"
+            backend = self._infer_backend_from_blocks(manifest, blocks)
+            segments = self._segments_from_blocks(manifest, blocks, backend)
         else:
             segments = self._segments_from_manifest(manifest)
             backend = self._infer_backend(manifest)
@@ -103,6 +103,7 @@ class SegmentationService:
         self,
         manifest: DocumentManifest,
         blocks: list[dict[str, object]],
+        default_source_backend: str,
     ) -> list[DocumentSegment]:
         ordered_blocks = list(enumerate(blocks))
         used_figure_ids: set[str] = set()
@@ -156,7 +157,10 @@ class SegmentationService:
                     section_hierarchy=self._section_path(
                         block.get("section_hierarchy")
                     ),
-                    source_backend="marker",
+                    source_backend=self._block_source_backend(
+                        block,
+                        default_source_backend,
+                    ),
                     metadata={
                         "original_block_type": str(block.get("block_type") or ""),
                         "source_block_id": str(block.get("block_id") or ""),
@@ -415,6 +419,34 @@ class SegmentationService:
         if any(table.source == "marker" for table in manifest.assets.tables):
             return "marker"
         return "pymupdf"
+
+    @staticmethod
+    def _infer_backend_from_blocks(
+        manifest: DocumentManifest,
+        blocks: list[dict[str, object]],
+    ) -> str:
+        backends = {
+            str(metadata.get("source_backend"))
+            for block in blocks
+            if isinstance((metadata := block.get("metadata")), dict)
+            and str(metadata.get("source_backend") or "").strip()
+        }
+        if len(backends) == 1:
+            return next(iter(backends))
+        if "marker" in backends:
+            return "marker"
+        if "pymupdf" in backends:
+            return "pymupdf"
+        return SegmentationService._infer_backend(manifest)
+
+    @staticmethod
+    def _block_source_backend(
+        block: dict[str, object],
+        default_source_backend: str,
+    ) -> str:
+        metadata = SegmentationService._metadata_dict(block.get("metadata"))
+        backend = str(metadata.get("source_backend") or "").strip()
+        return backend or default_source_backend
 
     @staticmethod
     def _metadata_dict(value: object) -> dict[str, object]:

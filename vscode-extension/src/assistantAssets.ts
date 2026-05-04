@@ -100,6 +100,7 @@ function syncManagedFile(
     workspaceRoot: string,
     manifest: ManagedAssetManifest,
     summary: InstallSummary,
+    options: { legacyManaged?: boolean } = {},
 ): void {
     const incoming = fs.readFileSync(sourcePath, 'utf-8');
     const incomingHash = sha256(incoming);
@@ -121,6 +122,13 @@ function syncManagedFile(
 
     const priorHash = manifest.files[relativePath]?.sha256;
     if (priorHash && existingHash === priorHash) {
+        copyBundledFile(sourcePath, destinationPath);
+        manifest.files[relativePath] = { sha256: incomingHash };
+        summary.updated++;
+        return;
+    }
+
+    if (options.legacyManaged) {
         copyBundledFile(sourcePath, destinationPath);
         manifest.files[relativePath] = { sha256: incomingHash };
         summary.updated++;
@@ -181,7 +189,10 @@ function syncFileWithDetector(
 
     const existing = readUtf8IfExists(destinationPath);
     if (existing === undefined || detector(existing)) {
-        syncManagedFile(sourcePath, destinationPath, workspaceRoot, manifest, summary);
+        const relativePath = normalizeManifestPath(workspaceRoot, destinationPath);
+        syncManagedFile(sourcePath, destinationPath, workspaceRoot, manifest, summary, {
+            legacyManaged: existing !== undefined && manifest.files[relativePath] === undefined,
+        });
         return;
     }
 

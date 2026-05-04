@@ -301,6 +301,11 @@ class DocxService:
 
                 # Move to same directory as original
                 dest = source_path.with_suffix(".docx")
+                if dest.exists():
+                    logger.error(
+                        "Refusing to overwrite existing converted DOCX: %s", dest
+                    )
+                    return None
                 shutil.move(str(converted), str(dest))
                 validate_docx_structure(dest)
                 return dest

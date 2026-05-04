@@ -76,6 +76,10 @@ vscode-extension/out/
 vscode-extension/*.vsix
 vscode-extension/.vscode-test/
 
+# Local MCP/VSIX runtime state
+.asset-aware-mcp/
+.vscode/mcp.json.invalid.*.bak
+
 # Images (mostly ignored; allow curated assets)
 *.png
 !vscode-extension/resources/icon.png

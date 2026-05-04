@@ -64,8 +64,8 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP 伺服器 (模組化 Presentation 層)          │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 47 工具，7 個模組                       │   │
-│  │   document (11) │ docx (14) │ section (5)       │   │
+│  │ tools/: 50 工具，7 個模組                       │   │
+│  │   document (14) │ docx (14) │ section (5)       │   │
 │  │   job (3) │ knowledge (2) │ table (7) │ profile (5) │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │
@@ -116,16 +116,16 @@ asset-aware-mcp/
 | 圖表 | 說明 |
 |-----|------|
 | [01 — 系統架構](docs/diagrams/01-system-architecture.jpg) | 完整架構：Telegram → Gateway → MCP Adapter → Ollama |
-| [02 — 資料結構](docs/diagrams/02-data-layout.jpg) | 48 工具分 7 大類 + 資料樹狀圖 |
+| [02 — 資料結構](docs/diagrams/02-data-layout.jpg) | 50 工具分 7 大類 + 資料樹狀圖 |
 | [03 — PDF 解讀流程](docs/diagrams/03-pdf-ingestion-pipeline.jpg) | 7 階段流程：PDF 上傳 → 知識圖譜 |
 | [04 — DOCX 雙向編輯](docs/diagrams/04-docx-edit-pipeline.jpg) | DOCX 吃入 → TableContext 編輯 → 往返存檔 |
 | [05 — 知識圖譜搜尋](docs/diagrams/05-knowledge-graph-search.jpg) | 跨文件搜尋的三條平行路徑 |
 | [06 — 安裝步驟](docs/diagrams/06-installation-steps.jpg) | 7 步驟從 clone 到驗證 |
 | [07 — PDF ETL 流程](docs/diagrams/07-pdf-etl-pipeline.jpg) | 雙引擎解析：PyMuPDF + Marker |
 | [08 — KG 架構](docs/diagrams/08-knowledge-graph-architecture.jpg) | lightrag-hku 三層知識圖譜架構 |
-| [08 — KG 架構](docs/diagrams/08-knowledge-graph-architecture.jpg) | lightrag-hku 三層知識圖譜架構 |
+| [09 — Agent Harness 概念](docs/diagrams/09-agent-harness-concept.jpg) | 給無狀態代理使用的 assistant harness 模型 |
 
-> 💡 所有生成 prompt 保存在 [docs/diagrams/prompts/README.md](docs/diagrams/prompts/README.md)，方便再生成時維持風格一致。
+> 💡 所有生成 prompt 保存在 [docs/diagrams/ALL-PROMPTS.md](docs/diagrams/ALL-PROMPTS.md)，方便再生成時維持風格一致。
 
 ## 🚀 快速開始
 
@@ -135,6 +135,8 @@ uv sync
 
 # 如需高精度結構化解析，再額外安裝 Marker backend
 uv sync --extra marker
+# 舊文件/腳本相容別名
+uv sync --extra pdf
 
 # 啟動 MCP 伺服器
 uv run python -m src.presentation.server
@@ -151,7 +153,7 @@ VS Code 擴充套件在透過 `uv` / `uvx` 啟動 MCP server 時，會優先使�
 - 執行時資料留在 workspace：`.env` 與 `assetAwareMcp.dataDir` 預設指向 `./data`，讓攝入結果跟著專案存放，避免佔用全域資源。
 
 Marker 說明：
-`marker-pdf` 現在是可選依賴，因為它可能拉入 `torch`、`surya` 與平台相關的 ML wheels。預設安裝只使用 PyMuPDF 後端；只有在你真的需要 `use_marker=True` 或 `parse_pdf_structure` 時才建議額外安裝。
+`marker-pdf` 現在是可選依賴，因為它可能拉入 `torch`、`surya` 與平台相關的 ML wheels。預設安裝只使用 PyMuPDF 後端；只有在你真的需要 `use_marker=True` 或 `parse_pdf_structure` 時才建議額外安裝。請把 extra 安裝在實際啟動 MCP server 的同一個環境；若 Marker 遇到記憶體壓力，先改用 `extract_figures=False` 與 `marker_max_pages_per_chunk=1`，或退回 PyMuPDF fallback。
 
 ## 🔌 MCP 工具
 
@@ -262,7 +264,7 @@ Marker 說明：
 
 安裝建議：
 - 預設安裝：`uv sync`
-- 需要 Marker 時再安裝：`uv sync --extra marker`
+- 需要 Marker 時再安裝：`uv sync --extra marker`（保留 `uv sync --extra pdf` 作為舊文件/腳本相容別名）
 - VS Code extension 要啟用 Marker 時，建議先用 `torchBackend=cpu`，除非你明確需要 GPU wheels
 
 - [技術規格書](docs/spec.md) - 詳細技術定義

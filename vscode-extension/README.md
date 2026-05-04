@@ -6,15 +6,15 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.15/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.16/resources/banner.png)
 
-## 🆕 What's New in v0.6.15
+## 🆕 What's New in v0.6.16
 
-- **Assistant harness auto-sync**: VSIX startup installs/updates bundled Asset-Aware Copilot, Cline, and Codex harness assets without overwriting user customizations
-- **External MCP config merge**: Copilot, Cline, and Codex MCP settings are conservatively merged so existing custom servers stay intact and duplicate Asset-Aware entries are avoided
-- **Word Track Changes in DFM**: DOCX tracked insertions, deletions, moves, and common format revisions are exposed as read-only `dfm:revision` review blocks
-- **Release gates hardened**: asset sync, MCP merge tests, Cline skill validation, install smoke, artifact audit, Docker smoke, and package-content checks are part of the release path
-- **48 tools** across 7 modules
+- **Marker install and fallback hardening**: local dev launches include the Marker extra when enabled, missing Marker reports install guidance, and catchable OOM errors can fall back to PyMuPDF
+- **Citation-safe segmentation**: PyMuPDF synthetic blocks keep their source backend and Marker page-range metadata is remapped back to original PDF pages
+- **Safer table workflows**: table resources reject traversal, edited cells drop stale citations, and Markdown/HTML render outputs work through the MCP tool
+- **Assistant harness migration**: legacy detector-managed harness files can migrate to the bundled version without overwriting user-customized files
+- **50 tools** across 7 modules
 
 ## 🧪 Current Main Branch
 

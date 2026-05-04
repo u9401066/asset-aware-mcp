@@ -43,8 +43,10 @@ async def resource_table_content(table_id: str) -> str:
     enabling token-efficient table resumption workflows.
     """
     try:
-        # Read from saved MD file directly
-        md_path = table_service.storage_dir / f"{table_id}.md"
+        table_service.get_table_context(table_id)
+        storage_root = table_service.storage_dir.resolve()
+        md_path = (storage_root / f"{table_id}.md").resolve()
+        md_path.relative_to(storage_root)
         if md_path.exists():
             return md_path.read_text(encoding="utf-8")
         else:

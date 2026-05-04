@@ -9,6 +9,7 @@ import json
 import logging
 import uuid
 from datetime import datetime
+from html import escape
 from pathlib import Path
 from typing import Any, Literal
 
@@ -55,7 +56,7 @@ class TableService:
 
     def _load_existing_tables(self) -> None:
         """Load table metadata from disk on startup."""
-        for json_file in self.storage_dir.glob("tbl_*.json"):
+        for json_file in self.storage_dir.glob("*.json"):
             try:
                 with json_file.open(encoding="utf-8") as f:
                     data = json.load(f)
@@ -207,12 +208,17 @@ class TableService:
             return {"success": False, "errors": row_errors}
 
         old_row = dict(context.rows[index])
+        removed_citations = self._remove_changed_row_citations(context, index, row)
         context.rows[index] = row
         self._record_change(
-            context, "update_row", f"row:{index}", old_value=old_row, new_value=row
+            context,
+            "update_row",
+            f"row:{index}",
+            old_value=old_row,
+            new_value=row,
         )
         self._save_table(context)
-        return {"success": True}
+        return {"success": True, "citations_removed": removed_citations}
 
     def delete_row(self, table_id: str, index: int) -> dict[str, Any]:
         """Delete a row by index."""
@@ -282,6 +288,13 @@ class TableService:
 
         # Update the cell
         old_value = context.rows[row_index].get(column_name)
+        citation_removed = self._remove_cell_citation_if_value_changed(
+            context,
+            row_index,
+            column_name,
+            old_value,
+            value,
+        )
         context.rows[row_index][column_name] = value
         self._record_change(
             context,
@@ -298,6 +311,7 @@ class TableService:
             "column": column_name,
             "old_value": old_value,
             "new_value": value,
+            "citation_removed": citation_removed,
         }
 
     def get_table_status(self, table_id: str) -> dict[str, Any]:
@@ -381,8 +395,69 @@ class TableService:
                 "content": preview,
                 "row_count": context.row_count,
             }
+        elif format == "html":
+            content = self._render_html_table(context)
+            return {
+                "success": True,
+                "format": "html",
+                "content": content,
+                "row_count": context.row_count,
+            }
         else:
             raise NotImplementedError(f"Format '{format}' is not yet supported.")
+
+    def _remove_changed_row_citations(
+        self,
+        context: TableContext,
+        row_index: int,
+        new_row: dict[str, Any],
+    ) -> list[str]:
+        """Remove cell citations when the cited cell value changes."""
+        removed: list[str] = []
+        old_row = context.rows[row_index]
+        for column_name in context.column_names:
+            if old_row.get(column_name) == new_row.get(column_name):
+                continue
+            if context.get_citation(row_index, column_name) is None:
+                continue
+            context.remove_citation(row_index, column_name)
+            removed.append(f"{row_index}:{column_name}")
+        return removed
+
+    @staticmethod
+    def _remove_cell_citation_if_value_changed(
+        context: TableContext,
+        row_index: int,
+        column_name: str,
+        old_value: Any,
+        new_value: Any,
+    ) -> bool:
+        """Remove a citation from a single cell if the cell content changed."""
+        if old_value == new_value:
+            return False
+        if context.get_citation(row_index, column_name) is None:
+            return False
+        context.remove_citation(row_index, column_name)
+        return True
+
+    @staticmethod
+    def _render_html_table(context: TableContext) -> str:
+        headers = context.column_names
+        header_html = "".join(f"<th>{escape(header)}</th>" for header in headers)
+        rows_html = []
+        for row in context.rows:
+            cells = "".join(
+                f"<td>{escape(str(row.get(header, '')))}</td>" for header in headers
+            )
+            rows_html.append(f"<tr>{cells}</tr>")
+        body_html = "".join(rows_html)
+        return (
+            "<table>"
+            f"<caption>{escape(context.title)}</caption>"
+            f"<thead><tr>{header_html}</tr></thead>"
+            f"<tbody>{body_html}</tbody>"
+            "</table>"
+        )
 
     # =========================================================================
     # Audit Trail Recording

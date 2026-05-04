@@ -65,6 +65,13 @@ describe('uv path discovery', () => {
         assert.deepStrictEqual(getUvRunArgs(), ['run', '--python', PREFERRED_RUNTIME_PYTHON]);
     });
 
+    it('builds uv run args with local marker extra', () => {
+        assert.deepStrictEqual(
+            getUvRunArgs(PREFERRED_RUNTIME_PYTHON, true),
+            ['run', '--python', PREFERRED_RUNTIME_PYTHON, '--extra', 'marker'],
+        );
+    });
+
     it('builds marker runtime args with cpu backend by default', () => {
         assert.deepStrictEqual(getMarkerRuntimeArgs(), ['--with', 'marker-pdf', '--torch-backend', DEFAULT_TORCH_BACKEND]);
     });
@@ -76,17 +83,17 @@ describe('uv path discovery', () => {
     });
 
     it('pins server version with --from when serverVersion provided', () => {
-        const launch = getUvxLaunch('uv', PREFERRED_RUNTIME_PYTHON, false, 'cpu', '0.6.15');
+        const launch = getUvxLaunch('uv', PREFERRED_RUNTIME_PYTHON, false, 'cpu', '0.6.16');
 
-        assert.deepStrictEqual(launch.args, ['--python', PREFERRED_RUNTIME_PYTHON, '--from', 'asset-aware-mcp==0.6.15']);
+        assert.deepStrictEqual(launch.args, ['--python', PREFERRED_RUNTIME_PYTHON, '--from', 'asset-aware-mcp==0.6.16']);
     });
 
     it('adds --upgrade flag when upgrade is true', () => {
-        const launch = getUvxLaunch('uv', PREFERRED_RUNTIME_PYTHON, false, 'cpu', '0.6.15', true);
+        const launch = getUvxLaunch('uv', PREFERRED_RUNTIME_PYTHON, false, 'cpu', '0.6.16', true);
 
         assert.ok(launch.args.includes('--upgrade'));
         assert.ok(launch.args.includes('--from'));
-        assert.ok(launch.args.includes('asset-aware-mcp==0.6.15'));
+        assert.ok(launch.args.includes('asset-aware-mcp==0.6.16'));
     });
 
     it('combines version pin, upgrade, and marker args', () => {

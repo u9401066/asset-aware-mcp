@@ -1,7 +1,11 @@
-# Progress (Updated: 2026-04-29)
+# Progress (Updated: 2026-05-04)
 
 ## Done
 
+- 完成 0.6.16 multi-agent repo corrective release：修正 Marker optional backend preflight/fallback、Marker page-map metadata remap、LightRAG entity prompt context、PyMuPDF segmentation backend provenance、A2T table resource traversal/stale citation/render contract、DOCX legacy conversion overwrite、OCR language normalization、PyMuPDF spawn fallback、VSIX local-source env 與 assistant harness legacy migration
+- 完成 0.6.16 release/documentation hygiene：新增 `docs/asset-aware-mcp-issue-report-20260429.md` 作為修正來源報告，README/diagram/Copilot harness/Marker docs 對齊 50 tools / 13 resources，CI/release 改用 `uv sync --frozen` 並於 release workflow 執行 `uv lock --check`
+- 完成 0.6.16 final local verification：`uv run pytest -q` → `686 passed, 21 skipped`（Ollama / Marker integration 因本機服務或 optional backend 未安裝跳過）、`uv run ruff check .`、`uv run ruff format --check .`、`uv run mypy src --ignore-missing-imports`、`uv lock --check`、VSIX `npm run test:ci`、`git diff --check` 全部通過
+- 完成 0.6.16 release version bump：Python package、Docker label、runtime version、VSIX manifest/lock、VSIX README banner、CHANGELOG 與 Memory Bank 已對齊到 0.6.16
 - 完成 opt-in DFM→DOCX Track Changes emission：`save_docx(track_changes=True)` 會以原始 IR / edited IR 產生 token-level `w:del`/`w:ins`，同步啟用 `word/settings.xml` 的 `w:trackRevisions`，並支援表格儲存格文字 diff
 - 完成 Track Changes citation-ready sidecar：`save_docx(track_changes=True)` 現在同步輸出 `revisions.jsonl`，每筆 record 含 `doc_id`、`source_revision_id`、`revision_id`、`block_id`、`op`、old/new text hash、char/byte range、context 與 locator，可銜接 MedPaper/Foam block anchor
 - 完成 Track Changes write-back 修正後審查 findings：保留單一 hyperlink/SDT wrapper，依 run span 套用 revision run properties，避免 mixed-format 段落全部退化為第一 run 樣式
@@ -25,7 +29,7 @@
 
 ## Doing
 
-- 0.6.15 local release gates 已完成；接著 commit、push、建立並推送 `v0.6.15` tag
+- 0.6.16 local release gates 已完成；接著 commit、push、建立並推送 `v0.6.16` tag
 
 ## Next
 

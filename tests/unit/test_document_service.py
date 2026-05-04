@@ -16,6 +16,7 @@ from src.application.document_service import (
     normalize_page_ranges,
     remap_markdown_page_markers,
 )
+from src.domain.entities import IngestResult
 from src.domain.etl_profile import ETLProfile
 from src.infrastructure.marker_adapter import MarkerBlock
 
@@ -235,6 +236,43 @@ async def test_ingest_reports_progress_callback(tmp_path: Path) -> None:
     assert progress_events
     assert progress_events[-1][0] == progress_events[-1][1]
     assert progress_events[-1][2] == "Completed"
+
+
+@pytest.mark.asyncio
+async def test_marker_oom_falls_back_to_pymupdf_with_warning(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "paper.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4 test")
+
+    marker_extractor = MagicMock()
+    marker_extractor.parse.side_effect = RuntimeError("CUDA out of memory")
+
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path / "doc_123"
+
+    pdf_extractor = MagicMock()
+    pdf_extractor.get_page_count.return_value = 1
+
+    service = DocumentService(
+        repository=repository,
+        pdf_extractor=pdf_extractor,
+        marker_extractor=marker_extractor,
+    )
+    service._ingest_single = AsyncMock(
+        return_value=IngestResult(
+            doc_id="doc_123",
+            filename="paper.pdf",
+            success=True,
+            backend="pymupdf",
+        )
+    )
+
+    result = await service._ingest_single_with_marker(str(pdf_path))
+
+    assert result.success is True
+    assert result.backend == "pymupdf_fallback"
+    assert result.warnings
+    assert "marker_max_pages_per_chunk=1" in result.warnings[0]
+    assert "PyMuPDF fallback" in result.warnings[0]
 
 
 @pytest.mark.asyncio

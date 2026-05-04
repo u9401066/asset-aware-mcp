@@ -26,9 +26,12 @@ from src.domain.entities import (
     TableAsset,
 )
 from src.domain.line_spans import annotate_marker_blocks, apply_asset_line_spans
+from src.domain.marker_errors import MARKER_INSTALL_HINT, MarkerBackendUnavailable
 
-AUTO_CHUNK_PAGE_THRESHOLD = 800
-AUTO_CHUNK_SIZE = 200
+AUTO_SAFE_CHUNK_PAGE_THRESHOLD = 10
+AUTO_SAFE_CHUNK_SIZE = 1
+AUTO_LARGE_CHUNK_PAGE_THRESHOLD = 800
+AUTO_LARGE_CHUNK_SIZE = 200
 AUTO_DISABLE_FIGURES_IMAGE_THRESHOLD = 2000
 
 
@@ -97,6 +100,16 @@ class MarkerPDFExtractor:
         """
         self.output_dir = output_dir or Path("./temp_output")
         self._model_dict: dict | None = None
+
+    @staticmethod
+    def require_backend_available() -> None:
+        """Preflight marker-pdf imports without loading OCR models."""
+        try:
+            from marker.converters.pdf import PdfConverter  # type: ignore # noqa: F401
+            from marker.models import create_model_dict  # type: ignore # noqa: F401
+            from marker.output import text_from_rendered  # type: ignore # noqa: F401
+        except (ImportError, OSError) as exc:
+            raise MarkerBackendUnavailable(MARKER_INSTALL_HINT) from exc
 
     def _get_models(self) -> dict:
         """懶加載 Marker 模型（首次使用時初始化）。"""
@@ -208,6 +221,28 @@ class MarkerPDFExtractor:
         remapped = "_".join(parts)
         return f"{remapped}.{ext}" if dot else remapped
 
+    def _remap_marker_block_reference_to_original(
+        self,
+        reference: str,
+        page_map: list[int] | None,
+    ) -> str:
+        """將 subset-local Marker block path 映射回原始 PDF 頁碼。"""
+        if not page_map or not reference.startswith("/page/"):
+            return reference
+
+        parts = reference.split("/")
+        if len(parts) < 4:
+            return reference
+
+        try:
+            local_page = int(parts[2]) + 1
+        except ValueError:
+            return reference
+
+        original_page = self._remap_page_number(local_page, page_map)
+        parts[2] = str(original_page - 1)
+        return "/".join(parts)
+
     @staticmethod
     def _count_pdf_pages(pdf_path: Path) -> int:
         """快速取得 PDF 頁數。"""
@@ -242,8 +277,16 @@ class MarkerPDFExtractor:
             else None
         )
         auto_chunk_applied = False
-        if resolved_chunk_size is None and total_pages > AUTO_CHUNK_PAGE_THRESHOLD:
-            resolved_chunk_size = AUTO_CHUNK_SIZE
+        if (
+            resolved_chunk_size is None
+            and total_pages > AUTO_LARGE_CHUNK_PAGE_THRESHOLD
+        ):
+            resolved_chunk_size = AUTO_LARGE_CHUNK_SIZE
+            auto_chunk_applied = True
+        elif (
+            resolved_chunk_size is None and total_pages > AUTO_SAFE_CHUNK_PAGE_THRESHOLD
+        ):
+            resolved_chunk_size = AUTO_SAFE_CHUNK_SIZE
             auto_chunk_applied = True
 
         resolved_extract_images = extract_images
@@ -276,20 +319,28 @@ class MarkerPDFExtractor:
         reported_page_count: int | None,
     ) -> MarkerParseResult:
         """將 subset-local parse result 的頁碼映射回原始 PDF。"""
-        mapped_blocks = [
-            MarkerBlock(
-                block_id=block.block_id,
-                block_type=block.block_type,
-                page=self._remap_page_number(block.page, page_map),
-                text=block.text,
-                bbox=list(block.bbox),
-                polygon=list(block.polygon),
-                section_hierarchy=dict(block.section_hierarchy),
-                children=list(block.children),
-                metadata=dict(block.metadata),
+        mapped_blocks = []
+        for block in parse_result.blocks:
+            metadata = dict(block.metadata)
+            block_reference = metadata.get("id")
+            if isinstance(block_reference, str):
+                metadata["id"] = self._remap_marker_block_reference_to_original(
+                    block_reference,
+                    page_map,
+                )
+            mapped_blocks.append(
+                MarkerBlock(
+                    block_id=block.block_id,
+                    block_type=block.block_type,
+                    page=self._remap_page_number(block.page, page_map),
+                    text=block.text,
+                    bbox=list(block.bbox),
+                    polygon=list(block.polygon),
+                    section_hierarchy=dict(block.section_hierarchy),
+                    children=list(block.children),
+                    metadata=metadata,
+                )
             )
-            for block in parse_result.blocks
-        ]
         mapped_toc: list[dict[str, Any]] = []
         for item in parse_result.toc:
             mapped_item = dict(item)
@@ -509,6 +560,7 @@ class MarkerPDFExtractor:
         Returns:
             MarkerParseResult 包含 markdown, blocks, toc, images
         """
+        self.require_backend_available()
         (
             total_pages,
             resolved_extract_images,

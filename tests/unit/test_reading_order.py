@@ -165,6 +165,46 @@ class TestSegmentationServiceReadingOrder:
         )
         assert segmentation.segments[1].line_start is not None
 
+    async def test_blocks_metadata_can_identify_pymupdf_source_backend(
+        self, temp_dir
+    ) -> None:
+        manifest = DocumentManifest(
+            doc_id="doc_test",
+            filename="test.pdf",
+            title="Test",
+            page_count=1,
+            markdown_path="workspace/test.md",
+            assets=DocumentAssets(figures=[], tables=[], sections=[]),
+        )
+        blocks = [
+            {
+                "block_id": "md_txt_1",
+                "block_type": "Text",
+                "page": 1,
+                "text": "PyMuPDF paragraph",
+                "bbox": [],
+                "section_hierarchy": {},
+                "metadata": {
+                    "line_start": 0,
+                    "line_end": 1,
+                    "source_backend": "pymupdf",
+                    "source_order": 1,
+                },
+            }
+        ]
+        (temp_dir / "blocks.json").write_text(json.dumps(blocks), encoding="utf-8")
+
+        repository = MagicMock()
+        repository.load_manifest.return_value = manifest
+        repository.get_doc_dir.return_value = temp_dir
+        repository.load_markdown.return_value = "PyMuPDF paragraph\n"
+
+        service = SegmentationService(repository=repository)
+        segmentation = await service.export_document_segmentation("doc_test")
+
+        assert segmentation.source_backend == "pymupdf"
+        assert segmentation.segments[0].source_backend == "pymupdf"
+
     async def test_manifest_fallback_segments_also_get_policy(self, temp_dir) -> None:
         manifest = DocumentManifest(
             doc_id="doc_test",
