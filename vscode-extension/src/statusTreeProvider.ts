@@ -6,6 +6,7 @@
 
 import * as vscode from 'vscode';
 import { EnvManager } from './envManager';
+import { checkOllamaModels } from './ollama';
 
 export interface InstallInfo {
     scope: string;
@@ -80,12 +81,30 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
         ));
 
         // Ollama Connection
-        const ollamaConnected = await this.checkOllama(env.OLLAMA_HOST || 'http://localhost:11434');
+        const ollamaStatus = await checkOllamaModels(
+            env.OLLAMA_HOST || 'http://localhost:11434',
+            [
+                env.OLLAMA_MODEL || 'qwen2.5:7b',
+                env.OLLAMA_EMBEDDING_MODEL || 'nomic-embed-text',
+            ],
+        );
         items.push(new StatusItem(
             'Ollama',
-            ollamaConnected ? 'Connected' : 'Disconnected',
+            ollamaStatus.connected ? 'Connected' : 'Disconnected',
             vscode.TreeItemCollapsibleState.None,
-            ollamaConnected ? 'check' : 'error',
+            ollamaStatus.connected ? 'check' : 'error',
+            'assetAwareMcp.checkConnection'
+        ));
+
+        items.push(new StatusItem(
+            'Ollama Models',
+            ollamaStatus.connected && ollamaStatus.missingModels.length === 0
+                ? 'Available'
+                : ollamaStatus.connected
+                    ? `Missing: ${ollamaStatus.missingModels.join(', ')}`
+                    : 'Not checked',
+            vscode.TreeItemCollapsibleState.None,
+            ollamaStatus.connected && ollamaStatus.missingModels.length === 0 ? 'check' : 'warning',
             'assetAwareMcp.checkConnection'
         ));
 
@@ -131,14 +150,6 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
         return items;
     }
 
-    private async checkOllama(host: string): Promise<boolean> {
-        try {
-            const response = await fetch(`${host}/api/tags`);
-            return response.ok;
-        } catch {
-            return false;
-        }
-    }
 }
 
 class StatusItem extends vscode.TreeItem {

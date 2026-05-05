@@ -7,6 +7,25 @@
 
 ## [Unreleased]
 
+## [0.6.17] - 2026-05-05
+
+### Fixed
+
+- **Cline / external MCP startup hardening**
+  - External MCP client auto-sync now waits for the pinned `asset-aware-mcp` uv runtime probe before updating Copilot, Cline, or Codex config, reducing first-run Cline request timeouts during dependency downloads.
+  - Added `Asset-Aware MCP: Prepare Server Runtime` so users can pre-warm the exact server package version before reconnecting MCP clients.
+  - Cline global settings no longer auto-overwrite a managed `asset-aware-mcp` entry whose `DATA_DIR` belongs to another workspace; manual external MCP configuration can still intentionally take over.
+  - uv discovery now prefers concrete `uv` executable paths before bare `uv`, avoiding PATH drift between the VS Code extension and Cline.
+- **DOCX / DFM save fidelity**
+  - `save_docx` now writes rebuilt DOCX output to a staged file and runs post-save integrity checks before replacing user-visible output or editable artifacts.
+  - Severe content-shrink fail-safe checks now use normalized Markdown table padding, avoiding false positives from formatting-only pipe-table alignment changes.
+  - DOCX table parsing and write-back now use logical grid columns for merged cells, so edits after `gridSpan` cells update the correct XML cell while unchanged multi-paragraph cells keep their run structure.
+
+### Changed
+
+- **Ollama setup diagnostics**
+  - Ollama checks now distinguish host connectivity from missing configured chat/embedding models and show actionable `ollama pull ...` commands.
+
 ## [0.6.16] - 2026-05-04
 
 ### Added

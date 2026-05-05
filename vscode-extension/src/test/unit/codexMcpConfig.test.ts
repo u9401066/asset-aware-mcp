@@ -24,7 +24,7 @@ describe('codexMcpConfig', () => {
         process.env.CODEX_HOME = tempDir;
         context = {
             globalStorageUri: { fsPath: path.join(tempDir, 'globalStorage', 'u9401066.asset-aware-mcp') },
-            extension: { packageJSON: { version: '0.6.16' } },
+            extension: { packageJSON: { version: '0.6.17' } },
         };
         (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];
         __resetConfiguration();

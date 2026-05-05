@@ -25,8 +25,14 @@ import { installClineMcpServer } from './clineMcpConfig';
 import { installCodexMcpServer } from './codexMcpConfig';
 import { installCopilotMcpConfig } from './copilotMcpConfig';
 import {
+    checkOllamaModels,
+    formatOllamaPullCommands,
+    OllamaModelStatus,
+} from './ollama';
+import {
     DEFAULT_TORCH_BACKEND,
     findUvPath,
+    getAssetAwareRuntimeProbeArgs,
     getUvVersion,
     getUvxLaunch,
     PREFERRED_RUNTIME_PYTHON,
@@ -53,6 +59,8 @@ let runtimeSyncListenersRegistered = false;
 const CONTEXT_READY = 'assetAwareMcp.ready';
 const CONTEXT_OLLAMA_CONNECTED = 'assetAwareMcp.ollamaConnected';
 const FIRST_ACTIVATION_KEY = 'assetAwareMcp.firstActivation';
+const RUNTIME_PREPARED_VERSION_KEY = 'assetAwareMcp.runtimePreparedVersion';
+const RUNTIME_PREPARE_TIMEOUT_MS = 10 * 60 * 1000;
 
 /**
  * Log message to output channel
@@ -277,8 +285,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // Step 6a: Configure external MCP consumers and assistant assets
         log('Step 6a: Synchronizing MCP consumers and assistant assets...');
         if (uvPath) {
-            syncExternalMcpConsumers(context, uvPath, needsUpgrade, true);
-            registerRuntimeSyncListeners(context);
+            ensureExternalMcpRuntimeAndSync(context, uvPath, needsUpgrade, true);
         }
         await installAssistantAssets(context);
 
@@ -352,6 +359,7 @@ function syncExternalMcpConsumers(
     uvPath: string,
     needsUpgrade: boolean = false,
     notifyUser: boolean = false,
+    forceClineWorkspace: boolean = false,
 ): void {
     const updatedConsumers: string[] = [];
 
@@ -365,7 +373,7 @@ function syncExternalMcpConsumers(
     }
 
     try {
-        if (installClineMcpServer(context, uvPath, needsUpgrade)) {
+        if (installClineMcpServer(context, uvPath, needsUpgrade, { forceWorkspace: forceClineWorkspace })) {
             updatedConsumers.push('Cline');
             log('Cline MCP config updated');
         }
@@ -387,6 +395,77 @@ function syncExternalMcpConsumers(
             `Asset-Aware MCP configured for ${updatedConsumers.join(', ')}. Reload the relevant client if it was already open.`,
         );
     }
+}
+
+async function prepareMcpServerRuntime(
+    uvPath: string,
+    needsUpgrade: boolean = false,
+    progress?: vscode.Progress<{ message?: string; increment?: number }>,
+): Promise<boolean> {
+    const config = vscode.workspace.getConfiguration('assetAwareMcp');
+    const extensionVersion = extensionContext.extension.packageJSON.version as string;
+    const enableMarkerBackend = config.get('enableMarkerBackend', false);
+    const torchBackend = config.get('torchBackend', DEFAULT_TORCH_BACKEND);
+    const launch = getUvxLaunch(
+        uvPath,
+        PREFERRED_RUNTIME_PYTHON,
+        enableMarkerBackend,
+        torchBackend,
+        extensionVersion,
+        needsUpgrade,
+    );
+    const args = getAssetAwareRuntimeProbeArgs(launch.args);
+
+    try {
+        progress?.report({ message: `Preparing asset-aware-mcp ${extensionVersion} runtime...` });
+        log(`Preparing MCP runtime: ${launch.command} ${args.join(' ')}`);
+        await execFileAsync(launch.command, args, { timeout: RUNTIME_PREPARE_TIMEOUT_MS });
+        await extensionContext.globalState.update(RUNTIME_PREPARED_VERSION_KEY, extensionVersion);
+        log(`MCP runtime prepared for asset-aware-mcp ${extensionVersion}`);
+        return true;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        log(`MCP runtime preparation failed: ${message}`);
+        return false;
+    }
+}
+
+async function prepareRuntimeWithProgress(uvPath: string, needsUpgrade: boolean = false): Promise<boolean> {
+    return vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: 'Preparing Asset-Aware MCP server runtime',
+            cancellable: false,
+        },
+        async (progress) => prepareMcpServerRuntime(uvPath, needsUpgrade, progress),
+    );
+}
+
+function ensureExternalMcpRuntimeAndSync(
+    context: vscode.ExtensionContext,
+    uvPath: string,
+    needsUpgrade: boolean,
+    notifyUser: boolean,
+): void {
+    const currentVersion = context.extension.packageJSON.version as string;
+    const preparedVersion = context.globalState.get<string>(RUNTIME_PREPARED_VERSION_KEY);
+    if (preparedVersion === currentVersion) {
+        syncExternalMcpConsumers(context, uvPath, needsUpgrade, notifyUser);
+        registerRuntimeSyncListeners(context);
+        return;
+    }
+
+    prepareMcpServerRuntime(uvPath, needsUpgrade).then((prepared) => {
+        if (!prepared) {
+            vscode.window.showWarningMessage(
+                'Asset-Aware MCP server runtime is not ready yet, so external MCP clients were not auto-updated. Run "Asset-Aware MCP: Prepare Server Runtime" and then configure MCP clients.',
+            );
+            return;
+        }
+
+        syncExternalMcpConsumers(context, uvPath, needsUpgrade, notifyUser);
+        registerRuntimeSyncListeners(context);
+    });
 }
 
 function registerRuntimeSyncListeners(context: vscode.ExtensionContext): void {
@@ -448,7 +527,33 @@ function registerCommands(context: vscode.ExtensionContext): void {
                 vscode.window.showErrorMessage('Asset-Aware MCP requires uv before MCP clients can be configured.');
                 return;
             }
-            syncExternalMcpConsumers(context, resolvedUvPath, false, true);
+            const prepared = await prepareRuntimeWithProgress(resolvedUvPath, false);
+            if (!prepared) {
+                vscode.window.showWarningMessage(
+                    'Asset-Aware MCP server runtime is not ready. Dependency downloads may still be running or blocked; MCP clients were not updated to avoid startup timeouts.',
+                );
+                return;
+            }
+            syncExternalMcpConsumers(context, resolvedUvPath, false, true, true);
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('assetAwareMcp.prepareServer', async () => {
+            if (!resolvedUvPath) {
+                resolvedUvPath = await ensureUvInstalled();
+            }
+            if (!resolvedUvPath) {
+                vscode.window.showErrorMessage('Asset-Aware MCP requires uv before the server runtime can be prepared.');
+                return;
+            }
+
+            const prepared = await prepareRuntimeWithProgress(resolvedUvPath, false);
+            if (prepared) {
+                vscode.window.showInformationMessage('Asset-Aware MCP server runtime is ready.');
+            } else {
+                vscode.window.showWarningMessage('Asset-Aware MCP server runtime could not be prepared. Check the Asset-Aware MCP output log for details.');
+            }
         })
     );
 
@@ -479,11 +584,17 @@ function registerCommands(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.checkConnection', async () => {
             statusBar.setStatus('initializing', 'Checking Ollama...');
-            const connected = await checkAndUpdateOllamaStatus();
+            const status = await getOllamaModelStatus();
+            await checkAndUpdateOllamaStatus(status);
 
-            if (connected) {
-                vscode.window.showInformationMessage('✅ Ollama is running and accessible!');
+            if (status.connected && status.missingModels.length === 0) {
+                vscode.window.showInformationMessage('✅ Ollama is running and configured models are available!');
                 statusBar.setStatus('ready', 'Asset-Aware MCP: Ready');
+            } else if (status.connected) {
+                vscode.window.showWarningMessage(
+                    `Ollama is running, but configured models are missing:\n${formatOllamaPullCommands(status.missingModels)}`,
+                );
+                statusBar.setStatus('warning', 'Asset-Aware MCP: Ollama model missing');
             } else {
                 vscode.window.showWarningMessage(
                     '❌ Cannot connect to Ollama. Make sure Ollama is running.',
@@ -618,7 +729,7 @@ async function checkSystemDependencies(): Promise<void> {
             extensionVersion,
             lastVersion !== extensionVersion,
         );
-        await execFileAsync(launch.command, [...launch.args, '--help'], { timeout: 5000 });
+        const preparedVersion = extensionContext.globalState.get<string>(RUNTIME_PREPARED_VERSION_KEY);
         depChannel.appendLine('✅ MCP launcher: available');
 
         // Check if asset-aware-mcp is accessible via uvx
@@ -630,7 +741,11 @@ async function checkSystemDependencies(): Promise<void> {
         if (enableMarkerBackend) {
             depChannel.appendLine('   Torch backend: ' + torchBackend);
         }
-        depChannel.appendLine('   (Package will be auto-installed from PyPI on first use)');
+        depChannel.appendLine('   Runtime prepared: ' + (preparedVersion === extensionVersion ? 'yes' : 'no'));
+        if (preparedVersion !== extensionVersion) {
+            allOk = false;
+            depChannel.appendLine('   Run "Asset-Aware MCP: Prepare Server Runtime" before connecting Cline/Copilot/Codex.');
+        }
     } catch {
         depChannel.appendLine('⚠️ MCP launcher: not available (uv may need update)');
     }
@@ -682,9 +797,14 @@ async function runSetupWizard(): Promise<void> {
             }
 
             progress.report({ message: 'Checking Ollama connection...', increment: 25 });
-            const ollamaOk = await checkAndUpdateOllamaStatus();
+            const ollamaStatus = await getOllamaModelStatus();
+            const ollamaOk = await checkAndUpdateOllamaStatus(ollamaStatus);
 
-            if (!ollamaOk) {
+            if (ollamaStatus.connected && ollamaStatus.missingModels.length > 0) {
+                vscode.window.showWarningMessage(
+                    `Ollama is running, but configured models are missing:\n${formatOllamaPullCommands(ollamaStatus.missingModels)}`,
+                );
+            } else if (!ollamaOk) {
                 const choice = await vscode.window.showWarningMessage(
                     'Ollama is not running. Would you like to use OpenAI instead?',
                     'Download Ollama', 'Use OpenAI', 'Continue Anyway'
@@ -719,26 +839,25 @@ async function runSetupWizard(): Promise<void> {
     }
 }
 
-async function checkOllamaConnection(): Promise<boolean> {
+function getRequiredOllamaModels(): string[] {
     const config = vscode.workspace.getConfiguration('assetAwareMcp');
-    const host = config.get<string>('ollamaHost', 'http://localhost:11434');
-
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const response = await fetch(host + '/api/tags', { signal: controller.signal });
-        clearTimeout(timeoutId);
-        return response.ok;
-    } catch {
-        return false;
-    }
+    return [
+        config.get<string>('ollamaModel', 'qwen2.5:7b'),
+        config.get<string>('ollamaEmbeddingModel', 'nomic-embed-text'),
+    ];
 }
 
-async function checkAndUpdateOllamaStatus(): Promise<boolean> {
-    const connected = await checkOllamaConnection();
-    await vscode.commands.executeCommand('setContext', CONTEXT_OLLAMA_CONNECTED, connected);
+async function getOllamaModelStatus(): Promise<OllamaModelStatus> {
+    const config = vscode.workspace.getConfiguration('assetAwareMcp');
+    const host = config.get<string>('ollamaHost', 'http://localhost:11434');
+    return checkOllamaModels(host, getRequiredOllamaModels());
+}
+
+async function checkAndUpdateOllamaStatus(status?: OllamaModelStatus): Promise<boolean> {
+    const ollamaStatus = status ?? await getOllamaModelStatus();
+    await vscode.commands.executeCommand('setContext', CONTEXT_OLLAMA_CONNECTED, ollamaStatus.connected);
     await statusTreeProvider?.refresh();
-    return connected;
+    return ollamaStatus.connected && ollamaStatus.missingModels.length === 0;
 }
 
 function showFirstTimeWalkthrough(context: vscode.ExtensionContext): void {
@@ -761,6 +880,7 @@ interface ExtensionStatus {
     ollamaHost: string;
     ollamaModel: string;
     ollamaConnected: boolean;
+    ollamaMissingModels: string[];
     openaiConfigured: boolean;
     dataDir: string;
     documentCount: number;
@@ -772,6 +892,7 @@ async function getExtensionStatus(): Promise<ExtensionStatus> {
     const config = vscode.workspace.getConfiguration('assetAwareMcp');
     const env = await envManager.readEnv();
     const dataDir = envManager.getDataDir();
+    const ollamaStatus = await getOllamaModelStatus();
 
     const documentCount = envManager.listDocuments().length;
 
@@ -781,7 +902,8 @@ async function getExtensionStatus(): Promise<ExtensionStatus> {
         llmBackend: env.LLM_BACKEND || 'ollama',
         ollamaHost: env.OLLAMA_HOST || config.get<string>('ollamaHost', 'http://localhost:11434'),
         ollamaModel: env.OLLAMA_MODEL || config.get<string>('ollamaModel', 'qwen2.5:7b'),
-        ollamaConnected: await checkOllamaConnection(),
+        ollamaConnected: ollamaStatus.connected,
+        ollamaMissingModels: ollamaStatus.missingModels,
         openaiConfigured: !!(env.OPENAI_API_KEY),
         dataDir: dataDir,
         documentCount: documentCount,
@@ -808,6 +930,7 @@ function getStatusWebviewContent(status: ExtensionStatus, webview: vscode.Webvie
     const llmBackend = escapeHtml(status.llmBackend.toUpperCase());
     const ollamaHost = escapeHtml(status.ollamaHost);
     const ollamaModel = escapeHtml(status.ollamaModel);
+    const missingModels = escapeHtml(status.ollamaMissingModels.join(', ') || 'None');
     const dataDir = escapeHtml(status.dataDir);
 
     return `<!DOCTYPE html>
@@ -850,6 +973,7 @@ function getStatusWebviewContent(status: ExtensionStatus, webview: vscode.Webvie
 	        <div class="item"><span>Host:</span><code>${ollamaHost}</code></div>
 	        <div class="item"><span>Model:</span><span>${ollamaModel}</span></div>
 	        <div class="item"><span>Status:</span><span class="status ${status.ollamaConnected ? 'ok' : 'error'}">${status.ollamaConnected ? checkmark + ' Connected' : cross + ' Disconnected'}</span></div>
+	        <div class="item"><span>Missing Models:</span><span class="status ${status.ollamaMissingModels.length === 0 ? 'ok' : 'warning'}">${missingModels}</span></div>
 	    </div>
     <div class="section">
         <h2>OpenAI</h2>

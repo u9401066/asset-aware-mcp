@@ -7,6 +7,7 @@
 
 import * as vscode from 'vscode';
 import { EnvManager } from './envManager';
+import { checkOllamaModels, formatOllamaPullCommands } from './ollama';
 
 function escapeHtml(value: string): string {
     return value
@@ -139,16 +140,25 @@ export class SettingsPanel {
 
     private async _testOllamaConnection(host: string): Promise<void> {
         try {
-            const response = await fetch(`${host}/api/tags`);
-            if (response.ok) {
-                const data = await response.json() as { models?: { name: string }[] };
-                const models = data.models?.map((m: { name: string }) => m.name).join(', ') || 'None';
+            const env = await this._envManager.readEnv();
+            const status = await checkOllamaModels(host, [
+                env.OLLAMA_MODEL || 'qwen2.5:7b',
+                env.OLLAMA_EMBEDDING_MODEL || 'nomic-embed-text',
+            ]);
+            if (status.connected) {
+                const models = status.models.join(', ') || 'None';
                 vscode.window.showInformationMessage(`✅ Ollama connected! Models: ${models}`);
+                if (status.missingModels.length > 0) {
+                    vscode.window.showWarningMessage(
+                        `Configured Ollama models are missing:\n${formatOllamaPullCommands(status.missingModels)}`,
+                    );
+                }
 
                 this._panel.webview.postMessage({
                     command: 'ollamaStatus',
                     connected: true,
-                    models: data.models
+                    models: status.models,
+                    missingModels: status.missingModels,
                 });
             } else {
                 throw new Error('Connection failed');

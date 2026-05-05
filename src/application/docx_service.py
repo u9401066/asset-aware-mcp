@@ -450,6 +450,7 @@ class DocxService:
             Result dict with output path and any errors.
         """
         doc_dir = self.repository.get_doc_dir(doc_id)
+        staged_out: Path | None = None
 
         # Load original IR
         ir = self._load_ir(doc_id)
@@ -619,8 +620,8 @@ class DocxService:
 
             # --- Fail-safe: reject output if severe content loss detected ---
             if old_md_text and not force:
-                old_len = len(old_md_text)
-                new_len = len(md_text)
+                old_len = len(self._normalize_markdown_for_drift(old_md_text))
+                new_len = len(self._normalize_markdown_for_drift(md_text))
                 if old_len > 100 and new_len < old_len * 0.5:
                     shrinkage_pct = (1 - new_len / old_len) * 100
                     logger.error(
@@ -642,9 +643,10 @@ class DocxService:
                     }
 
             original_path = doc_dir / "original.docx"
+            staged_out = self._staged_docx_output_path(out)
             if not expected_changed_ids:
-                shutil.copy2(original_path, out)
-                result_path = out
+                shutil.copy2(original_path, staged_out)
+                result_path = staged_out
             else:
                 adapter_kwargs: dict[str, Any] = {
                     "changed_block_ids": expected_changed_ids,
@@ -660,12 +662,38 @@ class DocxService:
                 result_path = self.adapter.ir_to_docx(
                     ir,
                     doc_dir,
-                    out,
+                    staged_out,
                     **adapter_kwargs,
                 )
 
+            # --- Post-save integrity check before touching user-visible files ---
+            post_report = self.integrity.check_post_save(original_path, result_path)
+            if not post_report.passed and not force:
+                warnings = list(parse_result.errors)
+                for issue in pre_report.issues + post_report.issues:
+                    if issue.severity in ("error", "warning"):
+                        prefix = "[auto-fixed] " if issue.auto_fixed else ""
+                        warnings.append(f"{prefix}{issue.message}")
+                try:
+                    staged_out.unlink(missing_ok=True)
+                except OSError:
+                    logger.warning("Failed to remove staged docx: %s", staged_out)
+                return {
+                    "success": False,
+                    "error": (
+                        "Post-save integrity check failed; output and editable "
+                        "artifacts were not overwritten. Use force=True to override."
+                    ),
+                    "integrity": post_report.to_summary(),
+                    "warnings": warnings,
+                }
+
             # --- Auto-backup before overwriting DFM state ---
             self._backup_before_overwrite(doc_dir)
+
+            staged_out.replace(out)
+            result_path = out
+            staged_out = None
 
             # Save updated IR and synchronized editable artifacts.
             self._save_ir(ir, doc_dir / "ir.json")
@@ -678,9 +706,6 @@ class DocxService:
             write_utf8_text(
                 doc_dir / "format.yaml", yaml_text, hint=f"YAML for {doc_id}"
             )
-
-            # --- Post-save integrity check ---
-            post_report = self.integrity.check_post_save(original_path, result_path)
 
             result: dict[str, Any] = {
                 "success": True,
@@ -710,6 +735,11 @@ class DocxService:
             return result
 
         except Exception as e:
+            if staged_out is not None and staged_out.exists():
+                try:
+                    staged_out.unlink()
+                except OSError:
+                    logger.warning("Failed to remove staged docx: %s", staged_out)
             logger.exception("Failed to save docx: %s", doc_id)
             return {"success": False, "error": str(e)}
 
@@ -1447,6 +1477,14 @@ class DocxService:
             )
 
         return "\n".join(normalized_lines)
+
+    @staticmethod
+    def _staged_docx_output_path(output_path: Path) -> Path:
+        """Return a same-directory temporary DOCX path for atomic replacement."""
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
+        return output_path.with_name(
+            f".{output_path.stem}.{timestamp}.{os.getpid()}.tmp.docx"
+        )
 
     # ========================================================================
     # IR persistence
