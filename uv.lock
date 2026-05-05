@@ -222,7 +222,7 @@ wheels = [
 
 [[package]]
 name = "asset-aware-mcp"
-version = "0.6.16"
+version = "0.6.17"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -1424,7 +1424,7 @@ wheels = [
 
 [[package]]
 name = "lightrag-hku"
-version = "1.4.11"
+version = "1.4.15"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1447,9 +1447,9 @@ dependencies = [
     { name = "tiktoken" },
     { name = "xlsxwriter" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/75/ca/1ead7d51bc660bbfea42f1fbb6cf2dbe9acf56e5027880ab6833c6a8c4f9/lightrag_hku-1.4.11.tar.gz", hash = "sha256:88bb991bef49ca22f534d0f5c5db3db0af652916180d9c4d3c384a42f6c985d1", size = 3717655, upload-time = "2026-03-20T08:42:18.975Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/af/ac/3c3d404cb0957fd571bdc1e910b2a5f85d0d3479686fa75eec0e9b3b5f66/lightrag_hku-1.4.15.tar.gz", hash = "sha256:50a2c26612c96dec1816150d39c121b8f090ff6bb00b485bc867e008923a858c", size = 3650948, upload-time = "2026-04-19T08:41:14.702Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/4e/1ad0737ab1faa44aa35acd32e3002a9b2ec766ee1f364c92509db6435f39/lightrag_hku-1.4.11-py3-none-any.whl", hash = "sha256:804262d2fe1896a36ec8ce3dfb1229dd6f9101b42e39b5528da0a81f41a5f34c", size = 3627842, upload-time = "2026-03-20T08:42:16.616Z" },
+    { url = "https://files.pythonhosted.org/packages/90/be/9c3b7c598e6ce1e59d949126f4f45fa58fffd10e3ff1c36ae15feabdf2b9/lightrag_hku-1.4.15-py3-none-any.whl", hash = "sha256:0cbc122dadc3d19758927ef2f060ab26db84ccc9e55c1836fd3799f76a36b23c", size = 3627556, upload-time = "2026-04-19T08:41:12.664Z" },
 ]
 
 [[package]]

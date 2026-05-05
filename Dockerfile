@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 # ============================================================================
 # Asset-Aware MCP — Production Dockerfile (multi-stage)
 # ============================================================================
@@ -24,10 +25,12 @@ COPY pyproject.toml uv.lock README.md ./
 COPY src/ ./src/
 
 # Install locked runtime deps first, then the local project without re-resolving.
-RUN uv export --frozen --no-dev --no-emit-project --format requirements-txt -o requirements.txt \
-    && uv pip install --system --no-cache -r requirements.txt \
-    && uv pip install --system --no-cache --no-deps "." \
-    && rm -rf /root/.cache
+# BuildKit keeps the uv download cache outside the image layers, which avoids
+# repeated slow local release smoke builds without shipping cache data.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv export --frozen --no-dev --no-emit-project --format requirements-txt -o requirements.txt \
+    && uv pip install --system -r requirements.txt \
+    && uv pip install --system --no-deps "."
 
 # Stage 2: Runtime
 FROM python:3.12-slim-bookworm AS runtime
@@ -58,7 +61,7 @@ USER mcp
 
 # Health metadata
 LABEL maintainer="u9401066@gap.kmu.edu.tw" \
-      version="0.6.16" \
+      version="0.6.17" \
       description="Asset-Aware Medical RAG MCP Server"
 
 ENTRYPOINT ["python", "-m", "src.presentation.server"]

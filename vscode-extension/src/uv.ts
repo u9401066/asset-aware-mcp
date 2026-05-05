@@ -7,6 +7,7 @@ const execFileAsync = promisify(execFile);
 
 export const PREFERRED_RUNTIME_PYTHON = '3.11';
 export const DEFAULT_TORCH_BACKEND = 'cpu';
+export const ASSET_AWARE_RUNTIME_PROBE = "import src.presentation.server; print('asset-aware-mcp runtime ready')";
 
 export function getUvPaths(
     platform: NodeJS.Platform = process.platform,
@@ -20,18 +21,17 @@ export function getUvPaths(
 
     if (platform === 'win32') {
         candidates.push(
-            'uv',
             path.win32.join(localAppData, 'uv', 'bin', 'uv.exe'),
             path.win32.join(homeDir, '.local', 'bin', 'uv.exe'),
             path.win32.join(cargoHome, 'bin', 'uv.exe'),
             path.win32.join(homeDir, 'scoop', 'shims', 'uv.exe'),
             'C:\\ProgramData\\chocolatey\\bin\\uv.exe',
             'C:\\Program Files\\uv\\uv.exe',
+            'uv',
         );
     } else {
         const xdgBinHome = env.XDG_BIN_HOME || '';
         candidates.push(
-            'uv',
             pathApi.join(homeDir, '.local', 'bin', 'uv'),
             pathApi.join(cargoHome, 'bin', 'uv'),
             xdgBinHome ? pathApi.join(xdgBinHome, 'uv') : '',
@@ -41,6 +41,7 @@ export function getUvPaths(
             '/opt/local/bin/uv',
             '/home/linuxbrew/.linuxbrew/bin/uv',
             '/snap/bin/uv',
+            'uv',
         );
     }
 
@@ -102,4 +103,8 @@ export function getUvxLaunch(
     }
 
     return { command: uvPath, args: ['tool', 'run', '--python', pythonVersion, ...upgradeArgs, ...fromArgs, ...markerArgs] };
+}
+
+export function getAssetAwareRuntimeProbeArgs(launchArgs: string[]): string[] {
+    return [...launchArgs, 'python', '-c', ASSET_AWARE_RUNTIME_PROBE];
 }

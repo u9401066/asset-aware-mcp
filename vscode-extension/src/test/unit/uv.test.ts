@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import {
     DEFAULT_TORCH_BACKEND,
+    getAssetAwareRuntimeProbeArgs,
     getMarkerRuntimeArgs,
     getUvPaths,
     getUvRunArgs,
@@ -20,6 +21,7 @@ describe('uv path discovery', () => {
         assert.ok(paths.includes('C:\\Users\\alice\\AppData\\Local\\uv\\bin\\uv.exe'));
         assert.ok(paths.includes('C:\\Users\\alice\\scoop\\shims\\uv.exe'));
         assert.ok(paths.includes('C:\\ProgramData\\chocolatey\\bin\\uv.exe'));
+        assert.ok(paths.indexOf('C:\\Users\\alice\\AppData\\Local\\uv\\bin\\uv.exe') < paths.indexOf('uv'));
     });
 
     it('includes common Linux install locations', () => {
@@ -33,6 +35,7 @@ describe('uv path discovery', () => {
         assert.ok(paths.includes('/home/alice/.cargo/bin/uv'));
         assert.ok(paths.includes('/home/linuxbrew/.linuxbrew/bin/uv'));
         assert.ok(paths.includes('/snap/bin/uv'));
+        assert.ok(paths.indexOf('/home/alice/.local/bin/uv') < paths.indexOf('uv'));
     });
 
     it('includes common macOS install locations', () => {
@@ -83,17 +86,17 @@ describe('uv path discovery', () => {
     });
 
     it('pins server version with --from when serverVersion provided', () => {
-        const launch = getUvxLaunch('uv', PREFERRED_RUNTIME_PYTHON, false, 'cpu', '0.6.16');
+        const launch = getUvxLaunch('uv', PREFERRED_RUNTIME_PYTHON, false, 'cpu', '0.6.17');
 
-        assert.deepStrictEqual(launch.args, ['--python', PREFERRED_RUNTIME_PYTHON, '--from', 'asset-aware-mcp==0.6.16']);
+        assert.deepStrictEqual(launch.args, ['--python', PREFERRED_RUNTIME_PYTHON, '--from', 'asset-aware-mcp==0.6.17']);
     });
 
     it('adds --upgrade flag when upgrade is true', () => {
-        const launch = getUvxLaunch('uv', PREFERRED_RUNTIME_PYTHON, false, 'cpu', '0.6.16', true);
+        const launch = getUvxLaunch('uv', PREFERRED_RUNTIME_PYTHON, false, 'cpu', '0.6.17', true);
 
         assert.ok(launch.args.includes('--upgrade'));
         assert.ok(launch.args.includes('--from'));
-        assert.ok(launch.args.includes('asset-aware-mcp==0.6.16'));
+        assert.ok(launch.args.includes('asset-aware-mcp==0.6.17'));
     });
 
     it('combines version pin, upgrade, and marker args', () => {
@@ -105,5 +108,14 @@ describe('uv path discovery', () => {
             '--upgrade', '--from', 'asset-aware-mcp==0.5.3',
             '--with', 'marker-pdf', '--torch-backend', 'cpu',
         ]);
+    });
+
+    it('builds a runtime probe command that exits after importing the MCP server', () => {
+        const launch = getUvxLaunch('/usr/bin/uv', PREFERRED_RUNTIME_PYTHON, false, 'cpu', '0.6.17');
+        const args = getAssetAwareRuntimeProbeArgs(launch.args);
+
+        assert.deepStrictEqual(args.slice(0, launch.args.length), launch.args);
+        assert.deepStrictEqual(args.slice(-3, -1), ['python', '-c']);
+        assert.ok(args[args.length - 1].includes('src.presentation.server'));
     });
 });

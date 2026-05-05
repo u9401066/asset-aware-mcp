@@ -5,6 +5,7 @@ import {
     ASSET_AWARE_SERVER_KEY,
     buildAssetAwareLaunchSpec,
     entriesEqual,
+    getPrimaryWorkspaceRoot,
     isAssetAwareLaunch,
 } from './mcpConfigCommon';
 
@@ -25,6 +26,10 @@ interface ClineMcpSettings {
     mcpServers: Record<string, ClineMcpServerEntry>;
     mcpRules?: Record<string, unknown>;
     [key: string]: unknown;
+}
+
+interface InstallClineOptions {
+    forceWorkspace?: boolean;
 }
 
 function getClineMcpSettingsPath(context: vscode.ExtensionContext): string {
@@ -83,6 +88,36 @@ function mergeManagedEntry(
         disabled: existing.disabled ?? next.disabled,
         alwaysAllow: existing.alwaysAllow,
     };
+}
+
+function normalizeForCompare(value: string): string {
+    const resolved = path.resolve(value);
+    return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+}
+
+function isInsideOrSame(parentPath: string, childPath: string): boolean {
+    const parent = normalizeForCompare(parentPath);
+    const child = normalizeForCompare(childPath);
+    const relative = path.relative(parent, child);
+    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function isCrossWorkspaceDataDirChange(
+    existing: ClineMcpServerEntry,
+    next: ClineMcpServerEntry,
+    workspaceRoot: string | undefined = getPrimaryWorkspaceRoot(),
+): boolean {
+    const existingDataDir = existing.env?.DATA_DIR;
+    const nextDataDir = next.env?.DATA_DIR;
+    if (!workspaceRoot || !existingDataDir || !nextDataDir || existingDataDir === nextDataDir) {
+        return false;
+    }
+    if (!path.isAbsolute(existingDataDir) || !path.isAbsolute(nextDataDir)) {
+        return false;
+    }
+
+    return !isInsideOrSame(workspaceRoot, existingDataDir)
+        && isInsideOrSame(workspaceRoot, nextDataDir);
 }
 
 function mergeAssetAwareRules(settings: ClineMcpSettings): boolean {
@@ -153,6 +188,7 @@ export function installClineMcpServer(
     context: vscode.ExtensionContext,
     uvPath: string,
     needsUpgrade: boolean = false,
+    options: InstallClineOptions = {},
 ): boolean {
     if (!isClineInstalled(context)) {
         return false;
@@ -173,6 +209,9 @@ export function installClineMcpServer(
 
     const existing = settings.mcpServers[ASSET_AWARE_SERVER_KEY];
     if (existing && !isAssetAwareLaunch(existing.command, existing.args)) {
+        return false;
+    }
+    if (existing && !options.forceWorkspace && isCrossWorkspaceDataDirChange(existing, nextEntry)) {
         return false;
     }
 
@@ -214,5 +253,6 @@ export function removeClineMcpServer(context: vscode.ExtensionContext): boolean 
 export const __test__ = {
     getClineMcpSettingsPath,
     readClineSettings,
+    isCrossWorkspaceDataDirChange,
     mergeAssetAwareRules,
 };

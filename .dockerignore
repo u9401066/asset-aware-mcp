@@ -28,10 +28,17 @@ vscode-extension/
 .github/
 .academic-figures/
 .claude/
+.cline/
+.clinerules/
+.codex/
 .pre-commit-config.yaml
 .ruff_cache/
 .mypy_cache/
 .pytest_cache/
+.tmp/
+.uv-cache/
+.uvx-cache/
+.venv-release/
 htmlcov/
 coverage.xml
 .coverage
@@ -42,6 +49,8 @@ scripts/
 
 # Docs
 docs/
+profiles/
+resources/
 *.md
 !README.md
 LICENSE

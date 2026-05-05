@@ -763,7 +763,9 @@ class DocxAdapter:
 
         for row_idx, tr_elem in enumerate(tbl_elem.findall(f"{{{NS['w']}}}tr")):
             row_cells: list[str] = []
-            for col_idx, tc_elem in enumerate(tr_elem.findall(f"{{{NS['w']}}}tc")):
+            for col_idx, tc_elem, col_span, tc_pr in self._iter_row_cells(tr_elem):
+                while len(row_cells) < col_idx:
+                    row_cells.append("")
                 cell_text, child_nested_blocks = self._extract_cell_content(
                     tc_elem,
                     ir,
@@ -774,35 +776,26 @@ class DocxAdapter:
                     parent_table_id=block_id,
                 )
                 row_cells.append(cell_text)
+                row_cells.extend("" for _ in range(col_span - 1))
                 nested_blocks.extend(child_nested_blocks)
                 has_nested_descendants = has_nested_descendants or bool(
                     child_nested_blocks
                 )
 
-                tc_pr = tc_elem.find(f"{{{NS['w']}}}tcPr")
                 if tc_pr is not None:
-                    grid_span = tc_pr.find(f"{{{NS['w']}}}gridSpan")
-                    col_span = 1
-                    if grid_span is not None:
-                        val = grid_span.get(f"{{{NS['w']}}}val")
-                        if val:
-                            col_span = int(val)
-
-                    v_merge = tc_pr.find(f"{{{NS['w']}}}vMerge")
-                    if v_merge is not None:
-                        val = v_merge.get(f"{{{NS['w']}}}val")
-                        if val == "restart":
-                            row_span = self._count_vmerge(tbl_elem, row_idx, col_idx)
-                            if col_span > 1 or row_span > 1:
-                                merged_cells.append(
-                                    MergedCell(
-                                        row=row_idx,
-                                        col=col_idx,
-                                        row_span=row_span,
-                                        col_span=col_span,
-                                    )
+                    v_merge_state = self._get_vmerge_state(tc_pr)
+                    if v_merge_state == "restart":
+                        row_span = self._count_vmerge(tbl_elem, row_idx, col_idx)
+                        if col_span > 1 or row_span > 1:
+                            merged_cells.append(
+                                MergedCell(
+                                    row=row_idx,
+                                    col=col_idx,
+                                    row_span=row_span,
+                                    col_span=col_span,
                                 )
-                    elif col_span > 1:
+                            )
+                    elif v_merge_state is None and col_span > 1:
                         merged_cells.append(
                             MergedCell(
                                 row=row_idx,
@@ -1394,6 +1387,59 @@ class DocxAdapter:
             for r in runs[1:]
         )
 
+    def _get_row_grid_offset(self, tr_elem: etree._Element) -> int:
+        """Return the logical column offset declared by w:gridBefore."""
+        tr_pr = tr_elem.find(f"{{{NS['w']}}}trPr")
+        if tr_pr is None:
+            return 0
+        grid_before = tr_pr.find(f"{{{NS['w']}}}gridBefore")
+        if grid_before is None:
+            return 0
+        return _safe_int(grid_before.get(f"{{{NS['w']}}}val"), default=0) or 0
+
+    def _get_cell_grid_span(self, tc_pr: etree._Element | None) -> int:
+        """Return the logical column span for a table cell."""
+        if tc_pr is None:
+            return 1
+        grid_span = tc_pr.find(f"{{{NS['w']}}}gridSpan")
+        if grid_span is None:
+            return 1
+        return max(_safe_int(grid_span.get(f"{{{NS['w']}}}val"), default=1) or 1, 1)
+
+    def _get_vmerge_state(self, tc_pr: etree._Element | None) -> str | None:
+        """Return restart/continue for vertical merge cells."""
+        if tc_pr is None:
+            return None
+        v_merge = tc_pr.find(f"{{{NS['w']}}}vMerge")
+        if v_merge is None:
+            return None
+        return v_merge.get(f"{{{NS['w']}}}val") or "continue"
+
+    def _iter_row_cells(
+        self,
+        tr_elem: etree._Element,
+    ) -> list[tuple[int, etree._Element, int, etree._Element | None]]:
+        """Yield physical cells with their logical table-grid column."""
+        logical_col = self._get_row_grid_offset(tr_elem)
+        cells: list[tuple[int, etree._Element, int, etree._Element | None]] = []
+        for tc_elem in tr_elem.findall(f"{{{NS['w']}}}tc"):
+            tc_pr = tc_elem.find(f"{{{NS['w']}}}tcPr")
+            col_span = self._get_cell_grid_span(tc_pr)
+            cells.append((logical_col, tc_elem, col_span, tc_pr))
+            logical_col += col_span
+        return cells
+
+    def _find_row_cell(
+        self,
+        tr_elem: etree._Element,
+        logical_col: int,
+    ) -> tuple[int, etree._Element, int, etree._Element | None] | None:
+        """Find the cell that starts at a logical column."""
+        for cell_info in self._iter_row_cells(tr_elem):
+            if cell_info[0] == logical_col:
+                return cell_info
+        return None
+
     def _count_vmerge(
         self, tbl_elem: etree._Element, start_row: int, col_idx: int
     ) -> int:
@@ -1401,15 +1447,13 @@ class DocxAdapter:
         rows = tbl_elem.findall(f"{{{NS['w']}}}tr")
         span = 1
         for row_idx in range(start_row + 1, len(rows)):
-            cells = rows[row_idx].findall(f"{{{NS['w']}}}tc")
-            if col_idx >= len(cells):
+            cell_info = self._find_row_cell(rows[row_idx], col_idx)
+            if cell_info is None:
                 break
-            tc_pr = cells[col_idx].find(f"{{{NS['w']}}}tcPr")
-            if tc_pr is not None:
-                v_merge = tc_pr.find(f"{{{NS['w']}}}vMerge")
-                if v_merge is not None and v_merge.get(f"{{{NS['w']}}}val") is None:
-                    span += 1
-                    continue
+            _, _tc_elem, _col_span, tc_pr = cell_info
+            if self._get_vmerge_state(tc_pr) == "continue":
+                span += 1
+                continue
             break
         return span
 
@@ -1764,21 +1808,57 @@ class DocxAdapter:
         for row_idx, (xml_row, md_row) in enumerate(
             zip(xml_rows, md_rows, strict=False)
         ):
-            cells = xml_row.findall(f"{{{NS['w']}}}tc")
-            for col_idx, (cell, md_cell) in enumerate(zip(cells, md_row, strict=False)):
+            for col_idx, cell, _col_span, tc_pr in self._iter_row_cells(xml_row):
+                if col_idx >= len(md_row):
+                    continue
+                if self._get_vmerge_state(tc_pr) == "continue":
+                    continue
+                md_cell = md_row[col_idx]
                 nested_blocks = nested_blocks_by_parent.get(block.id, {}).get(
                     f"{row_idx}:{col_idx}",
                     [],
                 )
+                desired_text = md_cell.strip()
+                current_text = self._get_table_cell_content_for_compare(
+                    cell,
+                    nested_blocks,
+                ).strip()
+                should_update_direct_text = (
+                    update_direct_text and desired_text != current_text
+                )
                 self._update_table_cell(
                     cell,
-                    md_cell.strip(),
+                    desired_text,
                     nested_blocks,
                     nested_blocks_by_parent,
                     changed_block_ids,
-                    update_direct_text=update_direct_text,
+                    update_direct_text=should_update_direct_text,
                     revision_context=revision_context,
                 )
+
+    def _get_table_cell_content_for_compare(
+        self,
+        cell: etree._Element,
+        nested_blocks: list[DfmBlock],
+    ) -> str:
+        """Return direct cell content using nested-table markers for comparison."""
+        segments: list[str] = []
+        nested_iter = iter(nested_blocks)
+        for child in cell:
+            tag = etree.QName(child.tag).localname
+            if tag == "tcPr":
+                continue
+            if tag == "p":
+                segments.append(self._get_paragraph_text(child))
+                continue
+            if tag == "tbl":
+                nested_block = next(nested_iter, None)
+                if nested_block is not None:
+                    segments.append(self._nested_table_marker(nested_block.id))
+
+        while segments and not segments[-1]:
+            segments.pop()
+        return "\n".join(segments)
 
     def _update_table_cell(
         self,
