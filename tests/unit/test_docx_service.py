@@ -248,6 +248,124 @@ def test_detect_content_drift_ignores_table_padding_only_changes():
     assert DocxService._detect_content_drift(old_md, new_md) == []
 
 
+def test_expected_content_diff_counts_include_paragraphs_and_changed_table_cells():
+    service = DocxService(repository=MagicMock())
+    original_ir = DocxIR(
+        doc_id="docx_123",
+        source_path="/workspace/demo.docx",
+        blocks=[
+            DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="Before"),
+            DfmBlock(
+                id="tbl001",
+                block_type=DfmBlockType.TABLE,
+                content="\n".join(
+                    [
+                        "| Drug | Dose |",
+                        "| --- | --- |",
+                        "| A | 10 |",
+                        "| B | 20 |",
+                    ]
+                ),
+            ),
+            DfmBlock(id="p002", block_type=DfmBlockType.PARAGRAPH, content="Same"),
+        ],
+    )
+    parse_result = DfmParseResult(
+        doc_id="docx_123",
+        source="demo.docx",
+        checksum="",
+        edits=[
+            BlockEdit(block_id="p001", new_content="After"),
+            BlockEdit(
+                block_id="tbl001",
+                new_content="",
+                table_rows=[
+                    ["Drug", "Dose"],
+                    ["A", "11"],
+                    ["B changed", "20"],
+                ],
+            ),
+            BlockEdit(block_id="p002", new_content="Same"),
+        ],
+    )
+    expected_changed_ids = service._expected_changed_block_ids(
+        original_ir,
+        parse_result,
+    )
+
+    counts = service._expected_content_diff_counts(
+        original_ir,
+        parse_result,
+        expected_changed_ids,
+    )
+
+    assert counts == {"text": 1, "table": 2}
+
+
+def test_expected_content_diff_locations_include_parent_cell_for_nested_table_edits():
+    service = DocxService(repository=MagicMock())
+    original_ir = DocxIR(
+        doc_id="docx_123",
+        source_path="/workspace/demo.docx",
+        blocks=[
+            DfmBlock(
+                id="t002",
+                block_type=DfmBlockType.TABLE,
+                content="\n".join(
+                    [
+                        "| Parent | Side |",
+                        "| --- | --- |",
+                        "| [NestedTable] | Text |",
+                    ]
+                ),
+            ),
+            DfmBlock(
+                id="t003",
+                block_type=DfmBlockType.TABLE,
+                content="\n".join(
+                    [
+                        "| Visit | Note |",
+                        "| --- | --- |",
+                        "| 5 | Checkup |",
+                    ]
+                ),
+                parent_cell="1:0",
+                metadata={"parent_table_id": "t002"},
+            ),
+        ],
+    )
+    parse_result = DfmParseResult(
+        doc_id="docx_123",
+        source="demo.docx",
+        checksum="",
+        edits=[
+            BlockEdit(
+                block_id="t003",
+                new_content="",
+                table_rows=[
+                    ["Visit", "Note"],
+                    ["5 updated", "Checkup"],
+                ],
+            ),
+        ],
+    )
+    expected_changed_ids = service._expected_changed_block_ids(
+        original_ir,
+        parse_result,
+    )
+
+    locations = service._expected_content_diff_locations(
+        original_ir,
+        parse_result,
+        expected_changed_ids,
+    )
+
+    assert locations["table"] == {
+        "table 1/row 2/col 1",
+        "table 2/row 2/col 1",
+    }
+
+
 @pytest.mark.asyncio
 async def test_save_docx_does_not_overwrite_artifacts_when_post_save_fails(
     monkeypatch,
@@ -287,6 +405,7 @@ async def test_save_docx_does_not_overwrite_artifacts_when_post_save_fails(
         )
     )
     backup_mock = MagicMock()
+    post_save_calls = []
 
     monkeypatch.setattr(service, "_load_ir", lambda doc_id: ir)
     monkeypatch.setattr(service.parser, "parse", lambda dfm_text: parse_result)
@@ -298,7 +417,9 @@ async def test_save_docx_does_not_overwrite_artifacts_when_post_save_fails(
     monkeypatch.setattr(
         service.integrity,
         "check_post_save",
-        lambda original_path, result_path: post_report,
+        lambda original_path, result_path, **kwargs: (
+            post_save_calls.append(kwargs) or post_report
+        ),
     )
     monkeypatch.setattr(service, "_backup_before_overwrite", backup_mock)
     monkeypatch.setattr(service.renderer, "render", lambda ir_obj: "After DFM\n")
@@ -323,6 +444,16 @@ async def test_save_docx_does_not_overwrite_artifacts_when_post_save_fails(
 
     assert result["success"] is False
     assert "Post-save integrity check failed" in result["error"]
+    assert post_save_calls == [
+        {
+            "content_edits_expected": True,
+            "expected_text_diffs": 1,
+            "expected_table_diffs": 0,
+            "expected_text_diff_locations": {"paragraph 1"},
+            "expected_table_diff_locations": set(),
+            "revision_markup_expected": False,
+        }
+    ]
     assert output.read_bytes() == b"previous-output"
     assert (tmp_path / "content.md").read_text(encoding="utf-8") == "Before line\n"
     assert not list(tmp_path.glob(".*.tmp.docx"))

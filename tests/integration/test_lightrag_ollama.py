@@ -16,26 +16,38 @@ from src.infrastructure.config import settings
 
 
 @pytest.fixture
-def ollama_available() -> bool:
-    """Check if Ollama is available."""
+def ollama_models() -> set[str] | None:
+    """Return locally available Ollama models, or None if Ollama is unavailable."""
     import httpx
 
     try:
         with httpx.Client(timeout=5.0) as client:
             resp = client.get(f"{settings.ollama_host}/api/tags")
-            return resp.status_code == 200
-    except Exception:
-        return False
+            resp.raise_for_status()
+            body = resp.json()
+            return {
+                str(model.get("name") or model.get("model"))
+                for model in body.get("models", [])
+                if model.get("name") or model.get("model")
+            }
+    except httpx.RequestError:
+        return None
+
+
+def _require_ollama_model(models: set[str] | None, model: str) -> None:
+    if models is None:
+        pytest.skip("Ollama not available")
+    if model not in models:
+        pytest.skip(f"Ollama model not available: run `ollama pull {model}`")
 
 
 class TestOllamaIntegration:
     """Integration tests for Ollama LLM backend."""
 
     @pytest.mark.asyncio
-    async def test_ollama_completion(self, ollama_available: bool):
+    async def test_ollama_completion(self, ollama_models: set[str] | None):
         """Test Ollama LLM completion."""
-        if not ollama_available:
-            pytest.skip("Ollama not available")
+        _require_ollama_model(ollama_models, settings.ollama_model)
 
         from src.infrastructure.lightrag_adapter import ollama_model_complete
 
@@ -50,10 +62,9 @@ class TestOllamaIntegration:
         assert "4" in result
 
     @pytest.mark.asyncio
-    async def test_ollama_embedding(self, ollama_available: bool):
+    async def test_ollama_embedding(self, ollama_models: set[str] | None):
         """Test Ollama embedding generation."""
-        if not ollama_available:
-            pytest.skip("Ollama not available")
+        _require_ollama_model(ollama_models, settings.ollama_embedding_model)
 
         from src.infrastructure.lightrag_adapter import ollama_embedding
 
@@ -69,9 +80,11 @@ class TestOllamaIntegration:
         assert len(embeddings[1]) == 768
 
     @pytest.mark.asyncio
-    async def test_lightrag_adapter_initialization(self, ollama_available: bool):
+    async def test_lightrag_adapter_initialization(
+        self, ollama_models: set[str] | None
+    ):
         """Test LightRAG adapter can initialize with Ollama."""
-        if not ollama_available:
+        if ollama_models is None:
             pytest.skip("Ollama not available")
 
         # Ensure we're using Ollama backend

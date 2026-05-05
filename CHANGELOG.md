@@ -20,6 +20,7 @@
   - `save_docx` now writes rebuilt DOCX output to a staged file and runs post-save integrity checks before replacing user-visible output or editable artifacts.
   - Severe content-shrink fail-safe checks now use normalized Markdown table padding, avoiding false positives from formatting-only pipe-table alignment changes.
   - DOCX table parsing and write-back now use logical grid columns for merged cells, so edits after `gridSpan` cells update the correct XML cell while unchanged multi-paragraph cells keep their run structure.
+  - Post-save integrity checks now distinguish expected DFM text/table edits from structural corruption, so small edited DOCX files are not rejected solely because the intended content changed.
 - **Release artifact audit portability**
   - Local release artifact audits now read extension metadata as UTF-8 on Windows and the packaged VSIX README is pinned to the `v0.6.17` banner.
   - Docker smoke builds now ignore local uv/runtime caches and assistant harness folders so release worktrees with local verification artifacts do not stall while sending build context.

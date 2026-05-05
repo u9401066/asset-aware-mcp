@@ -1159,8 +1159,19 @@ class PyMuPDFExtractor(PDFExtractorInterface):
 
         if (
             timeout_seconds <= 0
-            or not hasattr(signal, "setitimer")
             or threading.current_thread() is not threading.main_thread()
+        ):
+            return func()
+
+        sigalrm = getattr(signal, "SIGALRM", None)
+        itimer_real = getattr(signal, "ITIMER_REAL", None)
+        getitimer = getattr(signal, "getitimer", None)
+        setitimer = getattr(signal, "setitimer", None)
+        if (
+            sigalrm is None
+            or itimer_real is None
+            or not callable(getitimer)
+            or not callable(setitimer)
         ):
             return func()
 
@@ -1169,19 +1180,19 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                 f"PyMuPDF {operation} timed out after {timeout_seconds:.1f}s"
             )
 
-        previous_handler = signal.getsignal(signal.SIGALRM)
-        previous_timer = signal.getitimer(signal.ITIMER_REAL)
+        previous_handler = signal.getsignal(sigalrm)
+        previous_timer = getitimer(itimer_real)
 
         try:
-            signal.signal(signal.SIGALRM, _handle_timeout)
-            signal.setitimer(signal.ITIMER_REAL, timeout_seconds)
+            signal.signal(sigalrm, _handle_timeout)
+            setitimer(itimer_real, timeout_seconds)
             return func()
         finally:
-            signal.setitimer(signal.ITIMER_REAL, 0)
-            signal.signal(signal.SIGALRM, previous_handler)
+            setitimer(itimer_real, 0)
+            signal.signal(sigalrm, previous_handler)
             if previous_timer != (0.0, 0.0):
-                signal.setitimer(
-                    signal.ITIMER_REAL,
+                setitimer(
+                    itimer_real,
                     previous_timer[0],
                     previous_timer[1],
                 )

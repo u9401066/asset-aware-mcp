@@ -574,6 +574,15 @@ class DocxService:
             expected_changed_ids = self._expected_changed_block_ids(
                 original_ir, parse_result
             )
+            expected_diff_locations = self._expected_content_diff_locations(
+                original_ir,
+                parse_result,
+                expected_changed_ids,
+            )
+            expected_diff_counts = {
+                "text": len(expected_diff_locations["text"]),
+                "table": len(expected_diff_locations["table"]),
+            }
             unexpected_mutations = self._detect_unedited_block_mutations(
                 original_ir, ir, expected_changed_ids
             )
@@ -667,7 +676,16 @@ class DocxService:
                 )
 
             # --- Post-save integrity check before touching user-visible files ---
-            post_report = self.integrity.check_post_save(original_path, result_path)
+            post_report = self.integrity.check_post_save(
+                original_path,
+                result_path,
+                content_edits_expected=bool(expected_changed_ids),
+                expected_text_diffs=expected_diff_counts["text"],
+                expected_table_diffs=expected_diff_counts["table"],
+                expected_text_diff_locations=expected_diff_locations["text"],
+                expected_table_diff_locations=expected_diff_locations["table"],
+                revision_markup_expected=track_changes,
+            )
             if not post_report.passed and not force:
                 warnings = list(parse_result.errors)
                 for issue in pre_report.issues + post_report.issues:
@@ -1300,6 +1318,136 @@ class DocxService:
                 changed_ids.add(edit.block_id)
 
         return changed_ids
+
+    def _expected_content_diff_counts(
+        self,
+        original_ir: DocxIR,
+        parse_result: Any,
+        expected_changed_ids: set[str],
+    ) -> dict[str, int]:
+        """Count post-save text/table diffs expected from semantic DFM edits."""
+        locations = self._expected_content_diff_locations(
+            original_ir,
+            parse_result,
+            expected_changed_ids,
+        )
+        return {"text": len(locations["text"]), "table": len(locations["table"])}
+
+    def _expected_content_diff_locations(
+        self,
+        original_ir: DocxIR,
+        parse_result: Any,
+        expected_changed_ids: set[str],
+    ) -> dict[str, set[str]]:
+        """Map expected DFM edits to DocxValidator text/table diff locations."""
+        paragraph_locations: dict[str, str] = {}
+        table_locations: dict[str, int] = {}
+        paragraph_index = 0
+        table_index = 0
+
+        for ir_block in original_ir.blocks:
+            if ir_block.block_type == DfmBlockType.TABLE:
+                table_index += 1
+                table_locations[ir_block.id] = table_index
+            elif self._is_body_text_block(ir_block):
+                paragraph_index += 1
+                paragraph_locations[ir_block.id] = f"paragraph {paragraph_index}"
+
+        text_locations: set[str] = set()
+        table_cell_locations: set[str] = set()
+        for edit in parse_result.edits:
+            if edit.block_id not in expected_changed_ids:
+                continue
+
+            edited_block = original_ir.find_block(edit.block_id)
+            if edited_block is None:
+                continue
+
+            if edit.table_rows is not None:
+                table_number = table_locations.get(edit.block_id)
+                if table_number is not None:
+                    table_cell_locations.update(
+                        self._changed_table_cell_locations(
+                            table_number,
+                            self.parser._parse_md_table(edited_block.content),
+                            edit.table_rows,
+                        )
+                    )
+                table_cell_locations.update(
+                    self._parent_table_cell_locations(edited_block, table_locations)
+                )
+                continue
+
+            location = paragraph_locations.get(edit.block_id)
+            if location is not None:
+                text_locations.add(location)
+
+        return {"text": text_locations, "table": table_cell_locations}
+
+    @staticmethod
+    def _is_body_text_block(block: DfmBlock) -> bool:
+        """Return True for editable blocks represented as body paragraphs."""
+        return block.block_type in {
+            DfmBlockType.PARAGRAPH,
+            DfmBlockType.HEADING,
+            DfmBlockType.LIST_ITEM,
+            DfmBlockType.FORMAT,
+            DfmBlockType.CAPTION,
+        }
+
+    def _changed_table_cell_locations(
+        self,
+        table_number: int,
+        original_rows: list[list[str]] | None,
+        edited_rows: list[list[str]] | None,
+    ) -> set[str]:
+        """Return DocxValidator locations for table cells changed by an edit."""
+        original = self._normalize_table_rows(original_rows)
+        edited = self._normalize_table_rows(edited_rows)
+        locations: set[str] = set()
+
+        for row_index in range(max(len(original), len(edited))):
+            original_row = original[row_index] if row_index < len(original) else []
+            edited_row = edited[row_index] if row_index < len(edited) else []
+            for col_index in range(max(len(original_row), len(edited_row))):
+                original_cell = (
+                    original_row[col_index] if col_index < len(original_row) else ""
+                )
+                edited_cell = (
+                    edited_row[col_index] if col_index < len(edited_row) else ""
+                )
+                if original_cell != edited_cell:
+                    locations.add(
+                        f"table {table_number}/row {row_index + 1}/col {col_index + 1}"
+                    )
+
+        return locations
+
+    @staticmethod
+    def _parent_table_cell_locations(
+        block: DfmBlock,
+        table_locations: dict[str, int],
+    ) -> set[str]:
+        """Return parent cell locations dirtied by nested table edits."""
+        parent_table_id = block.metadata.get("parent_table_id")
+        if not parent_table_id or not block.parent_cell:
+            return set()
+
+        table_number = table_locations.get(str(parent_table_id))
+        if table_number is None:
+            return set()
+
+        row_text, separator, col_text = block.parent_cell.partition(":")
+        if not separator:
+            return set()
+
+        try:
+            row_index = int(row_text)
+            col_index = int(col_text)
+        except ValueError:
+            return set()
+
+        return {f"table {table_number}/row {row_index + 1}/col {col_index + 1}"}
 
     def _validate_table_edit_shapes(
         self,

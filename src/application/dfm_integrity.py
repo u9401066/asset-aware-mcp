@@ -130,7 +130,13 @@ class DfmIntegrityChecker:
         md_text, yaml_text = checker.auto_repair_split(md_text, yaml_text, ir)
 
         # After save
-        report = checker.check_post_save(original_path, output_path)
+        report = checker.check_post_save(
+            original_path,
+            output_path,
+            content_edits_expected=True,
+            expected_text_diff_locations={"paragraph 1"},
+            expected_table_diff_locations=set(),
+        )
     """
 
     def __init__(self) -> None:
@@ -499,12 +505,26 @@ class DfmIntegrityChecker:
     # ========================================================================
 
     def check_post_save(
-        self, original_path: Path, output_path: Path
+        self,
+        original_path: Path,
+        output_path: Path,
+        *,
+        content_edits_expected: bool = False,
+        expected_text_diffs: int | None = None,
+        expected_table_diffs: int | None = None,
+        expected_text_diff_locations: set[str] | None = None,
+        expected_table_diff_locations: set[str] | None = None,
+        revision_markup_expected: bool = False,
     ) -> IntegrityReport:
         """
         Run round-trip validation after saving docx.
 
         Uses DocxValidator to compare original vs rebuilt.
+
+        When content edits are expected, text/table differences are the intended
+        user changes and should not fail the post-save guard by themselves.
+        Structural, media, style, and non-revision formatting regressions still
+        fail closed.
         """
         report = IntegrityReport()
 
@@ -523,6 +543,93 @@ class DfmIntegrityChecker:
 
             validator = DocxValidator()
             val_report = validator.validate(original_path, output_path)
+
+            if content_edits_expected:
+                blocking_structure = [
+                    diff
+                    for diff in val_report.structure_diffs
+                    if diff.category != "table_nonempty_cells"
+                ]
+                allowed_format_attributes = (
+                    {"run_count"} if revision_markup_expected else set()
+                )
+                blocking_format = [
+                    diff
+                    for diff in val_report.format_diffs
+                    if diff.attribute not in allowed_format_attributes
+                    or (
+                        diff.attribute == "run_count"
+                        and not self._diff_location_allowed(
+                            getattr(diff, "location", ""),
+                            expected_text_diff_locations,
+                        )
+                    )
+                ]
+                blocking_text, missing_text = self._content_diff_scope_issues(
+                    val_report.text_diffs,
+                    expected_count=expected_text_diffs,
+                    expected_locations=expected_text_diff_locations,
+                )
+                blocking_table, missing_table = self._content_diff_scope_issues(
+                    val_report.table_diffs,
+                    expected_count=expected_table_diffs,
+                    expected_locations=expected_table_diff_locations,
+                )
+                if (
+                    val_report.errors
+                    or blocking_structure
+                    or blocking_text
+                    or blocking_table
+                    or missing_text
+                    or missing_table
+                    or blocking_format
+                    or val_report.media_diffs
+                    or val_report.style_diffs
+                ):
+                    report.add(
+                        IntegrityIssue(
+                            severity="error",
+                            stage="post_save",
+                            message=(
+                                "Post-save non-content fidelity degraded after "
+                                "applying expected edits"
+                            ),
+                            details={
+                                "fidelity_score": round(
+                                    val_report.fidelity_score * 100, 1
+                                ),
+                                "structure_diffs": len(blocking_structure),
+                                "text_diffs": len(blocking_text),
+                                "table_diffs": len(blocking_table),
+                                "missing_text_diffs": len(missing_text),
+                                "missing_table_diffs": len(missing_table),
+                                "format_diffs": len(blocking_format),
+                                "media_diffs": len(val_report.media_diffs),
+                                "style_diffs": len(val_report.style_diffs),
+                                "errors": len(val_report.errors),
+                            },
+                        )
+                    )
+                else:
+                    report.add(
+                        IntegrityIssue(
+                            severity="info",
+                            stage="post_save",
+                            message=(
+                                "Post-save non-content fidelity passed with "
+                                "expected content edits"
+                            ),
+                            details={
+                                "fidelity_score": round(
+                                    val_report.fidelity_score * 100, 1
+                                ),
+                                "text_diffs": len(val_report.text_diffs),
+                                "table_diffs": len(val_report.table_diffs),
+                                "format_diffs": len(val_report.format_diffs),
+                            },
+                        )
+                    )
+                return report
 
             score = val_report.fidelity_score
             if score >= 0.95:
@@ -580,6 +687,41 @@ class DfmIntegrityChecker:
             )
 
         return report
+
+    @staticmethod
+    def _content_diff_scope_issues(
+        diffs: list[Any],
+        *,
+        expected_count: int | None,
+        expected_locations: set[str] | None,
+    ) -> tuple[list[Any], set[str]]:
+        """Return unexpected diffs plus expected locations that did not appear."""
+        if expected_locations is not None:
+            actual_locations = {
+                getattr(diff, "location", "") for diff in diffs if diff is not None
+            }
+            unexpected = [
+                diff
+                for diff in diffs
+                if getattr(diff, "location", "") not in expected_locations
+            ]
+            missing = expected_locations - actual_locations
+            return unexpected, missing
+
+        if expected_count is not None and len(diffs) > expected_count:
+            return diffs[expected_count:], set()
+
+        if expected_count is None and diffs:
+            return diffs, set()
+
+        return [], set()
+
+    @staticmethod
+    def _diff_location_allowed(
+        location: str,
+        expected_locations: set[str] | None,
+    ) -> bool:
+        return expected_locations is not None and location in expected_locations
 
     # ========================================================================
     # 5. Auto-repair: split format
