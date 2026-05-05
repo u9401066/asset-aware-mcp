@@ -6,14 +6,14 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.16/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.17/resources/banner.png)
 
-## 🆕 What's New in v0.6.16
+## 🆕 What's New in v0.6.17
 
-- **Marker install and fallback hardening**: local dev launches include the Marker extra when enabled, missing Marker reports install guidance, and catchable OOM errors can fall back to PyMuPDF
-- **Citation-safe segmentation**: PyMuPDF synthetic blocks keep their source backend and Marker page-range metadata is remapped back to original PDF pages
-- **Safer table workflows**: table resources reject traversal, edited cells drop stale citations, and Markdown/HTML render outputs work through the MCP tool
-- **Assistant harness migration**: legacy detector-managed harness files can migrate to the bundled version without overwriting user-customized files
+- **Cline launch hardening**: extension installs now prefer the concrete `uv` runtime path, prewarm the pinned runtime, and avoid cross-workspace `DATA_DIR` reuse in Cline MCP settings
+- **Ollama diagnostics**: setup checks report missing configured chat and embedding models before Cline waits on an unusable local model
+- **DOCX/DFM save fidelity**: `save_docx` stages writes transactionally, preserves unchanged multi-paragraph table cells, and validates logical table grids before replacing the source
+- **Release audit portability**: release artifact metadata is read as UTF-8 so Windows local audits match CI behavior
 - **50 tools** across 7 modules
 
 ## 🧪 Current Main Branch

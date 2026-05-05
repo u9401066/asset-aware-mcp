@@ -48,8 +48,12 @@ def read_uv_lock_project_version() -> str:
 
 def check_versions() -> list[str]:
     version = read_project_version()
-    package_json = json.loads((ROOT / "vscode-extension/package.json").read_text())
-    package_lock = json.loads((ROOT / "vscode-extension/package-lock.json").read_text())
+    package_json = json.loads(
+        (ROOT / "vscode-extension/package.json").read_text(encoding="utf-8")
+    )
+    package_lock = json.loads(
+        (ROOT / "vscode-extension/package-lock.json").read_text(encoding="utf-8")
+    )
     versions = {
         "pyproject.toml": version,
         "src/__init__.py": read_regex(
