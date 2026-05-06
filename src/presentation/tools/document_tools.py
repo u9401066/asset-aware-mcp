@@ -34,7 +34,7 @@ from src.application.output_paths import (
     resolve_document_output_dir,
     resolve_document_output_path,
 )
-from src.domain.citation import EvidenceSpan, build_evidence_spans
+from src.domain.citation import LOCATOR_VERSION, EvidenceSpan, build_evidence_spans
 from src.domain.marker_errors import (
     MarkerBackendUnavailable,
     format_marker_failure,
@@ -112,11 +112,21 @@ def _asset_ref_from_span(span: EvidenceSpan) -> dict[str, Any]:
 
 def _load_or_build_evidence_spans(doc_id: str) -> list[EvidenceSpan]:
     spans = repository.load_citation_index(doc_id)
-    if spans:
-        return spans
-
     markdown = repository.load_markdown(doc_id)
     blocks = repository.load_blocks(doc_id)
+    markdown = markdown if isinstance(markdown, str) else ""
+
+    if spans and not markdown:
+        return spans
+    if spans and markdown:
+        source_revision_id = hashlib.sha256(markdown.encode("utf-8")).hexdigest()
+        if all(
+            span.source_revision_id == source_revision_id
+            and span.locator_version == LOCATOR_VERSION
+            for span in spans
+        ):
+            return spans
+
     if not markdown or blocks is None:
         return []
 

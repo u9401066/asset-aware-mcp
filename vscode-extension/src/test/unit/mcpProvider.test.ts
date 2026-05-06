@@ -1,4 +1,4 @@
-import * as assert from 'assert';
+﻿import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -24,7 +24,8 @@ describe('AssetAwareMcpProvider', () => {
     function makeContext(overrides: Record<string, any> = {}) {
         return {
             globalState: { get: () => undefined },
-            extension: { packageJSON: { version: '0.6.18' } },
+            extension: { packageJSON: { version: '0.6.19' } },
+            globalStorageUri: { fsPath: path.join(tempDir, 'global-storage') },
             ...overrides,
         } as any;
     }
@@ -39,7 +40,7 @@ describe('AssetAwareMcpProvider', () => {
         assert.ok(servers[0].args.includes('--python'));
         assert.ok(servers[0].args.includes('3.11'));
         assert.ok(servers[0].args.includes('--from'));
-        assert.ok(servers[0].args.includes('asset-aware-mcp==0.6.18'));
+        assert.ok(servers[0].args.includes('asset-aware-mcp==0.6.19'));
         assert.strictEqual(servers[0].args[servers[0].args.length - 1], 'asset-aware-mcp');
     });
 
@@ -74,6 +75,29 @@ describe('AssetAwareMcpProvider', () => {
         assert.ok(!servers[0].args.includes('marker-pdf'));
     });
 
+    it('resolves local source .env DATA_DIR relative to the local source root', () => {
+        const workspaceRoot = path.join(tempDir, 'workspace');
+        const sourceRoot = path.join(workspaceRoot, 'asset-aware-mcp');
+        fs.mkdirSync(path.join(sourceRoot, 'src'), { recursive: true });
+        fs.writeFileSync(path.join(sourceRoot, 'src', 'server.py'), 'def main():\n    pass\n');
+        fs.writeFileSync(path.join(sourceRoot, 'pyproject.toml'), '[project]\nname = "asset-aware-mcp"\n');
+        fs.writeFileSync(path.join(workspaceRoot, '.env'), 'DATA_DIR=parent-data\nOLLAMA_MODEL=parent-model\n');
+        fs.writeFileSync(path.join(sourceRoot, '.env'), 'DATA_DIR=child-data\nOLLAMA_MODEL=child-model\n');
+        (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: workspaceRoot } }];
+
+        const provider = new AssetAwareMcpProvider(workspaceRoot, undefined, makeContext());
+
+        const servers = provider.provideMcpServerDefinitions({} as any) as any[];
+
+        assert.strictEqual(servers.length, 1);
+        assert.strictEqual(servers[0].label, 'Asset-Aware MCP (Dev)');
+        assert.strictEqual(servers[0].env.OLLAMA_MODEL, 'child-model');
+        assert.strictEqual(
+            servers[0].env.DATA_DIR,
+            path.resolve(sourceRoot, 'child-data'),
+        );
+    });
+
     it('adds marker runtime args when marker backend is enabled', () => {
         __setConfigurationValue('assetAwareMcp.enableMarkerBackend', true);
         __setConfigurationValue('assetAwareMcp.torchBackend', 'cpu');
@@ -95,7 +119,7 @@ describe('AssetAwareMcpProvider', () => {
 
         assert.ok(servers[0].args.includes('--upgrade'));
         assert.ok(servers[0].args.includes('--from'));
-        assert.ok(servers[0].args.includes('asset-aware-mcp==0.6.18'));
+        assert.ok(servers[0].args.includes('asset-aware-mcp==0.6.19'));
     });
 
     it('does not add --upgrade flag when needsUpgrade is false', () => {

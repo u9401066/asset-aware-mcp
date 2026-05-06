@@ -18,7 +18,8 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
-  NODE_VERSION: "20"
+  NODE_VERSION: "24"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   # ==========================================
@@ -28,10 +29,10 @@ jobs:
     name: 🧪 Run Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           version: "latest"
 
@@ -39,7 +40,7 @@ jobs:
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -109,10 +110,10 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           version: "latest"
 
@@ -137,17 +138,42 @@ jobs:
   publish-vscode:
     name: 🧩 Publish to VS Code Marketplace
     runs-on: ubuntu-latest
-    needs: test
+    needs: publish-pypi
     defaults:
       run:
         working-directory: vscode-extension
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          version: "latest"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
+
+      - name: Verify PyPI package is available
+        working-directory: .
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+
+          for attempt in $(seq 1 20); do
+            if uvx --python "${{ env.PYTHON_VERSION }}" --from "asset-aware-mcp==$VERSION" python -c "import src.presentation.server; print('asset-aware-mcp PyPI import OK')"; then
+              exit 0
+            fi
+            echo "PyPI package asset-aware-mcp==$VERSION not available yet (attempt $attempt/20); retrying..."
+            sleep 30
+          done
+
+          echo "ERROR: PyPI package asset-aware-mcp==$VERSION was not installable before VSIX publish"
+          exit 1
 
       - name: Install dependencies
         run: npm ci
@@ -158,12 +184,23 @@ jobs:
           npm run test:ci
 
       - name: Package extension
-        run: npx vsce package --no-dependencies
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          npx vsce package --no-dependencies --out "asset-aware-mcp-${VERSION}.vsix"
 
       - name: Verify VSIX integrity
         id: verify
         run: |
-          VSIX_FILE=$(ls -1 asset-aware-mcp-*.vsix | head -1)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          VSIX_FILE="asset-aware-mcp-${VERSION}.vsix"
           if [ -z "$VSIX_FILE" ] || [ ! -f "$VSIX_FILE" ]; then
             echo "ERROR: VSIX file was not created"
             exit 1
@@ -182,13 +219,19 @@ jobs:
           echo "vsix_file=$VSIX_FILE" >> "$GITHUB_OUTPUT"
           echo "Verified VSIX: $VSIX_FILE"
 
+      - name: Audit packaged VSIX artifact
+        working-directory: .
+        run: |
+          uv build
+          python3 scripts/audit_release_artifacts.py
+
       - name: Publish to VS Code Marketplace
         run: npx vsce publish --packagePath "${{ steps.verify.outputs.vsix_file }}" -p ${{ secrets.VSCE_PAT }}
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
       - name: Upload VSIX artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vscode-extension
           path: vscode-extension/*.vsix
@@ -203,10 +246,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download VSIX
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: vscode-extension
           path: ./release-assets/

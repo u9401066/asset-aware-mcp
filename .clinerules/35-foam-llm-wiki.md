@@ -3,13 +3,13 @@ paths:
   - ".clinerules/workflows/llm-wiki-build.md"
   - ".cline/skills/llm-wiki-builder/SKILL.md"
   - ".codex/skills/llm-wiki-builder/SKILL.md"
-  - ".github/zotero-research-workflow.md"
 ---
 
 # Foam LLM Wiki Rules
 
-Use these rules when turning Zotero, PubMed, PDF/full-text, or project evidence
-into a Foam-compatible Markdown wiki for LLM-assisted reading and synthesis.
+Use these rules when turning Asset-Aware document outputs, PDF/full-text, DOCX,
+DFM, table, figure, or project evidence into a Foam-compatible Markdown wiki
+for LLM-assisted reading and synthesis.
 
 ## Asset Boundaries
 
@@ -34,21 +34,23 @@ into a Foam-compatible Markdown wiki for LLM-assisted reading and synthesis.
 
 ## Evidence And Citation Hygiene
 
-- Preserve PMID, DOI, PMCID, Zotero key, URL, title, journal, year, and access
-  status whenever available.
-- Distinguish imported Zotero items, candidate PubMed results, and preprints.
+- Preserve document IDs, block IDs, section IDs, page/line/char locators,
+  quote hashes, URLs, titles, and access status whenever available.
+- Distinguish ingested source documents, derived notes, external literature
+  records, and preprints when those external records are supplied by the user.
 - Cite claims at paragraph or bullet level using compact source markers such as
-  `PMID:12345678`, `DOI:...`, or `Zotero:ABC123`.
+  `doc_id:block_id:Lx-y`, `span_id`, `DOI:...`, or a user-provided source key.
 - Prefer exact text spans, section names, page numbers, or quote hashes when a
   full-text or asset-aware tool provides them.
 - Do not claim that a note is citation-ready unless its source markers can be
-  traced back to a concrete article, item, or document span.
+  traced back to a concrete source document, external record, or document span.
 
 ## Workflow And Skill Split
 
 - Rules define durable wiki constraints and rendering invariants.
 - Workflows define the complete user-facing sequence for making or refreshing
   an LLM wiki.
-- Skills orchestrate multiple tools: filesystem search, Zotero inspection,
-  PubMed discovery, full-text/asset extraction when available, Markdown writes,
-  and link validation.
+- Skills orchestrate multiple tools: filesystem search, Asset-Aware document
+  inspection, full-text/asset extraction when available, Markdown writes, and
+  link validation. Zotero Keeper and PubMed Search, when present, are external
+  project harnesses and are not installed or maintained by Asset-Aware.

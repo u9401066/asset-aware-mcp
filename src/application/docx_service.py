@@ -451,6 +451,7 @@ class DocxService:
         """
         doc_dir = self.repository.get_doc_dir(doc_id)
         staged_out: Path | None = None
+        save_warnings: list[str] = []
 
         # Load original IR
         ir = self._load_ir(doc_id)
@@ -535,8 +536,35 @@ class DocxService:
 
             # Verify checksum matches
             if parse_result.checksum and parse_result.checksum != ir.checksum:
+                stale_message = (
+                    "Stale DFM edit detected: edited DFM checksum "
+                    f"{parse_result.checksum} does not match the current IR checksum "
+                    f"{ir.checksum}. Re-open the current DFM or re-ingest the document "
+                    "before saving; use force=True only when you have manually verified "
+                    "the edit is based on the current document."
+                )
                 logger.warning(
-                    "Checksum mismatch: DFM=%s, IR=%s",
+                    "%s",
+                    stale_message,
+                )
+                if not force:
+                    return {
+                        "success": False,
+                        "error": stale_message,
+                        "warnings": [
+                            (
+                                "Saving was aborted before applying edits to prevent "
+                                "overwriting a newer DFM/IR session."
+                            )
+                        ],
+                    }
+                save_warnings.append(
+                    "Forced stale DFM save: edited DFM checksum "
+                    f"{parse_result.checksum} did not match current IR checksum "
+                    f"{ir.checksum}."
+                )
+                logger.info(
+                    "Forced checksum mismatch: DFM=%s, IR=%s",
                     parse_result.checksum,
                     ir.checksum,
                 )
@@ -687,7 +715,7 @@ class DocxService:
                 revision_markup_expected=track_changes,
             )
             if not post_report.passed and not force:
-                warnings = list(parse_result.errors)
+                warnings = list(parse_result.errors) + save_warnings
                 for issue in pre_report.issues + post_report.issues:
                     if issue.severity in ("error", "warning"):
                         prefix = "[auto-fixed] " if issue.auto_fixed else ""
@@ -743,7 +771,7 @@ class DocxService:
                 )
                 result["revision_sidecar_path"] = str(revision_sidecar)
                 result["revision_records"] = revision_count
-            warnings = list(parse_result.errors)
+            warnings = list(parse_result.errors) + save_warnings
             for issue in pre_report.issues + post_report.issues:
                 if issue.severity in ("error", "warning"):
                     prefix = "[auto-fixed] " if issue.auto_fixed else ""

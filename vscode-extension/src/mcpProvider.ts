@@ -9,12 +9,10 @@
  */
 
 import * as vscode from 'vscode';
-import * as path from 'path';
 import * as fs from 'fs';
+import { buildAssetAwareLaunchSpec } from './mcpConfigCommon';
 import {
     DEFAULT_TORCH_BACKEND,
-    getUvRunArgs,
-    getUvxLaunch,
     getUvPaths,
     PREFERRED_RUNTIME_PYTHON,
 } from './uv';
@@ -70,29 +68,6 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
     }
 
     /**
-     * Get the extension's own version (matches PyPI package version)
-     */
-    private getExtensionVersion(): string | undefined {
-        return this.context?.extension?.packageJSON?.version;
-    }
-
-    /**
-     * Get uvx command (uv tool run) with version pinning and upgrade support
-     */
-    private getUvxCommand(): { command: string; args: string[] } {
-        const config = vscode.workspace.getConfiguration('assetAwareMcp');
-        const serverVersion = this.getExtensionVersion();
-        return getUvxLaunch(
-            this.getUvCommand(),
-            PREFERRED_RUNTIME_PYTHON,
-            config.get('enableMarkerBackend', false),
-            config.get('torchBackend', DEFAULT_TORCH_BACKEND),
-            serverVersion,
-            this.needsUpgrade,
-        );
-    }
-
-    /**
      * Refresh MCP server definitions
      */
     refresh(): void {
@@ -106,129 +81,47 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
     provideMcpServerDefinitions(
         _token: vscode.CancellationToken
     ): vscode.ProviderResult<vscode.McpStdioServerDefinition[]> {
-        const servers: vscode.McpStdioServerDefinition[] = [];
-
-        // Check for local development mode first
-        const mcpServerDir = this.findMcpServerDir();
-
-        // Get configuration from VS Code settings
+        const launchContext = this.context ?? ({
+            globalStorageUri: vscode.Uri.file(this.workspaceRoot),
+            extension: { packageJSON: {} },
+        } as vscode.ExtensionContext);
+        const spec = buildAssetAwareLaunchSpec(
+            launchContext,
+            this.getUvCommand(),
+            {
+                workspaceRoot: this.workspaceRoot,
+                needsUpgrade: this.needsUpgrade,
+            },
+        );
         const config = vscode.workspace.getConfiguration('assetAwareMcp');
-        const enableMarkerBackend = config.get('enableMarkerBackend', false);
-        const torchBackend = config.get('torchBackend', DEFAULT_TORCH_BACKEND);
 
-        // Build environment variables from settings
-        const envVars: Record<string, string> = {
-            LLM_BACKEND: config.get('llmBackend', 'ollama'),
-            OLLAMA_HOST: config.get('ollamaHost', 'http://localhost:11434'),
-            OLLAMA_MODEL: config.get('ollamaModel', 'qwen2.5:7b'),
-            OLLAMA_EMBEDDING_MODEL: config.get('ollamaEmbeddingModel', 'nomic-embed-text'),
-            ENABLE_LIGHTRAG: 'true',
-        };
-
-        // Add OpenAI settings if configured
-        const openaiKey = config.get<string>('openaiApiKey', '');
-        if (openaiKey) {
-            envVars['OPENAI_API_KEY'] = openaiKey;
-            envVars['OPENAI_MODEL'] = config.get('openaiModel', 'gpt-4o-mini');
-            envVars['LIGHTRAG_EMBEDDING_MODEL'] = config.get('openaiEmbeddingModel', 'text-embedding-3-small');
-        }
-
-        if (mcpServerDir) {
-            // Development Mode: Local source found
-            this.log('Development Mode: Using local source at ' + mcpServerDir);
-
-            const envPath = path.join(mcpServerDir, '.env');
-            const uvCommand = this.getUvCommand();
-
-            // Set DATA_DIR relative to project
-            envVars['DATA_DIR'] = path.join(mcpServerDir, 'data');
-
-            // Merge with .env file if exists
-            if (fs.existsSync(envPath)) {
-                const fileEnv = this.parseEnvFile(envPath);
-                Object.assign(envVars, fileEnv);
-                this.normalizeEmbeddingEnv(envVars);
-                this.log('Merged .env file settings');
-            }
-
-            const localRunArgs = getUvRunArgs(PREFERRED_RUNTIME_PYTHON, enableMarkerBackend);
-            this.log('Marker backend enabled: ' + String(enableMarkerBackend));
-            if (enableMarkerBackend) {
-                this.log('Local source launch will include: --extra marker');
-            }
-
-            this.log(
-                'Command: '
-                + uvCommand
-                + ' '
-                + [
-                    ...localRunArgs,
-                    '--directory',
-                    mcpServerDir,
-                    'python',
-                    '-m',
-                    'src.server',
-                ].join(' ')
-            );
-
-            servers.push({
-                label: 'Asset-Aware MCP (Dev)',
-                command: uvCommand,
-                args: [
-                    ...localRunArgs,
-                    '--directory', mcpServerDir,
-                    'python', '-m', 'src.server'
-                ],
-                env: envVars
-            });
+        if (spec.mode === 'local') {
+            this.log('Development Mode: Using local source launch spec');
         } else {
-            // Production Mode: Use uvx to run from PyPI
             this.log('Production Mode: Using uvx to run from PyPI');
-
-            const workspaceEnvPath = path.join(this.workspaceRoot, '.env');
-            if (fs.existsSync(workspaceEnvPath)) {
-                const fileEnv = this.parseEnvFile(workspaceEnvPath);
-                Object.assign(envVars, fileEnv);
-                this.normalizeEmbeddingEnv(envVars);
-                this.log('Merged workspace .env file settings');
-            }
-
-            // Set DATA_DIR to workspace or user's home
-            const dataDir = envVars['DATA_DIR'] || config.get<string>('dataDir', './data');
-            if (path.isAbsolute(dataDir)) {
-                envVars['DATA_DIR'] = dataDir;
-            } else {
-                envVars['DATA_DIR'] = path.resolve(this.workspaceRoot, dataDir);
-            }
-
-            // Get uvx command (handles full path if needed)
-            const uvx = this.getUvxCommand();
-            const args = [...uvx.args, 'asset-aware-mcp'];
-
-            this.log('Command: ' + uvx.command + ' ' + args.join(' '));
-            this.log('DATA_DIR: ' + envVars['DATA_DIR']);
-            this.log('Preferred Python runtime: ' + PREFERRED_RUNTIME_PYTHON);
-            const serverVersion = this.getExtensionVersion();
-            if (serverVersion) {
-                this.log('Server version pin: ' + serverVersion);
-            }
-            if (this.needsUpgrade) {
-                this.log('Upgrade flag: enabled (version changed)');
-            }
-            this.log('Marker backend enabled: ' + String(enableMarkerBackend));
-            if (enableMarkerBackend) {
-                this.log('Torch backend: ' + torchBackend);
-            }
-
-            servers.push({
-                label: 'Asset-Aware MCP',
-                command: uvx.command,
-                args: args,
-                env: envVars
-            });
+        }
+        this.log('Command: ' + spec.command + ' ' + spec.args.join(' '));
+        this.log('DATA_DIR: ' + spec.env['DATA_DIR']);
+        this.log('Preferred Python runtime: ' + PREFERRED_RUNTIME_PYTHON);
+        if (launchContext.extension?.packageJSON?.version) {
+            this.log('Server version pin: ' + launchContext.extension.packageJSON.version);
+        }
+        if (this.needsUpgrade) {
+            this.log('Upgrade flag: enabled (version changed)');
+        }
+        this.log('Marker backend enabled: ' + String(config.get('enableMarkerBackend', false)));
+        if (config.get('enableMarkerBackend', false)) {
+            this.log('Torch backend: ' + config.get('torchBackend', DEFAULT_TORCH_BACKEND));
         }
 
-        return servers;
+        return [
+            {
+                label: spec.mode === 'local' ? 'Asset-Aware MCP (Dev)' : 'Asset-Aware MCP',
+                command: spec.command,
+                args: spec.args,
+                env: spec.env,
+            },
+        ];
     }
 
     /**
@@ -242,92 +135,4 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
         return server;
     }
 
-    /**
-     * Find MCP server directory (for development mode)
-     * Returns undefined if not found (triggers production mode)
-     */
-    private findMcpServerDir(): string | undefined {
-        // Look for the src directory with server.py
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        const possiblePaths = Array.from(
-            new Set(
-                [
-                    workspaceFolder,
-                    workspaceFolder ? path.join(workspaceFolder, 'mcp-server') : undefined,
-                    workspaceFolder ? path.join(workspaceFolder, 'asset-aware-mcp') : undefined,
-                    workspaceFolder ? path.dirname(workspaceFolder) : undefined,
-                    this.workspaceRoot,
-                ].filter((candidate): candidate is string => Boolean(candidate))
-            )
-        );
-
-        this.log('Checking for local development source...');
-
-        for (const basePath of possiblePaths) {
-            const serverPath = path.join(basePath, 'src', 'server.py');
-            const pyprojectPath = path.join(basePath, 'pyproject.toml');
-
-            // Must have both server.py and pyproject.toml with asset-aware-mcp
-            if (fs.existsSync(serverPath) && fs.existsSync(pyprojectPath)) {
-                try {
-                    const pyproject = fs.readFileSync(pyprojectPath, 'utf-8');
-                    if (pyproject.includes('name = "asset-aware-mcp"')) {
-                        this.log('  Found local source at: ' + basePath);
-                        return basePath;
-                    }
-                } catch {
-                    // Ignore read errors
-                }
-            }
-        }
-
-        this.log('  No local source found, will use PyPI package');
-        return undefined;
-    }
-
-    /**
-     * Parse .env file to object
-     */
-    private parseEnvFile(envPath: string): Record<string, string> {
-        const env: Record<string, string> = {};
-
-        try {
-            const content = fs.readFileSync(envPath, 'utf-8');
-            const lines = content.split('\n');
-
-            for (const line of lines) {
-                const trimmed = line.trim();
-                if (trimmed && !trimmed.startsWith('#')) {
-                    const eqIndex = trimmed.indexOf('=');
-                    if (eqIndex > 0) {
-                        const key = trimmed.substring(0, eqIndex).trim();
-                        let value = trimmed.substring(eqIndex + 1).trim();
-
-                        // Remove quotes if present
-                        if ((value.startsWith('"') && value.endsWith('"')) ||
-                            (value.startsWith("'") && value.endsWith("'"))) {
-                            value = value.slice(1, -1);
-                        }
-
-                        env[key] = value;
-                    }
-                }
-            }
-        } catch (error) {
-            this.log('Error parsing .env file: ' + String(error));
-        }
-
-        return env;
-    }
-
-    private normalizeEmbeddingEnv(envVars: Record<string, string>): void {
-        const canonical = envVars['LIGHTRAG_EMBEDDING_MODEL'];
-        const legacy = envVars['OPENAI_EMBEDDING_MODEL'];
-        if (!canonical && legacy) {
-            envVars['LIGHTRAG_EMBEDDING_MODEL'] = legacy;
-        }
-        if (canonical && !legacy) {
-            envVars['OPENAI_EMBEDDING_MODEL'] = canonical;
-        }
-    }
 }

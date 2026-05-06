@@ -47,14 +47,14 @@ async def resource_document_manifest(doc_id: str) -> str:
 @mcp.resource("document://{doc_id}/segmentation")
 async def resource_document_segmentation(doc_id: str) -> str:
     """Dynamic resource for unified segmentation schema JSON."""
-    from src.presentation.tools.document_tools import export_document_segmentation
-
-    await export_document_segmentation(doc_id)
     segmentation_path = (
         document_service.repository.get_doc_dir(doc_id) / "segmentation.json"
     )
     if not segmentation_path.exists():
-        return f"Segmentation not found for {doc_id}"
+        return (
+            f"Segmentation not found for {doc_id}. "
+            "Run export_document_segmentation first to create segmentation.json."
+        )
     return segmentation_path.read_text(encoding="utf-8")
 
 

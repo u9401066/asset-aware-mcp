@@ -7,6 +7,26 @@
 
 ## [Unreleased]
 
+## [0.6.19] - 2026-05-06
+
+### Changed
+
+- **Assistant harness ownership boundary**
+  - Removed Zotero Keeper and PubMed Search MCP harness files from the Asset-Aware repository and VSIX repo-assets bundle.
+  - Kept the LLM wiki builder as an Asset-Aware document-evidence workflow; external Zotero/PubMed tools are now treated as optional sources governed by their own repositories.
+  - VSIX assistant asset install/update now prunes retired managed harness files when the workspace copy was not customized.
+
+### Fixed
+
+- **DFM and citation provenance safety**
+  - `save_docx` now rejects stale DFM saves when the edited checksum does not match the current IR checksum, unless `force=True` is explicitly used.
+  - Citation span lookup now rebuilds cached indexes when the canonical Markdown revision hash or locator version is stale.
+  - `document://{doc_id}/segmentation` is read-only and no longer writes `segmentation.json` as a side effect.
+- **VSIX and release hardening**
+  - Native VS Code MCP provider now reuses the shared launch spec, so local source `.env` and relative `DATA_DIR` resolution match external Copilot/Cline/Codex config generation.
+  - Release workflow now publishes the VSIX only after the matching PyPI package is published and installable, then audits the packaged VSIX artifact.
+  - GitHub Actions workflows have been upgraded to Node 24-compatible action releases.
+
 ## [0.6.18] - 2026-05-06
 
 ### Added

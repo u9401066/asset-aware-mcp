@@ -158,6 +158,28 @@ def check_vsix(version: str) -> list[str]:
         errors.append(f"{vsix}: README banner is not pinned to v{version}")
     if "blob/main" in readme or "raw/main" in readme:
         errors.append(f"{vsix}: README contains stale main-branch links")
+    forbidden_harness_fragments = [
+        "/resources/repo-assets/asset-aware/.github/zotero-research-workflow.md",
+        "/resources/repo-assets/asset-aware/.github/agents/research.agent.md",
+        "/resources/repo-assets/asset-aware/.claude/skills/pubmed-",
+        "/resources/repo-assets/asset-aware/.claude/skills/pipeline-persistence/",
+        "/resources/repo-assets/asset-aware/.cline/skills/pubmed-search-mcp-harness/",
+        "/resources/repo-assets/asset-aware/.cline/skills/zotero-keeper-harness/",
+        "/resources/repo-assets/asset-aware/.codex/skills/pubmed-search-mcp-harness/",
+        "/resources/repo-assets/asset-aware/.codex/skills/zotero-keeper-harness/",
+        "/resources/repo-assets/asset-aware/.clinerules/workflows/pubmed-",
+        "/resources/repo-assets/asset-aware/.clinerules/workflows/zotero-",
+    ]
+    non_asset_harness = [
+        name
+        for name in names
+        if any(fragment in name for fragment in forbidden_harness_fragments)
+    ]
+    if non_asset_harness:
+        errors.append(
+            f"{vsix}: contains non Asset-Aware harness assets: "
+            + ", ".join(non_asset_harness)
+        )
     return errors
 
 

@@ -27,6 +27,23 @@ const clineRuleFiles = [
     'workflows/skills-audit.md',
 ];
 
+const claudeSkillDirs = [
+    'changelog-updater',
+    'code-refactor',
+    'code-reviewer',
+    'ddd-architect',
+    'git-doc-updater',
+    'git-precommit',
+    'memory-checkpoint',
+    'memory-updater',
+    'pdf-asset-extractor',
+    'project-init',
+    'readme-i18n',
+    'readme-updater',
+    'roadmap-updater',
+    'test-generator',
+];
+
 const mappings = [
     {
         source: path.join(repoRoot, 'AGENTS.md'),
@@ -44,10 +61,10 @@ const mappings = [
         source: path.join(repoRoot, '.github', 'bylaws'),
         target: path.join(assetRoot, '.github', 'bylaws'),
     },
-    {
-        source: path.join(repoRoot, '.claude', 'skills'),
-        target: path.join(assetRoot, '.claude', 'skills'),
-    },
+    ...claudeSkillDirs.map((skillDir) => ({
+        source: path.join(repoRoot, '.claude', 'skills', skillDir),
+        target: path.join(assetRoot, '.claude', 'skills', skillDir),
+    })),
     {
         source: path.join(repoRoot, '.cline', 'skills', 'asset-aware-mcp-harness'),
         target: path.join(assetRoot, '.cline', 'skills', 'asset-aware-mcp-harness'),

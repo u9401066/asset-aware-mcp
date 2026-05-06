@@ -227,6 +227,46 @@ async def test_save_docx_fails_when_unedited_block_changes(monkeypatch, tmp_path
     assert any("p002" in warning for warning in result["warnings"])
 
 
+@pytest.mark.asyncio
+async def test_save_docx_rejects_stale_dfm_checksum(monkeypatch, tmp_path: Path):
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path
+
+    service = DocxService(repository=repository)
+    ir = DocxIR(
+        doc_id="docx_123",
+        source_path="/workspace/original.docx",
+        checksum="current-checksum",
+        blocks=[
+            DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="Before"),
+        ],
+    )
+    parse_result = DfmParseResult(
+        doc_id="docx_123",
+        source="demo.docx",
+        checksum="stale-checksum",
+        edits=[BlockEdit(block_id="p001", new_content="After")],
+    )
+    apply_edits = MagicMock(return_value=ir)
+
+    monkeypatch.setattr(service, "_load_ir", lambda doc_id: ir)
+    monkeypatch.setattr(service.parser, "parse", lambda dfm_text: parse_result)
+    monkeypatch.setattr(service.parser, "apply_edits", apply_edits)
+    monkeypatch.setattr(
+        service.integrity,
+        "check_pre_save",
+        lambda ir, parse_result: IntegrityReport(),
+    )
+
+    result = await service.save_docx("docx_123", "dummy")
+
+    assert result["success"] is False
+    assert "stale dfm" in result["error"].lower()
+    assert "current-checksum" in result["error"]
+    assert "stale-checksum" in result["error"]
+    apply_edits.assert_not_called()
+
+
 def test_detect_content_drift_ignores_table_padding_only_changes():
     old_md = "\n".join(
         [

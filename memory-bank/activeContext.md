@@ -1,16 +1,18 @@
 # Active Context
 
-## 2026-05-06 - v0.6.18 local reconciliation release
+## 2026-05-06 - v0.6.19 harness-boundary corrective release
 
-- Original workspace `D:\workspace260203\asset-aware-mcp` was reconciled to `origin/master` at `a22a7dae62c8239158a950be32becaadbbcda56e` / `v0.6.17` after resolving the shallow/grafted history false `ahead 78` state.
-- Preserved a safety stash: `pre-0.6.17-original-workspace-reconcile-20260506-091930`.
-- Preparing `v0.6.18` as a patch release that tracks the remaining useful local assets: LLM wiki Codex/Cline skills, Cline wiki workflow rules, and the Cline timeout investigation report.
-- VSIX assistant asset sync now carries the LLM wiki harness in `vscode-extension/resources/repo-assets/asset-aware/**`.
+- Preparing `v0.6.19` as the corrective patch after `v0.6.18`.
+- Asset-Aware must not maintain or bundle Zotero Keeper / PubMed Search MCP harness files. Those assets were removed from `.codex`, `.cline`, `.claude`, `.clinerules`, `.github`, and the VSIX repo-assets bundle.
+- The remaining LLM wiki builder is now scoped to Asset-Aware document evidence, citation spans, segmentation, DOCX/DFM, figures, tables, and local Markdown. Zotero/PubMed may only be treated as optional external tools governed by their own repositories.
+- High-risk fixes in this release: fail-closed stale DFM checksum saves, stale citation index rebuilds, read-only segmentation resources, shared native/external MCP launch specs, retired managed asset pruning, and serialized PyPI-before-VSIX publishing.
 - Release gates must cover Python checks, VSIX `test:ci`, sync-assets, release harness/artifact audit, VSIX install smoke, Docker smoke, git push, and tag release monitoring.
 
 > 📌 當前工作焦點和進行中的變更
 
 ## Current Goals
+
+- Complete the `0.6.19` corrective release with clean local checks, memory updates, git commit/push, and tag publication.
 
 - 正在完成 0.6.16 release prep：整合 multi-agent repo review 修正，完成 Marker/LightRAG/PyMuPDF/segmentation/table/DOCX/VSIX/release hygiene 補強，並進行 MEM+GIT+PUSH+TAG 發布。
 

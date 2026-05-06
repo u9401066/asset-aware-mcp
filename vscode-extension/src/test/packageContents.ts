@@ -43,6 +43,28 @@ const forbiddenFiles = [
     'package-lock.json',
 ];
 
+const forbiddenAssetFragments = [
+    'resources/repo-assets/asset-aware/.github/zotero-research-workflow.md',
+    'resources/repo-assets/asset-aware/.github/agents/research.agent.md',
+    'resources/repo-assets/asset-aware/.claude/skills/pubmed-',
+    'resources/repo-assets/asset-aware/.claude/skills/pipeline-persistence/',
+    'resources/repo-assets/asset-aware/.cline/skills/pubmed-search-mcp-harness/',
+    'resources/repo-assets/asset-aware/.cline/skills/zotero-keeper-harness/',
+    'resources/repo-assets/asset-aware/.codex/skills/pubmed-search-mcp-harness/',
+    'resources/repo-assets/asset-aware/.codex/skills/zotero-keeper-harness/',
+    'resources/repo-assets/asset-aware/.clinerules/00-zotero-project.md',
+    'resources/repo-assets/asset-aware/.clinerules/10-zotero-python.md',
+    'resources/repo-assets/asset-aware/.clinerules/20-zotero-vscode-extension.md',
+    'resources/repo-assets/asset-aware/.clinerules/30-zotero-research-workflow.md',
+    'resources/repo-assets/asset-aware/.clinerules/40-zotero-release.md',
+    'resources/repo-assets/asset-aware/.clinerules/50-pubmed-project.md',
+    'resources/repo-assets/asset-aware/.clinerules/60-pubmed-python.md',
+    'resources/repo-assets/asset-aware/.clinerules/70-pubmed-mcp-tools.md',
+    'resources/repo-assets/asset-aware/.clinerules/80-pubmed-release.md',
+    'resources/repo-assets/asset-aware/.clinerules/workflows/pubmed-',
+    'resources/repo-assets/asset-aware/.clinerules/workflows/zotero-',
+];
+
 async function listPackageFiles(): Promise<string[]> {
     return await listFiles({
         cwd: extensionRoot,
@@ -67,6 +89,13 @@ function assertPackageContents(files: string[]): void {
 
     if (forbidden.length > 0) {
         throw new Error(`VSIX package contains development-only files: ${forbidden.join(', ')}`);
+    }
+
+    const forbiddenAssets = files.filter((file) =>
+        forbiddenAssetFragments.some((fragment) => file.includes(fragment))
+    );
+    if (forbiddenAssets.length > 0) {
+        throw new Error(`VSIX package contains non Asset-Aware harness assets: ${forbiddenAssets.join(', ')}`);
     }
 }
 

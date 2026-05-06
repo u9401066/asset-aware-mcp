@@ -7,6 +7,7 @@ error handling, input validation, and response formatting.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -757,6 +758,44 @@ class TestDocumentTools:
         assert "AssetRef" in result
         assert '"source_type": "span"' in result
         assert '"char_range"' in result
+
+    async def test_find_evidence_spans_rebuilds_stale_citation_index(self) -> None:
+        """find_evidence_spans rebuilds cached spans when markdown changed."""
+        from src.domain.citation import EvidenceSpan
+
+        markdown = "New exact evidence sentence.\n"
+        old_span = EvidenceSpan.create(
+            doc_id="doc_123",
+            source_revision_id=hashlib.sha256(b"old markdown").hexdigest(),
+            span_kind="sentence",
+            text="Old cached sentence.",
+            block_id="blk_old",
+        )
+        blocks = [
+            {
+                "block_id": "blk_1",
+                "block_type": "Text",
+                "page": 1,
+                "text": "New exact evidence sentence.",
+                "metadata": {"line_start": 0, "line_end": 1},
+            }
+        ]
+        with patch("src.presentation.tools.document_tools.repository") as mock_repo:
+            mock_repo.load_citation_index.return_value = [old_span]
+            mock_repo.load_markdown.return_value = markdown
+            mock_repo.load_blocks.return_value = blocks
+            from src.presentation.tools.document_tools import find_evidence_spans
+
+            result = await find_evidence_spans("doc_123", "New exact")
+
+        assert "New exact evidence sentence." in result
+        mock_repo.save_citation_index.assert_called_once()
+        saved_spans = mock_repo.save_citation_index.call_args.args[1]
+        assert saved_spans
+        assert (
+            saved_spans[0].source_revision_id
+            == hashlib.sha256(markdown.encode("utf-8")).hexdigest()
+        )
 
     async def test_verify_citation_ref_detects_valid_span(self) -> None:
         """verify_citation_ref validates quote hash and source revision."""

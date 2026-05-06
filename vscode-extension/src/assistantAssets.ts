@@ -13,6 +13,7 @@ interface InstallSummary {
     installed: number;
     updated: number;
     preserved: number;
+    removed: number;
     missingSources: string[];
 }
 
@@ -21,11 +22,33 @@ function createSummary(): InstallSummary {
         installed: 0,
         updated: 0,
         preserved: 0,
+        removed: 0,
         missingSources: [],
     };
 }
 
 const MANIFEST_RELATIVE_PATH = path.join('.asset-aware-mcp', 'assistant-assets.json');
+const RETIRED_MANAGED_ASSET_FRAGMENTS = [
+    '.github/zotero-research-workflow.md',
+    '.github/agents/research.agent.md',
+    '.claude/skills/pubmed-',
+    '.claude/skills/pipeline-persistence/',
+    '.cline/skills/pubmed-search-mcp-harness/',
+    '.cline/skills/zotero-keeper-harness/',
+    '.codex/skills/pubmed-search-mcp-harness/',
+    '.codex/skills/zotero-keeper-harness/',
+    '.clinerules/00-zotero-project.md',
+    '.clinerules/10-zotero-python.md',
+    '.clinerules/20-zotero-vscode-extension.md',
+    '.clinerules/30-zotero-research-workflow.md',
+    '.clinerules/40-zotero-release.md',
+    '.clinerules/50-pubmed-project.md',
+    '.clinerules/60-pubmed-python.md',
+    '.clinerules/70-pubmed-mcp-tools.md',
+    '.clinerules/80-pubmed-release.md',
+    '.clinerules/workflows/pubmed-',
+    '.clinerules/workflows/zotero-',
+];
 
 function getAssetPath(context: vscode.ExtensionContext, ...segments: string[]): string {
     return path.join(context.extensionPath, 'resources', 'repo-assets', 'asset-aware', ...segments);
@@ -100,11 +123,13 @@ function syncManagedFile(
     workspaceRoot: string,
     manifest: ManagedAssetManifest,
     summary: InstallSummary,
+    activeRelativePaths?: Set<string>,
     options: { legacyManaged?: boolean } = {},
 ): void {
     const incoming = fs.readFileSync(sourcePath, 'utf-8');
     const incomingHash = sha256(incoming);
     const relativePath = normalizeManifestPath(workspaceRoot, destinationPath);
+    activeRelativePaths?.add(relativePath);
     const existing = readUtf8IfExists(destinationPath);
 
     if (existing === undefined) {
@@ -160,6 +185,7 @@ function syncManagedDirectory(
     workspaceRoot: string,
     manifest: ManagedAssetManifest,
     summary: InstallSummary,
+    activeRelativePaths?: Set<string>,
 ): void {
     if (!fs.existsSync(sourceDir)) {
         summary.missingSources.push(sourceDir);
@@ -169,7 +195,14 @@ function syncManagedDirectory(
     for (const sourceFile of collectFilesRecursive(sourceDir)) {
         const relativePath = path.relative(sourceDir, sourceFile);
         const destinationFile = path.join(destinationDir, relativePath);
-        syncManagedFile(sourceFile, destinationFile, workspaceRoot, manifest, summary);
+        syncManagedFile(
+            sourceFile,
+            destinationFile,
+            workspaceRoot,
+            manifest,
+            summary,
+            activeRelativePaths,
+        );
     }
 }
 
@@ -181,6 +214,7 @@ function syncFileWithDetector(
     workspaceRoot: string,
     manifest: ManagedAssetManifest,
     mode: InstallMode,
+    activeRelativePaths?: Set<string>,
 ): void {
     if (!fs.existsSync(sourcePath)) {
         summary.missingSources.push(sourcePath);
@@ -190,9 +224,17 @@ function syncFileWithDetector(
     const existing = readUtf8IfExists(destinationPath);
     if (existing === undefined || detector(existing)) {
         const relativePath = normalizeManifestPath(workspaceRoot, destinationPath);
-        syncManagedFile(sourcePath, destinationPath, workspaceRoot, manifest, summary, {
-            legacyManaged: existing !== undefined && manifest.files[relativePath] === undefined,
-        });
+        syncManagedFile(
+            sourcePath,
+            destinationPath,
+            workspaceRoot,
+            manifest,
+            summary,
+            activeRelativePaths,
+            {
+                legacyManaged: existing !== undefined && manifest.files[relativePath] === undefined,
+            },
+        );
         return;
     }
 
@@ -202,6 +244,42 @@ function syncFileWithDetector(
     }
 
     summary.preserved++;
+}
+
+function pruneRetiredManagedFiles(
+    workspaceRoot: string,
+    manifest: ManagedAssetManifest,
+    activeRelativePaths: Set<string>,
+    summary: InstallSummary,
+    options: { onlyKnownRetired?: boolean } = {},
+): void {
+    for (const [relativePath, entry] of Object.entries({ ...manifest.files })) {
+        if (activeRelativePaths.has(relativePath)) {
+            continue;
+        }
+        if (
+            options.onlyKnownRetired
+            && !RETIRED_MANAGED_ASSET_FRAGMENTS.some((fragment) => relativePath.includes(fragment))
+        ) {
+            continue;
+        }
+
+        const destinationPath = path.join(workspaceRoot, relativePath);
+        const existing = readUtf8IfExists(destinationPath);
+        if (existing === undefined) {
+            delete manifest.files[relativePath];
+            continue;
+        }
+
+        if (sha256(existing) !== entry.sha256) {
+            summary.preserved++;
+            continue;
+        }
+
+        fs.rmSync(destinationPath, { force: true });
+        delete manifest.files[relativePath];
+        summary.removed++;
+    }
 }
 
 export async function installAssistantAssets(
@@ -235,6 +313,7 @@ export async function installAssistantAssets(
     const workspaceRoot = workspaceFolder.uri.fsPath;
     const summary = createSummary();
     const manifest = loadManifest(workspaceRoot);
+    const activeRelativePaths = new Set<string>();
 
     syncFileWithDetector(
         getAssetPath(context, 'AGENTS.md'),
@@ -244,6 +323,7 @@ export async function installAssistantAssets(
         workspaceRoot,
         manifest,
         mode,
+        activeRelativePaths,
     );
     syncFileWithDetector(
         getAssetPath(context, '.github', 'copilot-instructions.md'),
@@ -253,6 +333,7 @@ export async function installAssistantAssets(
         workspaceRoot,
         manifest,
         mode,
+        activeRelativePaths,
     );
 
     syncManagedDirectory(
@@ -261,6 +342,7 @@ export async function installAssistantAssets(
         workspaceRoot,
         manifest,
         summary,
+        activeRelativePaths,
     );
     syncManagedDirectory(
         getAssetPath(context, '.github', 'bylaws'),
@@ -268,6 +350,7 @@ export async function installAssistantAssets(
         workspaceRoot,
         manifest,
         summary,
+        activeRelativePaths,
     );
     syncManagedDirectory(
         getAssetPath(context, '.claude', 'skills'),
@@ -275,6 +358,7 @@ export async function installAssistantAssets(
         workspaceRoot,
         manifest,
         summary,
+        activeRelativePaths,
     );
     syncManagedDirectory(
         getAssetPath(context, '.cline', 'skills'),
@@ -282,6 +366,7 @@ export async function installAssistantAssets(
         workspaceRoot,
         manifest,
         summary,
+        activeRelativePaths,
     );
     syncManagedDirectory(
         getAssetPath(context, '.codex', 'skills'),
@@ -289,6 +374,7 @@ export async function installAssistantAssets(
         workspaceRoot,
         manifest,
         summary,
+        activeRelativePaths,
     );
     syncManagedDirectory(
         getAssetPath(context, '.clinerules'),
@@ -296,8 +382,12 @@ export async function installAssistantAssets(
         workspaceRoot,
         manifest,
         summary,
+        activeRelativePaths,
     );
 
+    pruneRetiredManagedFiles(workspaceRoot, manifest, activeRelativePaths, summary, {
+        onlyKnownRetired: summary.missingSources.length > 0,
+    });
     saveManifest(workspaceRoot, manifest);
 
     if (mode === 'manual') {
@@ -305,9 +395,9 @@ export async function installAssistantAssets(
             vscode.window.showWarningMessage(
                 `Installed ${summary.installed} and updated ${summary.updated} assistant asset(s), but ${summary.missingSources.length} bundled source path(s) were missing.`,
             );
-        } else if (summary.installed > 0 || summary.updated > 0) {
+        } else if (summary.installed > 0 || summary.updated > 0 || summary.removed > 0) {
             vscode.window.showInformationMessage(
-                `Installed ${summary.installed} and updated ${summary.updated} Asset-Aware assistant asset(s). Preserved ${summary.preserved} custom file(s).`,
+                `Installed ${summary.installed}, updated ${summary.updated}, and removed ${summary.removed} retired Asset-Aware assistant asset(s). Preserved ${summary.preserved} custom file(s).`,
             );
         } else {
             vscode.window.showInformationMessage(

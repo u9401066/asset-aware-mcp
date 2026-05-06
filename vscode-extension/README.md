@@ -6,14 +6,15 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.18/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.19/resources/banner.png)
 
-## What's New in v0.6.18
+## What's New in v0.6.19
 
-- **LLM wiki harness**: bundled Codex and Cline `llm-wiki-builder` skills for Foam-compatible literature notes with Zotero, PubMed, and Asset-Aware provenance
-- **Wiki workflow rules**: added Cline rules for stable Markdown note naming, source identifiers, citation markers, and link validation
-- **Assistant asset sync**: VSIX repo assets now include the LLM wiki harness so workspace assistant assets remain consistent after install/update
-- **Original workspace reconciliation**: local release records now capture the Cline timeout investigation used to harden MCP startup follow-up work
+- **Harness boundary cleanup**: Asset-Aware no longer bundles Zotero Keeper or PubMed Search harness assets; retired managed copies are pruned when safe
+- **DFM save guard**: stale DFM edits now fail closed on checksum mismatch unless explicitly forced
+- **Citation freshness**: citation span indexes rebuild when canonical Markdown revision hashes drift
+- **Extension launch parity**: native MCP provider now uses the shared launch spec for local `.env` and `DATA_DIR` handling
+- **Release hardening**: VSIX publishing waits for the matching PyPI package and CI actions have been upgraded to Node 24-compatible releases
 - **50 tools** across 7 modules
 
 ## 🧪 Current Main Branch

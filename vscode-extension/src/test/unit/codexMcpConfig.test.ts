@@ -1,4 +1,4 @@
-import * as assert from 'assert';
+﻿import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -24,7 +24,7 @@ describe('codexMcpConfig', () => {
         process.env.CODEX_HOME = tempDir;
         context = {
             globalStorageUri: { fsPath: path.join(tempDir, 'globalStorage', 'u9401066.asset-aware-mcp') },
-            extension: { packageJSON: { version: '0.6.18' } },
+            extension: { packageJSON: { version: '0.6.19' } },
         };
         (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];
         __resetConfiguration();

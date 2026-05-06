@@ -1,4 +1,4 @@
-import * as assert from 'assert';
+﻿import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -29,7 +29,7 @@ describe('assistantAssets', () => {
     function makeContext(): any {
         return {
             extensionPath: extensionRoot,
-            extension: { packageJSON: { version: '0.6.18' } },
+            extension: { packageJSON: { version: '0.6.19' } },
         };
     }
 
@@ -86,5 +86,25 @@ describe('assistantAssets', () => {
             '# Asset-Aware MCP Codex Harness\ncitation-ready document workflows\nversion two\n',
         );
         assert.strictEqual(summary?.updated, 1);
+    });
+
+    it('removes retired managed harness assets that were not customized', async () => {
+        const retiredSkillPath = path.join('.cline', 'skills', 'pubmed-search-mcp-harness', 'SKILL.md');
+        writeBundledAsset(retiredSkillPath, 'managed pubmed harness\n');
+
+        await installAssistantAssets(makeContext());
+        fs.rmSync(
+            path.join(extensionRoot, 'resources', 'repo-assets', 'asset-aware', '.cline', 'skills', 'pubmed-search-mcp-harness'),
+            { recursive: true, force: true },
+        );
+        writeBundledAsset(
+            path.join('.cline', 'skills', 'asset-aware-mcp-harness', 'SKILL.md'),
+            'asset-aware harness\n',
+        );
+
+        const summary = await installAssistantAssets(makeContext());
+
+        assert.ok(!fs.existsSync(path.join(workspaceRoot, retiredSkillPath)));
+        assert.strictEqual(summary?.removed, 1);
     });
 });

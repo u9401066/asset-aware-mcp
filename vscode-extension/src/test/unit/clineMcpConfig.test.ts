@@ -1,4 +1,4 @@
-import * as assert from 'assert';
+﻿import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -17,7 +17,7 @@ describe('clineMcpConfig', () => {
             globalStorageUri: {
                 fsPath: path.join(tempDir, 'globalStorage', 'u9401066.asset-aware-mcp'),
             },
-            extension: { packageJSON: { version: '0.6.18' } },
+            extension: { packageJSON: { version: '0.6.19' } },
         };
         settingsPath = path.join(tempDir, 'globalStorage', 'saoudrizwan.claude-dev', 'settings', 'cline_mcp_settings.json');
         (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];
