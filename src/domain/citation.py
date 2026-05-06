@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from typing import Any, Literal
 
@@ -72,6 +73,10 @@ class EvidenceSpan(BaseModel):
     context_before: str = Field("", description="Short context before the span")
     context_after: str = Field("", description="Short context after the span")
     extraction_backend: str = Field("", description="marker/pymupdf/etc.")
+    locator_source_sha256: str = Field(
+        "",
+        description="Hash of layout/block metadata used to derive locator fields",
+    )
     craap: CraapAssessment = Field(default_factory=CraapAssessment)
 
     @classmethod
@@ -94,6 +99,7 @@ class EvidenceSpan(BaseModel):
         char_end: int | None = None,
         markdown: str = "",
         extraction_backend: str = "",
+        locator_source_sha256: str = "",
     ) -> EvidenceSpan:
         """Create a span with stable hashes and context fields."""
         exact_hash = _sha256(text)
@@ -137,6 +143,7 @@ class EvidenceSpan(BaseModel):
             context_before=_context(markdown, char_start, before=True),
             context_after=_context(markdown, char_end, before=False),
             extraction_backend=extraction_backend,
+            locator_source_sha256=locator_source_sha256,
             craap=build_initial_craap_assessment(
                 source_type=source_type,
                 extraction_backend=extraction_backend,
@@ -154,6 +161,7 @@ def build_evidence_spans(
 ) -> list[EvidenceSpan]:
     """Build citation-ready spans from canonical markdown and block metadata."""
     source_revision_id = _sha256(markdown)
+    locator_source_sha256 = blocks_locator_sha256(blocks)
     line_offsets, line_count = _line_offsets(markdown)
     spans: list[EvidenceSpan] = []
     seen: set[str] = set()
@@ -209,6 +217,7 @@ def build_evidence_spans(
                 char_end=char_end,
                 markdown=markdown,
                 extraction_backend=source_backend,
+                locator_source_sha256=locator_source_sha256,
             ),
         )
 
@@ -236,6 +245,7 @@ def build_evidence_spans(
                     char_end=unit_end,
                     markdown=markdown,
                     extraction_backend=source_backend,
+                    locator_source_sha256=locator_source_sha256,
                 ),
             )
 
@@ -305,6 +315,33 @@ def _append_unique(
         return
     seen.add(span.span_id)
     spans.append(span)
+
+
+def blocks_locator_sha256(blocks: list[dict[str, Any]]) -> str:
+    """Hash block metadata that affects page/line/bbox/section locators."""
+    locator_payload: list[dict[str, Any]] = []
+    for block in blocks:
+        metadata = block.get("metadata")
+        metadata = metadata if isinstance(metadata, dict) else {}
+        locator_payload.append(
+            {
+                "block_id": block.get("block_id"),
+                "block_type": block.get("block_type"),
+                "page": block.get("page"),
+                "bbox": block.get("bbox"),
+                "section_hierarchy": block.get("section_hierarchy"),
+                "line_start": metadata.get("line_start"),
+                "line_end": metadata.get("line_end"),
+            }
+        )
+    canonical = json.dumps(
+        locator_payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
+    return _sha256(canonical)
 
 
 def _iter_child_units(

@@ -7,6 +7,22 @@
 
 ## [Unreleased]
 
+## [0.6.20] - 2026-05-06
+
+### Fixed
+
+- **Document provenance fail-closed guards**
+  - `save_docx` now rejects missing DFM checksums, doc ID drift, and severe pre-save integrity errors before writing artifacts.
+  - Citation refs now carry locator-source hashes and `verify_citation_ref` checks block, page, line, char, byte, bbox, locator version, source revision, and quote hashes.
+  - Citation span caches rebuild when block locator metadata changes even if canonical Markdown text is unchanged.
+- **Table and segmentation integrity**
+  - Docx/A2T table contexts now persist source revision and source block hashes, rejecting stale write-back attempts.
+  - Segmentation export no longer mutates stored marker blocks and now includes source revision, locator version, locator-source hash, text hash, and char/byte ranges.
+- **Harness and release boundaries**
+  - External Zotero Keeper and PubMed Search harness assets are ignored and audited as non-Asset-Aware files instead of being bundled.
+  - VSIX assistant asset sync prunes retired managed external harness files only when safe.
+  - Release workflow now adds cross-platform VSIX smoke and a release preflight gate before PyPI publishing.
+
 ## [0.6.19] - 2026-05-06
 
 ### Changed

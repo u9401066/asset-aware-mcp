@@ -73,7 +73,10 @@ def _make_chart_block(block_id: str = "c001") -> DfmBlock:
 def _make_ir() -> DocxIR:
     """Create a minimal DocxIR with one table for testing."""
     ir = DocxIR(
-        doc_id="test_doc", source_path="/test.docx", source_filename="test.docx"
+        doc_id="test_doc",
+        source_path="/test.docx",
+        source_filename="test.docx",
+        checksum="rev-a",
     )
     ir.add_block(_make_table_block("t001"))
     ir.add_block(
@@ -373,6 +376,17 @@ class TestTableContextToBlock:
 
 
 class TestApplyTableContextToIR:
+    def test_block_to_table_context_records_source_revision_and_block_hash(self):
+        block = _make_table_block("t001")
+        tc = DfmTableBridge.block_to_table_context(
+            block,
+            doc_id="test_doc",
+            source_revision_id="rev-a",
+        )
+
+        assert tc.source_revision_id == "rev-a"
+        assert tc.source_block_hash == DfmTableBridge.block_content_hash(block)
+
     def test_update_existing_block(self):
         ir = _make_ir()
         tc = TableContext(
@@ -392,6 +406,34 @@ class TestApplyTableContextToIR:
         assert block is not None
         assert "Charlie" in block.content
         assert "99" in block.content
+
+    def test_rejects_stale_source_revision(self):
+        ir = _make_ir()
+        block = ir.find_block("t001")
+        assert block is not None
+        tc = DfmTableBridge.block_to_table_context(
+            block,
+            doc_id=ir.doc_id,
+            source_revision_id="rev-before",
+        )
+        ir.checksum = "rev-after"
+
+        with pytest.raises(ValueError, match="stale TableContext"):
+            DfmTableBridge.apply_table_context_to_ir(ir, "t001", tc)
+
+    def test_rejects_stale_source_block_hash(self):
+        ir = _make_ir()
+        block = ir.find_block("t001")
+        assert block is not None
+        tc = DfmTableBridge.block_to_table_context(
+            block,
+            doc_id=ir.doc_id,
+            source_revision_id=ir.checksum,
+        )
+        block.content = "| Name |\n| --- |\n| Changed |"
+
+        with pytest.raises(ValueError, match="source block changed"):
+            DfmTableBridge.apply_table_context_to_ir(ir, "t001", tc)
 
     def test_block_not_found_raises(self):
         ir = _make_ir()

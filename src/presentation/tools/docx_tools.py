@@ -638,6 +638,7 @@ async def docx_table_to_context(
             block,
             doc_id=doc_id,
             source_description=f"Table {block_id} from {ir.source_filename}",
+            source_revision_id=ir.checksum,
         )
     except ValueError as e:
         return f"❌ 轉換失敗：{e}"

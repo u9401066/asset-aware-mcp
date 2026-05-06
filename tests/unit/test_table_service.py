@@ -79,6 +79,36 @@ def test_load_existing_tables_includes_non_tbl_context_ids(tmp_path):
     assert context.rows == [{"Finding": "A"}]
 
 
+def test_load_existing_tables_preserves_docx_source_guards(tmp_path):
+    from src.infrastructure.excel_renderer import ExcelRenderer
+
+    table_id = "dfm_docx123_table1"
+    (tmp_path / f"{table_id}.json").write_text(
+        """{
+  "id": "dfm_docx123_table1",
+  "intent": "summary",
+  "title": "DFM Table",
+  "columns": [{"name": "Finding", "type": "text", "required": true}],
+  "rows": [{"Finding": "A"}],
+  "source_doc_id": "docx_123",
+  "source_block_id": "t001",
+  "source_revision_id": "rev-a",
+  "source_block_hash": "hash-a",
+  "created_at": "2026-04-29"
+}""",
+        encoding="utf-8",
+    )
+
+    service = TableService(
+        table_output_dir=tmp_path,
+        table_renderer=ExcelRenderer(tmp_path),
+    )
+
+    context = service.get_table_context(table_id)
+    assert context.source_revision_id == "rev-a"
+    assert context.source_block_hash == "hash-a"
+
+
 def test_update_delete_row(table_service):
     columns = [{"name": "Drug", "type": "text"}]
     table_id = table_service.create_table("comparison", "Test", columns)

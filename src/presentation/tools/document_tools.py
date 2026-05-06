@@ -34,7 +34,12 @@ from src.application.output_paths import (
     resolve_document_output_dir,
     resolve_document_output_path,
 )
-from src.domain.citation import LOCATOR_VERSION, EvidenceSpan, build_evidence_spans
+from src.domain.citation import (
+    LOCATOR_VERSION,
+    EvidenceSpan,
+    blocks_locator_sha256,
+    build_evidence_spans,
+)
 from src.domain.marker_errors import (
     MarkerBackendUnavailable,
     format_marker_failure,
@@ -83,6 +88,20 @@ def _format_line_range(start_line: int | None, end_line: int | None) -> str | No
     return _display_line_range(start_line, end_line)
 
 
+def _coerce_range(value: Any) -> list[int | None] | None:
+    if not isinstance(value, (list, tuple)) or len(value) != 2:
+        return None
+    coerced: list[int | None] = []
+    for item in value:
+        if item is None:
+            coerced.append(None)
+        elif isinstance(item, int):
+            coerced.append(item)
+        else:
+            return None
+    return coerced
+
+
 def _asset_ref_from_span(span: EvidenceSpan) -> dict[str, Any]:
     ref: dict[str, Any] = {
         "source_type": "span",
@@ -92,6 +111,7 @@ def _asset_ref_from_span(span: EvidenceSpan) -> dict[str, Any]:
         "page": span.page,
         "source_revision_id": span.source_revision_id,
         "locator_version": span.locator_version,
+        "locator_source_sha256": span.locator_source_sha256,
         "quote": span.text,
         "quote_sha256": span.text_sha256,
         "excerpt": span.text[:200],
@@ -117,12 +137,14 @@ def _load_or_build_evidence_spans(doc_id: str) -> list[EvidenceSpan]:
     markdown = markdown if isinstance(markdown, str) else ""
 
     if spans and not markdown:
-        return spans
-    if spans and markdown:
+        return []
+    if spans and markdown and blocks is not None:
         source_revision_id = hashlib.sha256(markdown.encode("utf-8")).hexdigest()
+        locator_source_sha256 = blocks_locator_sha256(blocks)
         if all(
             span.source_revision_id == source_revision_id
             and span.locator_version == LOCATOR_VERSION
+            and span.locator_source_sha256 == locator_source_sha256
             for span in spans
         ):
             return spans
@@ -523,6 +545,34 @@ async def verify_citation_ref(ref: dict[str, Any]) -> str:
     issues: list[str] = []
     if ref.get("source_revision_id") != span.source_revision_id:
         issues.append("source_revision_id mismatch")
+    if ref.get("locator_version") != span.locator_version:
+        issues.append("locator_version mismatch")
+    if (
+        "locator_source_sha256" in ref
+        and ref.get("locator_source_sha256") != span.locator_source_sha256
+    ):
+        issues.append("locator_source_sha256 mismatch")
+    if "block_id" in ref and ref.get("block_id") != span.block_id:
+        issues.append("block_id mismatch")
+    if "page" in ref and ref.get("page") != span.page:
+        issues.append("page mismatch")
+    if "line_range" in ref and _coerce_range(ref.get("line_range")) != [
+        span.line_start,
+        span.line_end,
+    ]:
+        issues.append("line_range mismatch")
+    if "char_range" in ref and _coerce_range(ref.get("char_range")) != [
+        span.char_start,
+        span.char_end,
+    ]:
+        issues.append("char_range mismatch")
+    if "byte_range" in ref and _coerce_range(ref.get("byte_range")) != [
+        span.byte_start,
+        span.byte_end,
+    ]:
+        issues.append("byte_range mismatch")
+    if "bbox" in ref and ref.get("bbox") != span.bbox:
+        issues.append("bbox mismatch")
 
     quote = str(ref.get("quote") or "")
     quote_sha256 = str(ref.get("quote_sha256") or "")

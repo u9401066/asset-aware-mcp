@@ -2,10 +2,10 @@
 
 ## 2026-05-06
 
-- Preparing `v0.6.19` corrective release after the `v0.6.18` local reconciliation release.
+- Preparing `v0.6.20` corrective release after the published `v0.6.19` harness-boundary release.
 - Removed Zotero Keeper and PubMed Search MCP harness assets from Asset-Aware source and VSIX repo-assets; retained the LLM wiki builder as an Asset-Aware document-evidence workflow with external literature tools treated as optional.
-- Added regression coverage for stale DFM checksum rejection, stale citation index rebuilds, read-only segmentation resources, native MCP provider launch-spec parity, VSIX package harness boundaries, and retired managed assistant-asset pruning.
-- Hardened release workflows so VSIX publishing waits for the matching PyPI package and upgraded CI/release GitHub Actions to Node 24-compatible versions.
+- Added regression coverage for DOCX/DFM fail-closed checksum/doc-id/pre-save guards, citation locator-source verification and cache rebuilds, stale A2T table-context rejection, read-only segmentation provenance, VSIX package harness boundaries, release harness audits, and retired managed assistant-asset pruning.
+- Hardened release workflows with cross-platform VSIX smoke and a release preflight gate before PyPI publishing.
 - Reconciled the original local workspace to the published `v0.6.17` mainline after full history fetch showed the apparent `ahead 78` state was a shallow/grafted history artifact.
 - Kept the full pre-reconcile dirty state in stash `pre-0.6.17-original-workspace-reconcile-20260506-091930`.
 - Restored and prepared the remaining useful local assets for `v0.6.18`: `.cline/.codex` `llm-wiki-builder` skills, Cline Foam/LLM wiki rules/workflow, and `asset-aware-mcp-cline-timeout-report-2026-05-05.md`.

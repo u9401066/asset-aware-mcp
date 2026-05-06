@@ -62,6 +62,31 @@ lightrag_db/
 
 # PubMed Search MCP local pipeline state
 .pubmed-search/
+.zotero-keeper/
+
+# External MCP/assistant harness assets managed by their own extensions
+.github/hooks/
+.github/zotero-research-workflow.md
+.github/agents/research.agent.md
+.claude/skills/pubmed-*/
+.claude/skills/zotero-keeper-harness/
+.claude/skills/pipeline-persistence/
+.cline/skills/pubmed-search-mcp-harness/
+.cline/skills/zotero-keeper-harness/
+.codex/skills/pubmed-search-mcp-harness/
+.codex/skills/zotero-keeper-harness/
+.clinerules/00-zotero-project.md
+.clinerules/10-zotero-python.md
+.clinerules/20-zotero-vscode-extension.md
+.clinerules/30-zotero-research-workflow.md
+.clinerules/40-zotero-release.md
+.clinerules/50-pubmed-project.md
+.clinerules/60-pubmed-python.md
+.clinerules/70-pubmed-mcp-tools.md
+.clinerules/80-pubmed-release.md
+.clinerules/workflows/pubmed-*
+.clinerules/workflows/zotero-*
+scripts/hooks/copilot/
 
 # Test data (large PDF files)
 test_data/

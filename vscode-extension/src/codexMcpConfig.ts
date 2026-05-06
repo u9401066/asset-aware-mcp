@@ -193,6 +193,7 @@ function warnSkippedConfigWrite(configPath: string, reason: string): void {
 }
 
 function hasSuspiciousTomlSyntax(content: string): boolean {
+    const seenTables = new Set<string>();
     for (const rawLine of content.split(/\r?\n/)) {
         const line = rawLine.trim();
         if (!line || line.startsWith('#')) {
@@ -201,8 +202,82 @@ function hasSuspiciousTomlSyntax(content: string): boolean {
         if (line.startsWith('[') && !/^\[\[?[^\]]+\]\]?(?:\s*#.*)?$/.test(line)) {
             return true;
         }
+        if (line.startsWith('[')) {
+            const tableName = line.replace(/\s*#.*$/, '').replace(/^\[\[?/, '').replace(/\]\]?$/, '').trim();
+            if (seenTables.has(tableName)) {
+                return true;
+            }
+            seenTables.add(tableName);
+            continue;
+        }
+        if (line.includes('=') && !hasBalancedTomlValue(stripTomlComment(line).split(/=(.*)/s)[1] ?? '')) {
+            return true;
+        }
     }
     return false;
+}
+
+function stripTomlComment(line: string): string {
+    let inString: '"' | "'" | '' = '';
+    let escaping = false;
+    let output = '';
+    for (const char of line) {
+        if (inString) {
+            output += char;
+            if (inString === '"' && !escaping && char === '\\') {
+                escaping = true;
+                continue;
+            }
+            if (!escaping && char === inString) {
+                inString = '';
+            }
+            escaping = false;
+            continue;
+        }
+        if (char === '"' || char === "'") {
+            inString = char;
+            output += char;
+            continue;
+        }
+        if (char === '#') {
+            break;
+        }
+        output += char;
+    }
+    return output;
+}
+
+function hasBalancedTomlValue(value: string): boolean {
+    const stack: string[] = [];
+    let inString: '"' | "'" | '' = '';
+    let escaping = false;
+    for (const char of value.trim()) {
+        if (inString) {
+            if (inString === '"' && !escaping && char === '\\') {
+                escaping = true;
+                continue;
+            }
+            if (!escaping && char === inString) {
+                inString = '';
+            }
+            escaping = false;
+            continue;
+        }
+        if (char === '"' || char === "'") {
+            inString = char;
+            continue;
+        }
+        if (char === '[' || char === '{') {
+            stack.push(char === '[' ? ']' : '}');
+            continue;
+        }
+        if (char === ']' || char === '}') {
+            if (stack.pop() !== char) {
+                return false;
+            }
+        }
+    }
+    return !inString && stack.length === 0;
 }
 
 function readConfig(configPath: string): string | undefined {
@@ -298,4 +373,6 @@ export const __test__ = {
     stripManagedBlock,
     extractManagedBlock,
     hasSuspiciousTomlSyntax,
+    stripTomlComment,
+    hasBalancedTomlValue,
 };

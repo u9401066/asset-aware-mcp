@@ -99,13 +99,106 @@ jobs:
           cd vscode-extension
           xvfb-run -a npm run test:install-smoke -- --require-activation
 
+  cross-platform-smoke:
+    name: Cross-platform VSIX smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Linux desktop smoke dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb unzip libgbm1 libgtk-3-0 libnss3 libxss1 libasound2t64
+
+      - name: Run packaged install smoke
+        shell: bash
+        run: |
+          cd vscode-extension
+          npm ci
+          npm run sync-assets:check
+          if [ "${RUNNER_OS}" = "Linux" ]; then
+            xvfb-run -a npm run test:install-smoke -- --require-activation
+          else
+            npm run test:install-smoke
+          fi
+
+  release-preflight:
+    name: Release artifact preflight
+    runs-on: ubuntu-latest
+    needs: [test, cross-platform-smoke]
+    environment: release
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Verify release secrets are configured before publishing
+        run: |
+          if [ -z "${VSCE_PAT}" ]; then
+            echo "ERROR: VSCE_PAT is not configured; refusing to publish PyPI first."
+            exit 1
+          fi
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Build Python artifacts
+        run: uv build
+
+      - name: Package VSIX before publishing PyPI
+        run: |
+          cd vscode-extension
+          npm ci
+          npm run sync-assets:check
+          npm run test:ci
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          npx vsce package --no-dependencies --out "asset-aware-mcp-${VERSION}.vsix"
+
+      - name: Audit prepublish release artifacts
+        run: python3 scripts/audit_release_artifacts.py
+
+      - name: Docker smoke import
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          docker build -t "asset-aware-mcp:${VERSION}-release-smoke" .
+          docker run --rm --entrypoint python "asset-aware-mcp:${VERSION}-release-smoke" -c "import src.presentation.server; print('server import ok')"
+
   # ==========================================
   # 發布到 PyPI
   # ==========================================
   publish-pypi:
     name: 📦 Publish to PyPI
     runs-on: ubuntu-latest
-    needs: test
+    needs: release-preflight
     environment: release
     permissions:
       id-token: write

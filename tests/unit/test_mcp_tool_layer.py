@@ -733,11 +733,22 @@ class TestDocumentTools:
 
     async def test_find_evidence_spans_returns_span_asset_ref(self) -> None:
         """find_evidence_spans returns citation-ready span refs."""
-        from src.domain.citation import EvidenceSpan
+        from src.domain.citation import EvidenceSpan, blocks_locator_sha256
+
+        markdown = "x" * 40 + "Needle guidance reduced complications."
+        blocks = [
+            {
+                "block_id": "blk_1",
+                "block_type": "Text",
+                "page": 2,
+                "text": "Needle guidance reduced complications.",
+                "metadata": {"line_start": 5, "line_end": 6},
+            }
+        ]
 
         span = EvidenceSpan.create(
             doc_id="doc_123",
-            source_revision_id="rev",
+            source_revision_id=hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
             span_kind="sentence",
             text="Needle guidance reduced complications.",
             block_id="blk_1",
@@ -746,10 +757,13 @@ class TestDocumentTools:
             line_end=6,
             char_start=40,
             char_end=78,
-            markdown="x" * 40 + "Needle guidance reduced complications.",
+            markdown=markdown,
+            locator_source_sha256=blocks_locator_sha256(blocks),
         )
         with patch("src.presentation.tools.document_tools.repository") as mock_repo:
             mock_repo.load_citation_index.return_value = [span]
+            mock_repo.load_markdown.return_value = markdown
+            mock_repo.load_blocks.return_value = blocks
             from src.presentation.tools.document_tools import find_evidence_spans
 
             result = await find_evidence_spans("doc_123", "reduced")
@@ -799,32 +813,154 @@ class TestDocumentTools:
 
     async def test_verify_citation_ref_detects_valid_span(self) -> None:
         """verify_citation_ref validates quote hash and source revision."""
-        from src.domain.citation import EvidenceSpan
+        from src.domain.citation import EvidenceSpan, blocks_locator_sha256
+
+        markdown = "Exact quote for verification."
+        blocks = [
+            {
+                "block_id": "blk_1",
+                "block_type": "Text",
+                "page": 1,
+                "text": markdown,
+                "metadata": {"line_start": 0, "line_end": 1},
+            }
+        ]
 
         span = EvidenceSpan.create(
             doc_id="doc_123",
-            source_revision_id="rev",
+            source_revision_id=hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
             span_kind="sentence",
             text="Exact quote for verification.",
             block_id="blk_1",
             page=1,
+            line_start=0,
+            line_end=1,
+            char_start=0,
+            char_end=len(markdown),
+            markdown=markdown,
+            locator_source_sha256=blocks_locator_sha256(blocks),
         )
         ref = {
             "source_type": "span",
             "doc_id": "doc_123",
             "span_id": span.span_id,
-            "source_revision_id": "rev",
+            "source_revision_id": span.source_revision_id,
+            "locator_version": span.locator_version,
+            "block_id": span.block_id,
+            "page": span.page,
+            "line_range": [span.line_start, span.line_end],
+            "char_range": [span.char_start, span.char_end],
+            "byte_range": [span.byte_start, span.byte_end],
             "quote": span.text,
             "quote_sha256": span.text_sha256,
         }
         with patch("src.presentation.tools.document_tools.repository") as mock_repo:
             mock_repo.load_citation_index.return_value = [span]
+            mock_repo.load_markdown.return_value = markdown
+            mock_repo.load_blocks.return_value = blocks
             from src.presentation.tools.document_tools import verify_citation_ref
 
             result = await verify_citation_ref(ref)
 
         assert "verified" in result
         assert span.span_id in result
+
+    async def test_verify_citation_ref_detects_locator_mismatch(self) -> None:
+        """verify_citation_ref rejects stale or fabricated locator fields."""
+        from src.domain.citation import EvidenceSpan, blocks_locator_sha256
+
+        markdown = "0123456789Exact quote for verification."
+        blocks = [
+            {
+                "block_id": "blk_1",
+                "block_type": "Text",
+                "page": 1,
+                "text": "Exact quote for verification.",
+                "metadata": {"line_start": 2, "line_end": 3},
+            }
+        ]
+
+        span = EvidenceSpan.create(
+            doc_id="doc_123",
+            source_revision_id=hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
+            span_kind="sentence",
+            text="Exact quote for verification.",
+            block_id="blk_1",
+            page=1,
+            line_start=2,
+            line_end=3,
+            char_start=10,
+            char_end=39,
+            markdown=markdown,
+            locator_source_sha256=blocks_locator_sha256(blocks),
+        )
+        ref = {
+            "source_type": "span",
+            "doc_id": "doc_123",
+            "span_id": span.span_id,
+            "source_revision_id": span.source_revision_id,
+            "locator_version": "citation-span-v0",
+            "block_id": "wrong_block",
+            "page": 9,
+            "line_range": [20, 21],
+            "char_range": [0, 4],
+            "byte_range": [0, 4],
+            "quote": span.text,
+            "quote_sha256": span.text_sha256,
+        }
+        with patch("src.presentation.tools.document_tools.repository") as mock_repo:
+            mock_repo.load_citation_index.return_value = [span]
+            mock_repo.load_markdown.return_value = markdown
+            mock_repo.load_blocks.return_value = blocks
+            from src.presentation.tools.document_tools import verify_citation_ref
+
+            result = await verify_citation_ref(ref)
+
+        assert "mismatch" in result.lower()
+        assert "locator_version mismatch" in result
+        assert "block_id mismatch" in result
+        assert "page mismatch" in result
+        assert "line_range mismatch" in result
+        assert "char_range mismatch" in result
+        assert "byte_range mismatch" in result
+
+    async def test_find_evidence_spans_rebuilds_when_blocks_metadata_changes(
+        self,
+    ) -> None:
+        """find_evidence_spans rebuilds cached spans when block locators drift."""
+        from src.domain.citation import EvidenceSpan
+
+        markdown = "Stable evidence sentence.\n"
+        old_span = EvidenceSpan.create(
+            doc_id="doc_123",
+            source_revision_id=hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
+            span_kind="sentence",
+            text="Stable evidence sentence.",
+            block_id="blk_1",
+            page=9,
+            line_start=99,
+            line_end=100,
+        )
+        old_span.locator_source_sha256 = "old-blocks-hash"
+        blocks = [
+            {
+                "block_id": "blk_1",
+                "block_type": "Text",
+                "page": 1,
+                "text": "Stable evidence sentence.",
+                "metadata": {"line_start": 0, "line_end": 1},
+            }
+        ]
+        with patch("src.presentation.tools.document_tools.repository") as mock_repo:
+            mock_repo.load_citation_index.return_value = [old_span]
+            mock_repo.load_markdown.return_value = markdown
+            mock_repo.load_blocks.return_value = blocks
+            from src.presentation.tools.document_tools import find_evidence_spans
+
+            result = await find_evidence_spans("doc_123", "Stable evidence")
+
+        assert "**Page:** 1" in result
+        mock_repo.save_citation_index.assert_called_once()
 
     async def test_delete_document_success(self) -> None:
         """delete_document returns formatted summary on success."""

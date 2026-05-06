@@ -193,6 +193,7 @@ async def test_save_docx_fails_when_unedited_block_changes(monkeypatch, tmp_path
     ir = DocxIR(
         doc_id="docx_123",
         source_path="/workspace/original.docx",
+        checksum="current-checksum",
         blocks=[
             DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="Before"),
             DfmBlock(id="p002", block_type=DfmBlockType.PARAGRAPH, content="Safe"),
@@ -201,7 +202,7 @@ async def test_save_docx_fails_when_unedited_block_changes(monkeypatch, tmp_path
     parse_result = DfmParseResult(
         doc_id="docx_123",
         source="demo.docx",
-        checksum="",
+        checksum="current-checksum",
         edits=[BlockEdit(block_id="p001", new_content="After")],
     )
 
@@ -264,6 +265,120 @@ async def test_save_docx_rejects_stale_dfm_checksum(monkeypatch, tmp_path: Path)
     assert "stale dfm" in result["error"].lower()
     assert "current-checksum" in result["error"]
     assert "stale-checksum" in result["error"]
+    apply_edits.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_save_docx_rejects_missing_dfm_checksum(monkeypatch, tmp_path: Path):
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path
+
+    service = DocxService(repository=repository)
+    ir = DocxIR(
+        doc_id="docx_123",
+        source_path="/workspace/original.docx",
+        checksum="current-checksum",
+        blocks=[
+            DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="Before"),
+        ],
+    )
+    parse_result = DfmParseResult(
+        doc_id="docx_123",
+        source="demo.docx",
+        checksum="",
+        edits=[BlockEdit(block_id="p001", new_content="After")],
+    )
+    apply_edits = MagicMock(return_value=ir)
+
+    monkeypatch.setattr(service, "_load_ir", lambda doc_id: ir)
+    monkeypatch.setattr(service.parser, "parse", lambda dfm_text: parse_result)
+    monkeypatch.setattr(service.parser, "apply_edits", apply_edits)
+
+    result = await service.save_docx("docx_123", "dummy")
+
+    assert result["success"] is False
+    assert "missing dfm checksum" in result["error"].lower()
+    apply_edits.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_save_docx_rejects_dfm_doc_id_mismatch(monkeypatch, tmp_path: Path):
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path
+
+    service = DocxService(repository=repository)
+    ir = DocxIR(
+        doc_id="docx_123",
+        source_path="/workspace/original.docx",
+        checksum="current-checksum",
+        blocks=[
+            DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="Before"),
+        ],
+    )
+    parse_result = DfmParseResult(
+        doc_id="docx_other",
+        source="demo.docx",
+        checksum="current-checksum",
+        edits=[BlockEdit(block_id="p001", new_content="After")],
+    )
+    apply_edits = MagicMock(return_value=ir)
+
+    monkeypatch.setattr(service, "_load_ir", lambda doc_id: ir)
+    monkeypatch.setattr(service.parser, "parse", lambda dfm_text: parse_result)
+    monkeypatch.setattr(service.parser, "apply_edits", apply_edits)
+
+    result = await service.save_docx("docx_123", "dummy")
+
+    assert result["success"] is False
+    assert "doc_id mismatch" in result["error"].lower()
+    assert "docx_other" in result["error"]
+    apply_edits.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_save_docx_fails_on_pre_save_errors(monkeypatch, tmp_path: Path):
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path
+
+    service = DocxService(repository=repository)
+    ir = DocxIR(
+        doc_id="docx_123",
+        source_path="/workspace/original.docx",
+        checksum="current-checksum",
+        blocks=[
+            DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="Before"),
+        ],
+    )
+    parse_result = DfmParseResult(
+        doc_id="docx_123",
+        source="demo.docx",
+        checksum="current-checksum",
+        edits=[BlockEdit(block_id="missing", new_content="After")],
+    )
+    pre_report = IntegrityReport()
+    pre_report.add(
+        IntegrityIssue(
+            severity="error",
+            stage="pre_save",
+            message="Block missing not found in IR",
+        )
+    )
+    apply_edits = MagicMock(return_value=ir)
+
+    monkeypatch.setattr(service, "_load_ir", lambda doc_id: ir)
+    monkeypatch.setattr(service.parser, "parse", lambda dfm_text: parse_result)
+    monkeypatch.setattr(service.parser, "apply_edits", apply_edits)
+    monkeypatch.setattr(
+        service.integrity,
+        "check_pre_save",
+        lambda ir, parse_result: pre_report,
+    )
+
+    result = await service.save_docx("docx_123", "dummy")
+
+    assert result["success"] is False
+    assert "pre-save integrity check failed" in result["error"].lower()
+    assert any("Block missing" in warning for warning in result["warnings"])
     apply_edits.assert_not_called()
 
 
@@ -426,6 +541,7 @@ async def test_save_docx_does_not_overwrite_artifacts_when_post_save_fails(
     ir = DocxIR(
         doc_id="docx_123",
         source_path=str(tmp_path / "original.docx"),
+        checksum="current-checksum",
         blocks=[
             DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="Before")
         ],
@@ -433,7 +549,7 @@ async def test_save_docx_does_not_overwrite_artifacts_when_post_save_fails(
     parse_result = DfmParseResult(
         doc_id="docx_123",
         source="demo.docx",
-        checksum="",
+        checksum="current-checksum",
         edits=[BlockEdit(block_id="p001", new_content="After")],
     )
     post_report = IntegrityReport()

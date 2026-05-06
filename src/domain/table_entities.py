@@ -311,6 +311,8 @@ class TableContext(BaseModel):
     source_description: str = ""
     source_doc_id: str = ""
     source_block_id: str = ""
+    source_revision_id: str = ""
+    source_block_hash: str = ""
     created_at: datetime = Field(default_factory=datetime.now)
     # 平行引用層 — key: "row_index:column_name"
     citations: dict[str, CellCitation] = Field(default_factory=dict)

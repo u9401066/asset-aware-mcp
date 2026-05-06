@@ -10,6 +10,14 @@ from __future__ import annotations
 from pathlib import Path
 
 
+def require_absent(paths: list[str]) -> list[str]:
+    return [
+        f"{path}: non Asset-Aware harness asset must not be present"
+        for path in paths
+        if Path(path).exists()
+    ]
+
+
 def require_text(path: str, needles: list[str]) -> list[str]:
     text = Path(path).read_text(encoding="utf-8")
     return [f"{path}: missing {needle!r}" for needle in needles if needle not in text]
@@ -26,6 +34,29 @@ def main() -> int:
     errors: list[str] = []
 
     errors.extend(
+        require_absent(
+            [
+                ".github/hooks/copilot-tool-policy.json",
+                ".github/hooks/pipeline-enforcer.json",
+                "scripts/hooks/copilot",
+            ]
+        )
+    )
+    errors.extend(
+        require_text(
+            ".gitignore",
+            [
+                ".github/hooks/",
+                ".github/agents/research.agent.md",
+                ".claude/skills/zotero-keeper-harness/",
+                ".cline/skills/pubmed-search-mcp-harness/",
+                ".codex/skills/zotero-keeper-harness/",
+                "scripts/hooks/copilot/",
+            ],
+        )
+    )
+
+    errors.extend(
         require_text(
             ".github/workflows/release.yml",
             [
@@ -38,7 +69,13 @@ def main() -> int:
                 "python3 scripts/audit_release_artifacts.py",
                 "npm run test:ci",
                 "xvfb-run -a npm run test:install-smoke -- --require-activation",
+                "cross-platform-smoke",
+                "release-preflight",
+                "Verify release secrets are configured before publishing",
+                "Package VSIX before publishing PyPI",
+                "Docker smoke import",
                 "needs: publish-pypi",
+                "needs: release-preflight",
                 "Verify PyPI package is available",
                 "npx vsce package --no-dependencies --out",
                 "Audit packaged VSIX artifact",
@@ -138,6 +175,26 @@ def main() -> int:
                 "sync-assets:check",
                 "assetAwareMcp.configureExternalMcp",
                 "assetAwareMcp.installAssistantAssets",
+            ],
+        )
+    )
+    errors.extend(
+        require_text(
+            "vscode-extension/README.md",
+            [
+                "MCP Tools (50 total)",
+                "Document ETL (14)",
+                "find_evidence_spans",
+                "verify_citation_ref",
+            ],
+        )
+    )
+    errors.extend(
+        require_text(
+            "README.md",
+            [
+                "find_evidence_spans",
+                "verify_citation_ref",
             ],
         )
     )

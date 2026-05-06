@@ -119,6 +119,40 @@ describe('codexMcpConfig', () => {
         assert.ok(__test__.hasSuspiciousTomlSyntax(content));
     });
 
+    it('skips malformed TOML assignments instead of appending a managed block', () => {
+        const configPath = path.join(tempDir, 'config.toml');
+        fs.writeFileSync(configPath, [
+            '[mcp_servers.other]',
+            'command = "unterminated',
+            'args = ["server.js"]',
+            '',
+        ].join('\n'));
+
+        const updated = installCodexMcpServer(context, '/usr/bin/uv');
+
+        assert.strictEqual(updated, false);
+        const content = fs.readFileSync(configPath, 'utf-8');
+        assert.ok(!content.includes('Managed by asset-aware-mcp VS Code extension'));
+        assert.ok(__test__.hasSuspiciousTomlSyntax(content));
+    });
+
+    it('skips malformed TOML arrays instead of appending a managed block', () => {
+        const configPath = path.join(tempDir, 'config.toml');
+        fs.writeFileSync(configPath, [
+            '[mcp_servers.other]',
+            'command = "node"',
+            'args = ["server.js"',
+            '',
+        ].join('\n'));
+
+        const updated = installCodexMcpServer(context, '/usr/bin/uv');
+
+        assert.strictEqual(updated, false);
+        const content = fs.readFileSync(configPath, 'utf-8');
+        assert.ok(!content.includes('Managed by asset-aware-mcp VS Code extension'));
+        assert.ok(__test__.hasSuspiciousTomlSyntax(content));
+    });
+
     it('removes managed blocks while preserving unrelated content', () => {
         assert.strictEqual(installCodexMcpServer(context, '/usr/bin/uv'), true);
         fs.appendFileSync(path.join(tempDir, 'config.toml'), '\n[other]\nkey = "value"\n');

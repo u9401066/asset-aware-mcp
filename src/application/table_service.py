@@ -79,6 +79,8 @@ class TableService:
                         source_description=data.get("source_description", ""),
                         source_doc_id=data.get("source_doc_id", ""),
                         source_block_id=data.get("source_block_id", ""),
+                        source_revision_id=data.get("source_revision_id", ""),
+                        source_block_hash=data.get("source_block_hash", ""),
                         created_at=data.get("created_at", ""),
                         citations=citations,
                         change_log=change_log,
@@ -109,6 +111,8 @@ class TableService:
             "source_description": context.source_description,
             "source_doc_id": context.source_doc_id,
             "source_block_id": context.source_block_id,
+            "source_revision_id": context.source_revision_id,
+            "source_block_hash": context.source_block_hash,
             "created_at": str(context.created_at)
             if isinstance(context.created_at, datetime)
             else context.created_at,

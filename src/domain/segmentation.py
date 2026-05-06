@@ -24,6 +24,18 @@ class DocumentSegment(BaseModel):
     reading_order: int = Field(0, description="Reading order within the page")
     line_start: int | None = Field(None, description="0-based start line in markdown")
     line_end: int | None = Field(None, description="0-based end line in markdown")
+    char_start: int | None = Field(None, description="0-based start char in markdown")
+    char_end: int | None = Field(
+        None, description="0-based exclusive end char in markdown"
+    )
+    byte_start: int | None = Field(None, description="UTF-8 byte start in markdown")
+    byte_end: int | None = Field(None, description="UTF-8 byte end in markdown")
+    source_revision_id: str = Field("", description="Hash of canonical markdown")
+    locator_version: str = Field("", description="Locator algorithm version")
+    locator_source_sha256: str = Field(
+        "", description="Hash of layout/block metadata used for locators"
+    )
+    text_sha256: str = Field("", description="SHA-256 of exact segment text")
     section_hierarchy: list[str] = Field(
         default_factory=list,
         description="Section hierarchy path for the segment",
@@ -44,6 +56,11 @@ class DocumentSegmentation(BaseModel):
     page_count: int = Field(0, description="Total number of pages")
     source_backend: str = Field("", description="Primary extraction backend")
     reading_order_policy: str = Field("", description="Reading order policy version")
+    source_revision_id: str = Field("", description="Hash of canonical markdown")
+    locator_version: str = Field("", description="Locator algorithm version")
+    locator_source_sha256: str = Field(
+        "", description="Hash of layout/block metadata used for locators"
+    )
     generated_at: datetime = Field(default_factory=datetime.now)
     segments: list[DocumentSegment] = Field(default_factory=list)
 

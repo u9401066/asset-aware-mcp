@@ -6,15 +6,16 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.19/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.20/resources/banner.png)
 
-## What's New in v0.6.19
+## What's New in v0.6.20
 
-- **Harness boundary cleanup**: Asset-Aware no longer bundles Zotero Keeper or PubMed Search harness assets; retired managed copies are pruned when safe
-- **DFM save guard**: stale DFM edits now fail closed on checksum mismatch unless explicitly forced
-- **Citation freshness**: citation span indexes rebuild when canonical Markdown revision hashes drift
-- **Extension launch parity**: native MCP provider now uses the shared launch spec for local `.env` and `DATA_DIR` handling
-- **Release hardening**: VSIX publishing waits for the matching PyPI package and CI actions have been upgraded to Node 24-compatible releases
+- **Document save safety**: DOCX/DFM write-back now fails closed on missing checksums, doc ID drift, and pre-save integrity errors
+- **Citation freshness**: citation refs now carry locator-source hashes and verify block/page/line/char/byte locators against rebuilt indexes
+- **Table bridge provenance**: Docx/A2T table contexts now reject stale source revisions or changed source blocks before write-back
+- **Segmentation provenance**: segmentation exports are read-only and include source revision, locator version, text hash, and char/byte ranges
+- **Harness boundary cleanup**: external Zotero Keeper and PubMed Search harness assets are ignored/pruned instead of bundled by Asset-Aware
+- **Release hardening**: release CI now has cross-platform VSIX smoke and a preflight gate before PyPI publishing
 - **50 tools** across 7 modules
 
 ## 🧪 Current Main Branch
@@ -214,15 +215,16 @@ If the extension fails to start or the MCP server doesn't appear:
     *   Run `npm install`.
     *   Press `F5` to launch the **Extension Development Host**.
 
-## 📚 MCP Tools (47 total)
+## 📚 MCP Tools (50 total)
 
-### Document ETL (11)
+### Document ETL (14)
 | Tool | Description |
 |------|-------------|
 | `ingest_documents` | Process PDF files into structured assets |
 | `list_documents` | List all ingested documents |
 | `delete_document` | Delete an ingested PDF and its local artifacts |
 | `convert_pdf_to_docx` | Reconstruct a readable DOCX from extracted PDF content |
+| `convert_pdf_to_pptx` | Rebuild editable PPTX slides from extracted PDF markdown and figures |
 | `inspect_document_manifest` | View document structure (Tables/Figures/Sections) |
 | `fetch_document_asset` | Get specific Table/Figure/Section content |
 | `parse_pdf_structure` | Parse PDF structure without full ingestion |
@@ -230,6 +232,8 @@ If the extension fails to start or the MCP server doesn't appear:
 | `export_document_segmentation` | Export normalized segmentation with reading order and line spans |
 | `visualize_document_layout` | Render page overlay images for layout debugging |
 | `ocr_pdf_document` | Run OCR preprocessing and output a cleaned PDF |
+| `find_evidence_spans` | Search citation-ready spans with revision, locator, hash, and CRAAP metadata |
+| `verify_citation_ref` | Verify span AssetRefs against the current citation index and locator metadata |
 
 ### Section Navigation (5)
 | Tool | Description |

@@ -177,6 +177,8 @@ Marker note:
 | `export_document_segmentation` | Export normalized `segmentation.json` with reading order + line ranges |
 | `visualize_document_layout` | Render page overlay images for bbox / type / reading-order inspection |
 | `ocr_pdf_document` | Run OCR preprocessing and generate a cleaned PDF for later ETL |
+| `find_evidence_spans` | Search citation-ready spans with source revision, locator, hash, and CRAAP scaffold |
+| `verify_citation_ref` | Verify span AssetRefs against the current citation index and locator metadata |
 
 ### Job Management Tools
 

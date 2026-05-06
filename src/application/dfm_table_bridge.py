@@ -12,6 +12,7 @@ Flow:
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import uuid
 from typing import Any
@@ -46,6 +47,7 @@ class DfmTableBridge:
         block: DfmBlock,
         doc_id: str = "",
         source_description: str = "",
+        source_revision_id: str = "",
     ) -> TableContext:
         """
         Convert a DFM table block to a TableContext for structured editing.
@@ -81,6 +83,8 @@ class DfmTableBridge:
                 source_description=source_description or f"From docx {doc_id}",
                 source_doc_id=doc_id,
                 source_block_id=block.id,
+                source_revision_id=source_revision_id,
+                source_block_hash=DfmTableBridge.block_content_hash(block),
             )
 
         # First row = headers
@@ -112,6 +116,8 @@ class DfmTableBridge:
             source_description=source_description or f"From docx {doc_id}",
             source_doc_id=doc_id,
             source_block_id=block.id,
+            source_revision_id=source_revision_id,
+            source_block_hash=DfmTableBridge.block_content_hash(block),
         )
 
     # ========================================================================
@@ -200,8 +206,46 @@ class DfmTableBridge:
             raise ValueError(msg)
 
         # Update content only — preserve metadata
+        if tc.source_doc_id:
+            if tc.source_block_id and tc.source_block_id != block_id:
+                raise ValueError(
+                    "TableContext source block mismatch: "
+                    f"{tc.source_block_id} != target {block_id}"
+                )
+            if not tc.source_revision_id or not tc.source_block_hash:
+                raise ValueError(
+                    "stale TableContext guard missing source revision/hash; "
+                    "recreate the context from the current DOCX table before write-back"
+                )
+            if tc.source_revision_id != ir.checksum:
+                raise ValueError(
+                    "stale TableContext source revision: "
+                    f"{tc.source_revision_id} != current IR {ir.checksum}"
+                )
+            current_block_hash = DfmTableBridge.block_content_hash(block)
+            if tc.source_block_hash != current_block_hash:
+                raise ValueError(
+                    "source block changed since TableContext extraction; "
+                    "recreate the context before write-back"
+                )
+
         block.content = _table_context_to_md(tc)
         return ir
+
+    @staticmethod
+    def block_content_hash(block: DfmBlock) -> str:
+        """Hash table source content and structure relevant to safe write-back."""
+        payload = "|".join(
+            [
+                block.id,
+                block.block_type.value,
+                block.content,
+                str(block.merged_cells),
+                str(block.col_widths),
+                str(block.cell_formats),
+            ]
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
     # ========================================================================
     # Chart Data Extraction (read-only)

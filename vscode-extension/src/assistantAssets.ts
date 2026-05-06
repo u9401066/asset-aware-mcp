@@ -29,9 +29,12 @@ function createSummary(): InstallSummary {
 
 const MANIFEST_RELATIVE_PATH = path.join('.asset-aware-mcp', 'assistant-assets.json');
 const RETIRED_MANAGED_ASSET_FRAGMENTS = [
+    '.github/hooks/',
     '.github/zotero-research-workflow.md',
     '.github/agents/research.agent.md',
+    'scripts/hooks/copilot/',
     '.claude/skills/pubmed-',
+    '.claude/skills/zotero-keeper-harness/',
     '.claude/skills/pipeline-persistence/',
     '.cline/skills/pubmed-search-mcp-harness/',
     '.cline/skills/zotero-keeper-harness/',

@@ -534,8 +534,50 @@ class DocxService:
                     "warnings": duplicate_id_errors,
                 }
 
+            if parse_result.doc_id != doc_id or ir.doc_id != doc_id:
+                return {
+                    "success": False,
+                    "error": (
+                        "DFM doc_id mismatch: edited DFM belongs to "
+                        f"{parse_result.doc_id or '<missing>'}, requested save is "
+                        f"{doc_id}, and current IR is {ir.doc_id or '<missing>'}. "
+                        "Re-open the current DFM before saving."
+                    ),
+                    "warnings": [
+                        (
+                            "Saving was aborted before applying edits to prevent "
+                            "writing a DFM session into the wrong document."
+                        )
+                    ],
+                }
+
+            if not ir.checksum:
+                return {
+                    "success": False,
+                    "error": (
+                        "Current DOCX IR is missing its checksum. Re-ingest the "
+                        "document before saving so stale-session checks can run."
+                    ),
+                }
+
+            if not parse_result.checksum:
+                return {
+                    "success": False,
+                    "error": (
+                        "Missing DFM checksum: edited content does not include the "
+                        "session checksum needed to prove it was opened from the "
+                        "current DOCX IR. Re-open the current DFM before saving."
+                    ),
+                    "warnings": [
+                        (
+                            "Saving was aborted before applying edits to prevent "
+                            "overwriting a newer DFM/IR session."
+                        )
+                    ],
+                }
+
             # Verify checksum matches
-            if parse_result.checksum and parse_result.checksum != ir.checksum:
+            if parse_result.checksum != ir.checksum:
                 stale_message = (
                     "Stale DFM edit detected: edited DFM checksum "
                     f"{parse_result.checksum} does not match the current IR checksum "
@@ -571,6 +613,23 @@ class DocxService:
 
             # --- Pre-save integrity check + auto-repair ---
             pre_report = self.integrity.check_pre_save(ir, parse_result)
+            pre_errors = [
+                issue for issue in pre_report.issues if issue.severity == "error"
+            ]
+            if pre_errors:
+                return {
+                    "success": False,
+                    "error": (
+                        "Pre-save integrity check failed; edits were not applied "
+                        "and editable artifacts were not overwritten."
+                    ),
+                    "integrity": pre_report.to_summary(),
+                    "warnings": [
+                        issue.message
+                        for issue in pre_report.issues
+                        if issue.severity in ("error", "warning")
+                    ],
+                }
             table_shape_errors = self._validate_table_edit_shapes(ir, parse_result)
             if table_shape_errors:
                 return {

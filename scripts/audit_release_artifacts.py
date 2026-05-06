@@ -159,9 +159,12 @@ def check_vsix(version: str) -> list[str]:
     if "blob/main" in readme or "raw/main" in readme:
         errors.append(f"{vsix}: README contains stale main-branch links")
     forbidden_harness_fragments = [
+        "/resources/repo-assets/asset-aware/.github/hooks/",
         "/resources/repo-assets/asset-aware/.github/zotero-research-workflow.md",
         "/resources/repo-assets/asset-aware/.github/agents/research.agent.md",
+        "/resources/repo-assets/asset-aware/scripts/hooks/copilot/",
         "/resources/repo-assets/asset-aware/.claude/skills/pubmed-",
+        "/resources/repo-assets/asset-aware/.claude/skills/zotero-keeper-harness/",
         "/resources/repo-assets/asset-aware/.claude/skills/pipeline-persistence/",
         "/resources/repo-assets/asset-aware/.cline/skills/pubmed-search-mcp-harness/",
         "/resources/repo-assets/asset-aware/.cline/skills/zotero-keeper-harness/",

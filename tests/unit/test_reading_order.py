@@ -154,6 +154,9 @@ class TestSegmentationServiceReadingOrder:
         service = SegmentationService(repository=repository)
         segmentation = await service.export_document_segmentation("doc_test")
 
+        repository.save_blocks.assert_not_called()
+        assert segmentation.source_revision_id
+        assert segmentation.locator_version == "citation-span-v1"
         assert segmentation.reading_order_policy == "explicit-reading-order-v1"
         assert [segment.segment_id for segment in segmentation.segments] == [
             "blk_pic",
@@ -164,6 +167,13 @@ class TestSegmentationServiceReadingOrder:
             == "caption-near-picture:blk_pic"
         )
         assert segmentation.segments[1].line_start is not None
+        assert (
+            segmentation.segments[1].source_revision_id
+            == segmentation.source_revision_id
+        )
+        assert segmentation.segments[1].text_sha256
+        assert segmentation.segments[1].char_start is not None
+        assert segmentation.segments[1].byte_start is not None
 
     async def test_blocks_metadata_can_identify_pymupdf_source_backend(
         self, temp_dir

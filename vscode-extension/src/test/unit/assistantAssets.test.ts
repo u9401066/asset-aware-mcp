@@ -1,4 +1,5 @@
 ﻿import * as assert from 'assert';
+import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -37,6 +38,10 @@ describe('assistantAssets', () => {
         const target = path.join(extensionRoot, 'resources', 'repo-assets', 'asset-aware', relativePath);
         fs.mkdirSync(path.dirname(target), { recursive: true });
         fs.writeFileSync(target, content, 'utf-8');
+    }
+
+    function sha256(content: string): string {
+        return createHash('sha256').update(content, 'utf-8').digest('hex');
     }
 
     it('updates previously managed assets when the workspace copy is unchanged', async () => {
@@ -90,9 +95,21 @@ describe('assistantAssets', () => {
 
     it('removes retired managed harness assets that were not customized', async () => {
         const retiredSkillPath = path.join('.cline', 'skills', 'pubmed-search-mcp-harness', 'SKILL.md');
+        const retiredHookPath = path.join('scripts', 'hooks', 'copilot', 'evaluate-results.sh');
         writeBundledAsset(retiredSkillPath, 'managed pubmed harness\n');
 
         await installAssistantAssets(makeContext());
+        const retiredHookWorkspacePath = path.join(workspaceRoot, retiredHookPath);
+        const retiredHookContent = 'managed pubmed hook\n';
+        fs.mkdirSync(path.dirname(retiredHookWorkspacePath), { recursive: true });
+        fs.writeFileSync(retiredHookWorkspacePath, retiredHookContent, 'utf-8');
+        const manifestPath = path.join(workspaceRoot, '.asset-aware-mcp', 'assistant-assets.json');
+        const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+        manifest.files[retiredHookPath.replaceAll(path.sep, '/')] = {
+            sha256: sha256(retiredHookContent),
+        };
+        fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
+
         fs.rmSync(
             path.join(extensionRoot, 'resources', 'repo-assets', 'asset-aware', '.cline', 'skills', 'pubmed-search-mcp-harness'),
             { recursive: true, force: true },
@@ -105,6 +122,7 @@ describe('assistantAssets', () => {
         const summary = await installAssistantAssets(makeContext());
 
         assert.ok(!fs.existsSync(path.join(workspaceRoot, retiredSkillPath)));
-        assert.strictEqual(summary?.removed, 1);
+        assert.ok(!fs.existsSync(path.join(workspaceRoot, retiredHookPath)));
+        assert.strictEqual(summary?.removed, 2);
     });
 });
