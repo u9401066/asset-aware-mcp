@@ -6,16 +6,16 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.20/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.21/resources/banner.png)
 
-## What's New in v0.6.20
+## What's New in v0.6.21
 
 - **Document save safety**: DOCX/DFM write-back now fails closed on missing checksums, doc ID drift, and pre-save integrity errors
 - **Citation freshness**: citation refs now carry locator-source hashes and verify block/page/line/char/byte locators against rebuilt indexes
 - **Table bridge provenance**: Docx/A2T table contexts now reject stale source revisions or changed source blocks before write-back
 - **Segmentation provenance**: segmentation exports are read-only and include source revision, locator version, text hash, and char/byte ranges
 - **Harness boundary cleanup**: external Zotero Keeper and PubMed Search harness assets are ignored/pruned instead of bundled by Asset-Aware
-- **Release hardening**: release CI now has cross-platform VSIX smoke and a preflight gate before PyPI publishing
+- **Release hardening**: release CI now has cross-platform VSIX smoke, installs uv before activation smoke, and gates PyPI publishing behind preflight
 - **50 tools** across 7 modules
 
 ## 🧪 Current Main Branch

@@ -1,18 +1,18 @@
 # Active Context
 
-## 2026-05-06 - v0.6.20 document-provenance corrective release
+## 2026-05-06 - v0.6.21 document-provenance corrective release
 
-- Preparing `v0.6.20` as the corrective patch after `v0.6.19`.
+- Preparing `v0.6.21` as the corrective patch after the failed `v0.6.20` release workflow smoke run.
 - Asset-Aware must not maintain or bundle Zotero Keeper / PubMed Search MCP harness files. Those assets were removed from `.codex`, `.cline`, `.claude`, `.clinerules`, `.github`, and the VSIX repo-assets bundle.
 - The remaining LLM wiki builder is now scoped to Asset-Aware document evidence, citation spans, segmentation, DOCX/DFM, figures, tables, and local Markdown. Zotero/PubMed may only be treated as optional external tools governed by their own repositories.
-- High-risk fixes in this release: fail-closed DOCX/DFM checksum/doc-id/pre-save guards, citation locator-source verification, stale A2T table-context rejection, read-only segmentation provenance, external harness ignore/prune boundaries, and release preflight/cross-platform VSIX smoke.
+- High-risk fixes in this release: fail-closed DOCX/DFM checksum/doc-id/pre-save guards, citation locator-source verification, stale A2T table-context rejection, read-only segmentation provenance, external harness ignore/prune boundaries, and release preflight/cross-platform VSIX smoke with uv installed before activation.
 - Release gates must cover Python checks, VSIX `test:ci`, sync-assets, release harness/artifact audit, VSIX install smoke, Docker smoke, git push, and tag release monitoring.
 
 > 📌 當前工作焦點和進行中的變更
 
 ## Current Goals
 
-- Complete the `0.6.20` corrective release with clean local checks, memory updates, git commit/push, and tag publication.
+- Complete the `0.6.21` corrective release with clean local checks, memory updates, git commit/push, and tag publication.
 
 - 正在完成 0.6.16 release prep：整合 multi-agent repo review 修正，完成 Marker/LightRAG/PyMuPDF/segmentation/table/DOCX/VSIX/release hygiene 補強，並進行 MEM+GIT+PUSH+TAG 發布。
 

@@ -5,4 +5,4 @@ Asset-Aware Medical RAG MCP Server
 A local-first MCP server for medical research with precise asset retrieval.
 """
 
-__version__ = "0.6.20"
+__version__ = "0.6.21"

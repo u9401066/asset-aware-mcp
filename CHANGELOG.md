@@ -7,6 +7,13 @@
 
 ## [Unreleased]
 
+## [0.6.21] - 2026-05-06
+
+### Fixed
+
+- **Release workflow activation smoke**
+  - Cross-platform VSIX smoke now installs `uv` before running packaged activation tests on Linux, macOS, and Windows, preventing CI-only activation prompts from blocking release preflight.
+
 ## [0.6.20] - 2026-05-06
 
 ### Fixed
