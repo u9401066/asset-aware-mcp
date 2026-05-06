@@ -6,14 +6,14 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.17/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.18/resources/banner.png)
 
-## 🆕 What's New in v0.6.17
+## What's New in v0.6.18
 
-- **Cline launch hardening**: extension installs now prefer the concrete `uv` runtime path, prewarm the pinned runtime, and avoid cross-workspace `DATA_DIR` reuse in Cline MCP settings
-- **Ollama diagnostics**: setup checks report missing configured chat and embedding models before Cline waits on an unusable local model
-- **DOCX/DFM save fidelity**: `save_docx` stages writes transactionally, preserves unchanged multi-paragraph table cells, and validates logical table grids before replacing the source
-- **Release audit portability**: release artifact metadata is read as UTF-8 so Windows local audits match CI behavior
+- **LLM wiki harness**: bundled Codex and Cline `llm-wiki-builder` skills for Foam-compatible literature notes with Zotero, PubMed, and Asset-Aware provenance
+- **Wiki workflow rules**: added Cline rules for stable Markdown note naming, source identifiers, citation markers, and link validation
+- **Assistant asset sync**: VSIX repo assets now include the LLM wiki harness so workspace assistant assets remain consistent after install/update
+- **Original workspace reconciliation**: local release records now capture the Cline timeout investigation used to harden MCP startup follow-up work
 - **50 tools** across 7 modules
 
 ## 🧪 Current Main Branch

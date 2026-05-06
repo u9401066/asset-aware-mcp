@@ -29,7 +29,7 @@ describe('assistantAssets', () => {
     function makeContext(): any {
         return {
             extensionPath: extensionRoot,
-            extension: { packageJSON: { version: '0.6.17' } },
+            extension: { packageJSON: { version: '0.6.18' } },
         };
     }
 

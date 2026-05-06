@@ -7,6 +7,21 @@
 
 ## [Unreleased]
 
+## [0.6.18] - 2026-05-06
+
+### Added
+
+- **LLM wiki assistant harness**
+  - Added Codex and Cline `llm-wiki-builder` skills for Foam-compatible literature/wiki workflows that preserve Zotero, PubMed, and Asset-Aware evidence provenance.
+  - Added LLM wiki Cline rules and workflow guidance for stable Markdown note naming, source identifiers, citation markers, and link validation.
+  - Bundled the LLM wiki harness into the VSIX repo assets so extension installs keep Copilot/Cline/Codex assistant assets in sync.
+
+### Fixed
+
+- **Original workspace git reconciliation**
+  - Reconciled the original local workspace from the stale `v0.5.1` checkout to the published `v0.6.17` mainline without replaying already-upstream commits.
+  - Preserved the Cline timeout investigation report as a tracked release note source for future MCP startup hardening work.
+
 ## [0.6.17] - 2026-05-05
 
 ### Fixed

@@ -110,6 +110,9 @@ def main() -> int:
             [
                 "resources/repo-assets/asset-aware/AGENTS.md",
                 "resources/repo-assets/asset-aware/.cline/skills/asset-aware-mcp-harness/SKILL.md",
+                "resources/repo-assets/asset-aware/.cline/skills/llm-wiki-builder/SKILL.md",
+                "resources/repo-assets/asset-aware/.codex/skills/llm-wiki-builder/SKILL.md",
+                "resources/repo-assets/asset-aware/.clinerules/35-foam-llm-wiki.md",
             ],
         )
     )

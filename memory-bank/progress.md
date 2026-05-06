@@ -1,4 +1,12 @@
-# Progress (Updated: 2026-05-04)
+# Progress (Updated: 2026-05-06)
+
+## 2026-05-06
+
+- Reconciled the original local workspace to the published `v0.6.17` mainline after full history fetch showed the apparent `ahead 78` state was a shallow/grafted history artifact.
+- Kept the full pre-reconcile dirty state in stash `pre-0.6.17-original-workspace-reconcile-20260506-091930`.
+- Restored and prepared the remaining useful local assets for `v0.6.18`: `.cline/.codex` `llm-wiki-builder` skills, Cline Foam/LLM wiki rules/workflow, and `asset-aware-mcp-cline-timeout-report-2026-05-05.md`.
+- Updated the VSIX assistant asset sync and package-content guard so the LLM wiki harness is bundled and release-checked.
+- Started `0.6.18` version bump for Python package metadata, Docker label, VSIX manifest/lock, changelog, and memory bank.
 
 ## Done
 

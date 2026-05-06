@@ -24,7 +24,7 @@ describe('copilotMcpConfig', () => {
     function makeContext(): any {
         return {
             globalStorageUri: { fsPath: path.join(tempDir, 'globalStorage', 'u9401066.asset-aware-mcp') },
-            extension: { packageJSON: { version: '0.6.17' } },
+            extension: { packageJSON: { version: '0.6.18' } },
         };
     }
 

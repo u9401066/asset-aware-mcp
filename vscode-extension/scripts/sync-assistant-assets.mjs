@@ -18,8 +18,10 @@ const clineRuleFiles = [
     '10-python.md',
     '20-vscode-extension.md',
     '30-citation-ready.md',
+    '35-foam-llm-wiki.md',
     '40-release.md',
     'workflows/full-check.md',
+    'workflows/llm-wiki-build.md',
     'workflows/mcp-setup.md',
     'workflows/release-publish.md',
     'workflows/skills-audit.md',
@@ -51,8 +53,16 @@ const mappings = [
         target: path.join(assetRoot, '.cline', 'skills', 'asset-aware-mcp-harness'),
     },
     {
+        source: path.join(repoRoot, '.cline', 'skills', 'llm-wiki-builder'),
+        target: path.join(assetRoot, '.cline', 'skills', 'llm-wiki-builder'),
+    },
+    {
         source: path.join(repoRoot, '.codex', 'skills', 'asset-aware-mcp-harness'),
         target: path.join(assetRoot, '.codex', 'skills', 'asset-aware-mcp-harness'),
+    },
+    {
+        source: path.join(repoRoot, '.codex', 'skills', 'llm-wiki-builder'),
+        target: path.join(assetRoot, '.codex', 'skills', 'llm-wiki-builder'),
     },
     ...clineRuleFiles.map((ruleFile) => ({
         source: path.join(repoRoot, '.clinerules', ruleFile),

@@ -1,5 +1,13 @@
 # Active Context
 
+## 2026-05-06 - v0.6.18 local reconciliation release
+
+- Original workspace `D:\workspace260203\asset-aware-mcp` was reconciled to `origin/master` at `a22a7dae62c8239158a950be32becaadbbcda56e` / `v0.6.17` after resolving the shallow/grafted history false `ahead 78` state.
+- Preserved a safety stash: `pre-0.6.17-original-workspace-reconcile-20260506-091930`.
+- Preparing `v0.6.18` as a patch release that tracks the remaining useful local assets: LLM wiki Codex/Cline skills, Cline wiki workflow rules, and the Cline timeout investigation report.
+- VSIX assistant asset sync now carries the LLM wiki harness in `vscode-extension/resources/repo-assets/asset-aware/**`.
+- Release gates must cover Python checks, VSIX `test:ci`, sync-assets, release harness/artifact audit, VSIX install smoke, Docker smoke, git push, and tag release monitoring.
+
 > 📌 當前工作焦點和進行中的變更
 
 ## Current Goals

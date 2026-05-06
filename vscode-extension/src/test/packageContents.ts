@@ -18,8 +18,12 @@ const requiredFiles = [
     'resources/repo-assets/asset-aware/.github/bylaws/ddd-architecture.md',
     'resources/repo-assets/asset-aware/.claude/skills/pdf-asset-extractor/SKILL.md',
     'resources/repo-assets/asset-aware/.cline/skills/asset-aware-mcp-harness/SKILL.md',
+    'resources/repo-assets/asset-aware/.cline/skills/llm-wiki-builder/SKILL.md',
     'resources/repo-assets/asset-aware/.codex/skills/asset-aware-mcp-harness/SKILL.md',
+    'resources/repo-assets/asset-aware/.codex/skills/llm-wiki-builder/SKILL.md',
+    'resources/repo-assets/asset-aware/.clinerules/35-foam-llm-wiki.md',
     'resources/repo-assets/asset-aware/.clinerules/workflows/full-check.md',
+    'resources/repo-assets/asset-aware/.clinerules/workflows/llm-wiki-build.md',
     'out/extension.js',
 ];
 
