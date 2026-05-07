@@ -1,4 +1,15 @@
-# Progress (Updated: 2026-05-06)
+# Progress (Updated: 2026-05-07)
+
+## 2026-05-07
+
+- Preparing `v0.6.22` corrective release for Cline MCP usability after live Cline settings still pointed at stale `asset-aware-mcp==0.6.17` and old workspace data.
+- Fixed local Cline installer coverage for VS Code Insiders settings, workspace-local `DATA_DIR`, non-destructive managed-entry detection, and preservation of `alwaysAllow`, `disabled`, custom env, and unrelated MCP servers.
+- Hardened VS Code extension Cline config merge with fail-closed schema validation for malformed top-level and nested server metadata.
+- Removed ignored retired Zotero/PubMed harness leftovers from the workspace and expanded release audit coverage across `.github`, `.claude`, `.cline`, `.codex`, `.clinerules`, and `scripts/hooks`.
+- Restored LLM wiki harness scope to Asset-Aware document evidence and added an audit guard against drifting back to bundled Zotero/PubMed workflow ownership.
+- Updated bundled Cline release workflows to use PowerShell-safe command forms and synchronized repo-assets.
+- Added regression coverage for Cline installer boundaries, Cline harness asset boundaries, schema validation, readable Traditional Chinese triggers, and assistant asset preservation behavior.
+- Local release gates passed for `v0.6.22`: Python ruff/format/mypy/full pytest (`719 passed, 19 skipped`), Cline skill audit, release harness audit, VSIX `test:ci` (`112 passing`, package contents 62 files), Python sdist/wheel build, VSIX package, artifact audit, Windows VSIX install/update smoke, and Docker import smoke. Windows local activation smoke remains CI/Linux-xvfb gated by design.
 
 ## 2026-05-06
 

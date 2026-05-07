@@ -7,6 +7,20 @@
 
 ## [Unreleased]
 
+## [0.6.22] - 2026-05-07
+
+### Fixed
+
+- **Cline MCP configuration**
+  - Local Cline installer now discovers VS Code Insiders settings, resolves `DATA_DIR` from the current workspace, and preserves `alwaysAllow`, `disabled`, custom environment values, and unrelated server entries.
+  - Existing same-name Cline servers are updated only when they match the Asset-Aware managed launch shape, avoiding destructive takeover of custom user MCP entries.
+  - VS Code extension Cline config merge now fails closed on invalid settings schema and backs up malformed nested server metadata before writing a managed entry.
+
+- **Assistant harness boundaries**
+  - Release audit now blocks retired Zotero/PubMed harness files across `.github`, `.claude`, `.cline`, `.codex`, `.clinerules`, and `scripts/hooks`.
+  - LLM wiki harness text is guarded against drifting back into bundled Zotero/PubMed workflow ownership while still allowing externally supplied literature tools.
+  - Cline workflow commands now use PowerShell-safe command forms for sync, test, smoke, commit, and tag steps.
+
 ## [0.6.21] - 2026-05-06
 
 ### Fixed

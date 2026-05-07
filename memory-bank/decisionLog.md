@@ -1,6 +1,7 @@
 # Decision Log
 
 | Date | Decision | Rationale |
+| 2026-05-07 | **Cline MCP managed entry merge is non-destructive and launch-shape gated** | Cline users may already have a same-name `asset-aware-mcp` server that is custom or belongs to another workspace. The installer and VS Code extension may update only entries that match the managed Asset-Aware launch shape; they must preserve `alwaysAllow`, `disabled`, custom env, and unrelated servers, and back up malformed Cline settings before writing. |
 | 2026-04-29 | **Asset-Aware 對齊 MedPaper/Foam 時只擔任 decomposition / locator authority，不直接寫 Foam notes** | MedPaper 已擁有 LLM wiki/Foam materialization、wikilink、dashboard 與 graph-health 邏輯；若 Asset-Aware 也寫 Foam notes 會造成重複責任與路徑衝突。Asset-Aware 應輸出穩定 `doc_id`/`block_id`/`span_id`、`source_revision_id`、hash、char/byte/page/bbox locator、context、CRAAP scaffold 與 DFM revision sidecar，讓 MedPaper 可驗證 promotion。 |
 | 2026-04-29 | **VSIX assistant harness 同步採 manifest-based non-destructive update** | Extension 啟動自動同步 harness assets 是好體驗，但直接覆蓋 `.cline/skills`、`.codex/skills`、`.clinerules` 或 Copilot/Codex instructions 會吃掉使用者客製化。新增 workspace manifest 後，只有目前內容仍符合上次 extension 寫入 hash 的檔案才會更新；同路徑被使用者改過就 preserve。 |
 | 2026-04-29 | **外部 MCP config 讀取/解析失敗時 fail-closed，不用空白設定修復** | Copilot/Cline/Codex 設定可能含 custom server、comments 或手寫片段。若 malformed JSON/TOML 或 unreadable 時用空白基底寫回，等同把使用者設定移走。正確策略是備份/警告並跳過，待使用者修復後再 merge Asset-Aware entry。 |
