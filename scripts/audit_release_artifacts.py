@@ -12,6 +12,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MAX_SDIST_BYTES = 5 * 1024 * 1024
 MAX_WHEEL_BYTES = 5 * 1024 * 1024
+REQUIRED_PYTHON_PACKAGE_FILES = [
+    "src/application/ingest_worker.py",
+    "src/presentation/markdown_utils.py",
+]
 
 
 def read_project_version() -> str:
@@ -86,6 +90,14 @@ def check_links() -> list[str]:
     return errors
 
 
+def missing_required_files(names: list[str]) -> list[str]:
+    missing: list[str] = []
+    for required in REQUIRED_PYTHON_PACKAGE_FILES:
+        if not any(name == required or name.endswith(f"/{required}") for name in names):
+            missing.append(required)
+    return missing
+
+
 def check_sdist(version: str) -> list[str]:
     sdist = ROOT / "dist" / f"asset_aware_mcp-{version}.tar.gz"
     if not sdist.exists():
@@ -105,6 +117,9 @@ def check_sdist(version: str) -> list[str]:
     ]
     with tarfile.open(sdist) as tar:
         names = tar.getnames()
+    missing = missing_required_files(names)
+    if missing:
+        errors.append(f"{sdist}: missing required file(s): {', '.join(missing)}")
     for fragment in forbidden:
         count = sum(1 for name in names if fragment in name)
         if count:
@@ -124,6 +139,9 @@ def check_wheel(version: str) -> list[str]:
         errors.append(f"{wheel}: too large ({wheel.stat().st_size} bytes)")
     with zipfile.ZipFile(wheel) as zf:
         names = zf.namelist()
+    missing = missing_required_files(names)
+    if missing:
+        errors.append(f"{wheel}: missing required file(s): {', '.join(missing)}")
     forbidden_prefixes = [
         "tests/",
         "vscode-extension/",

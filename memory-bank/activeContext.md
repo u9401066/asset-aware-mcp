@@ -1,5 +1,16 @@
 # Active Context
 
+## 2026-05-07 - v0.6.24 Cline worker isolation release prep
+
+- Preparing `v0.6.24` after 4 subagents completed 3 review rounds over the Cline failure path, job lifecycle, document ingestion, and release pipeline.
+- Marker-backed background jobs now use `src.application.ingest_worker` in an isolated subprocess with stdin/stdout/stderr closed, so Cline can keep calling `get_job_status` and `cancel_job` while Marker parses.
+- `parse_pdf_structure(async_mode=True)` now carries `require_marker=True` and fails closed without writing PyMuPDF fallback artifacts when Marker structure is required.
+- Job results now include per-document backend, warnings, artifacts, degraded state, and next-step commands; Cline no longer has to infer whether a Marker job actually degraded to PyMuPDF.
+- Job cancellation, stale active job reconciliation, and ETL profile isolation were hardened with regression tests.
+- Local Cline install now preserves cross-workspace `DATA_DIR` unless `--force-workspace` is explicit.
+- Release workflow now guards PyPI reruns, VS Code Marketplace retry/visibility, wheel/sdist required runtime files, VSIX bundled `count_tools.ps1`, and precise release staging without `git add -A`.
+- Verification so far: `ruff`, full `uv run pytest -q` (`781 passed, 19 skipped`), VSIX `npm run test:ci`, sync-assets check, release harness audit, `uv build`, artifact audit, `count_tools.ps1`, and `git diff --check` all passed.
+
 ## 2026-05-07 - v0.6.23 Cline / Marker corrective release
 
 - Preparing `v0.6.23` as the second Cline corrective patch after multi-agent review found that Marker model loading and synchronous PDF parsing could still exceed Cline request budgets.
@@ -14,7 +25,7 @@
 
 ## Current Goals
 
-- Complete the `0.6.23` Cline / Marker corrective release with clean local checks, memory updates, segmented git commits, push, and tag publication.
+- Complete the `0.6.24` Cline worker isolation release with memory updates, segmented git commits, push, and annotated tag publication while leaving unreviewed PDFs/ad-hoc agent drafts unstaged.
 
 - 正在完成 0.6.16 release prep：整合 multi-agent repo review 修正，完成 Marker/LightRAG/PyMuPDF/segmentation/table/DOCX/VSIX/release hygiene 補強，並進行 MEM+GIT+PUSH+TAG 發布。
 
@@ -22,7 +33,7 @@
 
 - **當前版本真相為 0.6.16**：本次 patch 版本以 2026-04-29 issue report 與 5-agent repo review 為依據，修正 Marker optional backend、LightRAG prompt、PyMuPDF segmentation provenance、A2T table citation safety、DOCX legacy conversion overwrite、VSIX harness migration 與 release/docs drift
 - **0.6.16 local gates 已完成**：full `uv run pytest -q` → `686 passed, 21 skipped`；Ruff、format、MyPy、`uv lock --check`、VSIX `npm run test:ci`、sync-assets check、package contents 與 `git diff --check` 均通過
-- **Release hygiene 更新**：CI/release 改用 `uv sync --frozen` / `uv lock --check`；README/diagram/Copilot harness/Marker docs 更新為 50 tools / 13 resources；VSIX README banner/version 已對齊 `v0.6.16`
+- **Release hygiene 更新**：CI/release 改用 `uv sync --frozen` / `uv lock --check`；README/diagram/Copilot harness/Marker docs 更新為 59 tools / 13 resources；VSIX README banner/version 已對齊 `v0.6.16`
 - **Workspace git policy 本輪決策**：納入 tracked workspace 變更與新 regression tests；忽略 `.asset-aware-mcp/` 與 `.vscode/mcp.json.invalid.*.bak` 這類本機 runtime/backup 產物
 - **VSIX assistant assets 改為 manifest-based non-destructive sync**：啟動時只會更新「先前由 extension 寫入且未被使用者修改」的檔案；同路徑自訂檔會保留，避免吃掉 custom harness
 - **VSIX bundled harness 自洽性補齊**：`sync-assets`/VSIX package 現在包含 `.github/bylaws/**` 與 `.claude/skills/**`，避免 Copilot instructions 引用不存在的 harness assets
@@ -142,14 +153,14 @@ src/
 ├── domain/          # 🔵 核心業務邏輯 (+docx_entities, docx_value_objects)
 ├── application/     # 🟢 使用案例 (+docx_service, dfm_table_bridge)
 ├── infrastructure/  # 🟠 外部依賴實作 (+docx_adapter, dfm_parser, dfm_renderer, docx_validator)
-└── presentation/    # 🔴 MCP Server (50 tools in 7 modules, 13 resources)
+└── presentation/    # 🔴 MCP Server (59 tools in 7 modules, 13 resources)
     ├── tools/
     │   ├── document_tools.py   # ETL + document management (11)
-    │   ├── docx_tools.py       # Docx DFM + conversion (14) — core + validator + bridge
+    │   ├── docx_tools.py       # Docx DFM + conversion (16) — core + validator + bridge
     │   ├── section_tools.py    # Navigation (5)
-    │   ├── job_tools.py        # Job (3)
-    │   ├── knowledge_tools.py  # KG (2)
-    │   ├── profile_tools.py    # Profile (5)
+    │   ├── job_tools.py        # Job (4)
+    │   ├── knowledge_tools.py  # KG (3)
+    │   ├── profile_tools.py    # Profile (6)
     │   └── table_tools.py      # A2T (7) — operation-based
     └── resources/              # 13 resources
 ```

@@ -7,6 +7,29 @@
 
 ## [Unreleased]
 
+## [0.6.24] - 2026-05-07
+
+### Fixed
+
+- **Cline / Marker async job isolation**
+  - Marker-backed background jobs now run in an isolated subprocess worker with stdio closed, keeping the MCP server event loop responsive for `get_job_status` and `cancel_job`.
+  - `parse_pdf_structure(async_mode=True)` now fails closed when Marker is required instead of writing PyMuPDF fallback artifacts behind a failed strict parse.
+  - Job status now exposes per-document backend, fallback warnings, artifact paths, degraded state, and next-step commands for manifest inspection and segmentation export.
+
+- **Job lifecycle durability**
+  - Job cancellation now preserves worker-written cancellation status, terminates isolated workers with a bounded kill fallback, and avoids stale job object overwrites.
+  - Persisted active job reconciliation now avoids failing jobs owned by another live MCP process while still marking interrupted legacy jobs as failed.
+  - ETL profile changes no longer affect an already captured background job service.
+
+- **Cline install and release hardening**
+  - Local Cline installer now matches the VSIX cross-workspace `DATA_DIR` guard and requires `--force-workspace` for intentional takeover.
+  - Release workflow now tolerates PyPI reruns after an already-published version, retries Marketplace publish, verifies Marketplace visibility, and audits wheel/sdist contents for required runtime modules.
+  - Release staging instructions now avoid `git add -A` and explicitly include runtime helper files needed by the Cline-safe worker path.
+
+- **Document / DOCX output correctness**
+  - Pending DOCX TableContext sync now preserves successful table edits even when another stale pending context is skipped with a warning.
+  - Markdown table cell escaping now handles CRLF, LF, and CR line breaks.
+
 ## [0.6.23] - 2026-05-07
 
 ### Fixed

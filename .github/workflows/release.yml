@@ -225,10 +225,43 @@ jobs:
       - name: Audit Python release artifacts
         run: python3 scripts/audit_release_artifacts.py
 
+      - name: Check whether PyPI version already exists
+        id: pypi_exists
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          VERSION="$VERSION" python3 - <<'PY'
+          import os
+          import urllib.error
+          import urllib.request
+
+          version = os.environ["VERSION"]
+          url = f"https://pypi.org/pypi/asset-aware-mcp/{version}/json"
+          try:
+              with urllib.request.urlopen(url, timeout=30):
+                  exists = True
+          except urllib.error.HTTPError as exc:
+              if exc.code == 404:
+                  exists = False
+              else:
+                  raise
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"exists={str(exists).lower()}\n")
+          print(f"PyPI asset-aware-mcp=={version} exists: {exists}")
+          PY
+
       - name: Publish to PyPI
+        if: steps.pypi_exists.outputs.exists != 'true'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           verbose: true
+
+      - name: Reuse existing PyPI version
+        if: steps.pypi_exists.outputs.exists == 'true'
+        run: echo "PyPI already has this version; continuing to VSIX publish verification."
 
   # ==========================================
   # 發布到 VS Code Marketplace
@@ -237,6 +270,7 @@ jobs:
     name: 🧩 Publish to VS Code Marketplace
     runs-on: ubuntu-latest
     needs: publish-pypi
+    environment: release
     defaults:
       run:
         working-directory: vscode-extension
@@ -262,11 +296,11 @@ jobs:
             VERSION="${GITHUB_REF#refs/tags/v}"
           fi
 
-          for attempt in $(seq 1 20); do
-            if uvx --python "${{ env.PYTHON_VERSION }}" --from "asset-aware-mcp==$VERSION" python -c "import src.presentation.server; print('asset-aware-mcp PyPI import OK')"; then
+          for attempt in $(seq 1 40); do
+            if uvx --refresh --python "${{ env.PYTHON_VERSION }}" --from "asset-aware-mcp==$VERSION" python -c "import src.presentation.server; print('asset-aware-mcp PyPI import OK')"; then
               exit 0
             fi
-            echo "PyPI package asset-aware-mcp==$VERSION not available yet (attempt $attempt/20); retrying..."
+            echo "PyPI package asset-aware-mcp==$VERSION not available yet (attempt $attempt/40); retrying..."
             sleep 30
           done
 
@@ -323,10 +357,68 @@ jobs:
           uv build
           python3 scripts/audit_release_artifacts.py
 
-      - name: Publish to VS Code Marketplace
-        run: npx vsce publish --packagePath "${{ steps.verify.outputs.vsix_file }}" -p ${{ secrets.VSCE_PAT }}
+      - name: Check VSCE token
+        run: |
+          if [ -z "$VSCE_PAT" ]; then
+            echo "ERROR: VSCE_PAT is empty. Check the release environment secret."
+            exit 1
+          fi
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Publish to VS Code Marketplace
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+
+          for attempt in $(seq 1 5); do
+            set +e
+            OUTPUT="$(npx vsce publish --packagePath "${{ steps.verify.outputs.vsix_file }}" -p "$VSCE_PAT" 2>&1)"
+            STATUS=$?
+            set -e
+            echo "$OUTPUT"
+
+            if [ "$STATUS" -eq 0 ]; then
+              exit 0
+            fi
+            if echo "$OUTPUT" | grep -Eiq "already (exists|published)|version.*already"; then
+              echo "VS Code Marketplace already has version $VERSION; continuing."
+              exit 0
+            fi
+
+            echo "VS Code Marketplace publish failed (attempt $attempt/5); retrying..."
+            sleep $((attempt * 30))
+          done
+
+          echo "ERROR: VS Code Marketplace publish failed after retries"
+          exit 1
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Verify Marketplace version is visible
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+
+          for attempt in $(seq 1 20); do
+            if npx vsce show u9401066.asset-aware-mcp --json > marketplace.json; then
+              if VERSION="$VERSION" node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('marketplace.json','utf8')); const wanted=process.env.VERSION; const versions=[data.version, data.latestVersion, ...(data.versions || []).map((v) => v.version)].filter(Boolean); process.exit(versions.includes(wanted) ? 0 : 1);"; then
+                echo "VS Code Marketplace version $VERSION is visible."
+                exit 0
+              fi
+            fi
+            echo "VS Code Marketplace version $VERSION not visible yet (attempt $attempt/20); retrying..."
+            sleep 30
+          done
+
+          echo "ERROR: VS Code Marketplace version $VERSION was not visible after publish"
+          exit 1
 
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v7

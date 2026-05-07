@@ -109,7 +109,7 @@ uv add --dev pytest ruff
 - 如有失敗，優先修復 CI 問題再繼續開發
 
 **📊 更新工具數量時必須使用 Script**
-- 執行 `./scripts/count_tools.sh` 統計實際數量
+- 執行 `./scripts/count_tools.sh` (Linux/macOS) or `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/count_tools.ps1` (Windows) 統計實際數量
 - 不可手動計算或猜測工具數量
 - 確保 README、copilot-instructions、VSCode extension README 三處同步
 
@@ -223,13 +223,13 @@ src/
     ├── server.py            # Thin entry point (31 行)
     ├── mcp_app.py           # FastMCP 單一實例
     ├── dependencies.py      # Composition Root
-    ├── tools/               # 50 tools (7 模組)
-    │   ├── document_tools.py   # ETL + document management (14)
-    │   ├── docx_tools.py       # Docx ↔ DFM + conversion (14)
+    ├── tools/               # 59 tools (7 模組)
+    │   ├── document_tools.py   # ETL + document management (18)
+    │   ├── docx_tools.py       # Docx ↔ DFM + conversion (16)
     │   ├── section_tools.py    # Navigation (5)
-    │   ├── job_tools.py        # Job management (3)
-    │   ├── knowledge_tools.py  # KG (2)
-    │   ├── profile_tools.py    # Profile (5)
+    │   ├── job_tools.py        # Job management (4)
+    │   ├── knowledge_tools.py  # KG (3)
+    │   ├── profile_tools.py    # Profile (6)
     │   └── table_tools.py      # A2T (7) — operation-based
     └── resources/           # 13 resources (2 模組)
         ├── document_resources.py  # Documents (8)

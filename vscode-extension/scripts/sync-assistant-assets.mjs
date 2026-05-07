@@ -58,6 +58,10 @@ const mappings = [
         target: path.join(assetRoot, '.github', 'agents', 'asset-aware-document.agent.md'),
     },
     {
+        source: path.join(repoRoot, 'scripts', 'count_tools.ps1'),
+        target: path.join(assetRoot, 'scripts', 'count_tools.ps1'),
+    },
+    {
         source: path.join(repoRoot, '.github', 'bylaws'),
         target: path.join(assetRoot, '.github', 'bylaws'),
     },

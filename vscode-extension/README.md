@@ -6,16 +6,16 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.23/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.24/resources/banner.png)
 
-## What's New in v0.6.23
+## What's New in v0.6.24
 
-- **Cline-safe Marker jobs**: Marker PDF structure parsing and ingest default to background jobs so Cline requests do not time out during model loading.
-- **Marker output containment**: bundled MCP configs suppress raw Marker stdout/stderr and preserve diagnostics in a workspace log.
-- **Job durability**: background job creation, cancellation, and store writes are guarded against quota races, orphan tasks, unsafe IDs, and partial JSON writes.
-- **LightRAG/Ollama hardening**: Ollama embedding calls use batch `/api/embed` with legacy fallback, configurable timeouts, and LightRAG distribution checks.
-- **DOCX save warnings**: skipped pending TableContext merges are now visible in `save_docx` output instead of being silently swallowed.
-- **50 tools** across 7 modules
+- **Isolated Marker jobs**: Marker background ingestion now runs in a subprocess worker so Cline can keep polling job status while heavy parsing continues.
+- **Clear job outputs**: job status now shows backend, fallback warnings, artifact paths, degraded state, and next commands for manifest and segmentation work.
+- **Strict structure parsing**: `parse_pdf_structure` now fails closed when Marker is required instead of writing fallback artifacts under a failed strict parse.
+- **Safer Cline config**: the local installer now preserves cross-workspace `DATA_DIR` entries unless `--force-workspace` is explicitly used.
+- **Release hardening**: PyPI/Marketplace reruns, VSIX asset sync, and wheel/sdist audits now guard the runtime helper modules needed by Cline-safe jobs.
+- **59 tools** across 7 modules, including 9 consolidated compatibility entrypoints
 
 ## 🧪 Current Main Branch
 
@@ -214,9 +214,9 @@ If the extension fails to start or the MCP server doesn't appear:
     *   Run `npm install`.
     *   Press `F5` to launch the **Extension Development Host**.
 
-## 📚 MCP Tools (50 total)
+## 📚 MCP Tools (59 total)
 
-### Document ETL (14)
+### Document ETL (18)
 | Tool | Description |
 |------|-------------|
 | `ingest_documents` | Process PDF files into structured assets |
@@ -233,6 +233,10 @@ If the extension fails to start or the MCP server doesn't appear:
 | `ocr_pdf_document` | Run OCR preprocessing and output a cleaned PDF |
 | `find_evidence_spans` | Search citation-ready spans with revision, locator, hash, and CRAAP metadata |
 | `verify_citation_ref` | Verify span AssetRefs against the current citation index and locator metadata |
+| `document` | Operation-based PDF document facade over ingest/list/delete/inspect/parse |
+| `document_asset` | Operation-based asset and section facade over fetch/tree/detail/blocks/search |
+| `evidence` | Operation-based citation facade over find/verify/locate |
+| `convert_document` | Operation-based conversion facade for PDF, DOCX/DFM, and Markdown exports |
 
 ### Section Navigation (5)
 | Tool | Description |
@@ -243,20 +247,22 @@ If the extension fails to start or the MCP server doesn't appear:
 | `search_sections` | Search sections by keyword |
 | `get_section_content` | Read section content via asset service |
 
-### Job Management (3)
+### Job Management (4)
 | Tool | Description |
 |------|-------------|
 | `get_job_status` | Track progress of ingestion jobs |
 | `list_jobs` | List all jobs |
 | `cancel_job` | Cancel a running job |
+| `job` | Operation-based job facade over get/list/cancel |
 
-### Knowledge Graph (2)
+### Knowledge Graph (3)
 | Tool | Description |
 |------|-------------|
 | `consult_knowledge_graph` | Cross-document RAG queries with `structured`, `data`, and `text` response modes |
 | `export_knowledge_graph` | Export knowledge graph data |
+| `knowledge` | Operation-based knowledge facade over consult/export |
 
-### Docx Editing — DFM (14)
+### Docx Editing — DFM (16)
 | Tool | Description |
 |------|-------------|
 | `ingest_docx` | Import .docx and decompose into DFM blocks |
@@ -273,6 +279,8 @@ If the extension fails to start or the MCP server doesn't appear:
 | `docx_chart_data` | Extract chart data from Docx |
 | `export_markdown` | Export Markdown to .docx/.pdf/.doc |
 | `convert_docx_to_odt` | Export the current DOCX/DFM state to ODT |
+| `docx` | Operation-based DOCX/DFM facade over ingest/get/save/list/delete/blocks/validate |
+| `docx_table` | Operation-based DOCX table facade over to_context/from_context/chart_data |
 
 ### A2T — Anything to Table (7 operation-based)
 | Tool | Operations | Description |
@@ -285,7 +293,7 @@ If the extension fails to start or the MCP server doesn't appear:
 | `table_draft` | `create` / `update` / `add_rows` / `resume` / `commit` / `list` / `delete` | Draft workflow with persistence |
 | `discover_sources` | — | Cross-document source discovery |
 
-### ETL Profile (5)
+### ETL Profile (6)
 | Tool | Description |
 |------|-------------|
 | `list_etl_profiles` | List available profiles |
@@ -293,6 +301,7 @@ If the extension fails to start or the MCP server doesn't appear:
 | `get_current_etl_profile` | Show active profile |
 | `set_etl_profile` | Switch profile |
 | `load_etl_profile_from_json` | Load custom profile |
+| `etl_profile` | Operation-based profile facade over list/get/current/set/load |
 
 ## 🔗 Links
 
