@@ -2,6 +2,12 @@
 
 ## 2026-05-07
 
+- Preparing `v0.6.23` corrective release after multi-agent review of `docs/code-review-todo-20260507.md` confirmed Cline still needed Marker work forced out of synchronous MCP request paths.
+- Fixed Marker-backed PDF parsing and ingest to default to background jobs, with guarded synchronous diagnostics, visible segmentation fallback warnings, and Marker output suppression/log routing in generated Cline/VS Code environments.
+- Hardened background jobs with quota locking, atomic job store writes, unsafe job ID rejection, awaited cancellation cleanup, and background Marker preflight.
+- Hardened LightRAG/Ollama integration with `lightrag-hku` distribution validation, batch `/api/embed` embeddings, legacy fallback, and configurable timeouts.
+- Surfaced skipped pending TableContext merge warnings from `save_docx` so DOCX saves no longer hide failed pending A2T sync.
+- Added regression coverage for Cline-safe async Marker defaults, forced background thresholds, job durability, LightRAG/Ollama behavior, Marker suppression, Cline env generation, and DOCX warning visibility.
 - Preparing `v0.6.22` corrective release for Cline MCP usability after live Cline settings still pointed at stale `asset-aware-mcp==0.6.17` and old workspace data.
 - Fixed local Cline installer coverage for VS Code Insiders settings, workspace-local `DATA_DIR`, non-destructive managed-entry detection, and preservation of `alwaysAllow`, `disabled`, custom env, and unrelated MCP servers.
 - Hardened VS Code extension Cline config merge with fail-closed schema validation for malformed top-level and nested server metadata.

@@ -6,15 +6,15 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.22/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.23/resources/banner.png)
 
-## What's New in v0.6.22
+## What's New in v0.6.23
 
-- **Cline settings discovery**: external MCP setup now detects VS Code Insiders Cline settings and points them at the active Asset-Aware workspace.
-- **Non-destructive Cline merge**: managed entries preserve `alwaysAllow`, `disabled`, and custom environment values while leaving custom same-name servers alone.
-- **Config schema safety**: malformed Cline MCP settings are backed up instead of being partially merged.
-- **Harness boundary audit**: release checks now block retired Zotero/PubMed harness assets and LLM wiki ownership drift.
-- **PowerShell-safe workflows**: bundled Cline release commands avoid Bash-only syntax on Windows.
+- **Cline-safe Marker jobs**: Marker PDF structure parsing and ingest default to background jobs so Cline requests do not time out during model loading.
+- **Marker output containment**: bundled MCP configs suppress raw Marker stdout/stderr and preserve diagnostics in a workspace log.
+- **Job durability**: background job creation, cancellation, and store writes are guarded against quota races, orphan tasks, unsafe IDs, and partial JSON writes.
+- **LightRAG/Ollama hardening**: Ollama embedding calls use batch `/api/embed` with legacy fallback, configurable timeouts, and LightRAG distribution checks.
+- **DOCX save warnings**: skipped pending TableContext merges are now visible in `save_docx` output instead of being silently swallowed.
 - **50 tools** across 7 modules
 
 ## 🧪 Current Main Branch

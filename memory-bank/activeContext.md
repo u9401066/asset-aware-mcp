@@ -1,18 +1,20 @@
 # Active Context
 
-## 2026-05-07 - v0.6.22 Cline corrective release
+## 2026-05-07 - v0.6.23 Cline / Marker corrective release
 
-- Preparing `v0.6.22` as the Cline MCP corrective patch after live use showed Cline still reading stale VS Code Insiders settings and old workspace paths.
-- Cline install/config now detects `Code - Insiders`, resolves `DATA_DIR` from the active workspace, preserves `alwaysAllow`, `disabled`, custom env, and unrelated servers, and refuses to overwrite custom same-name MCP entries unless they match the managed Asset-Aware launch shape.
-- Release harness boundaries now block retired Zotero/PubMed assets in `.github`, `.claude`, `.cline`, `.codex`, `.clinerules`, and `scripts/hooks`; LLM wiki rules stay scoped to Asset-Aware document evidence, with external literature tools treated only as user-supplied sources.
-- Bundled Cline workflows use PowerShell-safe commands (`npm --prefix ...`, inline version lookup for commit/tag) so Windows Cline sessions can run release checks without Bash syntax.
-- Release gates for this patch must cover Python targeted tests, Cline skill audit, release harness audit, sync-assets, VSIX `test:ci`, version/artifact audit, install smoke where available, git push, and `v0.6.22` tag publication.
+- Preparing `v0.6.23` as the second Cline corrective patch after multi-agent review found that Marker model loading and synchronous PDF parsing could still exceed Cline request budgets.
+- Marker-backed `parse_pdf_structure` and `ingest_documents` now default to background jobs, with explicit synchronous diagnostics guarded by page/file-size checks.
+- Generated Cline and VS Code MCP launch environments suppress noisy Marker stdout/stderr and preserve diagnostics in a workspace `logs/marker.log` file.
+- Background job creation/cancellation/store writes are hardened against quota races, orphan tasks, unsafe IDs, and partial JSON writes.
+- LightRAG/Ollama integration now validates the expected `lightrag-hku` distribution, uses batch Ollama embeddings with legacy fallback, and exposes timeout knobs.
+- `save_docx` now surfaces skipped pending TableContext merge warnings; segmentation fallback warnings are visible in MCP output.
+- Release gates for this patch must cover full Python checks, Cline skill audit, release harness audit, sync-assets, VSIX `test:ci`, install smoke, Docker smoke, artifact audit, git push, and `v0.6.23` tag publication.
 
 > 📌 當前工作焦點和進行中的變更
 
 ## Current Goals
 
-- Complete the `0.6.22` Cline corrective release with clean local checks, memory updates, segmented git commits, push, and tag publication.
+- Complete the `0.6.23` Cline / Marker corrective release with clean local checks, memory updates, segmented git commits, push, and tag publication.
 
 - 正在完成 0.6.16 release prep：整合 multi-agent repo review 修正，完成 Marker/LightRAG/PyMuPDF/segmentation/table/DOCX/VSIX/release hygiene 補強，並進行 MEM+GIT+PUSH+TAG 發布。
 

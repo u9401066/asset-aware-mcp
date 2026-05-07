@@ -7,6 +7,29 @@
 
 ## [Unreleased]
 
+## [0.6.23] - 2026-05-07
+
+### Fixed
+
+- **Cline / Marker MCP timeout safety**
+  - Marker-backed `parse_pdf_structure` and `ingest_documents` now default to background jobs, with sync execution guarded by page/file-size checks and explicit `async_mode=false` diagnostics.
+  - Marker stdout/stderr is suppressed for MCP clients and routed to a workspace log from generated Cline/VS Code launch config.
+  - Segmentation fallback failures now emit visible warnings instead of disappearing from tool output.
+
+- **Background job durability**
+  - Job creation is quota-locked, job IDs reject unsafe path characters, job store writes are atomic, and cancellation now awaits task cleanup.
+  - Background Marker ingest preflights Marker inside the worker so async jobs do not silently fall back before the optional backend is initialized.
+
+- **LightRAG / Ollama reliability**
+  - Ollama embeddings now use batch `/api/embed` with legacy per-text fallback and configurable LLM/embedding timeouts.
+  - LightRAG initialization now verifies the expected `lightrag-hku` distribution before advertising availability.
+
+- **DOCX save visibility**
+  - `save_docx` now surfaces skipped pending TableContext merge warnings in success and failure responses.
+
+- **Assistant harness hygiene**
+  - Retired assistant harness leftovers were pruned from the local workspace and bundled LLM wiki rules were restored to Asset-Aware ownership boundaries.
+
 ## [0.6.22] - 2026-05-07
 
 ### Fixed
