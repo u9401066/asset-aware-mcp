@@ -70,6 +70,146 @@ if TYPE_CHECKING:
 else:
     Context = Any
 
+SYNC_INGEST_PAGE_LIMIT = 10
+SYNC_INGEST_FILE_SIZE_MB_LIMIT = 200
+
+
+def _count_requested_pages(file_path: str, page_ranges: list[str] | None) -> int:
+    """Return requested page count for timeout-safe sync-ingest routing."""
+    try:
+        total_pages = pdf_extractor.get_page_count(Path(file_path))
+        normalized_page_ranges = normalize_page_ranges(page_ranges, total_pages)
+    except Exception:
+        return SYNC_INGEST_PAGE_LIMIT + 1
+    if not normalized_page_ranges:
+        return total_pages
+    return len(build_page_number_map(normalized_page_ranges))
+
+
+def _should_force_background_ingest(
+    file_paths: list[str],
+    *,
+    use_marker: bool,
+    ocr_enabled: bool,
+    page_ranges: list[str] | None,
+) -> tuple[bool, str]:
+    """Decide whether sync ingestion should become a background job.
+
+    Cline/stdio MCP requests have a finite request timeout. Full-PDF OCR,
+    Marker, image extraction, or multi-file ingestion can outlive that timeout
+    and make the client consider the server unavailable. In those cases, return
+    a job id immediately and let callers poll with get_job_status.
+    """
+    if len(file_paths) > 1:
+        return True, "multiple files are safer as a background job"
+    if use_marker:
+        return True, "Marker parsing can exceed the MCP request timeout"
+    if ocr_enabled:
+        return True, "OCR preprocessing can exceed the MCP request timeout"
+
+    for file_path in file_paths:
+        try:
+            file_size_mb = Path(file_path).stat().st_size / (1024 * 1024)
+        except OSError:
+            continue
+        if file_size_mb > SYNC_INGEST_FILE_SIZE_MB_LIMIT:
+            return (
+                True,
+                f"file size ({file_size_mb:.1f} MB) exceeds sync limit "
+                f"({SYNC_INGEST_FILE_SIZE_MB_LIMIT} MB)",
+            )
+
+    requested_pages = sum(
+        _count_requested_pages(file_path, page_ranges) for file_path in file_paths
+    )
+    if requested_pages > SYNC_INGEST_PAGE_LIMIT:
+        return (
+            True,
+            f"requested page count ({requested_pages}) exceeds sync limit ({SYNC_INGEST_PAGE_LIMIT})",
+        )
+    return False, ""
+
+
+def _ingest_job_parameters(
+    *,
+    use_marker: bool,
+    ocr_enabled: bool,
+    ocr_language: str,
+    rotate_pages: bool,
+    deskew: bool,
+    marker_max_pages_per_chunk: int,
+    extract_figures: bool,
+    page_ranges: list[str] | None,
+) -> dict[str, Any]:
+    return {
+        "use_marker": use_marker,
+        "ocr_enabled": ocr_enabled,
+        "ocr_language": ocr_language,
+        "rotate_pages": rotate_pages,
+        "deskew": deskew,
+        "marker_max_pages_per_chunk": marker_max_pages_per_chunk,
+        "extract_figures": extract_figures,
+        "page_ranges": page_ranges or [],
+    }
+
+
+async def _create_ingest_job_response(
+    file_paths: list[str],
+    *,
+    use_marker: bool,
+    ocr_enabled: bool,
+    ocr_language: str,
+    rotate_pages: bool,
+    deskew: bool,
+    marker_max_pages_per_chunk: int,
+    extract_figures: bool,
+    page_ranges: list[str] | None,
+    ctx: Context | None,
+    forced_reason: str = "",
+    title: str = "ETL Job Created",
+) -> str:
+    await report_progress(ctx, 20, message="Creating background ETL job")
+    try:
+        job = await job_service.create_ingest_job(
+            file_paths,
+            parameters=_ingest_job_parameters(
+                use_marker=use_marker,
+                ocr_enabled=ocr_enabled,
+                ocr_language=ocr_language,
+                rotate_pages=rotate_pages,
+                deskew=deskew,
+                marker_max_pages_per_chunk=marker_max_pages_per_chunk,
+                extract_figures=extract_figures,
+                page_ranges=page_ranges,
+            ),
+        )
+    except RuntimeError as e:
+        await log_message(ctx, "error", f"ingest_documents job creation failed: {e}")
+        return f"# ??Could Not Create ETL Job\n\n{e!s}"
+
+    await report_progress(ctx, 100, message=f"Created job {job.job_id}")
+    await log_message(ctx, "info", f"ingest_documents job created: {job.job_id}")
+
+    backend_note = " (Marker)" if use_marker else ""
+    lines = [
+        f"# ?? {title}{backend_note}",
+        "",
+        f"**Job ID:** `{job.job_id}`",
+        f"**Files:** {len(file_paths)}",
+        f"**Backend:** {'Marker (structured)' if use_marker else 'PyMuPDF (fast)'}",
+        f"**Estimated Time:** ~{job.estimated_duration_seconds or 10}s",
+    ]
+    if forced_reason:
+        lines.append(f"**Background Reason:** {forced_reason}")
+    lines.extend(
+        [
+            "",
+            f'Use `get_job_status("{job.job_id}")` to check progress.',
+            "Or use `list_jobs()` to see all active jobs.",
+        ]
+    )
+    return "\n".join(lines)
+
 
 def _display_line_range(start_line: int, end_line: int) -> str:
     if start_line < 0 or end_line < 0 or end_line < start_line:
@@ -166,6 +306,7 @@ def _load_or_build_evidence_spans(doc_id: str) -> list[EvidenceSpan]:
 async def parse_pdf_structure(
     pdf_path: str,
     output_dir: str | None = None,
+    async_mode: bool = True,
     ocr_enabled: bool = False,
     ocr_language: str = "eng",
     rotate_pages: bool = False,
@@ -214,6 +355,25 @@ async def parse_pdf_structure(
 
     if not pdf_file.exists():
         return f"❌ File not found: {pdf_path}"
+
+    if async_mode:
+        return await _create_ingest_job_response(
+            [pdf_path],
+            use_marker=True,
+            ocr_enabled=ocr_enabled,
+            ocr_language=ocr_language,
+            rotate_pages=rotate_pages,
+            deskew=deskew,
+            marker_max_pages_per_chunk=marker_max_pages_per_chunk,
+            extract_figures=extract_figures,
+            page_ranges=page_ranges,
+            ctx=ctx,
+            forced_reason=(
+                "parse_pdf_structure uses Marker and is routed through the "
+                "background job system to avoid MCP stdio request timeouts"
+            ),
+            title="PDF Structure Parse Job Created",
+        )
 
     try:
         total_page_count = pdf_extractor.get_page_count(pdf_file)
@@ -268,7 +428,9 @@ async def parse_pdf_structure(
         )
         extractor = get_marker_extractor()
         await report_progress(
-            ctx, 45, message=f"Parsing structure from {pdf_file.name}"
+            ctx,
+            45,
+            message=f"Loading Marker models and parsing structure from {pdf_file.name}",
         )
         parse_result = extractor.parse(
             active_pdf,
@@ -296,7 +458,12 @@ async def parse_pdf_structure(
                     )
                 )
                 segmentation_path = str(segmentation_file)
-        except Exception:
+        except Exception as e:
+            await log_message(
+                ctx,
+                "warning",
+                f"parse_pdf_structure segmentation skipped for {manifest.doc_id}: {e}",
+            )
             segmentation_path = ""
 
         elapsed = time.time() - start
@@ -331,6 +498,8 @@ async def parse_pdf_structure(
             lines.insert(-1, f"- Selected PDF: `{out_path / 'selected_pages.pdf'}`")
         if segmentation_path:
             lines.insert(-1, f"- Segmentation: `{segmentation_path}`")
+        else:
+            lines.insert(-1, "- Segmentation: skipped")
 
         # Show TOC preview
         if manifest.toc:
@@ -647,7 +816,7 @@ async def ingest_documents(
         ingest_documents(["/papers/small.pdf"], async_mode=False)
 
         # With Marker for precise source tracking:
-        ingest_documents(["/papers/textbook.pdf"], use_marker=True, async_mode=False)
+        ingest_documents(["/papers/textbook.pdf"], use_marker=True)
     """
     await log_message(
         ctx,
@@ -656,52 +825,57 @@ async def ingest_documents(
     )
     await report_progress(ctx, 5, message="Validating ingest request")
 
-    # Lazy-load Marker if requested
-    if use_marker and document_service.marker_extractor is None:
-        try:
-            document_service.marker_extractor = get_marker_extractor()
-        except RuntimeError as e:
-            return (
-                "# ❌ Marker Backend Not Available\n\n"
-                f"{e!s}\n\n"
-                "Use default PyMuPDF mode, or install the optional Marker dependency first."
-            )
-
     if async_mode:
-        await report_progress(ctx, 20, message="Creating background ETL job")
-        try:
-            job = await job_service.create_ingest_job(
-                file_paths,
-                parameters={
-                    "use_marker": use_marker,
-                    "ocr_enabled": ocr_enabled,
-                    "ocr_language": ocr_language,
-                    "rotate_pages": rotate_pages,
-                    "deskew": deskew,
-                    "marker_max_pages_per_chunk": marker_max_pages_per_chunk,
-                    "extract_figures": extract_figures,
-                    "page_ranges": page_ranges or [],
-                },
-            )
-        except RuntimeError as e:
-            await log_message(
-                ctx, "error", f"ingest_documents job creation failed: {e}"
-            )
-            return f"# ❌ Could Not Create ETL Job\n\n{e!s}"
-        await report_progress(ctx, 100, message=f"Created job {job.job_id}")
-        await log_message(ctx, "info", f"ingest_documents job created: {job.job_id}")
-
-        backend_note = " (Marker)" if use_marker else ""
-        return (
-            f"# 📋 ETL Job Created{backend_note}\n\n"
-            f"**Job ID:** `{job.job_id}`\n"
-            f"**Files:** {len(file_paths)}\n"
-            f"**Backend:** {'Marker (structured)' if use_marker else 'PyMuPDF (fast)'}\n"
-            f"**Estimated Time:** ~{job.estimated_duration_seconds or 10}s\n\n"
-            f'Use `get_job_status("{job.job_id}")` to check progress.\n'
-            f"Or use `list_jobs()` to see all active jobs."
+        return await _create_ingest_job_response(
+            file_paths,
+            use_marker=use_marker,
+            ocr_enabled=ocr_enabled,
+            ocr_language=ocr_language,
+            rotate_pages=rotate_pages,
+            deskew=deskew,
+            marker_max_pages_per_chunk=marker_max_pages_per_chunk,
+            extract_figures=extract_figures,
+            page_ranges=page_ranges,
+            ctx=ctx,
         )
     else:
+        should_force, reason = _should_force_background_ingest(
+            file_paths,
+            use_marker=use_marker,
+            ocr_enabled=ocr_enabled,
+            page_ranges=page_ranges,
+        )
+        if should_force:
+            await log_message(
+                ctx,
+                "warning",
+                f"ingest_documents forcing background job: {reason}",
+            )
+            return await _create_ingest_job_response(
+                file_paths,
+                use_marker=use_marker,
+                ocr_enabled=ocr_enabled,
+                ocr_language=ocr_language,
+                rotate_pages=rotate_pages,
+                deskew=deskew,
+                marker_max_pages_per_chunk=marker_max_pages_per_chunk,
+                extract_figures=extract_figures,
+                page_ranges=page_ranges,
+                ctx=ctx,
+                forced_reason=reason,
+            )
+
+        # Lazy-load Marker only for explicitly allowed synchronous Marker work.
+        if use_marker and document_service.marker_extractor is None:
+            try:
+                document_service.marker_extractor = get_marker_extractor()
+            except RuntimeError as e:
+                return (
+                    "# ❌ Marker Backend Not Available\n\n"
+                    f"{e!s}\n\n"
+                    "Use default PyMuPDF mode, or install the optional Marker dependency first."
+                )
+
         await report_progress(ctx, 15, message="Starting synchronous ingestion")
         results = await document_service.ingest(
             file_paths,

@@ -5,12 +5,19 @@ from __future__ import annotations
 import builtins
 import sys
 import types
+from typing import Any
 from unittest.mock import AsyncMock
 
+import httpx
+import numpy as np
 import pytest
 
 import src.infrastructure.lightrag_adapter as lightrag_adapter
-from src.infrastructure.lightrag_adapter import LightRAGAdapter
+from src.infrastructure.lightrag_adapter import (
+    LightRAGAdapter,
+    ollama_embedding,
+    ollama_model_complete,
+)
 
 
 class FakeLightRAG:
@@ -19,6 +26,30 @@ class FakeLightRAG:
     def __init__(self) -> None:
         self.ainsert = AsyncMock()
         self.aquery = AsyncMock(return_value="")
+
+
+class FakeResponse:
+    def __init__(
+        self,
+        payload: dict[str, Any],
+        *,
+        status_code: int = 200,
+        text: str = "",
+    ) -> None:
+        self._payload = payload
+        self.status_code = status_code
+        self.text = text
+
+    def json(self) -> dict[str, Any]:
+        return self._payload
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            raise httpx.HTTPStatusError(
+                "request failed",
+                request=httpx.Request("POST", "http://ollama.test"),
+                response=httpx.Response(self.status_code),
+            )
 
 
 @pytest.mark.asyncio
@@ -135,3 +166,122 @@ async def test_extract_entities_includes_text_context_in_prompt(
     assert "UniqueContextTerm" in prompt
     assert "Context:" in prompt
     assert entities == ["Remimazolam"]
+
+
+@pytest.mark.asyncio
+async def test_ollama_embedding_batches_api_embed_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, dict[str, Any]]] = []
+
+    class FakeAsyncClient:
+        def __init__(self, timeout: float) -> None:
+            self.timeout = timeout
+
+        async def __aenter__(self) -> FakeAsyncClient:
+            return self
+
+        async def __aexit__(self, *_args: object) -> None:
+            return None
+
+        async def post(self, url: str, json: dict[str, Any]) -> FakeResponse:
+            calls.append((url, json))
+            return FakeResponse({"embeddings": [[1.0, 2.0], [3.0, 4.0]]})
+
+    monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
+
+    embeddings = await ollama_embedding(
+        ["alpha", "beta"],
+        model="nomic-test",
+        host="http://ollama.test",
+    )
+
+    assert np.array_equal(embeddings, np.array([[1.0, 2.0], [3.0, 4.0]]))
+    assert calls == [
+        (
+            "http://ollama.test/api/embed",
+            {"model": "nomic-test", "input": ["alpha", "beta"]},
+        )
+    ]
+
+
+@pytest.mark.asyncio
+async def test_ollama_embedding_falls_back_to_legacy_embeddings_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, dict[str, Any]]] = []
+
+    class FakeAsyncClient:
+        def __init__(self, timeout: float) -> None:
+            self.timeout = timeout
+
+        async def __aenter__(self) -> FakeAsyncClient:
+            return self
+
+        async def __aexit__(self, *_args: object) -> None:
+            return None
+
+        async def post(self, url: str, json: dict[str, Any]) -> FakeResponse:
+            calls.append((url, json))
+            if url.endswith("/api/embed"):
+                return FakeResponse({}, status_code=404, text="endpoint not found")
+            return FakeResponse({"embedding": [float(len(calls)), 9.0]})
+
+    monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
+
+    embeddings = await ollama_embedding(
+        ["alpha", "beta"],
+        model="nomic-test",
+        host="http://ollama.test",
+    )
+
+    assert np.array_equal(embeddings, np.array([[2.0, 9.0], [3.0, 9.0]]))
+    assert calls == [
+        (
+            "http://ollama.test/api/embed",
+            {"model": "nomic-test", "input": ["alpha", "beta"]},
+        ),
+        (
+            "http://ollama.test/api/embeddings",
+            {"model": "nomic-test", "prompt": "alpha"},
+        ),
+        (
+            "http://ollama.test/api/embeddings",
+            {"model": "nomic-test", "prompt": "beta"},
+        ),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_ollama_model_complete_uses_configurable_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    timeouts: list[float] = []
+
+    class FakeAsyncClient:
+        def __init__(self, timeout: float) -> None:
+            timeouts.append(timeout)
+
+        async def __aenter__(self) -> FakeAsyncClient:
+            return self
+
+        async def __aexit__(self, *_args: object) -> None:
+            return None
+
+        async def post(self, _url: str, json: dict[str, Any]) -> FakeResponse:
+            assert json["stream"] is False
+            return FakeResponse({"message": {"content": "ok"}})
+
+    monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
+    monkeypatch.setattr(
+        lightrag_adapter.settings, "ollama_llm_timeout", 333.0, raising=False
+    )
+
+    result = await ollama_model_complete(
+        "hello",
+        model="qwen-test",
+        host="http://ollama.test",
+    )
+
+    assert result == "ok"
+    assert timeouts == [333.0]

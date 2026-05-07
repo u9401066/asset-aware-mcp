@@ -726,7 +726,7 @@ class DocumentService:
                 current_step,
                 total_steps,
                 "Parsing Structure",
-                f"Parsing structure from {path.name} with Marker",
+                f"Loading Marker models and parsing structure from {path.name}",
             )
             parse_result = self.marker_extractor.parse(
                 active_pdf_path,

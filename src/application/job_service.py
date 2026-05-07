@@ -55,6 +55,7 @@ class JobService:
         self.document_service = document_service
         self.max_concurrent_jobs = max_concurrent_jobs
         self._running_tasks: dict[str, asyncio.Task[None]] = {}
+        self._quota_lock = asyncio.Lock()
 
     def set_document_service(self, document_service: DocumentService) -> None:
         """Set document service (for late binding)."""
@@ -75,48 +76,58 @@ class JobService:
         Returns:
             Created job with ID for tracking
         """
-        # Check concurrent job limit
-        active_count = len(self._running_tasks)
-        if active_count >= self.max_concurrent_jobs:
-            msg = (
-                f"Too many concurrent jobs ({active_count}/{self.max_concurrent_jobs}). "
-                "Wait for existing jobs to finish or cancel some."
+        async with self._quota_lock:
+            # Check concurrent job limit while holding the slot reservation lock.
+            active_count = len(self._running_tasks)
+            if active_count >= self.max_concurrent_jobs:
+                msg = (
+                    f"Too many concurrent jobs ({active_count}/{self.max_concurrent_jobs}). "
+                    "Wait for existing jobs to finish or cancel some."
+                )
+                raise RuntimeError(msg)
+
+            # Generate unique job ID
+            job_id = (
+                f"job_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
             )
-            raise RuntimeError(msg)
 
-        # Generate unique job ID
-        job_id = (
-            f"job_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
-        )
+            # Estimate duration (rough: 10s per file)
+            estimated_duration = len(file_paths) * 10
+            job_parameters = parameters or {}
+            base_steps = 9 if job_parameters.get("use_marker") else 8
+            steps_per_file = base_steps + (
+                1 if job_parameters.get("ocr_enabled") else 0
+            )
 
-        # Estimate duration (rough: 10s per file)
-        estimated_duration = len(file_paths) * 10
-        job_parameters = parameters or {}
-        base_steps = 9 if job_parameters.get("use_marker") else 8
-        steps_per_file = base_steps + (1 if job_parameters.get("ocr_enabled") else 0)
+            # Create job
+            job = Job(
+                job_id=job_id,
+                job_type=JobType.INGEST_PDF
+                if len(file_paths) == 1
+                else JobType.INGEST_BATCH,
+                status=JobStatus.PENDING,
+                input_files=file_paths,
+                parameters=job_parameters,
+                progress=JobProgress(
+                    total_steps=len(file_paths) * steps_per_file,
+                    message="Job created, waiting to start...",
+                ),
+                estimated_duration_seconds=estimated_duration,
+            )
 
-        # Create job
-        job = Job(
-            job_id=job_id,
-            job_type=JobType.INGEST_PDF
-            if len(file_paths) == 1
-            else JobType.INGEST_BATCH,
-            status=JobStatus.PENDING,
-            input_files=file_paths,
-            parameters=job_parameters,
-            progress=JobProgress(
-                total_steps=len(file_paths) * steps_per_file,
-                message="Job created, waiting to start...",
-            ),
-            estimated_duration_seconds=estimated_duration,
-        )
+            # Save job
+            await self.job_store.create(job)
 
-        # Save job
-        await self.job_store.create(job)
+            # Start background processing
+            task = asyncio.create_task(self._process_ingest_job(job_id))
+            self._running_tasks[job_id] = task
 
-        # Start background processing
-        task = asyncio.create_task(self._process_ingest_job(job_id))
-        self._running_tasks[job_id] = task
+            def forget_task(
+                _task: asyncio.Task[None], task_job_id: str = job_id
+            ) -> None:
+                self._running_tasks.pop(task_job_id, None)
+
+            task.add_done_callback(forget_task)
 
         logger.info(f"Created ingest job {job_id} for {len(file_paths)} file(s)")
         return job
@@ -152,9 +163,17 @@ class JobService:
             return False
 
         # Cancel the task
-        if job_id in self._running_tasks:
-            self._running_tasks[job_id].cancel()
-            del self._running_tasks[job_id]
+        task = self._running_tasks.pop(job_id, None)
+        if task is not None:
+            task.cancel()
+            try:
+                await asyncio.wait_for(task, timeout=5)
+            except asyncio.CancelledError:
+                pass
+            except TimeoutError:
+                logger.warning(
+                    "Timed out waiting for job task cancellation: %s", job_id
+                )
 
         # Update job status
         job.cancel()
@@ -177,12 +196,13 @@ class JobService:
 
         This runs asynchronously and updates job status as it progresses.
         """
-        job = await self.job_store.get(job_id)
-        if job is None:
-            logger.error(f"Job {job_id} not found")
-            return
-
+        job: Job | None = None
         try:
+            job = await self.job_store.get(job_id)
+            if job is None:
+                logger.error(f"Job {job_id} not found")
+                return
+
             # Start job
             job.start()
             job.progress.current_phase = "Starting"
@@ -228,6 +248,8 @@ class JobService:
                 # Actually process the document (ingest() takes a list)
                 try:
                     use_marker = job.parameters.get("use_marker", False)
+                    if use_marker:
+                        self._ensure_marker_extractor_for_job()
                     results = await self.document_service.ingest(
                         [file_path],
                         use_marker=use_marker,
@@ -317,20 +339,38 @@ class JobService:
 
         except asyncio.CancelledError:
             logger.info(f"Job {job_id} was cancelled")
-            job.cancel()
-            job.progress.message = "Job cancelled by user"
-            await self.job_store.update(job)
+            if job is not None:
+                job.cancel()
+                job.progress.message = "Job cancelled by user"
+                await self.job_store.update(job)
 
         except Exception as e:
             logger.error(f"Job {job_id} failed: {e}")
-            job.fail(str(e))
-            job.progress.message = f"Failed: {e}"
-            await self.job_store.update(job)
+            if job is not None:
+                job.fail(str(e))
+                job.progress.message = f"Failed: {e}"
+                await self.job_store.update(job)
 
         finally:
-            # Clean up task reference
-            if job_id in self._running_tasks:
-                del self._running_tasks[job_id]
+            self._running_tasks.pop(job_id, None)
+
+    def _ensure_marker_extractor_for_job(self) -> None:
+        """Load the Marker extractor inside the background worker when requested."""
+        if self.document_service is None:
+            return
+        if getattr(self.document_service, "marker_extractor", None) is not None:
+            return
+        try:
+            from src.infrastructure.marker_adapter import MarkerPDFExtractor
+
+            MarkerPDFExtractor.require_backend_available()
+            self.document_service.marker_extractor = MarkerPDFExtractor()
+        except Exception as exc:
+            logger.warning(
+                "Marker requested for background job but is unavailable: %s",
+                exc,
+                exc_info=True,
+            )
 
 
 # ============================================================================

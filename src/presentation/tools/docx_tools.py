@@ -60,15 +60,15 @@ def _prepare_merged_save_input(
     doc_id: str,
     dfm_content: str | None,
     from_md: bool,
-) -> tuple[str | None, bool, list[str]]:
+) -> tuple[str | None, bool, list[str], list[str]]:
     """Merge editor/disk edits with pending TableContext changes before save."""
     pending = _get_pending_table_contexts(doc_id)
     if not pending:
-        return dfm_content, from_md, []
+        return dfm_content, from_md, [], []
 
     ir = docx_service._load_ir(doc_id)
     if ir is None:
-        return dfm_content, from_md, []
+        return dfm_content, from_md, [], []
 
     working_ir = deepcopy(ir)
     doc_dir = docx_service.repository.get_doc_dir(doc_id)
@@ -77,7 +77,7 @@ def _prepare_merged_save_input(
         md_path = doc_dir / "content.md"
         yaml_path = doc_dir / "format.yaml"
         if not md_path.exists() or not yaml_path.exists():
-            return dfm_content, from_md, []
+            return dfm_content, from_md, [], []
 
         md_content = read_text_file(md_path, hint=str(md_path))
         yaml_content = read_text_file(yaml_path, hint=str(yaml_path))
@@ -85,7 +85,7 @@ def _prepare_merged_save_input(
             md_content, yaml_content
         )
         if split_report.error_count:
-            return dfm_content, from_md, []
+            return dfm_content, from_md, [], []
 
         parse_result = docx_service.parser.parse_split(md_content, yaml_content)
         working_ir = docx_service.parser.apply_edits(working_ir, parse_result)
@@ -97,16 +97,22 @@ def _prepare_merged_save_input(
             if e.startswith(("FORMAT_MISMATCH", "DUPLICATE_ID"))
         ]
         if fatal_errors:
-            return dfm_content, from_md, []
+            return dfm_content, from_md, [], []
         working_ir = docx_service.parser.apply_edits(working_ir, parse_result)
 
     synced_table_ids: list[str] = []
+    merge_warnings: list[str] = []
     for tc in pending:
         try:
             dfm_table_bridge.apply_table_context_to_ir(
                 working_ir, tc.source_block_id, tc
             )
-        except ValueError:
+        except ValueError as e:
+            warning = (
+                f"Skipped pending TableContext `{tc.id}` for block "
+                f"`{tc.source_block_id}` before save_docx: {e}"
+            )
+            merge_warnings.append(warning)
             logger.warning(
                 "Skipping TableContext merge before save_docx | doc_id=%s | table_id=%s | block_id=%s",
                 doc_id,
@@ -117,11 +123,14 @@ def _prepare_merged_save_input(
             continue
         synced_table_ids.append(tc.id)
 
+    if merge_warnings:
+        return dfm_content, from_md, [], merge_warnings
+
     if not synced_table_ids:
-        return dfm_content, from_md, []
+        return dfm_content, from_md, [], []
 
     merged_dfm = docx_service.renderer.render(working_ir)
-    return merged_dfm, False, synced_table_ids
+    return merged_dfm, False, synced_table_ids, []
 
 
 @mcp.tool()
@@ -263,7 +272,7 @@ async def save_docx(
     )
     await log_message(ctx, "info", f"save_docx start: {doc_id}")
     await report_progress(ctx, 10, message=f"Preparing merged save for {doc_id}")
-    dfm_content, from_md, synced_table_ids = _prepare_merged_save_input(
+    dfm_content, from_md, synced_table_ids, merge_warnings = _prepare_merged_save_input(
         doc_id,
         dfm_content,
         from_md,
@@ -288,7 +297,7 @@ async def save_docx(
     if not result.get("success"):
         await log_message(ctx, "error", f"save_docx failed: {doc_id}")
         lines = [f"❌ 儲存失敗：{result.get('error', '未知錯誤')}"]
-        warnings = result.get("warnings", [])
+        warnings = [*merge_warnings, *result.get("warnings", [])]
         if warnings:
             lines.append("")
             lines.append("⚠️ 診斷：")
@@ -322,7 +331,7 @@ async def save_docx(
                 f"({result.get('revision_records', 0)} records)"
             )
 
-    warnings = result.get("warnings", [])
+    warnings = [*merge_warnings, *result.get("warnings", [])]
     if warnings:
         lines.append("")
         lines.append("⚠️ 警告：")

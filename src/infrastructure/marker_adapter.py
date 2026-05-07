@@ -12,7 +12,10 @@ Infrastructure Layer - Marker PDF Adapter
 
 from __future__ import annotations
 
+import contextlib
 import json
+import os
+import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -33,6 +36,93 @@ AUTO_SAFE_CHUNK_SIZE = 1
 AUTO_LARGE_CHUNK_PAGE_THRESHOLD = 800
 AUTO_LARGE_CHUNK_SIZE = 200
 AUTO_DISABLE_FIGURES_IMAGE_THRESHOLD = 2000
+SUPPRESS_MARKER_OUTPUT_ENV = "ASSET_AWARE_SUPPRESS_MARKER_OUTPUT"
+MARKER_OUTPUT_LOG_ENV = "ASSET_AWARE_MARKER_OUTPUT_LOG"
+
+
+def _env_flag(name: str, default: bool) -> bool:
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    return raw_value.strip().lower() not in {"0", "false", "no", "off"}
+
+
+@contextlib.contextmanager
+def _redirect_standard_fds(sink: Any) -> Any:
+    """Redirect OS-level stdout/stderr file descriptors to ``sink``.
+
+    ``contextlib.redirect_stdout`` only replaces Python's ``sys.stdout`` object.
+    Some OCR/layout stacks write progress directly to file descriptors 1/2, so
+    stdio MCP servers need descriptor-level isolation as well.
+    """
+
+    try:
+        sink_fd = sink.fileno()
+    except (AttributeError, OSError):
+        yield
+        return
+
+    for stream in (sys.stdout, sys.stderr):
+        with contextlib.suppress(Exception):
+            stream.flush()
+
+    saved_fds: list[tuple[int, int]] = []
+    try:
+        for fd in (1, 2):
+            saved_fd: int | None = None
+            try:
+                saved_fd = os.dup(fd)
+                os.dup2(sink_fd, fd)
+            except OSError:
+                if saved_fd is not None:
+                    with contextlib.suppress(OSError):
+                        os.close(saved_fd)
+                continue
+            saved_fds.append((fd, saved_fd))
+        yield
+    finally:
+        for stream in (sys.stdout, sys.stderr):
+            with contextlib.suppress(Exception):
+                stream.flush()
+        for fd, saved_fd in reversed(saved_fds):
+            with contextlib.suppress(OSError):
+                os.dup2(saved_fd, fd)
+            with contextlib.suppress(OSError):
+                os.close(saved_fd)
+
+
+@contextlib.contextmanager
+def _suppress_marker_output() -> Any:
+    """Suppress noisy third-party Marker progress output.
+
+    Marker/surya uses tqdm-style progress bars such as "Running OCR Error
+    Detection" and "Recognizing Layout". In stdio MCP mode, stdout is the
+    JSON-RPC transport and stderr is surfaced by clients; leaking these progress
+    bars can corrupt or destabilize the MCP session. Keep Asset-Aware's own MCP
+    progress reporting in the tool layer, and silence raw third-party streams
+    here by default.
+    """
+
+    if not _env_flag(SUPPRESS_MARKER_OUTPUT_ENV, True):
+        yield
+        return
+
+    log_path_value = os.environ.get(MARKER_OUTPUT_LOG_ENV, "").strip()
+    sink_path = (
+        Path(log_path_value).expanduser() if log_path_value else Path(os.devnull)
+    )
+    if log_path_value:
+        sink_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with (
+        sink_path.open(
+            "a" if log_path_value else "w", encoding="utf-8", errors="replace"
+        ) as sink,
+        _redirect_standard_fds(sink),
+        contextlib.redirect_stdout(sink),
+        contextlib.redirect_stderr(sink),
+    ):
+        yield
 
 
 def _coerce_metadata_int(metadata: dict[str, Any], key: str, default: int = 0) -> int:
@@ -116,17 +206,19 @@ class MarkerPDFExtractor:
         if self._model_dict is None:
             from marker.models import create_model_dict  # type: ignore
 
-            self._model_dict = create_model_dict()
+            with _suppress_marker_output():
+                self._model_dict = create_model_dict()
         return self._model_dict
 
     def _get_converter(self, *, extract_images: bool) -> Any:
         """建立可重用的 Marker converter。"""
         from marker.converters.pdf import PdfConverter  # type: ignore
 
-        return PdfConverter(
-            artifact_dict=self._get_models(),
-            config={"extract_images": extract_images},
-        )
+        with _suppress_marker_output():
+            return PdfConverter(
+                artifact_dict=self._get_models(),
+                config={"extract_images": extract_images},
+            )
 
     @staticmethod
     def _stringify_marker_block_id(value: Any) -> str:
@@ -508,9 +600,11 @@ class MarkerPDFExtractor:
         """解析單一 PDF 或單一 chunk，並在必要時回填原始頁碼。"""
         from marker.output import text_from_rendered  # type: ignore
 
-        rendered = converter(str(pdf_path))
+        with _suppress_marker_output():
+            rendered = converter(str(pdf_path))
 
-        result = text_from_rendered(rendered)
+        with _suppress_marker_output():
+            result = text_from_rendered(rendered)
         markdown_text = result[0] if isinstance(result, tuple) else str(result)
 
         local_blocks = self._extract_blocks(rendered)

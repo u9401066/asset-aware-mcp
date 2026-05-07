@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -20,7 +22,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_JOB_ID_RE = re.compile(r"^job_[A-Za-z0-9_:-]+$")
+_JOB_ID_RE = re.compile(r"^job_[A-Za-z0-9_-]+$")
 
 
 class FileJobStore(JobStoreInterface):
@@ -52,14 +54,26 @@ class FileJobStore(JobStoreInterface):
             raise ValueError(f"Job path escapes storage root: {job_id}") from exc
         return path
 
+    def _atomic_write_job(self, path: Path, job: Job) -> None:
+        """Write a job JSON file without exposing partial contents."""
+        tmp_path = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+        try:
+            with tmp_path.open("w", encoding="utf-8") as f:
+                json.dump(job.model_dump(mode="json"), f, indent=2, default=str)
+                f.flush()
+                os.fsync(f.fileno())
+            tmp_path.replace(path)
+        finally:
+            if tmp_path.exists():
+                tmp_path.unlink()
+
     async def create(self, job: Job) -> Job:
         """Create a new job."""
         path = self._job_path(job.job_id)
         if path.exists():
             raise ValueError(f"Job {job.job_id} already exists")
 
-        with path.open("w", encoding="utf-8") as f:
-            json.dump(job.model_dump(mode="json"), f, indent=2, default=str)
+        self._atomic_write_job(path, job)
 
         logger.info(f"Created job: {job.job_id}")
         return job
@@ -87,8 +101,7 @@ class FileJobStore(JobStoreInterface):
         """Update an existing job."""
         path = self._job_path(job.job_id)
 
-        with path.open("w", encoding="utf-8") as f:
-            json.dump(job.model_dump(mode="json"), f, indent=2, default=str)
+        self._atomic_write_job(path, job)
 
         return job
 

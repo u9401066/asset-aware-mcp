@@ -7,6 +7,8 @@ Supports both Ollama (local) and OpenAI backends.
 
 from __future__ import annotations
 
+import re
+from importlib.metadata import PackageNotFoundError, version
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
@@ -17,6 +19,34 @@ from .config import settings
 
 if TYPE_CHECKING:
     from lightrag import LightRAG  # type: ignore
+
+MIN_LIGHTRAG_HKU_VERSION = (1, 4, 11)
+
+
+def _parse_version_tuple(raw_version: str) -> tuple[int, int, int]:
+    match = re.match(r"^(\d+)\.(\d+)\.(\d+)", raw_version)
+    if match is None:
+        return (0, 0, 0)
+    return (int(match.group(1)), int(match.group(2)), int(match.group(3)))
+
+
+def _validate_lightrag_hku_distribution() -> None:
+    try:
+        installed_version = version("lightrag-hku")
+    except PackageNotFoundError as exc:
+        raise RuntimeError(
+            "LightRAG backend requires the `lightrag-hku` distribution. "
+            "Install this project with `uv sync`; do not install the unrelated "
+            "`lightrag` package from PyPI."
+        ) from exc
+
+    if _parse_version_tuple(installed_version) < MIN_LIGHTRAG_HKU_VERSION:
+        minimum = ".".join(str(part) for part in MIN_LIGHTRAG_HKU_VERSION)
+        raise RuntimeError(
+            f"LightRAG backend requires `lightrag-hku>={minimum}`, "
+            f"but {installed_version} is installed."
+        )
+
 
 # ============================================================================
 # Ollama LLM Functions for LightRAG
@@ -45,6 +75,7 @@ async def ollama_model_complete(
 
     model = str(kwargs.get("model", settings.ollama_model))
     host = str(kwargs.get("host", settings.ollama_host))
+    timeout = float(kwargs.get("timeout", settings.ollama_llm_timeout))
 
     messages = []
 
@@ -56,7 +87,7 @@ async def ollama_model_complete(
 
     messages.append({"role": "user", "content": prompt})
 
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    async with httpx.AsyncClient(timeout=timeout) as client:
         response = await client.post(
             f"{host}/api/chat",
             json={
@@ -93,42 +124,51 @@ async def ollama_embedding(
 
     model = str(kwargs.get("model", settings.ollama_embedding_model))
     host = str(kwargs.get("host", settings.ollama_host))
+    timeout = float(kwargs.get("timeout", settings.ollama_embedding_timeout))
 
-    embeddings = []
+    if not texts:
+        return np.array([])
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        for text in texts:
-            # Try new /api/embed endpoint first (Ollama v0.5+),
-            # fall back to legacy /api/embeddings
-            response = await client.post(
-                f"{host}/api/embed",
-                json={
-                    "model": model,
-                    "input": text,
-                },
-            )
-            if response.status_code == 404:
-                # Distinguish model-not-found from endpoint-not-found
-                body = response.text
-                if "not found" in body and "model" in body:
-                    # Model doesn't exist — no point trying legacy endpoint
-                    response.raise_for_status()
-                # Endpoint doesn't exist — try legacy /api/embeddings
-                response = await client.post(
-                    f"{host}/api/embeddings",
-                    json={
-                        "model": model,
-                        "prompt": text,
-                    },
-                )
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        # Try the current batch endpoint first (Ollama v0.5+).
+        response = await client.post(
+            f"{host}/api/embed",
+            json={
+                "model": model,
+                "input": texts,
+            },
+        )
+        if response.status_code != 404:
             response.raise_for_status()
             result = response.json()
-            # /api/embed returns "embeddings" (list), /api/embeddings returns "embedding"
-            emb = result.get("embeddings", [result.get("embedding", [])])
-            if isinstance(emb, list) and emb and isinstance(emb[0], list):
-                embeddings.append(emb[0])
-            else:
-                embeddings.append(emb)
+            embeddings = result.get("embeddings", result.get("embedding", []))
+            if (
+                isinstance(embeddings, list)
+                and len(texts) == 1
+                and embeddings
+                and not isinstance(embeddings[0], list)
+            ):
+                embeddings = [embeddings]
+            return np.array(embeddings)
+
+        # Distinguish model-not-found from endpoint-not-found.
+        body = response.text
+        if "not found" in body and "model" in body:
+            response.raise_for_status()
+
+        embeddings = []
+        for text in texts:
+            # Legacy /api/embeddings only accepts one prompt per request.
+            response = await client.post(
+                f"{host}/api/embeddings",
+                json={
+                    "model": model,
+                    "prompt": text,
+                },
+            )
+            response.raise_for_status()
+            result = response.json()
+            embeddings.append(result.get("embedding", []))
 
     # LightRAG requires numpy array with .size attribute
     return np.array(embeddings)
@@ -224,6 +264,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
             raise RuntimeError("LightRAG is disabled in settings")
 
         try:
+            _validate_lightrag_hku_distribution()
             from lightrag import LightRAG  # type: ignore
             from lightrag.base import EmbeddingFunc  # type: ignore
 
@@ -611,11 +652,12 @@ class LightRAGAdapter(KnowledgeGraphInterface):
             return False
 
         try:
+            _validate_lightrag_hku_distribution()
             from lightrag import LightRAG, QueryParam  # type: ignore # noqa: F401
             from lightrag.base import EmbeddingFunc  # type: ignore # noqa: F401
 
             return True
-        except (ImportError, AttributeError):
+        except (ImportError, AttributeError, RuntimeError):
             return False
 
 

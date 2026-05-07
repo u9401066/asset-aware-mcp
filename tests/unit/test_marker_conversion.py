@@ -10,6 +10,9 @@ Unit Tests — Marker Block 轉換邏輯
 from __future__ import annotations
 
 import json
+import os
+import sys
+import types
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -527,6 +530,50 @@ class TestMarkerChunking:
             "require_backend_available",
             staticmethod(lambda: None),
         )
+
+    def test_parse_single_pdf_suppresses_marker_progress_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        capfd: pytest.CaptureFixture[str],
+        tmp_path: Path,
+    ) -> None:
+        """Marker/surya progress bars must not leak into stdio MCP transport."""
+        pdf_path = tmp_path / "noisy.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 test")
+
+        marker_pkg = types.ModuleType("marker")
+        marker_pkg.__path__ = []  # type: ignore[attr-defined]
+        output_mod = types.ModuleType("marker.output")
+
+        def fake_text_from_rendered(
+            _rendered: object,
+        ) -> tuple[str, dict[str, bytes], dict]:
+            print("Recognizing Layout: 100%|██████████| 1/1")
+            print("Running OCR Error Detection: 100%|██████████| 1/1", file=sys.stderr)
+            os.write(1, b"FD stdout: Recognizing Layout\n")
+            os.write(2, b"FD stderr: Running OCR Error Detection\n")
+            return ("# Parsed", {}, {})
+
+        output_mod.text_from_rendered = fake_text_from_rendered  # type: ignore[attr-defined]
+        marker_pkg.output = output_mod  # type: ignore[attr-defined]
+        monkeypatch.setitem(sys.modules, "marker", marker_pkg)
+        monkeypatch.setitem(sys.modules, "marker.output", output_mod)
+        monkeypatch.delenv("ASSET_AWARE_SUPPRESS_MARKER_OUTPUT", raising=False)
+
+        class NoisyConverter:
+            def __call__(self, _pdf_path: str) -> object:
+                print("Recognizing Text: 0%|          | 0/1")
+                print("Recognizing tables: 100%|██████████| 1/1", file=sys.stderr)
+                os.write(1, b"FD stdout: Recognizing Text\n")
+                os.write(2, b"FD stderr: Recognizing tables\n")
+                return types.SimpleNamespace(children=[], metadata={}, images={})
+
+        result = MarkerPDFExtractor()._parse_single_pdf(NoisyConverter(), pdf_path)
+
+        captured = capfd.readouterr()
+        assert result.markdown == "# Parsed"
+        assert captured.out == ""
+        assert captured.err == ""
 
     def test_parse_passes_extract_images_to_converter(
         self,

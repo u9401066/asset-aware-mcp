@@ -7,6 +7,7 @@ error handling, input validation, and response formatting.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 from pathlib import Path
@@ -267,6 +268,51 @@ class TestDocxTools:
             assert "editor text" in call_args.args[1]
             assert "| new |" in call_args.args[1]
             assert call_args.kwargs["from_md"] is False
+
+    async def test_save_docx_warns_when_pending_table_context_is_skipped(self) -> None:
+        """Skipped pending TableContext merges must be visible to the caller."""
+        with (
+            patch("src.presentation.tools.docx_tools.docx_service") as mock_svc,
+            patch("src.presentation.tools.docx_tools.table_service") as mock_table_svc,
+            patch("src.presentation.tools.docx_tools.dfm_table_bridge") as mock_bridge,
+        ):
+            ir = DocxIR(doc_id="doc123", source_path="workspace/test.docx")
+            ir.add_block(
+                DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content="old")
+            )
+            tc = TableContext(
+                id="tbl_ctx",
+                intent="summary",
+                title="T",
+                columns=[ColumnDef(name="A", type="text")],
+                rows=[{"A": "new"}],
+                source_doc_id="doc123",
+                source_block_id="missing-table",
+            )
+
+            mock_table_svc._tables = {tc.id: tc}
+            mock_svc._load_ir.return_value = ir
+            mock_svc.parser.parse.return_value = MagicMock(errors=[])
+            mock_svc.parser.apply_edits.return_value = ir
+            mock_bridge.apply_table_context_to_ir.side_effect = ValueError(
+                "block missing-table not found"
+            )
+            mock_svc.save_docx = AsyncMock(
+                return_value={
+                    "success": True,
+                    "output_path": "/data/doc123/output.docx",
+                    "integrity": "OK",
+                }
+            )
+
+            from src.presentation.tools.docx_tools import save_docx
+
+            result = await save_docx("doc123", "inline dfm", force=True)
+
+            assert "tbl_ctx" in result
+            assert "block missing-table not found" in result
+            call_args = mock_svc.save_docx.await_args
+            assert call_args.args[1] == "inline dfm"
 
     async def test_save_docx_merges_split_md_with_pending_table_context(
         self, tmp_path: Path
@@ -671,7 +717,10 @@ class TestDocumentTools:
             MagicMock(side_effect=MarkerBackendUnavailable("No module named 'marker'")),
         )
 
-        result = await document_tools.parse_pdf_structure(str(pdf_path))
+        result = await document_tools.parse_pdf_structure(
+            str(pdf_path),
+            async_mode=False,
+        )
 
         assert "Marker Backend Not Available" in result
         assert "uv sync --extra marker" in result
@@ -695,7 +744,10 @@ class TestDocumentTools:
         monkeypatch.setattr(document_tools.pdf_extractor, "get_page_count", lambda _: 1)
         monkeypatch.setattr(document_tools, "get_marker_extractor", lambda: marker)
 
-        result = await document_tools.parse_pdf_structure(str(pdf_path))
+        result = await document_tools.parse_pdf_structure(
+            str(pdf_path),
+            async_mode=False,
+        )
 
         assert "Marker Resource Limit" in result
         assert "marker_max_pages_per_chunk=1" in result
@@ -716,9 +768,41 @@ class TestDocumentTools:
         result = await document_tools.parse_pdf_structure(
             str(pdf_path),
             page_ranges=["2"],
+            async_mode=False,
         )
 
         assert "Invalid PDF or page range" in result
+
+    async def test_parse_pdf_structure_defaults_to_background_marker_job(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """parse_pdf_structure must return quickly instead of loading Marker inline."""
+        pdf_path = tmp_path / "paper.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 test")
+
+        from src.presentation.tools import document_tools
+
+        monkeypatch.setattr(
+            document_tools,
+            "get_marker_extractor",
+            MagicMock(side_effect=AssertionError("Marker should load in the job")),
+        )
+        mock_jobs = MagicMock()
+        mock_jobs.create_ingest_job = AsyncMock(
+            return_value=MagicMock(job_id="job_parse", estimated_duration_seconds=10)
+        )
+        monkeypatch.setattr(document_tools, "job_service", mock_jobs)
+
+        result = await document_tools.parse_pdf_structure(str(pdf_path))
+
+        assert "job_parse" in result
+        mock_jobs.create_ingest_job.assert_awaited_once()
+        args, kwargs = mock_jobs.create_ingest_job.await_args
+        assert args[0] == [str(pdf_path)]
+        assert kwargs["parameters"]["use_marker"] is True
+        assert kwargs["parameters"]["page_ranges"] == []
 
     async def test_search_source_location_no_blocks(self) -> None:
         """search_source_location returns error when blocks.json missing."""
@@ -1024,8 +1108,14 @@ class TestDocumentTools:
             assert "✅" in result
             assert "converted.pptx" in result
 
-    async def test_ingest_documents_sync_reports_context_progress(self) -> None:
+    async def test_ingest_documents_sync_reports_context_progress(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
         """ingest_documents emits MCP progress for synchronous ETL."""
+        pdf_path = tmp_path / "test.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 test")
         fake_ctx = MagicMock()
         fake_ctx.report_progress = AsyncMock()
         fake_ctx.log = AsyncMock()
@@ -1064,15 +1154,141 @@ class TestDocumentTools:
             "src.presentation.tools.document_tools.document_service"
         ) as mock_svc:
             mock_svc.ingest = AsyncMock(side_effect=fake_ingest)
-            from src.presentation.tools.document_tools import ingest_documents
+            from src.presentation.tools import document_tools
 
-            result = await ingest_documents(
-                ["workspace/test.pdf"], async_mode=False, ctx=fake_ctx
+            monkeypatch.setattr(
+                document_tools.pdf_extractor,
+                "get_page_count",
+                MagicMock(return_value=1),
+            )
+
+            result = await document_tools.ingest_documents(
+                [str(pdf_path)], async_mode=False, ctx=fake_ctx
             )
 
         assert "Processed" in result
         assert fake_ctx.report_progress.await_count >= 3
         assert fake_ctx.log.await_count >= 2
+
+    async def test_ingest_documents_sync_marker_is_forced_to_background_job(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A sync Marker request should become a job before any model load."""
+        from src.presentation.tools import document_tools
+
+        monkeypatch.setattr(
+            document_tools,
+            "get_marker_extractor",
+            MagicMock(side_effect=AssertionError("Marker should load in the job")),
+        )
+        mock_jobs = MagicMock()
+        mock_jobs.create_ingest_job = AsyncMock(
+            return_value=MagicMock(job_id="job_marker", estimated_duration_seconds=10)
+        )
+        monkeypatch.setattr(document_tools, "job_service", mock_jobs)
+
+        result = await document_tools.ingest_documents(
+            ["workspace/test.pdf"],
+            async_mode=False,
+            use_marker=True,
+        )
+
+        assert "job_marker" in result
+        mock_jobs.create_ingest_job.assert_awaited_once()
+
+    async def test_ingest_documents_async_marker_does_not_load_marker_in_request(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Async Marker job creation must not block on Marker model loading."""
+        from src.presentation.tools import document_tools
+
+        monkeypatch.setattr(
+            document_tools,
+            "get_marker_extractor",
+            MagicMock(side_effect=AssertionError("Marker should load in the job")),
+        )
+        mock_jobs = MagicMock()
+        mock_jobs.create_ingest_job = AsyncMock(
+            return_value=MagicMock(
+                job_id="job_async_marker", estimated_duration_seconds=10
+            )
+        )
+        monkeypatch.setattr(document_tools, "job_service", mock_jobs)
+
+        result = await document_tools.ingest_documents(
+            ["workspace/test.pdf"],
+            async_mode=True,
+            use_marker=True,
+        )
+
+        assert "job_async_marker" in result
+        mock_jobs.create_ingest_job.assert_awaited_once()
+
+    async def test_ingest_documents_sync_uncountable_pdf_forces_background_job(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """If page counting fails, the sync path must fail safe to a job."""
+        from src.presentation.tools import document_tools
+
+        monkeypatch.setattr(
+            document_tools.pdf_extractor,
+            "get_page_count",
+            MagicMock(side_effect=RuntimeError("cannot count")),
+        )
+        mock_jobs = MagicMock()
+        mock_jobs.create_ingest_job = AsyncMock(
+            return_value=MagicMock(
+                job_id="job_uncountable", estimated_duration_seconds=10
+            )
+        )
+        monkeypatch.setattr(document_tools, "job_service", mock_jobs)
+        mock_service = MagicMock()
+        mock_service.ingest = AsyncMock(
+            side_effect=AssertionError("uncountable PDFs should not run synchronously")
+        )
+        monkeypatch.setattr(document_tools, "document_service", mock_service)
+
+        result = await document_tools.ingest_documents(
+            ["workspace/test.pdf"],
+            async_mode=False,
+        )
+
+        assert "job_uncountable" in result
+        mock_jobs.create_ingest_job.assert_awaited_once()
+
+    async def test_ingest_documents_sync_large_pdf_forces_background_job(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Large PDFs should not run in the synchronous MCP request path."""
+        pdf_path = tmp_path / "large.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 test")
+
+        from src.presentation.tools import document_tools
+
+        monkeypatch.setattr(document_tools, "SYNC_INGEST_FILE_SIZE_MB_LIMIT", 0)
+        mock_jobs = MagicMock()
+        mock_jobs.create_ingest_job = AsyncMock(
+            return_value=MagicMock(job_id="job_large", estimated_duration_seconds=10)
+        )
+        monkeypatch.setattr(document_tools, "job_service", mock_jobs)
+        mock_service = MagicMock()
+        mock_service.ingest = AsyncMock(
+            side_effect=AssertionError("large PDFs should not run synchronously")
+        )
+        monkeypatch.setattr(document_tools, "document_service", mock_service)
+
+        result = await document_tools.ingest_documents(
+            [str(pdf_path)],
+            async_mode=False,
+        )
+
+        assert "job_large" in result
+        mock_jobs.create_ingest_job.assert_awaited_once()
 
     async def test_ingest_documents_async_passes_use_marker_to_job(self) -> None:
         """ingest_documents async job preserves Marker tuning parameters."""
@@ -1630,6 +1846,79 @@ class TestJobServiceConcurrency:
         assert stored.result["failed_files"] == [
             {"file": "bad.pdf", "error": "bad pdf"}
         ]
+
+    async def test_cancel_job_waits_for_running_task_cleanup(self) -> None:
+        """cancel_job should not return while the task is still unwinding."""
+        from src.application.job_service import JobService
+        from src.domain.job import Job, JobProgress, JobStatus, JobType
+
+        class MemoryJobStore:
+            def __init__(self) -> None:
+                self.jobs: dict[str, Job] = {}
+
+            async def create(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+            async def get(self, job_id: str) -> Job | None:
+                return self.jobs.get(job_id)
+
+            async def update(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+        cleanup_seen = False
+        started = asyncio.Event()
+
+        async def long_running() -> None:
+            nonlocal cleanup_seen
+            try:
+                started.set()
+                await asyncio.sleep(3600)
+            finally:
+                cleanup_seen = True
+
+        store = MemoryJobStore()
+        job = Job(
+            job_id="job_cancel_wait",
+            job_type=JobType.INGEST_PDF,
+            input_files=["paper.pdf"],
+            progress=JobProgress(total_steps=8),
+        )
+        job.start()
+        await store.create(job)
+        service = JobService(job_store=store)
+        task = asyncio.create_task(long_running())
+        await started.wait()
+        service._running_tasks[job.job_id] = task
+
+        assert await service.cancel_job(job.job_id) is True
+
+        stored = await store.get(job.job_id)
+        assert stored is not None
+        assert stored.status == JobStatus.CANCELLED
+        assert task.done()
+        assert cleanup_seen
+        assert job.job_id not in service._running_tasks
+
+    async def test_process_ingest_job_cleans_running_task_when_job_missing(
+        self,
+    ) -> None:
+        """A deleted/corrupt job file must not leak a concurrency slot."""
+        from src.application.job_service import JobService
+
+        class EmptyJobStore:
+            async def get(self, _job_id: str):
+                return None
+
+        service = JobService(job_store=EmptyJobStore())  # type: ignore[arg-type]
+        current_task = asyncio.current_task()
+        assert current_task is not None
+        service._running_tasks["job_missing"] = current_task  # type: ignore[assignment]
+
+        await service._process_ingest_job("job_missing")
+
+        assert "job_missing" not in service._running_tasks
 
 
 # ============================================================================

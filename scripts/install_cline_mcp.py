@@ -144,10 +144,17 @@ def resolve_data_dir(root: Path) -> Path:
 
 def build_server_config(*, uv: str, root: Path) -> dict:
     # Use --directory so the server loads this repo's .env and relative data paths.
+    data_dir = resolve_data_dir(root)
     return {
         "command": uv,
         "args": ["run", "--directory", str(root), "python", "-m", "src.server"],
-        "env": {"DATA_DIR": str(resolve_data_dir(root))},
+        "env": {
+            "DATA_DIR": str(data_dir),
+            # Marker/surya progress bars can corrupt stdio MCP JSON-RPC transport.
+            # Keep raw third-party progress disabled for Cline by default.
+            "ASSET_AWARE_SUPPRESS_MARKER_OUTPUT": "true",
+            "ASSET_AWARE_MARKER_OUTPUT_LOG": str(data_dir / "logs" / "marker.log"),
+        },
         "disabled": False,
     }
 

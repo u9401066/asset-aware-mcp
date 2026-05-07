@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     ollama_embedding_model: str = Field(
         default="nomic-embed-text", description="Ollama model for embeddings"
     )
+    ollama_llm_timeout: float = Field(
+        default=300.0, description="Ollama chat request timeout in seconds"
+    )
+    ollama_embedding_timeout: float = Field(
+        default=120.0, description="Ollama embedding request timeout in seconds"
+    )
 
     # LLM Backend selection
     llm_backend: str = Field(
