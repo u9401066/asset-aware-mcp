@@ -306,6 +306,7 @@ class JobService:
                 # Actually process the document (ingest() takes a list)
                 try:
                     use_marker = job.parameters.get("use_marker", False)
+                    result: IngestResult | None
                     if use_marker:
                         job.update_progress(
                             step=base_step + 1,
@@ -335,13 +336,9 @@ class JobService:
                                 "marker_max_pages_per_chunk",
                                 0,
                             ),
-                            extract_figures=job.parameters.get(
-                                "extract_figures", True
-                            ),
+                            extract_figures=job.parameters.get("extract_figures", True),
                             page_ranges=job.parameters.get("page_ranges") or None,
-                            require_marker=job.parameters.get(
-                                "require_marker", False
-                            ),
+                            require_marker=job.parameters.get("require_marker", False),
                         )
                         result = results[0] if results else None
 
@@ -354,9 +351,7 @@ class JobService:
                                 "Marker structure parse was required, but ingestion "
                                 f"completed with backend={result.backend!r}."
                             )
-                            failed_files.append(
-                                {"file": file_path, "error": error_msg}
-                            )
+                            failed_files.append({"file": file_path, "error": error_msg})
                             logger.warning(
                                 "Failed strict Marker job for %s: %s",
                                 filename,

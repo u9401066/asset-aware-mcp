@@ -208,9 +208,9 @@ def is_cross_workspace_data_dir_change(
     if not existing_path.is_absolute() or not next_path.is_absolute():
         return False
 
-    return not is_inside_or_same(
-        workspace_root, existing_path
-    ) and is_inside_or_same(workspace_root, next_path)
+    return not is_inside_or_same(workspace_root, existing_path) and is_inside_or_same(
+        workspace_root, next_path
+    )
 
 
 def merge_server(

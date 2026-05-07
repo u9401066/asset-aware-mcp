@@ -64,7 +64,14 @@ def test_merge_server_preserves_cross_workspace_data_dir_by_default(
         "mcpServers": {
             "asset-aware-mcp": {
                 "command": "old-uv",
-                "args": ["run", "--directory", str(other_workspace), "python", "-m", "src.server"],
+                "args": [
+                    "run",
+                    "--directory",
+                    str(other_workspace),
+                    "python",
+                    "-m",
+                    "src.server",
+                ],
                 "env": {"DATA_DIR": str(other_workspace / "data")},
             }
         }
@@ -97,7 +104,14 @@ def test_merge_server_force_workspace_allows_data_dir_takeover(
         "mcpServers": {
             "asset-aware-mcp": {
                 "command": "old-uv",
-                "args": ["run", "--directory", str(other_workspace), "python", "-m", "src.server"],
+                "args": [
+                    "run",
+                    "--directory",
+                    str(other_workspace),
+                    "python",
+                    "-m",
+                    "src.server",
+                ],
                 "env": {"DATA_DIR": str(other_workspace / "data")},
             }
         }

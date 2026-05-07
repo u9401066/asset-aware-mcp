@@ -362,9 +362,7 @@ class TestDocxTools:
                 return ir_obj
 
             mock_bridge.apply_table_context_to_ir.side_effect = apply_table
-            mock_svc.renderer.render.return_value = (
-                "<!-- dfm:table @b:t001 -->\n| A |\n| --- |\n| new |\n<!-- /dfm:table -->"
-            )
+            mock_svc.renderer.render.return_value = "<!-- dfm:table @b:t001 -->\n| A |\n| --- |\n| new |\n<!-- /dfm:table -->"
             mock_svc.save_docx = AsyncMock(
                 return_value={
                     "success": True,

@@ -99,7 +99,9 @@ async def get_job_status(job_id: str) -> str:
             lines.append(f"  - `{doc_id}`")
             lines.append(f"    - backend: `{backend}`")
             if backend == "pymupdf_fallback":
-                lines.append("    - degraded: Marker requested but PyMuPDF fallback was used")
+                lines.append(
+                    "    - degraded: Marker requested but PyMuPDF fallback was used"
+                )
             artifacts = item.get("artifacts")
             if isinstance(artifacts, dict) and artifacts:
                 lines.append("    - artifacts:")
@@ -110,10 +112,10 @@ async def get_job_status(job_id: str) -> str:
                 for warning in warnings:
                     lines.append(f"      - {warning}")
             if doc_id:
-                lines.append(f"    - next: `inspect_document_manifest(\"{doc_id}\")`")
+                lines.append(f'    - next: `inspect_document_manifest("{doc_id}")`')
                 if item.get("blocks_available"):
                     lines.append(
-                        f"    - next: `export_document_segmentation(\"{doc_id}\")`"
+                        f'    - next: `export_document_segmentation("{doc_id}")`'
                     )
     elif job.output_doc_ids:
         lines.append(f"**Output Documents:** {len(job.output_doc_ids)}")
