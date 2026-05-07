@@ -2,22 +2,26 @@
 Presentation Layer - MCP Tools
 
 拆分自 server.py，按領域分模組：
-- document_tools: ETL + 文件管理工具 (14)
-- docx_tools: Docx ↔ DFM 編輯 + 驗證 + Bridge 工具 (14)
-- section_tools: Section 導航工具 (5)
-- job_tools: 非同步 Job 管理工具 (3)
-- knowledge_tools: 知識圖譜工具 (2)
-- table_tools: A2T 表格工具 (7) — v0.2.14 合併版
-- profile_tools: ETL Profile 設定工具 (5)
+- document_tools: ETL + document management tools (18)
+- docx_tools: DOCX/DFM editing, validation, conversion, bridge tools (16)
+- section_tools: section navigation tools (5)
+- job_tools: async job management tools (4)
+- knowledge_tools: knowledge graph tools (3)
+- table_tools: A2T operation-based table tools (7)
+- profile_tools: ETL profile tools (6)
 
-Total: 50 tools
+Total: 59 tools
 """
 
 # Import all tools to register them with mcp
 from src.presentation.tools.document_tools import (
+    convert_document,
     convert_pdf_to_docx,
     convert_pdf_to_pptx,
     delete_document,
+    document,
+    document_asset,
+    evidence,
     export_document_segmentation,
     fetch_document_asset,
     find_evidence_spans,
@@ -35,7 +39,9 @@ from src.presentation.tools.docx_tools import (
     convert_docx_to_odt,
     convert_docx_to_pdf,
     delete_docx,
+    docx,
     docx_chart_data,
+    docx_table,
     docx_table_from_context,
     docx_table_to_context,
     docx_validate_roundtrip,
@@ -49,13 +55,16 @@ from src.presentation.tools.docx_tools import (
 from src.presentation.tools.job_tools import (
     cancel_job,
     get_job_status,
+    job,
     list_jobs,
 )
 from src.presentation.tools.knowledge_tools import (
     consult_knowledge_graph,
     export_knowledge_graph,
+    knowledge,
 )
 from src.presentation.tools.profile_tools import (
+    etl_profile,
     get_current_etl_profile,
     get_etl_profile,
     list_etl_profiles,
@@ -82,6 +91,7 @@ from src.presentation.tools.table_tools import (
 __all__ = [
     "cancel_job",
     "consult_knowledge_graph",
+    "convert_document",
     "convert_docx_to_doc",
     "convert_docx_to_odt",
     "convert_docx_to_pdf",
@@ -90,10 +100,16 @@ __all__ = [
     "delete_document",
     "delete_docx",
     "discover_sources",
+    "document",
+    "document_asset",
+    "docx",
     "docx_chart_data",
+    "docx_table",
     "docx_table_from_context",
     "docx_table_to_context",
     "docx_validate_roundtrip",
+    "etl_profile",
+    "evidence",
     "export_document_segmentation",
     "export_knowledge_graph",
     "export_markdown",
@@ -109,6 +125,8 @@ __all__ = [
     "ingest_documents",
     "ingest_docx",
     "inspect_document_manifest",
+    "job",
+    "knowledge",
     "list_documents",
     "list_docx_blocks",
     "list_docx_documents",

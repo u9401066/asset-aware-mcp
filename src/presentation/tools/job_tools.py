@@ -9,9 +9,33 @@ Job Tools - 非同步 ETL Job 管理 MCP 工具
 
 from __future__ import annotations
 
+from typing import Any
+
 from src.domain.job import JobStatus
 from src.presentation.dependencies import job_service
 from src.presentation.mcp_app import mcp
+
+
+def _normalize_op(op: str) -> str:
+    return op.strip().lower().replace("-", "_")
+
+
+def _unsupported_job_op(op: str, allowed: set[str]) -> str:
+    allowed_ops = ", ".join(sorted(allowed))
+    return f"Unsupported job op `{op}`. Supported operations: {allowed_ops}."
+
+
+def _missing_job_param(name: str) -> str:
+    return f"Missing required parameter: {name} is required."
+
+
+def _format_artifact_lines(artifacts: dict[str, Any]) -> list[str]:
+    lines: list[str] = []
+    for name in ("manifest", "markdown", "blocks", "segmentation"):
+        path = artifacts.get(name)
+        if path:
+            lines.append(f"    - {name}: `{path}`")
+    return lines
 
 
 @mcp.tool()
@@ -63,7 +87,35 @@ async def get_job_status(job_id: str) -> str:
             lines.append(f"**Duration:** {job.duration_seconds:.1f}s")
 
     lines.append(f"\n**Input Files:** {len(job.input_files)}")
-    if job.output_doc_ids:
+    result_documents = []
+    if job.result and isinstance(job.result.get("documents"), list):
+        result_documents = job.result["documents"]
+
+    if result_documents:
+        lines.append(f"**Output Documents:** {len(result_documents)}")
+        for item in result_documents:
+            doc_id = item.get("doc_id", "")
+            backend = item.get("backend", "unknown")
+            lines.append(f"  - `{doc_id}`")
+            lines.append(f"    - backend: `{backend}`")
+            if backend == "pymupdf_fallback":
+                lines.append("    - degraded: Marker requested but PyMuPDF fallback was used")
+            artifacts = item.get("artifacts")
+            if isinstance(artifacts, dict) and artifacts:
+                lines.append("    - artifacts:")
+                lines.extend(_format_artifact_lines(artifacts))
+            warnings = item.get("warnings")
+            if isinstance(warnings, list) and warnings:
+                lines.append("    - warnings:")
+                for warning in warnings:
+                    lines.append(f"      - {warning}")
+            if doc_id:
+                lines.append(f"    - next: `inspect_document_manifest(\"{doc_id}\")`")
+                if item.get("blocks_available"):
+                    lines.append(
+                        f"    - next: `export_document_segmentation(\"{doc_id}\")`"
+                    )
+    elif job.output_doc_ids:
         lines.append(f"**Output Documents:** {len(job.output_doc_ids)}")
         for doc_id in job.output_doc_ids:
             lines.append(f"  - `{doc_id}`")
@@ -76,11 +128,19 @@ async def get_job_status(job_id: str) -> str:
         for item in job.result["failed_files"]:
             lines.append(f"  - `{item.get('file', '')}`: {item.get('error', '')}")
 
+    if job.result and job.result.get("warnings"):
+        lines.append("\n**Warnings:**")
+        for warning in job.result["warnings"]:
+            lines.append(f"  - {warning}")
+
     if job.status == JobStatus.COMPLETED and job.result:
         lines.append("\n---")
         lines.append("✅ **Job completed successfully!**")
         lines.append(f"Created {len(job.output_doc_ids)} document(s).")
-        lines.append("Use `inspect_document_manifest(<doc_id>)` to view details.")
+        if result_documents:
+            lines.append("Use the per-document `next` commands above to continue.")
+        else:
+            lines.append("Use `inspect_document_manifest(<doc_id>)` to view details.")
 
     return "\n".join(lines)
 
@@ -163,3 +223,28 @@ async def cancel_job(job_id: str) -> str:
             f"❌ Could not cancel job `{job_id}`. "
             "It may have already completed or doesn't exist."
         )
+
+
+@mcp.tool()
+async def job(
+    op: str,
+    job_id: str | None = None,
+    active_only: bool = False,
+) -> Any:
+    """
+    Consolidated job entrypoint over get/list/cancel.
+
+    Existing job tools stay registered for backwards compatibility.
+    """
+    operation = _normalize_op(op)
+    if operation in {"get", "status"}:
+        if not job_id:
+            return _missing_job_param("job_id")
+        return await get_job_status(job_id)
+    if operation == "list":
+        return await list_jobs(active_only=active_only)
+    if operation == "cancel":
+        if not job_id:
+            return _missing_job_param("job_id")
+        return await cancel_job(job_id)
+    return _unsupported_job_op(op, {"cancel", "get", "list"})

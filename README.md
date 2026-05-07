@@ -48,7 +48,7 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 - 🗺️ **Document Manifest** - Provides a structured "map" of the document for precise data access by Agents.
 - 🧠 **LightRAG Integration** - Knowledge Graph + Vector Index, supporting cross-document comparison and reasoning.
 - 🧾 **Citation-Aware KG Output** - `consult_knowledge_graph` now supports structured answer/reference payloads for downstream agent workflows.
-- 📝 **Docx Editing (DFM)** - Edit .docx files in Markdown via **Docx-Flavored Markdown** format. Supports legacy `.doc`, `.odt`, and `.ods` ingest via LibreOffice auto-conversion. 14 tools: ingest, read, save, list, delete, export, strict round-trip validation, DOCX→PDF, DOCX→DOC, DOCX→ODT, and Docx ↔ A2T bridges.
+- 📝 **Docx Editing (DFM)** - Edit .docx files in Markdown via **Docx-Flavored Markdown** format. Supports legacy `.doc`, `.odt`, and `.ods` ingest via LibreOffice auto-conversion. 16 tools: ingest, read, save, list, delete, export, strict round-trip validation, DOCX→PDF, DOCX→DOC, DOCX→ODT, and Docx ↔ A2T bridges.
 - 🛡️ **DFM Integrity Checker** - Automatic validation and auto-repair at every pipeline stage (post-ingest, pre-save, post-save). Catches orphan markers, column mismatches, and format inconsistencies.
 - 📊 **A2T (Anything to Table)** - 7 operation-based tools for building professional tables from **any source** (PDF assets, Knowledge Graph, URLs, user input). Features: **Citations** (AssetRef), **Audit Trail**, **Schema Evolution**, **Templates**, **Drafting**, and **Token-efficient resumption**.
 - 🖥️ **VS Code Management Extension** - Graphical interface for monitoring server status, ingested documents, and **A2T tables/drafts** with one-click Excel export.
@@ -69,9 +69,9 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP Server (Modular Presentation)            │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 50 tools in 7 modules                   │   │
-│  │   document (14) │ docx (14) │ section (5)       │   │
-│  │   job (3) │ knowledge (2) │ table (7) │ profile (5) │
+│  │ tools/: 59 tools in 7 modules                   │   │
+│  │   document (18) │ docx (16) │ section (5)       │   │
+│  │   job (4) │ knowledge (3) │ table (7) │ profile (6) │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │ resources/: 13 resources in 2 modules           │   │
@@ -121,7 +121,7 @@ Visual overview for the project. All diagrams use consistent GitHub README style
 | Diagram | Description |
 |---------|-------------|
 | [01 — System Architecture](docs/diagrams/01-system-architecture.jpg) | Full stack: Telegram → Gateway → MCP Adapter → 3 MCP servers → Ollama |
-| [02 — Data Layout](docs/diagrams/02-data-layout.jpg) | 50 tools organized in 7 categories with asset-aware data tree |
+| [02 — Data Layout](docs/diagrams/02-data-layout.jpg) | 59 tools organized in 7 categories with asset-aware data tree |
 | [03 — PDF Ingestion Pipeline](docs/diagrams/03-pdf-ingestion-pipeline.jpg) | 7-stage flow from PDF upload to knowledge graph |
 | [04 — DOCX Bidirectional Edit](docs/diagrams/04-docx-edit-pipeline.jpg) | DOCX ingest → TableContext edit → round-trip save workflow |
 | [05 — Knowledge Graph Search](docs/diagrams/05-knowledge-graph-search.jpg) | Cross-document search with 3 parallel query paths |
@@ -179,6 +179,10 @@ Marker note:
 | `ocr_pdf_document` | Run OCR preprocessing and generate a cleaned PDF for later ETL |
 | `find_evidence_spans` | Search citation-ready spans with source revision, locator, hash, and CRAAP scaffold |
 | `verify_citation_ref` | Verify span AssetRefs against the current citation index and locator metadata |
+| `document` | Operation-based facade over PDF ingest/list/delete/inspect/parse |
+| `document_asset` | Operation-based facade over asset fetch and section tree/detail/blocks/search |
+| `evidence` | Operation-based facade over citation span find/verify/source-location search |
+| `convert_document` | Operation-based facade for PDF, DOCX/DFM, and Markdown conversions |
 
 ### Job Management Tools
 
@@ -187,6 +191,7 @@ Marker note:
 | `get_job_status` | Get async ingestion job progress and final result |
 | `list_jobs` | List active or historical ETL jobs |
 | `cancel_job` | Cancel a running ETL job |
+| `job` | Operation-based facade over job get/list/cancel |
 
 ### Knowledge Graph Tools
 
@@ -194,6 +199,7 @@ Marker note:
 |------|---------|
 | `consult_knowledge_graph` | Citation-aware knowledge graph query with `structured`, `data`, and `text` response modes |
 | `export_knowledge_graph` | Export graph summary / JSON / Mermaid for inspection |
+| `knowledge` | Operation-based facade over knowledge graph consult/export |
 
 Knowledge graph note:
 - `consult_knowledge_graph` defaults to `response_mode="structured"` and can return `answer`, `references`, `metadata`, `retrieval`, and `counts` for agent-side citation workflows.
@@ -228,6 +234,9 @@ Knowledge graph note:
 | `docx_table_from_context` | Bridge: A2T table → Docx table |
 | `docx_chart_data` | Extract chart data from Docx |
 | `export_markdown` | Export Markdown to .docx/.pdf/.doc |
+| `convert_docx_to_odt` | Export the current DOCX/DFM state to ODT |
+| `docx` | Operation-based facade over DOCX/DFM ingest/get/save/list/delete/blocks/validate |
+| `docx_table` | Operation-based facade over DOCX table to_context/from_context/chart_data |
 
 ### A2T (Anything to Table) Tools — 7 Operation-Based Tools
 
@@ -255,6 +264,7 @@ Different journals/formats need different extraction settings. Use these tools t
 | `get_current_etl_profile` | Show currently active profile |
 | `set_etl_profile` | Switch profile for subsequent document ingestion |
 | `load_etl_profile_from_json` | Load custom profile from JSON file |
+| `etl_profile` | Operation-based facade over profile list/get/current/set/load |
 
 ## 🔧 Tech Stack
 

@@ -5,6 +5,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 
+def test_escape_table_cell_handles_crlf_and_cr() -> None:
+    from src.presentation.markdown_utils import escape_table_cell
+
+    assert escape_table_cell("a\r\nb\rc|d\\e") == "a b c\\|d\\\\e"
+
+
 @pytest.mark.asyncio
 async def test_resource_document_sections_shows_first_section_line_range() -> None:
     manifest = MagicMock(
@@ -64,3 +70,35 @@ async def test_resource_document_segmentation_reads_existing_json_without_export
 
     assert result == '{"doc_id":"doc_demo","segments":[]}'
     mock_export.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_resource_document_figures_escapes_pipe_cells() -> None:
+    manifest = MagicMock(
+        title="Demo",
+        assets=MagicMock(
+            figures=[
+                MagicMock(
+                    id="fig|1",
+                    page=1,
+                    width=640,
+                    height=480,
+                    caption="Alpha | Beta",
+                )
+            ]
+        ),
+    )
+
+    with patch(
+        "src.presentation.resources.document_resources.document_service"
+    ) as mock_service:
+        mock_service.get_manifest = AsyncMock(return_value=manifest)
+        from src.presentation.resources.document_resources import (
+            resource_document_figures,
+        )
+
+        result = await resource_document_figures("doc_demo")
+
+    assert "`fig\\|1`" in result
+    assert "Alpha \\| Beta" in result
+    assert "640×480" in result

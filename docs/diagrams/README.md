@@ -5,7 +5,7 @@
 | # | Diagram | Description |
 |---|---------|-------------|
 | 01 | [System Architecture](01-system-architecture.jpg) | 4-layer architecture: Telegram → Gateway → MCP → Ollama |
-| 02 | [Data Layout](02-data-layout.jpg) | 50 tools in 7 categories with asset tree |
+| 02 | [Data Layout](02-data-layout.jpg) | 59 tools in 7 categories with asset tree |
 | 03 | [PDF Ingestion Pipeline](03-pdf-ingestion-pipeline.jpg) | 7-stage flow from PDF to KG |
 | 04 | [DOCX Bidirectional Edit](04-docx-edit-pipeline.jpg) | Round-trip DOCX editing workflow |
 | 05 | [Cross-Document Search](05-knowledge-graph-search.jpg) | 3 parallel query paths via KG |

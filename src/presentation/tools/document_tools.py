@@ -74,6 +74,19 @@ SYNC_INGEST_PAGE_LIMIT = 10
 SYNC_INGEST_FILE_SIZE_MB_LIMIT = 200
 
 
+def _normalize_op(op: str) -> str:
+    return op.strip().lower().replace("-", "_")
+
+
+def _unsupported_document_op(kind: str, op: str, allowed: set[str]) -> str:
+    allowed_ops = ", ".join(sorted(allowed))
+    return f"Unsupported {kind} op `{op}`. Supported operations: {allowed_ops}."
+
+
+def _missing_document_param(name: str) -> str:
+    return f"Missing required parameter: {name} is required."
+
+
 def _count_requested_pages(file_path: str, page_ranges: list[str] | None) -> int:
     """Return requested page count for timeout-safe sync-ingest routing."""
     try:
@@ -140,9 +153,15 @@ def _ingest_job_parameters(
     marker_max_pages_per_chunk: int,
     extract_figures: bool,
     page_ranges: list[str] | None,
+    operation: str = "ingest_documents",
+    require_marker: bool = False,
 ) -> dict[str, Any]:
+    from src.presentation import dependencies
+
     return {
+        "operation": operation,
         "use_marker": use_marker,
+        "require_marker": require_marker,
         "ocr_enabled": ocr_enabled,
         "ocr_language": ocr_language,
         "rotate_pages": rotate_pages,
@@ -150,6 +169,7 @@ def _ingest_job_parameters(
         "marker_max_pages_per_chunk": marker_max_pages_per_chunk,
         "extract_figures": extract_figures,
         "page_ranges": page_ranges or [],
+        "etl_profile": dependencies.etl_profile.name,
     }
 
 
@@ -167,6 +187,8 @@ async def _create_ingest_job_response(
     ctx: Context | None,
     forced_reason: str = "",
     title: str = "ETL Job Created",
+    operation: str = "ingest_documents",
+    require_marker: bool = False,
 ) -> str:
     await report_progress(ctx, 20, message="Creating background ETL job")
     try:
@@ -181,6 +203,8 @@ async def _create_ingest_job_response(
                 marker_max_pages_per_chunk=marker_max_pages_per_chunk,
                 extract_figures=extract_figures,
                 page_ranges=page_ranges,
+                operation=operation,
+                require_marker=require_marker,
             ),
         )
     except RuntimeError as e:
@@ -205,6 +229,7 @@ async def _create_ingest_job_response(
         [
             "",
             f'Use `get_job_status("{job.job_id}")` to check progress.',
+            f'Use `cancel_job("{job.job_id}")` if the job is no longer needed.',
             "Or use `list_jobs()` to see all active jobs.",
         ]
     )
@@ -373,6 +398,8 @@ async def parse_pdf_structure(
                 "background job system to avoid MCP stdio request timeouts"
             ),
             title="PDF Structure Parse Job Created",
+            operation="parse_pdf_structure",
+            require_marker=True,
         )
 
     try:
@@ -1428,3 +1455,277 @@ async def fetch_document_asset(
         lines.append("")
         lines.append(result.text_content or "")
         return [TextContent(type="text", text="\n".join(lines))]
+
+
+@mcp.tool()
+async def document(
+    op: str,
+    file_paths: list[str] | None = None,
+    pdf_path: str | None = None,
+    doc_id: str | None = None,
+    output_dir: str | None = None,
+    async_mode: bool = True,
+    use_marker: bool = False,
+    ocr_enabled: bool = False,
+    ocr_language: str = "eng",
+    rotate_pages: bool = False,
+    deskew: bool = False,
+    marker_max_pages_per_chunk: int = 0,
+    extract_figures: bool = True,
+    page_ranges: list[str] | None = None,
+    ctx: Context | None = None,
+) -> Any:
+    """
+    Consolidated PDF document entrypoint.
+
+    Existing document tools stay registered and keep their original contracts.
+    """
+    operation = _normalize_op(op)
+    if operation in {"ingest", "import"}:
+        if not file_paths:
+            return _missing_document_param("file_paths")
+        return await ingest_documents(
+            file_paths,
+            async_mode=async_mode,
+            use_marker=use_marker,
+            ocr_enabled=ocr_enabled,
+            ocr_language=ocr_language,
+            rotate_pages=rotate_pages,
+            deskew=deskew,
+            marker_max_pages_per_chunk=marker_max_pages_per_chunk,
+            extract_figures=extract_figures,
+            page_ranges=page_ranges,
+            ctx=ctx,
+        )
+    if operation == "parse":
+        source_pdf = pdf_path or (file_paths[0] if file_paths else None)
+        if not source_pdf:
+            return _missing_document_param("pdf_path")
+        return await parse_pdf_structure(
+            source_pdf,
+            output_dir=output_dir,
+            async_mode=async_mode,
+            ocr_enabled=ocr_enabled,
+            ocr_language=ocr_language,
+            rotate_pages=rotate_pages,
+            deskew=deskew,
+            marker_max_pages_per_chunk=marker_max_pages_per_chunk,
+            extract_figures=extract_figures,
+            page_ranges=page_ranges,
+            ctx=ctx,
+        )
+    if operation == "list":
+        return await list_documents()
+    if operation == "delete":
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        return await delete_document(doc_id)
+    if operation == "inspect":
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        return await inspect_document_manifest(doc_id)
+
+    return _unsupported_document_op(
+        "document",
+        op,
+        {"delete", "ingest", "inspect", "list", "parse"},
+    )
+
+
+@mcp.tool()
+async def document_asset(
+    op: str,
+    doc_id: str | None = None,
+    asset_type: str | None = None,
+    asset_id: str = "full",
+    max_size: int | None = None,
+    path: str | None = None,
+    query: str | None = None,
+    max_depth: int | None = None,
+    response_format: str = "tree",
+    include_children: bool = True,
+    block_types: list[str] | None = None,
+    limit: int | None = None,
+    fuzzy: bool = True,
+    ctx: Context | None = None,
+) -> Any:
+    """Consolidated document asset and section entrypoint."""
+    operation = _normalize_op(op)
+    if not doc_id:
+        return _missing_document_param("doc_id")
+
+    if operation == "get":
+        if not asset_type:
+            return _missing_document_param("asset_type")
+        return await fetch_document_asset(
+            doc_id,
+            asset_type,
+            asset_id,
+            max_size=max_size,
+            ctx=ctx,
+        )
+
+    from src.presentation.tools import section_tools
+
+    if operation in {"tree", "list"}:
+        return await section_tools.list_section_tree(
+            doc_id,
+            max_depth,
+            response_format,
+        )
+    if operation == "detail":
+        if not path:
+            return _missing_document_param("path")
+        return await section_tools.get_section_detail(doc_id, path)
+    if operation in {"blocks", "list_blocks"}:
+        if not path:
+            return _missing_document_param("path")
+        return await section_tools.get_section_blocks(
+            doc_id,
+            path,
+            include_children,
+            block_types,
+            limit,
+        )
+    if operation == "search":
+        if not query:
+            return _missing_document_param("query")
+        return await section_tools.search_sections(doc_id, query, fuzzy)
+
+    return _unsupported_document_op(
+        "document_asset",
+        op,
+        {"blocks", "detail", "get", "list", "search", "tree"},
+    )
+
+
+@mcp.tool()
+async def evidence(
+    op: str,
+    doc_id: str | None = None,
+    query: str = "",
+    span_id: str = "",
+    span_kinds: list[str] | None = None,
+    limit: int = 10,
+    ref: dict[str, Any] | None = None,
+    block_types: list[str] | None = None,
+) -> Any:
+    """Consolidated citation evidence entrypoint."""
+    operation = _normalize_op(op)
+    if operation == "find":
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        return await find_evidence_spans(
+            doc_id,
+            query=query,
+            span_id=span_id,
+            span_kinds=span_kinds,
+            limit=limit,
+        )
+    if operation == "verify":
+        if ref is None:
+            return _missing_document_param("ref")
+        return await verify_citation_ref(ref)
+    if operation in {"locate", "search_location"}:
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        if not query:
+            return _missing_document_param("query")
+        return await search_source_location(doc_id, query, block_types=block_types)
+
+    return _unsupported_document_op(
+        "evidence",
+        op,
+        {"find", "locate", "verify"},
+    )
+
+
+@mcp.tool()
+async def convert_document(
+    source: str,
+    target_format: str,
+    source_format: str = "auto",
+    output_path: str | None = None,
+    mode: str = "content",
+    md_text: str | None = None,
+    ctx: Context | None = None,
+) -> Any:
+    """
+    Consolidated document conversion entrypoint.
+
+    Dispatches to the existing conversion tools so each source family keeps its
+    established output-path containment policy.
+    """
+    source_kind = source_format.strip().lower().replace("markdown", "md")
+    target = target_format.strip().lower().lstrip(".")
+    if source_kind == "auto":
+        suffix = Path(source).suffix.lower()
+        if suffix in {".md", ".markdown"}:
+            source_kind = "md"
+        elif suffix == ".pdf":
+            source_kind = "pdf"
+        elif suffix in {".doc", ".docx", ".odt", ".ods"} or target in {
+            "doc",
+            "odt",
+            "pdf",
+        }:
+            source_kind = "docx"
+        else:
+            source_kind = "pdf"
+
+    if source_kind == "pdf":
+        if target == "docx":
+            return await convert_pdf_to_docx(
+                source,
+                output_path=output_path,
+                mode=mode,
+                ctx=ctx,
+            )
+        if target == "pptx":
+            return await convert_pdf_to_pptx(
+                source,
+                output_path=output_path,
+                mode=mode,
+                ctx=ctx,
+            )
+    elif source_kind == "docx":
+        from src.presentation.tools import docx_tools
+
+        if target == "doc":
+            return await docx_tools.convert_docx_to_doc(
+                source,
+                output_path=output_path,
+                mode=mode,
+                ctx=ctx,
+            )
+        if target == "pdf":
+            return await docx_tools.convert_docx_to_pdf(
+                source,
+                output_path=output_path,
+                mode=mode,
+                ctx=ctx,
+            )
+        if target == "odt":
+            return await docx_tools.convert_docx_to_odt(
+                source,
+                output_path=output_path,
+                mode=mode,
+                ctx=ctx,
+            )
+    elif source_kind == "md":
+        from src.presentation.tools import docx_tools
+
+        if target in {"doc", "docx", "odt", "pdf"}:
+            return await docx_tools.export_markdown(
+                md_path=source if md_text is None else None,
+                md_text=md_text,
+                output_path=output_path,
+                output_format=target,
+                ctx=ctx,
+            )
+
+    return (
+        f"Unsupported conversion: {source_kind} -> {target}. "
+        "Supported conversions: pdf->docx/pptx, docx->doc/pdf/odt, "
+        "markdown->doc/docx/odt/pdf."
+    )

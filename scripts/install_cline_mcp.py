@@ -171,7 +171,56 @@ def is_asset_aware_launch(entry: dict) -> bool:
     )
 
 
-def merge_server(settings: dict, *, server_name: str, server_config: dict) -> bool:
+def normalize_for_compare(path_value: str) -> str:
+    resolved = str(Path(path_value).expanduser().resolve())
+    return resolved.lower() if platform.system().lower() == "windows" else resolved
+
+
+def is_inside_or_same(parent_path: Path, child_path: Path) -> bool:
+    parent = normalize_for_compare(str(parent_path))
+    child = normalize_for_compare(str(child_path))
+    try:
+        Path(child).relative_to(Path(parent))
+        return True
+    except ValueError:
+        return child == parent
+
+
+def is_cross_workspace_data_dir_change(
+    existing: dict,
+    next_entry: dict,
+    *,
+    workspace_root: Path,
+) -> bool:
+    existing_env = existing.get("env")
+    next_env = next_entry.get("env")
+    if not isinstance(existing_env, dict) or not isinstance(next_env, dict):
+        return False
+    existing_data_dir = existing_env.get("DATA_DIR")
+    next_data_dir = next_env.get("DATA_DIR")
+    if not isinstance(existing_data_dir, str) or not isinstance(next_data_dir, str):
+        return False
+    if existing_data_dir == next_data_dir:
+        return False
+
+    existing_path = Path(existing_data_dir).expanduser()
+    next_path = Path(next_data_dir).expanduser()
+    if not existing_path.is_absolute() or not next_path.is_absolute():
+        return False
+
+    return not is_inside_or_same(
+        workspace_root, existing_path
+    ) and is_inside_or_same(workspace_root, next_path)
+
+
+def merge_server(
+    settings: dict,
+    *,
+    server_name: str,
+    server_config: dict,
+    workspace_root: Path | None = None,
+    force_workspace: bool = False,
+) -> bool:
     servers = settings.setdefault("mcpServers", {})
     if not isinstance(servers, dict):
         raise RuntimeError("Invalid settings: mcpServers must be an object")
@@ -180,6 +229,14 @@ def merge_server(settings: dict, *, server_name: str, server_config: dict) -> bo
         servers[server_name] = server_config
         return True
     if not is_asset_aware_launch(existing):
+        return False
+    if (
+        workspace_root is not None
+        and not force_workspace
+        and is_cross_workspace_data_dir_change(
+            existing, server_config, workspace_root=workspace_root
+        )
+    ):
         return False
 
     merged = {**existing, **server_config}
@@ -293,6 +350,14 @@ def main() -> int:
         help="Do not add/update mcpRules for auto-selection triggers.",
     )
     parser.add_argument(
+        "--force-workspace",
+        action="store_true",
+        help=(
+            "Allow this workspace to take over an existing managed Cline server "
+            "whose DATA_DIR points outside the current repository."
+        ),
+    )
+    parser.add_argument(
         "--write",
         action="store_true",
         help="Actually write changes (default is dry-run).",
@@ -324,7 +389,11 @@ def main() -> int:
 
         settings = load_json(path)
         merged = merge_server(
-            settings, server_name=args.server_name, server_config=server_config
+            settings,
+            server_name=args.server_name,
+            server_config=server_config,
+            workspace_root=root,
+            force_workspace=args.force_workspace,
         )
         if not merged:
             print(

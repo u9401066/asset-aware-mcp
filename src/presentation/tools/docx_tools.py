@@ -31,6 +31,7 @@ from src.presentation.dependencies import (
     docx_validator,
     table_service,
 )
+from src.presentation.markdown_utils import escape_table_cell
 from src.presentation.mcp_app import mcp
 from src.presentation.mcp_context import log_message, report_progress
 
@@ -42,6 +43,23 @@ else:
     Context = Any
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize_op(op: str) -> str:
+    return op.strip().lower().replace("-", "_")
+
+
+def _unsupported_docx_op(kind: str, op: str, allowed: set[str]) -> str:
+    allowed_ops = ", ".join(sorted(allowed))
+    return f"Unsupported {kind} op `{op}`. Supported operations: {allowed_ops}."
+
+
+def _missing_docx_param(name: str) -> str:
+    return f"Missing required parameter: {name} is required."
+
+
+def _escape_preview_cell(value: object, max_chars: int) -> str:
+    return str(value).replace("|", "\\|")[:max_chars]
 
 
 def _get_pending_table_contexts(doc_id: str) -> list[TableContext]:
@@ -123,14 +141,11 @@ def _prepare_merged_save_input(
             continue
         synced_table_ids.append(tc.id)
 
-    if merge_warnings:
+    if not synced_table_ids:
         return dfm_content, from_md, [], merge_warnings
 
-    if not synced_table_ids:
-        return dfm_content, from_md, [], []
-
     merged_dfm = docx_service.renderer.render(working_ir)
-    return merged_dfm, False, synced_table_ids, []
+    return merged_dfm, False, synced_table_ids, merge_warnings
 
 
 @mcp.tool()
@@ -366,9 +381,17 @@ async def list_docx_blocks(doc_id: str) -> str:
 
     for b in blocks:
         editable = "✅" if b["editable"] else "🔒"
-        style = b.get("style") or ""
-        preview = b.get("preview", "").replace("|", "\\|")[:50]
-        lines.append(f"| {b['id']} | {b['type']} | {editable} | {style} | {preview} |")
+        style = escape_table_cell(b.get("style") or "")
+        preview = _escape_preview_cell(b.get("preview", ""), 50)
+        lines.append(
+            "| {id} | {type} | {editable} | {style} | {preview} |".format(
+                id=escape_table_cell(b["id"]),
+                type=escape_table_cell(b["type"]),
+                editable=escape_table_cell(editable),
+                style=style,
+                preview=preview,
+            )
+        )
 
     return "\n".join(lines)
 
@@ -392,12 +415,12 @@ async def list_docx_documents() -> str:
     for doc in documents:
         lines.append(
             "| {doc_id} | {filename} | {total_blocks} | {has_docx} | {has_pdf} | {updated_at} |".format(
-                doc_id=doc.get("doc_id", ""),
-                filename=doc.get("filename", ""),
-                total_blocks=doc.get("total_blocks", 0),
+                doc_id=escape_table_cell(doc.get("doc_id", "")),
+                filename=escape_table_cell(doc.get("filename", "")),
+                total_blocks=escape_table_cell(doc.get("total_blocks", 0)),
                 has_docx="✅" if doc.get("has_output_docx") else "-",
                 has_pdf="✅" if doc.get("has_output_pdf") else "-",
-                updated_at=doc.get("updated_at", ""),
+                updated_at=escape_table_cell(doc.get("updated_at", "")),
             )
         )
 
@@ -603,6 +626,76 @@ async def docx_validate_roundtrip(
     return report.to_markdown()
 
 
+@mcp.tool()
+async def docx(
+    op: str,
+    file_path: str | None = None,
+    doc_id: str | None = None,
+    block_id: str | None = None,
+    dfm_content: str | None = None,
+    output_path: str | None = None,
+    from_md: bool = False,
+    force: bool = False,
+    track_changes: bool = False,
+    revision_author: str = "Asset-Aware MCP",
+    strict: bool = False,
+    ctx: Context | None = None,
+) -> Any:
+    """
+    Consolidated DOCX/DFM entrypoint.
+
+    The legacy DOCX tools remain registered and keep their original parameters
+    and output formats. This wrapper only adds an operation-based facade.
+    """
+    operation = _normalize_op(op)
+    if operation in {"ingest", "import"}:
+        if not file_path:
+            return _missing_docx_param("file_path")
+        return await ingest_docx(file_path, ctx=ctx)
+    if operation in {"get", "content", "read"}:
+        if not doc_id:
+            return _missing_docx_param("doc_id")
+        return await get_docx_content(doc_id, block_id=block_id)
+    if operation == "save":
+        if not doc_id:
+            return _missing_docx_param("doc_id")
+        return await save_docx(
+            doc_id,
+            dfm_content=dfm_content,
+            output_path=output_path,
+            from_md=from_md,
+            force=force,
+            track_changes=track_changes,
+            revision_author=revision_author,
+            ctx=ctx,
+        )
+    if operation in {"list", "list_documents"}:
+        return await list_docx_documents()
+    if operation == "delete":
+        if not doc_id:
+            return _missing_docx_param("doc_id")
+        return await delete_docx(doc_id)
+    if operation in {"list_blocks", "blocks"}:
+        if not doc_id:
+            return _missing_docx_param("doc_id")
+        return await list_docx_blocks(doc_id)
+    if operation in {"validate", "validate_roundtrip"}:
+        if not doc_id:
+            return _missing_docx_param("doc_id")
+        return await docx_validate_roundtrip(
+            doc_id,
+            output_path=output_path,
+            strict=strict,
+            ctx=ctx,
+        )
+
+    return _unsupported_docx_op(
+        "docx",
+        op,
+        {"delete", "get", "ingest", "list", "list_blocks", "save", "validate"},
+    )
+
+
 # ============================================================================
 # DFM ↔ Table Bridge Tools
 # ============================================================================
@@ -673,10 +766,10 @@ async def docx_table_to_context(
         lines.append("**前 3 行預覽**：")
         preview_rows = tc.rows[:3]
         col_names = tc.column_names
-        lines.append("| " + " | ".join(col_names) + " |")
+        lines.append("| " + " | ".join(escape_table_cell(c) for c in col_names) + " |")
         lines.append("| " + " | ".join("---" for _ in col_names) + " |")
         for row in preview_rows:
-            cells = [str(row.get(c, ""))[:30] for c in col_names]
+            cells = [_escape_preview_cell(row.get(c, ""), 30) for c in col_names]
             lines.append("| " + " | ".join(cells) + " |")
 
     if register:
@@ -875,10 +968,10 @@ async def docx_chart_data(
     if tc.rows:
         lines.append("")
         col_names = tc.column_names
-        lines.append("| " + " | ".join(col_names) + " |")
+        lines.append("| " + " | ".join(escape_table_cell(c) for c in col_names) + " |")
         lines.append("| " + " | ".join("---" for _ in col_names) + " |")
         for row in tc.rows[:10]:
-            cells = [str(row.get(c, ""))[:20] for c in col_names]
+            cells = [_escape_preview_cell(row.get(c, ""), 20) for c in col_names]
             lines.append("| " + " | ".join(cells) + " |")
         if tc.row_count > 10:
             lines.append(f"... 共 {tc.row_count} 行")
@@ -897,6 +990,55 @@ async def docx_chart_data(
         )
 
     return "\n".join(lines)
+
+
+@mcp.tool()
+async def docx_table(
+    op: str,
+    doc_id: str | None = None,
+    block_id: str | None = None,
+    table_id: str | None = None,
+    register: bool = True,
+    save_dfm: bool = True,
+) -> Any:
+    """
+    Consolidated DOCX table bridge entrypoint.
+
+    Existing docx_table_* tools remain available for clients that rely on their
+    names or generated allow-lists.
+    """
+    operation = _normalize_op(op)
+    if operation in {"to_context", "extract"}:
+        if not doc_id:
+            return _missing_docx_param("doc_id")
+        if not block_id:
+            return _missing_docx_param("block_id")
+        return await docx_table_to_context(doc_id, block_id, register=register)
+    if operation in {"from_context", "apply"}:
+        if not doc_id:
+            return _missing_docx_param("doc_id")
+        if not block_id:
+            return _missing_docx_param("block_id")
+        if not table_id:
+            return _missing_docx_param("table_id")
+        return await docx_table_from_context(
+            doc_id,
+            block_id,
+            table_id,
+            save_dfm=save_dfm,
+        )
+    if operation in {"chart_data", "chart"}:
+        if not doc_id:
+            return _missing_docx_param("doc_id")
+        if not block_id:
+            return _missing_docx_param("block_id")
+        return await docx_chart_data(doc_id, block_id, register=register)
+
+    return _unsupported_docx_op(
+        "docx_table",
+        op,
+        {"chart_data", "from_context", "to_context"},
+    )
 
 
 @mcp.tool()

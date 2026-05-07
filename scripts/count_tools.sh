@@ -1,6 +1,7 @@
 #!/bin/bash
 # Count MCP tools in the repository
 # Usage: ./scripts/count_tools.sh
+# Windows: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/count_tools.ps1
 
 set -e
 

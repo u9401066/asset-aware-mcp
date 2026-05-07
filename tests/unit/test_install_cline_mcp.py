@@ -55,6 +55,73 @@ def test_merge_server_preserves_cline_local_metadata(tmp_path: Path) -> None:
     assert entry["disabled"] is True
 
 
+def test_merge_server_preserves_cross_workspace_data_dir_by_default(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace-a"
+    other_workspace = tmp_path / "workspace-b"
+    settings = {
+        "mcpServers": {
+            "asset-aware-mcp": {
+                "command": "old-uv",
+                "args": ["run", "--directory", str(other_workspace), "python", "-m", "src.server"],
+                "env": {"DATA_DIR": str(other_workspace / "data")},
+            }
+        }
+    }
+    server_config = {
+        "command": "uv",
+        "args": ["run", "--directory", str(workspace), "python", "-m", "src.server"],
+        "env": {"DATA_DIR": str(workspace / "data")},
+        "disabled": False,
+    }
+
+    merged = install_cline_mcp.merge_server(
+        settings,
+        server_name="asset-aware-mcp",
+        server_config=server_config,
+        workspace_root=workspace,
+    )
+
+    assert merged is False
+    entry = settings["mcpServers"]["asset-aware-mcp"]
+    assert entry["env"]["DATA_DIR"] == str(other_workspace / "data")
+
+
+def test_merge_server_force_workspace_allows_data_dir_takeover(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace-a"
+    other_workspace = tmp_path / "workspace-b"
+    settings = {
+        "mcpServers": {
+            "asset-aware-mcp": {
+                "command": "old-uv",
+                "args": ["run", "--directory", str(other_workspace), "python", "-m", "src.server"],
+                "env": {"DATA_DIR": str(other_workspace / "data")},
+            }
+        }
+    }
+    server_config = {
+        "command": "uv",
+        "args": ["run", "--directory", str(workspace), "python", "-m", "src.server"],
+        "env": {"DATA_DIR": str(workspace / "data")},
+        "disabled": False,
+    }
+
+    merged = install_cline_mcp.merge_server(
+        settings,
+        server_name="asset-aware-mcp",
+        server_config=server_config,
+        workspace_root=workspace,
+        force_workspace=True,
+    )
+
+    assert merged is True
+    entry = settings["mcpServers"]["asset-aware-mcp"]
+    assert entry["env"]["DATA_DIR"] == str(workspace / "data")
+
+
 def test_merge_server_skips_custom_same_key_server(tmp_path: Path) -> None:
     settings = {
         "mcpServers": {

@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 
 from src.presentation.dependencies import table_service
+from src.presentation.markdown_utils import escape_table_cell
 from src.presentation.mcp_app import mcp
 
 
@@ -28,8 +29,13 @@ async def resource_table_list() -> str:
     lines.append("|----|-------|--------|------|---------|")
     for t in tables:
         lines.append(
-            f"| `{t['id']}` | {t['title']} | {t['intent']} "
-            f"| {t['rows']} | {t['created_at']} |"
+            "| `{id}` | {title} | {intent} | {rows} | {created_at} |".format(
+                id=escape_table_cell(t["id"]),
+                title=escape_table_cell(t["title"]),
+                intent=escape_table_cell(t["intent"]),
+                rows=escape_table_cell(t["rows"]),
+                created_at=escape_table_cell(t["created_at"]),
+            )
         )
     return "\n".join(lines)
 
@@ -87,8 +93,14 @@ async def resource_draft_list() -> str:
     for d in drafts:
         status = "✅ Has Table" if d["has_table"] else "⏳ Planning"
         lines.append(
-            f"| `{d['id']}` | {d['title']} | {d['intent'] or '-'} "
-            f"| {d['columns_planned']} | {d['pending_rows']} | {status} |"
+            "| `{id}` | {title} | {intent} | {columns} | {pending} | {status} |".format(
+                id=escape_table_cell(d["id"]),
+                title=escape_table_cell(d["title"]),
+                intent=escape_table_cell(d["intent"] or "-"),
+                columns=escape_table_cell(d["columns_planned"]),
+                pending=escape_table_cell(d["pending_rows"]),
+                status=escape_table_cell(status),
+            )
         )
     return "\n".join(lines)
 

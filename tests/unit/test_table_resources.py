@@ -40,3 +40,58 @@ async def test_table_content_resource_blocks_path_traversal(
 
     assert result == "Table not found: ../secret"
     assert "do not leak" not in result
+
+
+class _FakeListTableService:
+    def list_tables(self) -> list[dict[str, object]]:
+        return [
+            {
+                "id": "tbl|1",
+                "title": "Alpha | Beta",
+                "intent": "compare | summarize",
+                "rows": 2,
+                "created_at": "2026-05-07",
+            }
+        ]
+
+    def list_drafts(self) -> list[dict[str, object]]:
+        return [
+            {
+                "id": "draft|1",
+                "title": "Draft | Title",
+                "intent": "extract | cite",
+                "columns_planned": 3,
+                "pending_rows": 1,
+                "has_table": False,
+            }
+        ]
+
+
+@pytest.mark.asyncio
+async def test_table_list_resource_escapes_pipe_cells(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from src.presentation.resources import table_resources
+
+    monkeypatch.setattr(table_resources, "table_service", _FakeListTableService())
+
+    result = await table_resources.resource_table_list()
+
+    assert "`tbl\\|1`" in result
+    assert "Alpha \\| Beta" in result
+    assert "compare \\| summarize" in result
+
+
+@pytest.mark.asyncio
+async def test_draft_list_resource_escapes_pipe_cells(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from src.presentation.resources import table_resources
+
+    monkeypatch.setattr(table_resources, "table_service", _FakeListTableService())
+
+    result = await table_resources.resource_draft_list()
+
+    assert "`draft\\|1`" in result
+    assert "Draft \\| Title" in result
+    assert "extract \\| cite" in result

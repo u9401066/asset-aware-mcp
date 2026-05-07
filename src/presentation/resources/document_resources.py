@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import cast
 
 from src.presentation.dependencies import document_service, knowledge_graph
+from src.presentation.markdown_utils import escape_table_cell
 from src.presentation.mcp_app import mcp
 from src.presentation.tools.document_tools import list_documents
 
@@ -86,7 +87,12 @@ async def resource_document_figures(doc_id: str) -> str:
             else (fig.caption or "-")
         )
         lines.append(
-            f"| `{fig.id}` | {fig.page or '-'} | {fig.width}×{fig.height} | {caption} |"
+            "| `{id}` | {page} | {size} | {caption} |".format(
+                id=escape_table_cell(fig.id),
+                page=escape_table_cell(fig.page or "-"),
+                size=escape_table_cell(f"{fig.width}×{fig.height}"),
+                caption=escape_table_cell(caption),
+            )
         )
 
     lines.extend(
@@ -127,7 +133,13 @@ async def resource_document_tables(doc_id: str) -> str:
             if tab.caption and len(tab.caption) > 50
             else (tab.caption or "-")
         )
-        lines.append(f"| `{tab.id}` | {tab.page or '-'} | {desc} |")
+        lines.append(
+            "| `{id}` | {page} | {desc} |".format(
+                id=escape_table_cell(tab.id),
+                page=escape_table_cell(tab.page or "-"),
+                desc=escape_table_cell(desc),
+            )
+        )
 
     lines.extend(
         [

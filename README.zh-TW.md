@@ -64,9 +64,9 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP 伺服器 (模組化 Presentation 層)          │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 50 工具，7 個模組                       │   │
-│  │   document (14) │ docx (14) │ section (5)       │   │
-│  │   job (3) │ knowledge (2) │ table (7) │ profile (5) │
+│  │ tools/: 59 工具，7 個模組                       │   │
+│  │   document (18) │ docx (16) │ section (5)       │   │
+│  │   job (4) │ knowledge (3) │ table (7) │ profile (6) │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │ resources/: 13 資源，2 個模組                   │   │
@@ -250,6 +250,21 @@ Marker 說明：
 | `set_etl_profile` | 切換後續文件處理使用的 Profile |
 | `load_etl_profile_from_json` | 從 JSON 檔案載入自訂 Profile |
 
+
+### Compatibility consolidated entrypoints
+
+| Tool | Purpose |
+|------|---------|
+| `document` | Operation-based facade over PDF ingest/list/delete/inspect/parse |
+| `document_asset` | Operation-based facade over asset fetch and section tree/detail/blocks/search |
+| `evidence` | Operation-based facade over citation span find/verify/source-location search |
+| `convert_document` | Operation-based facade for PDF, DOCX/DFM, and Markdown conversions |
+| `job` | Operation-based facade over job get/list/cancel |
+| `knowledge` | Operation-based facade over knowledge graph consult/export |
+| `docx` | Operation-based facade over DOCX/DFM ingest/get/save/list/delete/blocks/validate |
+| `docx_table` | Operation-based facade over DOCX table to_context/from_context/chart_data |
+| `etl_profile` | Operation-based facade over profile list/get/current/set/load |
+| `convert_docx_to_odt` | Export the current DOCX/DFM state to ODT |
 ## 🔧 技術棧
 
 | 類別 | 技術 |

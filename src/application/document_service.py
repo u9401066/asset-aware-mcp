@@ -276,6 +276,7 @@ class DocumentService:
         marker_max_pages_per_chunk: int = 0,
         extract_figures: bool = True,
         page_ranges: list[str] | None = None,
+        require_marker: bool = False,
     ) -> list[IngestResult]:
         """
         Ingest multiple PDF files.
@@ -328,8 +329,25 @@ class DocumentService:
                     marker_max_pages_per_chunk=marker_max_pages_per_chunk,
                     extract_figures=extract_figures,
                     page_ranges=page_ranges,
+                    require_marker=require_marker,
                 )
             else:
+                if use_marker and require_marker:
+                    path = Path(file_path)
+                    results.append(
+                        IngestResult(
+                            doc_id="",
+                            filename=path.name,
+                            success=False,
+                            error=(
+                                "Marker structure parse was required, but the "
+                                "Marker extractor was not configured. Install "
+                                "Marker with `uv sync --extra marker` in the MCP "
+                                "server environment."
+                            ),
+                        )
+                    )
+                    continue
                 result = await self._ingest_single(
                     file_path,
                     progress_callback=file_progress,
@@ -633,6 +651,7 @@ class DocumentService:
         marker_max_pages_per_chunk: int = 0,
         extract_figures: bool = True,
         page_ranges: list[str] | None = None,
+        require_marker: bool = False,
     ) -> IngestResult:
         """
         Ingest a single PDF file using Marker for structured parsing.
@@ -900,6 +919,13 @@ class DocumentService:
         except Exception as e:
             marker_message = format_marker_failure(e)
             if is_marker_backend_unavailable(e) or is_marker_resource_error(e):
+                if require_marker:
+                    return IngestResult(
+                        doc_id="",
+                        filename=path.name,
+                        success=False,
+                        error=marker_message,
+                    )
                 fallback_result = await self._ingest_single(
                     file_path,
                     progress_callback=progress_callback,

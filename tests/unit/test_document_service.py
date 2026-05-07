@@ -276,6 +276,44 @@ async def test_marker_oom_falls_back_to_pymupdf_with_warning(tmp_path: Path) -> 
 
 
 @pytest.mark.asyncio
+async def test_required_marker_oom_does_not_write_fallback_artifacts(
+    tmp_path: Path,
+) -> None:
+    pdf_path = tmp_path / "paper.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4 test")
+
+    marker_extractor = MagicMock()
+    marker_extractor.parse.side_effect = RuntimeError("CUDA out of memory")
+
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path / "doc_123"
+    pdf_extractor = MagicMock()
+    pdf_extractor.get_page_count.return_value = 1
+
+    service = DocumentService(
+        repository=repository,
+        pdf_extractor=pdf_extractor,
+        marker_extractor=marker_extractor,
+    )
+    service._ingest_single = AsyncMock(
+        return_value=IngestResult(
+            doc_id="doc_fallback",
+            filename="paper.pdf",
+            success=True,
+        )
+    )
+
+    result = await service._ingest_single_with_marker(
+        str(pdf_path),
+        require_marker=True,
+    )
+
+    assert result.success is False
+    assert "marker_max_pages_per_chunk=1" in (result.error or "")
+    service._ingest_single.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_save_marker_images_falls_back_to_bbox_render(
     monkeypatch, tmp_path: Path
 ) -> None:

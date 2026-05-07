@@ -7,8 +7,35 @@ Allows users to list, view, and switch between profiles for different document f
 
 from __future__ import annotations
 
+from typing import Any
+
 from src.domain.etl_profile import ETLProfileRegistry
 from src.presentation.mcp_app import mcp
+
+
+def _normalize_op(op: str) -> str:
+    return op.strip().lower().replace("-", "_")
+
+
+def _profile_error(message: str) -> dict[str, Any]:
+    return {"success": False, "error": message}
+
+
+def _sync_profile_dependents() -> None:
+    """Refresh modules that cache profile-dependent presentation services."""
+    from src.presentation import dependencies
+    from src.presentation.tools import document_tools, table_tools
+
+    dependencies.job_service.set_document_service(dependencies.document_service)
+    document_tools.document_service = dependencies.document_service
+    document_tools.pdf_extractor = dependencies.pdf_extractor
+    table_tools.document_service = dependencies.document_service
+
+    try:
+        from src.presentation.resources import document_resources
+    except ImportError:
+        return
+    document_resources.document_service = dependencies.document_service
 
 
 @mcp.tool()
@@ -115,6 +142,7 @@ async def set_etl_profile(name: str) -> dict:
 
     try:
         new_profile = rebuild_for_profile(name)
+        _sync_profile_dependents()
 
         return {
             "success": True,
@@ -176,3 +204,37 @@ async def load_etl_profile_from_json(json_path: str) -> dict:
             "success": False,
             "error": f"Failed to load profile: {e!s}",
         }
+
+
+@mcp.tool()
+async def etl_profile(
+    op: str,
+    name: str | None = None,
+    json_path: str | None = None,
+) -> Any:
+    """
+    Consolidated ETL profile entrypoint.
+
+    Existing profile tools stay registered for backwards compatibility.
+    """
+    operation = _normalize_op(op)
+    if operation == "list":
+        return await list_etl_profiles()
+    if operation == "get":
+        if not name:
+            return _profile_error("name is required for etl_profile(op='get')")
+        return await get_etl_profile(name)
+    if operation == "current":
+        return await get_current_etl_profile()
+    if operation == "set":
+        if not name:
+            return _profile_error("name is required for etl_profile(op='set')")
+        return await set_etl_profile(name)
+    if operation == "load":
+        if not json_path:
+            return _profile_error("json_path is required for etl_profile(op='load')")
+        return await load_etl_profile_from_json(json_path)
+    return _profile_error(
+        "Unsupported etl_profile op "
+        f"`{op}`. Supported operations: current, get, list, load, set."
+    )

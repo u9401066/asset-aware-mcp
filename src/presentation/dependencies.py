@@ -134,7 +134,7 @@ def rebuild_for_profile(profile_name: str) -> ETLProfile:
     Raises:
         KeyError: If profile not found
     """
-    global etl_profile, pdf_extractor, document_service
+    global etl_profile, pdf_extractor, document_service, job_service
 
     new_profile = ETLProfileRegistry.get(profile_name)
 
@@ -151,5 +151,6 @@ def rebuild_for_profile(profile_name: str) -> ETLProfile:
         profile=new_profile,
         ocr_processor=ocr_processor,
     )
+    job_service.set_document_service(document_service)
 
     return new_profile

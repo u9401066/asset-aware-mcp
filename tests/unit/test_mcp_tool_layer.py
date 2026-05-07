@@ -314,6 +314,75 @@ class TestDocxTools:
             call_args = mock_svc.save_docx.await_args
             assert call_args.args[1] == "inline dfm"
 
+    async def test_save_docx_keeps_successful_table_context_when_one_skips(
+        self,
+    ) -> None:
+        """A stale pending TableContext must not discard successful table edits."""
+        with (
+            patch("src.presentation.tools.docx_tools.docx_service") as mock_svc,
+            patch("src.presentation.tools.docx_tools.table_service") as mock_table_svc,
+            patch("src.presentation.tools.docx_tools.dfm_table_bridge") as mock_bridge,
+        ):
+            ir = DocxIR(doc_id="doc123", source_path="workspace/test.docx")
+            ir.add_block(
+                DfmBlock(
+                    id="t001",
+                    block_type=DfmBlockType.TABLE,
+                    content="| A |\n| --- |\n| old |",
+                )
+            )
+            good = TableContext(
+                id="tbl_good",
+                intent="summary",
+                title="Good",
+                columns=[ColumnDef(name="A", type="text")],
+                rows=[{"A": "new"}],
+                source_doc_id="doc123",
+                source_block_id="t001",
+            )
+            stale = TableContext(
+                id="tbl_stale",
+                intent="summary",
+                title="Stale",
+                columns=[ColumnDef(name="A", type="text")],
+                rows=[{"A": "skip"}],
+                source_doc_id="doc123",
+                source_block_id="missing-table",
+            )
+
+            mock_table_svc._tables = {good.id: good, stale.id: stale}
+            mock_svc._load_ir.return_value = ir
+            mock_svc.parser.parse.return_value = MagicMock(errors=[])
+            mock_svc.parser.apply_edits.return_value = ir
+
+            def apply_table(ir_obj, block_id, _table_ctx):
+                if block_id == "missing-table":
+                    raise ValueError("block missing-table not found")
+                ir_obj.find_block(block_id).content = "| A |\n| --- |\n| new |"
+                return ir_obj
+
+            mock_bridge.apply_table_context_to_ir.side_effect = apply_table
+            mock_svc.renderer.render.return_value = (
+                "<!-- dfm:table @b:t001 -->\n| A |\n| --- |\n| new |\n<!-- /dfm:table -->"
+            )
+            mock_svc.save_docx = AsyncMock(
+                return_value={
+                    "success": True,
+                    "output_path": "/data/doc123/output.docx",
+                    "integrity": "OK",
+                }
+            )
+
+            from src.presentation.tools.docx_tools import save_docx
+
+            result = await save_docx("doc123", "inline dfm", force=True)
+
+            assert "TableContext" in result
+            assert "tbl_stale" in result
+            assert "block missing-table not found" in result
+            call_args = mock_svc.save_docx.await_args
+            assert "| new |" in call_args.args[1]
+
     async def test_save_docx_merges_split_md_with_pending_table_context(
         self, tmp_path: Path
     ) -> None:
@@ -435,6 +504,7 @@ class TestDocxTools:
             result = await list_docx_blocks("doc123")
             assert "p001" in result
             assert "t001" in result
+            assert "Col1 \\| Col2" in result
             assert "2 個區塊" in result
 
     async def test_list_docx_documents_success(self) -> None:
@@ -458,6 +528,27 @@ class TestDocxTools:
             assert "docx_123" in result
             assert "demo.docx" in result
             assert "DOCX Documents" in result
+
+    async def test_list_docx_documents_escapes_pipe_cells(self) -> None:
+        """list_docx_documents escapes table pipes in filenames."""
+        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
+            mock_svc.list_documents = AsyncMock(
+                return_value=[
+                    {
+                        "doc_id": "docx_123",
+                        "filename": "demo | pipe.docx",
+                        "total_blocks": 7,
+                        "has_output_docx": False,
+                        "has_output_pdf": False,
+                        "updated_at": "2026-02-10T08:00:00",
+                    }
+                ]
+            )
+            from src.presentation.tools.docx_tools import list_docx_documents
+
+            result = await list_docx_documents()
+
+        assert "demo \\| pipe.docx" in result
 
     async def test_delete_docx_success(self) -> None:
         """delete_docx returns formatted summary on success."""
@@ -634,6 +725,73 @@ class TestDocxTools:
             mock_svc._backup_before_overwrite.assert_called_once_with(doc_dir)
             mock_svc._save_ir.assert_called_once_with(ir, doc_dir / "ir.json")
 
+    async def test_docx_op_routes_save(self) -> None:
+        """docx(op='save') keeps the existing save_docx contract as its backend."""
+        with patch(
+            "src.presentation.tools.docx_tools.save_docx",
+            new_callable=AsyncMock,
+        ) as mock_save:
+            mock_save.return_value = "saved"
+            from src.presentation.tools.docx_tools import docx
+
+            result = await docx(
+                "save",
+                doc_id="docx_123",
+                dfm_content="dfm",
+                output_path="out.docx",
+                from_md=True,
+                force=True,
+                track_changes=True,
+                revision_author="Reviewer",
+            )
+
+        assert result == "saved"
+        mock_save.assert_awaited_once_with(
+            "docx_123",
+            dfm_content="dfm",
+            output_path="out.docx",
+            from_md=True,
+            force=True,
+            track_changes=True,
+            revision_author="Reviewer",
+            ctx=None,
+        )
+
+    async def test_docx_op_rejects_missing_doc_id(self) -> None:
+        """docx(op='get') requires doc_id before delegating."""
+        from src.presentation.tools.docx_tools import docx
+
+        result = await docx("get")
+
+        assert "doc_id is required" in result
+
+    async def test_docx_table_op_routes_chart_data(self) -> None:
+        """docx_table(op='chart_data') exposes chart extraction via one entrypoint."""
+        with patch(
+            "src.presentation.tools.docx_tools.docx_chart_data",
+            new_callable=AsyncMock,
+        ) as mock_chart:
+            mock_chart.return_value = "chart"
+            from src.presentation.tools.docx_tools import docx_table
+
+            result = await docx_table(
+                "chart_data",
+                doc_id="docx_123",
+                block_id="c001",
+                register=False,
+            )
+
+        assert result == "chart"
+        mock_chart.assert_awaited_once_with("docx_123", "c001", register=False)
+
+    async def test_docx_table_op_rejects_unknown_operation(self) -> None:
+        """docx_table(op, ...) fails closed for unsupported operations."""
+        from src.presentation.tools.docx_tools import docx_table
+
+        result = await docx_table("normalize", doc_id="docx_123", block_id="t001")
+
+        assert "Unsupported docx_table op" in result
+
 
 # ============================================================================
 # Job Tools
@@ -669,6 +827,85 @@ class TestJobTools:
 
             result = await cancel_job("job_nonexistent")
             assert "❌" in result
+
+    async def test_job_op_routes_existing_tools(self) -> None:
+        """job(op, ...) provides one operation-based entrypoint for job CRUD."""
+        with patch("src.presentation.tools.job_tools.get_job_status") as mock_status:
+            mock_status.return_value = "job status"
+            from src.presentation.tools.job_tools import job
+
+            result = await job("get", job_id="job_123")
+
+        assert result == "job status"
+        mock_status.assert_awaited_once_with("job_123")
+
+    async def test_job_op_rejects_unknown_operation(self) -> None:
+        """job(op, ...) fails closed for unknown operations."""
+        from src.presentation.tools.job_tools import job
+
+        result = await job("archive", job_id="job_123")
+
+        assert "Unsupported job op" in result
+
+    async def test_job_op_rejects_missing_job_id_for_cancel(self) -> None:
+        """job(op='cancel') requires a target job_id."""
+        from src.presentation.tools.job_tools import job
+
+        result = await job("cancel")
+
+        assert "job_id is required" in result
+
+    async def test_job_op_routes_cancel(self) -> None:
+        """job(op='cancel') delegates to the legacy cancellation tool."""
+        with patch("src.presentation.tools.job_tools.cancel_job") as mock_cancel:
+            mock_cancel.return_value = "cancelled"
+            from src.presentation.tools.job_tools import job
+
+            result = await job("cancel", job_id="job_123")
+
+        assert result == "cancelled"
+        mock_cancel.assert_awaited_once_with("job_123")
+
+    async def test_get_job_status_shows_backend_warnings_and_artifacts(self) -> None:
+        """Completed jobs expose backend, warnings, artifacts, and next commands."""
+        from src.domain.job import Job, JobProgress, JobStatus, JobType
+
+        job = Job(
+            job_id="job_status_details",
+            job_type=JobType.INGEST_PDF,
+            status=JobStatus.COMPLETED,
+            input_files=["paper.pdf"],
+            output_doc_ids=["doc_123"],
+            progress=JobProgress(total_steps=8, current_step=8, percentage=100),
+            result={
+                "documents": [
+                    {
+                        "file": "paper.pdf",
+                        "doc_id": "doc_123",
+                        "backend": "pymupdf_fallback",
+                        "warnings": ["Marker was unavailable"],
+                        "artifacts": {
+                            "manifest": "data/doc_123/doc_123_manifest.json",
+                            "markdown": "data/doc_123/doc_123_full.md",
+                            "blocks": "data/doc_123/blocks.json",
+                        },
+                        "blocks_available": True,
+                    }
+                ],
+                "warnings": ["Marker was unavailable"],
+            },
+        )
+
+        with patch("src.presentation.tools.job_tools.job_service") as mock_svc:
+            mock_svc.get_job = AsyncMock(return_value=job)
+            from src.presentation.tools.job_tools import get_job_status
+
+            result = await get_job_status("job_status_details")
+
+        assert "pymupdf_fallback" in result
+        assert "Marker was unavailable" in result
+        assert "data/doc_123/blocks.json" in result
+        assert 'export_document_segmentation("doc_123")' in result
 
 
 # ============================================================================
@@ -802,6 +1039,8 @@ class TestDocumentTools:
         args, kwargs = mock_jobs.create_ingest_job.await_args
         assert args[0] == [str(pdf_path)]
         assert kwargs["parameters"]["use_marker"] is True
+        assert kwargs["parameters"]["operation"] == "parse_pdf_structure"
+        assert kwargs["parameters"]["require_marker"] is True
         assert kwargs["parameters"]["page_ranges"] == []
 
     async def test_search_source_location_no_blocks(self) -> None:
@@ -1324,6 +1563,9 @@ class TestDocumentTools:
             "marker_max_pages_per_chunk": 200,
             "extract_figures": False,
             "page_ranges": ["1-50", "100-120"],
+            "operation": "ingest_documents",
+            "require_marker": False,
+            "etl_profile": "default",
         }
 
     async def test_ingest_documents_async_passes_ocr_params_to_job(self) -> None:
@@ -1354,6 +1596,9 @@ class TestDocumentTools:
             "marker_max_pages_per_chunk": 0,
             "extract_figures": True,
             "page_ranges": [],
+            "operation": "ingest_documents",
+            "require_marker": False,
+            "etl_profile": "default",
         }
 
     async def test_ingest_documents_async_reports_job_creation_limit(self) -> None:
@@ -1491,6 +1736,278 @@ class TestDocumentTools:
         assert "L1-3" in result[0].text
         assert fake_ctx.report_progress.await_count >= 2
 
+    async def test_document_op_routes_list(self) -> None:
+        """document(op, ...) exposes PDF document CRUD through one entrypoint."""
+        with patch(
+            "src.presentation.tools.document_tools.list_documents",
+            new_callable=AsyncMock,
+        ) as mock_list:
+            mock_list.return_value = "documents"
+            from src.presentation.tools.document_tools import document
+
+            result = await document("list")
+
+        assert result == "documents"
+        mock_list.assert_awaited_once_with()
+
+    async def test_document_op_rejects_unknown_operation(self) -> None:
+        """document(op, ...) fails closed for unsupported operations."""
+        from src.presentation.tools.document_tools import document
+
+        result = await document("compress")
+
+        assert "Unsupported document op" in result
+
+    async def test_document_op_routes_delete(self) -> None:
+        """document(op='delete') delegates to the legacy delete tool."""
+        with patch(
+            "src.presentation.tools.document_tools.delete_document",
+            new_callable=AsyncMock,
+        ) as mock_delete:
+            mock_delete.return_value = "deleted"
+            from src.presentation.tools.document_tools import document
+
+            result = await document("delete", doc_id="doc_123")
+
+        assert result == "deleted"
+        mock_delete.assert_awaited_once_with("doc_123")
+
+    async def test_document_asset_op_routes_get(self) -> None:
+        """document_asset(op='get') delegates to the legacy precise asset fetcher."""
+        payload = [MagicMock(type="text", text="asset")]
+        with patch(
+            "src.presentation.tools.document_tools.fetch_document_asset",
+            new_callable=AsyncMock,
+        ) as mock_fetch:
+            mock_fetch.return_value = payload
+            from src.presentation.tools.document_tools import document_asset
+
+            result = await document_asset(
+                "get",
+                doc_id="doc_123",
+                asset_type="section",
+                asset_id="sec_1",
+                max_size=512,
+            )
+
+        assert result == payload
+        mock_fetch.assert_awaited_once_with(
+            "doc_123",
+            "section",
+            "sec_1",
+            max_size=512,
+            ctx=None,
+        )
+
+    async def test_document_asset_op_rejects_missing_get_type(self) -> None:
+        """document_asset(op='get') requires an asset_type."""
+        from src.presentation.tools.document_tools import document_asset
+
+        result = await document_asset("get", doc_id="doc_123", asset_id="sec_1")
+
+        assert isinstance(result, str)
+        assert "asset_type is required" in result
+
+    async def test_evidence_op_routes_find(self) -> None:
+        """evidence(op='find') keeps citation span lookup behind one entrypoint."""
+        with patch(
+            "src.presentation.tools.document_tools.find_evidence_spans",
+            new_callable=AsyncMock,
+        ) as mock_find:
+            mock_find.return_value = "spans"
+            from src.presentation.tools.document_tools import evidence
+
+            result = await evidence("find", doc_id="doc_123", query="dose", limit=3)
+
+        assert result == "spans"
+        mock_find.assert_awaited_once_with(
+            "doc_123",
+            query="dose",
+            span_id="",
+            span_kinds=None,
+            limit=3,
+        )
+
+    async def test_convert_document_routes_pdf_to_docx(self) -> None:
+        """convert_document routes PDF document conversions through one entrypoint."""
+        with patch(
+            "src.presentation.tools.document_tools.convert_pdf_to_docx",
+            new_callable=AsyncMock,
+        ) as mock_convert:
+            mock_convert.return_value = "converted"
+            from src.presentation.tools.document_tools import convert_document
+
+            result = await convert_document(
+                "doc_123",
+                "docx",
+                source_format="pdf",
+                output_path="out.docx",
+                mode="content",
+            )
+
+        assert result == "converted"
+        mock_convert.assert_awaited_once_with(
+            "doc_123",
+            output_path="out.docx",
+            mode="content",
+            ctx=None,
+        )
+
+    async def test_convert_document_rejects_unsupported_pair(self) -> None:
+        """convert_document fails closed for unsupported source/target pairs."""
+        from src.presentation.tools.document_tools import convert_document
+
+        result = await convert_document("doc_123", "xlsx", source_format="pdf")
+
+        assert "Unsupported conversion" in result
+
+    async def test_convert_document_auto_uses_source_extension_first(self) -> None:
+        """Auto source detection must not treat a PDF path as a DOCX doc_id."""
+        with patch(
+            "src.presentation.tools.docx_tools.convert_docx_to_doc",
+            new_callable=AsyncMock,
+        ) as mock_convert:
+            from src.presentation.tools.document_tools import convert_document
+
+            result = await convert_document("paper.pdf", "doc")
+
+        assert "Unsupported conversion" in result
+        mock_convert.assert_not_awaited()
+
+    async def test_convert_document_routes_docx_to_pdf(self) -> None:
+        """convert_document preserves DOCX conversion output-path handling."""
+        with patch(
+            "src.presentation.tools.docx_tools.convert_docx_to_pdf",
+            new_callable=AsyncMock,
+        ) as mock_convert:
+            mock_convert.return_value = "pdf"
+            from src.presentation.tools.document_tools import convert_document
+
+            result = await convert_document(
+                "docx_123",
+                "pdf",
+                source_format="docx",
+                output_path="out.pdf",
+                mode="fidelity",
+            )
+
+        assert result == "pdf"
+        mock_convert.assert_awaited_once_with(
+            "docx_123",
+            output_path="out.pdf",
+            mode="fidelity",
+            ctx=None,
+        )
+
+    async def test_convert_document_routes_markdown_to_docx(self) -> None:
+        """convert_document routes Markdown exports without changing export roots."""
+        with patch(
+            "src.presentation.tools.docx_tools.export_markdown",
+            new_callable=AsyncMock,
+        ) as mock_export:
+            mock_export.return_value = "docx"
+            from src.presentation.tools.document_tools import convert_document
+
+            result = await convert_document(
+                "notes.md",
+                "docx",
+                source_format="markdown",
+                output_path="notes.docx",
+            )
+
+        assert result == "docx"
+        mock_export.assert_awaited_once_with(
+            md_path="notes.md",
+            md_text=None,
+            output_path="notes.docx",
+            output_format="docx",
+            ctx=None,
+        )
+
+    async def test_document_asset_op_routes_section_tree(self) -> None:
+        """document_asset(op='tree') keeps section-tree affordances available."""
+        with patch(
+            "src.presentation.tools.section_tools.list_section_tree",
+            new_callable=AsyncMock,
+        ) as mock_tree:
+            mock_tree.return_value = "tree"
+            from src.presentation.tools.document_tools import document_asset
+
+            result = await document_asset(
+                "tree",
+                doc_id="doc_123",
+                max_depth=2,
+                response_format="flat",
+            )
+
+        assert result == "tree"
+        mock_tree.assert_awaited_once_with("doc_123", 2, "flat")
+
+    async def test_document_asset_op_routes_section_blocks(self) -> None:
+        """document_asset(op='blocks') preserves include_children and block filters."""
+        with patch(
+            "src.presentation.tools.section_tools.get_section_blocks",
+            new_callable=AsyncMock,
+        ) as mock_blocks:
+            mock_blocks.return_value = "blocks"
+            from src.presentation.tools.document_tools import document_asset
+
+            result = await document_asset(
+                "blocks",
+                doc_id="doc_123",
+                path="Intro",
+                include_children=False,
+                block_types=["Table"],
+                limit=5,
+            )
+
+        assert result == "blocks"
+        mock_blocks.assert_awaited_once_with(
+            "doc_123",
+            "Intro",
+            False,
+            ["Table"],
+            5,
+        )
+
+    async def test_evidence_op_routes_locate(self) -> None:
+        """evidence(op='locate') keeps source-location search available."""
+        with patch(
+            "src.presentation.tools.document_tools.search_source_location",
+            new_callable=AsyncMock,
+        ) as mock_locate:
+            mock_locate.return_value = "locations"
+            from src.presentation.tools.document_tools import evidence
+
+            result = await evidence(
+                "locate",
+                doc_id="doc_123",
+                query="needle",
+                block_types=["Text"],
+            )
+
+        assert result == "locations"
+        mock_locate.assert_awaited_once_with(
+            "doc_123",
+            "needle",
+            block_types=["Text"],
+        )
+
+    async def test_evidence_op_routes_verify(self) -> None:
+        """evidence(op='verify') delegates AssetRef verification unchanged."""
+        ref = {"source_type": "span", "doc_id": "doc_123", "span_id": "span_1"}
+        with patch(
+            "src.presentation.tools.document_tools.verify_citation_ref",
+            new_callable=AsyncMock,
+        ) as mock_verify:
+            mock_verify.return_value = "verified"
+            from src.presentation.tools.document_tools import evidence
+
+            result = await evidence("verify", ref=ref)
+
+        assert result == "verified"
+        mock_verify.assert_awaited_once_with(ref)
+
 
 # ============================================================================
 # Table Tools
@@ -1555,6 +2072,48 @@ class TestTableTools:
 
             result = await table_manage("list")
             assert "table_manage" in result
+
+    async def test_table_manage_list_escapes_pipe_cells(self) -> None:
+        """table_manage(op='list') escapes Markdown table cell pipes."""
+        with patch("src.presentation.tools.table_tools.table_service") as mock_svc:
+            mock_svc.list_tables.return_value = [
+                {
+                    "id": "tbl|1",
+                    "title": "Alpha | Beta",
+                    "intent": "compare | summarize",
+                    "rows": 2,
+                    "citations": 1,
+                    "created_at": "2026-05-07",
+                }
+            ]
+            from src.presentation.tools.table_tools import table_manage
+
+            result = await table_manage("list")
+
+        assert "`tbl\\|1`" in result
+        assert "Alpha \\| Beta" in result
+        assert "compare \\| summarize" in result
+
+    async def test_table_draft_list_escapes_pipe_cells(self) -> None:
+        """table_draft(op='list') escapes Markdown table cell pipes."""
+        with patch("src.presentation.tools.table_tools.table_service") as mock_svc:
+            mock_svc.list_drafts.return_value = [
+                {
+                    "id": "draft|1",
+                    "title": "Draft | Title",
+                    "intent": "extract | cite",
+                    "columns_planned": 3,
+                    "pending_rows": 1,
+                    "has_table": False,
+                }
+            ]
+            from src.presentation.tools.table_tools import table_draft
+
+            result = await table_draft("list")
+
+        assert "`draft\\|1`" in result
+        assert "Draft \\| Title" in result
+        assert "extract \\| cite" in result
 
     async def test_table_manage_unknown_operation(self) -> None:
         """table_manage returns error for unknown op."""
@@ -1630,6 +2189,68 @@ class TestProfileTools:
 
         result = await get_current_etl_profile()
         assert "name" in result
+
+    async def test_etl_profile_op_routes_set(self) -> None:
+        """etl_profile(op='set') delegates to the existing profile switcher."""
+        with patch(
+            "src.presentation.tools.profile_tools.set_etl_profile",
+            new_callable=AsyncMock,
+        ) as mock_set:
+            mock_set.return_value = {"success": True}
+            from src.presentation.tools.profile_tools import etl_profile
+
+            result = await etl_profile("set", name="arxiv")
+
+        assert result == {"success": True}
+        mock_set.assert_awaited_once_with("arxiv")
+
+    async def test_etl_profile_op_rejects_missing_name(self) -> None:
+        """etl_profile(op='get') requires a profile name."""
+        from src.presentation.tools.profile_tools import etl_profile
+
+        result = await etl_profile("get")
+
+        assert result["success"] is False
+        assert "name is required" in result["error"]
+
+    async def test_etl_profile_op_routes_load(self) -> None:
+        """etl_profile(op='load') delegates custom profile loading."""
+        with patch(
+            "src.presentation.tools.profile_tools.load_etl_profile_from_json",
+            new_callable=AsyncMock,
+        ) as mock_load:
+            mock_load.return_value = {"success": True}
+            from src.presentation.tools.profile_tools import etl_profile
+
+            result = await etl_profile("load", json_path="profile.json")
+
+        assert result == {"success": True}
+        mock_load.assert_awaited_once_with("profile.json")
+
+    async def test_set_etl_profile_rebinds_document_tool_services(self) -> None:
+        """Profile switching updates already-imported presentation service aliases."""
+        from src.presentation import dependencies
+        from src.presentation.tools import document_tools, profile_tools, table_tools
+
+        old_profile_name = dependencies.etl_profile.name
+
+        result = await profile_tools.set_etl_profile("default")
+
+        try:
+            assert result["success"] is True
+            assert document_tools.document_service is dependencies.document_service
+            assert document_tools.pdf_extractor is dependencies.pdf_extractor
+            assert table_tools.document_service is dependencies.document_service
+            assert (
+                dependencies.job_service.document_service
+                is dependencies.document_service
+            )
+        finally:
+            dependencies.rebuild_for_profile(old_profile_name)
+            document_tools.document_service = dependencies.document_service
+            document_tools.pdf_extractor = dependencies.pdf_extractor
+            table_tools.document_service = dependencies.document_service
+            dependencies.job_service.set_document_service(dependencies.document_service)
 
 
 # ============================================================================
@@ -1742,6 +2363,57 @@ class TestKnowledgeTools:
         with pytest.raises(ValueError, match="response_mode must be one of"):
             await consult_knowledge_graph("test", response_mode="yaml")
 
+    async def test_knowledge_op_routes_export(self) -> None:
+        """knowledge(op='export') keeps export as an explicit operation."""
+        with patch(
+            "src.presentation.tools.knowledge_tools.export_knowledge_graph",
+            new_callable=AsyncMock,
+        ) as mock_export:
+            mock_export.return_value = "graph"
+            from src.presentation.tools.knowledge_tools import knowledge
+
+            result = await knowledge("export", format="summary", limit=10)
+
+        assert result == "graph"
+        mock_export.assert_awaited_once_with("summary", 10, ctx=None)
+
+    async def test_knowledge_op_routes_query(self) -> None:
+        """knowledge(op='query') delegates to consult_knowledge_graph."""
+        with patch(
+            "src.presentation.tools.knowledge_tools.consult_knowledge_graph",
+            new_callable=AsyncMock,
+        ) as mock_consult:
+            mock_consult.return_value = {"answer": "ok"}
+            from src.presentation.tools.knowledge_tools import knowledge
+
+            result = await knowledge(
+                "query",
+                query="dose",
+                mode="mix",
+                response_mode="data",
+                user_prompt="brief",
+                include_references=True,
+            )
+
+        assert result == {"answer": "ok"}
+        mock_consult.assert_awaited_once_with(
+            "dose",
+            mode="mix",
+            response_mode="data",
+            user_prompt="brief",
+            include_references=True,
+            ctx=None,
+        )
+
+    async def test_knowledge_op_rejects_unknown_operation(self) -> None:
+        """knowledge(op, ...) fails closed for unsupported operations."""
+        from src.presentation.tools.knowledge_tools import knowledge
+
+        result = await knowledge("mutate", query="test")
+
+        assert isinstance(result, str)
+        assert "Unsupported knowledge op" in result
+
 
 # ============================================================================
 # Server-level
@@ -1758,13 +2430,29 @@ class TestServerStartup:
         configure_logging()  # Should not raise
 
     def test_tool_count(self) -> None:
-        """All 43 expected tools are registered."""
+        """Legacy and consolidated MCP tools are registered during compatibility window."""
         from src.presentation.mcp_app import mcp
 
-        registered = [t.name for t in mcp._tool_manager._tools.values()]
-        assert len(registered) >= 43, (
-            f"Expected >=43 tools, got {len(registered)}: {registered}"
-        )
+        registered = {t.name for t in mcp._tool_manager._tools.values()}
+        expected = {
+            "document",
+            "document_asset",
+            "docx",
+            "docx_table",
+            "convert_document",
+            "evidence",
+            "job",
+            "etl_profile",
+            "knowledge",
+            "ingest_documents",
+            "ingest_docx",
+            "save_docx",
+            "find_evidence_spans",
+            "verify_citation_ref",
+            "get_job_status",
+        }
+        assert expected <= registered
+        assert len(registered) == 59, f"Expected 59 tools, got {len(registered)}"
 
 
 # ============================================================================
@@ -1847,6 +2535,211 @@ class TestJobServiceConcurrency:
             {"file": "bad.pdf", "error": "bad pdf"}
         ]
 
+    async def test_marker_job_uses_isolated_worker_not_event_loop_ingest(
+        self, temp_dir: Path
+    ) -> None:
+        """Marker jobs run through the subprocess worker path."""
+        from src.application.job_service import JobService
+        from src.domain.entities import IngestResult
+        from src.domain.job import Job, JobProgress, JobStatus, JobType
+
+        class MemoryJobStore:
+            def __init__(self) -> None:
+                self.jobs: dict[str, Job] = {}
+
+            async def create(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+            async def get(self, job_id: str) -> Job | None:
+                return self.jobs.get(job_id)
+
+            async def update(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+        class EventLoopDocumentService:
+            repository = MagicMock()
+
+            async def ingest(self, *_args, **_kwargs):
+                raise AssertionError("Marker ingest should run in an isolated worker")
+
+        doc_dir = temp_dir / "doc_marker"
+        doc_dir.mkdir()
+        (doc_dir / "blocks.json").write_text("[]", encoding="utf-8")
+        EventLoopDocumentService.repository.get_doc_dir.return_value = doc_dir
+
+        store = MemoryJobStore()
+        job = Job(
+            job_id="job_marker_worker",
+            job_type=JobType.INGEST_PDF,
+            input_files=["paper.pdf"],
+            parameters={"use_marker": True, "extract_figures": True},
+            progress=JobProgress(total_steps=9),
+        )
+        await store.create(job)
+
+        service = JobService(
+            job_store=store,
+            document_service=EventLoopDocumentService(),  # type: ignore[arg-type]
+        )
+        service._run_isolated_ingest_worker = AsyncMock(  # type: ignore[method-assign]
+            return_value=IngestResult(
+                doc_id="doc_marker",
+                filename="paper.pdf",
+                success=True,
+                backend="marker",
+            )
+        )
+
+        await service._process_ingest_job(job.job_id, service.document_service)
+
+        stored = await store.get(job.job_id)
+        assert stored is not None
+        assert stored.status == JobStatus.COMPLETED
+        assert stored.output_doc_ids == ["doc_marker"]
+        assert stored.result is not None
+        assert stored.result["documents"][0]["backend"] == "marker"
+        assert stored.result["documents"][0]["blocks_available"] is True
+        service._run_isolated_ingest_worker.assert_awaited_once()
+
+    async def test_isolated_ingest_worker_reads_result_and_silences_stdio(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """The subprocess worker command is isolated and returns JSON results."""
+        from src.application.job_service import JobService
+        from src.domain.entities import IngestResult
+
+        created: dict[str, object] = {}
+
+        class FakeProcess:
+            returncode = 0
+
+            async def wait(self) -> int:
+                return 0
+
+            def terminate(self) -> None:
+                raise AssertionError("terminate should not be needed")
+
+            def kill(self) -> None:
+                raise AssertionError("kill should not be needed")
+
+        async def fake_create_subprocess_exec(*cmd, **kwargs):
+            created["cmd"] = cmd
+            created["kwargs"] = kwargs
+            result_path = Path(cmd[cmd.index("--result-json") + 1])
+            result_path.write_text(
+                IngestResult(
+                    doc_id="doc_worker",
+                    filename="paper.pdf",
+                    backend="marker",
+                ).model_dump_json(),
+                encoding="utf-8",
+            )
+            return FakeProcess()
+
+        monkeypatch.setattr(
+            "src.application.job_service.tempfile.gettempdir",
+            lambda: str(tmp_path),
+        )
+        monkeypatch.setattr(
+            "src.application.job_service.asyncio.create_subprocess_exec",
+            fake_create_subprocess_exec,
+        )
+
+        service = JobService(job_store=MagicMock())
+
+        result = await service._run_isolated_ingest_worker(
+            "job_worker",
+            "paper.pdf",
+            {
+                "use_marker": True,
+                "require_marker": True,
+                "ocr_language": "eng",
+                "marker_max_pages_per_chunk": 7,
+                "page_ranges": ["1-2"],
+                "extract_figures": True,
+                "etl_profile": "arxiv",
+            },
+        )
+
+        cmd = created["cmd"]
+        kwargs = created["kwargs"]
+        assert isinstance(cmd, tuple)
+        assert "-m" in cmd
+        assert "src.application.ingest_worker" in cmd
+        assert "--use-marker" in cmd
+        assert "--require-marker" in cmd
+        assert "--extract-figures" in cmd
+        assert "--etl-profile" in cmd
+        assert kwargs["stdin"] is asyncio.subprocess.DEVNULL
+        assert kwargs["stdout"] is asyncio.subprocess.DEVNULL
+        assert kwargs["stderr"] is asyncio.subprocess.DEVNULL
+        assert kwargs["env"]["ETL_PROFILE"] == "arxiv"
+        assert result.doc_id == "doc_worker"
+
+    async def test_ingest_job_result_preserves_backend_warnings(self) -> None:
+        """Background jobs keep degraded backend warnings in their final result."""
+        from src.application.job_service import JobService
+        from src.domain.entities import IngestResult
+        from src.domain.job import Job, JobProgress, JobStatus, JobType
+
+        class MemoryJobStore:
+            def __init__(self) -> None:
+                self.jobs: dict[str, Job] = {}
+
+            async def create(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+            async def get(self, job_id: str) -> Job | None:
+                return self.jobs.get(job_id)
+
+            async def update(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+        class FallbackDocumentService:
+            repository = MagicMock()
+
+            async def ingest(self, *_args, **_kwargs):
+                return [
+                    IngestResult(
+                        doc_id="doc_fallback",
+                        filename="paper.pdf",
+                        success=True,
+                        backend="pymupdf_fallback",
+                        warnings=["Marker requested; PyMuPDF fallback used"],
+                    )
+                ]
+
+        FallbackDocumentService.repository.get_doc_dir.return_value = Path("data/doc")
+        store = MemoryJobStore()
+        job = Job(
+            job_id="job_fallback",
+            job_type=JobType.INGEST_PDF,
+            input_files=["paper.pdf"],
+            parameters={"use_marker": False},
+            progress=JobProgress(total_steps=8),
+        )
+        await store.create(job)
+        service = JobService(
+            job_store=store,
+            document_service=FallbackDocumentService(),  # type: ignore[arg-type]
+        )
+
+        await service._process_ingest_job(job.job_id, service.document_service)
+
+        stored = await store.get(job.job_id)
+        assert stored is not None
+        assert stored.status == JobStatus.COMPLETED
+        assert stored.result is not None
+        assert stored.result["degraded"] is True
+        assert stored.result["warnings"] == ["Marker requested; PyMuPDF fallback used"]
+        assert stored.result["documents"][0]["backend"] == "pymupdf_fallback"
+
     async def test_cancel_job_waits_for_running_task_cleanup(self) -> None:
         """cancel_job should not return while the task is still unwinding."""
         from src.application.job_service import JobService
@@ -1900,6 +2793,218 @@ class TestJobServiceConcurrency:
         assert task.done()
         assert cleanup_seen
         assert job.job_id not in service._running_tasks
+
+    async def test_cancel_job_preserves_worker_cancellation_message(self) -> None:
+        """cancel_job must not overwrite the worker's final cancellation update."""
+        from src.application.job_service import JobService
+        from src.domain.job import Job, JobProgress, JobStatus, JobType
+
+        class MemoryJobStore:
+            def __init__(self) -> None:
+                self.jobs: dict[str, Job] = {}
+
+            async def create(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+            async def get(self, job_id: str) -> Job | None:
+                return self.jobs.get(job_id)
+
+            async def update(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+        store = MemoryJobStore()
+        job = Job(
+            job_id="job_cancel_message",
+            job_type=JobType.INGEST_PDF,
+            input_files=["paper.pdf"],
+            progress=JobProgress(total_steps=8, message="worker started"),
+        )
+        job.start()
+        await store.create(job)
+        service = JobService(job_store=store)
+
+        started = asyncio.Event()
+
+        async def worker() -> None:
+            try:
+                started.set()
+                await asyncio.sleep(3600)
+            except asyncio.CancelledError:
+                latest = await store.get(job.job_id)
+                assert latest is not None
+                latest.cancel()
+                latest.progress.message = "Job cancelled by user"
+                await store.update(latest)
+                raise
+
+        task = asyncio.create_task(worker())
+        await started.wait()
+        service._running_tasks[job.job_id] = task
+
+        assert await service.cancel_job(job.job_id) is True
+
+        stored = await store.get(job.job_id)
+        assert stored is not None
+        assert stored.status == JobStatus.CANCELLED
+        assert stored.progress.message == "Job cancelled by user"
+
+    async def test_reconcile_stale_active_jobs_after_restart(self) -> None:
+        """Persisted active jobs without in-memory tasks are failed on read/list."""
+        from src.application.job_service import JobService
+        from src.domain.job import Job, JobProgress, JobStatus, JobSummary, JobType
+
+        class MemoryJobStore:
+            def __init__(self) -> None:
+                self.jobs: dict[str, Job] = {}
+
+            async def create(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+            async def get(self, job_id: str) -> Job | None:
+                return self.jobs.get(job_id)
+
+            async def update(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+            async def list_active(self):
+                return [
+                    JobSummary.from_job(job)
+                    for job in self.jobs.values()
+                    if not job.is_terminal
+                ]
+
+            async def list_all(self, limit: int = 20):
+                return [JobSummary.from_job(job) for job in self.jobs.values()]
+
+        store = MemoryJobStore()
+        job = Job(
+            job_id="job_stale",
+            job_type=JobType.INGEST_PDF,
+            input_files=["paper.pdf"],
+            progress=JobProgress(total_steps=8),
+        )
+        job.start()
+        await store.create(job)
+        service = JobService(job_store=store)
+
+        active = await service.list_active_jobs()
+        stored = await store.get(job.job_id)
+
+        assert active == []
+        assert stored is not None
+        assert stored.status == JobStatus.FAILED
+        assert "restarted" in (stored.error or "")
+
+    async def test_reconcile_does_not_fail_other_live_owner_job(self) -> None:
+        """Shared DATA_DIR instances must not fail jobs owned by a live process."""
+        from src.application.job_service import JobService
+        from src.domain.job import Job, JobProgress, JobStatus, JobSummary, JobType
+
+        class MemoryJobStore:
+            def __init__(self) -> None:
+                self.jobs: dict[str, Job] = {}
+
+            async def create(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+            async def get(self, job_id: str) -> Job | None:
+                return self.jobs.get(job_id)
+
+            async def update(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+            async def list_active(self):
+                return [
+                    JobSummary.from_job(job)
+                    for job in self.jobs.values()
+                    if not job.is_terminal
+                ]
+
+        store = MemoryJobStore()
+        job = Job(
+            job_id="job_other_owner",
+            job_type=JobType.INGEST_PDF,
+            input_files=["paper.pdf"],
+            parameters={"job_owner_id": "other", "job_owner_pid": 12345},
+            progress=JobProgress(total_steps=8),
+        )
+        job.start()
+        await store.create(job)
+        service = JobService(job_store=store)
+        service._process_is_alive = MagicMock(return_value=True)  # type: ignore[method-assign]
+
+        active = await service.list_active_jobs()
+        stored = await store.get(job.job_id)
+
+        assert len(active) == 1
+        assert stored is not None
+        assert stored.status == JobStatus.PROCESSING
+
+    async def test_process_ingest_job_uses_captured_document_service(self) -> None:
+        """Profile switches must not alter a job's already captured service."""
+        from src.application.job_service import JobService
+        from src.domain.entities import IngestResult
+        from src.domain.job import Job, JobProgress, JobStatus, JobType
+
+        class MemoryJobStore:
+            def __init__(self) -> None:
+                self.jobs: dict[str, Job] = {}
+
+            async def create(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+            async def get(self, job_id: str) -> Job | None:
+                return self.jobs.get(job_id)
+
+            async def update(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+        class OriginalDocumentService:
+            repository = MagicMock()
+
+            async def ingest(self, *_args, **_kwargs):
+                return [
+                    IngestResult(
+                        doc_id="doc_original",
+                        filename="paper.pdf",
+                        success=True,
+                    )
+                ]
+
+        class NewDocumentService:
+            repository = MagicMock()
+
+            async def ingest(self, *_args, **_kwargs):
+                raise AssertionError("new service should not handle captured job")
+
+        OriginalDocumentService.repository.get_doc_dir.return_value = Path("data/doc")
+        store = MemoryJobStore()
+        job = Job(
+            job_id="job_profile_isolated",
+            job_type=JobType.INGEST_PDF,
+            input_files=["paper.pdf"],
+            parameters={"use_marker": False},
+            progress=JobProgress(total_steps=8),
+        )
+        await store.create(job)
+        original = OriginalDocumentService()
+        service = JobService(job_store=store, document_service=original)  # type: ignore[arg-type]
+        service.set_document_service(NewDocumentService())  # type: ignore[arg-type]
+
+        await service._process_ingest_job(job.job_id, original)  # type: ignore[arg-type]
+
+        stored = await store.get(job.job_id)
+        assert stored is not None
+        assert stored.status == JobStatus.COMPLETED
+        assert stored.output_doc_ids == ["doc_original"]
 
     async def test_process_ingest_job_cleans_running_task_when_job_missing(
         self,

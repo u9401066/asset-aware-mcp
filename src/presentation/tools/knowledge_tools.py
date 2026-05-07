@@ -20,6 +20,10 @@ else:
     Context = Any
 
 
+def _normalize_op(op: str) -> str:
+    return op.strip().lower().replace("-", "_")
+
+
 @mcp.tool()
 async def consult_knowledge_graph(
     query: str,
@@ -177,3 +181,41 @@ async def export_knowledge_graph(
         import json
 
         return json.dumps(result, indent=2, ensure_ascii=False)
+
+
+@mcp.tool()
+async def knowledge(
+    op: str,
+    query: str | None = None,
+    mode: str = "hybrid",
+    response_mode: str = "structured",
+    user_prompt: str | None = None,
+    include_references: bool = False,
+    format: str = "summary",
+    limit: int = 50,
+    ctx: Context | None = None,
+) -> Any:
+    """
+    Consolidated knowledge-graph entrypoint.
+
+    Existing consult/export tools remain registered and keep their separate
+    contracts for clients that prefer explicit tool names.
+    """
+    operation = _normalize_op(op)
+    if operation in {"consult", "query"}:
+        if not query:
+            return "Missing required parameter: query is required."
+        return await consult_knowledge_graph(
+            query,
+            mode=mode,
+            response_mode=response_mode,
+            user_prompt=user_prompt,
+            include_references=include_references,
+            ctx=ctx,
+        )
+    if operation == "export":
+        return await export_knowledge_graph(format, limit, ctx=ctx)
+    return (
+        f"Unsupported knowledge op `{op}`. "
+        "Supported operations: consult, export, query."
+    )

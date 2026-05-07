@@ -22,6 +22,7 @@ from src.presentation.dependencies import (
     repository,
     table_service,
 )
+from src.presentation.markdown_utils import escape_table_cell
 from src.presentation.mcp_app import mcp
 from src.presentation.mcp_context import log_message, report_progress
 
@@ -237,7 +238,10 @@ def _list_templates() -> str:
         lines.append("|--------|------|----------|")
         for c in t["columns"]:
             req = "✅" if c.get("required", True) else "❌"
-            lines.append(f"| {c['name']} | {c['type']} | {req} |")
+            lines.append(
+                f"| {escape_table_cell(c['name'])} | "
+                f"{escape_table_cell(c['type'])} | {escape_table_cell(req)} |"
+            )
         lines.append("")
 
     lines.append("💡 Use `plan_table('from_template', template_name='...')` to create.")
@@ -398,8 +402,10 @@ def _table_list() -> str:
     lines.append("|----|-------|--------|------|-------|---------|")
     for t in tables:
         lines.append(
-            f"| `{t['id']}` | {t['title']} | {t['intent']} "
-            f"| {t['rows']} | {t['citations']} | {t['created_at']} |"
+            f"| `{escape_table_cell(t['id'])}` | {escape_table_cell(t['title'])} | "
+            f"{escape_table_cell(t['intent'])} | {escape_table_cell(t['rows'])} | "
+            f"{escape_table_cell(t['citations'])} | "
+            f"{escape_table_cell(t['created_at'])} |"
         )
     return "\n".join(lines)
 
@@ -1132,8 +1138,10 @@ def _draft_list() -> str:
     for d in drafts:
         status = "✅ Has Table" if d["has_table"] else "⏳ Planning"
         lines.append(
-            f"| `{d['id']}` | {d['title']} | {d['intent'] or '-'} "
-            f"| {d['columns_planned']} | {d['pending_rows']} | {status} |"
+            f"| `{escape_table_cell(d['id'])}` | {escape_table_cell(d['title'])} | "
+            f"{escape_table_cell(d['intent'] or '-')} | "
+            f"{escape_table_cell(d['columns_planned'])} | "
+            f"{escape_table_cell(d['pending_rows'])} | {escape_table_cell(status)} |"
         )
     return "\n".join(lines)
 

@@ -15,6 +15,15 @@ from src.presentation.tools.job_tools import cancel_job, get_job_status, list_jo
 def test_tool_registration() -> None:
     """Core MCP tools must be registered."""
     expected_tools = {
+        "document",
+        "document_asset",
+        "docx",
+        "docx_table",
+        "convert_document",
+        "evidence",
+        "job",
+        "etl_profile",
+        "knowledge",
         "ingest_documents",
         "get_job_status",
         "list_jobs",
