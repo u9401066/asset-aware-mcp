@@ -5,23 +5,16 @@ and local Markdown notes. Use with `.clinerules/35-foam-llm-wiki.md`.
 
 ## 1. Locate The Wiki
 
-- Find the workspace root and any existing Foam markers such as `.foam/`,
-  `.vscode/settings.json`, existing `[[wikilinks]]`, or a user-provided note
-  directory.
-- If no wiki root is obvious, propose a small root such as `wiki/` and wait for
-  user confirmation before creating many files.
-- Read nearby README or index notes to preserve existing naming and link style.
+- Identify the wiki root and avoid creating a parallel wiki unless requested.
+- Inspect existing filename style, frontmatter conventions, attachment folders,
+  and wikilink patterns.
+- Build a note map before editing so new links target known files.
 
-## 2. Define The Note Map
+## 2. Plan Changes
 
-- Create a short map before writing files:
-  - hub note
-  - topic notes
-  - literature/source notes
-  - method or protocol notes
-  - unresolved TODO notes
-- Prefer a few well-linked notes over one large dump.
-- Decide which notes are generated, refreshed, or preserved.
+- Separate source ingestion, note updates, link repairs, and cleanup.
+- Ask before bulk rewrites, renames, deleting notes, or moving attachments.
+- Preserve user-written sections unless the user explicitly asks for rewrite.
 
 ## 3. Gather Evidence With Tools
 
@@ -38,22 +31,21 @@ and local Markdown notes. Use with `.clinerules/35-foam-llm-wiki.md`.
 
 ## 4. Write Foam-Compatible Notes
 
-- Add YAML frontmatter only when it carries useful metadata.
-- Use a single `# H1`, concise sections, and stable anchors.
-- Use `[[note-slug]]` only when the target exists or is created in this run.
-- Add source markers near claims, not only in a bibliography note.
-- Keep note bodies readable for humans and chunkable for LLM retrieval.
+- Use stable lowercase kebab-case filenames for generated notes.
+- Use one `# H1` per note.
+- Keep generated notes readable, not just chunkable.
+- Put source identifiers near claims, especially for synthesized paragraphs.
+- Use `[[wikilinks]]` only for notes that exist or are being created.
+- Use relative Markdown links for PDFs, figures, tables, and exported files.
 
-## 5. Validate The Wiki
+## 5. Validate
 
-- Check that generated note filenames match the wikilinks you emitted.
-- Search for unresolved `[[...]]` links and either create the missing target,
-  convert the link to plain text, or mark it as an intentional TODO.
-- Confirm relative attachment links point to existing files.
-- Re-open a sample hub note and source note to verify the rendered structure is
-  clean: frontmatter, H1, sections, links, and citations.
+- Check that generated wikilinks resolve or are explicitly marked TODO.
+- Check that source markers can be traced to a concrete source.
+- Check that no raw tool dump was accidentally pasted into final notes.
+- Report skipped or unresolved evidence separately from completed notes.
 
-## 6. Report The Result
+## 6. Report
 
 - Summarize created, updated, preserved, and skipped notes.
 - List unresolved TODOs separately from completed links.

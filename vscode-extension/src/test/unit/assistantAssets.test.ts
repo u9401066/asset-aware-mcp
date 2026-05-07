@@ -125,4 +125,29 @@ describe('assistantAssets', () => {
         assert.ok(!fs.existsSync(path.join(workspaceRoot, retiredHookPath)));
         assert.strictEqual(summary?.removed, 2);
     });
+
+    it('preserves unmanifested retired-looking Cline harness leftovers as user-owned', async () => {
+        writeBundledAsset(
+            path.join('.cline', 'skills', 'asset-aware-mcp-harness', 'SKILL.md'),
+            'asset-aware harness\n',
+        );
+        const retiredSkillPath = path.join('.cline', 'skills', 'pubmed-search-mcp-harness', 'SKILL.md');
+        const retiredWorkflowPath = path.join('.clinerules', 'workflows', 'pubmed-full-check.md');
+        fs.mkdirSync(path.dirname(path.join(workspaceRoot, retiredSkillPath)), { recursive: true });
+        fs.mkdirSync(path.dirname(path.join(workspaceRoot, retiredWorkflowPath)), { recursive: true });
+        fs.writeFileSync(path.join(workspaceRoot, retiredSkillPath), 'old pubmed harness\n', 'utf-8');
+        fs.writeFileSync(path.join(workspaceRoot, retiredWorkflowPath), 'old pubmed workflow\n', 'utf-8');
+
+        const summary = await installAssistantAssets(makeContext());
+
+        assert.strictEqual(
+            fs.readFileSync(path.join(workspaceRoot, retiredSkillPath), 'utf-8'),
+            'old pubmed harness\n',
+        );
+        assert.strictEqual(
+            fs.readFileSync(path.join(workspaceRoot, retiredWorkflowPath), 'utf-8'),
+            'old pubmed workflow\n',
+        );
+        assert.strictEqual(summary?.removed, 0);
+    });
 });

@@ -23,6 +23,15 @@ def require_text(path: str, needles: list[str]) -> list[str]:
     return [f"{path}: missing {needle!r}" for needle in needles if needle not in text]
 
 
+def require_absent_text(path: str, needles: list[str]) -> list[str]:
+    text = Path(path).read_text(encoding="utf-8")
+    return [
+        f"{path}: forbidden retired harness text {needle!r}"
+        for needle in needles
+        if needle in text
+    ]
+
+
 def require_count(path: str, needle: str, minimum: int) -> str | None:
     count = Path(path).read_text(encoding="utf-8").count(needle)
     if count < minimum:
@@ -38,6 +47,40 @@ def main() -> int:
             [
                 ".github/hooks/copilot-tool-policy.json",
                 ".github/hooks/pipeline-enforcer.json",
+                ".github/agents/research.agent.md",
+                ".github/zotero-research-workflow.md",
+                ".claude/skills/pipeline-persistence",
+                ".claude/skills/zotero-keeper-harness",
+                ".claude/skills/pubmed-export-citations",
+                ".claude/skills/pubmed-fulltext-access",
+                ".claude/skills/pubmed-gene-drug-research",
+                ".claude/skills/pubmed-mcp-tools-reference",
+                ".claude/skills/pubmed-multi-source-search",
+                ".claude/skills/pubmed-paper-exploration",
+                ".claude/skills/pubmed-pico-search",
+                ".claude/skills/pubmed-quick-search",
+                ".claude/skills/pubmed-systematic-search",
+                ".cline/skills/pubmed-search-mcp-harness",
+                ".cline/skills/zotero-keeper-harness",
+                ".codex/skills/pubmed-search-mcp-harness",
+                ".codex/skills/zotero-keeper-harness",
+                ".clinerules/00-zotero-project.md",
+                ".clinerules/10-zotero-python.md",
+                ".clinerules/20-zotero-vscode-extension.md",
+                ".clinerules/30-zotero-research-workflow.md",
+                ".clinerules/40-zotero-release.md",
+                ".clinerules/50-pubmed-project.md",
+                ".clinerules/60-pubmed-python.md",
+                ".clinerules/70-pubmed-mcp-tools.md",
+                ".clinerules/80-pubmed-release.md",
+                ".clinerules/workflows/pubmed-full-check.md",
+                ".clinerules/workflows/pubmed-mcp-setup.md",
+                ".clinerules/workflows/pubmed-release-publish.md",
+                ".clinerules/workflows/pubmed-skills-audit.md",
+                ".clinerules/workflows/zotero-full-check.md",
+                ".clinerules/workflows/zotero-mcp-setup.md",
+                ".clinerules/workflows/zotero-release-publish.md",
+                ".clinerules/workflows/zotero-skills-audit.md",
                 "scripts/hooks/copilot",
             ]
         )
@@ -55,6 +98,25 @@ def main() -> int:
             ],
         )
     )
+    retired_harness_text = [
+        ".github/zotero-research-workflow.md",
+        "Build or refresh a Foam-compatible LLM wiki from Zotero",
+        "Use Zotero tools",
+        "Use PubMed tools",
+        "Use PubMed Search MCP tools",
+        "Zotero imports",
+        "Zotero key",
+        "Zotero:ABC123",
+        "PMID:12345678",
+        "PubMed discovery",
+    ]
+    for harness_path in [
+        ".cline/skills/llm-wiki-builder/SKILL.md",
+        ".codex/skills/llm-wiki-builder/SKILL.md",
+        ".clinerules/35-foam-llm-wiki.md",
+        ".clinerules/workflows/llm-wiki-build.md",
+    ]:
+        errors.extend(require_absent_text(harness_path, retired_harness_text))
 
     errors.extend(
         require_text(
@@ -129,7 +191,7 @@ def main() -> int:
             [
                 "python3 scripts/audit_release_harness.py",
                 "python3 scripts/audit_release_artifacts.py",
-                "npm run sync-assets:check",
+                "npm --prefix vscode-extension run sync-assets:check",
                 "npm run test:install-smoke",
                 "docker build",
                 "docker run",
@@ -143,7 +205,7 @@ def main() -> int:
                 "VSIX install/activation smoke is required",
                 "python3 scripts/audit_release_harness.py",
                 "python3 scripts/audit_release_artifacts.py",
-                'git tag -a "v$VERSION"',
+                'git tag -a "v$(python3 scripts/get_version.py --strict-semver)"',
             ],
         )
     )
