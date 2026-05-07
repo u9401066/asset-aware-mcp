@@ -43,6 +43,50 @@ function warnSkippedSettingsWrite(settingsPath: string): void {
     );
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+    return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+    return isRecord(value) && Object.values(value).every((item) => typeof item === 'string');
+}
+
+function isValidServerEntry(value: unknown): boolean {
+    if (!isRecord(value)) {
+        return false;
+    }
+    if (value.command !== undefined && typeof value.command !== 'string') {
+        return false;
+    }
+    if (value.args !== undefined && !isStringArray(value.args)) {
+        return false;
+    }
+    if (value.env !== undefined && !isStringRecord(value.env)) {
+        return false;
+    }
+    if (value.alwaysAllow !== undefined && !isStringArray(value.alwaysAllow)) {
+        return false;
+    }
+    if (value.disabled !== undefined && typeof value.disabled !== 'boolean') {
+        return false;
+    }
+    return true;
+}
+
+function backupInvalidSettings(settingsPath: string): void {
+    const backupPath = `${settingsPath}.invalid.${Date.now()}.bak`;
+    try {
+        fs.copyFileSync(settingsPath, backupPath);
+    } catch {
+        // Best-effort backup only.
+    }
+    warnSkippedSettingsWrite(settingsPath);
+}
+
 function readClineSettings(settingsPath: string): ClineMcpSettings | undefined {
     if (!fs.existsSync(settingsPath)) {
         return { mcpServers: {} };
@@ -50,19 +94,31 @@ function readClineSettings(settingsPath: string): ClineMcpSettings | undefined {
 
     try {
         const raw = fs.readFileSync(settingsPath, 'utf-8');
-        const parsed = JSON.parse(raw) as ClineMcpSettings;
-        if (!parsed.mcpServers || typeof parsed.mcpServers !== 'object') {
-            parsed.mcpServers = {};
+        const parsed = JSON.parse(raw) as unknown;
+        if (!isRecord(parsed)) {
+            backupInvalidSettings(settingsPath);
+            return undefined;
         }
-        return parsed;
+
+        const settings = parsed as ClineMcpSettings;
+        if (settings.mcpServers === undefined) {
+            settings.mcpServers = {};
+        } else if (!isRecord(settings.mcpServers)) {
+            backupInvalidSettings(settingsPath);
+            return undefined;
+        }
+        if (!Object.values(settings.mcpServers).every(isValidServerEntry)) {
+            backupInvalidSettings(settingsPath);
+            return undefined;
+        }
+        if (settings.mcpRules !== undefined && !isRecord(settings.mcpRules)) {
+            backupInvalidSettings(settingsPath);
+            return undefined;
+        }
+
+        return settings;
     } catch {
-        const backupPath = `${settingsPath}.invalid.${Date.now()}.bak`;
-        try {
-            fs.copyFileSync(settingsPath, backupPath);
-        } catch {
-            // Best-effort backup only.
-        }
-        warnSkippedSettingsWrite(settingsPath);
+        backupInvalidSettings(settingsPath);
         return undefined;
     }
 }
@@ -85,6 +141,12 @@ function mergeManagedEntry(
     return {
         ...existing,
         ...next,
+        env: existing.env || next.env
+            ? {
+                ...(existing.env ?? {}),
+                ...(next.env ?? {}),
+            }
+            : undefined,
         disabled: existing.disabled ?? next.disabled,
         alwaysAllow: existing.alwaysAllow,
     };
@@ -146,11 +208,17 @@ function mergeAssetAwareRules(settings: ClineMcpSettings): boolean {
         'table',
         'figure',
         'lightrag',
+        '文件',
+        '文件證據',
         '引用',
+        '引用來源',
         '證據',
         '表格',
+        '圖表',
         '圖片',
-        '文件',
+        '知識圖譜',
+        '段落定位',
+        '證據定位',
     ]) {
         if (!triggers.includes(trigger)) {
             triggers.push(trigger);

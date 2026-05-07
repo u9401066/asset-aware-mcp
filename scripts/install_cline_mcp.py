@@ -92,6 +92,7 @@ def candidate_settings_paths(
         appdata = os.environ.get("APPDATA")
         if appdata:
             paths.append(Path(appdata) / "Code" / ext_subpath)
+            paths.append(Path(appdata) / "Code - Insiders" / ext_subpath)
     else:
         # Linux + remote server paths
         paths.append(home / ".config" / "Code" / ext_subpath)
@@ -114,7 +115,7 @@ def load_json(path: Path) -> dict:
 def backup(path: Path) -> None:
     if not path.exists():
         return
-    stamp = dt.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     backup_path = path.with_suffix(path.suffix + f".bak.{stamp}")
     shutil.copy2(path, backup_path)
 
@@ -123,21 +124,72 @@ def ensure_parent(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
 
+def resolve_data_dir(root: Path) -> Path:
+    data_dir = "data"
+    env_path = root / ".env"
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            key, value = stripped.split("=", 1)
+            if key.strip() != "DATA_DIR":
+                continue
+            data_dir = value.strip().strip("\"'")
+            break
+
+    path = Path(data_dir).expanduser()
+    return path if path.is_absolute() else root / path
+
+
 def build_server_config(*, uv: str, root: Path) -> dict:
     # Use --directory so the server loads this repo's .env and relative data paths.
     return {
         "command": uv,
         "args": ["run", "--directory", str(root), "python", "-m", "src.server"],
-        "env": {},
+        "env": {"DATA_DIR": str(resolve_data_dir(root))},
         "disabled": False,
     }
 
 
-def merge_server(settings: dict, *, server_name: str, server_config: dict) -> None:
+def is_asset_aware_launch(entry: dict) -> bool:
+    command = str(entry.get("command", ""))
+    raw_args = entry.get("args", [])
+    args = [str(arg) for arg in raw_args] if isinstance(raw_args, list) else []
+    return (
+        DEFAULT_SERVER_NAME in command
+        or DEFAULT_SERVER_NAME in args
+        or "src.server" in args
+        or any(f"{DEFAULT_SERVER_NAME}==" in arg for arg in args)
+    )
+
+
+def merge_server(settings: dict, *, server_name: str, server_config: dict) -> bool:
     servers = settings.setdefault("mcpServers", {})
     if not isinstance(servers, dict):
         raise RuntimeError("Invalid settings: mcpServers must be an object")
-    servers[server_name] = server_config
+    existing = servers.get(server_name)
+    if not isinstance(existing, dict):
+        servers[server_name] = server_config
+        return True
+    if not is_asset_aware_launch(existing):
+        return False
+
+    merged = {**existing, **server_config}
+    existing_env = existing.get("env")
+    next_env = server_config.get("env")
+    if isinstance(existing_env, dict) or isinstance(next_env, dict):
+        merged["env"] = {
+            **(existing_env if isinstance(existing_env, dict) else {}),
+            **(next_env if isinstance(next_env, dict) else {}),
+        }
+    if "alwaysAllow" in existing:
+        merged["alwaysAllow"] = existing["alwaysAllow"]
+    if "disabled" in existing:
+        merged["disabled"] = existing["disabled"]
+
+    servers[server_name] = merged
+    return True
 
 
 def merge_rules(settings: dict, *, server_name: str) -> None:
@@ -173,12 +225,18 @@ def merge_rules(settings: dict, *, server_name: str) -> None:
         "craap",
         "knowledge graph",
         "lightrag",
+        "文件",
+        "文件證據",
         "引用",
+        "引用來源",
         "證據",
         "表格",
+        "圖表",
         "圖片",
         "章節",
         "知識圖譜",
+        "段落定位",
+        "證據定位",
     ]:
         if trig not in triggers:
             triggers.append(trig)
@@ -249,22 +307,38 @@ def main() -> int:
         )
 
     updated_any = False
+    saw_target = False
     for path in targets:
         # Create brand-new files for CLI config roots and explicit --path values.
         can_create = explicit_targets or path in creatable_cli_targets
         if not path.exists() and not can_create:
             continue
+        saw_target = True
 
         settings = load_json(path)
-        merge_server(
+        merged = merge_server(
             settings, server_name=args.server_name, server_config=server_config
         )
+        if not merged:
+            print(
+                f"[skip] custom same-key server preserved: {path} ({args.server_name})"
+            )
+            continue
         if not args.no_rules:
             merge_rules(settings, server_name=args.server_name)
 
         updated_any = True
         print(f"[plan] update: {path}")
-        print(json.dumps({"mcpServers": {args.server_name: server_config}}, indent=2))
+        print(
+            json.dumps(
+                {
+                    "mcpServers": {
+                        args.server_name: settings["mcpServers"][args.server_name]
+                    }
+                },
+                indent=2,
+            )
+        )
 
         if args.write:
             ensure_parent(path)
@@ -274,7 +348,7 @@ def main() -> int:
         else:
             print("[dry-run] no changes written (use --write)")
 
-    if not updated_any:
+    if not updated_any and not saw_target:
         print(
             "No Cline settings file found. Re-run with --write to create the CLI settings file at ~/.cline/data/settings/cline_mcp_settings.json",
             file=sys.stderr,

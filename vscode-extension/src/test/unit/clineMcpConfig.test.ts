@@ -58,6 +58,9 @@ describe('clineMcpConfig', () => {
         assert.ok(settings.mcpServers.other);
         assert.ok(settings.mcpServers['asset-aware-mcp']);
         assert.ok(settings.mcpRules.assetAwareDocs.servers.includes('asset-aware-mcp'));
+        for (const trigger of ['文件', '引用', '表格', '圖表', '知識圖譜']) {
+            assert.ok(settings.mcpRules.assetAwareDocs.triggers.includes(trigger));
+        }
     });
 
     it('preserves Cline-local disabled and alwaysAllow metadata on managed entries', () => {
@@ -80,6 +83,32 @@ describe('clineMcpConfig', () => {
         assert.strictEqual(entry.command, '/usr/bin/uv');
         assert.strictEqual(entry.disabled, true);
         assert.deepStrictEqual(entry.alwaysAllow, ['ingest_pdf']);
+    });
+
+    it('preserves custom env metadata while updating managed Cline launch env', () => {
+        fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+        fs.writeFileSync(settingsPath, JSON.stringify({
+            mcpServers: {
+                'asset-aware-mcp': {
+                    command: '/old/uv',
+                    args: ['tool', 'run', 'asset-aware-mcp'],
+                    env: {
+                        DATA_DIR: path.join(tempDir, 'data'),
+                        HTTP_PROXY: 'http://proxy.local:8080',
+                    },
+                },
+            },
+        }, null, 2));
+        (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];
+        fs.writeFileSync(path.join(tempDir, '.env'), 'DATA_DIR=next-data\nOLLAMA_MODEL=from-env\n');
+
+        const updated = installClineMcpServer(context, '/usr/bin/uv');
+
+        assert.strictEqual(updated, true);
+        const entry = readSettings().mcpServers['asset-aware-mcp'];
+        assert.strictEqual(entry.env.HTTP_PROXY, 'http://proxy.local:8080');
+        assert.strictEqual(entry.env.OLLAMA_MODEL, 'from-env');
+        assert.strictEqual(entry.env.DATA_DIR, path.join(tempDir, 'next-data'));
     });
 
     it('does not auto-overwrite a managed Cline DATA_DIR from another workspace', () => {
@@ -172,6 +201,38 @@ describe('clineMcpConfig', () => {
 
         assert.strictEqual(updated, false);
         assert.strictEqual(fs.readFileSync(settingsPath, 'utf-8'), '{ "mcpServers": {');
+        assert.ok(fs.readdirSync(path.dirname(settingsPath)).some((name) => name.includes('.invalid.')));
+    });
+
+    it('skips valid JSON with an invalid Cline settings schema', () => {
+        fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+        const original = JSON.stringify({ mcpServers: [] }, null, 2);
+        fs.writeFileSync(settingsPath, original);
+
+        const updated = installClineMcpServer(context, '/usr/bin/uv');
+
+        assert.strictEqual(updated, false);
+        assert.strictEqual(fs.readFileSync(settingsPath, 'utf-8'), original);
+        assert.ok(fs.readdirSync(path.dirname(settingsPath)).some((name) => name.includes('.invalid.')));
+    });
+
+    it('skips valid JSON with invalid nested Cline server metadata', () => {
+        fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+        const original = JSON.stringify({
+            mcpServers: {
+                'asset-aware-mcp': {
+                    command: '/old/uv',
+                    args: ['tool', 'run', 'asset-aware-mcp'],
+                    env: 'not-an-object',
+                },
+            },
+        }, null, 2);
+        fs.writeFileSync(settingsPath, original);
+
+        const updated = installClineMcpServer(context, '/usr/bin/uv');
+
+        assert.strictEqual(updated, false);
+        assert.strictEqual(fs.readFileSync(settingsPath, 'utf-8'), original);
         assert.ok(fs.readdirSync(path.dirname(settingsPath)).some((name) => name.includes('.invalid.')));
     });
 
