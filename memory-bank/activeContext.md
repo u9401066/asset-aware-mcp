@@ -1,5 +1,13 @@
 # Active Context
 
+## 2026-05-08 - v0.6.26 MCP stdio ingest hotfix
+
+- Preparing `v0.6.26` as a patch on top of the already-pushed `v0.6.25` tag after a Codex-style stdio MCP smoke found that `ingest_documents(async_mode=False, use_marker=False)` could still block on Windows PyMuPDF document-level extractor timeouts.
+- The MCP presentation layer now treats `async_mode=False` for PDF ingest as backwards-compatible input only; all PDF ingest requests return a background job so Cline/Codex/VS Code stdio clients stay responsive.
+- Regression coverage now asserts that sync MCP PDF ingest creates a job, preserves job parameters, skips page-count probes, and never calls inline `document_service.ingest()`.
+- Validation includes focused MCP tool tests, ruff, format, mypy, and a Codex-style stdio MCP client smoke covering initialize, tools/list, `ingest_documents`, `parse_pdf_structure`, `ocr_pdf_document`, disabled knowledge graph responses, and job cancellation.
+- Main worktree full pytest is intentionally polluted by unrelated LLM-wiki/retired harness files; release verification must run from a clean worktree or exact staged scope so those harness drafts are not mixed into the hotfix.
+
 ## 2026-05-08 - v0.6.25 stability release prep
 
 - Preparing `v0.6.25` as a scoped stability release after the Cline timeout and VSIX activation fixes were validated locally.
@@ -36,7 +44,7 @@
 
 ## Current Goals
 
-- Complete the `0.6.25` stability release with memory updates, segmented git commits, full verification, push, and annotated tag publication while leaving unreviewed PDFs/ad-hoc agent drafts unstaged.
+- Complete the `0.6.26` MCP stdio ingest hotfix with exact-path staging, clean-worktree verification, push, and annotated tag publication while leaving unreviewed LLM-wiki harness drafts, repo-assets mirrors, PDFs, ad-hoc agents, and test artifacts unstaged.
 
 - 正在完成 0.6.16 release prep：整合 multi-agent repo review 修正，完成 Marker/LightRAG/PyMuPDF/segmentation/table/DOCX/VSIX/release hygiene 補強，並進行 MEM+GIT+PUSH+TAG 發布。
 

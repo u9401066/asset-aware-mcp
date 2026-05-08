@@ -6,11 +6,12 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.25/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.26/resources/banner.png)
 
-## What's New in v0.6.25
+## What's New in v0.6.26
 
-- **Bounded MCP requests**: `parse_pdf_structure`, `ocr_pdf_document`, and blocking LightRAG ingest paths now return background jobs instead of tying up Cline requests.
+- **Codex/Cline-safe PDF ingest**: `ingest_documents(async_mode=false)` now returns a background job too, preventing small Windows PyMuPDF ingests from tying up stdio MCP requests.
+- **Bounded MCP requests**: `parse_pdf_structure`, `ocr_pdf_document`, and blocking LightRAG ingest paths return background jobs instead of tying up Cline requests.
 - **Worker diagnostics**: isolated ingest workers now preserve per-file logs, traceback details, heartbeat/progress updates, and visible failed-job warnings.
 - **Citation-ready Marker fallback**: layout-only Marker output can synthesize markdown blocks and citation status for evidence-span workflows.
 - **Knowledge graph guardrails**: query and export calls now have request-level timeout guards for stalled LightRAG runtimes.

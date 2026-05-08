@@ -2,6 +2,11 @@
 
 ## 2026-05-08
 
+- Preparing `v0.6.26` hotfix after a Codex-style MCP stdio smoke reproduced an 80-second sync PyMuPDF ingest request for a tiny PDF on Windows.
+- Fixed MCP PDF ingest so `ingest_documents(async_mode=False)` also returns a background job, preserving request responsiveness and leaving actual PyMuPDF work to the isolated worker path.
+- Added regression coverage that sync MCP PDF ingest creates a job, preserves job parameters, skips page-count probes, and never calls inline document ingestion.
+- Verified the repaired stdio path with a Codex-style MCP client smoke: `ingest_documents(async_mode=False)` returned in 0.047s, `parse_pdf_structure` in 0.032s, `ocr_pdf_document` in 0.031s, knowledge graph disabled responses stayed bounded, and all created jobs were cancellable.
+- The dirty main worktree still contains unrelated LLM-wiki/retired harness files that make full pytest fail in harness-boundary tests; they remain intentionally outside the hotfix scope.
 - Preparing `v0.6.25` as a scoped stability release for Cline responsiveness, isolated ingest worker durability, citation-ready Marker fallback artifacts, DOCX/table safety, and VSIX activation/runtime hardening.
 - Fixed blocking MCP paths by routing `parse_pdf_structure` and `ocr_pdf_document` through background jobs, failing synchronous LightRAG indexing closed to a background job, and adding request-level timeout guards to knowledge graph query/export tools.
 - Split citation and worker support into smaller modules: `markdown_block_builder`, `citation_artifacts`, `citation_index_service`, `citation_support`, `worker_runner`, `subprocess_ingest_worker_runner`, and `presentation/ingest_worker_main`.

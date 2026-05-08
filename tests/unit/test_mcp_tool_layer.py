@@ -1381,65 +1381,43 @@ class TestDocumentTools:
             assert "✅" in result
             assert "converted.pptx" in result
 
-    async def test_ingest_documents_sync_reports_context_progress(
+    async def test_ingest_documents_sync_forces_background_job_and_reports_progress(
         self,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """ingest_documents emits MCP progress for synchronous ETL."""
+        """A sync MCP PDF ingest request should not run ETL in the request."""
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"%PDF-1.4 test")
         fake_ctx = MagicMock()
         fake_ctx.report_progress = AsyncMock()
         fake_ctx.log = AsyncMock()
 
-        async def fake_ingest(
-            file_paths,
-            use_marker=False,
-            progress_callback=None,
-            ocr_enabled=False,
-            ocr_language="eng",
-            rotate_pages=False,
-            deskew=False,
-            marker_max_pages_per_chunk=0,
-            extract_figures=True,
-            page_ranges=None,
-        ):
-            assert progress_callback is not None
-            await progress_callback(1, 4, "Extracting", "Extracting test.pdf")
-            await progress_callback(4, 4, "Completed", "Finished test.pdf")
-            return [
-                MagicMock(
-                    success=True,
-                    filename="test.pdf",
-                    doc_id="doc_123",
-                    title="Test",
-                    backend="pymupdf",
-                    pages_processed=1,
-                    tables_found=0,
-                    figures_found=0,
-                    sections_found=0,
-                    processing_time_seconds=0.1,
-                )
-            ]
+        from src.presentation.tools import document_tools
 
-        with patch(
-            "src.presentation.tools.document_tools.document_service"
-        ) as mock_svc:
-            mock_svc.ingest = AsyncMock(side_effect=fake_ingest)
-            from src.presentation.tools import document_tools
+        mock_jobs = MagicMock()
+        mock_jobs.create_ingest_job = AsyncMock(
+            return_value=MagicMock(job_id="job_sync_pdf", estimated_duration_seconds=10)
+        )
+        monkeypatch.setattr(document_tools, "job_service", mock_jobs)
+        mock_service = MagicMock()
+        mock_service.ingest = AsyncMock(
+            side_effect=AssertionError("MCP sync PDF ingest must use a job")
+        )
+        monkeypatch.setattr(document_tools, "document_service", mock_service)
 
-            monkeypatch.setattr(
-                document_tools.pdf_extractor,
-                "get_page_count",
-                MagicMock(return_value=1),
-            )
+        result = await document_tools.ingest_documents(
+            [str(pdf_path)], async_mode=False, ctx=fake_ctx
+        )
 
-            result = await document_tools.ingest_documents(
-                [str(pdf_path)], async_mode=False, ctx=fake_ctx
-            )
-
-        assert "Processed" in result
+        assert "job_sync_pdf" in result
+        assert "background worker" in result
+        mock_jobs.create_ingest_job.assert_awaited_once()
+        _, kwargs = mock_jobs.create_ingest_job.await_args
+        assert kwargs["parameters"]["operation"] == "ingest_documents"
+        assert kwargs["parameters"]["use_marker"] is False
+        assert kwargs["parameters"]["page_ranges"] == []
+        mock_service.ingest.assert_not_awaited()
         assert fake_ctx.report_progress.await_count >= 3
         assert fake_ctx.log.await_count >= 2
 
@@ -1499,22 +1477,25 @@ class TestDocumentTools:
         assert "job_async_marker" in result
         mock_jobs.create_ingest_job.assert_awaited_once()
 
-    async def test_ingest_documents_sync_uncountable_pdf_forces_background_job(
+    async def test_ingest_documents_sync_pdf_skips_page_count_before_background_job(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """If page counting fails, the sync path must fail safe to a job."""
+        """The sync MCP path should not probe PDF pages before job creation."""
         from src.presentation.tools import document_tools
 
+        page_count = MagicMock(
+            side_effect=AssertionError("page counting belongs in the job")
+        )
         monkeypatch.setattr(
             document_tools.pdf_extractor,
             "get_page_count",
-            MagicMock(side_effect=RuntimeError("cannot count")),
+            page_count,
         )
         mock_jobs = MagicMock()
         mock_jobs.create_ingest_job = AsyncMock(
             return_value=MagicMock(
-                job_id="job_uncountable", estimated_duration_seconds=10
+                job_id="job_no_page_probe", estimated_duration_seconds=10
             )
         )
         monkeypatch.setattr(document_tools, "job_service", mock_jobs)
@@ -1529,29 +1510,33 @@ class TestDocumentTools:
             async_mode=False,
         )
 
-        assert "job_uncountable" in result
+        assert "job_no_page_probe" in result
         mock_jobs.create_ingest_job.assert_awaited_once()
+        page_count.assert_not_called()
 
-    async def test_ingest_documents_sync_large_pdf_forces_background_job(
+    async def test_ingest_documents_sync_pdf_never_counts_pages_in_request(
         self,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """Large PDFs should not run in the synchronous MCP request path."""
-        pdf_path = tmp_path / "large.pdf"
+        """Sync PDF ingest should skip page-count probes and create a job."""
+        pdf_path = tmp_path / "small.pdf"
         pdf_path.write_bytes(b"%PDF-1.4 test")
 
         from src.presentation.tools import document_tools
 
-        monkeypatch.setattr(document_tools, "SYNC_INGEST_FILE_SIZE_MB_LIMIT", 0)
+        page_count = MagicMock(
+            side_effect=AssertionError("page counting belongs in the job")
+        )
+        monkeypatch.setattr(document_tools.pdf_extractor, "get_page_count", page_count)
         mock_jobs = MagicMock()
         mock_jobs.create_ingest_job = AsyncMock(
-            return_value=MagicMock(job_id="job_large", estimated_duration_seconds=10)
+            return_value=MagicMock(job_id="job_sync_pdf", estimated_duration_seconds=10)
         )
         monkeypatch.setattr(document_tools, "job_service", mock_jobs)
         mock_service = MagicMock()
         mock_service.ingest = AsyncMock(
-            side_effect=AssertionError("large PDFs should not run synchronously")
+            side_effect=AssertionError("PDFs should not run synchronously")
         )
         monkeypatch.setattr(document_tools, "document_service", mock_service)
 
@@ -1560,15 +1545,16 @@ class TestDocumentTools:
             async_mode=False,
         )
 
-        assert "job_large" in result
+        assert "job_sync_pdf" in result
         mock_jobs.create_ingest_job.assert_awaited_once()
+        page_count.assert_not_called()
 
-    async def test_ingest_documents_sync_lightrag_forces_background_job(
+    async def test_ingest_documents_sync_lightrag_does_not_inline_indexing(
         self,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """LightRAG indexing should not run in the synchronous MCP request."""
+        """LightRAG indexing stays out of the synchronous MCP request path."""
         pdf_path = tmp_path / "kg.pdf"
         pdf_path.write_bytes(b"%PDF-1.4 test")
 

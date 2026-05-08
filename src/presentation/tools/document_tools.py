@@ -22,10 +22,7 @@ from typing import TYPE_CHECKING, Any
 
 from mcp.types import ImageContent, TextContent
 
-from src.application.document_service import (
-    build_page_number_map,
-    normalize_page_ranges,
-)
+from src.application.document_service import normalize_page_ranges
 from src.application.output_paths import (
     resolve_document_output_path,
 )
@@ -59,9 +56,6 @@ if TYPE_CHECKING:
 else:
     Context = Any
 
-SYNC_INGEST_PAGE_LIMIT = 10
-SYNC_INGEST_FILE_SIZE_MB_LIMIT = 200
-
 
 def _normalize_op(op: str) -> str:
     return op.strip().lower().replace("-", "_")
@@ -76,18 +70,6 @@ def _missing_document_param(name: str) -> str:
     return f"Missing required parameter: {name} is required."
 
 
-def _count_requested_pages(file_path: str, page_ranges: list[str] | None) -> int:
-    """Return requested page count for timeout-safe sync-ingest routing."""
-    try:
-        total_pages = pdf_extractor.get_page_count(Path(file_path))
-        normalized_page_ranges = normalize_page_ranges(page_ranges, total_pages)
-    except Exception:
-        return SYNC_INGEST_PAGE_LIMIT + 1
-    if not normalized_page_ranges:
-        return total_pages
-    return len(build_page_number_map(normalized_page_ranges))
-
-
 def _should_force_background_ingest(
     file_paths: list[str],
     *,
@@ -97,46 +79,15 @@ def _should_force_background_ingest(
 ) -> tuple[bool, str]:
     """Decide whether sync ingestion should become a background job.
 
-    Cline/stdio MCP requests have a finite request timeout. Full-PDF OCR,
-    Marker, image extraction, or multi-file ingestion can outlive that timeout
-    and make the client consider the server unavailable. In those cases, return
-    a job id immediately and let callers poll with get_job_status.
+    Cline/stdio MCP requests have a finite request timeout. Even small PyMuPDF
+    ingests can hit document-level extractor timeouts on Windows when the MCP
+    server is launched through stdio, so the presentation layer should return a
+    job id immediately and let callers poll with get_job_status.
     """
-    if len(file_paths) > 1:
-        return True, "multiple files are safer as a background job"
-    if use_marker:
-        return True, "Marker parsing can exceed the MCP request timeout"
-    if ocr_enabled:
-        return True, "OCR preprocessing can exceed the MCP request timeout"
-    knowledge_graph = getattr(document_service, "knowledge_graph", None)
-    if (
-        knowledge_graph is not None
-        and getattr(knowledge_graph, "is_available", False) is True
-    ):
-        return True, "LightRAG indexing can exceed the MCP request timeout"
-
-    for file_path in file_paths:
-        try:
-            file_size_mb = Path(file_path).stat().st_size / (1024 * 1024)
-        except OSError:
-            continue
-        if file_size_mb > SYNC_INGEST_FILE_SIZE_MB_LIMIT:
-            return (
-                True,
-                f"file size ({file_size_mb:.1f} MB) exceeds sync limit "
-                f"({SYNC_INGEST_FILE_SIZE_MB_LIMIT} MB)",
-            )
-
-    requested_pages = sum(
-        _count_requested_pages(file_path, page_ranges) for file_path in file_paths
+    return True, (
+        "PDF ingestion runs in the background worker to avoid MCP stdio "
+        "request timeouts"
     )
-    if requested_pages > SYNC_INGEST_PAGE_LIMIT:
-        return (
-            True,
-            f"requested page count ({requested_pages}) exceeds sync limit "
-            f"({SYNC_INGEST_PAGE_LIMIT})",
-        )
-    return False, ""
 
 
 def _ingest_job_parameters(
@@ -560,8 +511,9 @@ async def ingest_documents(
 
     Args:
         file_paths: List of absolute paths to PDF files
-        async_mode: If True (default), returns immediately with a job_id for tracking.
-                   If False, waits for completion (may timeout for large files).
+        async_mode: Kept for backwards compatibility. PDF ingestion is routed
+                   to a background job from the MCP tool layer to keep stdio
+                   clients responsive.
         use_marker: If True, use Marker for structured parsing (slower but more accurate).
                    Produces blocks.json with bbox/coordinates for precise source tracking.
                    Default False uses PyMuPDF (faster but less structured).
@@ -572,17 +524,13 @@ async def ingest_documents(
         page_ranges: 1-indexed inclusive page ranges applied to every input file, e.g. ["1-50", "120-160"].
 
     Returns:
-        - async_mode=True: Job ID for tracking progress with `get_job_status`
-        - async_mode=False: Summary of ingestion results
+        Job ID for tracking progress with `get_job_status`.
 
     Example:
         # Async (recommended for large files):
         ingest_documents(["/papers/study1.pdf"])
         # Then check status:
         get_job_status("job_xxx")
-
-        # Sync (small files only):
-        ingest_documents(["/papers/small.pdf"], async_mode=False)
 
         # With Marker for precise source tracking:
         ingest_documents(["/papers/textbook.pdf"], use_marker=True)

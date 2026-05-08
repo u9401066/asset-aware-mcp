@@ -7,6 +7,15 @@
 
 ## [Unreleased]
 
+## [0.6.26] - 2026-05-08
+
+### Fixed
+
+- **Codex/Cline stdio MCP ingest**
+  - `ingest_documents(async_mode=false)` now also fails closed to a background job from the MCP presentation layer, preventing small Windows PyMuPDF ingests from spending the full request budget inside document-level extractor timeouts.
+  - Added regression coverage that sync MCP PDF ingest does not call inline `document_service.ingest()` or page-count probes before creating a job.
+  - Verified the fix with a Codex-style stdio MCP client smoke: initialize, tools/list, `ingest_documents`, `parse_pdf_structure`, `ocr_pdf_document`, knowledge graph disabled responses, and job cancellation all returned within bounded request times.
+
 ## [0.6.25] - 2026-05-08
 
 ### Fixed
