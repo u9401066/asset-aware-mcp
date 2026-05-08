@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import inspect
+import logging
 import re
 import shutil
 import time
@@ -16,6 +17,12 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+from src.application.citation_artifacts import (
+    empty_citation_reason,
+    remove_citation_index,
+    save_citation_status,
+)
+from src.application.markdown_block_builder import build_markdown_blocks
 from src.application.output_paths import resolve_document_output_path
 from src.domain.citation import build_evidence_spans
 from src.domain.entities import (
@@ -54,6 +61,7 @@ ToolProgressCallback = Callable[[int, int, str, str], Awaitable[None] | None]
 PageRange = tuple[int, int]
 
 _PAGE_MARKER_RE = re.compile(r"<!-- Page (\d+) -->")
+logger = logging.getLogger(__name__)
 
 
 def format_page_ranges(page_ranges: list[PageRange] | tuple[PageRange, ...]) -> str:
@@ -253,10 +261,11 @@ class DocumentService:
         self.ocr_processor = ocr_processor
 
         # Resolve profile: explicit > from extractor > default
+        extractor_profile = getattr(pdf_extractor, "profile", None)
         if profile is not None:
             resolved_profile = profile
-        elif hasattr(pdf_extractor, "profile"):
-            resolved_profile = pdf_extractor.profile
+        elif isinstance(extractor_profile, ETLProfile):
+            resolved_profile = extractor_profile
         else:
             resolved_profile = ETLProfile.default()
 
@@ -599,7 +608,8 @@ class DocumentService:
 
             # Step 7: Save manifest
             self.repository.save_manifest(manifest)
-            blocks_data = self._build_pymupdf_blocks(markdown, manifest)
+            blocks_data = build_markdown_blocks(markdown, manifest)
+            segmentation_warnings: list[str] = []
             if blocks_data:
                 self._save_blocks_json(doc_id.value, blocks_data)
                 self._save_citation_index(
@@ -607,6 +617,10 @@ class DocumentService:
                     markdown,
                     blocks_data,
                     source_backend="pymupdf",
+                )
+                await self._save_segmentation_artifact(
+                    doc_id.value,
+                    segmentation_warnings,
                 )
             await _invoke_progress_callback(
                 progress_callback,
@@ -629,6 +643,7 @@ class DocumentService:
                 figures_found=len(manifest.assets.figures),
                 sections_found=len(manifest.assets.sections),
                 processing_time_seconds=processing_time,
+                warnings=segmentation_warnings,
             )
 
         except Exception as e:
@@ -759,6 +774,22 @@ class DocumentService:
                 reported_page_count=reported_page_count if page_map else None,
             )
             current_step += 1
+            warnings: list[str] = []
+            if not str(parse_result.markdown or "").strip():
+                return IngestResult(
+                    doc_id=doc_id.value,
+                    filename=path.name,
+                    success=False,
+                    error=(
+                        "Marker returned empty markdown; retry with OCR enabled "
+                        "or use the PyMuPDF backend."
+                    ),
+                    backend="marker",
+                    warnings=[
+                        "Marker returned empty markdown before citation artifacts "
+                        "could be created."
+                    ],
+                )
 
             # Step 2: Save markdown
             await _invoke_progress_callback(
@@ -777,22 +808,15 @@ class DocumentService:
             )
             current_step += 1
 
-            # Step 3: Save blocks.json (structured data)
+            # Step 3: Prepare blocks.json (structured data)
             await _invoke_progress_callback(
                 progress_callback,
                 current_step,
                 total_steps,
-                "Saving Blocks",
-                f"Saving structured blocks for {path.name}",
+                "Preparing Blocks",
+                f"Preparing structured blocks for {path.name}",
             )
             blocks_data = self._convert_blocks_to_json(parse_result.blocks)
-            self._save_blocks_json(doc_id.value, blocks_data)
-            self._save_citation_index(
-                doc_id.value,
-                parse_result.markdown,
-                blocks_data,
-                source_backend="marker",
-            )
             current_step += 1
 
             # Step 4: Extract and save images from Marker result
@@ -891,7 +915,27 @@ class DocumentService:
             )
 
             # Step 10: Save manifest
+            citation_backend = "marker"
+            if self._marker_blocks_need_markdown_fallback(blocks_data, manifest):
+                citation_backend = "marker_markdown_fallback"
+                blocks_data = build_markdown_blocks(
+                    parse_result.markdown,
+                    manifest,
+                    source_backend=citation_backend,
+                )
+                warnings.append(
+                    "Marker emitted non-citeable layout blocks; synthesized "
+                    "markdown-based blocks for citation and segmentation."
+                )
             self.repository.save_manifest(manifest)
+            self._save_blocks_json(doc_id.value, blocks_data)
+            self._save_citation_index(
+                doc_id.value,
+                parse_result.markdown,
+                blocks_data,
+                source_backend=citation_backend,
+            )
+            await self._save_segmentation_artifact(doc_id.value, warnings)
             await _invoke_progress_callback(
                 progress_callback,
                 total_steps,
@@ -909,11 +953,12 @@ class DocumentService:
                 success=True,
                 manifest=manifest,
                 pages_processed=processed_page_count,
-                tables_found=len(tables),
-                figures_found=len(figures),
-                sections_found=len(sections),
+                tables_found=len(manifest.assets.tables),
+                figures_found=len(manifest.assets.figures),
+                sections_found=len(manifest.assets.sections),
                 processing_time_seconds=processing_time,
                 backend="marker",  # Indicate which backend was used
+                warnings=warnings,
             )
 
         except Exception as e:
@@ -987,7 +1032,7 @@ class DocumentService:
         blocks_data: list[dict[str, Any]],
         *,
         source_backend: str,
-    ) -> Path:
+    ) -> Path | None:
         """Build and persist citation-ready spans for downstream references."""
         spans = build_evidence_spans(
             doc_id=doc_id,
@@ -995,203 +1040,69 @@ class DocumentService:
             blocks=blocks_data,
             source_backend=source_backend,
         )
+        try:
+            save_citation_status(
+                self.repository,
+                doc_id,
+                source_backend=source_backend,
+                found=len(spans),
+                reason="" if spans else empty_citation_reason(blocks_data),
+            )
+        except Exception:
+            logger.warning(
+                "Failed to save citation extraction status for %s",
+                doc_id,
+                exc_info=True,
+            )
+        if not spans:
+            try:
+                remove_citation_index(self.repository, doc_id)
+            except Exception:
+                logger.warning(
+                    "Failed to remove empty citation index for %s",
+                    doc_id,
+                    exc_info=True,
+                )
+            return None
         return self.repository.save_citation_index(doc_id, spans)
 
-    def _build_pymupdf_blocks(
-        self,
-        markdown: str,
+    @staticmethod
+    def _marker_blocks_need_markdown_fallback(
+        blocks_data: list[dict[str, Any]],
         manifest: DocumentManifest,
-    ) -> list[dict[str, Any]]:
-        """
-        Synthesize structured blocks for non-Marker ingests.
-
-        PyMuPDF mode does not emit native layout blocks, but the downstream
-        textbook workflows still require searchable blocks.json entries with
-        persisted line metadata. We derive paragraph/header blocks directly
-        from markdown and enrich them with section hierarchy plus any figure
-        or table assets that already carry line spans.
-        """
-        index = MarkdownLineSpanIndex(markdown)
-        lines = markdown.splitlines()
-        section_lookup = {section.start_line: section for section in index.sections}
-        blocks: list[dict[str, Any]] = []
-        block_order = 0
-        text_counter = 0
-        current_page = 1
-        line_index = 0
-
-        while line_index < len(lines):
-            raw_line = lines[line_index]
-            page_match = re.search(r"<!-- Page (\d+) -->", raw_line)
-            if page_match:
-                current_page = int(page_match.group(1))
-                line_index += 1
-                continue
-
-            stripped = raw_line.strip()
-            if not stripped:
-                line_index += 1
-                continue
-
-            section = section_lookup.get(line_index)
-            if section is not None:
-                block_order += 1
-                blocks.append(
-                    self._make_block_dict(
-                        block_id=f"md_sec_{len(blocks) + 1}",
-                        block_type="SectionHeader",
-                        page=current_page,
-                        text=section.title,
-                        line_start=section.start_line,
-                        line_end=min(section.start_line + 1, len(lines)),
-                        section_hierarchy=self._section_hierarchy_for_line(
-                            index.sections,
-                            section.start_line,
-                        ),
-                        source_order=block_order,
-                    )
-                )
-                line_index += 1
-                continue
-
-            start_line = line_index
-            paragraph_lines: list[str] = []
-            while line_index < len(lines):
-                candidate = lines[line_index]
-                if re.search(r"<!-- Page (\d+) -->", candidate):
-                    break
-                if not candidate.strip():
-                    break
-                if line_index in section_lookup:
-                    break
-                paragraph_lines.append(candidate.strip())
-                line_index += 1
-
-            paragraph_text = "\n".join(paragraph_lines).strip()
-            if paragraph_text:
-                block_order += 1
-                text_counter += 1
-                blocks.append(
-                    self._make_block_dict(
-                        block_id=f"md_txt_{text_counter}",
-                        block_type="Text",
-                        page=current_page,
-                        text=paragraph_text,
-                        line_start=start_line,
-                        line_end=line_index,
-                        section_hierarchy=self._section_hierarchy_for_line(
-                            index.sections,
-                            start_line,
-                        ),
-                        source_order=block_order,
-                    )
-                )
-
-            if line_index == start_line:
-                line_index += 1
-
-        for table in sorted(
-            manifest.assets.tables,
-            key=lambda item: (item.page, item.line_start or 0, item.id),
-        ):
-            if table.line_start is None or table.line_end is None:
-                continue
-            block_order += 1
-            blocks.append(
-                self._make_block_dict(
-                    block_id=table.source_block_id or f"asset_{table.id}",
-                    block_type="Table",
-                    page=table.page,
-                    text=table.markdown or table.preview or table.caption,
-                    line_start=table.line_start,
-                    line_end=table.line_end,
-                    section_hierarchy=self._section_hierarchy_for_line(
-                        index.sections,
-                        table.line_start,
-                    ),
-                    source_order=max(block_order, table.source_order or 0),
-                )
-            )
-
-        for figure in sorted(
-            manifest.assets.figures,
-            key=lambda item: (item.page, item.line_start or 0, item.id),
-        ):
-            if figure.line_start is None or figure.line_end is None:
-                continue
-            block_order += 1
-            blocks.append(
-                self._make_block_dict(
-                    block_id=figure.source_block_id or f"asset_{figure.id}",
-                    block_type="Figure",
-                    page=figure.page,
-                    text=figure.caption or figure.id,
-                    line_start=figure.line_start,
-                    line_end=figure.line_end,
-                    section_hierarchy=self._section_hierarchy_for_line(
-                        index.sections,
-                        figure.line_start,
-                    ),
-                    source_order=max(block_order, figure.source_order or 0),
-                )
-            )
-
-        blocks.sort(
-            key=lambda item: (
-                int(item.get("page") or 0),
-                int(((item.get("metadata") or {}).get("line_start")) or 0),
-                float(((item.get("metadata") or {}).get("source_order")) or 0),
-                str(item.get("block_id") or ""),
-            )
-        )
-        return blocks
-
-    @staticmethod
-    def _make_block_dict(
-        *,
-        block_id: str,
-        block_type: str,
-        page: int,
-        text: str,
-        line_start: int,
-        line_end: int,
-        section_hierarchy: dict[str, str],
-        source_order: int,
-    ) -> dict[str, Any]:
-        return {
-            "block_id": block_id,
-            "block_type": block_type,
-            "page": int(page or 1),
-            "text": text,
-            "bbox": [],
-            "polygon": [],
-            "section_hierarchy": section_hierarchy,
-            "metadata": {
-                "line_start": line_start,
-                "line_end": line_end,
-                "line_match_strategy": "markdown-struct",
-                "line_match_confidence": 1.0,
-                "source_backend": "pymupdf",
-                "source_order": source_order,
-            },
+    ) -> bool:
+        if not blocks_data:
+            return True
+        meaningful_types = {
+            str(block.get("block_type") or "").lower() for block in blocks_data
         }
+        has_text = any(str(block.get("text") or "").strip() for block in blocks_data)
+        if not has_text:
+            return True
+        if manifest.assets.sections and "sectionheader" not in meaningful_types:
+            return True
+        if manifest.assets.tables and "table" not in meaningful_types:
+            return True
+        return meaningful_types <= {"markdownoutput"}
 
-    @staticmethod
-    def _section_hierarchy_for_line(
-        sections: list[Any],
-        line_number: int,
-    ) -> dict[str, str]:
-        containing = [
-            section
-            for section in sections
-            if section.start_line <= line_number < section.end_line
-        ]
-        containing.sort(key=lambda section: (section.level, section.start_line))
-        return {
-            str(index + 1): str(section.title)
-            for index, section in enumerate(containing)
-            if str(section.title).strip()
-        }
+    async def _save_segmentation_artifact(
+        self,
+        doc_id: str,
+        warnings: list[str],
+    ) -> None:
+        try:
+            from src.application.segmentation_service import SegmentationService
+
+            await SegmentationService(self.repository).save_document_segmentation(
+                doc_id
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to save segmentation artifact for %s",
+                doc_id,
+                exc_info=True,
+            )
+            warnings.append(f"Segmentation export skipped: {exc}")
 
     def _save_original_pdf_copy(self, doc_id: str, source_path: Path) -> None:
         """Persist the original PDF for overlay inspection and downstream tooling."""
@@ -1457,6 +1368,9 @@ class DocumentService:
         markdown: str,
     ) -> list[SectionAsset]:
         """Convert Marker TOC to SectionAsset list."""
+        if not toc:
+            return self.manifest_generator._parse_sections(markdown)
+
         sections = []
         existing_ids: set[str] = set()
         line_index = MarkdownLineSpanIndex(markdown)

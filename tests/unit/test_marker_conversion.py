@@ -271,6 +271,18 @@ Procedure
         sections = mock_service._extract_sections_from_toc([], "")
         assert sections == []
 
+    def test_empty_toc_with_markdown_headings_yields_sections(
+        self, mock_service: DocumentService
+    ):
+        sections = mock_service._extract_sections_from_toc(
+            [],
+            "# Abstract\n\nIntro\n\n<!-- Page 2 -->\n## Methods\n\nDetails\n",
+        )
+
+        assert [section.title for section in sections] == ["Abstract", "Methods"]
+        assert sections[0].start_line == 0
+        assert sections[1].page == 2
+
     def test_section_ids_sequential(self, mock_service: DocumentService):
         """Section IDs 按順序編號。"""
         toc = [

@@ -29,6 +29,9 @@ from src.infrastructure.layout_visualizer import LayoutVisualizer
 from src.infrastructure.lightrag_adapter import LightRAGAdapter
 from src.infrastructure.ocr_processor import OCRProcessor
 from src.infrastructure.pdf_extractor import PyMuPDFExtractor
+from src.infrastructure.subprocess_ingest_worker_runner import (
+    SubprocessIngestWorkerRunner,
+)
 
 if TYPE_CHECKING:
     from src.infrastructure.marker_adapter import MarkerPDFExtractor
@@ -57,6 +60,7 @@ job_store = FileJobStore(settings.data_dir)
 excel_renderer = ExcelRenderer(settings.table_output_dir)
 layout_visualizer = LayoutVisualizer()
 ocr_processor = OCRProcessor()
+ingest_worker_runner = SubprocessIngestWorkerRunner(job_store=job_store)
 
 # ============================================================================
 # Application Services
@@ -71,7 +75,11 @@ document_service = DocumentService(
 )
 asset_service = AssetService(repository=repository)
 knowledge_service = KnowledgeService(knowledge_graph=knowledge_graph)
-job_service = JobService(job_store=job_store, document_service=document_service)
+job_service = JobService(
+    job_store=job_store,
+    document_service=document_service,
+    ingest_worker_runner=ingest_worker_runner,
+)
 segmentation_service = SegmentationService(repository=repository)
 section_service = SectionService(repository=repository)
 table_service = TableService(

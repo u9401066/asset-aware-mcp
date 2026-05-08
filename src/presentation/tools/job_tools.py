@@ -129,6 +129,10 @@ async def get_job_status(job_id: str) -> str:
         lines.append("\n**Failed Files:**")
         for item in job.result["failed_files"]:
             lines.append(f"  - `{item.get('file', '')}`: {item.get('error', '')}")
+            warnings = item.get("warnings")
+            if isinstance(warnings, list) and warnings:
+                for warning in warnings:
+                    lines.append(f"    - warning: {warning}")
 
     if job.result and job.result.get("warnings"):
         lines.append("\n**Warnings:**")

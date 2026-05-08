@@ -17,43 +17,24 @@ from __future__ import annotations
 
 import hashlib
 import json
-import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from mcp.types import ImageContent, TextContent
 
 from src.application.document_service import (
-    build_doc_id_unique_suffix,
     build_page_number_map,
-    format_page_ranges,
-    materialize_pdf_page_subset,
     normalize_page_ranges,
 )
 from src.application.output_paths import (
-    resolve_document_output_dir,
     resolve_document_output_path,
 )
-from src.domain.citation import (
-    LOCATOR_VERSION,
-    EvidenceSpan,
-    blocks_locator_sha256,
-    build_evidence_spans,
-)
-from src.domain.marker_errors import (
-    MarkerBackendUnavailable,
-    format_marker_failure,
-    is_marker_backend_unavailable,
-    is_marker_resource_error,
-)
-from src.infrastructure.config import settings
 from src.presentation.dependencies import (
     asset_service,
     document_service,
     get_marker_extractor,
     job_service,
     layout_visualizer,
-    ocr_processor,
     pdf_extractor,
     repository,
     segmentation_service,
@@ -63,6 +44,14 @@ from src.presentation.mcp_context import (
     create_subrange_progress_callback,
     log_message,
     report_progress,
+)
+from src.presentation.tools.citation_support import (
+    asset_ref_from_span,
+    coerce_range,
+    display_line_range,
+    format_line_range,
+    load_citation_status,
+    load_or_build_evidence_spans,
 )
 
 if TYPE_CHECKING:
@@ -119,6 +108,12 @@ def _should_force_background_ingest(
         return True, "Marker parsing can exceed the MCP request timeout"
     if ocr_enabled:
         return True, "OCR preprocessing can exceed the MCP request timeout"
+    knowledge_graph = getattr(document_service, "knowledge_graph", None)
+    if (
+        knowledge_graph is not None
+        and getattr(knowledge_graph, "is_available", False) is True
+    ):
+        return True, "LightRAG indexing can exceed the MCP request timeout"
 
     for file_path in file_paths:
         try:
@@ -138,7 +133,8 @@ def _should_force_background_ingest(
     if requested_pages > SYNC_INGEST_PAGE_LIMIT:
         return (
             True,
-            f"requested page count ({requested_pages}) exceeds sync limit ({SYNC_INGEST_PAGE_LIMIT})",
+            f"requested page count ({requested_pages}) exceeds sync limit "
+            f"({SYNC_INGEST_PAGE_LIMIT})",
         )
     return False, ""
 
@@ -236,97 +232,6 @@ async def _create_ingest_job_response(
     return "\n".join(lines)
 
 
-def _display_line_range(start_line: int, end_line: int) -> str:
-    if start_line < 0 or end_line < 0 or end_line < start_line:
-        return "L?"
-    return f"L{start_line + 1}-{end_line}"
-
-
-def _format_line_range(start_line: int | None, end_line: int | None) -> str | None:
-    if (
-        start_line is None
-        or end_line is None
-        or start_line < 0
-        or end_line < start_line
-    ):
-        return None
-    return _display_line_range(start_line, end_line)
-
-
-def _coerce_range(value: Any) -> list[int | None] | None:
-    if not isinstance(value, (list, tuple)) or len(value) != 2:
-        return None
-    coerced: list[int | None] = []
-    for item in value:
-        if item is None:
-            coerced.append(None)
-        elif isinstance(item, int):
-            coerced.append(item)
-        else:
-            return None
-    return coerced
-
-
-def _asset_ref_from_span(span: EvidenceSpan) -> dict[str, Any]:
-    ref: dict[str, Any] = {
-        "source_type": "span",
-        "doc_id": span.doc_id,
-        "span_id": span.span_id,
-        "block_id": span.block_id,
-        "page": span.page,
-        "source_revision_id": span.source_revision_id,
-        "locator_version": span.locator_version,
-        "locator_source_sha256": span.locator_source_sha256,
-        "quote": span.text,
-        "quote_sha256": span.text_sha256,
-        "excerpt": span.text[:200],
-        "craap": span.craap.model_dump(exclude_none=True),
-    }
-    if span.asset_id:
-        ref["asset_id"] = span.asset_id
-    if span.line_start is not None and span.line_end is not None:
-        ref["line_range"] = [span.line_start, span.line_end]
-    if span.char_start is not None and span.char_end is not None:
-        ref["char_range"] = [span.char_start, span.char_end]
-    if span.byte_start is not None and span.byte_end is not None:
-        ref["byte_range"] = [span.byte_start, span.byte_end]
-    if span.bbox:
-        ref["bbox"] = span.bbox
-    return ref
-
-
-def _load_or_build_evidence_spans(doc_id: str) -> list[EvidenceSpan]:
-    spans = repository.load_citation_index(doc_id)
-    markdown = repository.load_markdown(doc_id)
-    blocks = repository.load_blocks(doc_id)
-    markdown = markdown if isinstance(markdown, str) else ""
-
-    if spans and not markdown:
-        return []
-    if spans and markdown and blocks is not None:
-        source_revision_id = hashlib.sha256(markdown.encode("utf-8")).hexdigest()
-        locator_source_sha256 = blocks_locator_sha256(blocks)
-        if all(
-            span.source_revision_id == source_revision_id
-            and span.locator_version == LOCATOR_VERSION
-            and span.locator_source_sha256 == locator_source_sha256
-            for span in spans
-        ):
-            return spans
-
-    if not markdown or blocks is None:
-        return []
-
-    spans = build_evidence_spans(
-        doc_id=doc_id,
-        markdown=markdown,
-        blocks=blocks,
-        source_backend="unknown",
-    )
-    repository.save_citation_index(doc_id, spans)
-    return spans
-
-
 @mcp.tool()
 async def parse_pdf_structure(
     pdf_path: str,
@@ -341,38 +246,7 @@ async def parse_pdf_structure(
     page_ranges: list[str] | None = None,
     ctx: Context | None = None,
 ) -> str:
-    """
-    使用 Marker 進行結構化 PDF 解析（高精度）。
-
-    比標準 ingest_documents 提供更豐富的結構資訊：
-    - Block-level 解析（每個區塊的 bbox/polygon）
-    - 目錄 (TOC) 自動提取
-    - Section hierarchy 追蹤
-    - 圖片 + 圖說 (caption) 關聯
-
-    輸出目錄結構：
-    ```
-    data/{doc_id}/
-    ├── manifest.json    # DocumentManifest
-    ├── content.md       # Markdown 全文
-    ├── blocks.json      # 結構化區塊資料
-    └── figures/         # 圖片檔案
-    ```
-
-    Args:
-        pdf_path: PDF 檔案的絕對路徑
-        output_dir: 輸出目錄（預設為 data/{doc_id}/）
-        marker_max_pages_per_chunk: 每個 Marker chunk 的最大頁數；0 表示使用安全自動策略
-        extract_figures: 是否輸出 figures/ 與 FigureAsset；大型檔建議可先關閉
-        page_ranges: 指定要攝入的頁段，例如 ["1-50", "120-160"]
-
-    Returns:
-        解析結果摘要和 doc_id
-    """
-    import time
-    from pathlib import Path
-
-    start = time.time()
+    """Create a background Marker parse job for a PDF."""
     pdf_file = Path(pdf_path)
 
     await log_message(ctx, "info", f"parse_pdf_structure start: {pdf_path}")
@@ -381,184 +255,46 @@ async def parse_pdf_structure(
     if not pdf_file.exists():
         return f"❌ File not found: {pdf_path}"
 
-    if async_mode:
-        return await _create_ingest_job_response(
-            [pdf_path],
-            use_marker=True,
-            ocr_enabled=ocr_enabled,
-            ocr_language=ocr_language,
-            rotate_pages=rotate_pages,
-            deskew=deskew,
-            marker_max_pages_per_chunk=marker_max_pages_per_chunk,
-            extract_figures=extract_figures,
-            page_ranges=page_ranges,
-            ctx=ctx,
-            forced_reason=(
-                "parse_pdf_structure uses Marker and is routed through the "
-                "background job system to avoid MCP stdio request timeouts"
-            ),
-            title="PDF Structure Parse Job Created",
-            operation="parse_pdf_structure",
-            require_marker=True,
-        )
-
     try:
-        total_page_count = pdf_extractor.get_page_count(pdf_file)
-        normalized_page_ranges = normalize_page_ranges(page_ranges, total_page_count)
-        page_map = build_page_number_map(normalized_page_ranges)
+        if page_ranges:
+            total_page_count = pdf_extractor.get_page_count(pdf_file)
+            normalize_page_ranges(page_ranges, total_page_count)
     except Exception as e:
         await log_message(ctx, "error", f"parse_pdf_structure invalid input: {e}")
         return f"❌ Invalid PDF or page range: {e!s}"
 
-    from src.domain.value_objects import DocId
-
-    doc_id_obj = DocId.generate(
-        pdf_file.stem,
-        build_doc_id_unique_suffix(pdf_file, normalized_page_ranges),
-    )
-    try:
-        out_path = resolve_document_output_dir(
-            settings.data_dir,
-            output_dir,
-            default_name=doc_id_obj.value,
-        )
-    except ValueError as e:
-        return f"❌ {e!s}"
-
-    try:
-        shutil.copy2(pdf_file, out_path / "original.pdf")
-
-        active_pdf = pdf_file
-        if normalized_page_ranges:
-            active_pdf = materialize_pdf_page_subset(
-                pdf_file,
-                out_path / "selected_pages.pdf",
-                normalized_page_ranges,
-            )
-
-        if ocr_enabled:
-            await report_progress(
-                ctx, 15, message=f"Running OCR preprocessing for {pdf_file.name}"
-            )
-            if ocr_processor is None:
-                return "❌ OCR processor not configured."
-            active_pdf = ocr_processor.preprocess_pdf(
-                active_pdf,
-                out_path / "ocr_processed.pdf",
-                language=ocr_language,
-                rotate_pages=rotate_pages,
-                deskew=deskew,
-            ).output_path
-
-        await report_progress(
-            ctx, 25, message=f"Loading Marker extractor for {pdf_file.name}"
-        )
-        extractor = get_marker_extractor()
-        await report_progress(
-            ctx,
-            45,
-            message=f"Loading Marker models and parsing structure from {pdf_file.name}",
-        )
-        parse_result = extractor.parse(
-            active_pdf,
-            extract_images=extract_figures,
-            max_pages_per_chunk=(
-                marker_max_pages_per_chunk if marker_max_pages_per_chunk > 0 else None
-            ),
-            page_map=page_map or None,
-            reported_page_count=total_page_count if page_map else None,
-        )
-        manifest = extractor.convert_to_manifest(
-            parse_result,
-            pdf_file,
-            out_path,
-            doc_id=doc_id_obj.value,
-        )
-        await report_progress(ctx, 90, message=f"Finalizing assets for {pdf_file.name}")
-
-        segmentation_path = ""
-        try:
-            if out_path.is_relative_to(settings.data_dir):
-                segmentation_file = (
-                    await segmentation_service.save_document_segmentation(
-                        manifest.doc_id
-                    )
-                )
-                segmentation_path = str(segmentation_file)
-        except Exception as e:
-            await log_message(
-                ctx,
-                "warning",
-                f"parse_pdf_structure segmentation skipped for {manifest.doc_id}: {e}",
-            )
-            segmentation_path = ""
-
-        elapsed = time.time() - start
-
-        lines = [
-            "# ✅ PDF Structure Parsed (Marker)",
-            "",
-            f"**doc_id:** `{manifest.doc_id}`",
-            f"**Title:** {manifest.title or 'N/A'}",
-            f"**Pages:** {manifest.page_count}",
-            f"**Pages Processed:** {len(page_map) or total_page_count}",
-            f"**Time:** {elapsed:.1f}s",
-            f"**Chunk Size:** {marker_max_pages_per_chunk or 'auto'}",
-            f"**Extract Figures:** {'yes' if extract_figures else 'no'}",
-            "",
-            "## Assets Found",
-            f"- **Sections:** {len(manifest.assets.sections)}",
-            f"- **Tables:** {len(manifest.assets.tables)}",
-            f"- **Figures:** {len(manifest.assets.figures)}",
-            "",
-            "## Output Files",
-            f"- Manifest: `{manifest.manifest_path}`",
-            f"- Markdown: `{manifest.markdown_path}`",
-            f"- Blocks: `{out_path / 'blocks.json'}`",
-            f"- Original PDF: `{out_path / 'original.pdf'}`",
-            "",
-        ]
-        if normalized_page_ranges:
-            lines.insert(
-                7, f"**Page Ranges:** {format_page_ranges(normalized_page_ranges)}"
-            )
-            lines.insert(-1, f"- Selected PDF: `{out_path / 'selected_pages.pdf'}`")
-        if segmentation_path:
-            lines.insert(-1, f"- Segmentation: `{segmentation_path}`")
-        else:
-            lines.insert(-1, "- Segmentation: skipped")
-
-        # Show TOC preview
-        if manifest.toc:
-            lines.append("## Table of Contents")
-            for item in manifest.toc[:10]:
-                lines.append(f"- {item}")
-            if len(manifest.toc) > 10:
-                lines.append(f"- _...and {len(manifest.toc) - 10} more_")
-
-        await report_progress(ctx, 100, message=f"Finished parsing {pdf_file.name}")
+    if not async_mode:
         await log_message(
-            ctx, "info", f"parse_pdf_structure complete: {manifest.doc_id}"
+            ctx,
+            "warning",
+            "parse_pdf_structure forcing background job despite async_mode=False",
         )
-        return "\n".join(lines)
 
-    except MarkerBackendUnavailable as e:
-        await log_message(ctx, "error", f"parse_pdf_structure unavailable: {e}")
-        return "# ❌ Marker Backend Not Available\n\n" + format_marker_failure(e)
-    except RuntimeError as e:
-        await log_message(ctx, "error", f"parse_pdf_structure unavailable: {e}")
-        if is_marker_backend_unavailable(e):
-            return "# ❌ Marker Backend Not Available\n\n" + format_marker_failure(e)
-        if is_marker_resource_error(e):
-            return "# ❌ Marker Resource Limit\n\n" + format_marker_failure(e)
-        return f"❌ Marker parsing unavailable: {e!s}"
-    except Exception as e:
-        await log_message(ctx, "error", f"parse_pdf_structure failed: {e}")
-        if is_marker_backend_unavailable(e):
-            return "# ❌ Marker Backend Not Available\n\n" + format_marker_failure(e)
-        if is_marker_resource_error(e):
-            return "# ❌ Marker Resource Limit\n\n" + format_marker_failure(e)
-        return f"❌ Marker parsing failed: {e!s}"
+    response = await _create_ingest_job_response(
+        [pdf_path],
+        use_marker=True,
+        ocr_enabled=ocr_enabled,
+        ocr_language=ocr_language,
+        rotate_pages=rotate_pages,
+        deskew=deskew,
+        marker_max_pages_per_chunk=marker_max_pages_per_chunk,
+        extract_figures=extract_figures,
+        page_ranges=page_ranges,
+        ctx=ctx,
+        forced_reason=(
+            "parse_pdf_structure uses Marker and is always routed through the "
+            "background job system to avoid MCP stdio request timeouts"
+        ),
+        title="PDF Structure Parse Job Created",
+        operation="parse_pdf_structure",
+        require_marker=True,
+    )
+    if output_dir:
+        response += (
+            "\n\n**Note:** `output_dir` is ignored for background parses; artifacts "
+            "are written under the configured data directory."
+        )
+    return response
 
 
 @mcp.tool()
@@ -654,10 +390,16 @@ async def find_evidence_spans(
 
     Returns span-level AssetRef JSON that can be passed to table_cite.
     """
-    spans = _load_or_build_evidence_spans(doc_id)
+    spans = load_or_build_evidence_spans(repository, doc_id)
     if not spans:
+        status = load_citation_status(repository, doc_id) or {}
+        reason = str(status.get("reason") or "").strip()
+        if reason:
+            return (
+                f"No citation-ready evidence spans found for doc_id: {doc_id}. {reason}"
+            )
         return (
-            f"❌ Citation index not found for doc_id: {doc_id}. "
+            f"Citation index not found for doc_id: {doc_id}. "
             "Run ingest_documents again or ensure blocks.json/full markdown exist."
         )
 
@@ -681,7 +423,7 @@ async def find_evidence_spans(
         "",
     ]
     for index, span in enumerate(spans[: max(1, min(limit, 50))], 1):
-        line_range = _format_line_range(span.line_start, span.line_end)
+        line_range = format_line_range(span.line_start, span.line_end)
         char_range = (
             f"{span.char_start}-{span.char_end}"
             if span.char_start is not None and span.char_end is not None
@@ -710,7 +452,7 @@ async def find_evidence_spans(
                 "",
                 "AssetRef:",
                 "```json",
-                json.dumps(_asset_ref_from_span(span), ensure_ascii=False, indent=2),
+                json.dumps(asset_ref_from_span(span), ensure_ascii=False, indent=2),
                 "```",
                 "",
             ]
@@ -733,7 +475,7 @@ async def verify_citation_ref(ref: dict[str, Any]) -> str:
     if not doc_id or not span_id:
         return "❌ Citation ref must include doc_id and span_id."
 
-    spans = _load_or_build_evidence_spans(doc_id)
+    spans = load_or_build_evidence_spans(repository, doc_id)
     span = next((item for item in spans if item.span_id == span_id), None)
     if span is None:
         return f"❌ Citation span not found: {span_id}"
@@ -752,17 +494,17 @@ async def verify_citation_ref(ref: dict[str, Any]) -> str:
         issues.append("block_id mismatch")
     if "page" in ref and ref.get("page") != span.page:
         issues.append("page mismatch")
-    if "line_range" in ref and _coerce_range(ref.get("line_range")) != [
+    if "line_range" in ref and coerce_range(ref.get("line_range")) != [
         span.line_start,
         span.line_end,
     ]:
         issues.append("line_range mismatch")
-    if "char_range" in ref and _coerce_range(ref.get("char_range")) != [
+    if "char_range" in ref and coerce_range(ref.get("char_range")) != [
         span.char_start,
         span.char_end,
     ]:
         issues.append("char_range mismatch")
-    if "byte_range" in ref and _coerce_range(ref.get("byte_range")) != [
+    if "byte_range" in ref and coerce_range(ref.get("byte_range")) != [
         span.byte_start,
         span.byte_end,
     ]:
@@ -785,7 +527,7 @@ async def verify_citation_ref(ref: dict[str, Any]) -> str:
         f"- **doc_id:** `{doc_id}`",
         f"- **span_id:** `{span_id}`",
         f"- **page:** {span.page or '?'}",
-        f"- **lines:** {_format_line_range(span.line_start, span.line_end) or '?'}",
+        f"- **lines:** {format_line_range(span.line_start, span.line_end) or '?'}",
         f"- **char_range:** {span.char_start}-{span.char_end}",
         f"- **text_sha256:** `{span.text_sha256}`",
     ]
@@ -1163,7 +905,7 @@ async def inspect_document_manifest(doc_id: str) -> str:
         for sec in manifest.assets.sections:
             indent = "  " * (sec.level - 1) if sec.level > 1 else ""
             output_lines.append(
-                f"{indent}- `{sec.id}`: {sec.title} ({_display_line_range(sec.start_line, sec.end_line)})"
+                f"{indent}- `{sec.id}`: {sec.title} ({display_line_range(sec.start_line, sec.end_line)})"
             )
     else:
         output_lines.append("_No sections found_")
@@ -1311,48 +1053,39 @@ async def ocr_pdf_document(
     deskew: bool = False,
     ctx: Context | None = None,
 ) -> str:
-    """執行按需 OCR 前處理，產生可再供 ingest/parse 使用的 PDF。"""
+    """Create a background OCR ingest job instead of blocking the MCP request."""
     pdf_file = Path(pdf_path)
     await log_message(ctx, "info", f"ocr_pdf_document start: {pdf_path}")
-    await report_progress(ctx, 10, message=f"Preparing OCR for {pdf_file.name}")
+    await report_progress(ctx, 10, message=f"Creating OCR job for {pdf_file.name}")
 
     if not pdf_file.exists():
         return f"❌ File not found: {pdf_path}"
-    if ocr_processor is None:
-        return "❌ OCR processor not configured."
 
-    try:
-        target = resolve_document_output_path(
-            pdf_file.parent,
-            output_path,
-            default_name=f"{pdf_file.stem}.ocr.pdf",
-            allowed_suffixes={".pdf"},
-        )
-    except ValueError as e:
-        return f"❌ {e!s}"
-    result = ocr_processor.preprocess_pdf(
-        pdf_file,
-        target,
-        language=language,
+    response = await _create_ingest_job_response(
+        [pdf_path],
+        use_marker=False,
+        ocr_enabled=True,
+        ocr_language=language,
         rotate_pages=rotate_pages,
         deskew=deskew,
+        marker_max_pages_per_chunk=0,
+        extract_figures=True,
+        page_ranges=None,
+        ctx=ctx,
+        forced_reason=(
+            "OCR preprocessing can spawn long-running OCR engines, so it is "
+            "always routed through the background job system"
+        ),
+        title="OCR Job Created",
+        operation="ocr_pdf_document",
     )
-
-    await report_progress(
-        ctx, 100, message=f"OCR preprocessing finished for {pdf_file.name}"
-    )
-    await log_message(ctx, "info", f"ocr_pdf_document complete: {target}")
-
-    return "\n".join(
-        [
-            "✅ OCR preprocessing completed",
-            f"- **input**: `{pdf_path}`",
-            f"- **output**: `{result.output_path}`",
-            f"- **language**: {result.language}",
-            f"- **rotate_pages**: {result.rotate_pages}",
-            f"- **deskew**: {result.deskew}",
-        ]
-    )
+    if output_path:
+        response += (
+            "\n\n**Note:** `output_path` is ignored for background OCR; the OCR "
+            "artifact is saved as `ocr_processed.pdf` inside the created document "
+            "artifact directory."
+        )
+    return response
 
 
 @mcp.tool()
@@ -1423,7 +1156,7 @@ async def fetch_document_asset(
             f"**Size:** {result.width}×{result.height}",
             f"**Format:** {result.image_media_type}",
         ]
-        line_range = _format_line_range(result.line_start, result.line_end)
+        line_range = format_line_range(result.line_start, result.line_end)
         if line_range:
             metadata_lines.append(f"**Line Range:** {line_range}")
         if result.section_title:
@@ -1445,7 +1178,7 @@ async def fetch_document_asset(
         lines = [f"## {asset_type.title()}: {result.asset_id}"]
         if result.page:
             lines.append(f"**Page:** {result.page}")
-        line_range = _format_line_range(result.line_start, result.line_end)
+        line_range = format_line_range(result.line_start, result.line_end)
         if line_range:
             lines.append(f"**Line Range:** {line_range}")
         if result.section_title:

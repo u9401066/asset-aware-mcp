@@ -937,56 +937,62 @@ class TestDocumentTools:
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """parse_pdf_structure returns actionable install guidance when marker is absent."""
+        """parse_pdf_structure async_mode=False still returns a background job."""
         pdf_path = tmp_path / "paper.pdf"
         pdf_path.write_bytes(b"%PDF-1.4 test")
 
-        from src.domain.marker_errors import MarkerBackendUnavailable
         from src.presentation.tools import document_tools
 
-        monkeypatch.setattr(document_tools.settings, "data_dir", tmp_path / "data")
-        monkeypatch.setattr(document_tools.pdf_extractor, "get_page_count", lambda _: 1)
         monkeypatch.setattr(
             document_tools,
             "get_marker_extractor",
-            MagicMock(side_effect=MarkerBackendUnavailable("No module named 'marker'")),
+            MagicMock(side_effect=AssertionError("Marker should load in the job")),
         )
+        mock_jobs = MagicMock()
+        mock_jobs.create_ingest_job = AsyncMock(
+            return_value=MagicMock(
+                job_id="job_sync_parse", estimated_duration_seconds=10
+            )
+        )
+        monkeypatch.setattr(document_tools, "job_service", mock_jobs)
 
         result = await document_tools.parse_pdf_structure(
             str(pdf_path),
             async_mode=False,
         )
 
-        assert "Marker Backend Not Available" in result
-        assert "uv sync --extra marker" in result
-        assert "virtual environment" in result
+        assert "job_sync_parse" in result
+        mock_jobs.create_ingest_job.assert_awaited_once()
+        _, kwargs = mock_jobs.create_ingest_job.await_args
+        assert kwargs["parameters"]["operation"] == "parse_pdf_structure"
+        assert kwargs["parameters"]["require_marker"] is True
 
     async def test_parse_pdf_structure_reports_marker_resource_limit(
         self,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """parse_pdf_structure gives chunk/fallback guidance for catchable OOM errors."""
+        """parse_pdf_structure reports ignored output_dir instead of running inline."""
         pdf_path = tmp_path / "paper.pdf"
         pdf_path.write_bytes(b"%PDF-1.4 test")
 
         from src.presentation.tools import document_tools
 
-        marker = MagicMock()
-        marker.parse.side_effect = RuntimeError("CUDA out of memory")
-
-        monkeypatch.setattr(document_tools.settings, "data_dir", tmp_path / "data")
-        monkeypatch.setattr(document_tools.pdf_extractor, "get_page_count", lambda _: 1)
-        monkeypatch.setattr(document_tools, "get_marker_extractor", lambda: marker)
+        mock_jobs = MagicMock()
+        mock_jobs.create_ingest_job = AsyncMock(
+            return_value=MagicMock(
+                job_id="job_output_dir", estimated_duration_seconds=10
+            )
+        )
+        monkeypatch.setattr(document_tools, "job_service", mock_jobs)
 
         result = await document_tools.parse_pdf_structure(
             str(pdf_path),
-            async_mode=False,
+            output_dir=str(tmp_path / "custom"),
         )
 
-        assert "Marker Resource Limit" in result
-        assert "marker_max_pages_per_chunk=1" in result
-        assert "use_marker=False" in result
+        assert "job_output_dir" in result
+        assert "`output_dir` is ignored" in result
 
     async def test_parse_pdf_structure_reports_invalid_page_range_before_work(
         self,
@@ -1131,6 +1137,36 @@ class TestDocumentTools:
             saved_spans[0].source_revision_id
             == hashlib.sha256(markdown.encode("utf-8")).hexdigest()
         )
+
+    async def test_find_evidence_spans_reports_empty_blocks_without_zero_byte_index(
+        self, tmp_path: Path
+    ) -> None:
+        """Empty MarkerOutput blocks should not recreate a 0-byte citation index."""
+        blocks = [
+            {
+                "block_id": "mk_1",
+                "block_type": "MarkdownOutput",
+                "page": 1,
+                "text": "",
+            }
+        ]
+        with patch("src.presentation.tools.document_tools.repository") as mock_repo:
+            mock_repo.load_citation_index.return_value = []
+            mock_repo.load_markdown.return_value = "# Abstract\n\nBody"
+            mock_repo.load_blocks.return_value = blocks
+            mock_repo.get_doc_dir.return_value = tmp_path
+            from src.presentation.tools.document_tools import find_evidence_spans
+
+            result = await find_evidence_spans("doc_empty")
+
+        assert "No citation-ready evidence spans" in result
+        assert "did not contain citeable text" in result
+        assert not (tmp_path / "citation_index.jsonl").exists()
+        status = json.loads(
+            (tmp_path / "citation_index.status.json").read_text(encoding="utf-8")
+        )
+        assert status["found"] == 0
+        mock_repo.save_citation_index.assert_not_called()
 
     async def test_verify_citation_ref_detects_valid_span(self) -> None:
         """verify_citation_ref validates quote hash and source revision."""
@@ -1527,6 +1563,42 @@ class TestDocumentTools:
         assert "job_large" in result
         mock_jobs.create_ingest_job.assert_awaited_once()
 
+    async def test_ingest_documents_sync_lightrag_forces_background_job(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """LightRAG indexing should not run in the synchronous MCP request."""
+        pdf_path = tmp_path / "kg.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 test")
+
+        from src.presentation.tools import document_tools
+
+        monkeypatch.setattr(
+            document_tools.pdf_extractor,
+            "get_page_count",
+            MagicMock(return_value=1),
+        )
+        mock_jobs = MagicMock()
+        mock_jobs.create_ingest_job = AsyncMock(
+            return_value=MagicMock(job_id="job_lightrag", estimated_duration_seconds=10)
+        )
+        monkeypatch.setattr(document_tools, "job_service", mock_jobs)
+        mock_service = MagicMock()
+        mock_service.knowledge_graph = MagicMock(is_available=True)
+        mock_service.ingest = AsyncMock(
+            side_effect=AssertionError("LightRAG should run in the job")
+        )
+        monkeypatch.setattr(document_tools, "document_service", mock_service)
+
+        result = await document_tools.ingest_documents(
+            [str(pdf_path)],
+            async_mode=False,
+        )
+
+        assert "job_lightrag" in result
+        mock_jobs.create_ingest_job.assert_awaited_once()
+
     async def test_ingest_documents_async_passes_use_marker_to_job(self) -> None:
         """ingest_documents async job preserves Marker tuning parameters."""
         with (
@@ -1675,28 +1747,34 @@ class TestDocumentTools:
         assert result[0].type == "text"
         assert result[1].type == "image"
 
-    async def test_ocr_pdf_document_success(self, tmp_path: Path) -> None:
-        """ocr_pdf_document delegates to OCR processor and returns summary."""
+    async def test_ocr_pdf_document_success(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """ocr_pdf_document returns a background OCR job instead of blocking."""
         pdf_path = tmp_path / "sample.pdf"
         pdf_path.write_bytes(b"%PDF-1.4 fake")
 
-        with patch("src.presentation.tools.document_tools.ocr_processor") as mock_ocr:
-            mock_ocr.preprocess_pdf.return_value = MagicMock(
-                output_path=tmp_path / "sample.ocr.pdf",
-                language="eng",
-                rotate_pages=True,
-                deskew=False,
-            )
-            from src.presentation.tools.document_tools import ocr_pdf_document
+        from src.presentation.tools import document_tools
 
-            result = await ocr_pdf_document(
-                str(pdf_path),
-                language="eng",
-                rotate_pages=True,
-            )
+        mock_jobs = MagicMock()
+        mock_jobs.create_ingest_job = AsyncMock(
+            return_value=MagicMock(job_id="job_ocr_doc", estimated_duration_seconds=10)
+        )
+        monkeypatch.setattr(document_tools, "job_service", mock_jobs)
 
-        assert "OCR preprocessing completed" in result
-        assert "sample.ocr.pdf" in result
+        result = await document_tools.ocr_pdf_document(
+            str(pdf_path),
+            language="eng",
+            rotate_pages=True,
+        )
+
+        assert "job_ocr_doc" in result
+        _, kwargs = mock_jobs.create_ingest_job.await_args
+        assert kwargs["parameters"]["operation"] == "ocr_pdf_document"
+        assert kwargs["parameters"]["ocr_enabled"] is True
+        assert kwargs["parameters"]["rotate_pages"] is True
 
     async def test_fetch_document_asset_reports_context_progress(self) -> None:
         """fetch_document_asset emits MCP progress when Context is injected."""
@@ -2269,6 +2347,29 @@ class TestKnowledgeTools:
             result = await export_knowledge_graph()
             assert "not enabled" in result.lower() or "Error" in result
 
+    async def test_export_knowledge_graph_times_out_in_request_guard(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Slow graph export should return a bounded timeout message."""
+        from src.presentation.tools import knowledge_tools
+
+        async def slow_export(*_args, **_kwargs):
+            await asyncio.sleep(3600)
+
+        mock_graph = MagicMock()
+        mock_graph.export_graph = AsyncMock(side_effect=slow_export)
+        monkeypatch.setattr(knowledge_tools, "knowledge_graph", mock_graph)
+        monkeypatch.setattr(
+            knowledge_tools,
+            "KNOWLEDGE_TOOL_TIMEOUT_SECONDS",
+            0.01,
+        )
+
+        result = await knowledge_tools.export_knowledge_graph(format="summary", limit=5)
+
+        assert "timed out" in result
+        assert "limit=5" in result
+
     async def test_consult_knowledge_graph_reports_progress(self) -> None:
         """consult_knowledge_graph emits MCP progress when Context is injected."""
         fake_ctx = MagicMock()
@@ -2287,6 +2388,31 @@ class TestKnowledgeTools:
 
         assert result == {"success": True, "answer": "answer", "references": []}
         assert fake_ctx.report_progress.await_count >= 2
+
+    async def test_consult_knowledge_graph_times_out_in_request_guard(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Slow LightRAG calls should return a bounded timeout record."""
+        from src.presentation.tools import knowledge_tools
+
+        async def slow_query(*_args, **_kwargs):
+            await asyncio.sleep(3600)
+
+        with patch(
+            "src.presentation.tools.knowledge_tools.knowledge_service"
+        ) as mock_svc:
+            mock_svc.query_structured = AsyncMock(side_effect=slow_query)
+            monkeypatch.setattr(
+                knowledge_tools,
+                "KNOWLEDGE_TOOL_TIMEOUT_SECONDS",
+                0.01,
+            )
+
+            result = await knowledge_tools.consult_knowledge_graph("test")
+
+        assert isinstance(result, dict)
+        assert result["status"] == "timeout"
+        assert result["query"] == "test"
 
     async def test_consult_knowledge_graph_forwards_new_query_options(self) -> None:
         """consult_knowledge_graph forwards include_references and user_prompt."""
@@ -2520,6 +2646,15 @@ class TestJobServiceConcurrency:
             job_store=store,
             document_service=FailingDocumentService(),  # type: ignore[arg-type]
         )
+        service._run_isolated_ingest_worker = AsyncMock(  # type: ignore[method-assign]
+            return_value=IngestResult(
+                doc_id="",
+                filename="bad.pdf",
+                success=False,
+                error="bad pdf",
+                warnings=["Isolated ingest worker log: logs/bad.log"],
+            )
+        )
 
         await service._process_ingest_job(job.job_id)
 
@@ -2530,8 +2665,77 @@ class TestJobServiceConcurrency:
         assert stored.result is not None
         assert stored.result["files_failed"] == 1
         assert stored.result["failed_files"] == [
-            {"file": "bad.pdf", "error": "bad pdf"}
+            {
+                "file": "bad.pdf",
+                "error": "bad pdf",
+                "warnings": ["Isolated ingest worker log: logs/bad.log"],
+            }
         ]
+        assert stored.result["warnings"] == ["Isolated ingest worker log: logs/bad.log"]
+
+    async def test_pymupdf_job_uses_isolated_worker_not_event_loop_ingest(
+        self, temp_dir: Path
+    ) -> None:
+        """Background PyMuPDF jobs also avoid blocking the MCP event loop."""
+        from src.application.job_service import JobService
+        from src.domain.entities import IngestResult
+        from src.domain.job import Job, JobProgress, JobStatus, JobType
+
+        class MemoryJobStore:
+            def __init__(self) -> None:
+                self.jobs: dict[str, Job] = {}
+
+            async def create(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+            async def get(self, job_id: str) -> Job | None:
+                return self.jobs.get(job_id)
+
+            async def update(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+        class EventLoopDocumentService:
+            repository = MagicMock()
+
+            async def ingest(self, *_args, **_kwargs):
+                raise AssertionError("PyMuPDF ingest should run in an isolated worker")
+
+        doc_dir = temp_dir / "doc_pymupdf"
+        doc_dir.mkdir()
+        EventLoopDocumentService.repository.get_doc_dir.return_value = doc_dir
+
+        store = MemoryJobStore()
+        job = Job(
+            job_id="job_pymupdf_worker",
+            job_type=JobType.INGEST_PDF,
+            input_files=["paper.pdf"],
+            parameters={"use_marker": False},
+            progress=JobProgress(total_steps=8),
+        )
+        await store.create(job)
+
+        service = JobService(
+            job_store=store,
+            document_service=EventLoopDocumentService(),  # type: ignore[arg-type]
+        )
+        service._run_isolated_ingest_worker = AsyncMock(  # type: ignore[method-assign]
+            return_value=IngestResult(
+                doc_id="doc_pymupdf",
+                filename="paper.pdf",
+                success=True,
+                backend="pymupdf",
+            )
+        )
+
+        await service._process_ingest_job(job.job_id, service.document_service)
+
+        stored = await store.get(job.job_id)
+        assert stored is not None
+        assert stored.status == JobStatus.COMPLETED
+        assert stored.output_doc_ids == ["doc_pymupdf"]
+        service._run_isolated_ingest_worker.assert_awaited_once()
 
     async def test_marker_job_uses_isolated_worker_not_event_loop_ingest(
         self, temp_dir: Path
@@ -2601,12 +2805,91 @@ class TestJobServiceConcurrency:
         assert stored.result["documents"][0]["blocks_available"] is True
         service._run_isolated_ingest_worker.assert_awaited_once()
 
-    async def test_isolated_ingest_worker_reads_result_and_silences_stdio(
+    async def test_process_ingest_job_delegates_to_injected_worker_runner(
+        self, temp_dir: Path
+    ) -> None:
+        """JobService should depend on an ingest worker runner port."""
+        from src.application.job_service import JobService
+        from src.domain.entities import IngestResult
+        from src.domain.job import Job, JobProgress, JobStatus, JobType
+
+        class MemoryJobStore:
+            def __init__(self) -> None:
+                self.jobs: dict[str, Job] = {}
+
+            async def create(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+            async def get(self, job_id: str) -> Job | None:
+                return self.jobs.get(job_id)
+
+            async def update(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+        class EventLoopDocumentService:
+            repository = MagicMock()
+
+            async def ingest(self, *_args, **_kwargs):
+                raise AssertionError("DocumentService.ingest must stay in the worker")
+
+        class FakeIngestWorkerRunner:
+            def __init__(self) -> None:
+                self.requests = []
+
+            async def run_ingest_worker(self, request):
+                self.requests.append(request)
+                return IngestResult(
+                    doc_id="doc_runner",
+                    filename="paper.pdf",
+                    success=True,
+                    backend="marker",
+                )
+
+        doc_dir = temp_dir / "doc_runner"
+        doc_dir.mkdir()
+        EventLoopDocumentService.repository.get_doc_dir.return_value = doc_dir
+        runner = FakeIngestWorkerRunner()
+        store = MemoryJobStore()
+        job = Job(
+            job_id="job_runner_port",
+            job_type=JobType.INGEST_PDF,
+            input_files=["paper.pdf"],
+            parameters={"use_marker": True, "extract_figures": True},
+            progress=JobProgress(total_steps=9),
+        )
+        await store.create(job)
+
+        service = JobService(
+            job_store=store,
+            document_service=EventLoopDocumentService(),  # type: ignore[arg-type]
+            ingest_worker_runner=runner,
+        )
+
+        await service._process_ingest_job(job.job_id, service.document_service)
+
+        stored = await store.get(job.job_id)
+        assert len(runner.requests) == 1
+        request = runner.requests[0]
+        assert request.job_id == job.job_id
+        assert request.file_path == "paper.pdf"
+        assert request.parameters["use_marker"] is True
+        assert request.progress_offset == 0
+        assert request.progress_total_steps == 9
+        assert request.progress_prefix == "[1/1] "
+        assert stored is not None
+        assert stored.status == JobStatus.COMPLETED
+        assert stored.output_doc_ids == ["doc_runner"]
+        assert stored.result is not None
+        assert stored.result["documents"][0]["backend"] == "marker"
+
+    async def test_isolated_ingest_worker_reads_result_and_redirects_stdio_to_log(
         self,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """The subprocess worker command is isolated and returns JSON results."""
+        """The subprocess worker command returns JSON and keeps logs inspectable."""
         from src.application.job_service import JobService
         from src.domain.entities import IngestResult
 
@@ -2627,6 +2910,8 @@ class TestJobServiceConcurrency:
         async def fake_create_subprocess_exec(*cmd, **kwargs):
             created["cmd"] = cmd
             created["kwargs"] = kwargs
+            kwargs["stdout"].write("worker booted\n")
+            kwargs["stdout"].flush()
             result_path = Path(cmd[cmd.index("--result-json") + 1])
             result_path.write_text(
                 IngestResult(
@@ -2639,15 +2924,17 @@ class TestJobServiceConcurrency:
             return FakeProcess()
 
         monkeypatch.setattr(
-            "src.application.job_service.tempfile.gettempdir",
+            "src.infrastructure.subprocess_ingest_worker_runner.tempfile.gettempdir",
             lambda: str(tmp_path),
         )
         monkeypatch.setattr(
-            "src.application.job_service.asyncio.create_subprocess_exec",
+            "src.infrastructure.subprocess_ingest_worker_runner.asyncio.create_subprocess_exec",
             fake_create_subprocess_exec,
         )
 
-        service = JobService(job_store=MagicMock())
+        job_store = MagicMock()
+        job_store.jobs_dir = tmp_path / "jobs"
+        service = JobService(job_store=job_store)
 
         result = await service._run_isolated_ingest_worker(
             "job_worker",
@@ -2667,16 +2954,217 @@ class TestJobServiceConcurrency:
         kwargs = created["kwargs"]
         assert isinstance(cmd, tuple)
         assert "-m" in cmd
-        assert "src.application.ingest_worker" in cmd
+        assert "src.presentation.ingest_worker_main" in cmd
         assert "--use-marker" in cmd
         assert "--require-marker" in cmd
         assert "--extract-figures" in cmd
         assert "--etl-profile" in cmd
+        assert "--progress-json" in cmd
         assert kwargs["stdin"] is asyncio.subprocess.DEVNULL
-        assert kwargs["stdout"] is asyncio.subprocess.DEVNULL
-        assert kwargs["stderr"] is asyncio.subprocess.DEVNULL
+        assert kwargs["stdout"] is not asyncio.subprocess.DEVNULL
+        assert kwargs["stderr"] is asyncio.subprocess.STDOUT
         assert kwargs["env"]["ETL_PROFILE"] == "arxiv"
         assert result.doc_id == "doc_worker"
+        log_paths = list((tmp_path / "logs").glob("ingest_job_worker_paper_*.log"))
+        assert len(log_paths) == 1
+        log_path = log_paths[0]
+        assert log_path.read_text(encoding="utf-8") == "worker booted\n"
+        assert any(str(log_path) in warning for warning in result.warnings)
+
+    async def test_isolated_ingest_worker_heartbeat_updates_job_from_progress_json(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Parent progress is refreshed while the isolated worker is still running."""
+        from src.application.job_service import JobService
+        from src.domain.entities import IngestResult
+        from src.domain.job import Job, JobProgress, JobType
+
+        class MemoryJobStore:
+            def __init__(self) -> None:
+                self.jobs: dict[str, Job] = {}
+                self.jobs_dir = tmp_path / "jobs"
+
+            async def create(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+            async def get(self, job_id: str) -> Job | None:
+                return self.jobs.get(job_id)
+
+            async def update(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+        class FakeProcess:
+            pid = 1234
+            returncode: int | None = None
+
+            async def wait(self) -> int:
+                await asyncio.sleep(0.05)
+                self.returncode = 0
+                return 0
+
+            def terminate(self) -> None:
+                raise AssertionError("terminate should not be needed")
+
+            def kill(self) -> None:
+                raise AssertionError("kill should not be needed")
+
+        async def fake_create_subprocess_exec(*cmd, **kwargs):
+            kwargs["stdout"].write("marker log tail\n")
+            kwargs["stdout"].flush()
+            progress_path = Path(cmd[cmd.index("--progress-json") + 1])
+            progress_path.write_text(
+                json.dumps(
+                    {
+                        "step": 3,
+                        "total": 9,
+                        "phase": "Marker Parse",
+                        "message": "Loading Marker models",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result_path = Path(cmd[cmd.index("--result-json") + 1])
+            result_path.write_text(
+                IngestResult(
+                    doc_id="doc_worker",
+                    filename="paper.pdf",
+                    backend="marker",
+                ).model_dump_json(),
+                encoding="utf-8",
+            )
+            return FakeProcess()
+
+        monkeypatch.setattr(
+            "src.infrastructure.subprocess_ingest_worker_runner.asyncio.create_subprocess_exec",
+            fake_create_subprocess_exec,
+        )
+        monkeypatch.setattr(
+            "src.infrastructure.subprocess_ingest_worker_runner.WORKER_HEARTBEAT_SECONDS",
+            0.01,
+            raising=False,
+        )
+
+        store = MemoryJobStore()
+        job = Job(
+            job_id="job_heartbeat",
+            job_type=JobType.INGEST_PDF,
+            input_files=["paper.pdf"],
+            progress=JobProgress(total_steps=9),
+        )
+        job.start()
+        await store.create(job)
+        service = JobService(job_store=store)
+
+        result = await service._run_isolated_ingest_worker(
+            job.job_id,
+            "paper.pdf",
+            {"use_marker": True, "extract_figures": True},
+        )
+
+        stored = await store.get(job.job_id)
+        assert result.success is True
+        assert stored is not None
+        assert stored.progress.current_phase == "Marker Parse"
+        assert stored.progress.message == "Loading Marker models"
+        assert stored.progress.current_step == 3
+        assert stored.progress.percentage == pytest.approx(100 / 3)
+
+    async def test_isolated_ingest_worker_invalid_result_returns_failure_with_log_path(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Partial worker JSON is reported as a failed result instead of escaping."""
+        from src.application.job_service import JobService
+
+        class FakeProcess:
+            returncode = 0
+
+            async def wait(self) -> int:
+                return 0
+
+            def terminate(self) -> None:
+                raise AssertionError("terminate should not be needed")
+
+            def kill(self) -> None:
+                raise AssertionError("kill should not be needed")
+
+        async def fake_create_subprocess_exec(*cmd, **kwargs):
+            kwargs["stdout"].write("traceback line\n")
+            kwargs["stdout"].flush()
+            result_path = Path(cmd[cmd.index("--result-json") + 1])
+            result_path.write_text('{"success": false', encoding="utf-8")
+            return FakeProcess()
+
+        monkeypatch.setattr(
+            "src.infrastructure.subprocess_ingest_worker_runner.asyncio.create_subprocess_exec",
+            fake_create_subprocess_exec,
+        )
+        job_store = MagicMock()
+        job_store.jobs_dir = tmp_path / "jobs"
+        service = JobService(job_store=job_store)
+
+        result = await service._run_isolated_ingest_worker(
+            "job_bad_result",
+            "paper.pdf",
+            {"use_marker": True},
+        )
+
+        log_paths = list((tmp_path / "logs").glob("ingest_job_bad_result_paper_*.log"))
+        assert len(log_paths) == 1
+        log_path = log_paths[0]
+        assert result.success is False
+        assert "Could not read isolated ingest worker result" in (result.error or "")
+        assert str(log_path) in (result.error or "")
+        assert log_path.read_text(encoding="utf-8") == "traceback line\n"
+
+    async def test_ingest_worker_writes_result_and_progress_atomically(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Worker result/progress JSON writers preserve existing files on failure."""
+        from src.application import ingest_worker
+        from src.domain.entities import IngestResult
+
+        result_path = tmp_path / "result.json"
+        result_path.write_text(
+            IngestResult(doc_id="old", filename="paper.pdf").model_dump_json(),
+            encoding="utf-8",
+        )
+
+        original_write_text = Path.write_text
+
+        def fail_after_partial_tmp_write(self: Path, *args, **kwargs) -> int:
+            original_write_text(self, '{"partial"', encoding="utf-8")
+            raise RuntimeError("disk full")
+
+        monkeypatch.setattr(Path, "write_text", fail_after_partial_tmp_write)
+
+        with pytest.raises(RuntimeError, match="disk full"):
+            ingest_worker._write_result(
+                result_path,
+                IngestResult(doc_id="new", filename="paper.pdf"),
+            )
+
+        monkeypatch.setattr(Path, "write_text", original_write_text)
+        assert json.loads(result_path.read_text(encoding="utf-8"))["doc_id"] == "old"
+        assert not list(tmp_path.glob("*.tmp"))
+
+        callback = ingest_worker._make_progress_callback(tmp_path / "progress.json")
+        await callback(2, 9, "Marker Parse", "Loading Marker models")
+
+        progress = json.loads((tmp_path / "progress.json").read_text(encoding="utf-8"))
+        assert progress["step"] == 2
+        assert progress["total"] == 9
+        assert progress["phase"] == "Marker Parse"
+        assert progress["message"] == "Loading Marker models"
+        assert "ts" in progress
+        assert not list(tmp_path.glob("*.tmp"))
 
     async def test_ingest_job_result_preserves_backend_warnings(self) -> None:
         """Background jobs keep degraded backend warnings in their final result."""
@@ -2726,6 +3214,15 @@ class TestJobServiceConcurrency:
         service = JobService(
             job_store=store,
             document_service=FallbackDocumentService(),  # type: ignore[arg-type]
+        )
+        service._run_isolated_ingest_worker = AsyncMock(  # type: ignore[method-assign]
+            return_value=IngestResult(
+                doc_id="doc_fallback",
+                filename="paper.pdf",
+                success=True,
+                backend="pymupdf_fallback",
+                warnings=["Marker requested; PyMuPDF fallback used"],
+            )
         )
 
         await service._process_ingest_job(job.job_id, service.document_service)
@@ -2996,6 +3493,13 @@ class TestJobServiceConcurrency:
         original = OriginalDocumentService()
         service = JobService(job_store=store, document_service=original)  # type: ignore[arg-type]
         service.set_document_service(NewDocumentService())  # type: ignore[arg-type]
+        service._run_isolated_ingest_worker = AsyncMock(  # type: ignore[method-assign]
+            return_value=IngestResult(
+                doc_id="doc_original",
+                filename="paper.pdf",
+                success=True,
+            )
+        )
 
         await service._process_ingest_job(job.job_id, original)  # type: ignore[arg-type]
 

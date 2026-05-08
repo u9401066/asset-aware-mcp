@@ -7,22 +7,20 @@ ETL Job management service with background task execution.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import subprocess
-import sys
-import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from src.domain.entities import IngestResult
+from src.application.worker_runner import IngestWorkerRequest, IngestWorkerRunner
 from src.domain.job import Job, JobProgress, JobStatus, JobSummary, JobType
 
 if TYPE_CHECKING:
     from src.application.document_service import DocumentService
+    from src.domain.entities import IngestResult
     from src.domain.repositories import JobStoreInterface
 
 logger = logging.getLogger(__name__)
@@ -47,6 +45,7 @@ class JobService:
         self,
         job_store: JobStoreInterface,
         document_service: DocumentService | None = None,
+        ingest_worker_runner: IngestWorkerRunner | None = None,
         max_concurrent_jobs: int = MAX_CONCURRENT_JOBS,
     ) -> None:
         """
@@ -59,9 +58,9 @@ class JobService:
         """
         self.job_store = job_store
         self.document_service = document_service
+        self.ingest_worker_runner = ingest_worker_runner
         self.max_concurrent_jobs = max_concurrent_jobs
         self._running_tasks: dict[str, asyncio.Task[None]] = {}
-        self._worker_processes: dict[str, asyncio.subprocess.Process] = {}
         self._quota_lock = asyncio.Lock()
         self._instance_id = uuid.uuid4().hex
         self._started_at = datetime.now()
@@ -100,8 +99,10 @@ class JobService:
                 f"job_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
             )
 
+            normalized_file_paths = self._normalize_job_input_files(file_paths)
+
             # Estimate duration (rough: 10s per file)
-            estimated_duration = len(file_paths) * 10
+            estimated_duration = len(normalized_file_paths) * 10
             job_parameters = dict(parameters or {})
             job_parameters.setdefault("job_owner_id", self._instance_id)
             job_parameters.setdefault("job_owner_pid", os.getpid())
@@ -117,13 +118,13 @@ class JobService:
             job = Job(
                 job_id=job_id,
                 job_type=JobType.INGEST_PDF
-                if len(file_paths) == 1
+                if len(normalized_file_paths) == 1
                 else JobType.INGEST_BATCH,
                 status=JobStatus.PENDING,
-                input_files=file_paths,
+                input_files=normalized_file_paths,
                 parameters=job_parameters,
                 progress=JobProgress(
-                    total_steps=len(file_paths) * steps_per_file,
+                    total_steps=len(normalized_file_paths) * steps_per_file,
                     message="Job created, waiting to start...",
                 ),
                 estimated_duration_seconds=estimated_duration,
@@ -145,8 +146,18 @@ class JobService:
 
             task.add_done_callback(forget_task)
 
-        logger.info(f"Created ingest job {job_id} for {len(file_paths)} file(s)")
+        logger.info(
+            f"Created ingest job {job_id} for {len(normalized_file_paths)} file(s)"
+        )
         return job
+
+    @staticmethod
+    def _normalize_job_input_files(file_paths: list[str]) -> list[str]:
+        """Persist absolute paths so subprocess workers do not depend on cwd."""
+        return [
+            str(Path(file_path).expanduser().resolve(strict=False))
+            for file_path in file_paths
+        ]
 
     async def get_job(self, job_id: str) -> Job | None:
         """Get job by ID."""
@@ -276,7 +287,7 @@ class JobService:
             total_steps = max(total_files, 1) * steps_per_file
             job.update_progress(total=total_steps)
             await self.job_store.update(job)
-            failed_files: list[dict[str, str]] = []
+            failed_files: list[dict[str, Any]] = []
             documents: list[dict[str, Any]] = []
             all_warnings: list[str] = []
 
@@ -284,63 +295,30 @@ class JobService:
                 filename = Path(file_path).name
                 base_step = i * steps_per_file
 
-                async def report_job_progress(
-                    step: int,
-                    _ignored_total: int,
-                    phase: str,
-                    message: str,
-                    *,
-                    _base_step: int = base_step,
-                ) -> None:
-                    current_job = await self.job_store.get(job_id)
-                    if current_job is None or current_job.is_terminal:
-                        return
-                    current_job.update_progress(
-                        step=_base_step + step,
-                        total=total_steps,
-                        phase=phase,
-                        message=message,
-                    )
-                    await self.job_store.update(current_job)
-
                 # Actually process the document (ingest() takes a list)
                 try:
                     use_marker = job.parameters.get("use_marker", False)
                     result: IngestResult | None
-                    if use_marker:
-                        job.update_progress(
-                            step=base_step + 1,
-                            total=total_steps,
-                            phase="Marker Worker",
-                            message=(
-                                f"[{i + 1}/{total_files}] Running isolated Marker "
-                                f"worker for {filename}"
-                            ),
-                        )
-                        await self.job_store.update(job)
-                        result = await self._run_isolated_ingest_worker(
-                            job_id,
-                            file_path,
-                            job.parameters,
-                        )
-                    else:
-                        results = await document_service.ingest(
-                            [file_path],
-                            use_marker=use_marker,
-                            progress_callback=report_job_progress,
-                            ocr_enabled=job.parameters.get("ocr_enabled", False),
-                            ocr_language=job.parameters.get("ocr_language", "eng"),
-                            rotate_pages=job.parameters.get("rotate_pages", False),
-                            deskew=job.parameters.get("deskew", False),
-                            marker_max_pages_per_chunk=job.parameters.get(
-                                "marker_max_pages_per_chunk",
-                                0,
-                            ),
-                            extract_figures=job.parameters.get("extract_figures", True),
-                            page_ranges=job.parameters.get("page_ranges") or None,
-                            require_marker=job.parameters.get("require_marker", False),
-                        )
-                        result = results[0] if results else None
+                    worker_phase = "Marker Worker" if use_marker else "PDF Worker"
+                    backend_name = "Marker" if use_marker else "PyMuPDF"
+                    job.update_progress(
+                        step=base_step + 1,
+                        total=total_steps,
+                        phase=worker_phase,
+                        message=(
+                            f"[{i + 1}/{total_files}] Running isolated "
+                            f"{backend_name} worker for {filename}"
+                        ),
+                    )
+                    await self.job_store.update(job)
+                    result = await self._run_isolated_ingest_worker(
+                        job_id,
+                        file_path,
+                        job.parameters,
+                        progress_offset=base_step,
+                        progress_total_steps=total_steps,
+                        progress_prefix=f"[{i + 1}/{total_files}] ",
+                    )
 
                     if result is not None and result.success:
                         if (
@@ -351,7 +329,14 @@ class JobService:
                                 "Marker structure parse was required, but ingestion "
                                 f"completed with backend={result.backend!r}."
                             )
-                            failed_files.append({"file": file_path, "error": error_msg})
+                            failed_entry: dict[str, Any] = {
+                                "file": file_path,
+                                "error": error_msg,
+                            }
+                            if result.warnings:
+                                failed_entry["warnings"] = list(result.warnings)
+                                all_warnings.extend(result.warnings)
+                            failed_files.append(failed_entry)
                             logger.warning(
                                 "Failed strict Marker job for %s: %s",
                                 filename,
@@ -373,7 +358,11 @@ class JobService:
                             if result is not None and result.error is not None
                             else "No result returned"
                         )
-                        failed_files.append({"file": file_path, "error": error_msg})
+                        failed_entry = {"file": file_path, "error": error_msg}
+                        if result is not None and result.warnings:
+                            failed_entry["warnings"] = list(result.warnings)
+                            all_warnings.extend(result.warnings)
+                        failed_files.append(failed_entry)
                         logger.warning(f"Failed to process {filename}: {error_msg}")
                         job.update_progress(
                             step=base_step + steps_per_file,
@@ -456,7 +445,6 @@ class JobService:
 
         finally:
             self._running_tasks.pop(job_id, None)
-            self._worker_processes.pop(job_id, None)
 
     async def _mark_stale_if_untracked(self, job: Job) -> Job:
         """Mark persisted active jobs as failed after a server restart."""
@@ -482,95 +470,31 @@ class JobService:
         job_id: str,
         file_path: str,
         parameters: dict[str, Any],
+        *,
+        progress_offset: int = 0,
+        progress_total_steps: int | None = None,
+        progress_prefix: str = "",
     ) -> IngestResult:
-        """Run Marker ingestion in a subprocess so stdio MCP remains responsive."""
-        result_path = (
-            Path(tempfile.gettempdir())
-            / f"asset_aware_{job_id}_{uuid.uuid4().hex}_result.json"
+        """Run PDF ingestion through the configured worker runner port."""
+        runner = self.ingest_worker_runner
+        if runner is None:
+            from src.infrastructure.subprocess_ingest_worker_runner import (
+                SubprocessIngestWorkerRunner,
+            )
+
+            runner = SubprocessIngestWorkerRunner(self.job_store)
+            self.ingest_worker_runner = runner
+
+        return await runner.run_ingest_worker(
+            IngestWorkerRequest(
+                job_id=job_id,
+                file_path=file_path,
+                parameters=parameters,
+                progress_offset=progress_offset,
+                progress_total_steps=progress_total_steps,
+                progress_prefix=progress_prefix,
+            )
         )
-        cmd = [
-            sys.executable,
-            "-m",
-            "src.application.ingest_worker",
-            "--file",
-            file_path,
-            "--result-json",
-            str(result_path),
-            "--ocr-language",
-            str(parameters.get("ocr_language", "eng")),
-            "--marker-max-pages-per-chunk",
-            str(parameters.get("marker_max_pages_per_chunk", 0)),
-            "--page-ranges-json",
-            json.dumps(parameters.get("page_ranges") or []),
-        ]
-        for flag, name in [
-            ("use_marker", "--use-marker"),
-            ("require_marker", "--require-marker"),
-            ("ocr_enabled", "--ocr-enabled"),
-            ("rotate_pages", "--rotate-pages"),
-            ("deskew", "--deskew"),
-            ("extract_figures", "--extract-figures"),
-        ]:
-            if parameters.get(flag):
-                cmd.append(name)
-
-        if profile_name := parameters.get("etl_profile"):
-            cmd.extend(["--etl-profile", str(profile_name)])
-
-        env = os.environ.copy()
-        if profile_name := parameters.get("etl_profile"):
-            env["ETL_PROFILE"] = str(profile_name)
-
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            cwd=str(Path(__file__).resolve().parents[2]),
-            stdin=asyncio.subprocess.DEVNULL,
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL,
-            env=env,
-        )
-        self._worker_processes[job_id] = process
-        try:
-            return_code = await process.wait()
-        except asyncio.CancelledError:
-            await self._terminate_worker_process(process)
-            raise
-        finally:
-            self._worker_processes.pop(job_id, None)
-
-        if result_path.exists():
-            try:
-                data = json.loads(result_path.read_text(encoding="utf-8"))
-                return IngestResult.model_validate(data)
-            except Exception as exc:
-                return IngestResult(
-                    doc_id="",
-                    filename=Path(file_path).name,
-                    success=False,
-                    error=f"Could not read isolated ingest worker result: {exc}",
-                )
-            finally:
-                result_path.unlink(missing_ok=True)
-
-        return IngestResult(
-            doc_id="",
-            filename=Path(file_path).name,
-            success=False,
-            error=f"Isolated ingest worker exited with code {return_code}",
-        )
-
-    async def _terminate_worker_process(
-        self, process: asyncio.subprocess.Process
-    ) -> None:
-        """Terminate a subprocess worker with a bounded kill fallback."""
-        if process.returncode is not None:
-            return
-        process.terminate()
-        try:
-            await asyncio.wait_for(process.wait(), timeout=5)
-        except TimeoutError:
-            process.kill()
-            await process.wait()
 
     def _process_is_alive(self, pid: int) -> bool:
         """Best-effort owner liveness check for stale job reconciliation."""

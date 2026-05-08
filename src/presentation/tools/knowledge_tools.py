@@ -8,6 +8,7 @@ Knowledge Tools - 知識圖譜 MCP 工具
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any, cast
 
 from src.presentation.dependencies import knowledge_graph, knowledge_service
@@ -18,6 +19,8 @@ if TYPE_CHECKING:
     from mcp.server.fastmcp import Context
 else:
     Context = Any
+
+KNOWLEDGE_TOOL_TIMEOUT_SECONDS = 45.0
 
 
 def _normalize_op(op: str) -> str:
@@ -69,27 +72,50 @@ async def consult_knowledge_graph(
     await log_message(ctx, "info", f"consult_knowledge_graph start: mode={mode}")
     await report_progress(ctx, 10, message="Querying knowledge graph")
 
-    result: dict[str, Any] | str
+    query_task: Any
     if response_mode == "text":
-        result = await knowledge_service.query(
+        query_task = knowledge_service.query(
             query,
             mode=mode,
             user_prompt=user_prompt,
             include_references=include_references,
         )
     elif response_mode == "data":
-        result = await knowledge_service.query_data(
+        query_task = knowledge_service.query_data(
             query,
             mode=mode,
             user_prompt=user_prompt,
         )
     else:
-        result = await knowledge_service.query_structured(
+        query_task = knowledge_service.query_structured(
             query,
             mode=mode,
             user_prompt=user_prompt,
             include_references=include_references,
         )
+
+    try:
+        result: dict[str, Any] | str = await asyncio.wait_for(
+            query_task,
+            timeout=KNOWLEDGE_TOOL_TIMEOUT_SECONDS,
+        )
+    except TimeoutError:
+        await log_message(ctx, "error", "consult_knowledge_graph timed out")
+        payload: dict[str, Any] = {
+            "success": False,
+            "status": "timeout",
+            "error": (
+                "Knowledge graph query exceeded the MCP request timeout guard. "
+                "Retry with a narrower query or inspect the LightRAG runtime logs."
+            ),
+            "query": query,
+            "mode": mode,
+            "response_mode": response_mode,
+            "timeout_seconds": KNOWLEDGE_TOOL_TIMEOUT_SECONDS,
+        }
+        if response_mode == "text":
+            return str(payload["error"])
+        return payload
 
     await report_progress(ctx, 100, message="Knowledge graph query finished")
     await log_message(ctx, "info", "consult_knowledge_graph complete")
@@ -136,10 +162,21 @@ async def export_knowledge_graph(
         ctx, "info", f"export_knowledge_graph start: format={format} limit={limit}"
     )
     await report_progress(ctx, 10, message="Exporting knowledge graph")
-    result = await knowledge_graph.export_graph(
-        format=format,
-        limit=limit,
-    )
+    try:
+        result = await asyncio.wait_for(
+            knowledge_graph.export_graph(
+                format=format,
+                limit=limit,
+            ),
+            timeout=KNOWLEDGE_TOOL_TIMEOUT_SECONDS,
+        )
+    except TimeoutError:
+        await log_message(ctx, "error", "export_knowledge_graph timed out")
+        return (
+            "Knowledge graph export timed out before completion. "
+            f"format={format}, limit={limit}, "
+            f"timeout_seconds={KNOWLEDGE_TOOL_TIMEOUT_SECONDS}"
+        )
     await report_progress(ctx, 100, message="Knowledge graph export finished")
     await log_message(ctx, "info", "export_knowledge_graph complete")
 

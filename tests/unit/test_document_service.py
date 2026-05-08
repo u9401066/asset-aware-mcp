@@ -16,9 +16,16 @@ from src.application.document_service import (
     normalize_page_ranges,
     remap_markdown_page_markers,
 )
-from src.domain.entities import IngestResult
+from src.application.markdown_block_builder import build_markdown_blocks
+from src.domain.entities import (
+    DocumentAssets,
+    DocumentManifest,
+    IngestResult,
+    TableAsset,
+)
 from src.domain.etl_profile import ETLProfile
-from src.infrastructure.marker_adapter import MarkerBlock
+from src.infrastructure.file_storage import FileStorage
+from src.infrastructure.marker_adapter import MarkerBlock, MarkerParseResult
 
 
 def test_normalize_page_ranges_merges_adjacent_ranges() -> None:
@@ -617,3 +624,157 @@ async def test_pymupdf_ingest_persists_searchable_blocks_json(
         and isinstance((block.get("metadata") or {}).get("line_end"), int)
         for block in blocks
     )
+
+
+@pytest.mark.asyncio
+async def test_marker_ingest_reports_manifest_counts_and_saves_segmentation(
+    monkeypatch, tmp_path: Path
+) -> None:
+    pdf_path = tmp_path / "paper.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4 marker")
+    repository = FileStorage(tmp_path / "data")
+
+    pdf_extractor = MagicMock()
+    pdf_extractor.get_page_count.return_value = 1
+
+    marker_extractor = MagicMock()
+    marker_extractor.parse.return_value = MarkerParseResult(
+        markdown=(
+            "# Abstract\n\n"
+            "Marker markdown fallback text.\n\n"
+            "| Metric | Value |\n"
+            "| --- | --- |\n"
+            "| Accuracy | 0.95 |\n"
+        ),
+        blocks=[
+            MarkerBlock(
+                block_id="mk_1",
+                block_type="MarkdownOutput",
+                page=1,
+                text="",
+                metadata={"source_order": 1},
+            )
+        ],
+        toc=[],
+        images={},
+        metadata={"title": "Paper"},
+        page_count=1,
+    )
+
+    monkeypatch.setattr(
+        "src.application.document_service.DocId.generate",
+        lambda *_args: SimpleNamespace(value="doc_marker"),
+    )
+
+    service = DocumentService(
+        repository=repository,
+        pdf_extractor=pdf_extractor,
+        marker_extractor=marker_extractor,
+    )
+
+    result = await service._ingest_single_with_marker(str(pdf_path))
+    doc_dir = repository.get_doc_dir("doc_marker")
+    status = json.loads(
+        (doc_dir / "citation_index.status.json").read_text(encoding="utf-8")
+    )
+    segmentation = json.loads(
+        (doc_dir / "segmentation.json").read_text(encoding="utf-8")
+    )
+    segments = segmentation["segments"]
+
+    assert result.success is True
+    assert result.tables_found == len(result.manifest.assets.tables) == 1
+    assert result.sections_found == len(result.manifest.assets.sections) == 1
+    assert (doc_dir / "segmentation.json").exists()
+    assert (doc_dir / "citation_index.jsonl").exists()
+    assert any(segment["segment_type"] == "Table" for segment in segments)
+    assert any(segment["segment_type"] == "Section header" for segment in segments)
+    assert any(segment.get("asset_id") == "tab_1" for segment in segments)
+    assert status["attempted"] is True
+    assert status["found"] > 0
+    assert status["method"] == "marker_markdown_fallback"
+    citation_lines = (
+        (doc_dir / "citation_index.jsonl").read_text(encoding="utf-8").splitlines()
+    )
+    assert citation_lines
+    first_span = json.loads(citation_lines[0])
+    assert first_span["extraction_backend"] == "marker_markdown_fallback"
+    assert any(
+        "synthesized markdown-based blocks" in warning for warning in result.warnings
+    )
+
+
+@pytest.mark.asyncio
+async def test_marker_ingest_fails_on_empty_markdown(
+    monkeypatch, tmp_path: Path
+) -> None:
+    pdf_path = tmp_path / "empty.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4 marker")
+    repository = FileStorage(tmp_path / "data")
+
+    pdf_extractor = MagicMock()
+    pdf_extractor.get_page_count.return_value = 1
+    marker_extractor = MagicMock()
+    marker_extractor.parse.return_value = MarkerParseResult(
+        markdown="",
+        blocks=[],
+        toc=[],
+        images={},
+        metadata={"title": "Empty"},
+        page_count=1,
+    )
+    monkeypatch.setattr(
+        "src.application.document_service.DocId.generate",
+        lambda *_args: SimpleNamespace(value="doc_empty"),
+    )
+
+    service = DocumentService(
+        repository=repository,
+        pdf_extractor=pdf_extractor,
+        marker_extractor=marker_extractor,
+    )
+
+    result = await service._ingest_single_with_marker(str(pdf_path))
+
+    assert result.success is False
+    assert result.backend == "marker"
+    assert "empty markdown" in (result.error or "")
+    assert not (repository.get_doc_dir("doc_empty") / "citation_index.jsonl").exists()
+
+
+def test_markdown_block_builder_does_not_duplicate_table_lines() -> None:
+    markdown = "\n".join(
+        [
+            "# Results",
+            "",
+            "Intro paragraph.",
+            "",
+            "| Metric | Value |",
+            "| --- | --- |",
+            "| Accuracy | 0.95 |",
+            "",
+            "Closing paragraph.",
+        ]
+    )
+    manifest = DocumentManifest(
+        doc_id="doc_123",
+        filename="paper.pdf",
+        assets=DocumentAssets(
+            tables=[
+                TableAsset(
+                    id="tab_1",
+                    page=1,
+                    markdown="| Metric | Value |\n| --- | --- |\n| Accuracy | 0.95 |",
+                    line_start=4,
+                    line_end=7,
+                )
+            ]
+        ),
+    )
+
+    blocks = build_markdown_blocks(markdown, manifest)
+
+    table_blocks = [block for block in blocks if block["block_type"] == "Table"]
+    text_blocks = [block for block in blocks if block["block_type"] == "Text"]
+    assert len(table_blocks) == 1
+    assert all("| Metric |" not in block["text"] for block in text_blocks)

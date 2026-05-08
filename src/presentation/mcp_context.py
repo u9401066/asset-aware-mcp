@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import inspect
 import logging
 from collections.abc import Awaitable, Callable
@@ -13,6 +14,7 @@ else:
 logger = logging.getLogger(__name__)
 
 ToolProgressCallback = Callable[[int, int, str, str], Awaitable[None] | None]
+MCP_CONTEXT_EMIT_TIMEOUT_SECONDS = 2.0
 
 
 async def report_progress(
@@ -28,7 +30,9 @@ async def report_progress(
     try:
         result = ctx.report_progress(progress, total=total, message=message)
         if inspect.isawaitable(result):
-            await result
+            await asyncio.wait_for(result, timeout=MCP_CONTEXT_EMIT_TIMEOUT_SECONDS)
+    except TimeoutError:
+        logger.debug("Timed out reporting MCP progress")
     except Exception:
         logger.debug("Failed to report MCP progress", exc_info=True)
 
@@ -46,7 +50,9 @@ async def log_message(
     try:
         result = ctx.log(level, message, logger_name=logger_name)
         if inspect.isawaitable(result):
-            await result
+            await asyncio.wait_for(result, timeout=MCP_CONTEXT_EMIT_TIMEOUT_SECONDS)
+    except TimeoutError:
+        logger.debug("Timed out emitting MCP log")
     except Exception:
         logger.debug("Failed to emit MCP log", exc_info=True)
 
