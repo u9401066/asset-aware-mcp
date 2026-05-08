@@ -7,6 +7,35 @@
 
 ## [Unreleased]
 
+## [0.6.25] - 2026-05-08
+
+### Fixed
+
+- **MCP responsiveness and isolated ingest**
+  - `parse_pdf_structure` and `ocr_pdf_document` now always return background jobs instead of running Marker or OCR synchronously inside the MCP request path.
+  - Synchronous ingest fails closed to a background job when LightRAG indexing would otherwise block the request.
+  - Isolated ingest workers now persist traceback details, per-file logs, heartbeat percentage updates, and warning visibility in failed job status.
+
+- **Citation-ready Marker artifacts**
+  - Marker empty or layout-only output now produces explicit citation status, and Marker MarkdownOutput-only results can synthesize citation-ready markdown blocks for manifest, segmentation, and evidence-span workflows.
+  - Citation helper modules now keep citation index creation, status reporting, and presentation formatting out of the large MCP tool file.
+
+- **Knowledge graph timeout guards**
+  - `consult_knowledge_graph` and `export_knowledge_graph` now enforce request-level timeout guards so Cline receives bounded responses when LightRAG stalls.
+
+- **DDD and job runner boundaries**
+  - Application code no longer imports the presentation worker entrypoint; isolated worker startup moved to `src/presentation/ingest_worker_main.py`.
+  - `JobService` now delegates subprocess, environment, log, progress, heartbeat, and termination behavior through an `IngestWorkerRunner` port with an infrastructure subprocess adapter.
+
+- **DOCX and table safety**
+  - Strict DOCX round-trip validation now checks header, footer, footnote, and table-cell formatting regressions instead of only body text and sampled runs.
+  - Table JSON and Markdown persistence now use temporary files plus replace semantics so failed writes preserve the prior artifact.
+
+- **VSIX runtime and activation smoke**
+  - Runtime preparation now uses an extension-storage `UV_CACHE_DIR`, avoiding user uv cache permission failures.
+  - Forced activation smoke now activates the installed VSIX and avoids inheriting `ELECTRON_RUN_AS_NODE=1` into Code.exe.
+  - MCP provider activation is exposed to smoke tests so installed VSIX provider definitions can be verified directly.
+
 ## [0.6.24] - 2026-05-07
 
 ### Fixed

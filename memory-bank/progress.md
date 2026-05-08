@@ -1,4 +1,14 @@
-# Progress (Updated: 2026-05-07)
+# Progress (Updated: 2026-05-08)
+
+## 2026-05-08
+
+- Preparing `v0.6.25` as a scoped stability release for Cline responsiveness, isolated ingest worker durability, citation-ready Marker fallback artifacts, DOCX/table safety, and VSIX activation/runtime hardening.
+- Fixed blocking MCP paths by routing `parse_pdf_structure` and `ocr_pdf_document` through background jobs, failing synchronous LightRAG indexing closed to a background job, and adding request-level timeout guards to knowledge graph query/export tools.
+- Split citation and worker support into smaller modules: `markdown_block_builder`, `citation_artifacts`, `citation_index_service`, `citation_support`, `worker_runner`, `subprocess_ingest_worker_runner`, and `presentation/ingest_worker_main`.
+- Hardened failed ingest visibility with traceback capture, per-file logs, heartbeat/progress percentage updates, and failed job warnings.
+- Added strict DOCX validation for header/footer/footnote story parts and table-cell formatting, plus atomic TableService JSON/Markdown persistence.
+- Hardened VSIX installed activation smoke and runtime preparation with provider-definition verification, extension-storage `UV_CACHE_DIR`, and `ELECTRON_RUN_AS_NODE` cleanup before launching Code.exe.
+- Release handling is intentionally segmented: Python reliability, DOCX/table safety, VSIX runtime, and release metadata will be staged with exact pathspecs while unrelated assistant harness drafts and test artifacts remain uncommitted.
 
 ## 2026-05-07
 

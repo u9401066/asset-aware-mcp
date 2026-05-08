@@ -1,5 +1,16 @@
 # Active Context
 
+## 2026-05-08 - v0.6.25 stability release prep
+
+- Preparing `v0.6.25` as a scoped stability release after the Cline timeout and VSIX activation fixes were validated locally.
+- MCP request responsiveness is the release focus: `parse_pdf_structure` and `ocr_pdf_document` now always return background jobs, synchronous ingest fails closed to a background job when LightRAG indexing would block, and knowledge graph query/export tools have request-level timeout guards.
+- Isolated ingest worker behavior is hardened with presentation-owned worker entrypoint composition, application-layer worker helpers only, per-file logs, traceback capture, heartbeat/progress updates, and visible failed-job warnings.
+- Citation-ready Marker fallback is improved with markdown block synthesis, citation status files, and helper modules split out of `document_service.py` and `document_tools.py`.
+- The DDD boundary is improved by introducing an `IngestWorkerRunner` application port and a subprocess infrastructure adapter, keeping subprocess/env/log runner details out of `JobService`.
+- DOCX/table safety is included in this release: strict validation now covers header/footer/footnote story parts and table-cell direct formatting, while table persistence is atomic.
+- VSIX smoke coverage now verifies installed-extension activation and MCP provider definition, with runtime preparation using extension-storage `UV_CACHE_DIR` and avoiding `ELECTRON_RUN_AS_NODE=1` leakage into Code.exe.
+- Git hygiene goal for this release: use segmented commits and exact pathspecs, leave ad-hoc `.github/agents`, `.pytest-tmp`, `.vscode-test`, PDFs, and unrelated LLM wiki harness sync files out of the release unless explicitly staged later.
+
 ## 2026-05-07 - v0.6.24 Cline worker isolation release prep
 
 - Preparing `v0.6.24` after 4 subagents completed 3 review rounds over the Cline failure path, job lifecycle, document ingestion, and release pipeline.
@@ -25,7 +36,7 @@
 
 ## Current Goals
 
-- Complete the `0.6.24` Cline worker isolation release with memory updates, segmented git commits, push, and annotated tag publication while leaving unreviewed PDFs/ad-hoc agent drafts unstaged.
+- Complete the `0.6.25` stability release with memory updates, segmented git commits, full verification, push, and annotated tag publication while leaving unreviewed PDFs/ad-hoc agent drafts unstaged.
 
 - 正在完成 0.6.16 release prep：整合 multi-agent repo review 修正，完成 Marker/LightRAG/PyMuPDF/segmentation/table/DOCX/VSIX/release hygiene 補強，並進行 MEM+GIT+PUSH+TAG 發布。
 
