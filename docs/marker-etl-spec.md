@@ -396,7 +396,7 @@ return IngestResult(
 位置：`tests/integration/test_marker_etl.py`
 
 **前置條件：**
-- Marker 已安裝（`uv sync --extra marker`，或相容別名 `uv sync --extra pdf`）
+- v0.6.27 暫停 Marker integration：upstream `marker-pdf` 1.10.2 依賴 `Pillow<11`，但安全 runtime 需要 `Pillow>=12.2.0`；待 upstream 支援 patched Pillow 後再重新啟用。
 - 模型已下載（首次執行時自動下載）
 - 測試用 PDF 檔案存在
 

@@ -2,6 +2,10 @@
 
 ## 2026-05-08
 
+- Preparing `v0.6.27` as a security and release-hygiene patch after multi-agent prerelease checks found runtime dependency CVEs, the `marker-pdf`/Pillow resolver conflict, table citation locator-source drift, and VSIX package guard gaps.
+- Raised secure runtime floors and put Marker extras on security hold because upstream `marker-pdf` 1.10.2 still pins `Pillow<11`; VSIX/local launch now logs the hold and avoids `--extra marker` / `--with marker-pdf`.
+- Preserved `locator_source_sha256` through `AssetRef` serialization and table citation reload, with focused regression coverage for evidence-span conversion and table persistence.
+- Hardened VSIX packaging and assistant asset sync against root `dist`/`tmp` and nested generated repo-assets, and added an Insiders selector for install smoke.
 - Preparing `v0.6.26` hotfix after a Codex-style MCP stdio smoke reproduced an 80-second sync PyMuPDF ingest request for a tiny PDF on Windows.
 - Fixed MCP PDF ingest so `ingest_documents(async_mode=False)` also returns a background job, preserving request responsiveness and leaving actual PyMuPDF work to the isolated worker path.
 - Added regression coverage that sync MCP PDF ingest creates a job, preserves job parameters, skips page-count probes, and never calls inline document ingestion.
@@ -73,7 +77,7 @@
 
 ## Doing
 
-- 0.6.16 local release gates 已完成；接著 commit、push、建立並推送 `v0.6.16` tag
+- 0.6.27 security/release-hygiene gates, exact-path commits, push, and annotated `v0.6.27` tag.
 
 ## Next
 

@@ -11,7 +11,7 @@
 | 項目 | 說明 |
 |------|------|
 | 語言 | Python 3.10+ |
-| 框架 | FastMCP, LightRAG, PyMuPDF, marker-pdf |
+| 框架 | FastMCP, LightRAG, PyMuPDF; Marker is temporarily on security hold |
 | 策略 | 雙引擎 PDF 解析（PyMuPDF 快速 + Marker 高精度） |
 
 ### 核心功能
@@ -71,7 +71,7 @@
 # 初始化環境
 uv venv
 uv sync                    # 基本安裝
-uv sync --extra marker     # 如需 Marker 高精度引擎（含 torch）
+# v0.6.27: Marker extra is temporarily disabled because marker-pdf pins Pillow<11.
 
 # 安裝依賴
 uv add package-name

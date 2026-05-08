@@ -6,16 +6,15 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.26/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.27/resources/banner.png)
 
-## What's New in v0.6.26
+## What's New in v0.6.27
 
-- **Codex/Cline-safe PDF ingest**: `ingest_documents(async_mode=false)` now returns a background job too, preventing small Windows PyMuPDF ingests from tying up stdio MCP requests.
-- **Bounded MCP requests**: `parse_pdf_structure`, `ocr_pdf_document`, and blocking LightRAG ingest paths return background jobs instead of tying up Cline requests.
-- **Worker diagnostics**: isolated ingest workers now preserve per-file logs, traceback details, heartbeat/progress updates, and visible failed-job warnings.
-- **Citation-ready Marker fallback**: layout-only Marker output can synthesize markdown blocks and citation status for evidence-span workflows.
-- **Knowledge graph guardrails**: query and export calls now have request-level timeout guards for stalled LightRAG runtimes.
-- **VSIX activation/runtime smoke**: installed-extension activation verifies the MCP provider definition, and runtime preparation uses extension-local `UV_CACHE_DIR`.
+- **Runtime security refresh**: default Python dependencies now require patched image/XML/network/auth package floors, including `Pillow>=12.2.0` and `lxml>=6.1.0`.
+- **Marker security hold**: the launcher no longer installs `marker-pdf` when `assetAwareMcp.enableMarkerBackend` is set, because upstream `marker-pdf` currently pins vulnerable `Pillow<11`.
+- **Citation provenance round-trip**: table citations now preserve `locator_source_sha256` through `AssetRef` serialization and reload.
+- **VSIX package hygiene**: package checks now block `dist/`, `tmp/`, and generated nested repo-assets such as `out/`, `node_modules/`, `.venv`, and `__pycache__`.
+- **Insiders smoke selector**: install smoke tests can target VS Code Insiders with `ASSET_AWARE_MCP_VSCODE_QUALITY=insiders`.
 - **59 tools** across 8 modules, including consolidated compatibility entrypoints
 
 ## 🧪 Current Main Branch
@@ -105,9 +104,9 @@ This extension provides a sophisticated **ETL (Extract, Transform, Load) Pipelin
 
 ## ✨ Features
 
-- **📄 Dual-Engine PDF ETL**:
+- **📄 PDF ETL**:
   - **PyMuPDF** (default) - Fast extraction (~50MB dependency)
-  - **Marker** (optional, `use_marker=True`) - High-precision with `blocks.json` containing bbox coordinates
+  - **Marker** (`use_marker=True`) - Temporarily unavailable in v0.6.27 until upstream `marker-pdf` supports patched Pillow
 - **🧩 Unified Segmentation**: Export normalized `segmentation.json` with reading order and markdown line ranges
 - **🖼️ Layout Overlay**: Visual bbox/type/reading-order inspection from the original PDF
 - **🔤 OCR Preprocessing**: Optional scanned-PDF cleanup before ETL
@@ -173,14 +172,14 @@ The agent retrieves exactly what it needs:
 | `assetAwareMcp.ollamaHost` | `http://localhost:11434` | Ollama URL |
 | `assetAwareMcp.dataDir` | `./data` | Storage for processed assets |
 | `.env: LIGHTRAG_WORKING_DIR` | `./data/lightrag_db` | LightRAG working directory written by the setup wizard / settings panel |
-| `assetAwareMcp.enableMarkerBackend` | `false` | Install optional Marker backend for structured parsing; pulls torch-related ML dependencies |
-| `assetAwareMcp.torchBackend` | `cpu` | Torch backend used when Marker backend is enabled; `cpu` is the safest default |
+| `assetAwareMcp.enableMarkerBackend` | `false` | Reserved for Marker; temporarily disabled because `marker-pdf` pins vulnerable `Pillow<11` |
+| `assetAwareMcp.torchBackend` | `cpu` | Reserved torch backend setting for Marker after its Pillow dependency supports the secure runtime |
 
 Runtime note:
 The extension prefers a managed Python 3.11 runtime when launching the MCP server via `uv`/`uvx`. This avoids package builds on machines without native toolchains, especially macOS systems missing Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
 
 Marker note:
-The extension does not install Marker or torch by default. If you need `use_marker=True` workflows, enable `assetAwareMcp.enableMarkerBackend`. Keeping `assetAwareMcp.torchBackend=cpu` avoids most cross-platform wheel and CUDA mismatch issues.
+The extension does not install Marker or torch in v0.6.27. `assetAwareMcp.enableMarkerBackend` is retained for compatibility, but the launcher ignores it while upstream `marker-pdf` requires `Pillow<11` and the secure runtime requires `Pillow>=12.2.0`.
 
 Installation scope & storage:
 - The VSIX installs as a user/global extension (standard VS Code behavior), so you do not need a separate install per workspace.
@@ -204,7 +203,7 @@ If the extension fails to start or the MCP server doesn't appear:
 1.  **Check VS Code Version**: Ensure you are using VS Code **1.96.0** or newer.
 2.  **Check Dependencies**: Run `Asset-Aware MCP: Check System Dependencies` from the command palette.
   The dependency checker will also show the preferred Python runtime used by the MCP launcher.
-  If Marker backend is enabled, it will also show the selected torch backend.
+  If Marker backend is enabled, it will show the active security hold instead of installing `marker-pdf`.
 3.  **Inspect Logs**:
     *   Open **Output** panel (`Ctrl+Shift+U`).
     *   Select **Asset-Aware MCP** from the dropdown to see extension logs.

@@ -7,6 +7,23 @@
 
 ## [Unreleased]
 
+## [0.6.27] - 2026-05-08
+
+### Fixed
+
+- **Runtime dependency security**
+  - Raised default runtime floors for patched PDF/image/XML/network/auth dependencies, including `Pillow>=12.2.0`, `lxml>=6.1.0`, `aiohttp>=3.13.4`, `cryptography>=46.0.7`, `protobuf>=6.33.5`, `requests>=2.33.0`, `urllib3>=2.6.3`, `PyJWT>=2.12.0`, `pyasn1>=0.6.3`, `python-dotenv>=1.2.2`, and `python-multipart>=0.0.27`.
+  - Put the bundled Marker extras on security hold because `marker-pdf` 1.10.2 pins `Pillow<11`; default installs and VSIX launch now stay on the secure PyMuPDF runtime until upstream Marker supports patched Pillow.
+
+- **Citation provenance**
+  - `AssetRef` now preserves `locator_source_sha256` through dict serialization and reload, preventing table citation round-trips from dropping block-locator provenance.
+  - Added coverage for evidence-span AssetRef conversion and table citation persistence.
+
+- **VSIX release hygiene**
+  - Package-content checks now reject `dist/`, `tmp/`, and generated nested repo-assets such as `out/`, `node_modules/`, `.venv`, `.pytest_cache`, and `__pycache__`.
+  - Assistant asset sync now fails fast if generated directories are present under mapped harness assets.
+  - Install smoke tests can target VS Code Insiders with `ASSET_AWARE_MCP_VSCODE_QUALITY=insiders` or `--vscode-quality insiders`.
+
 ## [0.6.26] - 2026-05-08
 
 ### Fixed

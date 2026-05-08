@@ -138,10 +138,9 @@ Visual overview for the project. All diagrams use consistent GitHub README style
 # Install dependencies (using uv) — default install skips Marker/torch
 uv sync
 
-# Optional: install Marker backend only if you need structured parsing
-uv sync --extra marker
-# Backward-compatible alias for older docs/scripts
-uv sync --extra pdf
+# v0.6.27: Marker extra is temporarily empty because marker-pdf pins
+# Pillow<11 while the secure runtime requires Pillow>=12.2.0.
+# Use the default PyMuPDF backend until upstream marker-pdf supports patched Pillow.
 
 # Run MCP Server
 uv run python -m src.presentation.server
@@ -157,7 +156,7 @@ Installation scope note:
 - Runtime data stays with your repo: `.env` and `assetAwareMcp.dataDir` default to `./data`, so ingested assets remain scoped to the current workspace.
 
 Marker note:
-`marker-pdf` is now an optional dependency because it may pull in `torch`, `surya`, and platform-specific ML wheels. Default installs use the PyMuPDF backend only. Enable Marker only when you need `use_marker=True` or `parse_pdf_structure`. Install the extra in the same environment that launches the MCP server; if Marker hits memory pressure, retry with `extract_figures=False` and `marker_max_pages_per_chunk=1`, or use the PyMuPDF fallback path.
+In v0.6.27 the packaged Marker extra is intentionally on security hold: upstream `marker-pdf` 1.10.2 requires `Pillow<11`, while this release pins `Pillow>=12.2.0` for patched image-processing security. Default installs use the PyMuPDF backend only. `use_marker=True` / `parse_pdf_structure` will report that Marker is unavailable until upstream Marker supports a patched Pillow range.
 
 ## 🔌 MCP Tools
 
@@ -165,14 +164,14 @@ Marker note:
 
 | Tool | Purpose |
 |------|---------|
-| `ingest_documents` | Process PDF files with optional Marker backend (`use_marker=True` for blocks.json) |
+| `ingest_documents` | Process PDF files with PyMuPDF; `use_marker=True` currently falls back or fails closed while Marker is on security hold |
 | `list_documents` | List all ingested documents and their asset counts |
 | `delete_document` | Delete an ingested PDF, its local artifacts, and LightRAG index entries when enabled |
 | `convert_pdf_to_docx` | Reconstruct a readable DOCX from extracted PDF content |
 | `convert_pdf_to_pptx` | Rebuild editable PPTX slides from extracted PDF markdown and figures |
 | `inspect_document_manifest` | Inspect document structure before fetching specific assets |
 | `fetch_document_asset` | Precisely retrieve tables (MD) / figures (B64) / sections |
-| `parse_pdf_structure` | Run high-precision Marker parsing and emit structured blocks |
+| `parse_pdf_structure` | Queue structured parsing work; Marker output is unavailable in v0.6.27 until upstream Marker supports patched Pillow |
 | `search_source_location` | Search exact source locations with page + bbox for verification |
 | `export_document_segmentation` | Export normalized `segmentation.json` with reading order + line ranges |
 | `visualize_document_layout` | Render page overlay images for bbox / type / reading-order inspection |
@@ -272,7 +271,7 @@ Different journals/formats need different extraction settings. Use these tools t
 |----------|------------|
 | Language | Python 3.10+ |
 | Package Manager | **uv** (all pip/setup-python removed) |
-| ETL | **PyMuPDF** (fitz) + **Marker** (optional, high-precision) |
+| ETL | **PyMuPDF** (fitz); **Marker** is temporarily on security hold |
 | RAG | LightRAG (lightrag-hku) |
 | MCP | FastMCP |
 | Storage | Local filesystem (JSON/Markdown/PNG) |
@@ -281,8 +280,8 @@ Different journals/formats need different extraction settings. Use these tools t
 
 Installation guidance:
 - Default install: `uv sync`
-- Install Marker backend only when needed: `uv sync --extra marker` (`uv sync --extra pdf` is kept as a compatibility alias)
-- Safer extension Marker setup: enable Marker backend in settings and keep `torchBackend=cpu` unless you explicitly need GPU wheels
+- Marker backend: temporarily disabled in v0.6.27 because `marker-pdf` pins vulnerable `Pillow<11`; the `marker` / `pdf` extras are compatibility placeholders until upstream supports patched Pillow.
+- VS Code extension: `assetAwareMcp.enableMarkerBackend` is retained as a setting, but the launcher will not install `marker-pdf` while the security hold is active.
 
 - [Technical Spec](docs/spec.md) - Detailed technical specification
 - [Architecture](ARCHITECTURE.md) - System architecture

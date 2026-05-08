@@ -1,5 +1,14 @@
 # Active Context
 
+## 2026-05-08 - v0.6.27 security and release hygiene patch
+
+- Preparing `v0.6.27` from a clean worktree on top of `v0.6.26` after prerelease audit found runtime dependency CVEs, Marker/Pillow resolver conflict, table citation provenance drift, and VSIX package guard gaps.
+- Default runtime dependency floors now require patched image/XML/network/auth packages, including `Pillow>=12.2.0` and `lxml>=6.1.0`.
+- Marker extras are intentionally empty in this release because upstream `marker-pdf` 1.10.2 pins `Pillow<11`; the VSIX/local launcher now logs a Marker security hold and does not install `marker-pdf` even if `assetAwareMcp.enableMarkerBackend` is set.
+- Table citation AssetRefs now preserve `locator_source_sha256` through serialization/reload, with regression coverage for evidence-span conversion and table persistence.
+- VSIX release hygiene now blocks root `dist/`/`tmp/`, generated nested repo-assets, and generated assistant asset directories during sync. Install smoke can be forced to VS Code Insiders with `ASSET_AWARE_MCP_VSCODE_QUALITY=insiders`.
+- Main worktree remains intentionally dirty with unrelated LLM-wiki/harness/agent/test artifacts; release staging must happen only from the isolated `asset-aware-mcp-v0.6.27-fix` worktree with exact pathspecs.
+
 ## 2026-05-08 - v0.6.26 MCP stdio ingest hotfix
 
 - Preparing `v0.6.26` as a patch on top of the already-pushed `v0.6.25` tag after a Codex-style stdio MCP smoke found that `ingest_documents(async_mode=False, use_marker=False)` could still block on Windows PyMuPDF document-level extractor timeouts.
@@ -44,7 +53,7 @@
 
 ## Current Goals
 
-- Complete the `0.6.26` MCP stdio ingest hotfix with exact-path staging, clean-worktree verification, push, and annotated tag publication while leaving unreviewed LLM-wiki harness drafts, repo-assets mirrors, PDFs, ad-hoc agents, and test artifacts unstaged.
+- Complete the `0.6.27` security/release-hygiene patch with exact-path staging, clean-worktree verification, push, and annotated tag publication while leaving unreviewed LLM-wiki harness drafts, repo-assets mirrors, PDFs, ad-hoc agents, and test artifacts unstaged.
 
 - 正在完成 0.6.16 release prep：整合 multi-agent repo review 修正，完成 Marker/LightRAG/PyMuPDF/segmentation/table/DOCX/VSIX/release hygiene 補強，並進行 MEM+GIT+PUSH+TAG 發布。
 

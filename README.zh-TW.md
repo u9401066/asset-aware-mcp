@@ -133,10 +133,8 @@ asset-aware-mcp/
 # 安裝依賴 (使用 uv) — 預設不安裝 Marker/torch
 uv sync
 
-# 如需高精度結構化解析，再額外安裝 Marker backend
-uv sync --extra marker
-# 舊文件/腳本相容別名
-uv sync --extra pdf
+# v0.6.27：Marker extra 暫時停用；marker-pdf 1.10.2 鎖 Pillow<11，
+# 但安全 runtime 需要 Pillow>=12.2.0。請先使用預設 PyMuPDF backend。
 
 # 啟動 MCP 伺服器
 uv run python -m src.presentation.server
@@ -153,7 +151,7 @@ VS Code 擴充套件在透過 `uv` / `uvx` 啟動 MCP server 時，會優先使�
 - 執行時資料留在 workspace：`.env` 與 `assetAwareMcp.dataDir` 預設指向 `./data`，讓攝入結果跟著專案存放，避免佔用全域資源。
 
 Marker 說明：
-`marker-pdf` 現在是可選依賴，因為它可能拉入 `torch`、`surya` 與平台相關的 ML wheels。預設安裝只使用 PyMuPDF 後端；只有在你真的需要 `use_marker=True` 或 `parse_pdf_structure` 時才建議額外安裝。請把 extra 安裝在實際啟動 MCP server 的同一個環境；若 Marker 遇到記憶體壓力，先改用 `extract_figures=False` 與 `marker_max_pages_per_chunk=1`，或退回 PyMuPDF fallback。
+v0.6.27 將 Marker backend 暫時放入 security hold：upstream `marker-pdf` 1.10.2 需要 `Pillow<11`，但本版安全 runtime 需要 `Pillow>=12.2.0`。預設安裝只使用 PyMuPDF 後端；`use_marker=True` / `parse_pdf_structure` 會回報 Marker 暫不可用，直到 upstream Marker 支援 patched Pillow。
 
 ## 🔌 MCP 工具
 
@@ -279,8 +277,8 @@ Marker 說明：
 
 安裝建議：
 - 預設安裝：`uv sync`
-- 需要 Marker 時再安裝：`uv sync --extra marker`（保留 `uv sync --extra pdf` 作為舊文件/腳本相容別名）
-- VS Code extension 要啟用 Marker 時，建議先用 `torchBackend=cpu`，除非你明確需要 GPU wheels
+- Marker backend：v0.6.27 暫時停用；`marker` / `pdf` extras 保留名稱但不安裝 `marker-pdf`。
+- VS Code extension：`assetAwareMcp.enableMarkerBackend` 設定仍保留，但 security hold 期間 launcher 不會安裝 `marker-pdf`。
 
 - [技術規格書](docs/spec.md) - 詳細技術定義
 - [系統架構](ARCHITECTURE.md) - 架構設計說明
