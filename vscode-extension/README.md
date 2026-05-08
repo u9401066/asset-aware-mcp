@@ -6,16 +6,16 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.24/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.25/resources/banner.png)
 
-## What's New in v0.6.24
+## What's New in v0.6.25
 
-- **Isolated Marker jobs**: Marker background ingestion now runs in a subprocess worker so Cline can keep polling job status while heavy parsing continues.
-- **Clear job outputs**: job status now shows backend, fallback warnings, artifact paths, degraded state, and next commands for manifest and segmentation work.
-- **Strict structure parsing**: `parse_pdf_structure` now fails closed when Marker is required instead of writing fallback artifacts under a failed strict parse.
-- **Safer Cline config**: the local installer now preserves cross-workspace `DATA_DIR` entries unless `--force-workspace` is explicitly used.
-- **Release hardening**: PyPI/Marketplace reruns, VSIX asset sync, and wheel/sdist audits now guard the runtime helper modules needed by Cline-safe jobs.
-- **59 tools** across 7 modules, including 9 consolidated compatibility entrypoints
+- **Bounded MCP requests**: `parse_pdf_structure`, `ocr_pdf_document`, and blocking LightRAG ingest paths now return background jobs instead of tying up Cline requests.
+- **Worker diagnostics**: isolated ingest workers now preserve per-file logs, traceback details, heartbeat/progress updates, and visible failed-job warnings.
+- **Citation-ready Marker fallback**: layout-only Marker output can synthesize markdown blocks and citation status for evidence-span workflows.
+- **Knowledge graph guardrails**: query and export calls now have request-level timeout guards for stalled LightRAG runtimes.
+- **VSIX activation/runtime smoke**: installed-extension activation verifies the MCP provider definition, and runtime preparation uses extension-local `UV_CACHE_DIR`.
+- **59 tools** across 8 modules, including consolidated compatibility entrypoints
 
 ## 🧪 Current Main Branch
 
