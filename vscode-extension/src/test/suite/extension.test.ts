@@ -8,6 +8,9 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as path from 'path';
 
+const providerLaunchSmoke = process.env.ASSET_AWARE_MCP_VERIFY_PROVIDER_LAUNCH === '1';
+const nonSmokeTest = providerLaunchSmoke ? test.skip : test;
+
 suite('Extension Test Suite', () => {
     vscode.window.showInformationMessage('Start all tests.');
 
@@ -16,7 +19,7 @@ suite('Extension Test Suite', () => {
         assert.ok(extension, 'Extension should be installed');
     });
 
-    test('Extension should activate', async () => {
+    nonSmokeTest('Extension should activate', async () => {
         const extension = vscode.extensions.getExtension('u9401066.asset-aware-mcp');
         if (extension) {
             await extension.activate();
@@ -24,7 +27,7 @@ suite('Extension Test Suite', () => {
         }
     });
 
-    test('Commands should be registered', async () => {
+    nonSmokeTest('Commands should be registered', async () => {
         const commands = await vscode.commands.getCommands(true);
 
         const expectedCommands = [
@@ -48,7 +51,7 @@ suite('Extension Test Suite', () => {
         }
     });
 
-    test('Configuration should have default values', () => {
+    nonSmokeTest('Configuration should have default values', () => {
         const config = vscode.workspace.getConfiguration('assetAwareMcp');
 
         assert.strictEqual(config.get('llmBackend'), 'ollama');
@@ -92,7 +95,7 @@ suite('Extension Test Suite', () => {
 });
 
 suite('MCP Provider Test Suite', () => {
-    test('getUvPaths should return valid paths', () => {
+    nonSmokeTest('getUvPaths should return valid paths', () => {
         const homeDir = process.env.HOME || process.env.USERPROFILE || '';
         const platform = process.platform;
 
@@ -108,7 +111,7 @@ suite('MCP Provider Test Suite', () => {
 });
 
 suite('Utility Functions Test Suite', () => {
-    test('Path resolution should work correctly', () => {
+    nonSmokeTest('Path resolution should work correctly', () => {
         const testPath = './data';
         const basePath = '/home/user/workspace';
         const expected = path.join(basePath, 'data');
@@ -120,7 +123,7 @@ suite('Utility Functions Test Suite', () => {
         assert.strictEqual(resolved, expected);
     });
 
-    test('Environment variable parsing simulation', () => {
+    nonSmokeTest('Environment variable parsing simulation', () => {
         const envContent = `
 # This is a comment
 LLM_BACKEND=ollama

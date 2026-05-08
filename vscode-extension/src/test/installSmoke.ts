@@ -98,33 +98,6 @@ function createIsolatedDirs(prefix: string): { baseDir: string; userDataDir: str
     return { baseDir, userDataDir, extensionsDir, workspaceDir };
 }
 
-function createHarnessExtension(baseDir: string): string {
-    const harnessDir = path.join(baseDir, 'activation-harness');
-    fs.mkdirSync(harnessDir, { recursive: true });
-    fs.writeFileSync(
-        path.join(harnessDir, 'package.json'),
-        JSON.stringify(
-            {
-                name: 'asset-aware-installed-activation-harness',
-                publisher: 'asset-aware-tests',
-                version: '0.0.0',
-                engines: { vscode: '^1.96.0' },
-                activationEvents: [],
-                main: './extension.js',
-            },
-            null,
-            2,
-        ),
-        'utf8',
-    );
-    fs.writeFileSync(
-        path.join(harnessDir, 'extension.js'),
-        'exports.activate = function activate() { return {}; };\n',
-        'utf8',
-    );
-    return harnessDir;
-}
-
 async function installVsix(cliPath: string, vsixPath: string, userDataDir: string, extensionsDir: string): Promise<void> {
     await runCommand(cliPath, [
         '--user-data-dir', userDataDir,
