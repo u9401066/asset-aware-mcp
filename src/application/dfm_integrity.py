@@ -559,9 +559,15 @@ class DfmIntegrityChecker:
                     if diff.attribute not in allowed_format_attributes
                     or (
                         diff.attribute == "run_count"
-                        and not self._diff_location_allowed(
-                            getattr(diff, "location", ""),
-                            expected_text_diff_locations,
+                        and not (
+                            self._diff_location_allowed(
+                                getattr(diff, "location", ""),
+                                expected_text_diff_locations,
+                            )
+                            or self._diff_location_allowed(
+                                getattr(diff, "location", ""),
+                                expected_table_diff_locations,
+                            )
                         )
                     )
                 ]

@@ -385,6 +385,15 @@ def test_check_post_save_allows_revision_markup_format_diffs(monkeypatch, tmp_pa
             rebuilt="2",
         )
     )
+    validation.format_diffs.append(
+        FormatDiff(
+            index=1,
+            location="table 1/row 1/col 1",
+            attribute="run_count",
+            original="1",
+            rebuilt="2",
+        )
+    )
 
     class FakeValidator:
         def validate(self, original, rebuilt):
@@ -408,7 +417,7 @@ def test_check_post_save_allows_revision_markup_format_diffs(monkeypatch, tmp_pa
 
     assert report.passed is True
     assert report.error_count == 0
-    assert report.issues[0].details["format_diffs"] == 1
+    assert report.issues[0].details["format_diffs"] == 2
 
 
 def test_check_post_save_blocks_run_count_diff_outside_expected_text_scope(

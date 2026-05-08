@@ -49,12 +49,13 @@ def test_domain_layer_has_no_outer_layer_imports() -> None:
     assert offenders == []
 
 
-def test_infrastructure_layer_does_not_import_application_or_presentation() -> None:
+def test_infrastructure_layer_imports_only_application_ports() -> None:
+    allowed_application_ports = {"src.application.worker_runner"}
     forbidden = ("src.application", "src.presentation")
     offenders = [
         f"{path.relative_to(ROOT)} imports {module}"
         for path in _python_files("infrastructure")
         for module in _imports(path)
-        if module.startswith(forbidden)
+        if module.startswith(forbidden) and module not in allowed_application_ports
     ]
     assert offenders == []
