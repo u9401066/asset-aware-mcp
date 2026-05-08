@@ -1,6 +1,6 @@
 [project]
 name = "asset-aware-mcp"
-version = "0.6.26"
+version = "0.6.27"
 description = "Medical RAG with Asset-Aware MCP - Precise PDF asset retrieval (tables, figures, sections) for AI Agents"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -34,26 +34,33 @@ dependencies = [
     "mistralai>=1.0.0",
     "pydantic>=2.0.0",
     "aiofiles>=24.0.0",
-    "python-dotenv>=1.0.0",
+    "aiohttp>=3.13.4",
+    "cryptography>=46.0.7",
     "httpx>=0.28.1",
-    "Pillow>=10.0.0",
+    "Pillow>=12.2.0",
+    "protobuf>=6.33.5",
+    "pyasn1>=0.6.3",
+    "PyJWT>=2.12.0",
     "PyMuPDF>=1.24.0", # Core PDF backend (lightweight)
+    "python-dotenv>=1.2.2",
+    "python-multipart>=0.0.27",
+    "requests>=2.33.0",
+    "urllib3>=2.6.3",
     "xlsxwriter>=3.2.9",
     "pydantic-settings>=2.12.0",
     "tabulate>=0.9.0",
-    "lxml>=5.0.0",
+    "lxml>=6.1.0",
     "pyyaml>=6.0.0",
     "python-docx>=1.2.0",
     "python-pptx>=1.0.2",
 ]
 
 [project.optional-dependencies]
-marker = [
-    "marker-pdf>=1.10.2",
-]
-pdf = [
-    "marker-pdf>=1.10.2",
-]
+# Temporarily empty in v0.6.27: marker-pdf 1.10.2 pins Pillow<11,
+# while the secure runtime requires Pillow>=12.2.0. Re-enable this extra
+# when upstream marker-pdf supports a patched Pillow range.
+marker = []
+pdf = []
 
 [project.urls]
 Homepage = "https://github.com/u9401066/asset-aware-mcp"

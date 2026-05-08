@@ -35,6 +35,7 @@ import {
     getAssetAwareRuntimeProbeArgs,
     getUvVersion,
     getUvxLaunch,
+    MARKER_BACKEND_SECURITY_HOLD_MESSAGE,
     PREFERRED_RUNTIME_PYTHON,
 } from './uv';
 
@@ -439,10 +440,7 @@ async function prepareMcpServerRuntime(
             `torch_backend=${torchBackend}; timeout_ms=${RUNTIME_PREPARE_TIMEOUT_MS}`,
         );
         if (enableMarkerBackend) {
-            log(
-                'Marker runtime preparation can cold-start marker-pdf, torch, and model downloads. ' +
-                'Cline/Copilot/Codex sync waits for this probe so stdio startup is not blocked.',
-            );
+            log(MARKER_BACKEND_SECURITY_HOLD_MESSAGE);
         }
         log(`Preparing MCP runtime UV cache: ${uvCacheDir}`);
         const { stdout, stderr } = await execFileAsync(launch.command, args, {
@@ -783,7 +781,7 @@ async function checkSystemDependencies(): Promise<void> {
         depChannel.appendLine('   Cached version: ' + (lastVersion ?? '(first install)'));
         depChannel.appendLine('   Marker backend enabled: ' + String(enableMarkerBackend));
         if (enableMarkerBackend) {
-            depChannel.appendLine('   Torch backend: ' + torchBackend);
+            depChannel.appendLine('   ' + MARKER_BACKEND_SECURITY_HOLD_MESSAGE);
         }
         depChannel.appendLine('   Runtime prepared: ' + (preparedVersion === extensionVersion ? 'yes' : 'no'));
         if (preparedVersion !== extensionVersion) {

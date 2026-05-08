@@ -68,21 +68,21 @@ describe('uv path discovery', () => {
         assert.deepStrictEqual(getUvRunArgs(), ['run', '--python', PREFERRED_RUNTIME_PYTHON]);
     });
 
-    it('builds uv run args with local marker extra', () => {
+    it('does not add the local marker extra while the marker backend is on security hold', () => {
         assert.deepStrictEqual(
             getUvRunArgs(PREFERRED_RUNTIME_PYTHON, true),
-            ['run', '--python', PREFERRED_RUNTIME_PYTHON, '--extra', 'marker'],
+            ['run', '--python', PREFERRED_RUNTIME_PYTHON],
         );
     });
 
-    it('builds marker runtime args with cpu backend by default', () => {
-        assert.deepStrictEqual(getMarkerRuntimeArgs(), ['--with', 'marker-pdf', '--torch-backend', DEFAULT_TORCH_BACKEND]);
+    it('does not build marker runtime args while the marker backend is on security hold', () => {
+        assert.deepStrictEqual(getMarkerRuntimeArgs(DEFAULT_TORCH_BACKEND), []);
     });
 
-    it('builds uvx launch args with optional marker backend', () => {
+    it('omits marker runtime args from uvx launch while the marker backend is on security hold', () => {
         const launch = getUvxLaunch('uv', PREFERRED_RUNTIME_PYTHON, true, 'cpu');
 
-        assert.deepStrictEqual(launch.args, ['--python', PREFERRED_RUNTIME_PYTHON, '--with', 'marker-pdf', '--torch-backend', 'cpu']);
+        assert.deepStrictEqual(launch.args, ['--python', PREFERRED_RUNTIME_PYTHON]);
     });
 
     it('pins server version with --from when serverVersion provided', () => {
@@ -99,14 +99,13 @@ describe('uv path discovery', () => {
         assert.ok(launch.args.includes('asset-aware-mcp==0.6.19'));
     });
 
-    it('combines version pin, upgrade, and marker args', () => {
+    it('combines version pin and upgrade without marker args while the marker backend is on security hold', () => {
         const launch = getUvxLaunch('/usr/bin/uv', PREFERRED_RUNTIME_PYTHON, true, 'cpu', '0.5.3', true);
 
         assert.strictEqual(launch.command, '/usr/bin/uv');
         assert.deepStrictEqual(launch.args, [
             'tool', 'run', '--python', PREFERRED_RUNTIME_PYTHON,
             '--upgrade', '--from', 'asset-aware-mcp==0.5.3',
-            '--with', 'marker-pdf', '--torch-backend', 'cpu',
         ]);
     });
 

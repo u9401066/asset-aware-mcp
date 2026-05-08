@@ -2,7 +2,7 @@
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
     "description": "Medical RAG MCP Server with precise document asset retrieval and Docx editing (DFM) — tables, figures, sections from PDFs + .docx/.doc round-trip with integrity validation",
-    "version": "0.6.26",
+    "version": "0.6.27",
     "publisher": "u9401066",
     "engines": {
         "vscode": "^1.96.0"
@@ -169,7 +169,7 @@
                 "assetAwareMcp.enableMarkerBackend": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Install and enable the optional Marker backend for structured PDF parsing. This pulls torch and related ML dependencies."
+                    "description": "Reserved for the optional Marker backend. Temporarily disabled because marker-pdf pins vulnerable Pillow<11 while asset-aware-mcp requires patched Pillow>=12.2.0."
                 },
                 "assetAwareMcp.torchBackend": {
                     "type": "string",
@@ -178,7 +178,7 @@
                         "cpu",
                         "auto"
                     ],
-                    "description": "Torch backend to request when the optional Marker backend is enabled. Use cpu for the safest cross-platform install."
+                    "description": "Reserved torch backend setting for Marker after its Pillow dependency supports the secure runtime."
                 },
                 "assetAwareMcp.installAssistantAssets": {
                     "type": "boolean",
@@ -322,6 +322,9 @@
         "sinon": "^21.0.1",
         "typescript": "^5.7.2",
         "typescript-eslint": "^8.51.0"
+    },
+    "overrides": {
+        "serialize-javascript": "^7.0.5"
     },
     "repository": {
         "type": "git",

@@ -12,8 +12,8 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { buildAssetAwareLaunchSpec } from './mcpConfigCommon';
 import {
-    DEFAULT_TORCH_BACKEND,
     getUvPaths,
+    MARKER_BACKEND_SECURITY_HOLD_MESSAGE,
     PREFERRED_RUNTIME_PYTHON,
 } from './uv';
 
@@ -112,12 +112,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
         }
         this.log('Marker backend enabled: ' + String(config.get('enableMarkerBackend', false)));
         if (config.get('enableMarkerBackend', false)) {
-            this.log('Torch backend: ' + config.get('torchBackend', DEFAULT_TORCH_BACKEND));
-            this.log('Marker output log: ' + spec.env['ASSET_AWARE_MARKER_OUTPUT_LOG']);
-            this.log(
-                'Marker cold start may download marker-pdf, torch, and model dependencies; ' +
-                'run "Asset-Aware MCP: Prepare Server Runtime" before connecting Cline/Copilot/Codex.',
-            );
+            this.log(MARKER_BACKEND_SECURITY_HOLD_MESSAGE);
         }
 
         return [

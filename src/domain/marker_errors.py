@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 MARKER_INSTALL_HINT = (
-    "Marker backend is not installed in the Python environment running this MCP "
-    "server. Install it with `uv sync --extra marker` (or `uv sync --extra pdf` "
-    "for the compatibility extra), enable the Marker backend in the VS Code "
-    "extension, and confirm the MCP server is launched from the asset-aware-mcp "
-    "virtual environment."
+    "Marker backend is temporarily unavailable in the packaged asset-aware-mcp "
+    "runtime because marker-pdf 1.10.2 pins Pillow<11 while the secure runtime "
+    "requires Pillow>=12.2.0. Use the default PyMuPDF path with `use_marker=False` "
+    "until upstream marker-pdf supports patched Pillow."
 )
 MARKER_RESOURCE_HINT = (
     "Marker ran out of memory or was interrupted by the runtime. Retry with "

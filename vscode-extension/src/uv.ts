@@ -8,6 +8,8 @@ const execFileAsync = promisify(execFile);
 export const PREFERRED_RUNTIME_PYTHON = '3.11';
 export const DEFAULT_TORCH_BACKEND = 'cpu';
 export const ASSET_AWARE_RUNTIME_PROBE = "import src.presentation.server; print('asset-aware-mcp runtime ready')";
+export const MARKER_BACKEND_SECURITY_HOLD_MESSAGE =
+    'Marker backend requested but temporarily disabled: marker-pdf pins Pillow<11 while asset-aware-mcp requires Pillow>=12.2.0 for patched image-processing security. Using the secure PyMuPDF runtime until marker-pdf supports patched Pillow.';
 
 export function getUvPaths(
     platform: NodeJS.Platform = process.platform,
@@ -76,14 +78,13 @@ export async function getUvVersion(uvPath: string): Promise<string> {
 
 export function getUvRunArgs(
     pythonVersion: string = PREFERRED_RUNTIME_PYTHON,
-    withMarker: boolean = false,
+    _withMarker: boolean = false,
 ): string[] {
-    const markerArgs = withMarker ? ['--extra', 'marker'] : [];
-    return ['run', '--python', pythonVersion, ...markerArgs];
+    return ['run', '--python', pythonVersion];
 }
 
-export function getMarkerRuntimeArgs(torchBackend: string = DEFAULT_TORCH_BACKEND): string[] {
-    return ['--with', 'marker-pdf', '--torch-backend', torchBackend];
+export function getMarkerRuntimeArgs(_torchBackend: string = DEFAULT_TORCH_BACKEND): string[] {
+    return [];
 }
 
 export function getUvxLaunch(

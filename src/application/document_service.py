@@ -350,9 +350,9 @@ class DocumentService:
                             success=False,
                             error=(
                                 "Marker structure parse was required, but the "
-                                "Marker extractor was not configured. Install "
-                                "Marker with `uv sync --extra marker` in the MCP "
-                                "server environment."
+                                "Marker extractor is temporarily unavailable because "
+                                "marker-pdf 1.10.2 pins Pillow<11 while the secure "
+                                "runtime requires Pillow>=12.2.0."
                             ),
                         )
                     )
@@ -370,8 +370,8 @@ class DocumentService:
                     result.backend = "pymupdf_fallback"
                     result.warnings.append(
                         "Marker was requested but the extractor was not configured; "
-                        "used PyMuPDF fallback. Install Marker with `uv sync --extra marker` "
-                        "in the MCP server environment for structured blocks."
+                        "used PyMuPDF fallback while marker-pdf depends on vulnerable "
+                        "Pillow<11."
                     )
             results.append(result)
 
