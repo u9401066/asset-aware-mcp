@@ -112,6 +112,46 @@ describe('AssetAwareMcpProvider', () => {
         assert.ok(servers[0].args.includes('cpu'));
     });
 
+    it('logs package launch diagnostics for marker cold starts without touching stdio', () => {
+        __setConfigurationValue('assetAwareMcp.enableMarkerBackend', true);
+        __setConfigurationValue('assetAwareMcp.torchBackend', 'cpu');
+        const lines: string[] = [];
+        const outputChannel = {
+            appendLine(message: string) {
+                lines.push(message);
+            },
+        } as any;
+
+        const provider = new AssetAwareMcpProvider(
+            tempDir,
+            outputChannel,
+            makeContext({ globalState: { get: () => 'uv' } }),
+        );
+
+        const servers = provider.provideMcpServerDefinitions({} as any) as any[];
+        const logOutput = lines.join('\n');
+
+        assert.deepStrictEqual(servers[0].args, [
+            '--python',
+            '3.11',
+            '--from',
+            'asset-aware-mcp==0.6.19',
+            '--with',
+            'marker-pdf',
+            '--torch-backend',
+            'cpu',
+            'asset-aware-mcp',
+        ]);
+        assert.match(logOutput, /Launch mode: package/);
+        assert.match(logOutput, /Command: uvx --python 3\.11 --from asset-aware-mcp==0\.6\.19 --with marker-pdf --torch-backend cpu asset-aware-mcp/);
+        assert.match(logOutput, /DATA_DIR: /);
+        assert.match(logOutput, /Server version pin: 0\.6\.19/);
+        assert.match(logOutput, /Marker backend enabled: true/);
+        assert.match(logOutput, /Torch backend: cpu/);
+        assert.match(logOutput, /Marker output log: /);
+        assert.match(logOutput, /Marker cold start may download/);
+    });
+
     it('adds --upgrade flag when needsUpgrade is true', () => {
         const provider = new AssetAwareMcpProvider(tempDir, undefined, makeContext(), true);
 

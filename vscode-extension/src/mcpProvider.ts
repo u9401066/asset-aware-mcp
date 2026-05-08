@@ -47,7 +47,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
     private getUvCommand(): string {
         // Try to get stored path from context
         const storedPath = this.context?.globalState.get<string>('uvPath');
-        if (storedPath && storedPath !== 'uv') {
+        if (storedPath) {
             this.log('Using stored uv path: ' + storedPath);
             return storedPath;
         }
@@ -100,6 +100,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
         } else {
             this.log('Production Mode: Using uvx to run from PyPI');
         }
+        this.log('Launch mode: ' + spec.mode);
         this.log('Command: ' + spec.command + ' ' + spec.args.join(' '));
         this.log('DATA_DIR: ' + spec.env['DATA_DIR']);
         this.log('Preferred Python runtime: ' + PREFERRED_RUNTIME_PYTHON);
@@ -112,6 +113,11 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
         this.log('Marker backend enabled: ' + String(config.get('enableMarkerBackend', false)));
         if (config.get('enableMarkerBackend', false)) {
             this.log('Torch backend: ' + config.get('torchBackend', DEFAULT_TORCH_BACKEND));
+            this.log('Marker output log: ' + spec.env['ASSET_AWARE_MARKER_OUTPUT_LOG']);
+            this.log(
+                'Marker cold start may download marker-pdf, torch, and model dependencies; ' +
+                'run "Asset-Aware MCP: Prepare Server Runtime" before connecting Cline/Copilot/Codex.',
+            );
         }
 
         return [

@@ -57,6 +57,38 @@ suite('Extension Test Suite', () => {
         assert.strictEqual(config.get('ollamaEmbeddingModel'), 'nomic-embed-text');
         assert.strictEqual(config.get('dataDir'), './data');
     });
+
+    test('Installed activation smoke verifies MCP provider launch definition', async function () {
+        if (process.env.ASSET_AWARE_MCP_VERIFY_PROVIDER_LAUNCH !== '1') {
+            this.skip();
+        }
+
+        const extension = vscode.extensions.getExtension('u9401066.asset-aware-mcp');
+        assert.ok(extension, 'Extension should be installed');
+        const expectedExtensionDir = process.env.ASSET_AWARE_MCP_EXPECT_EXTENSION_DIR;
+        if (process.env.ASSET_AWARE_MCP_EXPECT_INSTALLED_EXTENSION === '1' && expectedExtensionDir) {
+            assert.strictEqual(
+                path.resolve(extension.extensionPath),
+                path.resolve(expectedExtensionDir),
+                'Activation smoke should discover the installed VSIX extension, not only a dev extension path',
+            );
+        }
+        const api = await extension.activate() as {
+            getMcpProviderForTests?: () => vscode.McpServerDefinitionProvider<vscode.McpStdioServerDefinition> | undefined;
+        };
+
+        const provider = api.getMcpProviderForTests?.();
+        assert.ok(provider, 'MCP provider should be initialized after activation');
+
+        const servers = provider.provideMcpServerDefinitions({} as any) as any[];
+        assert.strictEqual(servers.length, 1);
+        assert.strictEqual(servers[0].label, 'Asset-Aware MCP');
+        assert.ok(servers[0].args.includes('--python'));
+        assert.ok(servers[0].args.includes('3.11'));
+        assert.ok(servers[0].args.includes('--from'));
+        assert.ok(servers[0].args.some((arg: string) => arg.startsWith('asset-aware-mcp==')));
+        assert.strictEqual(servers[0].args[servers[0].args.length - 1], 'asset-aware-mcp');
+    });
 });
 
 suite('MCP Provider Test Suite', () => {

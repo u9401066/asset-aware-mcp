@@ -12,6 +12,7 @@ const repoRoot = process.env.ASSET_AWARE_REPO_ROOT
 const assetRoot = process.env.ASSET_AWARE_ASSET_ROOT
     ? path.resolve(process.env.ASSET_AWARE_ASSET_ROOT)
     : path.join(extensionRoot, 'resources', 'repo-assets', 'asset-aware');
+const textExtensions = new Set(['.md', '.json', '.toml', '.sh', '.ps1']);
 
 const clineRuleFiles = [
     '00-project.md',
@@ -95,6 +96,15 @@ function ensureParentDirectory(targetPath) {
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
 }
 
+function assertNoReplacementCharacters(targetPath, content) {
+    if (content.includes('\uFFFD')) {
+        throw new Error(
+            `Text asset contains Unicode replacement character U+FFFD: ${targetPath}. ` +
+            'Check the source encoding before packaging the VSIX.',
+        );
+    }
+}
+
 function normalizeTextAsset(targetPath) {
     const ext = path.extname(targetPath).toLowerCase();
     const raw = fs.readFileSync(targetPath);
@@ -102,8 +112,11 @@ function normalizeTextAsset(targetPath) {
         ? raw.subarray(3)
         : raw;
 
-    if (['.md', '.json', '.toml', '.sh', '.ps1'].includes(ext)) {
-        content = Buffer.from(content.toString('utf8').replace(/\r\n/g, '\n'), 'utf8');
+    if (textExtensions.has(ext)) {
+        const text = content.toString('utf8').replace(/\r\n/g, '\n');
+        assertNoReplacementCharacters(targetPath, text);
+        fs.writeFileSync(targetPath, text, { encoding: 'utf8' });
+        return;
     }
 
     fs.writeFileSync(targetPath, content);

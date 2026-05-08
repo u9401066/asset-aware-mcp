@@ -40,6 +40,10 @@ describe('mcpConfigCommon', () => {
         );
         assert.strictEqual(launch.env.OLLAMA_MODEL, 'from-child');
         assert.strictEqual(launch.env.DATA_DIR, path.resolve(sourceRoot, 'child-data'));
+        assert.strictEqual(
+            launch.env.UV_CACHE_DIR,
+            path.join(sourceRoot, 'child-data', '.uv-cache'),
+        );
         assert.strictEqual(launch.env.ASSET_AWARE_SUPPRESS_MARKER_OUTPUT, 'true');
         assert.strictEqual(
             launch.env.ASSET_AWARE_MARKER_OUTPUT_LOG,

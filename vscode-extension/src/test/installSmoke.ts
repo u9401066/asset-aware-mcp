@@ -98,6 +98,33 @@ function createIsolatedDirs(prefix: string): { baseDir: string; userDataDir: str
     return { baseDir, userDataDir, extensionsDir, workspaceDir };
 }
 
+function createHarnessExtension(baseDir: string): string {
+    const harnessDir = path.join(baseDir, 'activation-harness');
+    fs.mkdirSync(harnessDir, { recursive: true });
+    fs.writeFileSync(
+        path.join(harnessDir, 'package.json'),
+        JSON.stringify(
+            {
+                name: 'asset-aware-installed-activation-harness',
+                publisher: 'asset-aware-tests',
+                version: '0.0.0',
+                engines: { vscode: '^1.96.0' },
+                activationEvents: [],
+                main: './extension.js',
+            },
+            null,
+            2,
+        ),
+        'utf8',
+    );
+    fs.writeFileSync(
+        path.join(harnessDir, 'extension.js'),
+        'exports.activate = function activate() { return {}; };\n',
+        'utf8',
+    );
+    return harnessDir;
+}
+
 async function installVsix(cliPath: string, vsixPath: string, userDataDir: string, extensionsDir: string): Promise<void> {
     await runCommand(cliPath, [
         '--user-data-dir', userDataDir,
@@ -154,26 +181,43 @@ function resolveActivationExtensionPath(extensionsDir: string, version: string):
     );
 }
 
-async function verifyActivation(installedExtensionDir: string, vscodeExecutablePath: string): Promise<void> {
-    await runTests({
-        vscodeExecutablePath,
-        extensionDevelopmentPath: installedExtensionDir,
-        extensionTestsPath: suitePath,
-        launchArgs: ['--disable-extensions'],
-    });
+async function verifyActivation(
+    isolatedDirs: { baseDir: string; userDataDir: string; extensionsDir: string; workspaceDir: string },
+    vscodeExecutablePath: string,
+): Promise<void> {
+    const installedExtensionDir = resolveActivationExtensionPath(isolatedDirs.extensionsDir, currentVersion);
+    const previousElectronRunAsNode = process.env.ELECTRON_RUN_AS_NODE;
+    delete process.env.ELECTRON_RUN_AS_NODE;
+    try {
+        await runTests({
+            vscodeExecutablePath,
+            extensionDevelopmentPath: installedExtensionDir,
+            extensionTestsPath: suitePath,
+            extensionTestsEnv: {
+                ...process.env,
+                ASSET_AWARE_MCP_VERIFY_PROVIDER_LAUNCH: '1',
+                ASSET_AWARE_MCP_EXPECT_INSTALLED_EXTENSION: '1',
+                ASSET_AWARE_MCP_EXPECT_EXTENSION_DIR: installedExtensionDir,
+            },
+            launchArgs: [],
+        });
+    } finally {
+        if (previousElectronRunAsNode === undefined) {
+            delete process.env.ELECTRON_RUN_AS_NODE;
+        } else {
+            process.env.ELECTRON_RUN_AS_NODE = previousElectronRunAsNode;
+        }
+    }
 }
 
 async function main(): Promise<void> {
     const needsHeadlessDisplay = process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY;
-    if (requireActivation && process.platform === 'win32') {
-        throw new Error('Activation smoke is not supported on Windows by this script; unset --require-activation.');
-    }
     if (requireActivation && needsHeadlessDisplay) {
         throw new Error('Activation smoke requires DISPLAY/WAYLAND_DISPLAY on Linux. Run with xvfb-run or a desktop session.');
     }
 
-    const shouldRunActivation = process.platform !== 'win32' &&
-        (requireActivation || !needsHeadlessDisplay || Boolean(process.env.CI));
+    const shouldRunActivation = requireActivation ||
+        (process.platform !== 'win32' && (!needsHeadlessDisplay || Boolean(process.env.CI)));
     const currentVsixPath = await packageCurrentVsix();
     const oldVsixPath = path.join(extensionRoot, 'asset-aware-mcp-0.2.10.vsix');
 
@@ -212,11 +256,7 @@ async function main(): Promise<void> {
     console.log(`Update install verified: ${publisherExtensionId}@${currentVersion}`);
 
     if (shouldRunActivation && vscodeExecutablePath) {
-        const installedDir = resolveActivationExtensionPath(update.extensionsDir, currentVersion);
-        await verifyActivation(
-            installedDir,
-            vscodeExecutablePath,
-        );
+        await verifyActivation(update, vscodeExecutablePath);
         console.log('Installed extension activation smoke test passed.');
     } else {
         console.log(

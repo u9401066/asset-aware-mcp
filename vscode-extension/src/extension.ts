@@ -55,6 +55,10 @@ let outputChannel: vscode.OutputChannel;
 let resolvedUvPath: string | null = null;
 let runtimeSyncListenersRegistered = false;
 
+export interface AssetAwareExtensionApi {
+    getMcpProviderForTests(): AssetAwareMcpProvider | undefined;
+}
+
 // Context keys
 const CONTEXT_READY = 'assetAwareMcp.ready';
 const CONTEXT_OLLAMA_CONNECTED = 'assetAwareMcp.ollamaConnected';
@@ -194,7 +198,7 @@ async function ensureUvInstalled(): Promise<string | null> {
 /**
  * Extension activation
  */
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
+export async function activate(context: vscode.ExtensionContext): Promise<AssetAwareExtensionApi> {
     // Create output channel first for logging
     outputChannel = vscode.window.createOutputChannel('Asset-Aware MCP');
     context.subscriptions.push(outputChannel);
@@ -326,6 +330,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         statusBar?.setStatus('error', 'Asset-Aware MCP: Activation failed');
         vscode.window.showErrorMessage('Asset-Aware MCP activation failed: ' + errorMsg + '. Check Output panel for details.');
     }
+
+    return {
+        getMcpProviderForTests: () => mcpProvider,
+    };
 }
 
 /**
@@ -415,17 +423,53 @@ async function prepareMcpServerRuntime(
         needsUpgrade,
     );
     const args = getAssetAwareRuntimeProbeArgs(launch.args);
+    const uvCacheDir = path.join(getStorageRoot(), '.uv-cache');
+    fs.mkdirSync(uvCacheDir, { recursive: true });
+    const runtimeEnv = {
+        ...process.env,
+        UV_CACHE_DIR: uvCacheDir,
+    };
 
     try {
         progress?.report({ message: `Preparing asset-aware-mcp ${extensionVersion} runtime...` });
         log(`Preparing MCP runtime: ${launch.command} ${args.join(' ')}`);
-        await execFileAsync(launch.command, args, { timeout: RUNTIME_PREPARE_TIMEOUT_MS });
+        log(
+            `Preparing MCP runtime details: version=${extensionVersion}; ` +
+            `mode=package; marker_backend=${String(enableMarkerBackend)}; ` +
+            `torch_backend=${torchBackend}; timeout_ms=${RUNTIME_PREPARE_TIMEOUT_MS}`,
+        );
+        if (enableMarkerBackend) {
+            log(
+                'Marker runtime preparation can cold-start marker-pdf, torch, and model downloads. ' +
+                'Cline/Copilot/Codex sync waits for this probe so stdio startup is not blocked.',
+            );
+        }
+        log(`Preparing MCP runtime UV cache: ${uvCacheDir}`);
+        const { stdout, stderr } = await execFileAsync(launch.command, args, {
+            timeout: RUNTIME_PREPARE_TIMEOUT_MS,
+            env: runtimeEnv,
+        });
+        const trimmedStdout = stdout.trim();
+        const trimmedStderr = stderr.trim();
+        if (trimmedStdout) {
+            log('MCP runtime preparation stdout: ' + trimmedStdout);
+        }
+        if (trimmedStderr) {
+            log('MCP runtime preparation stderr: ' + trimmedStderr);
+        }
         await extensionContext.globalState.update(RUNTIME_PREPARED_VERSION_KEY, extensionVersion);
         log(`MCP runtime prepared for asset-aware-mcp ${extensionVersion}`);
         return true;
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         log(`MCP runtime preparation failed: ${message}`);
+        const output = error as { stdout?: string; stderr?: string };
+        if (output.stdout?.trim()) {
+            log('MCP runtime preparation stdout: ' + output.stdout.trim());
+        }
+        if (output.stderr?.trim()) {
+            log('MCP runtime preparation stderr: ' + output.stderr.trim());
+        }
         return false;
     }
 }

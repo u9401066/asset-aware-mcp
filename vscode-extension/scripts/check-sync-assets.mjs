@@ -10,6 +10,16 @@ const extensionRoot = path.resolve(scriptDir, '..');
 const repoRoot = path.resolve(extensionRoot, '..');
 const assetRoot = path.join(extensionRoot, 'resources', 'repo-assets', 'asset-aware');
 const syncScript = path.join(scriptDir, 'sync-assistant-assets.mjs');
+const textExtensions = new Set(['.md', '.json', '.toml', '.sh', '.ps1']);
+
+function assertNoReplacementCharacters(filePath, content) {
+    if (content.includes('\uFFFD')) {
+        throw new Error(
+            `Text asset contains Unicode replacement character U+FFFD: ${filePath}. ` +
+            'Run sync-assets from correctly encoded UTF-8 sources.',
+        );
+    }
+}
 
 function normalizedContent(filePath) {
     const raw = fs.readFileSync(filePath);
@@ -17,8 +27,10 @@ function normalizedContent(filePath) {
         ? raw.subarray(3)
         : raw;
 
-    if (['.md', '.json', '.toml', '.sh', '.ps1'].includes(path.extname(filePath).toLowerCase())) {
-        content = Buffer.from(content.toString('utf8').replace(/\r\n/g, '\n'), 'utf8');
+    if (textExtensions.has(path.extname(filePath).toLowerCase())) {
+        const text = content.toString('utf8').replace(/\r\n/g, '\n');
+        assertNoReplacementCharacters(filePath, text);
+        content = Buffer.from(text, 'utf8');
     }
 
     return content;

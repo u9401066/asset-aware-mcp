@@ -121,6 +121,10 @@ export function buildAssetAwareEnv(
 
     const dataDir = envVars['DATA_DIR'] || config.get<string>('dataDir', './data');
     envVars['DATA_DIR'] = path.isAbsolute(dataDir) ? dataDir : path.resolve(baseRoot, dataDir);
+    const uvCacheDir = envVars['UV_CACHE_DIR'] || path.join(envVars['DATA_DIR'], '.uv-cache');
+    envVars['UV_CACHE_DIR'] = path.isAbsolute(uvCacheDir)
+        ? uvCacheDir
+        : path.resolve(baseRoot, uvCacheDir);
     envVars['ASSET_AWARE_SUPPRESS_MARKER_OUTPUT'] =
         envVars['ASSET_AWARE_SUPPRESS_MARKER_OUTPUT'] ?? 'true';
     envVars['ASSET_AWARE_MARKER_OUTPUT_LOG'] =
