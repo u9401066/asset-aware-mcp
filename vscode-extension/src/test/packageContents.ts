@@ -29,10 +29,12 @@ const requiredFiles = [
 ];
 
 const forbiddenPrefixes = [
+    'dist/',
     'out/test/',
     'src/',
     'node_modules/',
     'scripts/',
+    'tmp/',
     '.github/',
     '.vscode/',
     '.vscode-test/',
@@ -69,6 +71,9 @@ const forbiddenAssetFragments = [
     'resources/repo-assets/asset-aware/.clinerules/workflows/zotero-',
 ];
 
+const forbiddenRepoAssetGeneratedDirPattern =
+    /^resources\/repo-assets\/asset-aware\/(?:.*\/)?(?:dist|out|tmp|node_modules|\.pytest_cache|\.venv|__pycache__)\//;
+
 async function listPackageFiles(): Promise<string[]> {
     return await listFiles({
         cwd: extensionRoot,
@@ -100,6 +105,13 @@ function assertPackageContents(files: string[]): void {
     );
     if (forbiddenAssets.length > 0) {
         throw new Error(`VSIX package contains non Asset-Aware harness assets: ${forbiddenAssets.join(', ')}`);
+    }
+
+    const forbiddenGeneratedAssets = files.filter((file) =>
+        forbiddenRepoAssetGeneratedDirPattern.test(file)
+    );
+    if (forbiddenGeneratedAssets.length > 0) {
+        throw new Error(`VSIX package contains generated repo-assets: ${forbiddenGeneratedAssets.join(', ')}`);
     }
 }
 

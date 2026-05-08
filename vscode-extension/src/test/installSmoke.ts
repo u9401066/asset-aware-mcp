@@ -20,6 +20,20 @@ const packageJson = JSON.parse(
 const currentVersion = packageJson.version;
 const requireActivation = process.argv.includes('--require-activation') ||
     process.env.ASSET_AWARE_MCP_REQUIRE_ACTIVATION === '1';
+type VSCodeQuality = 'stable' | 'insiders';
+
+function parseVSCodeQuality(): VSCodeQuality {
+    const inlineArg = process.argv.find((arg) => arg.startsWith('--vscode-quality='));
+    const qualityIndex = process.argv.indexOf('--vscode-quality');
+    const rawValue = inlineArg?.split('=', 2)[1] ??
+        (qualityIndex >= 0 ? process.argv[qualityIndex + 1] : undefined) ??
+        process.env.ASSET_AWARE_MCP_VSCODE_QUALITY ??
+        'stable';
+    if (rawValue === 'stable' || rawValue === 'insiders') {
+        return rawValue;
+    }
+    throw new Error(`Unsupported VS Code quality "${rawValue}". Use "stable" or "insiders".`);
+}
 
 async function runCommand(command: string, args: string[], cwd?: string): Promise<string> {
     const maxBuffer = 1024 * 1024 * 10;
@@ -65,10 +79,10 @@ async function packageCurrentVsix(): Promise<string> {
     return vsixPath;
 }
 
-function findAvailableCli(): string | null {
+function findAvailableCli(quality: VSCodeQuality): string | null {
     const candidates = process.platform === 'win32'
-        ? ['code-insiders.cmd', 'code.cmd']
-        : ['code-insiders', 'code', 'codium'];
+        ? (quality === 'insiders' ? ['code-insiders.cmd'] : ['code.cmd', 'code-insiders.cmd'])
+        : (quality === 'insiders' ? ['code-insiders'] : ['code', 'codium', 'code-insiders']);
 
     for (const candidate of candidates) {
         try {
@@ -193,13 +207,19 @@ async function main(): Promise<void> {
         (process.platform !== 'win32' && (!needsHeadlessDisplay || Boolean(process.env.CI)));
     const currentVsixPath = await packageCurrentVsix();
     const oldVsixPath = path.join(extensionRoot, 'asset-aware-mcp-0.2.10.vsix');
+    const vscodeQuality = parseVSCodeQuality();
+    console.log(`VS Code quality for install smoke: ${vscodeQuality}`);
 
     let vscodeExecutablePath: string | undefined;
-    const localCliPath = findAvailableCli();
+    const localCliPath = findAvailableCli(vscodeQuality);
     let cliPath = localCliPath;
 
-    if (!cliPath || shouldRunActivation || process.platform === 'win32') {
-        vscodeExecutablePath = await downloadAndUnzipVSCode();
+    if (
+        !cliPath ||
+        shouldRunActivation ||
+        (process.platform === 'win32' && vscodeQuality === 'stable')
+    ) {
+        vscodeExecutablePath = await downloadAndUnzipVSCode(vscodeQuality);
         cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath);
     }
 

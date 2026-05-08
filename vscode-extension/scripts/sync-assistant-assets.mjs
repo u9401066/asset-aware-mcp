@@ -13,6 +13,15 @@ const assetRoot = process.env.ASSET_AWARE_ASSET_ROOT
     ? path.resolve(process.env.ASSET_AWARE_ASSET_ROOT)
     : path.join(extensionRoot, 'resources', 'repo-assets', 'asset-aware');
 const textExtensions = new Set(['.md', '.json', '.toml', '.sh', '.ps1']);
+const generatedAssetDirectoryNames = new Set([
+    'dist',
+    'out',
+    'tmp',
+    'node_modules',
+    '.pytest_cache',
+    '.venv',
+    '__pycache__',
+]);
 
 const clineRuleFiles = [
     '00-project.md',
@@ -125,6 +134,13 @@ function normalizeTextAsset(targetPath) {
 function copyRecursive(sourcePath, targetPath) {
     const stat = fs.statSync(sourcePath);
     if (stat.isDirectory()) {
+        const directoryName = path.basename(sourcePath);
+        if (generatedAssetDirectoryNames.has(directoryName)) {
+            throw new Error(
+                `Generated assistant asset directory is not allowed: ${sourcePath}. ` +
+                'Remove generated outputs before syncing VSIX repo-assets.',
+            );
+        }
         fs.mkdirSync(targetPath, { recursive: true });
         for (const entry of fs.readdirSync(sourcePath, { withFileTypes: true })) {
             copyRecursive(path.join(sourcePath, entry.name), path.join(targetPath, entry.name));
