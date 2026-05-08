@@ -55,6 +55,39 @@ def test_add_rows_persistence(table_service, tmp_path):
     assert context.rows[0]["Drug"] == "Remimazolam"
 
 
+def test_table_citation_preserves_locator_source_hash(table_service, tmp_path):
+    columns = [{"name": "Finding", "type": "text"}]
+    table_id = table_service.create_table("citation", "Evidence", columns)
+    table_service.add_rows(table_id, [{"Finding": "Signal"}])
+
+    ref = {
+        "source_type": "span",
+        "doc_id": "doc_demo",
+        "span_id": "span_1",
+        "block_id": "blk_1",
+        "source_revision_id": "rev-1",
+        "locator_version": "blocks-v1",
+        "locator_source_sha256": "abc123hash",
+        "quote": "Signal",
+        "quote_sha256": "quotehash",
+    }
+
+    table_service.add_citation(table_id, 0, "Finding", [ref])
+
+    persisted = json.loads((tmp_path / f"{table_id}.json").read_text(encoding="utf-8"))
+    persisted_ref = persisted["citations"]["0:Finding"]["refs"][0]
+    assert persisted_ref["locator_source_sha256"] == "abc123hash"
+
+    from src.infrastructure.excel_renderer import ExcelRenderer
+
+    reloaded = TableService(
+        table_output_dir=tmp_path,
+        table_renderer=ExcelRenderer(tmp_path),
+    )
+    citation = reloaded.get_cell(table_id, 0, "Finding")["citation"]
+    assert citation["refs"][0]["locator_source_sha256"] == "abc123hash"
+
+
 def test_table_persistence_write_failure_preserves_existing_json(
     table_service, tmp_path, monkeypatch
 ):

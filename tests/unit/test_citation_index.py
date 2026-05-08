@@ -4,6 +4,7 @@ import hashlib
 
 from src.domain.citation import build_evidence_spans
 from src.domain.value_objects import AssetRef
+from src.presentation.tools.citation_support import asset_ref_from_span
 
 
 def test_build_evidence_spans_records_sentence_offsets_and_hashes() -> None:
@@ -62,6 +63,7 @@ def test_span_asset_ref_round_trips_exact_locator_metadata() -> None:
         bbox=(1.0, 2.0, 3.0, 4.0),
         source_revision_id="rev",
         locator_version="citation-span-v1",
+        locator_source_sha256="blocks-hash",
         quote="Beta finding needs follow-up.",
         craap={"assessment_version": "craap-v1", "accuracy": {"status": "partial"}},
     )
@@ -71,6 +73,30 @@ def test_span_asset_ref_round_trips_exact_locator_metadata() -> None:
 
     assert data["source_type"] == "span"
     assert data["quote_sha256"] == ref.quote_sha256
+    assert data["locator_source_sha256"] == "blocks-hash"
     assert data["craap"]["assessment_version"] == "craap-v1"
     assert restored == ref
     assert "find_evidence_spans" in restored.access_path
+
+
+def test_asset_ref_from_evidence_span_preserves_locator_source_hash() -> None:
+    spans = build_evidence_spans(
+        doc_id="doc_results_abc123",
+        markdown="Alpha finding.\n",
+        blocks=[
+            {
+                "block_id": "blk_1",
+                "block_type": "Text",
+                "page": 1,
+                "text": "Alpha finding.",
+                "metadata": {"line_start": 0, "line_end": 1},
+            }
+        ],
+        source_backend="marker",
+    )
+    span = next(item for item in spans if item.span_kind == "sentence")
+
+    ref_data = asset_ref_from_span(span)
+    restored = AssetRef.from_dict(ref_data).to_dict()
+
+    assert restored["locator_source_sha256"] == span.locator_source_sha256

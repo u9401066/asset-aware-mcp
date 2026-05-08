@@ -72,6 +72,7 @@ class AssetRef:
     bbox: tuple[float, float, float, float] | None = None
     source_revision_id: str = ""
     locator_version: str = ""
+    locator_source_sha256: str = ""
 
     # 外部來源
     url: str = ""
@@ -204,6 +205,8 @@ class AssetRef:
             d["source_revision_id"] = self.source_revision_id
         if self.locator_version:
             d["locator_version"] = self.locator_version
+        if self.locator_source_sha256:
+            d["locator_source_sha256"] = self.locator_source_sha256
         if self.url:
             d["url"] = self.url
         if self.excerpt:
@@ -249,6 +252,7 @@ class AssetRef:
             bbox=bbox,  # type: ignore[arg-type]
             source_revision_id=data.get("source_revision_id", ""),
             locator_version=data.get("locator_version", ""),
+            locator_source_sha256=data.get("locator_source_sha256", ""),
             url=data.get("url", ""),
             excerpt=data.get("excerpt", ""),
             quote=data.get("quote", ""),
