@@ -126,13 +126,24 @@ class TableService:
         if context.change_log and context.change_log.entries:
             state["change_log"] = context.change_log.to_dict()
 
-        with json_path.open("w", encoding="utf-8") as f:
-            json.dump(state, f, indent=2, ensure_ascii=False)
-
-        # Save Markdown preview
         md_path = self.storage_dir / f"{context.id}.md"
-        with md_path.open("w", encoding="utf-8") as f:
-            f.write(self.preview_table(context.id, limit=1000))
+        md_preview = self.preview_table(context.id, limit=1000)
+
+        tmp_paths: list[Path] = []
+        try:
+            json_tmp = self._write_json_temp(json_path, state)
+            tmp_paths.append(json_tmp)
+            md_tmp = self._write_text_temp(md_path, md_preview)
+            tmp_paths.append(md_tmp)
+            self._replace_prepared_files(
+                [
+                    (json_path, json_tmp),
+                    (md_path, md_tmp),
+                ]
+            )
+        finally:
+            for tmp_path in tmp_paths:
+                tmp_path.unlink(missing_ok=True)
 
     def create_table(
         self,
@@ -900,8 +911,11 @@ class TableService:
             "notes": draft.notes,
             "last_updated": str(draft.last_updated),
         }
-        with json_path.open("w", encoding="utf-8") as f:
-            json.dump(state, f, indent=2, ensure_ascii=False)
+        tmp_path = self._write_json_temp(json_path, state)
+        try:
+            self._replace_prepared_files([(json_path, tmp_path)])
+        finally:
+            tmp_path.unlink(missing_ok=True)
 
     def create_draft(
         self,
@@ -1046,3 +1060,51 @@ class TableService:
             "row_count": context.row_count,
             "tokens_per_row": content_tokens // max(context.row_count, 1),
         }
+
+    @staticmethod
+    def _tmp_path_for(path: Path) -> Path:
+        return path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+
+    @classmethod
+    def _write_json_temp(cls, path: Path, state: dict[str, Any]) -> Path:
+        tmp_path = cls._tmp_path_for(path)
+        try:
+            with tmp_path.open("w", encoding="utf-8") as f:
+                json.dump(state, f, indent=2, ensure_ascii=False)
+        except Exception:
+            tmp_path.unlink(missing_ok=True)
+            raise
+        return tmp_path
+
+    @classmethod
+    def _write_text_temp(cls, path: Path, content: str) -> Path:
+        tmp_path = cls._tmp_path_for(path)
+        try:
+            with tmp_path.open("w", encoding="utf-8", newline="\n") as f:
+                f.write(content)
+        except Exception:
+            tmp_path.unlink(missing_ok=True)
+            raise
+        return tmp_path
+
+    @staticmethod
+    def _replace_prepared_files(replacements: list[tuple[Path, Path]]) -> None:
+        replaced: list[tuple[Path, bytes | None]] = []
+        try:
+            for target_path, tmp_path in replacements:
+                previous = target_path.read_bytes() if target_path.exists() else None
+                tmp_path.replace(target_path)
+                replaced.append((target_path, previous))
+        except Exception:
+            for target_path, previous in reversed(replaced):
+                try:
+                    if previous is None:
+                        target_path.unlink(missing_ok=True)
+                    else:
+                        target_path.write_bytes(previous)
+                except OSError:
+                    logger.exception(
+                        "Failed to roll back table persistence file: %s",
+                        target_path,
+                    )
+            raise

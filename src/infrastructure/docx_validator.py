@@ -553,7 +553,67 @@ class DocxValidator:
                             elif child_tag == "tbl":
                                 data["tables"].append(self._extract_table(child))
 
+            self._extract_story_parts(zf, data)
+
         return data
+
+    def _extract_story_parts(self, zf: ZipFile, data: dict[str, Any]) -> None:
+        """Extract non-body WordprocessingML story parts into comparison data."""
+        names = sorted(zf.namelist())
+        for name in names:
+            if name.startswith("word/header") and name.endswith(".xml"):
+                self._extract_container_part(zf, name, data, f"header:{name}")
+            elif name.startswith("word/footer") and name.endswith(".xml"):
+                self._extract_container_part(zf, name, data, f"footer:{name}")
+
+        if "word/footnotes.xml" not in names:
+            return
+
+        tree = etree.fromstring(zf.read("word/footnotes.xml"))
+        for footnote in tree.findall(f"{{{NS['w']}}}footnote"):
+            fn_type = footnote.get(f"{{{NS['w']}}}type")
+            if fn_type in ("separator", "continuationSeparator"):
+                continue
+            fn_id = footnote.get(f"{{{NS['w']}}}id") or "unknown"
+            self._append_container_content(footnote, data, f"footnote:{fn_id}")
+
+    def _extract_container_part(
+        self,
+        zf: ZipFile,
+        name: str,
+        data: dict[str, Any],
+        location_prefix: str,
+    ) -> None:
+        tree = etree.fromstring(zf.read(name))
+        self._append_container_content(tree, data, location_prefix)
+
+    def _append_container_content(
+        self,
+        container: etree._Element,
+        data: dict[str, Any],
+        location_prefix: str,
+        paragraph_start: int = 0,
+    ) -> int:
+        paragraph_index = paragraph_start
+        for child in container:
+            tag = self._local_name(child)
+            if tag == "p":
+                paragraph_index += 1
+                para = self._extract_paragraph(child)
+                para["location"] = f"{location_prefix} paragraph {paragraph_index}"
+                data["paragraphs"].append(para)
+            elif tag == "tbl":
+                data["tables"].append(self._extract_table(child))
+            elif tag == "sdt":
+                sdt_content = child.find(f"{{{NS['w']}}}sdtContent")
+                if sdt_content is not None:
+                    paragraph_index = self._append_container_content(
+                        sdt_content,
+                        data,
+                        location_prefix,
+                        paragraph_index,
+                    )
+        return paragraph_index
 
     def _extract_paragraph(self, p_elem: etree._Element) -> dict[str, Any]:
         """Extract paragraph data for comparison."""
@@ -645,14 +705,18 @@ class DocxValidator:
     def _extract_table(self, tbl_elem: etree._Element) -> dict[str, Any]:
         """Extract table data for comparison."""
         rows: list[list[str]] = []
+        cell_runs: list[list[list[dict[str, Any]]]] = []
         nested_tables: list[dict[str, Any]] = []
         for tr_elem in tbl_elem.findall(f"{{{NS['w']}}}tr"):
             row_cells: list[str] = []
+            row_runs: list[list[dict[str, Any]]] = []
             for tc_elem in tr_elem.findall(f"{{{NS['w']}}}tc"):
-                cell_text, child_nested_tables = self._extract_table_cell(tc_elem)
+                cell_text, child_nested_tables, runs = self._extract_table_cell(tc_elem)
                 row_cells.append(cell_text)
+                row_runs.append(runs)
                 nested_tables.extend(child_nested_tables)
             rows.append(row_cells)
+            cell_runs.append(row_runs)
 
         # Table style
         tbl_pr = tbl_elem.find(f"{{{NS['w']}}}tblPr")
@@ -668,36 +732,32 @@ class DocxValidator:
             "col_count": max((len(r) for r in rows), default=0),
             "style": table_style,
             "nested_tables": nested_tables,
+            "cell_runs": cell_runs,
         }
 
     def _extract_table_cell(
         self, tc_elem: etree._Element
-    ) -> tuple[str, list[dict[str, Any]]]:
+    ) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]]]:
         """Extract direct cell text and recursively capture nested tables."""
         cell_parts: list[str] = []
         nested_tables: list[dict[str, Any]] = []
+        cell_runs: list[dict[str, Any]] = []
 
         for child in tc_elem:
             tag = etree.QName(child.tag).localname
             if tag == "tcPr":
                 continue
             if tag == "p":
-                text_parts = [
-                    t.text
-                    for t in child.findall(f".//{{{NS['w']}}}t")
-                    if t.text
-                    and not self._has_ancestor_with_local_name(
-                        t, _NON_VISIBLE_REVISION_TAGS
-                    )
-                ]
-                cell_parts.append("".join(text_parts))
+                para = self._extract_paragraph(child)
+                cell_parts.append(str(para["text"]))
+                cell_runs.extend(para["runs"])
                 continue
             if tag == "tbl":
                 nested = self._extract_table(child)
                 nested_tables.append(nested)
                 cell_parts.append(f"[NestedTable]{self._table_to_text(nested)}")
 
-        return "\n".join(cell_parts), nested_tables
+        return "\n".join(cell_parts), nested_tables, cell_runs
 
     @staticmethod
     def _local_name(elem: etree._Element) -> str:
@@ -716,6 +776,18 @@ class DocxValidator:
                 return True
             parent = parent.getparent()
         return False
+
+    @staticmethod
+    def _paragraph_location(
+        original: dict[str, Any] | None,
+        rebuilt: dict[str, Any] | None,
+        fallback: str,
+    ) -> str:
+        if original is not None and original.get("location"):
+            return str(original["location"])
+        if rebuilt is not None and rebuilt.get("location"):
+            return str(rebuilt["location"])
+        return fallback
 
     def _table_to_text(self, table: dict[str, Any]) -> str:
         """Serialize a table deterministically for nested-cell comparisons."""
@@ -857,8 +929,15 @@ class DocxValidator:
 
         matches = 0
         for i in range(max_len):
-            orig_text = orig_paras[i]["text"] if i < len(orig_paras) else ""
-            rebuilt_text = rebuilt_paras[i]["text"] if i < len(rebuilt_paras) else ""
+            orig_para = orig_paras[i] if i < len(orig_paras) else None
+            rebuilt_para = rebuilt_paras[i] if i < len(rebuilt_paras) else None
+            orig_text = orig_para["text"] if orig_para is not None else ""
+            rebuilt_text = rebuilt_para["text"] if rebuilt_para is not None else ""
+            location = self._paragraph_location(
+                orig_para,
+                rebuilt_para,
+                f"paragraph {i + 1}",
+            )
 
             # Normalize whitespace for comparison
             orig_norm = _normalize_text(orig_text)
@@ -870,7 +949,7 @@ class DocxValidator:
                 report.text_diffs.append(
                     TextDiff(
                         index=i,
-                        location=f"paragraph {i + 1}",
+                        location=location,
                         original=orig_text,
                         rebuilt=rebuilt_text,
                     )
@@ -894,13 +973,18 @@ class DocxValidator:
         for i in range(min(len(orig_paras), len(rebuilt_paras))):
             orig_runs = orig_paras[i]["runs"]
             rebuilt_runs = rebuilt_paras[i]["runs"]
+            location = self._paragraph_location(
+                orig_paras[i],
+                rebuilt_paras[i],
+                f"paragraph {i + 1}",
+            )
 
             if len(orig_runs) != len(rebuilt_runs):
                 total_checks += 1
                 report.format_diffs.append(
                     FormatDiff(
                         index=i,
-                        location=f"paragraph {i + 1}",
+                        location=location,
                         attribute="run_count",
                         original=str(len(orig_runs)),
                         rebuilt=str(len(rebuilt_runs)),
@@ -911,14 +995,7 @@ class DocxValidator:
                 matches += 1
 
             for run_index in range(min(len(orig_runs), len(rebuilt_runs))):
-                for attr in [
-                    "bold",
-                    "italic",
-                    "font_name",
-                    "font_size",
-                    "color",
-                    "underline",
-                ]:
+                for attr in self._format_attributes():
                     orig_val = orig_runs[run_index].get(attr)
                     rebuilt_val = rebuilt_runs[run_index].get(attr)
                     if orig_val is not None or rebuilt_val is not None:
@@ -929,14 +1006,93 @@ class DocxValidator:
                             report.format_diffs.append(
                                 FormatDiff(
                                     index=i,
-                                    location=f"paragraph {i + 1}/run {run_index + 1}",
+                                    location=f"{location}/run {run_index + 1}",
                                     attribute=attr,
                                     original=str(orig_val),
                                     rebuilt=str(rebuilt_val),
                                 )
                             )
 
+        table_checks, table_matches = self._compare_table_cell_formatting(
+            orig["tables"],
+            rebuilt["tables"],
+            report,
+        )
+        total_checks += table_checks
+        matches += table_matches
+
         report.format_score = matches / total_checks if total_checks > 0 else 1.0
+
+    @staticmethod
+    def _format_attributes() -> tuple[str, ...]:
+        return ("bold", "italic", "font_name", "font_size", "color", "underline")
+
+    def _compare_table_cell_formatting(
+        self,
+        orig_tables: list[dict[str, Any]],
+        rebuilt_tables: list[dict[str, Any]],
+        report: ValidationReport,
+    ) -> tuple[int, int]:
+        """Compare formatting for direct runs inside table cells."""
+        orig_flat = self._flatten_tables(orig_tables)
+        rebuilt_flat = self._flatten_tables(rebuilt_tables)
+        total_checks = 0
+        matches = 0
+
+        for t_idx in range(min(len(orig_flat), len(rebuilt_flat))):
+            orig_cell_runs = orig_flat[t_idx].get("cell_runs", [])
+            rebuilt_cell_runs = rebuilt_flat[t_idx].get("cell_runs", [])
+            max_rows = max(len(orig_cell_runs), len(rebuilt_cell_runs))
+            for r_idx in range(max_rows):
+                orig_row = orig_cell_runs[r_idx] if r_idx < len(orig_cell_runs) else []
+                rebuilt_row = (
+                    rebuilt_cell_runs[r_idx] if r_idx < len(rebuilt_cell_runs) else []
+                )
+                max_cols = max(len(orig_row), len(rebuilt_row))
+                for c_idx in range(max_cols):
+                    orig_runs = orig_row[c_idx] if c_idx < len(orig_row) else []
+                    rebuilt_runs = (
+                        rebuilt_row[c_idx] if c_idx < len(rebuilt_row) else []
+                    )
+                    location = f"table {t_idx + 1}/row {r_idx + 1}/col {c_idx + 1}"
+
+                    if len(orig_runs) != len(rebuilt_runs):
+                        total_checks += 1
+                        report.format_diffs.append(
+                            FormatDiff(
+                                index=t_idx,
+                                location=location,
+                                attribute="run_count",
+                                original=str(len(orig_runs)),
+                                rebuilt=str(len(rebuilt_runs)),
+                            )
+                        )
+                    elif orig_runs or rebuilt_runs:
+                        total_checks += 1
+                        matches += 1
+
+                    for run_index in range(min(len(orig_runs), len(rebuilt_runs))):
+                        for attr in self._format_attributes():
+                            orig_val = orig_runs[run_index].get(attr)
+                            rebuilt_val = rebuilt_runs[run_index].get(attr)
+                            if orig_val is not None or rebuilt_val is not None:
+                                total_checks += 1
+                                if orig_val == rebuilt_val:
+                                    matches += 1
+                                else:
+                                    report.format_diffs.append(
+                                        FormatDiff(
+                                            index=t_idx,
+                                            location=(
+                                                f"{location}/run {run_index + 1}"
+                                            ),
+                                            attribute=attr,
+                                            original=str(orig_val),
+                                            rebuilt=str(rebuilt_val),
+                                        )
+                                    )
+
+        return total_checks, matches
 
     def _compare_tables(
         self,
@@ -1052,6 +1208,11 @@ class DocxValidator:
         for i in range(min(len(orig_paras), len(rebuilt_paras))):
             orig_style = orig_paras[i]["style"]
             rebuilt_style = rebuilt_paras[i]["style"]
+            location = self._paragraph_location(
+                orig_paras[i],
+                rebuilt_paras[i],
+                f"paragraph {i + 1}",
+            )
 
             # Only count if at least one has a style
             if orig_style is not None or rebuilt_style is not None:
@@ -1062,7 +1223,7 @@ class DocxValidator:
                     report.style_diffs.append(
                         TextDiff(
                             index=i,
-                            location=f"paragraph {i + 1}",
+                            location=location,
                             original=str(orig_style),
                             rebuilt=str(rebuilt_style),
                         )

@@ -2,6 +2,7 @@
 Unit tests for TableService.
 """
 
+import json
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -52,6 +53,35 @@ def test_add_rows_persistence(table_service, tmp_path):
     context = new_service.get_table_context(table_id)
     assert len(context.rows) == 1
     assert context.rows[0]["Drug"] == "Remimazolam"
+
+
+def test_table_persistence_write_failure_preserves_existing_json(
+    table_service, tmp_path, monkeypatch
+):
+    columns = [{"name": "Drug", "type": "text"}]
+    table_id = table_service.create_table("comparison", "Test", columns)
+    table_service.add_rows(table_id, [{"Drug": "Remimazolam"}])
+    json_path = tmp_path / f"{table_id}.json"
+    markdown_path = tmp_path / f"{table_id}.md"
+    original_json = json_path.read_text(encoding="utf-8")
+    original_markdown = markdown_path.read_text(encoding="utf-8")
+    original_dump = json.dump
+
+    def fail_after_partial_write(payload, fp, *args, **kwargs):
+        fp.write('{"partial"')
+        raise OSError("simulated table persistence failure")
+
+    monkeypatch.setattr(
+        "src.application.table_service.json.dump", fail_after_partial_write
+    )
+
+    with pytest.raises(OSError, match="simulated table persistence failure"):
+        table_service.add_rows(table_id, [{"Drug": "Propofol"}])
+
+    monkeypatch.setattr("src.application.table_service.json.dump", original_dump)
+    persisted = json.loads(json_path.read_text(encoding="utf-8"))
+    assert persisted == json.loads(original_json)
+    assert markdown_path.read_text(encoding="utf-8") == original_markdown
 
 
 def test_load_existing_tables_includes_non_tbl_context_ids(tmp_path):

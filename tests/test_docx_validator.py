@@ -156,6 +156,19 @@ def _make_table(rows: list[list[str]], style: str | None = None) -> etree._Eleme
     return tbl
 
 
+def _make_formatted_table(rows: list[list[list[dict[str, object]]]]) -> etree._Element:
+    """Create a table whose cells contain explicitly formatted runs."""
+    tbl = etree.SubElement(etree.Element("dummy"), f"{{{NS_W}}}tbl")
+
+    for row_data in rows:
+        tr = etree.SubElement(tbl, f"{{{NS_W}}}tr")
+        for cell_runs in row_data:
+            tc = etree.SubElement(tr, f"{{{NS_W}}}tc")
+            tc.append(_make_runs_paragraph(cell_runs))
+
+    return tbl
+
+
 def _build_document_xml(
     paragraphs: list[etree._Element] | None = None,
     tables: list[etree._Element] | None = None,
@@ -188,6 +201,7 @@ def _create_docx(
     tables: list[etree._Element] | None = None,
     body_elements: list[etree._Element] | None = None,
     media: dict[str, bytes] | None = None,
+    extra_parts: dict[str, bytes] | None = None,
 ) -> None:
     """Create a minimal .docx file (zip) with given content."""
     doc_xml = _build_document_xml(paragraphs, tables, body_elements)
@@ -200,6 +214,29 @@ def _create_docx(
         if media:
             for filename, data in media.items():
                 zf.writestr(f"word/media/{filename}", data)
+        if extra_parts:
+            for filename, data in extra_parts.items():
+                zf.writestr(filename, data)
+
+
+def _build_story_part_xml(root_name: str, paragraphs: list[etree._Element]) -> bytes:
+    root = etree.Element(f"{{{NS_W}}}{root_name}", nsmap={"w": NS_W, "r": NS_R})
+    for paragraph in paragraphs:
+        root.append(paragraph)
+    return etree.tostring(root, xml_declaration=True, encoding="UTF-8")
+
+
+def _build_footnotes_xml(footnotes: dict[int, list[etree._Element]]) -> bytes:
+    root = etree.Element(f"{{{NS_W}}}footnotes", nsmap={"w": NS_W, "r": NS_R})
+    for footnote_id, paragraphs in footnotes.items():
+        footnote = etree.SubElement(
+            root,
+            f"{{{NS_W}}}footnote",
+            {f"{{{NS_W}}}id": str(footnote_id)},
+        )
+        for paragraph in paragraphs:
+            footnote.append(paragraph)
+    return etree.tostring(root, xml_declaration=True, encoding="UTF-8")
 
 
 # ============================================================================
@@ -475,6 +512,118 @@ class TestValidateTextDiffs:
         assert "text differences detected" in report.strict_failures[0]
 
 
+class TestValidateDocxStoryParts:
+    def test_header_footer_text_differences_fail_strict_gate(
+        self, validator: DocxValidator, tmp_docx_dir: Path
+    ):
+        """Strict mode compares header/footer text, not only document body text."""
+        original = tmp_docx_dir / "original.docx"
+        modified = tmp_docx_dir / "modified.docx"
+
+        _create_docx(
+            original,
+            paragraphs=[_make_paragraph("Unchanged body")],
+            extra_parts={
+                "word/header1.xml": _build_story_part_xml(
+                    "hdr", [_make_paragraph("Clinic header")]
+                ),
+                "word/footer1.xml": _build_story_part_xml(
+                    "ftr", [_make_paragraph("Page footer")]
+                ),
+            },
+        )
+        _create_docx(
+            modified,
+            paragraphs=[_make_paragraph("Unchanged body")],
+            extra_parts={
+                "word/header1.xml": _build_story_part_xml(
+                    "hdr", [_make_paragraph("Clinic header changed")]
+                ),
+                "word/footer1.xml": _build_story_part_xml(
+                    "ftr", [_make_paragraph("Page footer changed")]
+                ),
+            },
+        )
+
+        report = validator.validate(original, modified, strict=True)
+
+        assert report.strict_passed is False
+        assert report.text_score < 1.0
+        locations = {diff.location for diff in report.text_diffs}
+        assert "header:word/header1.xml paragraph 1" in locations
+        assert "footer:word/footer1.xml paragraph 1" in locations
+
+    def test_footnote_text_differences_fail_strict_gate(
+        self, validator: DocxValidator, tmp_docx_dir: Path
+    ):
+        """Strict mode compares word/footnotes.xml text."""
+        original = tmp_docx_dir / "original.docx"
+        modified = tmp_docx_dir / "modified.docx"
+
+        _create_docx(
+            original,
+            paragraphs=[_make_paragraph("Body with footnote")],
+            extra_parts={
+                "word/footnotes.xml": _build_footnotes_xml(
+                    {2: [_make_paragraph("Original footnote")]}
+                ),
+            },
+        )
+        _create_docx(
+            modified,
+            paragraphs=[_make_paragraph("Body with footnote")],
+            extra_parts={
+                "word/footnotes.xml": _build_footnotes_xml(
+                    {2: [_make_paragraph("Modified footnote")]}
+                ),
+            },
+        )
+
+        report = validator.validate(original, modified, strict=True)
+
+        assert report.strict_passed is False
+        assert report.text_score < 1.0
+        assert len(report.text_diffs) == 1
+        assert report.text_diffs[0].location == "footnote:2 paragraph 1"
+
+    def test_header_run_formatting_differences_fail_strict_gate(
+        self, validator: DocxValidator, tmp_docx_dir: Path
+    ):
+        """Header run formatting regressions participate in strict validation."""
+        original = tmp_docx_dir / "original.docx"
+        modified = tmp_docx_dir / "modified.docx"
+
+        _create_docx(
+            original,
+            paragraphs=[_make_paragraph("Unchanged body")],
+            extra_parts={
+                "word/header1.xml": _build_story_part_xml(
+                    "hdr",
+                    [_make_runs_paragraph([{"text": "Confidential", "italic": True}])],
+                ),
+            },
+        )
+        _create_docx(
+            modified,
+            paragraphs=[_make_paragraph("Unchanged body")],
+            extra_parts={
+                "word/header1.xml": _build_story_part_xml(
+                    "hdr",
+                    [_make_runs_paragraph([{"text": "Confidential"}])],
+                ),
+            },
+        )
+
+        report = validator.validate(original, modified, strict=True)
+
+        assert report.strict_passed is False
+        assert any(
+            diff.location == "header:word/header1.xml paragraph 1/run 1"
+            and diff.attribute == "italic"
+            for diff in report.format_diffs
+        )
+
+
 # ============================================================================
 # Tests: DocxValidator — formatting differences
 # ============================================================================
@@ -570,6 +719,37 @@ class TestValidateFormattingDiffs:
         assert report.strict_passed is False
         assert any(
             d.location == "paragraph 1/run 2" and d.attribute == "italic"
+            for d in report.format_diffs
+        )
+
+    def test_table_cell_run_format_difference_fails_strict_gate(
+        self, validator: DocxValidator, tmp_docx_dir: Path
+    ):
+        """Detect formatting regressions inside table cell runs."""
+        original = tmp_docx_dir / "original.docx"
+        modified = tmp_docx_dir / "modified.docx"
+
+        _create_docx(
+            original,
+            tables=[
+                _make_formatted_table(
+                    [[[{"text": "Cell text", "bold": True, "color": "FF0000"}]]]
+                )
+            ],
+        )
+        _create_docx(
+            modified,
+            tables=[
+                _make_formatted_table([[[{"text": "Cell text", "color": "FF0000"}]]])
+            ],
+        )
+
+        report = validator.validate(original, modified, strict=True)
+
+        assert report.strict_passed is False
+        assert report.format_score < 1.0
+        assert any(
+            d.location == "table 1/row 1/col 1/run 1" and d.attribute == "bold"
             for d in report.format_diffs
         )
 
