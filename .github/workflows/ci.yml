@@ -33,6 +33,9 @@ jobs:
           done
           echo "✅ All required files exist"
 
+      - name: Check docs site payload
+        run: python3 scripts/build_docs_site.py --check
+
   # ==========================================
   # Python 靜態分析
   # ==========================================

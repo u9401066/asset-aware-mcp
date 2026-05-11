@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-🌐 [繁體中文](README.zh-TW.md)
+🌐 [繁體中文](README.zh-TW.md) · [Docs Site](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
 ## 🎯 Why Asset-Aware MCP?
 

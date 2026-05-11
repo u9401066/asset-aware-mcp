@@ -64,7 +64,7 @@ pdf = []
 
 [project.urls]
 Homepage = "https://github.com/u9401066/asset-aware-mcp"
-Documentation = "https://github.com/u9401066/asset-aware-mcp#readme"
+Documentation = "https://u9401066.github.io/asset-aware-mcp/#/overview-zh"
 Repository = "https://github.com/u9401066/asset-aware-mcp.git"
 Issues = "https://github.com/u9401066/asset-aware-mcp/issues"
 Changelog = "https://github.com/u9401066/asset-aware-mcp/blob/master/CHANGELOG.md"

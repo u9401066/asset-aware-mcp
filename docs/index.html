@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Asset-Aware MCP Docs</title>
+    <meta
+      name="description"
+      content="Asset-Aware MCP documentation for PDF, DOCX, DFM, citation provenance, A2T tables, knowledge graphs, MCP tools, resources, and VS Code extension setup."
+    />
+    <link rel="stylesheet" href="site.css?v=20260511-docs-site" />
+  </head>
+  <body>
+    <div class="layout-shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="brand-block">
+          <p id="site-eyebrow" class="eyebrow">文件網站</p>
+          <h1>Asset-Aware MCP</h1>
+          <p id="site-tagline" class="tagline">
+            Citation-ready document workflows for AI agents.
+          </p>
+        </div>
+
+        <div class="lang-switch" role="group" aria-label="Language">
+          <button class="lang-option" type="button" data-lang="en" aria-pressed="false">
+            EN
+          </button>
+          <button class="lang-option active" type="button" data-lang="zh" aria-pressed="true">
+            繁中
+          </button>
+        </div>
+
+        <label id="filter-label" class="search-label" for="nav-filter">篩選頁面</label>
+        <input
+          id="nav-filter"
+          class="nav-filter"
+          type="search"
+          placeholder="PDF、DOCX、citation、VSIX..."
+        />
+
+        <nav id="page-nav" class="page-nav" aria-label="Documentation pages"></nav>
+
+        <div class="sidebar-note">
+          <p id="sidebar-note-text">
+            文件內容由 docs/wiki 生成；GitHub Wiki 與 Pages site 共用同一份功能說明來源。
+          </p>
+        </div>
+      </aside>
+
+      <main class="content-shell">
+        <header class="topbar">
+          <button
+            id="nav-toggle"
+            class="nav-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="sidebar"
+          >
+            選單
+          </button>
+          <div>
+            <p id="page-kicker" class="page-kicker">專案定位、endpoint 盤點與文件地圖。</p>
+            <h2 id="page-title" class="page-title">總覽</h2>
+          </div>
+        </header>
+
+        <section class="summary-band" aria-label="Site summary">
+          <div>
+            <p id="hero-kicker" class="hero-kicker">完整文件網站</p>
+            <p id="hero-copy">
+              以角色與工作流整理 Asset-Aware MCP：使用者流程、開發者架構、MCP
+              tools/resources、citation provenance、VSIX 設定與 release checks。
+            </p>
+          </div>
+          <dl class="hero-metrics">
+            <div>
+              <dt>59</dt>
+              <dd id="tool-metric-label">MCP tools</dd>
+            </div>
+            <div>
+              <dt>13</dt>
+              <dd id="resource-metric-label">MCP resources</dd>
+            </div>
+            <div>
+              <dt>72</dt>
+              <dd id="endpoint-metric-label">endpoints</dd>
+            </div>
+          </dl>
+        </section>
+
+        <div class="doc-layout">
+          <article id="doc-content" class="doc-content" aria-live="polite"></article>
+          <aside id="page-outline" class="page-outline" aria-label="On this page" hidden></aside>
+        </div>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script src="site-content.js?v=20260511-docs-site"></script>
+    <script src="site.js?v=20260511-docs-site"></script>
+  </body>
+</html>

@@ -4,7 +4,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-🌐 [English](README.md)
+🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
 ## 🎯 為什麼需要資產感知 MCP？
 
