@@ -25,6 +25,23 @@ export interface EnvConfig {
     [key: string]: string | undefined;
 }
 
+export interface DocumentArtifact {
+    id: string;
+    label: string;
+    kind: string;
+    path: string;
+    icon: string;
+}
+
+export interface CitationSpanSummary {
+    spanId: string;
+    label: string;
+    description: string;
+    quote: string;
+    path: string;
+    line: number;
+}
+
 const DEFAULT_ENV: EnvConfig = {
     LLM_BACKEND: 'ollama',
     OLLAMA_HOST: 'http://localhost:11434',
@@ -433,6 +450,118 @@ export class EnvManager {
             return JSON.parse(content);
         } catch {
             return null;
+        }
+    }
+
+    /**
+     * List known document artifacts for quick review from the VS Code tree.
+     */
+    listDocumentArtifacts(docId: string): DocumentArtifact[] {
+        const docDir = path.join(this.getDataDir(), docId);
+        const candidates: DocumentArtifact[] = [
+            {
+                id: 'manifest',
+                label: 'Manifest',
+                kind: 'json',
+                path: path.join(docDir, `${docId}_manifest.json`),
+                icon: 'json',
+            },
+            {
+                id: 'manifest-legacy',
+                label: 'Manifest (legacy)',
+                kind: 'json',
+                path: path.join(docDir, 'manifest.json'),
+                icon: 'json',
+            },
+            {
+                id: 'markdown',
+                label: 'Full Markdown',
+                kind: 'markdown',
+                path: path.join(docDir, `${docId}_full.md`),
+                icon: 'markdown',
+            },
+            {
+                id: 'blocks',
+                label: 'Blocks',
+                kind: 'json',
+                path: path.join(docDir, 'blocks.json'),
+                icon: 'symbol-structure',
+            },
+            {
+                id: 'segmentation',
+                label: 'Segmentation',
+                kind: 'json',
+                path: path.join(docDir, 'segmentation.json'),
+                icon: 'symbol-structure',
+            },
+            {
+                id: 'citation-index',
+                label: 'Citation Index',
+                kind: 'jsonl',
+                path: path.join(docDir, 'citation_index.jsonl'),
+                icon: 'references',
+            },
+            {
+                id: 'citation-status',
+                label: 'Citation Status',
+                kind: 'json',
+                path: path.join(docDir, 'citation_index.status.json'),
+                icon: 'verified',
+            },
+        ];
+
+        return candidates.filter((artifact, index, all) => {
+            if (!fs.existsSync(artifact.path)) {
+                return false;
+            }
+            return all.findIndex(candidate => candidate.path === artifact.path) === index;
+        });
+    }
+
+    /**
+     * List citation spans from citation_index.jsonl with source line numbers.
+     */
+    listCitationSpans(docId: string, limit = 25): CitationSpanSummary[] {
+        const indexPath = path.join(this.getDataDir(), docId, 'citation_index.jsonl');
+        if (!fs.existsSync(indexPath)) {
+            return [];
+        }
+
+        try {
+            const lines = fs.readFileSync(indexPath, 'utf-8').split(/\r?\n/);
+            const spans: CitationSpanSummary[] = [];
+            for (let i = 0; i < lines.length && spans.length < limit; i += 1) {
+                const line = lines[i].trim();
+                if (!line) {
+                    continue;
+                }
+                try {
+                    const data = JSON.parse(line) as {
+                        span_id?: string;
+                        page?: number;
+                        line_start?: number;
+                        line_end?: number;
+                        text?: string;
+                    };
+                    const quote = data.text || '';
+                    const lineDisplay = typeof data.line_start === 'number'
+                        ? `L${data.line_start + 1}-${data.line_end ?? data.line_start + 1}`
+                        : 'L?';
+                    spans.push({
+                        spanId: data.span_id || `span-${i + 1}`,
+                        label: data.span_id || `Span ${i + 1}`,
+                        description: `p.${data.page ?? '?'} ${lineDisplay}`,
+                        quote,
+                        path: indexPath,
+                        line: i,
+                    });
+                } catch {
+                    // Skip invalid JSONL records.
+                }
+            }
+            return spans;
+        } catch {
+            return [];
         }
     }
 }

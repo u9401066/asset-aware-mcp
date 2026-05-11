@@ -60,6 +60,35 @@ describe('EnvManager', () => {
         assert.strictEqual(env.LIGHTRAG_EMBEDDING_MODEL, 'text-embedding-legacy');
         assert.strictEqual(env.OPENAI_EMBEDDING_MODEL, 'text-embedding-legacy');
     });
+
+    it('lists document artifacts and citation span summaries', () => {
+        const manager = new EnvManager(tempDir);
+        const docDir = path.join(manager.getDataDir(), 'doc_gamma');
+        fs.mkdirSync(docDir, { recursive: true });
+        fs.writeFileSync(path.join(docDir, 'doc_gamma_manifest.json'), '{"title":"Gamma"}');
+        fs.writeFileSync(path.join(docDir, 'doc_gamma_full.md'), '# Gamma\n');
+        fs.writeFileSync(path.join(docDir, 'citation_index.status.json'), '{"found":1}');
+        fs.writeFileSync(
+            path.join(docDir, 'citation_index.jsonl'),
+            JSON.stringify({
+                span_id: 'spn_1',
+                page: 2,
+                line_start: 4,
+                line_end: 5,
+                text: 'Gamma evidence',
+            }) + '\n',
+        );
+
+        const artifacts = manager.listDocumentArtifacts('doc_gamma');
+        assert.ok(artifacts.some(artifact => artifact.id === 'manifest'));
+        assert.ok(artifacts.some(artifact => artifact.id === 'markdown'));
+        assert.ok(artifacts.some(artifact => artifact.id === 'citation-index'));
+
+        const spans = manager.listCitationSpans('doc_gamma');
+        assert.strictEqual(spans.length, 1);
+        assert.strictEqual(spans[0].spanId, 'spn_1');
+        assert.match(spans[0].description, /p\.2 L5-5/);
+    });
 });
 
 describe('DfmSessionManager path normalization', () => {

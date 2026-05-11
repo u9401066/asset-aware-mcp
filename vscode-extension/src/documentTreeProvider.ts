@@ -6,7 +6,7 @@
 
 import * as fs from 'fs';
 import * as vscode from 'vscode';
-import { EnvManager } from './envManager';
+import { DocumentArtifact, EnvManager } from './envManager';
 
 type ManifestSummary = {
     title?: string;
@@ -45,9 +45,14 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
             return this.getDocuments();
         }
 
-        // Show document details when expanded
-        if (element.docId) {
+        if (element.kind === 'document' && element.docId) {
             return this.getDocumentDetails(element.docId);
+        }
+        if (element.kind === 'artifacts' && element.docId) {
+            return this.getArtifactItems(element.docId);
+        }
+        if (element.kind === 'citations' && element.docId) {
+            return this.getCitationItems(element.docId);
         }
 
         return [];
@@ -75,7 +80,9 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
                 doc.id,
                 vscode.TreeItemCollapsibleState.Collapsed,
                 'file-pdf',
-                doc.id
+                doc.id,
+                undefined,
+                'document'
             );
         });
     }
@@ -143,6 +150,33 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
             ));
         }
 
+        const artifacts = this.envManager.listDocumentArtifacts(docId);
+        if (artifacts.length > 0) {
+            items.push(new DocumentItem(
+                `Artifacts: ${artifacts.length}`,
+                '',
+                vscode.TreeItemCollapsibleState.Collapsed,
+                'archive',
+                docId,
+                undefined,
+                'artifacts'
+            ));
+        }
+
+        const citationSpans = this.envManager.listCitationSpans(docId, 1);
+        const hasCitationArtifacts = artifacts.some(artifact => artifact.id.startsWith('citation-'));
+        if (hasCitationArtifacts || citationSpans.length > 0) {
+            items.push(new DocumentItem(
+                'Citations',
+                '',
+                vscode.TreeItemCollapsibleState.Collapsed,
+                'references',
+                docId,
+                undefined,
+                'citations'
+            ));
+        }
+
         // Open manifest command
         const manifestPath = this.envManager.getManifestPath(docId);
         if (manifestPath) {
@@ -162,6 +196,77 @@ export class DocumentTreeProvider implements vscode.TreeDataProvider<DocumentIte
 
         return items;
     }
+
+    private getArtifactItems(docId: string): DocumentItem[] {
+        const artifacts = this.envManager.listDocumentArtifacts(docId);
+        if (artifacts.length === 0) {
+            return [new DocumentItem('No artifacts found', '', vscode.TreeItemCollapsibleState.None, 'info')];
+        }
+
+        return artifacts.map((artifact: DocumentArtifact) => new DocumentItem(
+            artifact.label,
+            artifact.kind,
+            vscode.TreeItemCollapsibleState.None,
+            artifact.icon,
+            undefined,
+            {
+                command: 'vscode.open',
+                title: `Open ${artifact.label}`,
+                arguments: [vscode.Uri.file(artifact.path)]
+            },
+            'artifact'
+        ));
+    }
+
+    private getCitationItems(docId: string): DocumentItem[] {
+        const artifacts = this.envManager
+            .listDocumentArtifacts(docId)
+            .filter(artifact => artifact.id.startsWith('citation-'));
+        const spans = this.envManager.listCitationSpans(docId);
+        const items: DocumentItem[] = [];
+
+        for (const artifact of artifacts) {
+            items.push(new DocumentItem(
+                `Open ${artifact.label}`,
+                artifact.kind,
+                vscode.TreeItemCollapsibleState.None,
+                artifact.icon,
+                undefined,
+                {
+                    command: 'vscode.open',
+                    title: `Open ${artifact.label}`,
+                    arguments: [vscode.Uri.file(artifact.path)]
+                },
+                'citation-artifact'
+            ));
+        }
+
+        for (const span of spans) {
+            const item = new DocumentItem(
+                span.label,
+                span.description,
+                vscode.TreeItemCollapsibleState.None,
+                'quote',
+                undefined,
+                {
+                    command: 'vscode.open',
+                    title: 'Open Citation Span',
+                    arguments: [
+                        vscode.Uri.file(span.path),
+                        { selection: new vscode.Range(span.line, 0, span.line, 0) }
+                    ]
+                },
+                'citation-span'
+            );
+            item.tooltip = span.quote || span.label;
+            items.push(item);
+        }
+
+        if (items.length === 0) {
+            return [new DocumentItem('No citation index found', '', vscode.TreeItemCollapsibleState.None, 'info')];
+        }
+        return items;
+    }
 }
 
 class DocumentItem extends vscode.TreeItem {
@@ -171,7 +276,8 @@ class DocumentItem extends vscode.TreeItem {
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
         icon?: string,
         public readonly docId?: string,
-        cmd?: vscode.Command
+        cmd?: vscode.Command,
+        public readonly kind?: string
     ) {
         super(label, collapsibleState);
 

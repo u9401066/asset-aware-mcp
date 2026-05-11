@@ -20,6 +20,35 @@ export enum FoldingRangeKind {
     Region = 3,
 }
 
+export enum TreeItemCollapsibleState {
+    None = 0,
+    Collapsed = 1,
+    Expanded = 2,
+}
+
+export class ThemeIcon {
+    constructor(public id: string) {}
+}
+
+export class TreeItem {
+    description?: string;
+    iconPath?: ThemeIcon;
+    command?: Command;
+    contextValue?: string;
+    tooltip?: string;
+
+    constructor(
+        public label: string,
+        public collapsibleState: TreeItemCollapsibleState,
+    ) {}
+}
+
+export interface Command {
+    command: string;
+    title: string;
+    arguments?: any[];
+}
+
 // Range mock
 export class Range {
     constructor(
