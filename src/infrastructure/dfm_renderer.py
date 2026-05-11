@@ -182,6 +182,8 @@ class DfmRenderer:
 
         if block.style_name:
             meta["style"] = block.style_name
+        if block.metadata:
+            meta["metadata"] = block.metadata
 
         if bt == DfmBlockType.PARAGRAPH:
             if not block.style_name and not block.runs:

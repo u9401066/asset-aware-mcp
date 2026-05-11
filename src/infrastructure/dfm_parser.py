@@ -353,6 +353,12 @@ class DfmParser:
                 # text diverges from runs' text (user edited content.md)
                 runs_text = "".join(r.text for r in edit.updated_runs)
                 if new_content and new_content != runs_text:
+                    if self._same_except_trailing_linebreaks(
+                        new_content, runs_text
+                    ) and [run.to_dict() for run in edit.updated_runs] == [
+                        run.to_dict() for run in block.runs
+                    ]:
+                        continue
                     # Content was edited in .md — merge new text with
                     # original runs' formatting
                     block.runs = self._merge_runs(
@@ -367,7 +373,9 @@ class DfmParser:
                     block.runs = edit.updated_runs
                     block.content = runs_text
             elif block.runs:
-                if new_content == old_content:
+                if new_content == old_content or self._same_except_trailing_linebreaks(
+                    new_content, old_content
+                ):
                     continue
                 block.runs = self._merge_runs(block.runs, old_content, new_content)
                 block.content = new_content
@@ -788,7 +796,7 @@ class DfmParser:
         rows: list[list[str]] = []
         for line in lines:
             # Skip separator rows (|---|---|)
-            if re.match(r"^\|[\s\-:|]+\|$", line):
+            if DfmParser._is_md_table_separator_row(line):
                 continue
             if not line.startswith("|"):
                 continue
@@ -797,6 +805,17 @@ class DfmParser:
             cells = [c.replace("<br>", "\n") for c in cells]
             rows.append(cells)
         return rows if rows else None
+
+    @staticmethod
+    def _is_md_table_separator_row(line: str) -> bool:
+        """Return True only for Markdown alignment separator rows."""
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            return False
+        cells = stripped.strip("|").split("|")
+        if not cells:
+            return False
+        return all(re.fullmatch(r"\s*:?-{3,}:?\s*", cell) for cell in cells)
 
     @staticmethod
     def _split_md_table_row(line: str) -> list[str]:
@@ -860,6 +879,11 @@ class DfmParser:
         if not rows:
             return []
         return [[cell.strip() for cell in row] for row in rows]
+
+    @staticmethod
+    def _same_except_trailing_linebreaks(left: str, right: str) -> bool:
+        """Split Markdown cannot distinguish separator blanks from terminal breaks."""
+        return left != right and left.rstrip("\n") == right.rstrip("\n")
 
     # ========================================================================
     # Format merge strategy

@@ -362,6 +362,7 @@ class DocxService:
             "editable": block.is_editable,
             "content": block.content,
             "style": block.style_name,
+            "metadata": block.metadata,
         }
 
     async def list_blocks(self, doc_id: str) -> list[dict[str, Any]] | None:
@@ -385,6 +386,7 @@ class DocxService:
                     "editable": block.is_editable,
                     "style": block.style_name,
                     "preview": preview,
+                    "metadata": block.metadata,
                 }
             )
         return blocks
@@ -956,6 +958,28 @@ class DocxService:
     ) -> dict[str, Any]:
         old_quote = old_text[old_char_range[0] : old_char_range[1]]
         new_quote = new_text[new_char_range[0] : new_char_range[1]]
+        locator = {
+            "doc_id": ir.doc_id,
+            "block_id": block.id,
+            "source_revision_id": ir.checksum,
+            "old_char_range": old_char_range,
+            "new_char_range": new_char_range,
+        }
+        for key in (
+            "locator_version",
+            "source_part",
+            "source_story",
+            "source_element",
+            "source_order",
+            "paragraph_index",
+            "table_index",
+            "parent_table_id",
+            "parent_cell",
+            "sdt_index",
+        ):
+            if key in block.metadata:
+                locator[key] = block.metadata[key]
+
         return {
             "schema": "asset-aware.docx-revisions.v1",
             "doc_id": ir.doc_id,
@@ -975,13 +999,8 @@ class DocxService:
             "new_byte_range": self._byte_range(new_text, new_char_range),
             "old_context": self._range_context(old_text, old_char_range),
             "new_context": self._range_context(new_text, new_char_range),
-            "locator": {
-                "doc_id": ir.doc_id,
-                "block_id": block.id,
-                "source_revision_id": ir.checksum,
-                "old_char_range": old_char_range,
-                "new_char_range": new_char_range,
-            },
+            "docx_locator": block.metadata,
+            "locator": locator,
         }
 
     @staticmethod
@@ -1396,15 +1415,29 @@ class DocxService:
                 current_runs = [run.to_dict() for run in block.runs]
                 runs_text = "".join(run.text for run in edit.updated_runs)
                 expected_content = edit.new_content or runs_text
-                if expected_runs != current_runs or expected_content != block.content:
+                if expected_runs != current_runs:
+                    changed_ids.add(edit.block_id)
+                    continue
+                if expected_content != block.content and not self._same_visible_text(
+                    expected_content,
+                    block.content,
+                ):
                     changed_ids.add(edit.block_id)
                 continue
 
             current_text = block.plain_text if block.runs else block.content
-            if edit.new_content != current_text:
+            if edit.new_content != current_text and not self._same_visible_text(
+                edit.new_content,
+                current_text,
+            ):
                 changed_ids.add(edit.block_id)
 
         return changed_ids
+
+    @staticmethod
+    def _same_visible_text(left: str, right: str) -> bool:
+        """Return True for split-format terminal line-break normalization."""
+        return left != right and left.rstrip("\n") == right.rstrip("\n")
 
     def _expected_content_diff_counts(
         self,

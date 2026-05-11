@@ -90,6 +90,81 @@ def test_merged_table_parse_preserves_logical_columns(tmp_path: Path):
     ]
 
 
+def test_table_locator_metadata_records_source_part_and_cells(tmp_path: Path):
+    adapter = DocxAdapter()
+    table = _table_with_horizontal_merge()
+    ir = DocxIR(doc_id="docx_123", source_path="source.docx")
+    assets_dir = tmp_path / "assets"
+    parts_dir = tmp_path / "parts"
+    assets_dir.mkdir()
+    parts_dir.mkdir()
+
+    block, nested_blocks = adapter._build_table_block(
+        table,
+        ir,
+        {},
+        assets_dir,
+        parts_dir,
+        source_part="word/document.xml",
+        source_story="body",
+        table_index=2,
+        source_order=4,
+    )
+
+    assert nested_blocks == []
+    assert block.metadata["locator_version"] == "docx-dfm-locator-v1"
+    assert block.metadata["source_part"] == "word/document.xml"
+    assert block.metadata["source_element"] == "w:tbl"
+    assert block.metadata["table_index"] == 2
+    assert block.metadata["source_order"] == 4
+    assert block.metadata["table_index_scope"] == "story"
+    assert block.metadata["row_count"] == 2
+    assert block.metadata["column_count"] == 3
+    assert block.metadata["char_range"] == [0, len(block.content)]
+    assert block.metadata["byte_range"] == [0, len(block.content.encode("utf-8"))]
+    assert block.metadata["cell_locators"][0] == {
+        "row_index": 0,
+        "col_index": 0,
+        "col_span": 2,
+    }
+
+
+def test_nested_table_locator_metadata_records_parent_cell(tmp_path: Path):
+    adapter = DocxAdapter()
+    table = etree.Element(_w("tbl"))
+    row = etree.SubElement(table, _w("tr"))
+    cell = etree.SubElement(row, _w("tc"))
+    cell.append(_p("Outer"))
+
+    nested = etree.SubElement(cell, _w("tbl"))
+    nested_row = etree.SubElement(nested, _w("tr"))
+    nested_row.append(_tc([("Inner",)]))
+
+    ir = DocxIR(doc_id="docx_123", source_path="source.docx")
+    assets_dir = tmp_path / "assets"
+    parts_dir = tmp_path / "parts"
+    assets_dir.mkdir()
+    parts_dir.mkdir()
+
+    block, nested_blocks = adapter._build_table_block(
+        table,
+        ir,
+        {},
+        assets_dir,
+        parts_dir,
+        source_part="word/document.xml",
+        source_story="body",
+        table_index=0,
+    )
+
+    nested_block = nested_blocks[0]
+    assert block.metadata["contains_nested_tables"] is True
+    assert nested_block.metadata["parent_table_id"] == block.id
+    assert nested_block.metadata["parent_cell"] == "0:0"
+    assert nested_block.metadata["table_index_scope"] == "parent_cell"
+    assert nested_block.metadata["table_index"] == 0
+
+
 def test_merged_table_edit_updates_correct_logical_cell():
     adapter = DocxAdapter()
     table = _table_with_horizontal_merge()
@@ -110,6 +185,28 @@ def test_merged_table_edit_updates_correct_logical_cell():
     first_row_cells = table.findall(_w("tr"))[0].findall(_w("tc"))
     assert _cell_paragraph_texts(first_row_cells[0]) == [["Group"]]
     assert _cell_paragraph_texts(first_row_cells[1]) == [["Tail edited"]]
+
+
+def test_parse_md_table_preserves_blank_rows():
+    rows = DocxAdapter._parse_md_table("| A |\n| --- |\n|   |\n| B |")
+
+    assert rows == [["A"], [""], ["B"]]
+
+
+def test_set_run_texts_does_not_duplicate_break_text():
+    adapter = DocxAdapter()
+    paragraph = etree.Element(_w("p"))
+    first = etree.SubElement(paragraph, _w("r"))
+    etree.SubElement(first, _w("t")).text = "Before"
+    break_run = etree.SubElement(paragraph, _w("r"))
+    etree.SubElement(break_run, _w("br"))
+    last = etree.SubElement(paragraph, _w("r"))
+    etree.SubElement(last, _w("t")).text = "After"
+
+    adapter._set_run_texts([first, break_run, last], ["Before", "\n", "After"])
+
+    assert break_run.find(_w("br")) is not None
+    assert break_run.find(_w("t")) is None
 
 
 def test_table_writeback_preserves_unchanged_multi_paragraph_cell_runs():

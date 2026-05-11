@@ -68,6 +68,7 @@ _REVISION_TAG_TYPES = {
 _NON_VISIBLE_REVISION_TAGS = {"del", "moveFrom"}
 _DIFF_TOKEN_RE = re.compile(r"\s+|\S+")
 _XML_SPACE = "{http://www.w3.org/XML/1998/namespace}space"
+_DOCX_LOCATOR_VERSION = "docx-dfm-locator-v1"
 
 # EMU to cm conversion (1 cm = 360000 EMU)
 EMU_PER_CM = 360000
@@ -413,16 +414,51 @@ class DocxAdapter:
         parts_dir: Path,
     ) -> None:
         """Parse all child elements of the document body into blocks."""
-        for element in body:
+        paragraph_index = 0
+        table_index = 0
+        sdt_index = 0
+        for source_order, element in enumerate(body):
             tag = etree.QName(element.tag).localname
 
             if tag == "p":
-                self._parse_paragraph(element, ir, rels, assets_dir)
+                self._parse_paragraph(
+                    element,
+                    ir,
+                    rels,
+                    assets_dir,
+                    source_part="word/document.xml",
+                    source_story="body",
+                    paragraph_index=paragraph_index,
+                    source_order=source_order,
+                )
+                paragraph_index += 1
             elif tag == "tbl":
-                self._parse_table(element, ir, rels, assets_dir, parts_dir)
+                self._parse_table(
+                    element,
+                    ir,
+                    rels,
+                    assets_dir,
+                    parts_dir,
+                    source_part="word/document.xml",
+                    source_story="body",
+                    table_index=table_index,
+                    source_order=source_order,
+                )
+                table_index += 1
             elif tag == "sdt":
                 # Structured document tag (may contain TOC, etc.)
-                self._parse_sdt(element, ir, rels, assets_dir, parts_dir)
+                self._parse_sdt(
+                    element,
+                    ir,
+                    rels,
+                    assets_dir,
+                    parts_dir,
+                    source_part="word/document.xml",
+                    source_story="body",
+                    sdt_index=sdt_index,
+                    source_order=source_order,
+                )
+                sdt_index += 1
             elif tag == "sectPr":
                 # Final section properties — already handled in styles
                 pass
@@ -435,29 +471,73 @@ class DocxAdapter:
         ir: DocxIR,
         rels: dict[str, dict[str, str]],
         assets_dir: Path,
+        *,
+        source_part: str = "word/document.xml",
+        source_story: str = "body",
+        paragraph_index: int | None = None,
+        table_index: int | None = None,
+        source_order: int | None = None,
+        parent_table_id: str | None = None,
+        parent_cell: str | None = None,
+        sdt_index: int | None = None,
     ) -> None:
         """Parse a <w:p> element into one or more DfmBlocks."""
         # Check for embedded images
         drawings = p_elem.findall(f".//{{{NS['w']}}}drawing")
         if drawings:
-            for drawing in drawings:
-                self._parse_drawing(drawing, ir, rels, assets_dir)
+            for drawing_index, drawing in enumerate(drawings):
+                drawing_metadata = self._docx_locator_metadata(
+                    source_part=source_part,
+                    source_story=source_story,
+                    source_element="w:drawing",
+                    paragraph_index=paragraph_index,
+                    table_index=table_index,
+                    source_order=source_order,
+                    parent_table_id=parent_table_id,
+                    parent_cell=parent_cell,
+                    sdt_index=sdt_index,
+                    extra={"drawing_index": drawing_index},
+                )
+                self._parse_drawing(
+                    drawing,
+                    ir,
+                    rels,
+                    assets_dir,
+                    metadata=drawing_metadata,
+                )
             # If paragraph has only drawing (no text), don't create text block
             text = self._get_paragraph_text(p_elem)
             if not text.strip():
-                self._add_revision_blocks(p_elem, ir, scope="paragraph")
+                self._add_revision_blocks(
+                    p_elem,
+                    ir,
+                    scope="paragraph",
+                    source_metadata=drawing_metadata if drawings else None,
+                )
                 return
 
         # Check for field codes (TOC, PAGE, etc.)
         fld_chars = p_elem.findall(f".//{{{NS['w']}}}fldChar")
         if fld_chars:
-            self._parse_field_paragraph(p_elem, ir)
+            field_metadata = self._docx_locator_metadata(
+                source_part=source_part,
+                source_story=source_story,
+                source_element="w:p",
+                paragraph_index=paragraph_index,
+                table_index=table_index,
+                source_order=source_order,
+                parent_table_id=parent_table_id,
+                parent_cell=parent_cell,
+                sdt_index=sdt_index,
+            )
+            self._parse_field_paragraph(p_elem, ir, metadata=field_metadata)
             source_block_id = ir.blocks[-1].id if ir.blocks else None
             self._add_revision_blocks(
                 p_elem,
                 ir,
                 scope="paragraph",
                 source_block_id=source_block_id,
+                source_metadata=field_metadata,
             )
             return
 
@@ -473,6 +553,17 @@ class DocxAdapter:
                         block_type=DfmBlockType.BREAK,
                         content="",
                         break_type=BreakType.PAGE,
+                        metadata=self._docx_locator_metadata(
+                            source_part=source_part,
+                            source_story=source_story,
+                            source_element="w:p",
+                            paragraph_index=paragraph_index,
+                            table_index=table_index,
+                            source_order=source_order,
+                            parent_table_id=parent_table_id,
+                            parent_cell=parent_cell,
+                            sdt_index=sdt_index,
+                        ),
                     )
                 )
                 self._add_revision_blocks(
@@ -480,6 +571,7 @@ class DocxAdapter:
                     ir,
                     scope="paragraph",
                     source_block_id=block_id,
+                    source_metadata=ir.blocks[-1].metadata if ir.blocks else None,
                 )
                 return
 
@@ -491,6 +583,18 @@ class DocxAdapter:
         # Parse runs
         runs = self._parse_runs(p_elem)
         text = "".join(r.text for r in runs)
+        paragraph_metadata = self._docx_locator_metadata(
+            source_part=source_part,
+            source_story=source_story,
+            source_element="w:p",
+            paragraph_index=paragraph_index,
+            table_index=table_index,
+            source_order=source_order,
+            parent_table_id=parent_table_id,
+            parent_cell=parent_cell,
+            sdt_index=sdt_index,
+            runs=runs,
+        )
 
         if not text.strip():
             # Empty paragraph — still preserve for spacing
@@ -501,6 +605,7 @@ class DocxAdapter:
                     block_type=DfmBlockType.PARAGRAPH,
                     content="",
                     style_name=style_name,
+                    metadata=paragraph_metadata,
                 )
             )
             self._add_revision_blocks(
@@ -508,6 +613,7 @@ class DocxAdapter:
                 ir,
                 scope="paragraph",
                 source_block_id=block_id,
+                source_metadata=paragraph_metadata,
             )
             return
 
@@ -524,6 +630,7 @@ class DocxAdapter:
                     style_name=style_name,
                     level=level,
                     runs=runs,
+                    metadata=paragraph_metadata,
                 )
             )
             self._add_revision_blocks(
@@ -531,6 +638,7 @@ class DocxAdapter:
                 ir,
                 scope="paragraph",
                 source_block_id=block_id,
+                source_metadata=paragraph_metadata,
             )
             return
         list_level = self._get_list_level(ppr)
@@ -551,6 +659,7 @@ class DocxAdapter:
                     list_level=list_level,
                     num_id=num_id,
                     runs=runs,
+                    metadata=paragraph_metadata,
                 )
             )
             self._add_revision_blocks(
@@ -558,6 +667,7 @@ class DocxAdapter:
                 ir,
                 scope="paragraph",
                 source_block_id=block_id,
+                source_metadata=paragraph_metadata,
             )
         elif style_name and "caption" in style_name.lower():
             # Caption
@@ -569,6 +679,7 @@ class DocxAdapter:
                     content=text,
                     style_name=style_name,
                     runs=runs,
+                    metadata=paragraph_metadata,
                 )
             )
             self._add_revision_blocks(
@@ -576,6 +687,7 @@ class DocxAdapter:
                 ir,
                 scope="paragraph",
                 source_block_id=block_id,
+                source_metadata=paragraph_metadata,
             )
         else:
             # Check if mixed format
@@ -590,6 +702,7 @@ class DocxAdapter:
                     content=text,
                     style_name=style_name,
                     runs=runs,
+                    metadata=paragraph_metadata,
                 )
             )
             self._add_revision_blocks(
@@ -597,6 +710,7 @@ class DocxAdapter:
                 ir,
                 scope="paragraph",
                 source_block_id=block_id,
+                source_metadata=paragraph_metadata,
             )
 
     def _parse_runs(self, p_elem: etree._Element) -> list[FormatRun]:
@@ -706,6 +820,14 @@ class DocxAdapter:
         rels: dict[str, dict[str, str]],
         assets_dir: Path,
         parts_dir: Path,
+        *,
+        source_part: str = "word/document.xml",
+        source_story: str = "body",
+        table_index: int | None = None,
+        source_order: int | None = None,
+        parent_table_id: str | None = None,
+        parent_cell: str | None = None,
+        sdt_index: int | None = None,
     ) -> None:
         """Parse a <w:tbl> element into a DfmBlock plus any nested child tables."""
         block, nested_blocks = self._build_table_block(
@@ -714,6 +836,13 @@ class DocxAdapter:
             rels,
             assets_dir,
             parts_dir,
+            source_part=source_part,
+            source_story=source_story,
+            table_index=table_index,
+            source_order=source_order,
+            parent_table_id=parent_table_id,
+            parent_cell=parent_cell,
+            sdt_index=sdt_index,
         )
         ir.add_block(block)
         self._add_revision_blocks(
@@ -722,6 +851,7 @@ class DocxAdapter:
             scope="table",
             source_block_id=block.id,
             context_text=block.content,
+            source_metadata=block.metadata,
         )
         for nested_block in nested_blocks:
             ir.add_block(nested_block)
@@ -734,8 +864,13 @@ class DocxAdapter:
         assets_dir: Path,
         parts_dir: Path,
         *,
+        source_part: str = "word/document.xml",
+        source_story: str = "body",
+        table_index: int | None = None,
+        source_order: int | None = None,
         parent_cell: str | None = None,
         parent_table_id: str | None = None,
+        sdt_index: int | None = None,
     ) -> tuple[DfmBlock, list[DfmBlock]]:
         """Build a table block and recursively extract nested child table blocks."""
         block_id = ir.next_block_id(DfmBlockType.TABLE)
@@ -753,6 +888,7 @@ class DocxAdapter:
         col_widths: list[float] = []
         nested_blocks: list[DfmBlock] = []
         has_nested_descendants = False
+        cell_locators: list[dict[str, int | str]] = []
 
         tbl_grid = tbl_elem.find(f"{{{NS['w']}}}tblGrid")
         if tbl_grid is not None:
@@ -774,6 +910,10 @@ class DocxAdapter:
                     parts_dir,
                     parent_cell=f"{row_idx}:{col_idx}",
                     parent_table_id=block_id,
+                    source_part=source_part,
+                    source_story=source_story,
+                    table_index=table_index,
+                    sdt_index=sdt_index,
                 )
                 row_cells.append(cell_text)
                 row_cells.extend("" for _ in range(col_span - 1))
@@ -784,6 +924,14 @@ class DocxAdapter:
 
                 if tc_pr is not None:
                     v_merge_state = self._get_vmerge_state(tc_pr)
+                    cell_locator: dict[str, int | str] = {
+                        "row_index": row_idx,
+                        "col_index": col_idx,
+                        "col_span": col_span,
+                    }
+                    if v_merge_state:
+                        cell_locator["v_merge"] = v_merge_state
+                    cell_locators.append(cell_locator)
                     if v_merge_state == "restart":
                         row_span = self._count_vmerge(tbl_elem, row_idx, col_idx)
                         if col_span > 1 or row_span > 1:
@@ -808,6 +956,14 @@ class DocxAdapter:
                     cell_fmt = self._parse_cell_format(tc_pr, tc_elem)
                     if cell_fmt:
                         cell_formats[f"{row_idx}:{col_idx}"] = cell_fmt
+                else:
+                    cell_locators.append(
+                        {
+                            "row_index": row_idx,
+                            "col_index": col_idx,
+                            "col_span": col_span,
+                        }
+                    )
 
             rows_data.append(row_cells)
 
@@ -818,7 +974,25 @@ class DocxAdapter:
             xml_path = parts_dir / f"nested_table_{block_id}.xml"
             xml_path.write_bytes(etree.tostring(tbl_elem, xml_declaration=True))
 
-        metadata: dict[str, str | bool] = {}
+        metadata: dict[str, object] = self._docx_locator_metadata(
+            source_part=source_part,
+            source_story=source_story,
+            source_element="w:tbl",
+            table_index=table_index,
+            source_order=source_order,
+            parent_table_id=parent_table_id,
+            parent_cell=parent_cell,
+            sdt_index=sdt_index,
+            text=md_table,
+            extra={
+                "table_index_scope": "parent_cell"
+                if parent_table_id is not None
+                else "story",
+                "row_count": len(rows_data),
+                "column_count": max((len(row) for row in rows_data), default=0),
+                "cell_locators": cell_locators,
+            },
+        )
         if parent_table_id is not None:
             metadata["parent_table_id"] = parent_table_id
         if has_nested_descendants:
@@ -849,10 +1023,15 @@ class DocxAdapter:
         *,
         parent_cell: str,
         parent_table_id: str,
+        source_part: str,
+        source_story: str,
+        table_index: int | None = None,
+        sdt_index: int | None = None,
     ) -> tuple[str, list[DfmBlock]]:
         """Extract direct cell content while preserving nested table boundaries."""
         segments: list[str] = []
         nested_blocks: list[DfmBlock] = []
+        nested_table_index = 0
 
         for child in tc_elem:
             tag = etree.QName(child.tag).localname
@@ -868,9 +1047,14 @@ class DocxAdapter:
                     rels,
                     assets_dir,
                     parts_dir,
+                    source_part=source_part,
+                    source_story=source_story,
+                    table_index=nested_table_index,
                     parent_cell=parent_cell,
                     parent_table_id=parent_table_id,
+                    sdt_index=sdt_index,
                 )
+                nested_table_index += 1
                 nested_blocks.append(nested_block)
                 nested_blocks.extend(child_nested_blocks)
                 segments.append(self._nested_table_marker(nested_block.id))
@@ -886,6 +1070,8 @@ class DocxAdapter:
         ir: DocxIR,
         rels: dict[str, dict[str, str]],
         assets_dir: Path,
+        *,
+        metadata: dict[str, object] | None = None,
     ) -> None:
         """Parse a <w:drawing> element (image or chart)."""
         # Check for inline image
@@ -922,7 +1108,15 @@ class DocxAdapter:
         if chart_ref is not None:
             uri = chart_ref.get("uri", "")
             if "chart" in uri.lower():
-                self._parse_chart(target, ir, rels, assets_dir, width_cm, height_cm)
+                self._parse_chart(
+                    target,
+                    ir,
+                    rels,
+                    assets_dir,
+                    width_cm,
+                    height_cm,
+                    metadata=metadata,
+                )
                 return
 
         # Regular image — find the blip (image reference)
@@ -956,6 +1150,7 @@ class DocxAdapter:
                 image_height_cm=height_cm,
                 image_anchor=anchor_type,
                 image_alt=alt_text,
+                metadata=metadata or {},
             )
         )
 
@@ -967,6 +1162,8 @@ class DocxAdapter:
         assets_dir: Path,
         width_cm: float,
         height_cm: float,
+        *,
+        metadata: dict[str, object] | None = None,
     ) -> None:
         """Parse an embedded chart into a protected DfmBlock."""
         block_id = ir.next_block_id(DfmBlockType.CHART)
@@ -982,10 +1179,17 @@ class DocxAdapter:
                 chart_type="unknown",
                 image_width_cm=width_cm,
                 image_height_cm=height_cm,
+                metadata=metadata or {},
             )
         )
 
-    def _parse_field_paragraph(self, p_elem: etree._Element, ir: DocxIR) -> None:
+    def _parse_field_paragraph(
+        self,
+        p_elem: etree._Element,
+        ir: DocxIR,
+        *,
+        metadata: dict[str, object] | None = None,
+    ) -> None:
         """Parse a paragraph containing field codes."""
         # Extract field instruction
         instr_texts = []
@@ -1004,6 +1208,7 @@ class DocxAdapter:
                     block_type=DfmBlockType.TOC,
                     content="Table of Contents",
                     field_code=instruction,
+                    metadata=metadata or {},
                 )
             )
         elif instruction.upper().startswith("PAGE"):
@@ -1015,6 +1220,7 @@ class DocxAdapter:
                     content="",
                     field_type="PAGE",
                     field_instruction=instruction,
+                    metadata=metadata or {},
                 )
             )
         elif (
@@ -1030,6 +1236,7 @@ class DocxAdapter:
                     content=display_text,
                     field_instruction=instruction,
                     citation_entries=[{"field_code": instruction}],
+                    metadata=metadata or {},
                 )
             )
         else:
@@ -1042,6 +1249,7 @@ class DocxAdapter:
                     block_type=DfmBlockType.FIELD,
                     content=display_text,
                     field_instruction=instruction,
+                    metadata=metadata or {},
                 )
             )
 
@@ -1052,8 +1260,21 @@ class DocxAdapter:
         rels: dict[str, dict[str, str]],
         assets_dir: Path,
         parts_dir: Path,
+        *,
+        source_part: str = "word/document.xml",
+        source_story: str = "body",
+        sdt_index: int | None = None,
+        source_order: int | None = None,
     ) -> None:
         """Parse a structured document tag (<w:sdt>), often used for TOC."""
+        sdt_metadata = self._docx_locator_metadata(
+            source_part=source_part,
+            source_story=source_story,
+            source_element="w:sdt",
+            sdt_index=sdt_index,
+            source_order=source_order,
+            text=self._get_all_text(sdt_elem),
+        )
         # Check if this is a TOC
         sdt_pr = sdt_elem.find(f"{{{NS['w']}}}sdtPr")
         if sdt_pr is not None:
@@ -1078,6 +1299,7 @@ class DocxAdapter:
                             block_type=DfmBlockType.TOC,
                             content="Table of Contents",
                             xml_ref=xml_ref,
+                            metadata=sdt_metadata,
                         )
                     )
                     return
@@ -1085,12 +1307,37 @@ class DocxAdapter:
         # Otherwise, parse content normally
         sdt_content = sdt_elem.find(f"{{{NS['w']}}}sdtContent")
         if sdt_content is not None:
-            for child in sdt_content:
+            paragraph_index = 0
+            table_index = 0
+            for child_order, child in enumerate(sdt_content):
                 tag = etree.QName(child.tag).localname
                 if tag == "p":
-                    self._parse_paragraph(child, ir, rels, assets_dir)
+                    self._parse_paragraph(
+                        child,
+                        ir,
+                        rels,
+                        assets_dir,
+                        source_part=source_part,
+                        source_story=source_story,
+                        paragraph_index=paragraph_index,
+                        source_order=child_order,
+                        sdt_index=sdt_index,
+                    )
+                    paragraph_index += 1
                 elif tag == "tbl":
-                    self._parse_table(child, ir, rels, assets_dir, parts_dir)
+                    self._parse_table(
+                        child,
+                        ir,
+                        rels,
+                        assets_dir,
+                        parts_dir,
+                        source_part=source_part,
+                        source_story=source_story,
+                        table_index=table_index,
+                        source_order=child_order,
+                        sdt_index=sdt_index,
+                    )
+                    table_index += 1
 
     def _parse_footnotes(self, zf: ZipFile, ir: DocxIR) -> None:
         """Parse word/footnotes.xml."""
@@ -1112,7 +1359,8 @@ class DocxAdapter:
 
             # Get footnote text
             text_parts = []
-            for p in footnote.findall(f"{{{NS['w']}}}p"):
+            paragraphs = footnote.findall(f"{{{NS['w']}}}p")
+            for p in paragraphs:
                 text_parts.append(self._get_paragraph_text(p))
             text = "\n".join(text_parts)
 
@@ -1124,6 +1372,16 @@ class DocxAdapter:
                         block_type=DfmBlockType.FOOTNOTE,
                         content=text,
                         footnote_id=fn_id,
+                        metadata=self._docx_locator_metadata(
+                            source_part="word/footnotes.xml",
+                            source_story="footnote",
+                            source_element="w:footnote",
+                            text=text,
+                            extra={
+                                "footnote_id": fn_id,
+                                "paragraph_count": len(paragraphs),
+                            },
+                        ),
                     )
                 )
 
@@ -1138,6 +1396,7 @@ class DocxAdapter:
                 # Extract preview text
                 tree = etree.fromstring(data)
                 preview = self._get_all_text(tree)
+                paragraphs = tree.findall(f".//{{{NS['w']}}}p")
 
                 hdr_type = "default"
                 if "2" in safe_name:
@@ -1154,6 +1413,16 @@ class DocxAdapter:
                         hdr_ftr_type=hdr_type,
                         xml_ref=f"parts/{safe_name}",
                         preview_text=preview[:100],
+                        metadata=self._docx_locator_metadata(
+                            source_part=name,
+                            source_story="header",
+                            source_element="w:hdr",
+                            text=preview,
+                            extra={
+                                "hdr_ftr_type": hdr_type,
+                                "paragraph_count": len(paragraphs),
+                            },
+                        ),
                     )
                 )
 
@@ -1164,6 +1433,7 @@ class DocxAdapter:
 
                 preview_tree = etree.fromstring(data)
                 preview = self._get_all_text(preview_tree)
+                paragraphs = preview_tree.findall(f".//{{{NS['w']}}}p")
 
                 ftr_type = "default"
                 if "2" in safe_name:
@@ -1180,8 +1450,104 @@ class DocxAdapter:
                         hdr_ftr_type=ftr_type,
                         xml_ref=f"parts/{safe_name}",
                         preview_text=preview[:100],
+                        metadata=self._docx_locator_metadata(
+                            source_part=name,
+                            source_story="footer",
+                            source_element="w:ftr",
+                            text=preview,
+                            extra={
+                                "hdr_ftr_type": ftr_type,
+                                "paragraph_count": len(paragraphs),
+                            },
+                        ),
                     )
                 )
+
+    # ========================================================================
+    # Private: Locator metadata helpers
+    # ========================================================================
+
+    def _docx_locator_metadata(
+        self,
+        *,
+        source_part: str,
+        source_story: str,
+        source_element: str,
+        paragraph_index: int | None = None,
+        table_index: int | None = None,
+        source_order: int | None = None,
+        parent_table_id: str | None = None,
+        parent_cell: str | None = None,
+        sdt_index: int | None = None,
+        runs: list[FormatRun] | None = None,
+        text: str | None = None,
+        extra: dict[str, object] | None = None,
+    ) -> dict[str, object]:
+        """Build a stable, lightweight locator for DOCX-origin DFM blocks."""
+        metadata: dict[str, object] = {
+            "locator_version": _DOCX_LOCATOR_VERSION,
+            "source_part": source_part,
+            "source_story": source_story,
+            "source_element": source_element,
+        }
+        if source_order is not None:
+            metadata["source_order"] = source_order
+        if paragraph_index is not None:
+            metadata["paragraph_index"] = paragraph_index
+        if table_index is not None:
+            metadata["table_index"] = table_index
+        if parent_table_id is not None:
+            metadata["parent_table_id"] = parent_table_id
+        if parent_cell is not None:
+            metadata["parent_cell"] = parent_cell
+        if sdt_index is not None:
+            metadata["sdt_index"] = sdt_index
+
+        if runs is not None:
+            text = "".join(run.text for run in runs)
+            metadata["run_count"] = len(runs)
+            metadata["run_ranges"] = self._docx_run_ranges(runs)
+
+        if text is not None:
+            metadata.update(self._docx_text_locator(text))
+
+        if extra:
+            metadata.update(
+                {key: value for key, value in extra.items() if value is not None}
+            )
+        return metadata
+
+    @staticmethod
+    def _docx_text_locator(text: str) -> dict[str, object]:
+        return {
+            "char_range": [0, len(text)],
+            "byte_range": [0, len(text.encode("utf-8"))],
+            "text_sha256": f"sha256:{hashlib.sha256(text.encode('utf-8')).hexdigest()}",
+        }
+
+    @staticmethod
+    def _docx_run_ranges(runs: list[FormatRun]) -> list[dict[str, object]]:
+        ranges: list[dict[str, object]] = []
+        char_cursor = 0
+        byte_cursor = 0
+        for run_index, run in enumerate(runs):
+            text = run.text
+            char_end = char_cursor + len(text)
+            byte_len = len(text.encode("utf-8"))
+            byte_end = byte_cursor + byte_len
+            ranges.append(
+                {
+                    "run_index": run_index,
+                    "char_start": char_cursor,
+                    "char_end": char_end,
+                    "byte_start": byte_cursor,
+                    "byte_end": byte_end,
+                    "text_sha256": f"sha256:{hashlib.sha256(text.encode('utf-8')).hexdigest()}",
+                }
+            )
+            char_cursor = char_end
+            byte_cursor = byte_end
+        return ranges
 
     # ========================================================================
     # Private: XML text extraction helpers
@@ -1195,6 +1561,7 @@ class DocxAdapter:
         scope: str,
         source_block_id: str | None = None,
         context_text: str | None = None,
+        source_metadata: dict[str, object] | None = None,
     ) -> None:
         """Expose Word tracked changes as read-only DFM revision blocks."""
         fallback_context = context_text
@@ -1210,12 +1577,16 @@ class DocxAdapter:
             if not revision_text:
                 revision_text = "[tracked format change]"
 
-            metadata: dict[str, str | bool] = {
-                "source_tag": f"w:{revision_tag}",
-                "scope": scope,
-                "visible_in_current_text": revision_tag
-                not in _NON_VISIBLE_REVISION_TAGS,
-            }
+            metadata: dict[str, object] = dict(source_metadata or {})
+            metadata.update(
+                {
+                    "source_tag": f"w:{revision_tag}",
+                    "scope": scope,
+                    "visible_in_current_text": revision_tag
+                    not in _NON_VISIBLE_REVISION_TAGS,
+                }
+            )
+            metadata.update(self._docx_text_locator(revision_text))
             revision_id = revision_elem.get(f"{{{NS['w']}}}id")
             if revision_id:
                 metadata["revision_id"] = revision_id
@@ -2397,15 +2768,19 @@ class DocxAdapter:
         normalized_segments = list(segments) if segments else [""]
         for index, r_elem in enumerate(runs):
             t_elem = r_elem.find(f"{{{NS['w']}}}t")
+            segment = (
+                normalized_segments[index] if index < len(normalized_segments) else ""
+            )
             if t_elem is None:
-                if index < len(normalized_segments) and normalized_segments[index]:
+                has_break = r_elem.find(f"{{{NS['w']}}}br") is not None
+                if has_break and segment in {"\n", "\r\n"}:
+                    continue
+                if segment:
                     t_elem = etree.SubElement(r_elem, f"{{{NS['w']}}}t")
                 else:
                     continue
 
-            text = (
-                normalized_segments[index] if index < len(normalized_segments) else ""
-            )
+            text = segment
             if index == len(runs) - 1 and len(normalized_segments) > len(runs):
                 tail = normalized_segments[index:]
                 text = "".join(tail)
@@ -2458,7 +2833,7 @@ class DocxAdapter:
             if not line.startswith("|"):
                 continue
             # Skip separator row
-            if re.match(r"^\|[\s\-:|]+\|$", line):
+            if DfmParser._is_md_table_separator_row(line):
                 continue
             cells = DfmParser._split_md_table_row(line)
             # Restore escaped newlines (<br> → real newline)

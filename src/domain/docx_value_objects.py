@@ -78,6 +78,7 @@ _PROTECTED_TYPES = frozenset(
         DfmBlockType.FOOTER,
         DfmBlockType.FIELD,
         DfmBlockType.CITATION,
+        DfmBlockType.BREAK,
         DfmBlockType.REVISION,
         DfmBlockType.MACRO,
         DfmBlockType.OLE,

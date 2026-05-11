@@ -75,6 +75,73 @@ async def test_convert_to_pdf_rejects_non_fidelity_mode():
 
 
 @pytest.mark.asyncio
+async def test_get_block_content_returns_docx_locator_metadata(monkeypatch):
+    service = DocxService(repository=MagicMock())
+    ir = DocxIR(
+        doc_id="docx_123",
+        source_path="source.docx",
+        blocks=[
+            DfmBlock(
+                id="p001",
+                block_type=DfmBlockType.PARAGRAPH,
+                content="Evidence",
+                metadata={
+                    "locator_version": "docx-dfm-locator-v1",
+                    "source_part": "word/document.xml",
+                    "paragraph_index": 0,
+                },
+            )
+        ],
+    )
+    monkeypatch.setattr(service, "_load_ir", lambda _doc_id: ir)
+
+    result = await service.get_block_content("docx_123", "p001")
+
+    assert result is not None
+    assert result["metadata"]["source_part"] == "word/document.xml"
+    assert result["metadata"]["paragraph_index"] == 0
+
+
+def test_revision_record_locator_includes_docx_source_metadata(tmp_path: Path):
+    service = DocxService(repository=MagicMock())
+    ir = DocxIR(
+        doc_id="docx_123",
+        source_path="source.docx",
+        checksum="sha256:source",
+    )
+    block = DfmBlock(
+        id="p001",
+        block_type=DfmBlockType.PARAGRAPH,
+        content="Updated evidence",
+        metadata={
+            "locator_version": "docx-dfm-locator-v1",
+            "source_part": "word/document.xml",
+            "source_story": "body",
+            "source_element": "w:p",
+            "source_order": 2,
+            "paragraph_index": 1,
+        },
+    )
+
+    record = service._build_revision_record(
+        ir,
+        block,
+        tmp_path / "out.docx",
+        op="insert",
+        old_text="Old evidence",
+        new_text="Updated evidence",
+        old_char_range=[0, 0],
+        new_char_range=[0, 7],
+        index=1,
+    )
+
+    assert record["docx_locator"]["source_part"] == "word/document.xml"
+    assert record["locator"]["locator_version"] == "docx-dfm-locator-v1"
+    assert record["locator"]["paragraph_index"] == 1
+    assert record["locator"]["source_order"] == 2
+
+
+@pytest.mark.asyncio
 async def test_convert_to_pdf_success(monkeypatch, tmp_path: Path):
     repository = MagicMock()
     repository.get_doc_dir.return_value = tmp_path

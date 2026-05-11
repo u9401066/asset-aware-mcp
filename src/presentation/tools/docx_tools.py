@@ -67,6 +67,26 @@ def _escape_preview_cell(value: object, max_chars: int) -> str:
     return str(value).replace("|", "\\|")[:max_chars]
 
 
+def _format_docx_locator(metadata: dict[str, Any] | None) -> str:
+    """Return a compact DOCX source locator for block listings."""
+    if not metadata:
+        return ""
+    parts: list[str] = []
+    source_part = metadata.get("source_part")
+    if source_part:
+        parts.append(str(source_part))
+    source_story = metadata.get("source_story")
+    if source_story and source_story != "body":
+        parts.append(str(source_story))
+    if "paragraph_index" in metadata:
+        parts.append(f"p#{metadata['paragraph_index']}")
+    if "table_index" in metadata:
+        parts.append(f"t#{metadata['table_index']}")
+    if "parent_cell" in metadata:
+        parts.append(f"cell {metadata['parent_cell']}")
+    return " ".join(parts)
+
+
 def _get_pending_table_contexts(doc_id: str) -> list[TableContext]:
     """Collect doc-linked TableContext instances pending write-back."""
     pending: list[TableContext] = []
@@ -381,18 +401,20 @@ async def list_docx_blocks(doc_id: str) -> str:
         return "文件中沒有任何區塊。"
 
     lines = [f"📄 文件 `{doc_id}` — 共 {len(blocks)} 個區塊\n"]
-    lines.append("| ID | 類型 | 可編輯 | 樣式 | 預覽 |")
-    lines.append("|---|---|---|---|---|")
+    lines.append("| ID | 類型 | 可編輯 | Locator | 樣式 | 預覽 |")
+    lines.append("|---|---|---|---|---|---|")
 
     for b in blocks:
         editable = "✅" if b["editable"] else "🔒"
+        locator = _format_docx_locator(b.get("metadata"))
         style = escape_table_cell(b.get("style") or "")
         preview = _escape_preview_cell(b.get("preview", ""), 50)
         lines.append(
-            "| {id} | {type} | {editable} | {style} | {preview} |".format(
+            "| {id} | {type} | {editable} | {locator} | {style} | {preview} |".format(
                 id=escape_table_cell(b["id"]),
                 type=escape_table_cell(b["type"]),
                 editable=escape_table_cell(editable),
+                locator=escape_table_cell(locator),
                 style=style,
                 preview=preview,
             )

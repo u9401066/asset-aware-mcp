@@ -134,6 +134,7 @@ class TestDfmBlockType:
         assert DfmBlockType.TOC.is_protected
         assert DfmBlockType.CITATION.is_protected
         assert DfmBlockType.REVISION.is_protected
+        assert DfmBlockType.BREAK.is_protected
         assert DfmBlockType.MACRO.is_protected
         assert not DfmBlockType.PARAGRAPH.is_protected
         assert not DfmBlockType.HEADING.is_protected
@@ -312,6 +313,42 @@ class TestDocxAdapterParsing:
 
         assert len(ir.blocks) == 1
         assert ir.blocks[0].block_type == DfmBlockType.PARAGRAPH
+
+    def test_paragraph_locator_metadata_records_docx_part_and_run_ranges(self):
+        p = etree.fromstring(
+            f"""
+            <w:p xmlns:w="{NS["w"]}">
+              <w:r><w:t>Alpha </w:t></w:r>
+              <w:r><w:t>βeta</w:t></w:r>
+            </w:p>
+            """
+        )
+        ir = DocxIR(doc_id="test_doc_001", source_path="test.docx")
+
+        DocxAdapter()._parse_paragraph(
+            p,
+            ir,
+            {},
+            Path.cwd(),
+            source_part="word/document.xml",
+            source_story="body",
+            paragraph_index=3,
+            source_order=5,
+        )
+
+        block = ir.blocks[0]
+        metadata = block.metadata
+        assert metadata["locator_version"] == "docx-dfm-locator-v1"
+        assert metadata["source_part"] == "word/document.xml"
+        assert metadata["source_story"] == "body"
+        assert metadata["source_element"] == "w:p"
+        assert metadata["paragraph_index"] == 3
+        assert metadata["source_order"] == 5
+        assert metadata["char_range"] == [0, len("Alpha βeta")]
+        assert metadata["byte_range"] == [0, len("Alpha βeta".encode())]
+        assert metadata["run_count"] == 2
+        assert metadata["run_ranges"][1]["run_index"] == 1
+        assert metadata["run_ranges"][1]["char_start"] == len("Alpha ")
 
     def test_hyperlink_runs_are_parsed_and_cleared_on_edit(self):
         p = etree.fromstring(
@@ -711,6 +748,32 @@ class TestDfmRenderer:
         result = renderer._render_paragraph(block)
         assert "**bold**" in result
         assert " normal" in result
+
+    def test_split_format_preserves_block_locator_metadata(self, renderer: DfmRenderer):
+        ir = DocxIR(
+            doc_id="docx_locator",
+            source_path="source.docx",
+            source_filename="source.docx",
+            checksum="sha256:abc",
+            blocks=[
+                DfmBlock(
+                    id="p001",
+                    block_type=DfmBlockType.PARAGRAPH,
+                    content="Located",
+                    metadata={
+                        "locator_version": "docx-dfm-locator-v1",
+                        "source_part": "word/document.xml",
+                        "paragraph_index": 0,
+                    },
+                )
+            ],
+        )
+
+        _md_text, yaml_text = renderer.render_split(ir)
+
+        assert "metadata:" in yaml_text
+        assert "source_part: word/document.xml" in yaml_text
+        assert "paragraph_index: 0" in yaml_text
 
     def test_render_list_item(self, renderer: DfmRenderer):
         block = DfmBlock(
@@ -1174,6 +1237,70 @@ class TestRoundTrip:
         assert split_result.errors == []
         assert single_result.errors == []
         assert single_updated.find_block("l001").content == content
+
+    def test_split_break_block_is_not_treated_as_text_edit(
+        self, renderer: DfmRenderer, parser: DfmParser
+    ):
+        ir = DocxIR(
+            doc_id="test_doc_001",
+            source_path="test.docx",
+            source_filename="test.docx",
+            checksum="abc123",
+            created_at=datetime(2025, 1, 1, 12, 0, 0),
+            blocks=[
+                DfmBlock(
+                    id="br001",
+                    block_type=DfmBlockType.BREAK,
+                    content="",
+                    break_type=BreakType.PAGE,
+                )
+            ],
+        )
+
+        md_text, yaml_text = renderer.render_split(ir)
+        parse_result = parser.parse_split(md_text, yaml_text)
+
+        assert "---" in md_text
+        assert parse_result.errors == []
+        assert [edit.block_id for edit in parse_result.edits] == []
+
+    def test_split_format_noop_preserves_terminal_line_break_runs(
+        self, renderer: DfmRenderer, parser: DfmParser
+    ):
+        ir = DocxIR(
+            doc_id="test_doc_001",
+            source_path="test.docx",
+            source_filename="test.docx",
+            checksum="abc123",
+            created_at=datetime(2025, 1, 1, 12, 0, 0),
+            blocks=[
+                DfmBlock(
+                    id="p001",
+                    block_type=DfmBlockType.FORMAT,
+                    content="Signature\n",
+                    runs=[
+                        FormatRun(text="Signature"),
+                        FormatRun(text="\n"),
+                    ],
+                )
+            ],
+        )
+
+        md_text, yaml_text = renderer.render_split(ir)
+        parse_result = parser.parse_split(md_text, yaml_text)
+        updated = parser.apply_edits(ir, parse_result)
+
+        assert parse_result.errors == []
+        assert updated.find_block("p001").content == "Signature\n"
+        assert [run.text for run in updated.find_block("p001").runs] == [
+            "Signature",
+            "\n",
+        ]
+
+    def test_markdown_table_parser_preserves_blank_rows(self, parser: DfmParser):
+        rows = parser._parse_md_table("| A |\n| --- |\n|   |\n| B |")
+
+        assert rows == [["A"], [""], ["B"]]
 
     def test_apply_edits_paragraph(
         self, renderer: DfmRenderer, parser: DfmParser, sample_ir: DocxIR
