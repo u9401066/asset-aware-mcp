@@ -204,7 +204,7 @@ wheels = [
 
 [[package]]
 name = "asset-aware-mcp"
-version = "0.6.27"
+version = "0.6.28"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },

@@ -1,6 +1,6 @@
 [project]
 name = "asset-aware-mcp"
-version = "0.6.27"
+version = "0.6.28"
 description = "Medical RAG with Asset-Aware MCP - Precise PDF asset retrieval (tables, figures, sections) for AI Agents"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -56,7 +56,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Temporarily empty in v0.6.27: marker-pdf 1.10.2 pins Pillow<11,
+# Temporarily empty in v0.6.28: marker-pdf 1.10.2 pins Pillow<11,
 # while the secure runtime requires Pillow>=12.2.0. Re-enable this extra
 # when upstream marker-pdf supports a patched Pillow range.
 marker = []
