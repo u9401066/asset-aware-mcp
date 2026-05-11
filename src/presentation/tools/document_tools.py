@@ -50,6 +50,10 @@ from src.presentation.tools.citation_support import (
     load_citation_status,
     load_or_build_evidence_spans,
 )
+from src.presentation.tools.conversion_job_support import (
+    conversion_result_payload,
+    create_conversion_job_response,
+)
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import Context
@@ -68,6 +72,197 @@ def _unsupported_document_op(kind: str, op: str, allowed: set[str]) -> str:
 
 def _missing_document_param(name: str) -> str:
     return f"Missing required parameter: {name} is required."
+
+
+def _filter_evidence_spans(
+    spans: list[Any],
+    *,
+    query: str = "",
+    span_id: str = "",
+    span_kinds: list[str] | None = None,
+) -> list[Any]:
+    filtered = spans
+    if span_id:
+        filtered = [span for span in filtered if span.span_id == span_id]
+    if query:
+        query_lower = query.lower()
+        filtered = [span for span in filtered if query_lower in span.text.lower()]
+    if span_kinds:
+        allowed_kinds = {kind.lower() for kind in span_kinds}
+        filtered = [
+            span for span in filtered if span.span_kind.lower() in allowed_kinds
+        ]
+    return filtered
+
+
+def _verify_span_ref_payload(ref: dict[str, Any]) -> dict[str, Any]:
+    """Verify a span AssetRef and return structured status."""
+    if ref.get("source_type") != "span":
+        return {
+            "valid": False,
+            "status": "unsupported",
+            "issues": ["Only span-level AssetRef objects can be verified"],
+        }
+
+    doc_id = str(ref.get("doc_id") or "")
+    span_id = str(ref.get("span_id") or "")
+    if not doc_id or not span_id:
+        return {
+            "valid": False,
+            "status": "invalid",
+            "issues": ["Citation ref must include doc_id and span_id"],
+        }
+
+    spans = load_or_build_evidence_spans(repository, doc_id)
+    span = next((item for item in spans if item.span_id == span_id), None)
+    if span is None:
+        return {
+            "valid": False,
+            "status": "missing",
+            "doc_id": doc_id,
+            "span_id": span_id,
+            "issues": [f"Citation span not found: {span_id}"],
+        }
+
+    issues: list[str] = []
+    if ref.get("source_revision_id") != span.source_revision_id:
+        issues.append("source_revision_id mismatch")
+    if ref.get("locator_version") != span.locator_version:
+        issues.append("locator_version mismatch")
+    if (
+        "locator_source_sha256" in ref
+        and ref.get("locator_source_sha256") != span.locator_source_sha256
+    ):
+        issues.append("locator_source_sha256 mismatch")
+    if "block_id" in ref and ref.get("block_id") != span.block_id:
+        issues.append("block_id mismatch")
+    if "page" in ref and ref.get("page") != span.page:
+        issues.append("page mismatch")
+    if "line_range" in ref and coerce_range(ref.get("line_range")) != [
+        span.line_start,
+        span.line_end,
+    ]:
+        issues.append("line_range mismatch")
+    if "char_range" in ref and coerce_range(ref.get("char_range")) != [
+        span.char_start,
+        span.char_end,
+    ]:
+        issues.append("char_range mismatch")
+    if "byte_range" in ref and coerce_range(ref.get("byte_range")) != [
+        span.byte_start,
+        span.byte_end,
+    ]:
+        issues.append("byte_range mismatch")
+    if "bbox" in ref and ref.get("bbox") != span.bbox:
+        issues.append("bbox mismatch")
+
+    quote = str(ref.get("quote") or "")
+    quote_sha256 = str(ref.get("quote_sha256") or "")
+    if quote and quote not in span.text:
+        issues.append("quote is not contained in indexed span text")
+    if quote_sha256:
+        expected = hashlib.sha256((quote or span.text).encode("utf-8")).hexdigest()
+        if quote_sha256 != expected and quote_sha256 != span.text_sha256:
+            issues.append("quote_sha256 mismatch")
+
+    return {
+        "valid": not issues,
+        "status": "verified" if not issues else "mismatch",
+        "doc_id": doc_id,
+        "span_id": span_id,
+        "page": span.page,
+        "line_range": [span.line_start, span.line_end],
+        "line_display": format_line_range(span.line_start, span.line_end),
+        "char_range": [span.char_start, span.char_end],
+        "byte_range": [span.byte_start, span.byte_end],
+        "text_sha256": span.text_sha256,
+        "source_revision_id": span.source_revision_id,
+        "locator_version": span.locator_version,
+        "locator_source_sha256": span.locator_source_sha256,
+        "issues": issues,
+    }
+
+
+def _citation_bundle_entry(span: Any, *, include_verification: bool) -> dict[str, Any]:
+    ref = asset_ref_from_span(span)
+    entry: dict[str, Any] = {
+        "doc_id": span.doc_id,
+        "span_id": span.span_id,
+        "span_kind": span.span_kind,
+        "source_type": span.source_type,
+        "block_id": span.block_id,
+        "asset_id": span.asset_id,
+        "page": span.page,
+        "line_range": [span.line_start, span.line_end],
+        "line_display": format_line_range(span.line_start, span.line_end),
+        "char_range": [span.char_start, span.char_end],
+        "byte_range": [span.byte_start, span.byte_end],
+        "bbox": span.bbox,
+        "source_revision_id": span.source_revision_id,
+        "locator_version": span.locator_version,
+        "locator_source_sha256": span.locator_source_sha256,
+        "text_sha256": span.text_sha256,
+        "normalized_text_sha256": span.normalized_text_sha256,
+        "quote": span.text,
+        "context_before": span.context_before,
+        "context_after": span.context_after,
+        "section_hierarchy": span.section_hierarchy,
+        "extraction_backend": span.extraction_backend,
+        "craap": span.craap.model_dump(exclude_none=True),
+        "asset_ref": ref,
+    }
+    if include_verification:
+        entry["verification"] = _verify_span_ref_payload(ref)
+    return entry
+
+
+def _format_citation_bundle(payload: dict[str, Any]) -> str:
+    if not payload.get("success"):
+        return str(payload.get("error") or "Citation bundle failed")
+
+    lines = [
+        f"# Citation Bundle: {payload['doc_id']}",
+        "",
+        f"**Bundle version:** `{payload['bundle_version']}`",
+        f"**Returned:** {payload['returned']}/{payload['matched_count']} spans",
+    ]
+    if payload.get("query"):
+        lines.append(f"**Query:** `{payload['query']}`")
+    lines.append("")
+
+    for index, entry in enumerate(payload["entries"], 1):
+        verification = entry.get("verification") or {}
+        status = verification.get("status", "not_verified")
+        issues = verification.get("issues") or []
+        quote = entry["quote"][:500] + ("..." if len(entry["quote"]) > 500 else "")
+        lines.extend(
+            [
+                f"## Evidence {index}: `{entry['span_id']}`",
+                f"- **Kind:** {entry['span_kind']}",
+                f"- **Block:** `{entry['block_id']}`",
+                f"- **Page:** {entry['page'] or '?'}",
+                f"- **Lines:** {entry['line_display'] or '?'}",
+                f"- **Chars:** {entry['char_range'][0]}-{entry['char_range'][1]}",
+                f"- **SHA256:** `{entry['text_sha256']}`",
+                f"- **Verification:** {status}",
+            ]
+        )
+        if issues:
+            lines.append(f"- **Issues:** {', '.join(issues)}")
+        lines.extend(
+            [
+                "",
+                f"> {quote}",
+                "",
+                "AssetRef:",
+                "```json",
+                json.dumps(entry["asset_ref"], ensure_ascii=False, indent=2),
+                "```",
+                "",
+            ]
+        )
+
+    return "\n".join(lines)
 
 
 def _should_force_background_ingest(
@@ -354,14 +549,12 @@ async def find_evidence_spans(
             "Run ingest_documents again or ensure blocks.json/full markdown exist."
         )
 
-    if span_id:
-        spans = [span for span in spans if span.span_id == span_id]
-    if query:
-        query_lower = query.lower()
-        spans = [span for span in spans if query_lower in span.text.lower()]
-    if span_kinds:
-        allowed_kinds = {kind.lower() for kind in span_kinds}
-        spans = [span for span in spans if span.span_kind.lower() in allowed_kinds]
+    spans = _filter_evidence_spans(
+        spans,
+        query=query,
+        span_id=span_id,
+        span_kinds=span_kinds,
+    )
 
     if not spans:
         target = span_id or query
@@ -418,73 +611,111 @@ async def find_evidence_spans(
 @mcp.tool()
 async def verify_citation_ref(ref: dict[str, Any]) -> str:
     """Verify a span-level AssetRef against the persisted citation index."""
-    if ref.get("source_type") != "span":
+    payload = _verify_span_ref_payload(ref)
+    issues = payload.get("issues") or []
+    doc_id = str(payload.get("doc_id") or ref.get("doc_id") or "")
+    span_id = str(payload.get("span_id") or ref.get("span_id") or "")
+    if payload.get("status") == "unsupported":
         return "❌ Only span-level AssetRef objects can be verified by this tool."
-
-    doc_id = str(ref.get("doc_id") or "")
-    span_id = str(ref.get("span_id") or "")
-    if not doc_id or not span_id:
+    if payload.get("status") == "invalid":
         return "❌ Citation ref must include doc_id and span_id."
-
-    spans = load_or_build_evidence_spans(repository, doc_id)
-    span = next((item for item in spans if item.span_id == span_id), None)
-    if span is None:
+    if payload.get("status") == "missing":
         return f"❌ Citation span not found: {span_id}"
 
-    issues: list[str] = []
-    if ref.get("source_revision_id") != span.source_revision_id:
-        issues.append("source_revision_id mismatch")
-    if ref.get("locator_version") != span.locator_version:
-        issues.append("locator_version mismatch")
-    if (
-        "locator_source_sha256" in ref
-        and ref.get("locator_source_sha256") != span.locator_source_sha256
-    ):
-        issues.append("locator_source_sha256 mismatch")
-    if "block_id" in ref and ref.get("block_id") != span.block_id:
-        issues.append("block_id mismatch")
-    if "page" in ref and ref.get("page") != span.page:
-        issues.append("page mismatch")
-    if "line_range" in ref and coerce_range(ref.get("line_range")) != [
-        span.line_start,
-        span.line_end,
-    ]:
-        issues.append("line_range mismatch")
-    if "char_range" in ref and coerce_range(ref.get("char_range")) != [
-        span.char_start,
-        span.char_end,
-    ]:
-        issues.append("char_range mismatch")
-    if "byte_range" in ref and coerce_range(ref.get("byte_range")) != [
-        span.byte_start,
-        span.byte_end,
-    ]:
-        issues.append("byte_range mismatch")
-    if "bbox" in ref and ref.get("bbox") != span.bbox:
-        issues.append("bbox mismatch")
-
-    quote = str(ref.get("quote") or "")
-    quote_sha256 = str(ref.get("quote_sha256") or "")
-    if quote and quote not in span.text:
-        issues.append("quote is not contained in indexed span text")
-    if quote_sha256:
-        expected = hashlib.sha256((quote or span.text).encode("utf-8")).hexdigest()
-        if quote_sha256 != expected and quote_sha256 != span.text_sha256:
-            issues.append("quote_sha256 mismatch")
-
-    status = "✅ Citation ref verified" if not issues else "⚠️ Citation ref mismatch"
+    status = (
+        "✅ Citation ref verified"
+        if payload.get("valid")
+        else "⚠️ Citation ref mismatch"
+    )
     lines = [
         status,
         f"- **doc_id:** `{doc_id}`",
         f"- **span_id:** `{span_id}`",
-        f"- **page:** {span.page or '?'}",
-        f"- **lines:** {format_line_range(span.line_start, span.line_end) or '?'}",
-        f"- **char_range:** {span.char_start}-{span.char_end}",
-        f"- **text_sha256:** `{span.text_sha256}`",
+        f"- **page:** {payload.get('page') or '?'}",
+        f"- **lines:** {payload.get('line_display') or '?'}",
+        f"- **char_range:** {payload.get('char_range', ['?', '?'])[0]}-{payload.get('char_range', ['?', '?'])[1]}",
+        f"- **text_sha256:** `{payload.get('text_sha256', '')}`",
     ]
     if issues:
         lines.append(f"- **issues:** {', '.join(issues)}")
     return "\n".join(lines)
+
+
+@mcp.tool()
+async def citation_bundle(
+    doc_id: str,
+    query: str = "",
+    span_id: str = "",
+    span_kinds: list[str] | None = None,
+    limit: int = 10,
+    include_verification: bool = True,
+    output_format: str = "markdown",
+) -> Any:
+    """
+    Export citation-ready evidence spans as a verified bundle.
+
+    Each entry carries AssetRef, exact quote/hash, locator metadata, context,
+    conservative CRAAP scaffold, and optional verification status.
+    """
+    spans = load_or_build_evidence_spans(repository, doc_id)
+    if not spans:
+        status = load_citation_status(repository, doc_id) or {}
+        reason = str(status.get("reason") or "").strip()
+        error = (
+            f"No citation-ready evidence spans found for doc_id: {doc_id}. {reason}"
+            if reason
+            else (
+                f"Citation index not found for doc_id: {doc_id}. "
+                "Run ingest_documents again or ensure blocks.json/full markdown exist."
+            )
+        )
+        payload = {
+            "success": False,
+            "doc_id": doc_id,
+            "bundle_version": "citation-bundle-v1",
+            "error": error,
+        }
+        if output_format == "json":
+            return payload
+        return error
+
+    filtered = _filter_evidence_spans(
+        spans,
+        query=query,
+        span_id=span_id,
+        span_kinds=span_kinds,
+    )
+    if not filtered:
+        target = span_id or query
+        payload = {
+            "success": False,
+            "doc_id": doc_id,
+            "bundle_version": "citation-bundle-v1",
+            "error": f"No evidence spans found for `{target}` in doc_id: {doc_id}",
+        }
+        if output_format == "json":
+            return payload
+        return str(payload["error"])
+
+    bounded_limit = max(1, min(limit, 50))
+    entries = [
+        _citation_bundle_entry(span, include_verification=include_verification)
+        for span in filtered[:bounded_limit]
+    ]
+    payload = {
+        "success": True,
+        "bundle_version": "citation-bundle-v1",
+        "doc_id": doc_id,
+        "query": query,
+        "span_id": span_id,
+        "span_kinds": span_kinds or [],
+        "matched_count": len(filtered),
+        "returned": len(entries),
+        "entries": entries,
+    }
+    if output_format == "json":
+        return payload
+    return _format_citation_bundle(payload)
 
 
 @mcp.tool()
@@ -713,6 +944,7 @@ async def convert_pdf_to_docx(
     doc_id: str,
     output_path: str | None = None,
     mode: str = "content",
+    async_mode: bool = True,
     ctx: Context | None = None,
 ) -> str:
     """
@@ -721,8 +953,51 @@ async def convert_pdf_to_docx(
     轉換範圍：
     - `content`：內容層重建。根據 PDF ETL 的 Markdown/表格/圖片生成可讀 DOCX。
     - `fidelity`：目前不支援，因為 PDF ETL 並非版面可逆。
+    - `async_mode`：預設建立背景 conversion job；設為 False 可沿用同步回傳。
     """
     await log_message(ctx, "info", f"convert_pdf_to_docx start: {doc_id}")
+    if async_mode:
+        parameters = {
+            "operation": "pdf_to_docx",
+            "source": doc_id,
+            "target_format": "docx",
+            "output_path": output_path,
+            "mode": mode,
+        }
+
+        async def handler(progress: Any) -> dict[str, Any]:
+            await progress.report(
+                step=2,
+                phase="Converting",
+                message=f"Converting {doc_id} to DOCX",
+            )
+            result = await document_service.convert_pdf_to_docx(
+                doc_id,
+                output_path,
+                mode=mode,
+            )
+            await progress.report(
+                step=3,
+                phase="Packaging",
+                message=f"Finalizing DOCX conversion for {doc_id}",
+            )
+            return conversion_result_payload(
+                result,
+                operation="pdf_to_docx",
+                source=doc_id,
+                target_format="docx",
+            )
+
+        return await create_conversion_job_response(
+            job_service,
+            operation="pdf_to_docx",
+            source=doc_id,
+            target_format="docx",
+            parameters=parameters,
+            handler=handler,
+            ctx=ctx,
+        )
+
     await report_progress(ctx, 10, message=f"Converting {doc_id} to DOCX")
     result = await document_service.convert_pdf_to_docx(
         doc_id,
@@ -753,6 +1028,7 @@ async def convert_pdf_to_pptx(
     doc_id: str,
     output_path: str | None = None,
     mode: str = "content",
+    async_mode: bool = True,
     ctx: Context | None = None,
 ) -> str:
     """
@@ -760,8 +1036,51 @@ async def convert_pdf_to_pptx(
 
     轉換範圍：
     - `content`：依據 PDF ETL 的 Markdown/圖像生成可編輯投影片。
+    - `async_mode`：預設建立背景 conversion job；設為 False 可沿用同步回傳。
     """
     await log_message(ctx, "info", f"convert_pdf_to_pptx start: {doc_id}")
+    if async_mode:
+        parameters = {
+            "operation": "pdf_to_pptx",
+            "source": doc_id,
+            "target_format": "pptx",
+            "output_path": output_path,
+            "mode": mode,
+        }
+
+        async def handler(progress: Any) -> dict[str, Any]:
+            await progress.report(
+                step=2,
+                phase="Converting",
+                message=f"Converting {doc_id} to PPTX",
+            )
+            result = await document_service.convert_pdf_to_pptx(
+                doc_id,
+                output_path,
+                mode=mode,
+            )
+            await progress.report(
+                step=3,
+                phase="Packaging",
+                message=f"Finalizing PPTX conversion for {doc_id}",
+            )
+            return conversion_result_payload(
+                result,
+                operation="pdf_to_pptx",
+                source=doc_id,
+                target_format="pptx",
+            )
+
+        return await create_conversion_job_response(
+            job_service,
+            operation="pdf_to_pptx",
+            source=doc_id,
+            target_format="pptx",
+            parameters=parameters,
+            handler=handler,
+            ctx=ctx,
+        )
+
     await report_progress(ctx, 10, message=f"Converting {doc_id} to PPTX")
     result = await document_service.convert_pdf_to_pptx(
         doc_id,
@@ -1307,6 +1626,17 @@ async def evidence(
         if ref is None:
             return _missing_document_param("ref")
         return await verify_citation_ref(ref)
+    if operation == "bundle":
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        return await citation_bundle(
+            doc_id,
+            query=query,
+            span_id=span_id,
+            span_kinds=span_kinds,
+            limit=limit,
+            include_verification=True,
+        )
     if operation in {"locate", "search_location"}:
         if not doc_id:
             return _missing_document_param("doc_id")
@@ -1317,7 +1647,7 @@ async def evidence(
     return _unsupported_document_op(
         "evidence",
         op,
-        {"find", "locate", "verify"},
+        {"bundle", "find", "locate", "verify"},
     )
 
 
@@ -1329,6 +1659,7 @@ async def convert_document(
     output_path: str | None = None,
     mode: str = "content",
     md_text: str | None = None,
+    async_mode: bool = True,
     ctx: Context | None = None,
 ) -> Any:
     """
@@ -1360,6 +1691,7 @@ async def convert_document(
                 source,
                 output_path=output_path,
                 mode=mode,
+                async_mode=async_mode,
                 ctx=ctx,
             )
         if target == "pptx":
@@ -1367,6 +1699,7 @@ async def convert_document(
                 source,
                 output_path=output_path,
                 mode=mode,
+                async_mode=async_mode,
                 ctx=ctx,
             )
     elif source_kind == "docx":
@@ -1377,6 +1710,7 @@ async def convert_document(
                 source,
                 output_path=output_path,
                 mode=mode,
+                async_mode=async_mode,
                 ctx=ctx,
             )
         if target == "pdf":
@@ -1384,6 +1718,7 @@ async def convert_document(
                 source,
                 output_path=output_path,
                 mode=mode,
+                async_mode=async_mode,
                 ctx=ctx,
             )
         if target == "odt":
@@ -1391,6 +1726,7 @@ async def convert_document(
                 source,
                 output_path=output_path,
                 mode=mode,
+                async_mode=async_mode,
                 ctx=ctx,
             )
     elif source_kind == "md":
@@ -1402,6 +1738,7 @@ async def convert_document(
                 md_text=md_text,
                 output_path=output_path,
                 output_format=target,
+                async_mode=async_mode,
                 ctx=ctx,
             )
 

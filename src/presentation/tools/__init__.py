@@ -2,19 +2,20 @@
 Presentation Layer - MCP Tools
 
 拆分自 server.py，按領域分模組：
-- document_tools: ETL + document management tools (18)
-- docx_tools: DOCX/DFM editing, validation, conversion, bridge tools (16)
+- document_tools: ETL + document management tools (19)
+- docx_tools: DOCX/DFM editing, validation, conversion, bridge tools (17)
 - section_tools: section navigation tools (5)
 - job_tools: async job management tools (4)
 - knowledge_tools: knowledge graph tools (3)
 - table_tools: A2T operation-based table tools (7)
-- profile_tools: ETL profile tools (6)
+- profile_tools: ETL profile tools (7)
 
-Total: 59 tools
+Total: 62 tools
 """
 
 # Import all tools to register them with mcp
 from src.presentation.tools.document_tools import (
+    citation_bundle,
     convert_document,
     convert_pdf_to_docx,
     convert_pdf_to_pptx,
@@ -42,6 +43,7 @@ from src.presentation.tools.docx_tools import (
     docx,
     docx_chart_data,
     docx_table,
+    docx_table_edit_plan,
     docx_table_from_context,
     docx_table_to_context,
     docx_validate_roundtrip,
@@ -64,6 +66,7 @@ from src.presentation.tools.knowledge_tools import (
     knowledge,
 )
 from src.presentation.tools.profile_tools import (
+    detect_etl_profile,
     etl_profile,
     get_current_etl_profile,
     get_etl_profile,
@@ -90,6 +93,7 @@ from src.presentation.tools.table_tools import (
 
 __all__ = [
     "cancel_job",
+    "citation_bundle",
     "consult_knowledge_graph",
     "convert_document",
     "convert_docx_to_doc",
@@ -99,12 +103,14 @@ __all__ = [
     "convert_pdf_to_pptx",
     "delete_document",
     "delete_docx",
+    "detect_etl_profile",
     "discover_sources",
     "document",
     "document_asset",
     "docx",
     "docx_chart_data",
     "docx_table",
+    "docx_table_edit_plan",
     "docx_table_from_context",
     "docx_table_to_context",
     "docx_validate_roundtrip",

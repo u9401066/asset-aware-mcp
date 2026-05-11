@@ -122,6 +122,29 @@ async def get_job_status(job_id: str) -> str:
         for doc_id in job.output_doc_ids:
             lines.append(f"  - `{doc_id}`")
 
+    if job.result and isinstance(job.result.get("conversion"), dict):
+        conversion = job.result["conversion"]
+        lines.append("\n**Conversion Result:**")
+        lines.append(f"- **operation:** `{conversion.get('operation', 'conversion')}`")
+        if conversion.get("source"):
+            lines.append(f"- **source:** `{conversion.get('source')}`")
+        if conversion.get("target_format"):
+            lines.append(f"- **target_format:** `{conversion.get('target_format')}`")
+        if conversion.get("mode"):
+            lines.append(f"- **mode:** {conversion.get('mode')}")
+        if conversion.get("output_path"):
+            lines.append(f"- **output_path:** `{conversion.get('output_path')}`")
+        if conversion.get("format"):
+            lines.append(f"- **format:** {conversion.get('format')}")
+        for key in (
+            "figures_embedded",
+            "tables_found",
+            "slides_created",
+            "figure_slides",
+        ):
+            if key in conversion:
+                lines.append(f"- **{key}:** {conversion.get(key)}")
+
     if job.error:
         lines.append(f"\n**Error:** {job.error}")
 
@@ -142,9 +165,18 @@ async def get_job_status(job_id: str) -> str:
     if job.status == JobStatus.COMPLETED and job.result:
         lines.append("\n---")
         lines.append("✅ **Job completed successfully!**")
-        lines.append(f"Created {len(job.output_doc_ids)} document(s).")
+        if job.result and isinstance(job.result.get("conversion"), dict):
+            output_path = job.result["conversion"].get("output_path")
+            if output_path:
+                lines.append(f"Created converted artifact: `{output_path}`")
+            else:
+                lines.append("Conversion finished.")
+        else:
+            lines.append(f"Created {len(job.output_doc_ids)} document(s).")
         if result_documents:
             lines.append("Use the per-document `next` commands above to continue.")
+        elif job.result and isinstance(job.result.get("conversion"), dict):
+            lines.append("Open the converted artifact path above to review output.")
         else:
             lines.append("Use `inspect_document_manifest(<doc_id>)` to view details.")
 

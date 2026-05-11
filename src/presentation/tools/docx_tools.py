@@ -29,11 +29,16 @@ from src.presentation.dependencies import (
     dfm_table_bridge,
     docx_service,
     docx_validator,
+    job_service,
     table_service,
 )
 from src.presentation.markdown_utils import escape_table_cell
 from src.presentation.mcp_app import mcp
 from src.presentation.mcp_context import log_message, report_progress
+from src.presentation.tools.conversion_job_support import (
+    conversion_result_payload,
+    create_conversion_job_response,
+)
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import Context
@@ -450,6 +455,7 @@ async def convert_docx_to_doc(
     doc_id: str,
     output_path: str | None = None,
     mode: str = "fidelity",
+    async_mode: bool = True,
     ctx: Context | None = None,
 ) -> str:
     """
@@ -458,8 +464,51 @@ async def convert_docx_to_doc(
     轉換範圍：
     - `fidelity`：保真模式。以目前 DFM 狀態重建 DOCX，再用 LibreOffice 輸出 DOC。
     - `content`：目前不支援；DOCX → DOC 應以保真輸出為主。
+    - `async_mode`：預設建立背景 conversion job；設為 False 可沿用同步回傳。
     """
     await log_message(ctx, "info", f"convert_docx_to_doc start: {doc_id}")
+    if async_mode:
+        parameters = {
+            "operation": "docx_to_doc",
+            "source": doc_id,
+            "target_format": "doc",
+            "output_path": output_path,
+            "mode": mode,
+        }
+
+        async def handler(progress: Any) -> dict[str, Any]:
+            await progress.report(
+                step=2,
+                phase="Converting",
+                message=f"Converting {doc_id} to DOC",
+            )
+            result = await docx_service.convert_to_doc(
+                doc_id,
+                output_path,
+                mode=mode,
+            )
+            await progress.report(
+                step=3,
+                phase="Packaging",
+                message=f"Finalizing DOC conversion for {doc_id}",
+            )
+            return conversion_result_payload(
+                result,
+                operation="docx_to_doc",
+                source=doc_id,
+                target_format="doc",
+            )
+
+        return await create_conversion_job_response(
+            job_service,
+            operation="docx_to_doc",
+            source=doc_id,
+            target_format="doc",
+            parameters=parameters,
+            handler=handler,
+            ctx=ctx,
+        )
+
     await report_progress(ctx, 10, message=f"Converting {doc_id} to DOC")
     result = await docx_service.convert_to_doc(doc_id, output_path, mode=mode)
     if not result.get("success"):
@@ -481,6 +530,7 @@ async def convert_docx_to_pdf(
     doc_id: str,
     output_path: str | None = None,
     mode: str = "fidelity",
+    async_mode: bool = True,
     ctx: Context | None = None,
 ) -> str:
     """
@@ -489,8 +539,51 @@ async def convert_docx_to_pdf(
     轉換範圍：
     - `fidelity`：保真模式。以目前 DFM 狀態重建 DOCX，再用 LibreOffice 輸出 PDF。
     - `content`：目前不支援；DOCX → PDF 應以保真輸出為主。
+    - `async_mode`：預設建立背景 conversion job；設為 False 可沿用同步回傳。
     """
     await log_message(ctx, "info", f"convert_docx_to_pdf start: {doc_id}")
+    if async_mode:
+        parameters = {
+            "operation": "docx_to_pdf",
+            "source": doc_id,
+            "target_format": "pdf",
+            "output_path": output_path,
+            "mode": mode,
+        }
+
+        async def handler(progress: Any) -> dict[str, Any]:
+            await progress.report(
+                step=2,
+                phase="Converting",
+                message=f"Converting {doc_id} to PDF",
+            )
+            result = await docx_service.convert_to_pdf(
+                doc_id,
+                output_path,
+                mode=mode,
+            )
+            await progress.report(
+                step=3,
+                phase="Packaging",
+                message=f"Finalizing PDF conversion for {doc_id}",
+            )
+            return conversion_result_payload(
+                result,
+                operation="docx_to_pdf",
+                source=doc_id,
+                target_format="pdf",
+            )
+
+        return await create_conversion_job_response(
+            job_service,
+            operation="docx_to_pdf",
+            source=doc_id,
+            target_format="pdf",
+            parameters=parameters,
+            handler=handler,
+            ctx=ctx,
+        )
+
     await report_progress(ctx, 10, message=f"Converting {doc_id} to PDF")
     result = await docx_service.convert_to_pdf(doc_id, output_path, mode=mode)
     if not result.get("success"):
@@ -512,6 +605,7 @@ async def convert_docx_to_odt(
     doc_id: str,
     output_path: str | None = None,
     mode: str = "fidelity",
+    async_mode: bool = True,
     ctx: Context | None = None,
 ) -> str:
     """
@@ -520,6 +614,7 @@ async def convert_docx_to_odt(
     轉換範圍：
     - `fidelity`：保真模式。以目前 DFM 狀態重建 DOCX，再用 LibreOffice 輸出 ODT。
     - `content`：目前不支援。
+    - `async_mode`：預設建立背景 conversion job；設為 False 可沿用同步回傳。
 
     用途：
     - 匯出為 OpenDocument 格式以便在 LibreOffice Writer 中編輯。
@@ -530,6 +625,48 @@ async def convert_docx_to_odt(
     - 匯出僅支援 ODT（非 ODS），因 DOCX 是文書處理格式、ODS 是試算表格式，無法直接互轉。
     """
     await log_message(ctx, "info", f"convert_docx_to_odt start: {doc_id}")
+    if async_mode:
+        parameters = {
+            "operation": "docx_to_odt",
+            "source": doc_id,
+            "target_format": "odt",
+            "output_path": output_path,
+            "mode": mode,
+        }
+
+        async def handler(progress: Any) -> dict[str, Any]:
+            await progress.report(
+                step=2,
+                phase="Converting",
+                message=f"Converting {doc_id} to ODT",
+            )
+            result = await docx_service.convert_to_odt(
+                doc_id,
+                output_path,
+                mode=mode,
+            )
+            await progress.report(
+                step=3,
+                phase="Packaging",
+                message=f"Finalizing ODT conversion for {doc_id}",
+            )
+            return conversion_result_payload(
+                result,
+                operation="docx_to_odt",
+                source=doc_id,
+                target_format="odt",
+            )
+
+        return await create_conversion_job_response(
+            job_service,
+            operation="docx_to_odt",
+            source=doc_id,
+            target_format="odt",
+            parameters=parameters,
+            handler=handler,
+            ctx=ctx,
+        )
+
     await report_progress(ctx, 10, message=f"Converting {doc_id} to ODT")
     result = await docx_service.convert_to_odt(doc_id, output_path, mode=mode)
     if not result.get("success"):
@@ -992,12 +1129,171 @@ async def docx_chart_data(
     return "\n".join(lines)
 
 
+def _coerce_target_table(
+    *,
+    table_id: str | None,
+    target_columns: list[str] | None,
+    target_rows: list[dict[str, Any]] | None,
+) -> tuple[list[str] | None, list[dict[str, Any]] | None, str]:
+    if table_id:
+        tc = table_service._tables.get(table_id)
+        if tc is None:
+            raise ValueError(f"TableContext `{table_id}` not found")
+        return list(tc.column_names), [dict(row) for row in tc.rows], f"`{table_id}`"
+    if target_columns is not None or target_rows is not None:
+        return target_columns, target_rows, "inline target"
+    return None, None, "current table"
+
+
+@mcp.tool()
+async def docx_table_edit_plan(
+    doc_id: str,
+    block_id: str,
+    table_id: str | None = None,
+    target_columns: list[str] | None = None,
+    target_rows: list[dict[str, Any]] | None = None,
+) -> str:
+    """
+    Plan a DOCX table write-back before applying structural changes.
+
+    The current DFM bridge is safest for same-shape cell text updates. This
+    plan separates safe cell updates from row/column/header structural changes
+    so the caller can review risk before `docx_table_from_context`.
+    """
+    ir = docx_service._load_ir(doc_id)
+    if ir is None:
+        return f"❌ 找不到文件 {doc_id}"
+
+    block = ir.find_block(block_id)
+    if block is None:
+        return f"❌ 找不到區塊 {block_id}（doc_id={doc_id}）"
+    if block.block_type.value != "table":
+        return f"❌ 區塊 {block_id} 類型為 {block.block_type.value}，不是 table"
+
+    from src.application.dfm_table_bridge import _parse_md_table
+
+    rows_2d = _parse_md_table(block.content)
+    if not rows_2d:
+        return f"❌ 區塊 {block_id} 沒有可解析的 Markdown table"
+
+    current_columns = rows_2d[0]
+    current_rows = [
+        {
+            column: row[index] if index < len(row) else ""
+            for index, column in enumerate(current_columns)
+        }
+        for row in rows_2d[1:]
+    ]
+
+    try:
+        resolved_columns, resolved_rows, target_label = _coerce_target_table(
+            table_id=table_id,
+            target_columns=target_columns,
+            target_rows=target_rows,
+        )
+    except ValueError as e:
+        return f"❌ 無法建立表格變更計畫：{e}"
+
+    desired_columns = resolved_columns or current_columns
+    desired_rows = resolved_rows if resolved_rows is not None else current_rows
+
+    current_shape = (len(current_rows), len(current_columns))
+    target_shape = (len(desired_rows), len(desired_columns))
+
+    added_columns = [col for col in desired_columns if col not in current_columns]
+    removed_columns = [col for col in current_columns if col not in desired_columns]
+    renamed_columns: list[tuple[str, str]] = []
+    if (
+        len(current_columns) == len(desired_columns)
+        and current_columns != desired_columns
+    ):
+        renamed_columns = [
+            (old, new)
+            for old, new in zip(current_columns, desired_columns, strict=False)
+            if old != new
+        ]
+
+    add_rows = max(0, len(desired_rows) - len(current_rows))
+    delete_rows = max(0, len(current_rows) - len(desired_rows))
+    shared_rows = min(len(current_rows), len(desired_rows))
+    shared_columns = [col for col in current_columns if col in desired_columns]
+    update_cells = 0
+    for row_index in range(shared_rows):
+        for column in shared_columns:
+            if str(current_rows[row_index].get(column, "")) != str(
+                desired_rows[row_index].get(column, "")
+            ):
+                update_cells += 1
+
+    structural_changes = bool(
+        added_columns or removed_columns or renamed_columns or add_rows or delete_rows
+    )
+    safe_write_supported = not structural_changes
+
+    lines = [
+        "# DOCX Table Structural Edit Plan",
+        "",
+        f"- **doc_id:** `{doc_id}`",
+        f"- **block_id:** `{block_id}`",
+        f"- **target:** {target_label}",
+        f"- **current_shape:** {current_shape[0]} rows x {current_shape[1]} columns",
+        f"- **target_shape:** {target_shape[0]} rows x {target_shape[1]} columns",
+        f"- **safe_write_back:** {'yes' if safe_write_supported else 'review required'}",
+        "",
+        "## Planned Operations",
+        "",
+        f"- `update_cell`: {update_cells}",
+        f"- `add_rows`: {add_rows}",
+        f"- `delete_rows`: {delete_rows}",
+        f"- `add_columns`: {len(added_columns)}",
+        f"- `delete_columns`: {len(removed_columns)}",
+        f"- `rename_columns`: {len(renamed_columns)}",
+    ]
+
+    if added_columns:
+        lines.append(f"  - added: {', '.join(f'`{c}`' for c in added_columns)}")
+    if removed_columns:
+        lines.append(f"  - removed: {', '.join(f'`{c}`' for c in removed_columns)}")
+    if renamed_columns:
+        renamed = ", ".join(f"`{old}` → `{new}`" for old, new in renamed_columns)
+        lines.append(f"  - renamed: {renamed}")
+
+    lines.extend(
+        [
+            "",
+            "## Recommendation",
+            "",
+        ]
+    )
+    if safe_write_supported:
+        lines.append(
+            "Same-shape update only. `docx_table_from_context` can write back "
+            "cell text while preserving the existing table structure."
+        )
+    else:
+        lines.append(
+            "Structural change detected. Review this plan before write-back, keep "
+            "a separate output copy, then run `save_docx(...)` followed by "
+            "`docx_validate_roundtrip(strict=True)` after applying changes."
+        )
+
+    if block.merged_cells:
+        lines.append("")
+        lines.append(
+            "⚠️ Existing merged cells are present; column/row changes need extra review."
+        )
+
+    return "\n".join(lines)
+
+
 @mcp.tool()
 async def docx_table(
     op: str,
     doc_id: str | None = None,
     block_id: str | None = None,
     table_id: str | None = None,
+    target_columns: list[str] | None = None,
+    target_rows: list[dict[str, Any]] | None = None,
     register: bool = True,
     save_dfm: bool = True,
 ) -> Any:
@@ -1033,11 +1329,23 @@ async def docx_table(
         if not block_id:
             return _missing_docx_param("block_id")
         return await docx_chart_data(doc_id, block_id, register=register)
+    if operation in {"edit_plan", "plan", "plan_structure", "structure_plan"}:
+        if not doc_id:
+            return _missing_docx_param("doc_id")
+        if not block_id:
+            return _missing_docx_param("block_id")
+        return await docx_table_edit_plan(
+            doc_id,
+            block_id,
+            table_id=table_id,
+            target_columns=target_columns,
+            target_rows=target_rows,
+        )
 
     return _unsupported_docx_op(
         "docx_table",
         op,
-        {"chart_data", "from_context", "to_context"},
+        {"chart_data", "edit_plan", "from_context", "to_context"},
     )
 
 
@@ -1047,6 +1355,7 @@ async def export_markdown(
     md_path: str | None = None,
     output_path: str | None = None,
     output_format: str = "docx",
+    async_mode: bool = True,
     ctx: Context | None = None,
 ) -> str:
     """
@@ -1077,6 +1386,7 @@ async def export_markdown(
         md_path: .md 檔案路徑（與 md_text 二擇一）
         output_path: 輸出檔案路徑（預設依據 md_path 或 output.{format}）
         output_format: 輸出格式，"docx"（預設）、"pdf"、"doc"
+        async_mode: 預設建立背景 conversion job；設為 False 可沿用同步回傳。
     """
     logger.info(
         "export_markdown | format=%s | md_path=%s | output=%s",
@@ -1085,6 +1395,52 @@ async def export_markdown(
         output_path,
     )
     await log_message(ctx, "info", f"export_markdown start: format={output_format}")
+    if async_mode:
+        source = md_path or "<inline markdown>"
+        parameters = {
+            "operation": "markdown_export",
+            "source": source,
+            "target_format": output_format,
+            "output_path": output_path,
+            "md_path": md_path,
+            "md_text_length": len(md_text or ""),
+        }
+
+        async def handler(progress: Any) -> dict[str, Any]:
+            await progress.report(
+                step=2,
+                phase="Converting",
+                message=f"Exporting Markdown to {output_format.upper()}",
+            )
+            result = await docx_service.export_from_markdown(
+                md_text=md_text,
+                md_path=md_path,
+                output_path=output_path,
+                output_format=output_format,
+            )
+            await progress.report(
+                step=3,
+                phase="Packaging",
+                message=f"Finalizing Markdown export to {output_format.upper()}",
+            )
+            return conversion_result_payload(
+                result,
+                operation="markdown_export",
+                source=source,
+                target_format=output_format,
+            )
+
+        return await create_conversion_job_response(
+            job_service,
+            operation="markdown_export",
+            source=source,
+            target_format=output_format,
+            parameters=parameters,
+            handler=handler,
+            input_files=[md_path] if md_path else [],
+            ctx=ctx,
+        )
+
     await report_progress(
         ctx, 10, message=f"Exporting Markdown to {output_format.upper()}"
     )

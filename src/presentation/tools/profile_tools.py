@@ -9,7 +9,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.application.etl_profile_detector import (
+    detect_profile_from_text,
+    sample_pdf_text,
+)
 from src.domain.etl_profile import ETLProfileRegistry
+from src.presentation.dependencies import repository
 from src.presentation.mcp_app import mcp
 
 
@@ -207,10 +212,92 @@ async def load_etl_profile_from_json(json_path: str) -> dict:
 
 
 @mcp.tool()
+async def detect_etl_profile(
+    pdf_path: str | None = None,
+    doc_id: str | None = None,
+    sample_text: str = "",
+    sample_pages: int = 3,
+    activate: bool = False,
+) -> dict[str, Any]:
+    """
+    Auto-detect a suitable built-in ETL profile from a PDF or text sample.
+
+    Detection is heuristic and returns reasons plus confidence. Set
+    `activate=True` to switch the current profile after detection.
+    """
+    source = "sample_text"
+    text = sample_text
+    layout_hints: dict[str, Any] = {}
+    file_name = pdf_path or doc_id or ""
+
+    if not text and doc_id:
+        markdown = repository.load_markdown(doc_id)
+        if not markdown:
+            return _profile_error(f"markdown not found for doc_id: {doc_id}")
+        text = markdown[:12000]
+        source = f"doc_id:{doc_id}"
+        blocks = repository.load_blocks(doc_id) or []
+        left = right = 0
+        for block in blocks[:80]:
+            bbox = block.get("bbox") if isinstance(block, dict) else None
+            if not isinstance(bbox, list) or len(bbox) < 3:
+                continue
+            x0 = float(bbox[0])
+            x1 = float(bbox[2])
+            center = (x0 + x1) / 2
+            if center < 300:
+                left += 1
+            elif center > 300:
+                right += 1
+        if left >= 5 and right >= 5:
+            layout_hints["two_column"] = True
+
+    if not text and pdf_path:
+        try:
+            text, layout_hints = sample_pdf_text(
+                pdf_path,
+                sample_pages=sample_pages,
+            )
+            source = pdf_path
+        except Exception as e:
+            return _profile_error(str(e))
+
+    if not text:
+        return _profile_error("Provide sample_text, doc_id, or pdf_path.")
+
+    detection = detect_profile_from_text(
+        text,
+        file_name=file_name,
+        layout_hints=layout_hints,
+    )
+    response: dict[str, Any] = {
+        "success": True,
+        "source": source,
+        "sample_chars": len(text),
+        "layout_hints": layout_hints,
+        **detection,
+    }
+    if activate:
+        selected = str(detection["recommended_profile"])
+        response["activation"] = await set_etl_profile(selected)
+    else:
+        response["tip"] = (
+            f"Use set_etl_profile('{detection['recommended_profile']}') "
+            "or etl_profile(op='set', name=...) to activate."
+        )
+    return response
+
+
+@mcp.tool()
 async def etl_profile(
     op: str,
     name: str | None = None,
     json_path: str | None = None,
+    pdf_path: str | None = None,
+    doc_id: str | None = None,
+    sample_text: str = "",
+    sample_pages: int = 3,
+    activate: bool = False,
 ) -> Any:
     """
     Consolidated ETL profile entrypoint.
@@ -234,7 +321,15 @@ async def etl_profile(
         if not json_path:
             return _profile_error("json_path is required for etl_profile(op='load')")
         return await load_etl_profile_from_json(json_path)
+    if operation in {"detect", "auto", "auto_detect"}:
+        return await detect_etl_profile(
+            pdf_path=pdf_path,
+            doc_id=doc_id,
+            sample_text=sample_text,
+            sample_pages=sample_pages,
+            activate=activate,
+        )
     return _profile_error(
         "Unsupported etl_profile op "
-        f"`{op}`. Supported operations: current, get, list, load, set."
+        f"`{op}`. Supported operations: current, detect, get, list, load, set."
     )

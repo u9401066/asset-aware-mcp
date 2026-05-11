@@ -28,6 +28,7 @@ class JobType(str, Enum):
 
     INGEST_PDF = "ingest_pdf"  # PDF document ingestion
     INGEST_BATCH = "ingest_batch"  # Multiple documents
+    CONVERSION = "conversion"  # Document format conversion
     REINDEX = "reindex"  # Re-index existing document
     DELETE = "delete"  # Delete document
 

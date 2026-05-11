@@ -9,6 +9,7 @@ Knowledge Tools - 知識圖譜 MCP 工具
 from __future__ import annotations
 
 import asyncio
+import re
 from typing import TYPE_CHECKING, Any, cast
 
 from src.presentation.dependencies import knowledge_graph, knowledge_service
@@ -27,6 +28,99 @@ def _normalize_op(op: str) -> str:
     return op.strip().lower().replace("-", "_")
 
 
+def _extract_doc_ids(value: Any) -> list[str]:
+    """Best-effort doc_id extraction from structured LightRAG responses."""
+    doc_ids: set[str] = set()
+
+    def visit(item: Any) -> None:
+        if isinstance(item, dict):
+            for key, child in item.items():
+                normalized = str(key).lower()
+                if (
+                    normalized in {"doc_id", "source_doc_id", "document_id"}
+                    and isinstance(child, str)
+                    and child.startswith("doc_")
+                ):
+                    doc_ids.add(child)
+                visit(child)
+        elif isinstance(item, list | tuple | set):
+            for child in item:
+                visit(child)
+        elif isinstance(item, str):
+            doc_ids.update(re.findall(r"\bdoc_[A-Za-z0-9_]+\b", item))
+
+    visit(value)
+    return sorted(doc_ids)
+
+
+async def _verified_evidence_payload(
+    *,
+    query: str,
+    doc_ids: list[str] | None,
+    result: Any,
+    evidence_limit: int,
+) -> dict[str, Any]:
+    from src.presentation.tools.document_tools import citation_bundle
+
+    target_doc_ids = list(dict.fromkeys(doc_ids or _extract_doc_ids(result)))
+    if not target_doc_ids:
+        return {
+            "success": False,
+            "status": "skipped",
+            "reason": (
+                "No doc_ids were provided or discoverable in the knowledge graph "
+                "response. Pass doc_ids=[...] to verify against citation indexes."
+            ),
+            "query": query,
+            "bundles": [],
+        }
+
+    bundles: list[dict[str, Any]] = []
+    for doc_id in target_doc_ids:
+        bundle = await citation_bundle(
+            doc_id,
+            query=query,
+            limit=evidence_limit,
+            include_verification=True,
+            output_format="json",
+        )
+        if isinstance(bundle, dict):
+            bundles.append(bundle)
+
+    return {
+        "success": any(bundle.get("success") for bundle in bundles),
+        "status": "verified"
+        if any(bundle.get("success") for bundle in bundles)
+        else "empty",
+        "query": query,
+        "doc_ids": target_doc_ids,
+        "bundles": bundles,
+    }
+
+
+def _format_verified_evidence(payload: dict[str, Any]) -> str:
+    if payload.get("status") == "skipped":
+        return f"## Verified Evidence\n\nSkipped: {payload.get('reason', '')}"
+    lines = ["## Verified Evidence", ""]
+    for bundle in payload.get("bundles", []):
+        doc_id = bundle.get("doc_id", "")
+        if not bundle.get("success"):
+            lines.append(f"- `{doc_id}`: {bundle.get('error', 'no evidence')}")
+            continue
+        lines.append(
+            f"- `{doc_id}`: {bundle.get('returned', 0)}/{bundle.get('matched_count', 0)} spans"
+        )
+        for entry in bundle.get("entries", [])[:3]:
+            lines.append(
+                "  - "
+                f"`{entry.get('span_id')}` "
+                f"p.{entry.get('page') or '?'} "
+                f"{entry.get('line_display') or ''}: "
+                f"{str(entry.get('quote') or '')[:120]}"
+            )
+    return "\n".join(lines)
+
+
 @mcp.tool()
 async def consult_knowledge_graph(
     query: str,
@@ -34,6 +128,9 @@ async def consult_knowledge_graph(
     response_mode: str = "structured",
     user_prompt: str | None = None,
     include_references: bool = False,
+    verify_references: bool = False,
+    doc_ids: list[str] | None = None,
+    evidence_limit: int = 5,
     ctx: Context | None = None,
 ) -> dict[str, Any] | str:
     """
@@ -58,6 +155,9 @@ async def consult_knowledge_graph(
         response_mode: "structured" (default), "data", or "text"
         user_prompt: Optional instruction applied after retrieval, before answer generation
         include_references: Include source reference list when LightRAG supports it
+        verify_references: Attach citation-index evidence bundles for referenced docs
+        doc_ids: Optional explicit document IDs to verify against
+        evidence_limit: Max evidence spans per document bundle
 
     Returns:
         Structured MCP-friendly result by default, or plain text when response_mode="text"
@@ -71,6 +171,7 @@ async def consult_knowledge_graph(
 
     await log_message(ctx, "info", f"consult_knowledge_graph start: mode={mode}")
     await report_progress(ctx, 10, message="Querying knowledge graph")
+    effective_include_references = include_references or verify_references
 
     query_task: Any
     if response_mode == "text":
@@ -78,7 +179,7 @@ async def consult_knowledge_graph(
             query,
             mode=mode,
             user_prompt=user_prompt,
-            include_references=include_references,
+            include_references=effective_include_references,
         )
     elif response_mode == "data":
         query_task = knowledge_service.query_data(
@@ -91,7 +192,7 @@ async def consult_knowledge_graph(
             query,
             mode=mode,
             user_prompt=user_prompt,
-            include_references=include_references,
+            include_references=effective_include_references,
         )
 
     try:
@@ -116,6 +217,19 @@ async def consult_knowledge_graph(
         if response_mode == "text":
             return str(payload["error"])
         return payload
+
+    if verify_references:
+        await report_progress(ctx, 90, message="Verifying knowledge graph evidence")
+        verified = await _verified_evidence_payload(
+            query=query,
+            doc_ids=doc_ids,
+            result=result,
+            evidence_limit=evidence_limit,
+        )
+        if isinstance(result, dict):
+            result = {**result, "verified_evidence": verified}
+        else:
+            result = f"{result}\n\n{_format_verified_evidence(verified)}"
 
     await report_progress(ctx, 100, message="Knowledge graph query finished")
     await log_message(ctx, "info", "consult_knowledge_graph complete")
@@ -228,6 +342,9 @@ async def knowledge(
     response_mode: str = "structured",
     user_prompt: str | None = None,
     include_references: bool = False,
+    verify_references: bool = False,
+    doc_ids: list[str] | None = None,
+    evidence_limit: int = 5,
     format: str = "summary",
     limit: int = 50,
     ctx: Context | None = None,
@@ -248,6 +365,9 @@ async def knowledge(
             response_mode=response_mode,
             user_prompt=user_prompt,
             include_references=include_references,
+            verify_references=verify_references,
+            doc_ids=doc_ids,
+            evidence_limit=evidence_limit,
             ctx=ctx,
         )
     if operation == "export":

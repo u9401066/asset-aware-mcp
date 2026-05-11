@@ -577,7 +577,7 @@ class TestDocxTools:
             )
             from src.presentation.tools.docx_tools import convert_docx_to_pdf
 
-            result = await convert_docx_to_pdf("docx_123")
+            result = await convert_docx_to_pdf("docx_123", async_mode=False)
             assert "✅" in result
             assert "output.pdf" in result
 
@@ -594,7 +594,7 @@ class TestDocxTools:
             )
             from src.presentation.tools.docx_tools import convert_docx_to_doc
 
-            result = await convert_docx_to_doc("docx_123")
+            result = await convert_docx_to_doc("docx_123", async_mode=False)
             assert "✅" in result
             assert "output.doc" in result
 
@@ -789,6 +789,49 @@ class TestDocxTools:
         result = await docx_table("normalize", doc_id="docx_123", block_id="t001")
 
         assert "Unsupported docx_table op" in result
+
+    async def test_docx_table_edit_plan_reports_structural_changes(self) -> None:
+        """docx_table_edit_plan separates cell updates from row/column changes."""
+        from src.presentation.tools import docx_tools
+
+        block = DfmBlock(
+            id="t001",
+            block_type=DfmBlockType.TABLE,
+            content="| A | B |\n|---|---|\n| 1 | 2 |\n",
+        )
+        ir = MagicMock()
+        ir.find_block.return_value = block
+        tc = TableContext(
+            id="tbl_plan",
+            intent="summary",
+            title="Plan",
+            columns=[
+                ColumnDef(name="A", type="text"),
+                ColumnDef(name="B", type="text"),
+                ColumnDef(name="C", type="text"),
+            ],
+            rows=[{"A": "1", "B": "changed", "C": "new"}],
+        )
+        mock_table_service = MagicMock()
+        mock_table_service._tables = {"tbl_plan": tc}
+
+        with (
+            patch("src.presentation.tools.docx_tools.docx_service") as mock_svc,
+            patch(
+                "src.presentation.tools.docx_tools.table_service", mock_table_service
+            ),
+        ):
+            mock_svc._load_ir.return_value = ir
+
+            result = await docx_tools.docx_table_edit_plan(
+                "docx_123",
+                "t001",
+                table_id="tbl_plan",
+            )
+
+        assert "add_columns" in result
+        assert "`update_cell`: 1" in result
+        assert "review required" in result
 
 
 # ============================================================================
@@ -1281,6 +1324,51 @@ class TestDocumentTools:
         assert "char_range mismatch" in result
         assert "byte_range mismatch" in result
 
+    async def test_citation_bundle_exports_verified_entries(self) -> None:
+        """citation_bundle returns AssetRefs plus structured verification."""
+        from src.domain.citation import EvidenceSpan, blocks_locator_sha256
+
+        markdown = "Stable evidence for bundle export."
+        blocks = [
+            {
+                "block_id": "blk_1",
+                "block_type": "Text",
+                "page": 3,
+                "text": markdown,
+                "metadata": {"line_start": 1, "line_end": 2},
+            }
+        ]
+        span = EvidenceSpan.create(
+            doc_id="doc_123",
+            source_revision_id=hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
+            span_kind="sentence",
+            text=markdown,
+            block_id="blk_1",
+            page=3,
+            line_start=1,
+            line_end=2,
+            char_start=0,
+            char_end=len(markdown),
+            markdown=markdown,
+            locator_source_sha256=blocks_locator_sha256(blocks),
+        )
+        with patch("src.presentation.tools.document_tools.repository") as mock_repo:
+            mock_repo.load_citation_index.return_value = [span]
+            mock_repo.load_markdown.return_value = markdown
+            mock_repo.load_blocks.return_value = blocks
+            from src.presentation.tools.document_tools import citation_bundle
+
+            result = await citation_bundle(
+                "doc_123",
+                query="bundle",
+                output_format="json",
+            )
+
+        assert result["success"] is True
+        assert result["entries"][0]["asset_ref"]["span_id"] == span.span_id
+        assert result["entries"][0]["verification"]["valid"] is True
+        assert result["entries"][0]["locator_source_sha256"]
+
     async def test_find_evidence_spans_rebuilds_when_blocks_metadata_changes(
         self,
     ) -> None:
@@ -1356,7 +1444,7 @@ class TestDocumentTools:
             )
             from src.presentation.tools.document_tools import convert_pdf_to_docx
 
-            result = await convert_pdf_to_docx("doc_123")
+            result = await convert_pdf_to_docx("doc_123", async_mode=False)
             assert "✅" in result
             assert "converted.docx" in result
 
@@ -1377,9 +1465,40 @@ class TestDocumentTools:
             )
             from src.presentation.tools.document_tools import convert_pdf_to_pptx
 
-            result = await convert_pdf_to_pptx("doc_123")
+            result = await convert_pdf_to_pptx("doc_123", async_mode=False)
             assert "✅" in result
             assert "converted.pptx" in result
+
+    async def test_convert_pdf_to_docx_defaults_to_background_job(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Conversion defaults to a background job and does not run inline."""
+        from src.presentation.tools import document_tools
+
+        mock_jobs = MagicMock()
+        mock_jobs.create_conversion_job = AsyncMock(
+            return_value=MagicMock(
+                job_id="job_convert_docx",
+                estimated_duration_seconds=20,
+            )
+        )
+        mock_service = MagicMock()
+        mock_service.convert_pdf_to_docx = AsyncMock(
+            side_effect=AssertionError("conversion should run inside the job")
+        )
+        monkeypatch.setattr(document_tools, "job_service", mock_jobs)
+        monkeypatch.setattr(document_tools, "document_service", mock_service)
+
+        result = await document_tools.convert_pdf_to_docx("doc_123")
+
+        assert "job_convert_docx" in result
+        mock_jobs.create_conversion_job.assert_awaited_once()
+        _, kwargs = mock_jobs.create_conversion_job.await_args
+        assert kwargs["operation"] == "pdf_to_docx"
+        assert kwargs["parameters"]["target_format"] == "docx"
+        assert callable(kwargs["handler"])
+        mock_service.convert_pdf_to_docx.assert_not_awaited()
 
     async def test_ingest_documents_sync_forces_background_job_and_reports_progress(
         self,
@@ -1912,6 +2031,7 @@ class TestDocumentTools:
             "doc_123",
             output_path="out.docx",
             mode="content",
+            async_mode=True,
             ctx=None,
         )
 
@@ -1958,6 +2078,7 @@ class TestDocumentTools:
             "docx_123",
             output_path="out.pdf",
             mode="fidelity",
+            async_mode=True,
             ctx=None,
         )
 
@@ -1983,6 +2104,7 @@ class TestDocumentTools:
             md_text=None,
             output_path="notes.docx",
             output_format="docx",
+            async_mode=True,
             ctx=None,
         )
 
@@ -2289,6 +2411,19 @@ class TestProfileTools:
         assert result == {"success": True}
         mock_load.assert_awaited_once_with("profile.json")
 
+    async def test_detect_etl_profile_from_sample_text(self) -> None:
+        """detect_etl_profile recommends a profile with reasons."""
+        from src.presentation.tools.profile_tools import detect_etl_profile
+
+        result = await detect_etl_profile(
+            sample_text="arXiv:2601.12345\n1. Introduction\nBody",
+        )
+
+        assert result["success"] is True
+        assert result["recommended_profile"] == "arxiv"
+        assert result["confidence"] > 0.4
+        assert any("arXiv" in reason for reason in result["reasons"])
+
     async def test_set_etl_profile_rebinds_document_tool_services(self) -> None:
         """Profile switching updates already-imported presentation service aliases."""
         from src.presentation import dependencies
@@ -2466,6 +2601,54 @@ class TestKnowledgeTools:
             include_references=False,
         )
 
+    async def test_consult_knowledge_graph_attaches_verified_evidence(self) -> None:
+        """KG answers can attach verified citation bundles for source docs."""
+        with (
+            patch(
+                "src.presentation.tools.knowledge_tools.knowledge_service"
+            ) as mock_svc,
+            patch(
+                "src.presentation.tools.document_tools.citation_bundle",
+                new_callable=AsyncMock,
+            ) as mock_bundle,
+        ):
+            mock_svc.query_structured = AsyncMock(
+                return_value={
+                    "success": True,
+                    "answer": "ok",
+                    "references": [{"doc_id": "doc_123"}],
+                }
+            )
+            mock_bundle.return_value = {
+                "success": True,
+                "doc_id": "doc_123",
+                "returned": 1,
+                "matched_count": 1,
+                "entries": [{"span_id": "spn_1"}],
+            }
+            from src.presentation.tools.knowledge_tools import consult_knowledge_graph
+
+            result = await consult_knowledge_graph(
+                "dose",
+                verify_references=True,
+                evidence_limit=2,
+            )
+
+        assert result["verified_evidence"]["success"] is True
+        mock_svc.query_structured.assert_awaited_once_with(
+            "dose",
+            mode="hybrid",
+            user_prompt=None,
+            include_references=True,
+        )
+        mock_bundle.assert_awaited_once_with(
+            "doc_123",
+            query="dose",
+            limit=2,
+            include_verification=True,
+            output_format="json",
+        )
+
     async def test_consult_knowledge_graph_rejects_invalid_response_mode(self) -> None:
         """consult_knowledge_graph should fail fast on invalid response_mode."""
         from src.presentation.tools.knowledge_tools import consult_knowledge_graph
@@ -2512,6 +2695,9 @@ class TestKnowledgeTools:
             response_mode="data",
             user_prompt="brief",
             include_references=True,
+            verify_references=False,
+            doc_ids=None,
+            evidence_limit=5,
             ctx=None,
         )
 
@@ -2557,12 +2743,15 @@ class TestServerStartup:
             "ingest_documents",
             "ingest_docx",
             "save_docx",
+            "citation_bundle",
+            "detect_etl_profile",
+            "docx_table_edit_plan",
             "find_evidence_spans",
             "verify_citation_ref",
             "get_job_status",
         }
         assert expected <= registered
-        assert len(registered) == 59, f"Expected 59 tools, got {len(registered)}"
+        assert len(registered) == 62, f"Expected 62 tools, got {len(registered)}"
 
 
 # ============================================================================
@@ -2586,6 +2775,57 @@ class TestJobServiceConcurrency:
 
         with pytest.raises(RuntimeError, match="Too many concurrent jobs"):
             await service.create_ingest_job(["/test.pdf"])
+
+    async def test_conversion_job_completes_with_artifact_payload(self) -> None:
+        """JobService can run conversion handlers outside the MCP request path."""
+        from src.application.job_service import JobService
+        from src.domain.job import Job, JobStatus, JobSummary
+
+        class MemoryJobStore:
+            def __init__(self) -> None:
+                self.jobs: dict[str, Job] = {}
+
+            async def create(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+            async def get(self, job_id: str) -> Job | None:
+                return self.jobs.get(job_id)
+
+            async def update(self, job: Job) -> Job:
+                self.jobs[job.job_id] = job
+                return job
+
+            async def list_active(self) -> list[JobSummary]:
+                return []
+
+            async def list_all(self, _limit: int = 20) -> list[JobSummary]:
+                return []
+
+            async def cleanup_old(self, _max_age_hours: int) -> int:
+                return 0
+
+        async def handler(progress) -> dict:
+            await progress.report(step=2, phase="Converting", message="running")
+            return {
+                "success": True,
+                "operation": "pdf_to_docx",
+                "output_path": "/workspace/out.docx",
+            }
+
+        store = MemoryJobStore()
+        service = JobService(job_store=store)
+        job = await service.create_conversion_job(
+            operation="pdf_to_docx",
+            handler=handler,
+            parameters={"source": "doc_123"},
+        )
+        task = service._running_tasks[job.job_id]
+        await asyncio.wait_for(task, timeout=1)
+
+        stored = await store.get(job.job_id)
+        assert stored.status == JobStatus.COMPLETED
+        assert stored.result["conversion"]["output_path"] == "/workspace/out.docx"
 
     async def test_ingest_job_failure_is_not_marked_completed(self) -> None:
         """Failed file results must not be reported as a green completed job."""

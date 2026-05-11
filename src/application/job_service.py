@@ -11,6 +11,7 @@ import logging
 import os
 import subprocess
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -28,6 +29,8 @@ logger = logging.getLogger(__name__)
 
 # Maximum concurrent ETL jobs to prevent resource exhaustion
 MAX_CONCURRENT_JOBS = 5
+
+ConversionJobHandler = Callable[["JobProgressReporter"], Awaitable[dict[str, Any]]]
 
 
 class JobService:
@@ -61,6 +64,7 @@ class JobService:
         self.ingest_worker_runner = ingest_worker_runner
         self.max_concurrent_jobs = max_concurrent_jobs
         self._running_tasks: dict[str, asyncio.Task[None]] = {}
+        self._conversion_handlers: dict[str, ConversionJobHandler] = {}
         self._quota_lock = asyncio.Lock()
         self._instance_id = uuid.uuid4().hex
         self._started_at = datetime.now()
@@ -149,6 +153,74 @@ class JobService:
         logger.info(
             f"Created ingest job {job_id} for {len(normalized_file_paths)} file(s)"
         )
+        return job
+
+    async def create_conversion_job(
+        self,
+        *,
+        operation: str,
+        handler: ConversionJobHandler,
+        input_files: list[str] | None = None,
+        parameters: dict[str, Any] | None = None,
+        total_steps: int = 4,
+        estimated_duration_seconds: int = 20,
+    ) -> Job:
+        """
+        Create a background document conversion job.
+
+        Conversion handlers are intentionally in-memory callables. If the MCP
+        server restarts, active conversion jobs are marked interrupted by the
+        normal stale-job reconciliation path and can be recreated by the client.
+        """
+        async with self._quota_lock:
+            active_count = len(self._running_tasks)
+            if active_count >= self.max_concurrent_jobs:
+                msg = (
+                    f"Too many concurrent jobs ({active_count}/{self.max_concurrent_jobs}). "
+                    "Wait for existing jobs to finish or cancel some."
+                )
+                raise RuntimeError(msg)
+
+            job_id = (
+                f"job_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
+            )
+            normalized_file_paths = self._normalize_job_input_files(input_files or [])
+            job_parameters = dict(parameters or {})
+            job_parameters.setdefault("operation", operation)
+            job_parameters.setdefault("job_owner_id", self._instance_id)
+            job_parameters.setdefault("job_owner_pid", os.getpid())
+            job_parameters.setdefault(
+                "job_owner_started_at", self._started_at.isoformat()
+            )
+
+            job = Job(
+                job_id=job_id,
+                job_type=JobType.CONVERSION,
+                status=JobStatus.PENDING,
+                input_files=normalized_file_paths,
+                parameters=job_parameters,
+                progress=JobProgress(
+                    total_steps=max(total_steps, 1),
+                    message="Conversion job created, waiting to start...",
+                ),
+                estimated_duration_seconds=estimated_duration_seconds,
+            )
+
+            await self.job_store.create(job)
+            self._conversion_handlers[job_id] = handler
+
+            task = asyncio.create_task(self._process_conversion_job(job_id))
+            self._running_tasks[job_id] = task
+
+            def forget_task(
+                _task: asyncio.Task[None], task_job_id: str = job_id
+            ) -> None:
+                self._running_tasks.pop(task_job_id, None)
+                self._conversion_handlers.pop(task_job_id, None)
+
+            task.add_done_callback(forget_task)
+
+        logger.info("Created conversion job %s for operation=%s", job_id, operation)
         return job
 
     @staticmethod
@@ -445,6 +517,81 @@ class JobService:
 
         finally:
             self._running_tasks.pop(job_id, None)
+
+    async def _process_conversion_job(self, job_id: str) -> None:
+        """Background task to process a document conversion job."""
+        job: Job | None = None
+        try:
+            job = await self.job_store.get(job_id)
+            if job is None:
+                logger.error("Conversion job %s not found", job_id)
+                return
+
+            handler = self._conversion_handlers.get(job_id)
+            if handler is None:
+                raise RuntimeError("Conversion handler is not available")
+
+            total_steps = max(job.progress.total_steps, 1)
+            operation = str(job.parameters.get("operation") or "conversion")
+            job.start()
+            job.update_progress(
+                step=1,
+                total=total_steps,
+                phase="Starting",
+                message=f"Starting conversion: {operation}",
+            )
+            await self.job_store.update(job)
+
+            reporter = JobProgressReporter(self, job_id)
+            result = await handler(reporter)
+
+            latest = await self.job_store.get(job_id)
+            job = latest or job
+            result_payload = {"conversion": result}
+
+            if not result.get("success", True):
+                error_msg = str(result.get("error") or "Conversion failed")
+                job.fail(error_msg)
+                job.result = result_payload
+                job.update_progress(
+                    step=total_steps,
+                    total=total_steps,
+                    phase="Failed",
+                    message=error_msg,
+                )
+            else:
+                output_path = str(result.get("output_path") or "").strip()
+                message = "Conversion completed"
+                if output_path:
+                    message = f"Conversion completed: {output_path}"
+                job.complete(result=result_payload)
+                job.update_progress(
+                    step=total_steps,
+                    total=total_steps,
+                    phase="Completed",
+                    message=message,
+                )
+
+            await self.job_store.update(job)
+            logger.info("Conversion job %s finished with status=%s", job_id, job.status)
+
+        except asyncio.CancelledError:
+            logger.info("Conversion job %s was cancelled", job_id)
+            if job is not None:
+                job.cancel()
+                job.progress.message = "Job cancelled by user"
+                await self.job_store.update(job)
+
+        except Exception as e:
+            logger.error("Conversion job %s failed: %s", job_id, e)
+            if job is not None:
+                job.fail(str(e))
+                job.progress.message = f"Failed: {e}"
+                await self.job_store.update(job)
+
+        finally:
+            self._running_tasks.pop(job_id, None)
+            self._conversion_handlers.pop(job_id, None)
 
     async def _mark_stale_if_untracked(self, job: Job) -> Job:
         """Mark persisted active jobs as failed after a server restart."""
