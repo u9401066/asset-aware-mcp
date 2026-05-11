@@ -199,6 +199,18 @@ class DocumentManifest(BaseModel):
     doc_id: str = Field(..., description="Unique document identifier")
     filename: str = Field(..., description="Original PDF filename")
     title: str = Field("", description="Document title if detected")
+    source_pdf_sha256: str = Field(
+        "",
+        description=(
+            "SHA-256 of the original source PDF bytes, before OCR or page subsetting"
+        ),
+    )
+    selected_page_map: list[int] = Field(
+        default_factory=list,
+        description=(
+            "Original 1-based PDF page numbers included in this ingest; empty means all pages"
+        ),
+    )
 
     # Table of Contents
     toc: list[str] = Field(default_factory=list, description="List of section headings")

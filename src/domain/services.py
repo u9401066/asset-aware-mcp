@@ -77,6 +77,8 @@ class ManifestGenerator:
         pdf_toc: list[tuple[int, str, int]] | None = None,
         pdf_title: str = "",
         sections: list[SectionAsset] | None = None,
+        source_pdf_sha256: str = "",
+        selected_page_map: list[int] | None = None,
     ) -> DocumentManifest:
         """
         Generate a complete document manifest.
@@ -92,6 +94,8 @@ class ManifestGenerator:
             tables: Optional pre-extracted tables (from Docling)
             pdf_toc: Optional PDF built-in TOC [(level, title, page), ...]
             pdf_title: Optional title from PDF metadata
+            source_pdf_sha256: SHA-256 of the original source PDF bytes
+            selected_page_map: Original 1-based page numbers for subset ingests
 
         Returns:
             Complete DocumentManifest
@@ -120,6 +124,8 @@ class ManifestGenerator:
             doc_id=doc_id,
             filename=filename,
             title=title,
+            source_pdf_sha256=source_pdf_sha256,
+            selected_page_map=selected_page_map or [],
             toc=toc,
             assets=DocumentAssets(
                 tables=parsed_tables,

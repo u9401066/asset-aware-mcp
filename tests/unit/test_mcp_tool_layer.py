@@ -487,6 +487,10 @@ class TestDocxTools:
                         "editable": True,
                         "style": "Normal",
                         "preview": "Hello world",
+                        "metadata": {
+                            "source_part": "word/document.xml",
+                            "paragraph_index": 0,
+                        },
                     },
                     {
                         "id": "t001",
@@ -494,6 +498,10 @@ class TestDocxTools:
                         "editable": True,
                         "style": "TableGrid",
                         "preview": "Col1 | Col2",
+                        "metadata": {
+                            "source_part": "word/document.xml",
+                            "table_index": 0,
+                        },
                     },
                 ]
             )
@@ -502,6 +510,8 @@ class TestDocxTools:
             result = await list_docx_blocks("doc123")
             assert "p001" in result
             assert "t001" in result
+            assert "word/document.xml p#0" in result
+            assert "word/document.xml t#0" in result
             assert "Col1 \\| Col2" in result
             assert "2 個區塊" in result
 
@@ -1368,6 +1378,340 @@ class TestDocumentTools:
         assert result["entries"][0]["asset_ref"]["span_id"] == span.span_id
         assert result["entries"][0]["verification"]["valid"] is True
         assert result["entries"][0]["locator_source_sha256"]
+        assert result["entries"][0]["foam"]["block_anchor"].startswith("^spn-")
+        assert result["entries"][0]["foam"]["wikilink"].startswith("[[doc_123#^spn-")
+
+    async def test_citation_bundle_exports_foam_evidence_pack(self) -> None:
+        """citation_bundle(output_format='foam') returns Foam-ready anchors."""
+        from src.domain.citation import EvidenceSpan, blocks_locator_sha256
+
+        markdown = "Stable evidence for Foam promotion."
+        blocks = [
+            {
+                "block_id": "blk_foam",
+                "block_type": "Text",
+                "page": 4,
+                "text": markdown,
+                "metadata": {"line_start": 2, "line_end": 3},
+            }
+        ]
+        span = EvidenceSpan.create(
+            doc_id="doc_foam",
+            source_revision_id=hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
+            span_kind="sentence",
+            text=markdown,
+            block_id="blk_foam",
+            page=4,
+            line_start=2,
+            line_end=3,
+            char_start=0,
+            char_end=len(markdown),
+            markdown=markdown,
+            locator_source_sha256=blocks_locator_sha256(blocks),
+        )
+        with patch("src.presentation.tools.document_tools.repository") as mock_repo:
+            mock_repo.load_citation_index.return_value = [span]
+            mock_repo.load_markdown.return_value = markdown
+            mock_repo.load_blocks.return_value = blocks
+            from src.presentation.tools.document_tools import citation_bundle
+
+            result = await citation_bundle(
+                "doc_foam",
+                query="Foam",
+                output_format="foam",
+                citation_key="paper-key",
+            )
+
+        assert result.startswith("---\n")
+        assert 'type: "evidence_pack"' in result
+        assert "[[paper-key#^spn-" in result
+        assert "![[paper-key#^spn-" in result
+        assert "^spn-" in result
+        assert span.source_revision_id in result
+        assert span.text_sha256 in result
+        assert '"source_type": "span"' in result
+
+    async def test_citation_bundle_writes_foam_pack_and_index(
+        self, tmp_path: Path
+    ) -> None:
+        """citation_bundle can persist a Foam evidence pack and index block."""
+        from src.domain.citation import EvidenceSpan, blocks_locator_sha256
+
+        markdown = "Writable Foam evidence."
+        blocks = [
+            {
+                "block_id": "blk_write",
+                "block_type": "Text",
+                "page": 2,
+                "text": markdown,
+                "metadata": {"line_start": 0, "line_end": 1},
+            }
+        ]
+        span = EvidenceSpan.create(
+            doc_id="doc_write",
+            source_revision_id=hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
+            span_kind="sentence",
+            text=markdown,
+            block_id="blk_write",
+            page=2,
+            line_start=0,
+            line_end=1,
+            char_start=0,
+            char_end=len(markdown),
+            markdown=markdown,
+            locator_source_sha256=blocks_locator_sha256(blocks),
+        )
+        with patch("src.presentation.tools.document_tools.repository") as mock_repo:
+            mock_repo.load_citation_index.return_value = [span]
+            mock_repo.load_markdown.return_value = markdown
+            mock_repo.load_blocks.return_value = blocks
+            from src.presentation.tools.document_tools import citation_bundle
+
+            result = await citation_bundle(
+                "doc_write",
+                output_format="foam",
+                citation_key="paper-key",
+                wiki_root=str(tmp_path),
+                output_path="evidence/paper-key.md",
+                index_path="Evidence Index.md",
+                overwrite=True,
+            )
+
+        note_path = tmp_path / "evidence" / "paper-key.md"
+        index_path = tmp_path / "Evidence Index.md"
+        assert result["success"] is True
+        assert Path(result["output_path"]) == note_path
+        assert note_path.exists()
+        assert index_path.exists()
+        assert "[[paper-key#^spn-" in note_path.read_text(encoding="utf-8")
+        assert "[[paper-key#^spn-" in index_path.read_text(encoding="utf-8")
+
+    async def test_evidence_claim_promotion_returns_verified_candidates(self) -> None:
+        """Claim promotion proposes exact-quote candidates with forced verification."""
+        from src.domain.citation import EvidenceSpan, blocks_locator_sha256
+
+        markdown = "Claim-worthy evidence reduces uncertainty."
+        blocks = [
+            {
+                "block_id": "blk_claim",
+                "block_type": "Text",
+                "page": 3,
+                "text": markdown,
+                "metadata": {"line_start": 1, "line_end": 2},
+            }
+        ]
+        span = EvidenceSpan.create(
+            doc_id="doc_claim",
+            source_revision_id=hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
+            span_kind="sentence",
+            text=markdown,
+            block_id="blk_claim",
+            page=3,
+            line_start=1,
+            line_end=2,
+            char_start=0,
+            char_end=len(markdown),
+            markdown=markdown,
+            locator_source_sha256=blocks_locator_sha256(blocks),
+        )
+        with patch("src.presentation.tools.document_tools.repository") as mock_repo:
+            mock_repo.load_citation_index.return_value = [span]
+            mock_repo.load_markdown.return_value = markdown
+            mock_repo.load_blocks.return_value = blocks
+            from src.presentation.tools.document_tools import evidence
+
+            result = await evidence(
+                op="claim_promotion",
+                doc_id="doc_claim",
+                query="uncertainty",
+                output_format="json",
+                citation_key="paper-key",
+            )
+
+        assert result["success"] is True
+        assert result["verification_required"] is True
+        assert result["entries"][0]["promotion_status"] == "ready"
+        assert result["entries"][0]["verified"] is True
+        assert result["entries"][0]["claim_text"] == markdown
+        assert result["entries"][0]["asset_ref"]["span_id"] == span.span_id
+        assert result["entries"][0]["foam"]["block_anchor"].startswith("^clm-")
+
+    async def test_evidence_claim_promotion_writes_verified_foam_pack(
+        self, tmp_path: Path
+    ) -> None:
+        """Claim promotion writes Foam only after verification succeeds."""
+        from src.domain.citation import EvidenceSpan, blocks_locator_sha256
+
+        markdown = "Verified claim evidence belongs in the wiki."
+        blocks = [
+            {
+                "block_id": "blk_claim_write",
+                "block_type": "Text",
+                "page": 5,
+                "text": markdown,
+                "metadata": {"line_start": 4, "line_end": 5},
+            }
+        ]
+        span = EvidenceSpan.create(
+            doc_id="doc_claim_write",
+            source_revision_id=hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
+            span_kind="sentence",
+            text=markdown,
+            block_id="blk_claim_write",
+            page=5,
+            line_start=4,
+            line_end=5,
+            char_start=0,
+            char_end=len(markdown),
+            markdown=markdown,
+            locator_source_sha256=blocks_locator_sha256(blocks),
+        )
+        with patch("src.presentation.tools.document_tools.repository") as mock_repo:
+            mock_repo.load_citation_index.return_value = [span]
+            mock_repo.load_markdown.return_value = markdown
+            mock_repo.load_blocks.return_value = blocks
+            from src.presentation.tools.document_tools import evidence
+
+            result = await evidence(
+                op="promote_claims",
+                doc_id="doc_claim_write",
+                output_format="foam",
+                citation_key="paper-key",
+                wiki_root=str(tmp_path),
+                output_path="claims/paper-key-claims.md",
+                index_path="Evidence Index.md",
+                overwrite=True,
+            )
+
+        note_path = tmp_path / "claims" / "paper-key-claims.md"
+        assert result["success"] is True
+        assert Path(result["output_path"]) == note_path
+        note_text = note_path.read_text(encoding="utf-8")
+        assert 'type: "claim_promotion_pack"' in note_text
+        assert "^clm-" in note_text
+        assert "Verified claim evidence belongs in the wiki" in note_text
+        assert "### Verification Payload" in note_text
+        assert '"verification": {' in note_text
+        assert '"valid": true' in note_text
+        assert '"status": "verified"' in note_text
+        assert "[[paper-key-claims#^clm-" in (tmp_path / "Evidence Index.md").read_text(
+            encoding="utf-8"
+        )
+
+    async def test_evidence_claim_promotion_blocks_unverified_foam_write(
+        self, tmp_path: Path
+    ) -> None:
+        """Foam writes are blocked if the candidate AssetRef fails verification."""
+        from src.domain.citation import EvidenceSpan, blocks_locator_sha256
+        from src.presentation.tools.citation_support import asset_ref_from_span
+
+        markdown = "Stale claim evidence should not be promoted."
+        blocks = [
+            {
+                "block_id": "blk_claim_block",
+                "block_type": "Text",
+                "page": 1,
+                "text": markdown,
+                "metadata": {"line_start": 0, "line_end": 1},
+            }
+        ]
+        span = EvidenceSpan.create(
+            doc_id="doc_claim_block",
+            source_revision_id=hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
+            span_kind="sentence",
+            text=markdown,
+            block_id="blk_claim_block",
+            page=1,
+            line_start=0,
+            line_end=1,
+            char_start=0,
+            char_end=len(markdown),
+            markdown=markdown,
+            locator_source_sha256=blocks_locator_sha256(blocks),
+        )
+        bad_ref = asset_ref_from_span(span)
+        bad_ref["locator_version"] = "citation-span-v0"
+
+        with (
+            patch("src.presentation.tools.document_tools.repository") as mock_repo,
+            patch(
+                "src.presentation.tools.document_tools.asset_ref_from_span",
+                return_value=bad_ref,
+            ),
+        ):
+            mock_repo.load_citation_index.return_value = [span]
+            mock_repo.load_markdown.return_value = markdown
+            mock_repo.load_blocks.return_value = blocks
+            from src.presentation.tools.document_tools import evidence
+
+            result = await evidence(
+                op="claims",
+                doc_id="doc_claim_block",
+                output_format="foam",
+                wiki_root=str(tmp_path),
+                overwrite=True,
+            )
+
+        assert result["success"] is False
+        assert result["blocked_count"] == 1
+        assert "verify first" in result["error"]
+
+    async def test_evidence_health_validates_foam_asset_refs(
+        self, tmp_path: Path
+    ) -> None:
+        """evidence(op='health') verifies embedded AssetRefs and Foam anchors."""
+        from src.domain.citation import EvidenceSpan, blocks_locator_sha256
+
+        markdown = "Healthy Foam evidence."
+        blocks = [
+            {
+                "block_id": "blk_health",
+                "block_type": "Text",
+                "page": 1,
+                "text": markdown,
+                "metadata": {"line_start": 0, "line_end": 1},
+            }
+        ]
+        span = EvidenceSpan.create(
+            doc_id="doc_health",
+            source_revision_id=hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
+            span_kind="sentence",
+            text=markdown,
+            block_id="blk_health",
+            page=1,
+            line_start=0,
+            line_end=1,
+            char_start=0,
+            char_end=len(markdown),
+            markdown=markdown,
+            locator_source_sha256=blocks_locator_sha256(blocks),
+        )
+        with patch("src.presentation.tools.document_tools.repository") as mock_repo:
+            mock_repo.load_citation_index.return_value = [span]
+            mock_repo.load_markdown.return_value = markdown
+            mock_repo.load_blocks.return_value = blocks
+            from src.presentation.tools.document_tools import citation_bundle, evidence
+
+            await citation_bundle(
+                "doc_health",
+                output_format="foam",
+                citation_key="paper-key",
+                wiki_root=str(tmp_path),
+                output_path="paper-key.md",
+                overwrite=True,
+            )
+            result = await evidence(
+                "health",
+                wiki_root=str(tmp_path),
+                output_format="json",
+            )
+
+        assert result["success"] is True
+        assert result["files_scanned"] >= 1
+        assert result["span_asset_refs"] == 1
+        assert result["valid_refs"] == 1
+        assert result["invalid_refs"] == 0
+        assert result["wikilink_issues"] == 0
 
     async def test_find_evidence_spans_rebuilds_when_blocks_metadata_changes(
         self,
@@ -1989,6 +2333,159 @@ class TestDocumentTools:
         assert isinstance(result, str)
         assert "asset_type is required" in result
 
+    async def test_document_asset_writes_table_and_figure_foam_notes(
+        self, tmp_path: Path
+    ) -> None:
+        """document_asset(op='foam_notes') writes table/figure evidence notes."""
+        from src.domain.entities import (
+            DocumentAssets,
+            DocumentManifest,
+            FigureAsset,
+            TableAsset,
+        )
+
+        manifest = DocumentManifest(
+            doc_id="doc_assets",
+            filename="paper.pdf",
+            source_pdf_sha256="pdf-hash",
+            assets=DocumentAssets(
+                tables=[
+                    TableAsset(
+                        id="tab_1",
+                        page=2,
+                        markdown="| A | B |\n| --- | --- |\n| x | y |",
+                        row_count=1,
+                        col_count=2,
+                        source_block_id="blk_tab",
+                        source_order=3,
+                        line_start=10,
+                        line_end=13,
+                        section_title="Results",
+                    )
+                ],
+                figures=[
+                    FigureAsset(
+                        id="fig_1_1",
+                        page=3,
+                        path=str(tmp_path / "fig.png"),
+                        caption="Workflow diagram",
+                        width=640,
+                        height=480,
+                        source_block_id="blk_fig",
+                        source_order=4,
+                        line_start=20,
+                        line_end=21,
+                        section_title="Methods",
+                    )
+                ],
+            ),
+        )
+        with patch(
+            "src.presentation.tools.document_tools.document_service"
+        ) as mock_service:
+            mock_service.get_manifest = AsyncMock(return_value=manifest)
+            from src.presentation.tools.document_tools import document_asset
+
+            result = await document_asset(
+                "foam_notes",
+                doc_id="doc_assets",
+                asset_type="all",
+                asset_id="all",
+                wiki_root=str(tmp_path),
+                output_dir="assets",
+                index_path="Evidence Index.md",
+                citation_key="paper-key",
+                response_format="json",
+                overwrite=True,
+            )
+
+        assert result["success"] is True
+        assert result["written_count"] == 2
+        note_texts = [
+            Path(item["path"]).read_text(encoding="utf-8") for item in result["written"]
+        ]
+        assert any('type: "table_evidence"' in text for text in note_texts)
+        assert any('type: "figure_evidence"' in text for text in note_texts)
+        assert any('"source_type": "table"' in text for text in note_texts)
+        assert any('"source_type": "figure"' in text for text in note_texts)
+        index_text = (tmp_path / "Evidence Index.md").read_text(encoding="utf-8")
+        assert "[[paper-key-tab-1#^tab-" in index_text
+        assert "[[paper-key-fig-1-1#^fig-" in index_text
+
+    async def test_evidence_health_validates_table_and_figure_asset_refs(
+        self, tmp_path: Path
+    ) -> None:
+        """Foam health verifies table/figure AssetRefs against the manifest."""
+        from src.domain.entities import (
+            DocumentAssets,
+            DocumentManifest,
+            FigureAsset,
+            TableAsset,
+        )
+
+        manifest = DocumentManifest(
+            doc_id="doc_assets",
+            filename="paper.pdf",
+            source_pdf_sha256="pdf-hash",
+            assets=DocumentAssets(
+                tables=[
+                    TableAsset(
+                        id="tab_1",
+                        page=2,
+                        markdown="| A | B |\n| --- | --- |\n| x | y |",
+                        source_block_id="blk_tab",
+                        source_order=3,
+                        line_start=10,
+                        line_end=13,
+                    )
+                ],
+                figures=[
+                    FigureAsset(
+                        id="fig_1_1",
+                        page=3,
+                        path=str(tmp_path / "fig.png"),
+                        caption="Workflow diagram",
+                        width=640,
+                        height=480,
+                        source_block_id="blk_fig",
+                        source_order=4,
+                        line_start=20,
+                        line_end=21,
+                    )
+                ],
+            ),
+        )
+        with (
+            patch("src.presentation.tools.document_tools.document_service") as mock_svc,
+            patch("src.presentation.tools.document_tools.repository") as mock_repo,
+        ):
+            mock_svc.get_manifest = AsyncMock(return_value=manifest)
+            mock_repo.load_manifest.return_value = manifest
+            from src.presentation.tools.document_tools import document_asset, evidence
+
+            await document_asset(
+                "foam_notes",
+                doc_id="doc_assets",
+                asset_type="all",
+                asset_id="all",
+                wiki_root=str(tmp_path),
+                output_dir="assets",
+                citation_key="paper-key",
+                response_format="json",
+                overwrite=True,
+            )
+            result = await evidence(
+                "health",
+                wiki_root=str(tmp_path),
+                output_format="json",
+            )
+
+        assert result["success"] is True
+        assert result["asset_refs"] == 2
+        assert result["valid_refs"] == 2
+        assert result["invalid_refs"] == 0
+        assert result["wikilink_issues"] == 0
+
     async def test_evidence_op_routes_find(self) -> None:
         """evidence(op='find') keeps citation span lookup behind one entrypoint."""
         with patch(
@@ -2176,6 +2673,52 @@ class TestDocumentTools:
             "needle",
             block_types=["Text"],
         )
+
+    async def test_evidence_op_routes_bundle_foam_options(self) -> None:
+        """evidence(op='bundle') preserves Foam bundle options."""
+        with patch(
+            "src.presentation.tools.document_tools.citation_bundle",
+            new_callable=AsyncMock,
+        ) as mock_bundle:
+            mock_bundle.return_value = "foam pack"
+            from src.presentation.tools.document_tools import evidence
+
+            result = await evidence(
+                "bundle",
+                doc_id="doc_123",
+                query="dose",
+                output_format="foam",
+                citation_key="paper-key",
+                limit=2,
+            )
+
+        assert result == "foam pack"
+        mock_bundle.assert_awaited_once_with(
+            "doc_123",
+            query="dose",
+            span_id="",
+            span_kinds=None,
+            limit=2,
+            include_verification=True,
+            output_format="foam",
+            citation_key="paper-key",
+            wiki_root="",
+            output_path="",
+            index_path="",
+            update_index=True,
+            overwrite=False,
+        )
+
+    async def test_evidence_op_routes_health(self) -> None:
+        """evidence(op='health') audits a Foam wiki root."""
+        from src.presentation.tools.document_tools import evidence
+
+        result = await evidence(
+            "health", wiki_root="/missing/wiki", output_format="json"
+        )
+
+        assert result["success"] is False
+        assert "wiki_root does not exist" in result["error"]
 
     async def test_evidence_op_routes_verify(self) -> None:
         """evidence(op='verify') delegates AssetRef verification unchanged."""

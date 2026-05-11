@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from hashlib import sha256
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -159,6 +160,46 @@ async def test_convert_pdf_to_docx_success(monkeypatch, tmp_path: Path) -> None:
     }
     assert captured["markdown"] == "# Title\n\nHello world"
     assert captured["output_path"] == tmp_path / "converted_from_pdf.docx"
+
+
+def test_build_docx_from_markdown_reencodes_unrecognized_jpeg(
+    monkeypatch, tmp_path: Path
+) -> None:
+    from docx.document import Document as DocxDocument
+    from docx.image.exceptions import UnrecognizedImageError
+    from PIL import Image
+
+    image_path = tmp_path / "adobe_header_like.jpeg"
+    Image.new("RGB", (16, 16), "white").save(image_path, format="JPEG")
+    output_path = tmp_path / "converted.docx"
+    service = DocumentService(repository=MagicMock(), pdf_extractor=MagicMock())
+    manifest = SimpleNamespace(
+        title="",
+        assets=SimpleNamespace(
+            figures=[SimpleNamespace(path=str(image_path), caption="Figure 1")]
+        ),
+    )
+    original_add_picture = DocxDocument.add_picture
+    suffixes: list[str] = []
+
+    def fake_add_picture(self, image_path_or_stream, width=None, height=None):
+        suffix = Path(str(image_path_or_stream)).suffix.lower()
+        suffixes.append(suffix)
+        if suffix in {".jpg", ".jpeg"}:
+            raise UnrecognizedImageError
+        return original_add_picture(
+            self,
+            image_path_or_stream,
+            width=width,
+            height=height,
+        )
+
+    monkeypatch.setattr(DocxDocument, "add_picture", fake_add_picture)
+
+    service._build_docx_from_markdown("Body text", manifest, output_path)
+
+    assert output_path.exists()
+    assert suffixes == [".jpeg", ".png"]
 
 
 @pytest.mark.asyncio
@@ -607,6 +648,11 @@ async def test_pymupdf_ingest_persists_searchable_blocks_json(
     results = await service.ingest([str(pdf_path)])
 
     assert results[0].success is True
+    assert (
+        results[0].manifest.source_pdf_sha256
+        == sha256(b"%PDF-1.4 original").hexdigest()
+    )
+    assert results[0].manifest.selected_page_map == []
     blocks_path = doc_dir / "blocks.json"
     assert blocks_path.exists()
 
@@ -683,6 +729,8 @@ async def test_marker_ingest_reports_manifest_counts_and_saves_segmentation(
     segments = segmentation["segments"]
 
     assert result.success is True
+    assert result.manifest.source_pdf_sha256 == sha256(b"%PDF-1.4 marker").hexdigest()
+    assert result.manifest.selected_page_map == []
     assert result.tables_found == len(result.manifest.assets.tables) == 1
     assert result.sections_found == len(result.manifest.assets.sections) == 1
     assert (doc_dir / "segmentation.json").exists()

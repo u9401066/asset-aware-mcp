@@ -12,6 +12,7 @@ import inspect
 import logging
 import re
 import shutil
+import tempfile
 import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -431,6 +432,7 @@ class DocumentService:
 
         try:
             total_page_count = self.pdf_extractor.get_page_count(path)
+            source_pdf_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
             normalized_page_ranges = normalize_page_ranges(
                 page_ranges, total_page_count
             )
@@ -604,6 +606,8 @@ class DocumentService:
                 lightrag_entities=entities,
                 pdf_toc=pdf_toc,
                 pdf_title=pdf_title,
+                source_pdf_sha256=source_pdf_sha256,
+                selected_page_map=page_map,
             )
 
             # Step 7: Save manifest
@@ -707,6 +711,7 @@ class DocumentService:
 
         try:
             total_page_count = self.pdf_extractor.get_page_count(path)
+            source_pdf_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
             normalized_page_ranges = normalize_page_ranges(
                 page_ranges, total_page_count
             )
@@ -912,6 +917,8 @@ class DocumentService:
                 markdown_path=str(markdown_path),
                 lightrag_entities=entities,
                 sections=sections,
+                source_pdf_sha256=source_pdf_sha256,
+                selected_page_map=page_map,
             )
 
             # Step 10: Save manifest
@@ -1783,6 +1790,7 @@ class DocumentService:
         """Render extracted markdown into a readable DOCX document."""
         from docx import Document
         from docx.enum.text import WD_BREAK
+        from docx.image.exceptions import UnrecognizedImageError
         from docx.shared import Cm
 
         document = Document()
@@ -1839,16 +1847,38 @@ class DocumentService:
         if manifest.assets.figures:
             document.add_page_break()
             document.add_heading("Extracted Figures", level=1)
-            for figure in manifest.assets.figures:
-                if figure.caption:
-                    document.add_paragraph(figure.caption)
-                figure_path = Path(figure.path)
-                if figure_path.exists():
-                    with figure_path.open("rb"):
-                        document.add_picture(str(figure_path), width=Cm(15))
+            with tempfile.TemporaryDirectory() as image_tmp_dir:
+                for figure in manifest.assets.figures:
+                    if figure.caption:
+                        document.add_paragraph(figure.caption)
+                    figure_path = Path(figure.path)
+                    if figure_path.exists():
+                        try:
+                            document.add_picture(str(figure_path), width=Cm(15))
+                        except UnrecognizedImageError:
+                            compatible_path = self._normalize_image_for_docx(
+                                figure_path,
+                                Path(image_tmp_dir),
+                            )
+                            document.add_picture(str(compatible_path), width=Cm(15))
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         document.save(str(output_path))
+
+    @staticmethod
+    def _normalize_image_for_docx(image_path: Path, output_dir: Path) -> Path:
+        """Re-encode readable images into a header form python-docx accepts."""
+        from PIL import Image
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / f"{image_path.stem}.png"
+        with Image.open(image_path) as image:
+            if image.mode not in {"RGB", "RGBA"}:
+                converted = image.convert("RGB")
+                converted.save(output_path, format="PNG")
+            else:
+                image.save(output_path, format="PNG")
+        return output_path
 
     def _build_pptx_from_markdown(
         self,
