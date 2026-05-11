@@ -269,6 +269,7 @@ jobs:
   publish-vscode:
     name: 🧩 Publish to VS Code Marketplace
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     needs: publish-pypi
     environment: release
     defaults:
@@ -288,6 +289,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Verify PyPI package is available
+        timeout-minutes: 30
         working-directory: .
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -296,11 +298,11 @@ jobs:
             VERSION="${GITHUB_REF#refs/tags/v}"
           fi
 
-          for attempt in $(seq 1 40); do
-            if uvx --refresh --python "${{ env.PYTHON_VERSION }}" --from "asset-aware-mcp==$VERSION" python -c "import src.presentation.server; print('asset-aware-mcp PyPI import OK')"; then
+          for attempt in $(seq 1 12); do
+            if timeout 90s uvx --refresh --python "${{ env.PYTHON_VERSION }}" --from "asset-aware-mcp==$VERSION" python -c "import src.presentation.server; print('asset-aware-mcp PyPI import OK')"; then
               exit 0
             fi
-            echo "PyPI package asset-aware-mcp==$VERSION not available yet (attempt $attempt/40); retrying..."
+            echo "PyPI package asset-aware-mcp==$VERSION not available yet (attempt $attempt/12); retrying..."
             sleep 30
           done
 

@@ -139,6 +139,7 @@ def main() -> int:
                 "needs: publish-pypi",
                 "needs: release-preflight",
                 "Verify PyPI package is available",
+                "timeout 90s uvx --refresh",
                 "npx vsce package --no-dependencies --out",
                 "Audit packaged VSIX artifact",
                 "--packagePath",
