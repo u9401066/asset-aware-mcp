@@ -2,6 +2,7 @@
 
 - [Home](Home)
 - [Getting Started](Getting-Started)
+- [Design And UX Notes](Design-And-UX)
 - [Architecture](Architecture)
 
 ## API Surface

@@ -1,12 +1,14 @@
 :root {
-  --page: #f7f5ef;
+  --page: #f4f7fb;
   --surface: #ffffff;
   --surface-muted: #f0f6f4;
+  --surface-alt: #f7f9fc;
   --ink: #172326;
-  --muted: #607176;
-  --line: #d8dfdc;
+  --muted: #5a6872;
+  --line: #d7e0e6;
   --accent: #087669;
   --accent-strong: #064f49;
+  --accent-secondary: #405f9b;
   --warning: #946200;
   --code: #152026;
   --shadow: 0 12px 32px rgba(20, 31, 34, 0.08);
@@ -46,7 +48,7 @@ a {
   height: 100vh;
   padding: 1.5rem 1rem;
   border-right: 1px solid var(--line);
-  background: #fbfaf6;
+  background: #f8fbfd;
   overflow-y: auto;
 }
 
@@ -245,7 +247,7 @@ a {
   padding: 0.8rem;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fbfaf6;
+  background: var(--surface-alt);
 }
 
 .hero-metrics dt {
@@ -289,12 +291,62 @@ a {
   scroll-margin-top: 1.25rem;
 }
 
+.doc-content h2 {
+  margin-top: 1.8rem;
+}
+
+.doc-content h3 {
+  margin-top: 1.2rem;
+}
+
 .doc-content img {
   display: block;
   max-width: 100%;
   height: auto;
   border-radius: 8px;
   border: 1px solid var(--line);
+}
+
+.path-grid,
+.principle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 1.35rem;
+}
+
+.path-card,
+.principle-card {
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-alt);
+}
+
+.path-card h3,
+.principle-card h3 {
+  margin: 0.25rem 0 0.45rem;
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+.path-card p,
+.principle-card p {
+  margin: 0.45rem 0 0;
+}
+
+.path-card a,
+.principle-card a {
+  font-weight: 800;
+}
+
+.card-kicker {
+  margin: 0;
+  color: var(--accent-secondary);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .doc-content table {
@@ -362,7 +414,7 @@ a {
   overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fbfaf6;
+  background: var(--surface-alt);
 }
 
 .page-outline {
