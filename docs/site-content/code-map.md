@@ -42,6 +42,7 @@
 | `src/application/section_service.py` | Section tree/detail/blocks/search/content services |
 | `src/application/knowledge_service.py` | LightRAG query/export use cases |
 | `src/application/job_service.py` | Background job lifecycle、quota、cancel、worker coordination |
+| `src/application/etl_profile_detector.py` | Heuristic ETL profile detection from file name, sample text, and layout hints |
 | `src/application/ingest_worker.py` | Worker-side ingest execution |
 | `src/application/worker_runner.py` | Worker runner port |
 | `src/application/markdown_block_builder.py` | Marker MarkdownOutput fallback block synthesis |
@@ -78,7 +79,7 @@
 | `src/presentation/mcp_context.py` | Progress/log helpers |
 | `src/presentation/markdown_utils.py` | Presentation markdown formatting helpers |
 | `src/presentation/ingest_worker_main.py` | Isolated worker entrypoint |
-| `src/presentation/tools/{document,docx,job,knowledge,profile,section,table}_tools.py` | 59 public MCP tools；`citation_support.py` 為 shared helper |
+| `src/presentation/tools/{document,docx,job,knowledge,profile,section,table}_tools.py` | 62 public MCP tools；`citation_support.py` 與 `conversion_job_support.py` 為 shared helper |
 | `src/presentation/resources/*.py` | 13 MCP resources |
 
 ## VS Code Extension
@@ -94,8 +95,8 @@
 | `vscode-extension/src/assistantAssets.ts` | Assistant harness sync |
 | `vscode-extension/src/uv.ts` | uv discovery/runtime prep |
 | `vscode-extension/src/ollama.ts` | Ollama diagnostics |
-| `vscode-extension/src/envManager.ts` | Environment management |
-| `vscode-extension/src/documentTreeProvider.ts` | Documents tree view |
+| `vscode-extension/src/envManager.ts` | Environment management、document artifact listing、citation span summaries |
+| `vscode-extension/src/documentTreeProvider.ts` | Documents tree view with artifact/citation groups |
 | `vscode-extension/src/tableTreeProvider.ts` | Tables tree view |
 | `vscode-extension/src/statusTreeProvider.ts` | Runtime/status tree view |
 | `vscode-extension/src/statusBar.ts` | Status bar |

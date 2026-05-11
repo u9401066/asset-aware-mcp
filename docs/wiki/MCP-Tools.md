@@ -2,9 +2,9 @@
 
 ![MCP endpoint distribution](assets/mcp-endpoint-map.jpg)
 
-工具數量由 `./scripts/count_tools.sh` 產生：59 tools in 7 modules。下列為目前公開 MCP tool surface，來源為 `src/presentation/tools/**`。
+工具數量由 `./scripts/count_tools.sh` 產生：62 tools in 7 modules。下列為目前公開 MCP tool surface，來源為 `src/presentation/tools/**`。
 
-## `document_tools.py` - 18 tools
+## `document_tools.py` - 19 tools
 
 | Tool | 主要參數 | 功能 |
 |---|---|---|
@@ -12,11 +12,12 @@
 | `search_source_location` | `doc_id`, `query`, `block_types` | 搜尋文件來源位置，回傳 page/bbox/block context |
 | `find_evidence_spans` | `doc_id`, `query`, `span_id`, `span_kinds`, `limit` | 搜尋 citation-ready evidence spans |
 | `verify_citation_ref` | `ref` | 驗證 AssetRef 是否仍符合 citation index 與 locator/hash |
+| `citation_bundle` | `doc_id`, query/span filters, `include_verification`, `output_format` | 匯出 verified evidence bundle，包含 AssetRef、quote/hash、locator、context、CRAAP 與 verification |
 | `ingest_documents` | `file_paths`, `async_mode`, `use_marker`, OCR/Marker/page options | 攝入 PDF，建立 manifest、markdown、blocks、assets、citation artifacts |
 | `list_documents` | 無 | 列出已處理文件摘要 |
 | `delete_document` | `doc_id` | 刪除 PDF 文件 artifacts |
-| `convert_pdf_to_docx` | `doc_id`, `output_path`, `mode` | 將已攝入 PDF 轉 DOCX |
-| `convert_pdf_to_pptx` | `doc_id`, `output_path`, `mode` | 將已攝入 PDF 轉 PPTX |
+| `convert_pdf_to_docx` | `doc_id`, `output_path`, `mode`, `async_mode` | 建立 background conversion job，將已攝入 PDF 轉 DOCX；`async_mode=false` 可同步執行 |
+| `convert_pdf_to_pptx` | `doc_id`, `output_path`, `mode`, `async_mode` | 建立 background conversion job，將已攝入 PDF 轉 PPTX；`async_mode=false` 可同步執行 |
 | `inspect_document_manifest` | `doc_id` | 檢視 manifest 詳細資訊 |
 | `export_document_segmentation` | `doc_id`, `page`, `limit`, `output_path` | 匯出 segmentation schema |
 | `visualize_document_layout` | `doc_id`, `page`, label/order/output options | 產生 PDF layout overlay |
@@ -24,17 +25,17 @@
 | `fetch_document_asset` | `doc_id`, `asset_type`, `asset_id`, `max_size` | 依 asset identity 擷取 table/figure/section/full_text |
 | `document` | `op`, PDF ingest/parse/list/delete/inspect parameters | Consolidated PDF document entrypoint；conversion 請用 `convert_document` |
 | `document_asset` | `op`, `doc_id`, asset/search/section parameters | Consolidated asset and section entrypoint |
-| `evidence` | `op`, `doc_id`, query/span/ref parameters | Consolidated citation evidence entrypoint |
-| `convert_document` | `source`, `target_format`, `source_format`, `output_path`, `mode`, `md_text` | Consolidated conversion entrypoint |
+| `evidence` | `op`, `doc_id`, query/span/ref parameters | Consolidated citation evidence entrypoint，支援 `find` / `verify` / `bundle` / `locate` |
+| `convert_document` | `source`, `target_format`, `source_format`, `output_path`, `mode`, `md_text`, `async_mode` | Consolidated conversion entrypoint；預設建立 background conversion job |
 
 Operation notes:
 
 - `document` accepts `ingest` / `import`, `parse`, `list`, `delete`, and `inspect`; PDF/DOCX/Markdown conversions live behind `convert_document`.
 - `document_asset` accepts asset fetch plus section tree/detail/blocks/search operations.
-- `evidence` accepts `find`, `verify`, and `locate` / `search_location`; the old `search` wording is avoided because the code routes citation lookup through `find`.
-- PDF ingest and Marker parse requests are job-backed; `ingest_documents(async_mode=false)` is still routed through the background job system to avoid stdio request timeouts. `parse_pdf_structure(output_dir=...)` and `ocr_pdf_document(output_path=...)` still accept compatibility parameters, but background job mode owns the final artifact paths.
+- `evidence` accepts `find`, `verify`, `bundle`, and `locate` / `search_location`; the old `search` wording is avoided because the code routes citation lookup through `find`.
+- PDF ingest、Marker parse、OCR 與 conversion requests 都可 job-backed；conversion tools 預設 `async_mode=true`，大型 LibreOffice/PDF conversion 不會卡住 MCP request path。`parse_pdf_structure(output_dir=...)` and `ocr_pdf_document(output_path=...)` still accept compatibility parameters, but background job mode owns the final artifact paths.
 
-## `docx_tools.py` - 16 tools
+## `docx_tools.py` - 17 tools
 
 | Tool | 主要參數 | 功能 |
 |---|---|---|
@@ -44,16 +45,17 @@ Operation notes:
 | `list_docx_blocks` | `doc_id` | 列出 DOCX block 摘要 |
 | `list_docx_documents` | 無 | 列出已攝入 DOCX/DFM 文件 |
 | `delete_docx` | `doc_id` | 刪除 DOCX/DFM artifacts |
-| `convert_docx_to_doc` | `doc_id`, `output_path`, `mode` | 轉為 legacy DOC |
-| `convert_docx_to_pdf` | `doc_id`, `output_path`, `mode` | 轉為 PDF |
-| `convert_docx_to_odt` | `doc_id`, `output_path`, `mode` | 轉為 ODT |
+| `convert_docx_to_doc` | `doc_id`, `output_path`, `mode`, `async_mode` | 建立 background conversion job，轉為 legacy DOC |
+| `convert_docx_to_pdf` | `doc_id`, `output_path`, `mode`, `async_mode` | 建立 background conversion job，轉為 PDF |
+| `convert_docx_to_odt` | `doc_id`, `output_path`, `mode`, `async_mode` | 建立 background conversion job，轉為 ODT |
 | `docx_validate_roundtrip` | `doc_id`, `output_path`, `strict` | 驗證 DOCX -> DFM -> DOCX round trip |
 | `docx` | `op`, DOCX/DFM parameters | Consolidated DOCX/DFM entrypoint |
 | `docx_table_to_context` | `doc_id`, `block_id`, `register` | 將 DOCX 表格轉為 A2T TableContext |
 | `docx_table_from_context` | `doc_id`, `block_id`, `table_id`, `save_dfm` | 將 TableContext 寫回 DFM 表格 |
 | `docx_chart_data` | `doc_id`, `block_id`, `register` | 擷取 DOCX 圖表底層資料 |
-| `docx_table` | `op`, table bridge parameters | Consolidated DOCX table bridge entrypoint |
-| `export_markdown` | `md_text`, `md_path`, `output_path`, `output_format` | Markdown 直接匯出 DOCX/PDF/DOC/ODT |
+| `docx_table_edit_plan` | `doc_id`, `block_id`, `table_id`, `target_columns`, `target_rows` | 預覽 table write-back 的 cell/row/column/header 變更與結構風險 |
+| `docx_table` | `op`, table bridge parameters | Consolidated DOCX table bridge entrypoint，支援 `edit_plan` |
+| `export_markdown` | `md_text`, `md_path`, `output_path`, `output_format`, `async_mode` | Markdown 直接匯出 DOCX/PDF/DOC/ODT；預設建立 conversion job |
 
 ## `job_tools.py` - 4 tools
 
@@ -68,11 +70,11 @@ Operation notes:
 
 | Tool | 功能 |
 |---|---|
-| `consult_knowledge_graph` | 查詢 LightRAG knowledge graph |
+| `consult_knowledge_graph` | 查詢 LightRAG knowledge graph；可用 `verify_references=true` 附上 verified citation bundle |
 | `export_knowledge_graph` | 匯出 graph 給視覺化或外部分析 |
 | `knowledge` | Consolidated knowledge graph entrypoint |
 
-## `profile_tools.py` - 6 tools
+## `profile_tools.py` - 7 tools
 
 | Tool | 功能 |
 |---|---|
@@ -81,7 +83,8 @@ Operation notes:
 | `get_current_etl_profile` | 查詢目前 active profile |
 | `set_etl_profile` | 切換 active profile |
 | `load_etl_profile_from_json` | 從 JSON 載入自訂 profile |
-| `etl_profile` | Consolidated profile entrypoint |
+| `detect_etl_profile` | 從 PDF / doc_id / sample_text 偵測建議 profile，可選 `activate=true` |
+| `etl_profile` | Consolidated profile entrypoint，支援 `detect` / `auto_detect` |
 
 ## `section_tools.py` - 5 tools
 

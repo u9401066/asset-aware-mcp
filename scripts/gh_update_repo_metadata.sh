@@ -6,7 +6,7 @@ set -euo pipefail
 REPO="${GH_REPO:-u9401066/asset-aware-mcp}"
 
 # ── Description ──────────────────────────────────────────────────────
-DESCRIPTION="Asset-Aware MCP Server — AI Agent precisely accesses tables, figures, sections from PDFs + .docx round-trip editing (DFM) with 59 tools / 13 resources, segmentation export, layout overlay, OCR preprocessing, knowledge graph (LightRAG)"
+DESCRIPTION="Asset-Aware MCP Server — AI Agent precisely accesses tables, figures, sections from PDFs + .docx round-trip editing (DFM) with 62 tools / 13 resources, segmentation export, layout overlay, OCR preprocessing, knowledge graph (LightRAG)"
 
 # ── Topics ───────────────────────────────────────────────────────────
 TOPICS=(

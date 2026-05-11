@@ -14,6 +14,8 @@ VS Code extension 位於 `vscode-extension/src`。它負責讓使用者不用手
 - `vscode-extension/src/clineMcpConfig.ts`
 - `vscode-extension/src/codexMcpConfig.ts`
 - `vscode-extension/src/assistantAssets.ts`
+- `vscode-extension/src/envManager.ts`
+- `vscode-extension/src/documentTreeProvider.ts`
 - `vscode-extension/src/uv.ts`
 - `vscode-extension/src/ollama.ts`
 
@@ -61,12 +63,23 @@ VSIX 會打包 `vscode-extension/resources/repo-assets/asset-aware/**`。Extensi
 
 | 檔案 | 用途 |
 |---|---|
-| `documentTreeProvider.ts` | 文件樹 |
+| `documentTreeProvider.ts` | 文件樹、Artifacts group、Citations group、artifact/citation open commands |
 | `tableTreeProvider.ts` | A2T table tree |
 | `statusTreeProvider.ts` | 狀態與 runtime tree |
 | `statusBar.ts` | 狀態列 |
 | `settingsPanel.ts` | 設定面板 |
 | `dfm/*` | DFM editor service 與 language features |
+
+## Artifact / Citation Viewer
+
+`0.6.28` 的 Documents tree 會在每個已攝入文件下顯示：
+
+| Node | 來源 artifact | 行為 |
+|---|---|---|
+| `Artifacts` | `manifest.json`、`full.md`、`segmentation.json`、`citation_index.jsonl`、layout overlays 等 | 點擊後在 VS Code 開啟對應檔案 |
+| `Citations` | `citation_index.jsonl` 前幾筆 EvidenceSpan summary | 點擊後開啟 citation index 並跳到對應 line |
+
+對應 helper 位於 `EnvManager.listDocumentArtifacts(docId)` 與 `EnvManager.listCitationSpans(docId, limit)`。這個 UI 不是重新計算 citation；它讀取 MCP server 已產生的 durable artifacts，方便人類快速檢查 locator、quote/hash、page 與 span kind。
 
 ## Extension Checks
 

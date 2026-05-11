@@ -2,6 +2,11 @@
 
 ## 2026-05-11
 
+- Implementing `v0.6.28` feature release: conversion tools now default to background `JobType.CONVERSION`, `citation_bundle` / `evidence(op="bundle")` export verified evidence packages, `consult_knowledge_graph(verify_references=true)` attaches verified evidence, DOCX table edit planning previews structural changes, ETL profile auto-detect suggests/activates built-in profiles, and the VSIX Documents tree exposes artifact/citation viewer nodes.
+- Updated endpoint inventory to 62 tools in 7 modules and 13 resources in 2 modules, 75 MCP endpoints total. Focused validation already passed for new Python tool behavior, JobService conversion flow, MCP tool registration/counts, VSIX EnvManager/DocumentTreeProvider tests, Ruff/format on changed files, and VSIX compile/lint/unit slices.
+- Documentation alignment is in progress for `v0.6.28`: wiki source, GitHub Pages payload, README files, VSIX README, changelog, memory bank, tool counts, and refreshed web diagrams are being synchronized before release gates, segmented commits, push, and tag publication.
+- `v0.6.28` local release gates passed: `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy src --ignore-missing-imports`, `uv lock --check`, full `uv run pytest` (`818 passed, 21 skipped`), `npm run test:ci` (`119 passing` plus package contents), docs site builder/check, `node --check`, count/tools docs sync tests, Cline skill audit, release harness audit, `uv build`, VSIX package, release artifact audit, and `git diff --check`.
+- Environment-only smoke gaps: VSIX install smoke cannot complete on this remote host because the downloaded VS Code binary is missing `libgbm.so.1`, while the remote `code-insiders` CLI hangs on `--install-extension`; Docker smoke cannot run because Docker BuildKit is requested by the Dockerfile but the host lacks the buildx component.
 - Completed a follow-up code/docs alignment pass with 3 subagents over the GitHub Pages/Wiki content. Fixed stale or incorrect docs for MCP resource URI strings, consolidated tool operation names, PDF artifact layout, citation index filenames, Marker/background-job behavior, DOCX/DFM formats and safe-write scope, A2T draft operation naming, ETL profile activation, Knowledge Graph response modes/timeouts, VSIX runtime cache/sync boundaries, and Code Map entries.
 - Added `tests/unit/test_docs_site_reference_sync.py`, which AST-parses registered `@mcp.tool()` / `@mcp.resource()` decorators and verifies the human MCP reference pages stay aligned with actual tool names and resource URIs.
 - Regenerated the GitHub Pages payload from `docs/wiki/**`; local validation passed for `python3 scripts/build_docs_site.py --check`, `node --check docs/site.js docs/site-content.js`, linked wiki images, stale-string scan, `./scripts/count_tools.sh`, `uv run pytest tests/unit/test_count_tools_script.py tests/unit/test_docs_site_reference_sync.py -q`, ruff, format check, and `git diff --check`.
@@ -94,7 +99,7 @@
 
 ## Doing
 
-- 0.6.27 security/release-hygiene gates, exact-path commits, push, and annotated `v0.6.27` tag.
+- 0.6.28 feature release gates, docs/wiki/site verification, exact-path segmented commits, push, and annotated `v0.6.28` tag.
 
 ## Next
 

@@ -22,7 +22,7 @@ Asset-Aware MCP 是一個 citation-ready 文件處理與知識工作流 MCP Serv
   <section class="path-card">
     <p class="card-kicker">查完整功能</p>
     <h3>確認目前公開 MCP surface</h3>
-    <p>完整 59 tools、13 resources、程式碼地圖與 release checks 都放在 reference/developer 頁。</p>
+    <p>完整 62 tools、13 resources、程式碼地圖與 release checks 都放在 reference/developer 頁。</p>
     <p><a href="#/mcp-tools">MCP Tools</a> · <a href="#/mcp-resources">Resources</a> · <a href="#/code-map">Code Map</a></p>
   </section>
   <section class="path-card">
@@ -37,13 +37,13 @@ Asset-Aware MCP 是一個 citation-ready 文件處理與知識工作流 MCP Serv
 
 | 項目 | 狀態 |
 |---|---|
-| 最新程式版本 | `0.6.27` |
+| 最新程式版本 | `0.6.28` |
 | Python | `>=3.10`，以 `uv` 管理 |
-| MCP endpoints | 59 tools、13 resources，共 72 endpoints |
-| PDF 後端 | 預設 PyMuPDF；Marker backend 在 `0.6.27` 因 `Pillow` 安全相容性暫時 hold |
+| MCP endpoints | 62 tools、13 resources，共 75 endpoints |
+| PDF 後端 | 預設 PyMuPDF；Marker backend 在 `0.6.28` 因 `Pillow` 安全相容性暫時 hold |
 | DOCX | DOCX/DOC/DFM round trip、Track Changes、LibreOffice conversion、strict validation |
-| Knowledge graph | LightRAG (`lightrag-hku`) + Ollama/OpenAI 可插拔後端 |
-| VS Code extension | 內建 MCP provider、Cline/Codex/Copilot config merge、assistant harness sync |
+| Knowledge graph | LightRAG (`lightrag-hku`) + Ollama/OpenAI，可選 verified citation bundle |
+| VS Code extension | 內建 MCP provider、Cline/Codex/Copilot config merge、assistant harness sync、artifact/citation viewer |
 
 來源錨點：`pyproject.toml`、`CHANGELOG.md`、`src/presentation/tools/**`、`src/presentation/resources/**`、`vscode-extension/src/**`。
 
@@ -61,11 +61,11 @@ Asset-Aware MCP 是一個 citation-ready 文件處理與知識工作流 MCP Serv
 | 工作流 | 用途 | 主要入口 |
 |---|---|---|
 | PDF ingestion | 產生 `{doc_id}_manifest.json`、`{doc_id}_full.md`、assets metadata 與 segmentation | `ingest_documents`、`document(op="ingest")` |
-| Citation evidence | 找出可引用 span、驗證 AssetRef | `find_evidence_spans`、`verify_citation_ref`、`evidence(...)` |
+| Citation evidence | 找出可引用 span、驗證 AssetRef、匯出 verified bundle | `find_evidence_spans`、`verify_citation_ref`、`citation_bundle`、`evidence(...)` |
 | DOCX/DFM editing | 將 Word 轉為 DFM、編輯後保真寫回 | `ingest_docx`、`save_docx`、`docx(...)` |
 | Table extraction | 建立 A2T TableContext、附來源引用、渲染輸出 | `plan_table`、`table_manage`、`table_data`、`table_cite` |
-| Knowledge graph | 跨文件 LightRAG 查詢與匯出 | `consult_knowledge_graph`、`export_knowledge_graph` |
-| Async jobs | 將長任務移出 MCP request path | `get_job_status`、`list_jobs`、`cancel_job` |
+| Knowledge graph | 跨文件 LightRAG 查詢、匯出與 evidence verification | `consult_knowledge_graph(verify_references=true)`、`export_knowledge_graph` |
+| Async jobs | 將長任務與 conversion 移出 MCP request path | `get_job_status`、`list_jobs`、`cancel_job` |
 | VSIX setup | 安裝 MCP provider 與 assistant harness | VS Code extension commands and settings |
 
 ## 文件更新原則

@@ -6,20 +6,20 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.27/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.28/resources/banner.png)
 
-## What's New in v0.6.27
+## What's New in v0.6.28
 
-- **Runtime security refresh**: default Python dependencies now require patched image/XML/network/auth package floors, including `Pillow>=12.2.0` and `lxml>=6.1.0`.
-- **Marker security hold**: the launcher no longer installs `marker-pdf` when `assetAwareMcp.enableMarkerBackend` is set, because upstream `marker-pdf` currently pins vulnerable `Pillow<11`.
-- **Citation provenance round-trip**: table citations now preserve `locator_source_sha256` through `AssetRef` serialization and reload.
-- **VSIX package hygiene**: package checks now block `dist/`, `tmp/`, and generated nested repo-assets such as `out/`, `node_modules/`, `.venv`, and `__pycache__`.
-- **Insiders smoke selector**: install smoke tests can target VS Code Insiders with `ASSET_AWARE_MCP_VSCODE_QUALITY=insiders`.
-- **59 tools** across 8 modules, including consolidated compatibility entrypoints
+- **Conversion background jobs**: PDF/DOCX/Markdown conversion tools now default to async conversion jobs with status/result reporting.
+- **Verified citation bundles**: `citation_bundle`, `evidence(op="bundle")`, and `consult_knowledge_graph(verify_references=true)` expose citation-ready evidence packages.
+- **DOCX table edit planning**: preview table cell/row/column/header changes before write-back.
+- **ETL profile auto-detect**: detect the best built-in profile from PDF path, `doc_id`, or sample text.
+- **Artifact and citation viewer**: the Documents tree now opens generated artifacts and citation-index spans directly.
+- **62 tools** across 7 modules, plus 13 MCP resources
 
 ## 🧪 Current Main Branch
 
-- **Structured LightRAG MCP Output**: `consult_knowledge_graph` now supports `structured`, `data`, and `text` response modes for citation-aware agent workflows
+- **Structured LightRAG MCP Output**: `consult_knowledge_graph` supports `structured`, `data`, and `text` response modes, with optional verified evidence bundles
 - **LightRAG Deletion Sync**: deleting an ingested PDF now also attempts to remove its LightRAG document index
 - **Extension Env Alignment**: generated `.env` now writes `LIGHTRAG_WORKING_DIR` and still falls back from legacy `LIGHTRAG_DIR`
 
@@ -106,16 +106,17 @@ This extension provides a sophisticated **ETL (Extract, Transform, Load) Pipelin
 
 - **📄 PDF ETL**:
   - **PyMuPDF** (default) - Fast extraction (~50MB dependency)
-  - **Marker** (`use_marker=True`) - Temporarily unavailable in v0.6.27 until upstream `marker-pdf` supports patched Pillow
+  - **Marker** (`use_marker=True`) - Temporarily unavailable in v0.6.28 until upstream `marker-pdf` supports patched Pillow
 - **🧩 Unified Segmentation**: Export normalized `segmentation.json` with reading order and markdown line ranges
 - **🖼️ Layout Overlay**: Visual bbox/type/reading-order inspection from the original PDF
 - **🔤 OCR Preprocessing**: Optional scanned-PDF cleanup before ETL
 - **🧭 Section Navigation**: Dynamic hierarchy section tree with 5 tools for browsing, searching, content reading, and block extraction
-- **🔄 Async Jobs**: Track progress for large document batches with Job IDs.
+- **🔄 Async Jobs**: Track progress for large document batches, OCR, Marker-required parse, and conversions with Job IDs.
 - **🗺️ Document Manifest**: A structured index that lets Agents "see" document structure before reading.
 - **🖼️ Visual Assets**: Extract figures as Base64 images for Vision-capable Agents.
 - **📊 A2T (Anything to Table)**: 7 operation-based tools for creating tables from any source with citations, audit trail, and Excel export
-- **🧠 Knowledge Graph**: Cross-document insights powered by LightRAG.
+- **🧠 Knowledge Graph**: Cross-document insights powered by LightRAG, with optional verified evidence bundles.
+- **🧾 Artifact / Citation Viewer**: Open generated artifacts and EvidenceSpan summaries from the Documents tree.
 - **🔌 MCP Native**: Seamless integration with VS Code Copilot Chat and Claude.
 - **🏠 Local-First**: Optimized for Ollama (local LLM) but supports OpenAI.
 
@@ -179,7 +180,7 @@ Runtime note:
 The extension prefers a managed Python 3.11 runtime when launching the MCP server via `uv`/`uvx`. This avoids package builds on machines without native toolchains, especially macOS systems missing Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
 
 Marker note:
-The extension does not install Marker or torch in v0.6.27. `assetAwareMcp.enableMarkerBackend` is retained for compatibility, but the launcher ignores it while upstream `marker-pdf` requires `Pillow<11` and the secure runtime requires `Pillow>=12.2.0`.
+The extension does not install Marker or torch in v0.6.28. `assetAwareMcp.enableMarkerBackend` is retained for compatibility, but the launcher ignores it while upstream `marker-pdf` requires `Pillow<11` and the secure runtime requires `Pillow>=12.2.0`.
 
 Installation scope & storage:
 - The VSIX installs as a user/global extension (standard VS Code behavior), so you do not need a separate install per workspace.
@@ -214,16 +215,16 @@ If the extension fails to start or the MCP server doesn't appear:
     *   Run `npm install`.
     *   Press `F5` to launch the **Extension Development Host**.
 
-## 📚 MCP Tools (59 total)
+## 📚 MCP Tools (62 total)
 
-### Document ETL (18)
+### Document ETL (19)
 | Tool | Description |
 |------|-------------|
 | `ingest_documents` | Process PDF files into structured assets |
 | `list_documents` | List all ingested documents |
 | `delete_document` | Delete an ingested PDF and its local artifacts |
-| `convert_pdf_to_docx` | Reconstruct a readable DOCX from extracted PDF content |
-| `convert_pdf_to_pptx` | Rebuild editable PPTX slides from extracted PDF markdown and figures |
+| `convert_pdf_to_docx` | Reconstruct a readable DOCX from extracted PDF content; defaults to a conversion background job |
+| `convert_pdf_to_pptx` | Rebuild editable PPTX slides from extracted PDF markdown and figures; defaults to a conversion background job |
 | `inspect_document_manifest` | View document structure (Tables/Figures/Sections) |
 | `fetch_document_asset` | Get specific Table/Figure/Section content |
 | `parse_pdf_structure` | Parse PDF structure without full ingestion |
@@ -233,10 +234,11 @@ If the extension fails to start or the MCP server doesn't appear:
 | `ocr_pdf_document` | Run OCR preprocessing and output a cleaned PDF |
 | `find_evidence_spans` | Search citation-ready spans with revision, locator, hash, and CRAAP metadata |
 | `verify_citation_ref` | Verify span AssetRefs against the current citation index and locator metadata |
+| `citation_bundle` | Export verified evidence bundles with AssetRef, quote/hash, locator, context, CRAAP scaffold, and verification status |
 | `document` | Operation-based PDF document facade over ingest/list/delete/inspect/parse |
 | `document_asset` | Operation-based asset and section facade over fetch/tree/detail/blocks/search |
-| `evidence` | Operation-based citation facade over find/verify/locate |
-| `convert_document` | Operation-based conversion facade for PDF, DOCX/DFM, and Markdown exports |
+| `evidence` | Operation-based citation facade over find/verify/locate/bundle |
+| `convert_document` | Operation-based conversion facade for PDF, DOCX/DFM, and Markdown exports; conversion paths default to background jobs |
 
 ### Section Navigation (5)
 | Tool | Description |
@@ -250,7 +252,7 @@ If the extension fails to start or the MCP server doesn't appear:
 ### Job Management (4)
 | Tool | Description |
 |------|-------------|
-| `get_job_status` | Track progress of ingestion jobs |
+| `get_job_status` | Track progress of ingestion and conversion jobs |
 | `list_jobs` | List all jobs |
 | `cancel_job` | Cancel a running job |
 | `job` | Operation-based job facade over get/list/cancel |
@@ -258,11 +260,11 @@ If the extension fails to start or the MCP server doesn't appear:
 ### Knowledge Graph (3)
 | Tool | Description |
 |------|-------------|
-| `consult_knowledge_graph` | Cross-document RAG queries with `structured`, `data`, and `text` response modes |
+| `consult_knowledge_graph` | Cross-document RAG queries with `structured`, `data`, `text`, and optional verified evidence bundles |
 | `export_knowledge_graph` | Export knowledge graph data |
 | `knowledge` | Operation-based knowledge facade over consult/export |
 
-### Docx Editing — DFM (16)
+### Docx Editing — DFM (17)
 | Tool | Description |
 |------|-------------|
 | `ingest_docx` | Import .docx and decompose into DFM blocks |
@@ -271,16 +273,17 @@ If the extension fails to start or the MCP server doesn't appear:
 | `list_docx_blocks` | List document block structure |
 | `list_docx_documents` | List all ingested DOCX/DFM documents |
 | `delete_docx` | Delete an ingested DOCX/DFM document and its local artifacts |
-| `convert_docx_to_pdf` | Export the current DOCX/DFM state to PDF in fidelity mode |
-| `convert_docx_to_doc` | Export the current DOCX/DFM state to DOC in fidelity mode |
+| `convert_docx_to_pdf` | Export the current DOCX/DFM state to PDF in fidelity mode; defaults to a conversion background job |
+| `convert_docx_to_doc` | Export the current DOCX/DFM state to DOC in fidelity mode; defaults to a conversion background job |
 | `docx_validate_roundtrip` | 6-dimension round-trip fidelity + file-level SHA-256/ZIP comparison with optional strict fail-closed mode |
 | `docx_table_to_context` | Bridge: Docx table → A2T context |
 | `docx_table_from_context` | Bridge: A2T table → Docx table |
 | `docx_chart_data` | Extract chart data from Docx |
-| `export_markdown` | Export Markdown to .docx/.pdf/.doc |
-| `convert_docx_to_odt` | Export the current DOCX/DFM state to ODT |
+| `docx_table_edit_plan` | Preview table cell/row/column/header changes and structural risks before write-back |
+| `export_markdown` | Export Markdown to .docx/.pdf/.doc; defaults to a conversion background job |
+| `convert_docx_to_odt` | Export the current DOCX/DFM state to ODT; defaults to a conversion background job |
 | `docx` | Operation-based DOCX/DFM facade over ingest/get/save/list/delete/blocks/validate |
-| `docx_table` | Operation-based DOCX table facade over to_context/from_context/chart_data |
+| `docx_table` | Operation-based DOCX table facade over to_context/from_context/chart_data/edit_plan |
 
 ### A2T — Anything to Table (7 operation-based)
 | Tool | Operations | Description |
@@ -293,7 +296,7 @@ If the extension fails to start or the MCP server doesn't appear:
 | `table_draft` | `create` / `update` / `add_rows` / `resume` / `commit` / `list` / `delete` | Draft workflow with persistence |
 | `discover_sources` | — | Cross-document source discovery |
 
-### ETL Profile (6)
+### ETL Profile (7)
 | Tool | Description |
 |------|-------------|
 | `list_etl_profiles` | List available profiles |
@@ -301,7 +304,8 @@ If the extension fails to start or the MCP server doesn't appear:
 | `get_current_etl_profile` | Show active profile |
 | `set_etl_profile` | Switch profile |
 | `load_etl_profile_from_json` | Load custom profile |
-| `etl_profile` | Operation-based profile facade over list/get/current/set/load |
+| `detect_etl_profile` | Detect the best built-in profile from PDF path, doc_id, or sample text |
+| `etl_profile` | Operation-based profile facade over list/get/current/set/load/detect |
 
 ## 🔗 Links
 

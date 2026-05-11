@@ -7,6 +7,31 @@
 
 ## [Unreleased]
 
+## [0.6.28] - 2026-05-11
+
+### Added
+
+- **Conversion background jobs**
+  - PDF, DOCX, and Markdown conversion tools now default to `JobType.CONVERSION` background jobs with progress/status/result output.
+  - Legacy synchronous conversion remains available with `async_mode=false` for callers that explicitly need inline behavior.
+
+- **Verified citation bundles**
+  - Added `citation_bundle(...)` and `evidence(op="bundle")` for exporting verified EvidenceSpan packages with AssetRef, locator, quote/hash, context, CRAAP scaffold, and verification result.
+  - `consult_knowledge_graph(..., verify_references=true)` can now attach verified citation evidence to KG answers.
+
+- **DOCX table edit planning**
+  - Added `docx_table_edit_plan(...)` and `docx_table(op="edit_plan")` to preview table cell/row/column/header changes before write-back.
+
+- **ETL profile auto-detection**
+  - Added `detect_etl_profile(...)` and `etl_profile(op="detect")` for heuristic profile suggestions from PDF path, `doc_id`, or sample text, with optional activation.
+
+- **VS Code artifact/citation viewer**
+  - Documents tree now exposes generated artifacts and citation-index span summaries, opening files and JSONL lines directly from VS Code.
+
+### Changed
+
+- Updated docs, GitHub Pages payload, wiki source, README files, VSIX README, tool counts, and memory bank for `0.6.28` / `62 tools + 13 resources = 75 MCP endpoints`.
+
 ## [0.6.27] - 2026-05-08
 
 ### Fixed

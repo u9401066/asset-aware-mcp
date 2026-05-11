@@ -37,7 +37,7 @@ AssetRef 是工具間傳遞引用的 compact object。`verify_citation_ref(ref)`
 - quote/text hash 是否匹配。
 - source revision 是否 stale。
 
-`0.6.27` 已修正 AssetRef serialization/reload 會掉 `locator_source_sha256` 的問題。
+`0.6.27` 已修正 AssetRef serialization/reload 會掉 `locator_source_sha256` 的問題。`0.6.28` 進一步加入 `citation_bundle(...)`，可一次匯出多個 verified EvidenceSpan，包含 AssetRef、quote/hash、locator、context、CRAAP scaffold 與 verification 結果。
 
 ## Citation Index
 
@@ -52,9 +52,10 @@ A2T table cell 可掛 citation refs。當 cited cell 或 row 被更新時，舊 
 - `table_cite`
 - `find_evidence_spans`
 - `verify_citation_ref`
-- `evidence(op="find" | "verify" | "locate")`
+- `citation_bundle`
+- `evidence(op="find" | "verify" | "bundle" | "locate")`
 
-實務上，PDF 引用優先使用 `find_evidence_spans` 回傳的 AssetRef；`discover_sources` 適合先找表格可抽取來源，但它的 span ref 目前較偏 discovery payload，正式引用仍建議再走 `find_evidence_spans` / `verify_citation_ref`。
+實務上，PDF 引用優先使用 `find_evidence_spans` 回傳的 AssetRef；若要給人類文件、KG answer 或外部審查使用，建議用 `citation_bundle(output_format="json")` 或 `evidence(op="bundle")` 取得一整包可驗證 evidence。`discover_sources` 適合先找表格可抽取來源，但它的 span ref 目前較偏 discovery payload，正式引用仍建議再走 `find_evidence_spans` / `citation_bundle` / `verify_citation_ref`。
 
 ## DOCX Citation Safety
 

@@ -15,11 +15,16 @@ consult_knowledge_graph(
   query="...",
   mode="hybrid",
   response_mode="structured",
-  include_references=true
+  include_references=true,
+  verify_references=true,
+  doc_ids=["doc_..."],
+  evidence_limit=5
 )
 ```
 
 `response_mode` 只接受 `structured`、`data`、`text`。`structured` 是預設，會回傳 MCP-friendly payload；`data` 只回傳 retrieval data；`text` 保留舊版純文字行為。`knowledge(op="consult", ...)` 是 consolidated entrypoint。
+
+`0.6.28` 起，`verify_references=true` 會把 KG answer 連回 citation index：工具會從 `doc_ids` 或回傳內容中的文件 id 候選，呼叫 verified evidence bundle 流程，並在 structured/data payload 內附上 `verified_evidence`；text 模式則會把「Verified Evidence」區塊附在答案後面。這讓 KG 仍保持 discovery layer，但輸出可以直接帶著可驗證 span、locator、hash、context 與 CRAAP scaffold。
 
 ## 匯出
 
@@ -44,7 +49,7 @@ export_knowledge_graph(format="json", limit=100)
 KG 適合回答「跨文件有哪些關係」。若要產出可引用結論，流程應回到：
 
 ```text
-KG query -> source candidates -> find_evidence_spans -> verify_citation_ref
+KG query -> source candidates -> citation_bundle -> verify_citation_ref
 ```
 
-也就是說，KG 是 discovery layer；citation index 是 evidence layer。
+也就是說，KG 是 discovery layer；citation index 是 evidence layer。若已知道文件 id，可直接用 `consult_knowledge_graph(..., verify_references=true, doc_ids=[...])`；若要人工審查或匯出給外部流程，則用 `citation_bundle(output_format="json")` 取得完整 evidence package。

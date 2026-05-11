@@ -11,7 +11,7 @@ Asset-Aware MCP 以 DDD 方向維持邊界：
 | Layer | 路徑 | 責任 |
 |---|---|---|
 | Domain | `src/domain` | 實體、value objects、citation、section tree、reading order、segmentation、ETL profile、table model |
-| Application | `src/application` | use case 編排：document/docx/table/job/knowledge/section services、citation artifact、DFM integrity |
+| Application | `src/application` | use case 編排：document/docx/table/job/knowledge/section services、citation artifact、DFM integrity、ETL profile detect |
 | Infrastructure | `src/infrastructure` | 外部 adapter：PyMuPDF、Marker、DOCX XML、LibreOffice、LightRAG、OCR、file/job store、layout visualizer |
 | Presentation | `src/presentation` | FastMCP app、tools/resources、dependency composition、MCP progress/log、worker entrypoint |
 | VSIX | `vscode-extension/src` | VS Code provider、settings panel、tree views、MCP config merge、assistant assets sync |
@@ -60,7 +60,7 @@ DOCX 儲存不只是文字替換；它會保留 block identity、run-level style
 
 `JobService` 將耗時任務拆出 MCP request path。`src/application/worker_runner.py` 定義 runner port，`src/infrastructure/subprocess_ingest_worker_runner.py` 實作 subprocess 隔離，`src/presentation/ingest_worker_main.py` 是 worker entrypoint。
 
-這個結構讓 MCP server 可以繼續回應 `get_job_status`、`cancel_job`，避免 Marker/OCR/大型 PDF ingest 卡住 stdio client。
+這個結構讓 MCP server 可以繼續回應 `get_job_status`、`cancel_job`，避免 Marker/OCR/大型 PDF ingest 卡住 stdio client。`0.6.28` 起 conversion tools 也預設建立 `JobType.CONVERSION` background job；conversion handler 目前在 MCP process 內執行，因此重啟後可保留 job record，但未完成的 in-memory handler 不會跨 process 恢復。
 
 ## Storage Layout
 

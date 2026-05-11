@@ -39,19 +39,19 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 
 - 📄 **Asset-Aware ETL** - PDF → Markdown with a PyMuPDF-first parser and retained Marker code path:
   - **PyMuPDF** (default) - Fast extraction (~50MB)
-  - **Marker** (`use_marker=True`) - High-precision structured parsing code path retained, but packaged runtime is on security hold in v0.6.27 until upstream `marker-pdf` supports patched Pillow
+  - **Marker** (`use_marker=True`) - High-precision structured parsing code path retained, but packaged runtime is on security hold in v0.6.28 until upstream `marker-pdf` supports patched Pillow
 - 🧩 **Unified Segmentation Export** - Normalized `segmentation.json` merges manifest, blocks, reading order, and persisted markdown line spans for downstream tools and extensions.
 - 🖼️ **Layout Overlay Debugging** - Render page overlays from `original.pdf` to inspect bbox, segment type, and reading order visually.
 - 🔤 **On-Demand OCR Preprocessing** - Optional `ocrmypdf` preprocessing path for scanned PDFs before ETL.
 - 🧭 **Section Navigation** - Dynamic hierarchy section tree with 5 tools: browse, search, detail, content reading, and block extraction for any depth of headings.
-- 🔄 **Async Job Pipeline** - Supports asynchronous task processing and progress tracking for large documents.
+- 🔄 **Async Job Pipeline** - Supports asynchronous ingest, Marker-required parse, OCR, and conversion jobs with progress tracking.
 - 🗺️ **Document Manifest** - Provides a structured "map" of the document for precise data access by Agents.
 - 🧠 **LightRAG Integration** - Knowledge Graph + Vector Index, supporting cross-document comparison and reasoning.
-- 🧾 **Citation-Aware KG Output** - `consult_knowledge_graph` now supports structured answer/reference payloads for downstream agent workflows.
-- 📝 **Docx Editing (DFM)** - Edit .docx files in Markdown via **Docx-Flavored Markdown** format. Supports legacy `.doc`, `.odt`, and `.ods` ingest via LibreOffice auto-conversion. 16 tools: ingest, read, save, list, delete, export, strict round-trip validation, DOCX→PDF, DOCX→DOC, DOCX→ODT, and Docx ↔ A2T bridges.
+- 🧾 **Verified Citation Bundles** - `citation_bundle` and `consult_knowledge_graph(verify_references=True)` export citation-ready spans with locator, quote/hash, context, CRAAP scaffold, and verification status.
+- 📝 **Docx Editing (DFM)** - Edit .docx files in Markdown via **Docx-Flavored Markdown** format. Supports legacy `.doc`, `.odt`, and `.ods` ingest via LibreOffice auto-conversion. 17 tools: ingest, read, save, list, delete, export, strict round-trip validation, DOCX→PDF/DOC/ODT, table edit planning, and Docx ↔ A2T bridges.
 - 🛡️ **DFM Integrity Checker** - Automatic validation and auto-repair at every pipeline stage (post-ingest, pre-save, post-save). Catches orphan markers, column mismatches, and format inconsistencies.
 - 📊 **A2T (Anything to Table)** - 7 operation-based tools for building professional tables from **any source** (PDF assets, Knowledge Graph, URLs, user input). Features: **Citations** (AssetRef), **Audit Trail**, **Schema Evolution**, **Templates**, **Drafting**, and **Token-efficient resumption**.
-- 🖥️ **VS Code Management Extension** - Graphical interface for monitoring server status, ingested documents, and **A2T tables/drafts** with one-click Excel export.
+- 🖥️ **VS Code Management Extension** - Graphical interface for monitoring server status, ingested documents, document artifacts, citation spans, and **A2T tables/drafts** with one-click Excel export.
 - 🔌 **MCP Server** - Exposes tools and resources to Copilot/Claude via FastMCP.
 - 🏥 **Medical Research Focus** - Optimized for medical literature, supporting Base64 image transmission for Vision AI analysis.
 
@@ -69,9 +69,9 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP Server (Modular Presentation)            │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 59 tools in 7 modules                   │   │
-│  │   document (18) │ docx (16) │ section (5)       │   │
-│  │   job (4) │ knowledge (3) │ table (7) │ profile (6) │
+│  │ tools/: 62 tools in 7 modules                   │   │
+│  │   document (19) │ docx (17) │ section (5)       │   │
+│  │   job (4) │ knowledge (3) │ table (7) │ profile (7) │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │ resources/: 13 resources in 2 modules           │   │
@@ -121,7 +121,7 @@ Visual overview for the project. All diagrams use consistent GitHub README style
 | Diagram | Description |
 |---------|-------------|
 | [01 — System Architecture](docs/diagrams/01-system-architecture.jpg) | Full stack: Telegram → Gateway → MCP Adapter → 3 MCP servers → Ollama |
-| [02 — Data Layout](docs/diagrams/02-data-layout.jpg) | 59 tools organized in 7 categories with asset-aware data tree |
+| [02 — Data Layout](docs/diagrams/02-data-layout.jpg) | 62 tools organized in 7 categories with asset-aware data tree |
 | [03 — PDF Ingestion Pipeline](docs/diagrams/03-pdf-ingestion-pipeline.jpg) | 7-stage flow from PDF upload to knowledge graph |
 | [04 — DOCX Bidirectional Edit](docs/diagrams/04-docx-edit-pipeline.jpg) | DOCX ingest → TableContext edit → round-trip save workflow |
 | [05 — Knowledge Graph Search](docs/diagrams/05-knowledge-graph-search.jpg) | Cross-document search with 3 parallel query paths |
@@ -138,7 +138,7 @@ Visual overview for the project. All diagrams use consistent GitHub README style
 # Install dependencies (using uv) — default install skips Marker/torch
 uv sync
 
-# v0.6.27: Marker extra is temporarily empty because marker-pdf pins
+# v0.6.28: Marker extra is temporarily empty because marker-pdf pins
 # Pillow<11 while the secure runtime requires Pillow>=12.2.0.
 # Use the default PyMuPDF backend until upstream marker-pdf supports patched Pillow.
 
@@ -156,7 +156,7 @@ Installation scope note:
 - Runtime data stays with your repo: `.env` and `assetAwareMcp.dataDir` default to `./data`, so ingested assets and the uv cache used by the launched server remain scoped to the current workspace.
 
 Marker note:
-In v0.6.27 the packaged Marker extra is intentionally on security hold: upstream `marker-pdf` 1.10.2 requires `Pillow<11`, while this release pins `Pillow>=12.2.0` for patched image-processing security. Default installs use the PyMuPDF backend only. `use_marker=True` / `parse_pdf_structure` will report that Marker is unavailable until upstream Marker supports a patched Pillow range.
+In v0.6.28 the packaged Marker extra is intentionally on security hold: upstream `marker-pdf` 1.10.2 requires `Pillow<11`, while this release pins `Pillow>=12.2.0` for patched image-processing security. Default installs use the PyMuPDF backend only. `use_marker=True` / `parse_pdf_structure` will report that Marker is unavailable until upstream Marker supports a patched Pillow range.
 
 ## 🔌 MCP Tools
 
@@ -167,27 +167,28 @@ In v0.6.27 the packaged Marker extra is intentionally on security hold: upstream
 | `ingest_documents` | Process PDF files with PyMuPDF; `use_marker=True` currently falls back or fails closed while Marker is on security hold |
 | `list_documents` | List all ingested documents and their asset counts |
 | `delete_document` | Delete an ingested PDF, its local artifacts, and LightRAG index entries when enabled |
-| `convert_pdf_to_docx` | Reconstruct a readable DOCX from extracted PDF content |
-| `convert_pdf_to_pptx` | Rebuild editable PPTX slides from extracted PDF markdown and figures |
+| `convert_pdf_to_docx` | Reconstruct a readable DOCX from extracted PDF content; defaults to a conversion background job |
+| `convert_pdf_to_pptx` | Rebuild editable PPTX slides from extracted PDF markdown and figures; defaults to a conversion background job |
 | `inspect_document_manifest` | Inspect document structure before fetching specific assets |
 | `fetch_document_asset` | Precisely retrieve tables (MD) / figures (B64) / sections |
-| `parse_pdf_structure` | Queue structured parsing work; Marker output is unavailable in v0.6.27 until upstream Marker supports patched Pillow |
+| `parse_pdf_structure` | Queue structured parsing work; Marker output is unavailable in v0.6.28 until upstream Marker supports patched Pillow |
 | `search_source_location` | Search exact source locations with page + bbox for verification |
 | `export_document_segmentation` | Export normalized `segmentation.json` with reading order + line ranges |
 | `visualize_document_layout` | Render page overlay images for bbox / type / reading-order inspection |
 | `ocr_pdf_document` | Run OCR preprocessing and generate a cleaned PDF for later ETL |
 | `find_evidence_spans` | Search citation-ready spans with source revision, locator, hash, and CRAAP scaffold |
 | `verify_citation_ref` | Verify span AssetRefs against the current citation index and locator metadata |
+| `citation_bundle` | Export verified evidence bundles with AssetRef, quote/hash, locator, context, CRAAP scaffold, and verification status |
 | `document` | Operation-based facade over PDF ingest/list/delete/inspect/parse |
 | `document_asset` | Operation-based facade over asset fetch and section tree/detail/blocks/search |
-| `evidence` | Operation-based facade over citation span find/verify/source-location search |
-| `convert_document` | Operation-based facade for PDF, DOCX/DFM, and Markdown conversions |
+| `evidence` | Operation-based facade over citation span find/verify/source-location search and bundle export |
+| `convert_document` | Operation-based facade for PDF, DOCX/DFM, and Markdown conversions; conversion paths default to background jobs |
 
 ### Job Management Tools
 
 | Tool | Purpose |
 |------|---------|
-| `get_job_status` | Get async ingestion job progress and final result |
+| `get_job_status` | Get async ingestion/conversion job progress and final result |
 | `list_jobs` | List active or historical ETL jobs |
 | `cancel_job` | Cancel a running ETL job |
 | `job` | Operation-based facade over job get/list/cancel |
@@ -196,12 +197,12 @@ In v0.6.27 the packaged Marker extra is intentionally on security hold: upstream
 
 | Tool | Purpose |
 |------|---------|
-| `consult_knowledge_graph` | Citation-aware knowledge graph query with `structured`, `data`, and `text` response modes |
+| `consult_knowledge_graph` | Citation-aware knowledge graph query with `structured`, `data`, `text`, and optional verified evidence bundles |
 | `export_knowledge_graph` | Export graph summary / JSON / Mermaid for inspection |
 | `knowledge` | Operation-based facade over knowledge graph consult/export |
 
 Knowledge graph note:
-- `consult_knowledge_graph` defaults to `response_mode="structured"` and can return `answer`, `references`, `metadata`, `retrieval`, and `counts` for agent-side citation workflows.
+- `consult_knowledge_graph` defaults to `response_mode="structured"` and can return `answer`, `references`, `metadata`, `retrieval`, `counts`, and `verified_evidence` when `verify_references=true`.
 - Use `response_mode="data"` when you want retrieval payloads without final answer synthesis, or `response_mode="text"` for legacy plain-text behavior.
 
 ### Section Navigation Tools (Dynamic Hierarchy)
@@ -226,16 +227,17 @@ Knowledge graph note:
 | `list_docx_blocks` | List document block structure |
 | `list_docx_documents` | List all ingested DOCX/DFM documents |
 | `delete_docx` | Delete an ingested DOCX/DFM document and its local artifacts |
-| `convert_docx_to_pdf` | Export the current DOCX/DFM state to PDF in fidelity mode |
-| `convert_docx_to_doc` | Export the current DOCX/DFM state to DOC in fidelity mode |
+| `convert_docx_to_pdf` | Export the current DOCX/DFM state to PDF in fidelity mode; defaults to a conversion background job |
+| `convert_docx_to_doc` | Export the current DOCX/DFM state to DOC in fidelity mode; defaults to a conversion background job |
 | `docx_validate_roundtrip` | 6-dimension round-trip fidelity validation + file-level comparison (SHA-256, ZIP diff) |
 | `docx_table_to_context` | Bridge: Docx table → A2T context |
 | `docx_table_from_context` | Bridge: A2T table → Docx table |
 | `docx_chart_data` | Extract chart data from Docx |
-| `export_markdown` | Export Markdown to .docx/.pdf/.doc |
-| `convert_docx_to_odt` | Export the current DOCX/DFM state to ODT |
+| `docx_table_edit_plan` | Preview table cell/row/column/header changes and structural risks before write-back |
+| `export_markdown` | Export Markdown to .docx/.pdf/.doc; defaults to a conversion background job |
+| `convert_docx_to_odt` | Export the current DOCX/DFM state to ODT; defaults to a conversion background job |
 | `docx` | Operation-based facade over DOCX/DFM ingest/get/save/list/delete/blocks/validate |
-| `docx_table` | Operation-based facade over DOCX table to_context/from_context/chart_data |
+| `docx_table` | Operation-based facade over DOCX table to_context/from_context/chart_data/edit_plan |
 
 ### A2T (Anything to Table) Tools — 7 Operation-Based Tools
 
@@ -263,7 +265,8 @@ Different journals/formats need different extraction settings. Use these tools t
 | `get_current_etl_profile` | Show currently active profile |
 | `set_etl_profile` | Switch profile for subsequent document ingestion |
 | `load_etl_profile_from_json` | Load custom profile from JSON file |
-| `etl_profile` | Operation-based facade over profile list/get/current/set/load |
+| `detect_etl_profile` | Detect the best built-in profile from PDF path, doc_id, or sample text |
+| `etl_profile` | Operation-based facade over profile list/get/current/set/load/detect |
 
 ## 🔧 Tech Stack
 
@@ -280,7 +283,7 @@ Different journals/formats need different extraction settings. Use these tools t
 
 Installation guidance:
 - Default install: `uv sync`
-- Marker backend: temporarily disabled in v0.6.27 because `marker-pdf` pins vulnerable `Pillow<11`; the `marker` / `pdf` extras are compatibility placeholders until upstream supports patched Pillow.
+- Marker backend: temporarily disabled in v0.6.28 because `marker-pdf` pins vulnerable `Pillow<11`; the `marker` / `pdf` extras are compatibility placeholders until upstream supports patched Pillow.
 - VS Code extension: `assetAwareMcp.enableMarkerBackend` is retained as a setting, but the launcher will not install `marker-pdf` while the security hold is active.
 
 - [Technical Spec](docs/spec.md) - Detailed technical specification

@@ -115,10 +115,10 @@ PAGES = [
         "all",
         "reference",
         "MCP Tools",
-        "Complete 59-tool public MCP surface by module.",
+        "Complete 62-tool public MCP surface by module.",
         "MCP-Tools.md",
         "MCP 工具",
-        "依 module 整理的完整 59-tool MCP surface。",
+        "依 module 整理的完整 62-tool MCP surface。",
     ),
     Page(
         "mcp-resources",
@@ -296,13 +296,13 @@ code locations.
 
 | Item | Current Status |
 |---|---|
-| Latest code version | `0.6.27` |
+| Latest code version | `0.6.28` |
 | Runtime | Python `>=3.10`, managed with `uv` |
-| MCP endpoints | 59 tools and 13 resources, 72 endpoints total |
-| PDF backend | PyMuPDF by default; Marker is on security hold in `0.6.27` |
+| MCP endpoints | 62 tools and 13 resources, 75 endpoints total |
+| PDF backend | PyMuPDF by default; Marker is on security hold in `0.6.28` |
 | DOCX | DOCX/DOC/DFM round trip, Track Changes, LibreOffice conversion, strict validation |
-| Knowledge graph | LightRAG (`lightrag-hku`) with Ollama/OpenAI-compatible backends |
-| VS Code extension | Native MCP provider plus Cline/Codex/Copilot config merge and harness sync |
+| Knowledge graph | LightRAG (`lightrag-hku`) with Ollama/OpenAI-compatible backends and verified citation bundles |
+| VS Code extension | Native MCP provider plus Cline/Codex/Copilot config merge, harness sync, and artifact/citation viewer |
 
 ## Reading Path
 

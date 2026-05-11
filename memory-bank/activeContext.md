@@ -1,5 +1,13 @@
 # Active Context
 
+## 2026-05-11 - v0.6.28 feature release prep
+
+- Preparing `v0.6.28` from `master` after adding six requested capability refinements: conversion background jobs, verified citation bundle export, KG answers with verified evidence, DOCX table structural edit plans, ETL profile auto-detect, and a VSIX artifact/citation viewer.
+- Current endpoint inventory is 62 tools in 7 modules and 13 resources in 2 modules, 75 MCP endpoints total.
+- Focused validation has passed for the new Python tools and services, MCP tool registration/counts, VSIX EnvManager and DocumentTreeProvider behavior, TypeScript compile/lint/unit slices, Ruff checks, and formatting on changed Python files.
+- Docs/site/MEM are aligned to `0.6.28`, refreshed wiki assets are regenerated, and local release gates pass for Python, docs, VSIX unit/package, build artifacts, and release audits.
+- Remaining environment caveats before publication are host-level only: VSIX install smoke is blocked by missing `libgbm.so.1` when using downloaded VS Code and by a hanging remote `code-insiders` CLI, while Docker smoke is blocked by missing Docker buildx/BuildKit support.
+
 ## 2026-05-11 - Git harness hygiene and wiki documentation setup
 
 - Follow-up multi-subagent documentation alignment completed after the human-facing docs site was reviewed against the actual code. Corrections were made for MCP tool/resource contracts, `knowledge-graph://summary`, PDF artifact names (`{doc_id}_full.md`, `{doc_id}_manifest.json`, `citation_index.jsonl`), background-job/conversion boundaries, DOCX/DFM supported formats and safe-write limits, A2T `resume`, ETL profile activation semantics, Knowledge Graph response modes/timeouts, VSIX runtime cache behavior, assistant asset sync scope, and Code Map coverage.
@@ -8,7 +16,7 @@
 - Main worktree was fast-forwarded from the stale local checkout to `origin/master` / `v0.6.27`; four older VSIX-installed LLM wiki harness files were moved to `/tmp/asset-aware-harness-backup-20260511091421` before the fast-forward because the same paths are now tracked upstream.
 - VSIX-managed assistant harness source paths were marked local-only with `git update-index --skip-worktree` to keep automatic extension sync from dirtying normal feature work: `AGENTS.md`, `.github/copilot-instructions.md`, `.github/agents`, `.github/bylaws`, `.claude/skills`, `.cline/skills`, `.codex/skills`, and `.clinerules`.
 - `scripts/count_tools.sh` and `scripts/count_tools.ps1` were fixed to skip helper modules with zero MCP endpoints; focused regression coverage now lives in `tests/unit/test_count_tools_script.py`.
-- Current endpoint inventory from the repaired script is 59 tools in 7 modules and 13 resources in 2 modules, 72 MCP endpoints total.
+- Endpoint inventory from the repaired script was 59 tools in 7 modules and 13 resources in 2 modules, 72 MCP endpoints total before the later `0.6.28` feature additions.
 - A full GitHub Wiki page set was authored in `/tmp/asset-aware-mcp.wiki` and mirrored into `docs/wiki/` for versioned source control. The page set includes Home, sidebar, architecture, all MCP tools/resources, PDF/DOCX/A2T/KG/jobs/profiles workflows, VSIX setup, Git harness hygiene, developer/release guide, and code map.
 - Existing docs diagrams were reviewed as source material, but several embedded stale counts/versions such as `48 tools` made them unsafe for the current wiki. A new web-sized diagram batch was generated with Pillow under `docs/wiki/assets/`, covering architecture, endpoint map, PDF, DOCX/DFM, citation provenance, A2T, knowledge graph, jobs, ETL profiles, VSIX setup, and Git harness hygiene.
 - After the GitHub Wiki was initialized, `/tmp/asset-aware-mcp.wiki` was merged with the remote initial page using `--allow-unrelated-histories` and pushed to `asset-aware-mcp.wiki.git`; remote `master` now points at `d6b3a17`.
@@ -69,7 +77,7 @@
 
 ## Current Goals
 
-- Complete the `0.6.27` security/release-hygiene patch with exact-path staging, clean-worktree verification, push, and annotated tag publication while leaving unreviewed LLM-wiki harness drafts, repo-assets mirrors, PDFs, ad-hoc agents, and test artifacts unstaged.
+- Complete the `0.6.28` feature release with docs/wiki/site/MEM alignment, full local gates, exact-path segmented commits, push, GitHub Wiki/Pages verification, and annotated tag publication while leaving VSIX-managed harness auto-sync paths ignored locally.
 
 - 正在完成 0.6.16 release prep：整合 multi-agent repo review 修正，完成 Marker/LightRAG/PyMuPDF/segmentation/table/DOCX/VSIX/release hygiene 補強，並進行 MEM+GIT+PUSH+TAG 發布。
 
@@ -197,7 +205,7 @@ src/
 ├── domain/          # 🔵 核心業務邏輯 (+docx_entities, docx_value_objects)
 ├── application/     # 🟢 使用案例 (+docx_service, dfm_table_bridge)
 ├── infrastructure/  # 🟠 外部依賴實作 (+docx_adapter, dfm_parser, dfm_renderer, docx_validator)
-└── presentation/    # 🔴 MCP Server (59 tools in 7 modules, 13 resources)
+└── presentation/    # 🔴 MCP Server (62 tools in 7 modules, 13 resources)
     ├── tools/
     │   ├── document_tools.py   # ETL + document management (11)
     │   ├── docx_tools.py       # Docx DFM + conversion (16) — core + validator + bridge

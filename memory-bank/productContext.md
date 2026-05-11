@@ -41,11 +41,11 @@ Local Storage
 - 🧩 Unified segmentation 匯出（reading order + markdown line span）
 - 🖼️ Layout overlay 偵錯（直接檢查 bbox / type / order）
 - 🔤 Optional OCR preprocessing（掃描 PDF 按需前處理）
-- 📝 Docx ↔ DFM 即時編輯與互轉 (16 tools, 6D validator + strict gate)
+- 📝 Docx ↔ DFM 即時編輯與互轉 (17 tools, 6D validator + strict gate + table edit planning)
 - 🗺️ Document Manifest 生成 (Asset 清單)
 - 📊 A2T 表格系統 (7 operation-based tools)
-- 🧠 LightRAG 知識圖譜建立
-- 🔌 MCP Tools (59 tools in 7 modules, 13 resources) 暴露給 Agent
+- 🧠 LightRAG 知識圖譜建立，可選 verified evidence bundle
+- 🔌 MCP Tools (62 tools in 7 modules, 13 resources) 暴露給 Agent
 - 🧩 Cline-safe Marker background jobs with isolated subprocess execution and
   explicit job status artifacts/warnings for long-running structure parsing
 
@@ -71,7 +71,7 @@ Local Storage
 - ruff, mypy
 
 ---
-*Last updated: 2026-05-07*
+*Last updated: 2026-05-11*
 
 
 ## Project Description

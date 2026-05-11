@@ -244,8 +244,8 @@ def main() -> int:
         require_text(
             "vscode-extension/README.md",
             [
-                "MCP Tools (59 total)",
-                "Document ETL (18)",
+                "MCP Tools (62 total)",
+                "Document ETL (19)",
                 "find_evidence_spans",
                 "verify_citation_ref",
             ],

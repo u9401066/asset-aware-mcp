@@ -31,6 +31,8 @@ npm run sync-assets:check
 npm run test:install-smoke
 ```
 
+`test:install-smoke` 需要可執行的 VS Code CLI；Linux headless activation 另需 `xvfb-run`，下載版 VS Code 也需要系統圖形 runtime libraries（例如 `libgbm.so.1`）。
+
 ## Release Harness
 
 ```bash
@@ -59,9 +61,9 @@ Release workflow 會檢查：
 目前輸出：
 
 ```text
-Total tools:      59 tools in 7 modules
+Total tools:      62 tools in 7 modules
 Total resources:  13 resources in 2 modules
-Grand total:      72 MCP endpoints
+Grand total:      75 MCP endpoints
 ```
 
 ## Docker Smoke
@@ -72,3 +74,4 @@ docker run --rm --entrypoint python asset-aware-mcp:smoke -c "import src.present
 ```
 
 Docker build context 已忽略 local uv/runtime caches、assistant harness folders 與 document processing artifacts，避免 release smoke 被本機輸出拖慢或污染。
+目前 Dockerfile 使用 cache mount，因此本機 Docker smoke 需要 BuildKit/buildx 可用。

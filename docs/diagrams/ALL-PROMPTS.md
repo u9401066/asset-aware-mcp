@@ -16,7 +16,7 @@
 
 ## Diagram 02: Data Layout
 **File:** `02-data-layout.jpg`
-**Description:** 59 tools organized in 7 categories with asset-aware data tree structure
+**Description:** 62 tools organized in 7 categories with asset-aware data tree structure
 
 ---
 

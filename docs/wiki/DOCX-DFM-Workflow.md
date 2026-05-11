@@ -74,6 +74,8 @@ Strict mode 會抓 run-level formatting drift，不只比較 body text。
 
 ## Conversion
 
+DOCX/DFM conversion 現在預設建立 background conversion job，避免 LibreOffice 或大型輸出卡住 MCP request path。所有 conversion tool 都保留 `async_mode=false` 作為同步相容路徑。
+
 | Tool | 目標 |
 |---|---|
 | `convert_docx_to_pdf` | PDF |
@@ -87,7 +89,8 @@ Strict mode 會抓 run-level formatting drift，不只比較 body text。
 |---|---|
 | `docx_table_to_context` | DOCX table block -> A2T TableContext |
 | `docx_table_from_context` | TableContext -> DFM table block |
+| `docx_table_edit_plan` | 寫回前預覽 update_cell / add_rows / delete_rows / add_columns / rename_columns 與 structural risk |
 | `docx_chart_data` | DOCX chart data -> TableContext |
-| `docx_table(...)` | consolidated bridge |
+| `docx_table(...)` | consolidated bridge，支援 `op="edit_plan"` |
 
-這讓 Word 內的表格可以進入 A2T 編輯、引用、history 和 rendering pipeline，再安全寫回文件。
+這讓 Word 內的表格可以進入 A2T 編輯、引用、history 和 rendering pipeline，再安全寫回文件。若 `docx_table_edit_plan` 顯示 structural change，建議先輸出 copy、套用後跑 `docx_validate_roundtrip(strict=true)`，不要把 row/column 變更當成單純 cell text update。

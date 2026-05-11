@@ -6,7 +6,7 @@
 
 ETL profile 控制 heading detection、caption/table/figure filters、section keyword、numbered section pattern 與出版格式差異。它讓同一套 PDF ingest pipeline 可以適應 arXiv、Nature、IEEE、Elsevier 等格式。
 
-來源：`src/domain/etl_profile.py`、`src/presentation/tools/profile_tools.py`。
+來源：`src/domain/etl_profile.py`、`src/application/etl_profile_detector.py`、`src/presentation/tools/profile_tools.py`。
 
 ## 內建 profiles
 
@@ -27,7 +27,18 @@ ETL profile 控制 heading detection、caption/table/figure filters、section ke
 | `get_current_etl_profile` | 查詢 active profile |
 | `set_etl_profile` | 切換 active profile |
 | `load_etl_profile_from_json` | 載入自訂 JSON profile |
+| `detect_etl_profile` | 從 PDF、已攝入 doc_id 或 sample text 偵測建議 profile，可選擇立即 activate |
 | `etl_profile` | consolidated profile entrypoint |
+
+## Auto Detect
+
+```text
+detect_etl_profile(pdf_path="/path/paper.pdf", sample_pages=3)
+detect_etl_profile(doc_id="doc_...", activate=true)
+etl_profile(op="detect", sample_text="...", activate=false)
+```
+
+Profile detector 會從檔名、sample text 與版面 hints 推估 `default`、`arxiv`、`ieee`、`nature`、`elsevier`，並回傳 `recommended_profile`、`confidence`、`scores` 與 reasons。`activate=true` 會在偵測後切換 active profile；若只是想檢查建議，保持預設 `activate=false`。
 
 ## 自訂 profile
 

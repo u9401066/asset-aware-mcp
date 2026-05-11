@@ -16,7 +16,7 @@ PDF pipeline 將原始 PDF 轉成可檢索、可視覺化、可引用的文件 a
 - `document(op="ingest", ...)`
 - `parse_pdf_structure(...)`，Marker 專用 high-precision parse job
 
-預設後端是 PyMuPDF。`0.6.27` 的 Marker extra 暫時為空，因為 `marker-pdf` 對 Pillow 的舊版 pin 會和安全 runtime 衝突。`parse_pdf_structure(...)` 是 Marker-required background job；security hold 或 backend unavailable 會出現在 job status/result 裡。一般 `ingest_documents(use_marker=true)` 會把 Marker preference 傳進 job，Marker 不可用時可退回 PyMuPDF；若 `require_marker=true` 則 fail closed。
+預設後端是 PyMuPDF。`0.6.28` 的 Marker extra 暫時為空，因為 `marker-pdf` 對 Pillow 的舊版 pin 會和安全 runtime 衝突。`parse_pdf_structure(...)` 是 Marker-required background job；security hold 或 backend unavailable 會出現在 job status/result 裡。一般 `ingest_documents(use_marker=true)` 會把 Marker preference 傳進 job，Marker 不可用時可退回 PyMuPDF；若 `require_marker=true` 則 fail closed。
 
 ## 產物
 
@@ -68,9 +68,12 @@ OCR 後的 PDF 可再進入正常 ingest。
 | `search_source_location` | 依文字查 page/bbox/block |
 | `find_evidence_spans` | 找 citation-ready spans |
 | `verify_citation_ref` | 驗證引用 ref 是否仍有效 |
+| `citation_bundle` | 匯出 verified evidence bundle，含 AssetRef、locator、hash、context 與 verification |
 | `fetch_document_asset` | 擷取 table/figure/section/full_text |
 | `document_asset(...)` | consolidated asset/search/section 入口 |
 
 ## Conversion
 
-`convert_pdf_to_docx` 與 `convert_pdf_to_pptx` 以已攝入 artifacts 為來源，支援 `output_path` 與 conversion `mode`，目前在 tool request path 內同步執行並回報 progress，不屬於 job-backed conversion。對於 Markdown 直接輸出，使用 `convert_document(...)` 或 DOCX workflow 的 `export_markdown(...)`。
+`convert_pdf_to_docx` 與 `convert_pdf_to_pptx` 以已攝入 artifacts 為來源，支援 `output_path`、conversion `mode` 與 `async_mode`。預設 `async_mode=true` 會建立 background conversion job，使用 `get_job_status(job_id)` 追蹤 output artifact；若需要舊式同步結果，可設 `async_mode=false`。
+
+對於跨格式入口，使用 `convert_document(...)`；Markdown 直接輸出則使用 DOCX workflow 的 `export_markdown(...)`，同樣預設走 conversion job。
