@@ -57,12 +57,13 @@
 | `src/infrastructure/dfm_parser.py` | DFM -> IR/parser |
 | `src/infrastructure/dfm_renderer.py` | IR -> DFM/Markdown rendering |
 | `src/infrastructure/docx_validator.py` | DOCX round-trip validation |
-| `src/infrastructure/markdown_converter.py` | Markdown -> DOCX/PDF/DOC conversion |
+| `src/infrastructure/markdown_converter.py` | Markdown -> DOCX/PDF/DOC/ODT conversion |
 | `src/infrastructure/excel_renderer.py` | Table rendering/export helpers |
 | `src/infrastructure/layout_visualizer.py` | PDF layout overlay generation |
 | `src/infrastructure/ocr_processor.py` | `ocrmypdf` wrapper |
 | `src/infrastructure/lightrag_adapter.py` | LightRAG/Ollama/OpenAI backend |
 | `src/infrastructure/subprocess_ingest_worker_runner.py` | Isolated worker process runner |
+| `src/infrastructure/encoding_guard.py` | Fail-closed encoding/BOM/ZIP/input safety guard |
 | `src/infrastructure/config.py` | Runtime configuration |
 
 ## Presentation
@@ -75,7 +76,7 @@
 | `src/presentation/mcp_context.py` | Progress/log helpers |
 | `src/presentation/markdown_utils.py` | Presentation markdown formatting helpers |
 | `src/presentation/ingest_worker_main.py` | Isolated worker entrypoint |
-| `src/presentation/tools/*.py` | 59 MCP tools |
+| `src/presentation/tools/{document,docx,job,knowledge,profile,section,table}_tools.py` | 59 public MCP tools；`citation_support.py` 為 shared helper |
 | `src/presentation/resources/*.py` | 13 MCP resources |
 
 ## VS Code Extension
@@ -104,6 +105,9 @@
 | 檔案 | 功能 |
 |---|---|
 | `scripts/count_tools.sh` / `.ps1` | MCP endpoint inventory |
+| `scripts/build_docs_site.py` | GitHub Pages docs payload builder |
+| `scripts/check_cline_skills.py` | Cline skill packaging/sync check |
+| `scripts/get_version.py` | Single-source project version helper |
 | `scripts/release.sh` | Local release orchestration |
 | `scripts/audit_release_artifacts.py` | Wheel/sdist/VSIX artifact audit |
 | `scripts/audit_release_harness.py` | Harness packaging audit |

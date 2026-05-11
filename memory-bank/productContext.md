@@ -109,10 +109,10 @@ Medical RAG with Asset-Aware MCP - Precise PDF asset retrieval (tables, figures,
 ┌─────────────────────▼───────────────────────────────────┐
 │                   Local Storage                         │
 │  ./data/                                                │
-│  ├── doc_{id}/        # Document Assets                 │
+│  ├── {doc_id}/        # PDF document artifacts          │
 │  ├── tables/          # A2T Tables (JSON/MD/XLSX)       │
 │  │   └── drafts/      # Table Drafts (Persistence)      │
-│  └── lightrag/        # Knowledge Graph                 │
+│  └── lightrag_db/     # Knowledge Graph                 │
 └─────────────────────────────────────────────────────────┘
 
 

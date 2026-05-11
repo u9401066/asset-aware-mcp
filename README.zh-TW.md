@@ -37,9 +37,9 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 
 ## ✨ 特色
 
-- 📄 **資產感知 ETL** - PDF → Markdown，**雙引擎** PDF 解析：
+- 📄 **資產感知 ETL** - PDF → Markdown，以 PyMuPDF 為預設解析路徑並保留 Marker code path：
   - **PyMuPDF**（預設）- 快速提取（~50MB）
-  - **Marker**（可選，`use_marker=True`）- 高精度結構化解析，產出含 bbox 座標的 `blocks.json`
+  - **Marker**（`use_marker=True`）- 高精度結構化解析 code path 保留；v0.6.27 packaged runtime 因 upstream `marker-pdf` 尚未支援 patched Pillow 而暫時 security hold
 - 🧩 **統一 Segmentation 匯出** - 產生正規化 `segmentation.json`，整合 manifest、blocks、reading order 與持久化 line span。
 - 🖼️ **版面 Overlay 偵錯** - 可從 `original.pdf` 產生 page overlay，直接檢查 bbox、區塊類型與 reading order。
 - 🔤 **按需 OCR 前處理** - 針對掃描型 PDF 提供可選 `ocrmypdf` 前處理流程，再進行 ETL。
@@ -48,7 +48,7 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 🗺️ **文件清單 (Manifest)** - 為 Agent 提供結構化的文件「地圖」，實現精確數據存取。
 - 🧠 **LightRAG 整合** - 知識圖譜 + 向量索引，支援跨文件對比與推理。
 - 🧾 **Citation-Aware KG 輸出** - `consult_knowledge_graph` 現在可直接回傳結構化 answer/reference payload，方便後續 agent workflow 直接做 citation-aware 處理。
-- 📝 **Docx 即時編輯 (DFM)** - 以 Markdown 格式編輯 .docx 檔案，透過 **Docx-Flavored Markdown** 格式。支援 `.doc`、`.odt`、`.ods` 經 LibreOffice 自動轉換後攝入。提供 14 個工具：匯入、讀取、儲存、列出、刪除、匯出、strict 往返保真驗證、DOCX→PDF、DOCX→DOC、DOCX→ODT，以及 Docx ↔ A2T 表格橋接。
+- 📝 **Docx 即時編輯 (DFM)** - 以 Markdown 格式編輯 .docx 檔案，透過 **Docx-Flavored Markdown** 格式。支援 `.docx` / `.docm`，也支援 `.doc`、`.odt`、`.ods` 經 LibreOffice 自動轉換後攝入。提供 16 個工具：匯入、讀取、儲存、列出、刪除、匯出、strict 往返保真驗證、DOCX→PDF、DOCX→DOC、DOCX→ODT，以及 Docx ↔ A2T 表格橋接。
 - 📊 **A2T (Anything to Table)** - 7 個 operation-based 工具，從**任意來源**（PDF 資產、知識圖譜、URL、使用者輸入）建立專業表格。支援：**引用管理** (AssetRef)、**變更審計**、**Schema 演進**、**模板**、**草稿機制**與**節省 Token 的續作模式**。
 - 🖥️ **VS Code 管理擴充功能** - 提供圖形化介面監控伺服器狀態、已匯入文件，以及 **A2T 表格與草稿**，支援一鍵開啟 Excel。
 - 🔌 **MCP 伺服器** - 透過 FastMCP 向 Copilot/Claude 開放工具與資源。
@@ -84,7 +84,7 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 ┌─────────────────────▼───────────────────────────────────┐
 │                      本地儲存                           │
 │  ./data/                                                │
-│  ├── doc_{id}/        # 文件資產 (Markdown/圖片)        │
+│  ├── {doc_id}/        # PDF 文件 artifacts             │
 │  ├── docx_{id}/       # Docx IR + DFM + 資產            │
 │  ├── tables/          # A2T 表格 (JSON/MD/XLSX)         │
 │  │   └── drafts/      # 表格草稿 (持久化)               │
@@ -116,12 +116,12 @@ asset-aware-mcp/
 | 圖表 | 說明 |
 |-----|------|
 | [01 — 系統架構](docs/diagrams/01-system-architecture.jpg) | 完整架構：Telegram → Gateway → MCP Adapter → Ollama |
-| [02 — 資料結構](docs/diagrams/02-data-layout.jpg) | 50 工具分 7 大類 + 資料樹狀圖 |
+| [02 — 資料結構](docs/diagrams/02-data-layout.jpg) | 59 工具分 7 大類 + 13 resources / 72 endpoints |
 | [03 — PDF 解讀流程](docs/diagrams/03-pdf-ingestion-pipeline.jpg) | 7 階段流程：PDF 上傳 → 知識圖譜 |
 | [04 — DOCX 雙向編輯](docs/diagrams/04-docx-edit-pipeline.jpg) | DOCX 吃入 → TableContext 編輯 → 往返存檔 |
 | [05 — 知識圖譜搜尋](docs/diagrams/05-knowledge-graph-search.jpg) | 跨文件搜尋的三條平行路徑 |
 | [06 — 安裝步驟](docs/diagrams/06-installation-steps.jpg) | 7 步驟從 clone 到驗證 |
-| [07 — PDF ETL 流程](docs/diagrams/07-pdf-etl-pipeline.jpg) | 雙引擎解析：PyMuPDF + Marker |
+| [07 — PDF ETL 流程](docs/diagrams/07-pdf-etl-pipeline.jpg) | PyMuPDF 預設路徑 + Marker security-hold diagnostics |
 | [08 — KG 架構](docs/diagrams/08-knowledge-graph-architecture.jpg) | lightrag-hku 三層知識圖譜架構 |
 | [09 — Agent Harness 概念](docs/diagrams/09-agent-harness-concept.jpg) | 給無狀態代理使用的 assistant harness 模型 |
 
@@ -147,8 +147,8 @@ VS Code 擴充套件在透過 `uv` / `uvx` 啟動 MCP server 時，會優先使�
 
 安裝範圍說明：
 - VSIX 以使用者（全域）範圍安裝，不需要為每個 workspace 重複安裝。
-- MCP 伺服器透過 `uvx asset-aware-mcp` 啟動並重用使用者層級的 uv 快取，升級時也不會重新安裝整個環境。
-- 執行時資料留在 workspace：`.env` 與 `assetAwareMcp.dataDir` 預設指向 `./data`，讓攝入結果跟著專案存放，避免佔用全域資源。
+- MCP launch env 預設將 `DATA_DIR` 指向 workspace `./data`，並將 `UV_CACHE_DIR` 指向 `DATA_DIR/.uv-cache`；Prepare Server Runtime 會預熱 workspace `.uv-cache`，只有在沒有 workspace 時才 fallback 到 extension global storage。
+- 執行時資料留在 workspace：`.env` 與 `assetAwareMcp.dataDir` 預設指向 `./data`，讓攝入結果與 launched server 使用的 uv cache 跟著專案存放，避免佔用全域資源。
 
 Marker 說明：
 v0.6.27 將 Marker backend 暫時放入 security hold：upstream `marker-pdf` 1.10.2 需要 `Pillow<11`，但本版安全 runtime 需要 `Pillow>=12.2.0`。預設安裝只使用 PyMuPDF 後端；`use_marker=True` / `parse_pdf_structure` 會回報 Marker 暫不可用，直到 upstream Marker 支援 patched Pillow。
@@ -159,14 +159,14 @@ v0.6.27 將 Marker backend 暫時放入 security hold：upstream `marker-pdf` 1.
 
 | 工具 | 用途 |
 |------|------|
-| `ingest_documents` | 處理 PDF 檔案，可選用 Marker 後端 (`use_marker=True` 產出 blocks.json) |
+| `ingest_documents` | 以 PyMuPDF 處理 PDF；`use_marker=True` 目前會在 Marker security hold 時 fallback 或 fail closed |
 | `list_documents` | 列出所有已攝入文件與資產統計 |
 | `delete_document` | 刪除已攝入 PDF、本地 artifacts，以及啟用時對應的 LightRAG 索引 |
 | `convert_pdf_to_docx` | 將 PDF 內容層重建為可讀 DOCX |
 | `convert_pdf_to_pptx` | 依據 PDF Markdown 與圖像重建可編輯的 PPTX 投影片 |
 | `inspect_document_manifest` | 在抓取資產前先檢視文件結構 |
 | `fetch_document_asset` | 精確獲取表格 (MD) / 圖片 (B64) / 章節內容 |
-| `parse_pdf_structure` | 使用 Marker 進行高精度結構化 PDF 解析 |
+| `parse_pdf_structure` | 建立 Marker-required background job；v0.6.27 會在 upstream Marker 支援 patched Pillow 前回報 unavailable |
 | `search_source_location` | 搜尋精確來源位置（頁碼 + bbox） |
 | `export_document_segmentation` | 匯出含 reading order 與 line range 的統一 `segmentation.json` |
 | `visualize_document_layout` | 產生 page overlay，檢查 bbox / 類型 / reading order |
@@ -219,7 +219,7 @@ v0.6.27 將 Marker backend 暫時放入 security hold：upstream `marker-pdf` 1.
 | `docx_table_to_context` | 橋接：Docx 表格 → A2T 上下文 |
 | `docx_table_from_context` | 橋接：A2T 表格 → Docx 表格 |
 | `docx_chart_data` | 提取 Docx 圖表數據 |
-| `export_markdown` | 匯出 Markdown 為 .docx/.pdf/.doc |
+| `export_markdown` | 匯出 Markdown 為 .docx/.pdf/.doc/.odt |
 
 ### A2T (Anything to Table) 工具 — 7 個 Operation-Based 工具
 
@@ -268,7 +268,7 @@ v0.6.27 將 Marker backend 暫時放入 security hold：upstream `marker-pdf` 1.
 | 類別 | 技術 |
 |----------|------------|
 | 語言 | Python 3.10+ |
-| ETL | **PyMuPDF** (fitz) + **Marker** (可選，高精度) |
+| ETL | **PyMuPDF** (fitz)；**Marker** 暫時 security hold |
 | RAG | LightRAG (lightrag-hku) |
 | MCP | FastMCP |
 | 儲存 | 本地檔案系統 (JSON/Markdown/PNG) |

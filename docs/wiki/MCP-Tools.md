@@ -21,17 +21,24 @@
 | `export_document_segmentation` | `doc_id`, `page`, `limit`, `output_path` | 匯出 segmentation schema |
 | `visualize_document_layout` | `doc_id`, `page`, label/order/output options | 產生 PDF layout overlay |
 | `ocr_pdf_document` | `pdf_path`, `output_path`, OCR options | 建立 background OCR ingest job |
-| `fetch_document_asset` | `doc_id`, `asset_type`, `asset_id`, `max_size` | 依 asset identity 擷取 section/table/figure/text |
-| `document` | `op`, document ingest/parse/list/delete/convert parameters | Consolidated PDF document entrypoint |
+| `fetch_document_asset` | `doc_id`, `asset_type`, `asset_id`, `max_size` | 依 asset identity 擷取 table/figure/section/full_text |
+| `document` | `op`, PDF ingest/parse/list/delete/inspect parameters | Consolidated PDF document entrypoint；conversion 請用 `convert_document` |
 | `document_asset` | `op`, `doc_id`, asset/search/section parameters | Consolidated asset and section entrypoint |
 | `evidence` | `op`, `doc_id`, query/span/ref parameters | Consolidated citation evidence entrypoint |
 | `convert_document` | `source`, `target_format`, `source_format`, `output_path`, `mode`, `md_text` | Consolidated conversion entrypoint |
+
+Operation notes:
+
+- `document` accepts `ingest` / `import`, `parse`, `list`, `delete`, and `inspect`; PDF/DOCX/Markdown conversions live behind `convert_document`.
+- `document_asset` accepts asset fetch plus section tree/detail/blocks/search operations.
+- `evidence` accepts `find`, `verify`, and `locate` / `search_location`; the old `search` wording is avoided because the code routes citation lookup through `find`.
+- PDF ingest and Marker parse requests are job-backed; `ingest_documents(async_mode=false)` is still routed through the background job system to avoid stdio request timeouts. `parse_pdf_structure(output_dir=...)` and `ocr_pdf_document(output_path=...)` still accept compatibility parameters, but background job mode owns the final artifact paths.
 
 ## `docx_tools.py` - 16 tools
 
 | Tool | 主要參數 | 功能 |
 |---|---|---|
-| `ingest_docx` | `file_path` | 攝入 `.docx` / `.doc`，轉為 DocxIR + DFM |
+| `ingest_docx` | `file_path` | 攝入 `.docx` / `.docm`，或透過 LibreOffice 轉換 `.doc` / `.odt` / `.ods` 後轉為 DocxIR + DFM |
 | `get_docx_content` | `doc_id`, `block_id` | 讀取完整 DFM 或單一 block |
 | `save_docx` | `doc_id`, `dfm_content`, `output_path`, `from_md`, `force`, `track_changes`, `revision_author` | 將 DFM/Markdown 寫回 DOCX |
 | `list_docx_blocks` | `doc_id` | 列出 DOCX block 摘要 |
@@ -46,7 +53,7 @@
 | `docx_table_from_context` | `doc_id`, `block_id`, `table_id`, `save_dfm` | 將 TableContext 寫回 DFM 表格 |
 | `docx_chart_data` | `doc_id`, `block_id`, `register` | 擷取 DOCX 圖表底層資料 |
 | `docx_table` | `op`, table bridge parameters | Consolidated DOCX table bridge entrypoint |
-| `export_markdown` | `md_text`, `md_path`, `output_path`, `output_format` | Markdown 直接匯出 DOCX/PDF/DOC |
+| `export_markdown` | `md_text`, `md_path`, `output_path`, `output_format` | Markdown 直接匯出 DOCX/PDF/DOC/ODT |
 
 ## `job_tools.py` - 4 tools
 
@@ -95,5 +102,5 @@
 | `table_data` | 新增/讀取/更新/刪除 rows 和 cells |
 | `table_cite` | cell-level citation refs 管理 |
 | `table_history` | 變更紀錄、token 估算 |
-| `table_draft` | draft 建立、更新、加資料、恢復、提交 |
+| `table_draft` | draft 建立、更新、加資料、恢復、提交；operation 名稱為 `resume` |
 | `discover_sources` | 跨文件搜尋可用於表格的來源 |

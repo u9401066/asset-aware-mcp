@@ -60,7 +60,7 @@ Asset-Aware MCP 是一個 citation-ready 文件處理與知識工作流 MCP Serv
 
 | 工作流 | 用途 | 主要入口 |
 |---|---|---|
-| PDF ingestion | 產生 `manifest.json`、`content.md`、資產與 segmentation | `ingest_documents`、`document(op="ingest")` |
+| PDF ingestion | 產生 `{doc_id}_manifest.json`、`{doc_id}_full.md`、assets metadata 與 segmentation | `ingest_documents`、`document(op="ingest")` |
 | Citation evidence | 找出可引用 span、驗證 AssetRef | `find_evidence_spans`、`verify_citation_ref`、`evidence(...)` |
 | DOCX/DFM editing | 將 Word 轉為 DFM、編輯後保真寫回 | `ingest_docx`、`save_docx`、`docx(...)` |
 | Table extraction | 建立 A2T TableContext、附來源引用、渲染輸出 | `plan_table`、`table_manage`、`table_data`、`table_cite` |

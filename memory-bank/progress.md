@@ -2,6 +2,9 @@
 
 ## 2026-05-11
 
+- Completed a follow-up code/docs alignment pass with 3 subagents over the GitHub Pages/Wiki content. Fixed stale or incorrect docs for MCP resource URI strings, consolidated tool operation names, PDF artifact layout, citation index filenames, Marker/background-job behavior, DOCX/DFM formats and safe-write scope, A2T draft operation naming, ETL profile activation, Knowledge Graph response modes/timeouts, VSIX runtime cache/sync boundaries, and Code Map entries.
+- Added `tests/unit/test_docs_site_reference_sync.py`, which AST-parses registered `@mcp.tool()` / `@mcp.resource()` decorators and verifies the human MCP reference pages stay aligned with actual tool names and resource URIs.
+- Regenerated the GitHub Pages payload from `docs/wiki/**`; local validation passed for `python3 scripts/build_docs_site.py --check`, `node --check docs/site.js docs/site-content.js`, linked wiki images, stale-string scan, `./scripts/count_tools.sh`, `uv run pytest tests/unit/test_count_tools_script.py tests/unit/test_docs_site_reference_sync.py -q`, ruff, format check, and `git diff --check`.
 - Fast-forwarded the main worktree to `origin/master` / `v0.6.27` after moving older VSIX-installed LLM wiki harness files to `/tmp/asset-aware-harness-backup-20260511091421` so upstream tracked files could land cleanly.
 - Marked VSIX-managed assistant harness paths as local `skip-worktree` to keep extension auto-sync noise out of normal Git status while preserving the tracked source assets for release packaging.
 - Fixed `scripts/count_tools.sh` and `scripts/count_tools.ps1` so helper modules with zero endpoints no longer break counts or inflate module totals.

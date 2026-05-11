@@ -15,7 +15,7 @@
 | `resource_document_tables` | `document://{doc_id}/tables` | 列出 tables |
 | `resource_document_sections` | `document://{doc_id}/sections` | 列出 sections |
 | `resource_document_outline` | `document://{doc_id}/outline` | 文件 outline |
-| `resource_knowledge_graph_summary` | `knowledge://graph/summary` | Knowledge graph summary |
+| `resource_knowledge_graph_summary` | `knowledge-graph://summary` | Knowledge graph summary |
 
 ## `table_resources.py` - 5 resources
 

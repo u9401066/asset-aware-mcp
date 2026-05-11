@@ -36,13 +36,13 @@ Merge 原則：
 
 ## Runtime Preparation
 
-Extension 啟動 server 時會使用 pinned package version，並透過 `uv` 準備 runtime。`0.6.27` 中 runtime preparation 使用 extension-storage `UV_CACHE_DIR`，避免使用者 global uv cache 權限問題。
+Extension 啟動 server 時會使用 pinned package version，並透過 `uv` / `uvx` 準備 runtime。MCP launch env 預設把 `DATA_DIR` 放在 workspace `./data`，並把 `UV_CACHE_DIR` 放在 `DATA_DIR/.uv-cache`。Prepare Server Runtime 會使用 workspace root 的 `.uv-cache` 預熱 runtime；沒有 workspace 時才 fallback 到 extension global storage，避免依賴使用者全域 uv cache。
 
 Marker backend setting 保留，但 security hold 期間不會安裝 `marker-pdf`。
 
 ## Assistant Assets Sync
 
-VSIX 會打包 `vscode-extension/resources/repo-assets/asset-aware/**`，安裝/啟動時同步到 workspace：
+VSIX 會打包 `vscode-extension/resources/repo-assets/asset-aware/**`。Extension 安裝/啟動時只會同步 assistant harness 類檔案到 workspace：
 
 - `AGENTS.md`
 - `.github/copilot-instructions.md`
@@ -54,6 +54,8 @@ VSIX 會打包 `vscode-extension/resources/repo-assets/asset-aware/**`，安裝/
 - `.clinerules/**`
 
 同步使用 `.asset-aware-mcp/assistant-assets.json` manifest。只有「先前由 extension 寫入且未被使用者修改」的檔案會自動更新；同路徑自訂檔會 preserved。
+
+`scripts/count_tools.ps1` 等 package guard 相關檔案也會被打包在 repo-assets 中，用於 VSIX/package 檢查，但不是 `installAssistantAssets` 會寫回 workspace 的 assistant harness 目標。
 
 ## UI Components
 
@@ -75,4 +77,4 @@ npm run sync-assets:check
 npm run test:install-smoke
 ```
 
-Package contents tests 會防止 `dist/`、`tmp/`、nested generated repo-assets、`node_modules`、`.venv`、`.pytest_cache`、`__pycache__` 等被打包進 VSIX。
+Package contents tests 會防止 dev-only extension 檔與 generated dirs 混入 repo-assets，例如 `repo-assets/**/dist`、`repo-assets/**/.venv`、`repo-assets/**/.pytest_cache`、`repo-assets/**/__pycache__`、nested generated repo-assets、`node_modules` 等。Root-level `vscode-extension/.venv` 不屬於 assistant asset sync 目標；若要檢查，需用 release artifact audit 或額外 package rule。

@@ -100,11 +100,11 @@ asset-aware-mcp/
 │       └── server.py                # MCP Server (FastMCP)
 │
 ├── data/                            # Local storage root
-│   ├── doc_{id}/                    # Document-specific assets
-│   │   ├── full.md                  # Full text markdown
-│   │   ├── manifest.json            # Asset map
+│   ├── {doc_id}/                    # PDF document artifacts
+│   │   ├── {doc_id}_full.md         # Full text markdown
+│   │   ├── {doc_id}_manifest.json   # Asset map
 │   │   └── images/                  # Extracted figures
-│   └── lightrag/                    # Knowledge graph database
+│   └── lightrag_db/                 # Knowledge graph database
 ```
 
 ## 5. MCP Interface Definition

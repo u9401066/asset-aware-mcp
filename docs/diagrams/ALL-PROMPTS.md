@@ -46,7 +46,7 @@
 
 ## Diagram 07: PDF ETL Pipeline
 **File:** `07-pdf-etl-pipeline.jpg`
-**Description:** Dual-engine parsing (PyMuPDF fast vs Marker precise) with unified segmentation
+**Description:** PyMuPDF default path with Marker security-hold diagnostics and unified segmentation
 
 ---
 

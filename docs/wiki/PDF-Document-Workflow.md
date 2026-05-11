@@ -16,20 +16,23 @@ PDF pipeline 將原始 PDF 轉成可檢索、可視覺化、可引用的文件 a
 - `document(op="ingest", ...)`
 - `parse_pdf_structure(...)`，Marker 專用 high-precision parse job
 
-預設後端是 PyMuPDF。`0.6.27` 的 Marker extra 暫時為空，因為 `marker-pdf` 對 Pillow 的舊版 pin 會和安全 runtime 衝突。需要 Marker 時，工具會回報 unavailable/security hold，而不是在 request path 內不透明失敗。
+預設後端是 PyMuPDF。`0.6.27` 的 Marker extra 暫時為空，因為 `marker-pdf` 對 Pillow 的舊版 pin 會和安全 runtime 衝突。`parse_pdf_structure(...)` 是 Marker-required background job；security hold 或 backend unavailable 會出現在 job status/result 裡。一般 `ingest_documents(use_marker=true)` 會把 Marker preference 傳進 job，Marker 不可用時可退回 PyMuPDF；若 `require_marker=true` 則 fail closed。
 
 ## 產物
 
 | Artifact | 用途 |
 |---|---|
 | `original.pdf` | 原始 PDF copy，layout overlay 與 locator 對照使用 |
-| `content.md` | 人可讀與 LLM chunk-friendly 全文 |
-| `manifest.json` | 文件 identity、pages、figures、tables、sections、metadata |
+| `{doc_id}_full.md` | 人可讀與 LLM chunk-friendly 全文 |
+| `{doc_id}_manifest.json` | 文件 identity、pages、figures、tables、sections、metadata |
 | `blocks.json` | block-level layout/text/source backend metadata |
 | `segmentation.json` | reading order、line range、char/byte range、hash、source revision |
-| `citation_index.json` | citation-ready evidence spans |
-| `figures/` | 圖片 assets |
-| `tables/` | 表格 assets |
+| `citation_index.jsonl` | citation-ready evidence spans |
+| `citation_index.status.json` | citation index build/rebuild status |
+| `images/` | 圖片與 page/region assets |
+| `ocr/`, `pages/` | optional OCR、page image 或 conversion artifacts |
+
+這些 artifact 預設落在 `$DATA_DIR/{doc_id}/`。A2T 的 durable table files 則位於 `$DATA_DIR/tables/`；PDF table 結構本身主要透過 manifest、blocks 與 segmentation 讀取。
 
 ## OCR
 
@@ -41,6 +44,8 @@ PDF pipeline 將原始 PDF 轉成可檢索、可視覺化、可引用的文件 a
 - `output_path`
 
 OCR 後的 PDF 可再進入正常 ingest。
+
+在 background job 模式下，`ocr_pdf_document(output_path=...)` 保留為相容參數；實際可追蹤輸出以 job result/artifacts 為準。
 
 ## Segmentation
 
@@ -68,4 +73,4 @@ OCR 後的 PDF 可再進入正常 ingest。
 
 ## Conversion
 
-`convert_pdf_to_docx` 與 `convert_pdf_to_pptx` 以已攝入 artifacts 為來源，支援 `output_path` 與 conversion `mode`。對於 Markdown 直接輸出，使用 `convert_document(...)` 或 DOCX workflow 的 `export_markdown(...)`。
+`convert_pdf_to_docx` 與 `convert_pdf_to_pptx` 以已攝入 artifacts 為來源，支援 `output_path` 與 conversion `mode`，目前在 tool request path 內同步執行並回報 progress，不屬於 job-backed conversion。對於 Markdown 直接輸出，使用 `convert_document(...)` 或 DOCX workflow 的 `export_markdown(...)`。

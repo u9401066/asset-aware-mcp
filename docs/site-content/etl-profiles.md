@@ -42,4 +42,4 @@ JSON profile 可繼承 built-in base，並覆寫：
 - min figure/table filters
 - numbered section regex
 
-Profile 切換會影響後續 ingest；已建立的 background job 應保存 job creation 時的 profile context，避免中途切換造成 drift。
+Profile 切換只影響後續 ingest，不會重寫既有 document artifacts。已建立的 background job 會保存 job creation 時的 profile context，並傳入 isolated worker，避免中途切換造成同一個 job 的 heading/caption/filter 規則漂移。`load_etl_profile_from_json` 只負責註冊自訂 profile；若要立即使用，仍需再呼叫 `set_etl_profile`。

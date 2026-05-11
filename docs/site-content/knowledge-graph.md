@@ -16,12 +16,12 @@ Knowledge graph 由 LightRAG 提供，用於跨文件查詢、關聯摘要與圖
 consult_knowledge_graph(
   query="...",
   mode="hybrid",
-  response_mode="Multiple Paragraphs",
+  response_mode="structured",
   include_references=true
 )
 ```
 
-`knowledge(op="consult", ...)` 是 consolidated entrypoint。
+`response_mode` 只接受 `structured`、`data`、`text`。`structured` 是預設，會回傳 MCP-friendly payload；`data` 只回傳 retrieval data；`text` 保留舊版純文字行為。`knowledge(op="consult", ...)` 是 consolidated entrypoint。
 
 ## 匯出
 
@@ -37,7 +37,8 @@ export_knowledge_graph(format="json", limit=100)
 
 - 驗證 `lightrag-hku` distribution。
 - 支援 Ollama embeddings batch `/api/embed`，並提供 legacy fallback。
-- 暴露 LLM/embedding timeout knobs。
+- 透過 `.env` / environment 設定 `ENABLE_LIGHTRAG`、`LLM_BACKEND`、`OLLAMA_HOST`、`OLLAMA_MODEL`、`OLLAMA_EMBEDDING_MODEL`、`OLLAMA_LLM_TIMEOUT`、`OLLAMA_EMBEDDING_TIMEOUT`、`OPENAI_API_KEY`、`LIGHTRAG_EMBEDDING_MODEL` 與 `LIGHTRAG_WORKING_DIR`。
+- `consult_knowledge_graph` / `export_knowledge_graph` 有固定 45 秒 MCP request guard；Ollama LLM/embedding 呼叫本身仍使用上述 timeout knobs。
 - 在 LightRAG/Ollama 不可用時回傳 bounded diagnostic，而不是無限等待。
 
 ## 和 Citation 的關係

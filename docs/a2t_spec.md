@@ -320,7 +320,7 @@ asset-aware-mcp/
 │   └── presentation/
 │       └── server.py            # 現有 + 🆕 A2T tools 註冊
 ├── data/
-│   ├── doc_{id}/                # 現有文件儲存
+│   ├── {doc_id}/                # 現有 PDF 文件 artifacts
 │   └── tables/                  # 🆕 A2T 輸出目錄
 └── tests/
     ├── unit/

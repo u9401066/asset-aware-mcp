@@ -25,17 +25,17 @@ PDF
   -> DocumentService.ingest
   -> PyMuPDFExtractor 或 MarkerAdapter
   -> FileStorage
-  -> original.pdf
-  -> content.md
-  -> manifest.json
+  -> $DATA_DIR/{doc_id}/original.pdf
+  -> $DATA_DIR/{doc_id}/{doc_id}_full.md
+  -> $DATA_DIR/{doc_id}/{doc_id}_manifest.json
   -> blocks.json
   -> segmentation.json
-  -> citation_index.json
-  -> figures/tables/assets
+  -> citation_index.jsonl + citation_index.status.json
+  -> images/ + manifest table/figure metadata
   -> optional LightRAG indexing
 ```
 
-核心設計是同時保存「人可讀內容」與「機器可驗證 locator」。`content.md` 服務全文與 LLM chunk；`manifest.json` 保存 document identity 和資產摘要；`blocks.json` 保存 block-level metadata；`segmentation.json` 統一 reading order、line span、char/byte range、source revision 與 hash。
+核心設計是同時保存「人可讀內容」與「機器可驗證 locator」。`{doc_id}_full.md` 服務全文與 LLM chunk；`{doc_id}_manifest.json` 保存 document identity 和資產摘要；`blocks.json` 保存 block-level metadata；`segmentation.json` 統一 reading order、line span、char/byte range、source revision 與 hash。A2T table 的 durable artifacts 存在 `$DATA_DIR/tables/`，PDF 內抽到的 table/figure metadata 則保存在 manifest、blocks 與 segmentation 中。
 
 ## DOCX/DFM 資料流
 
@@ -66,18 +66,20 @@ DOCX 儲存不只是文字替換；它會保留 block identity、run-level style
 
 ```text
 data/
-  documents/{doc_id}/
+  {doc_id}/
     original.pdf
-    content.md
-    manifest.json
+    {doc_id}_full.md
+    {doc_id}_manifest.json
     blocks.json
     segmentation.json
-    citation_index.json
-    figures/
-    tables/
+    citation_index.jsonl
+    citation_index.status.json
+    images/
+    ocr/
+    pages/
   docx/{doc_id}/
   tables/
-lightrag_db/
+  lightrag_db/
 .asset-aware-mcp/
 ```
 

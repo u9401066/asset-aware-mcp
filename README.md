@@ -37,9 +37,9 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 
 ## ✨ Features
 
-- 📄 **Asset-Aware ETL** - PDF → Markdown with **dual-engine** PDF parsing:
+- 📄 **Asset-Aware ETL** - PDF → Markdown with a PyMuPDF-first parser and retained Marker code path:
   - **PyMuPDF** (default) - Fast extraction (~50MB)
-  - **Marker** (optional, `use_marker=True`) - High-precision structured parsing with `blocks.json` (bbox/coordinates)
+  - **Marker** (`use_marker=True`) - High-precision structured parsing code path retained, but packaged runtime is on security hold in v0.6.27 until upstream `marker-pdf` supports patched Pillow
 - 🧩 **Unified Segmentation Export** - Normalized `segmentation.json` merges manifest, blocks, reading order, and persisted markdown line spans for downstream tools and extensions.
 - 🖼️ **Layout Overlay Debugging** - Render page overlays from `original.pdf` to inspect bbox, segment type, and reading order visually.
 - 🔤 **On-Demand OCR Preprocessing** - Optional `ocrmypdf` preprocessing path for scanned PDFs before ETL.
@@ -89,7 +89,7 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 ┌─────────────────────▼───────────────────────────────────┐
 │                   Local Storage                         │
 │  ./data/                                                │
-│  ├── doc_{id}/        # Document Assets                 │
+│  ├── {doc_id}/        # PDF document artifacts          │
 │  ├── docx_{id}/       # Docx IR + DFM + Assets          │
 │  ├── tables/          # A2T Tables (JSON/MD/XLSX)       │
 │  │   └── drafts/      # Table Drafts (Persistence)      │
@@ -126,7 +126,7 @@ Visual overview for the project. All diagrams use consistent GitHub README style
 | [04 — DOCX Bidirectional Edit](docs/diagrams/04-docx-edit-pipeline.jpg) | DOCX ingest → TableContext edit → round-trip save workflow |
 | [05 — Knowledge Graph Search](docs/diagrams/05-knowledge-graph-search.jpg) | Cross-document search with 3 parallel query paths |
 | [06 — Installation Steps](docs/diagrams/06-installation-steps.jpg) | 7-step installation from clone to verification |
-| [07 — PDF ETL Pipeline](docs/diagrams/07-pdf-etl-pipeline.jpg) | Dual-engine parsing: PyMuPDF + Marker |
+| [07 — PDF ETL Pipeline](docs/diagrams/07-pdf-etl-pipeline.jpg) | PyMuPDF default path + Marker security-hold diagnostics |
 | [08 — KG Architecture](docs/diagrams/08-knowledge-graph-architecture.jpg) | lightrag-hku 3-layer KG architecture |
 | [09 — Agent Harness Concept](docs/diagrams/09-agent-harness-concept.jpg) | Assistant harness model for stateless agents |
 
@@ -152,8 +152,8 @@ Runtime note:
 The VS Code extension prefers a managed Python 3.11 runtime when launching the MCP server via `uv` or `uvx`. This avoids native package builds on end-user machines, especially macOS systems without Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
 
 Installation scope note:
-- The VS Code extension installs once per user (global). The MCP server launched through `uvx asset-aware-mcp` reuses the user uv cache rather than reinstalling per workspace.
-- Runtime data stays with your repo: `.env` and `assetAwareMcp.dataDir` default to `./data`, so ingested assets remain scoped to the current workspace.
+- The VS Code extension installs once per user (global). MCP launch env defaults `DATA_DIR` to workspace `./data` and `UV_CACHE_DIR` to `DATA_DIR/.uv-cache`; Prepare Server Runtime warms a workspace `.uv-cache`, falling back to extension global storage only when no workspace is open.
+- Runtime data stays with your repo: `.env` and `assetAwareMcp.dataDir` default to `./data`, so ingested assets and the uv cache used by the launched server remain scoped to the current workspace.
 
 Marker note:
 In v0.6.27 the packaged Marker extra is intentionally on security hold: upstream `marker-pdf` 1.10.2 requires `Pillow<11`, while this release pins `Pillow>=12.2.0` for patched image-processing security. Default installs use the PyMuPDF backend only. `use_marker=True` / `parse_pdf_structure` will report that Marker is unavailable until upstream Marker supports a patched Pillow range.

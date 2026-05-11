@@ -12,7 +12,7 @@ DFM 是 Docx-Flavored Markdown，用於讓 LLM 或 agent 編輯 Word 文件時�
 
 ## Ingest
 
-`ingest_docx(file_path=...)` 支援 `.docx` 與 legacy `.doc`。`.doc` 透過 LibreOffice headless conversion 轉成 `.docx`，且會避免覆蓋既有 sibling `.docx`。
+`ingest_docx(file_path=...)` 支援 `.docx` / `.docm`，並可透過 LibreOffice headless conversion 攝入 `.doc` / `.odt` / `.ods`。轉換時會避免覆蓋既有 sibling `.docx`，DOC/PDF/ODT 等輸出也需要本機可用的 LibreOffice。
 
 輸出包含：
 
@@ -44,7 +44,7 @@ save_docx(
 )
 ```
 
-`save_docx` 會在 pre-save、write、post-save 階段執行 DFM integrity checks。嚴重錯誤會 fail closed，除非呼叫端明確使用 `force=true`。
+`save_docx` 會在 pre-save、write、post-save 階段執行 DFM integrity checks。安全寫回主要支援文字與既有 table cell 內容更新，並保留現有 table shape；結構性表格修改會 fail closed。`force=true` 只會略過部分 stale/drift safeguards，不會讓不支援的結構改寫變成安全操作。
 
 ## Track Changes
 
@@ -81,7 +81,7 @@ Strict mode 會抓 run-level formatting drift，不只比較 body text。
 | `convert_docx_to_pdf` | PDF |
 | `convert_docx_to_doc` | legacy DOC |
 | `convert_docx_to_odt` | ODT |
-| `export_markdown` | Markdown text/file -> DOCX/PDF/DOC |
+| `export_markdown` | Markdown text/file -> DOCX/PDF/DOC/ODT |
 
 ## Table And Chart Bridge
 

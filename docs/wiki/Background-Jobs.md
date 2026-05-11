@@ -4,7 +4,7 @@
 
 ## 為什麼需要 jobs
 
-PDF parsing、Marker、OCR、LightRAG indexing 和 conversion 都可能超過 MCP client 的 request budget。Asset-Aware MCP 會把長任務放入 background job，讓 stdio client 仍能查詢狀態或取消任務。
+PDF ingest、Marker-required parse、OCR 與 LightRAG indexing 都可能超過 MCP client 的 request budget。Asset-Aware MCP 會把這些 PDF-side 長任務放入 background job，讓 stdio client 仍能查詢狀態或取消任務。DOCX/PDF conversion tools 目前多在 request path 內同步執行並回報 progress，因此大型 conversion 仍可能受 client timeout 限制。
 
 來源：`src/application/job_service.py`、`src/domain/job.py`、`src/infrastructure/job_store.py`、`src/application/ingest_worker.py`、`src/application/worker_runner.py`、`src/infrastructure/subprocess_ingest_worker_runner.py`、`src/presentation/tools/job_tools.py`。
 
@@ -33,7 +33,7 @@ Job status 會盡量包含：
 
 ## Worker Isolation
 
-Marker-backed background jobs 使用 isolated subprocess worker，stdin/stdout/stderr 會被關閉或導向 log，避免外部 MCP client 被大量模型輸出污染。
+PDF ingest 與 Marker-backed background jobs 使用 isolated subprocess worker，stdin/stdout/stderr 會被關閉或導向 log，避免外部 MCP client 被大量模型輸出污染。Job 建立時會捕捉當下 active ETL profile，再傳入 isolated worker，避免使用者中途切換 profile 造成同一個 job 的設定漂移。
 
 `JobService` 不直接依賴 presentation entrypoint；它透過 `IngestWorkerRunner` application port，讓 DDD 邊界維持清楚。
 

@@ -33,7 +33,7 @@ AssetRef 是工具間傳遞引用的 compact object。`verify_citation_ref(ref)`
 
 - block identity 是否存在。
 - page/line/char/byte/bbox locator 是否一致。
-- `locator_source_sha256` 是否保留。
+- ref 有提供 `locator_source_sha256` 時，檢查 locator source hash 是否一致。
 - quote/text hash 是否匹配。
 - source revision 是否 stale。
 
@@ -41,7 +41,7 @@ AssetRef 是工具間傳遞引用的 compact object。`verify_citation_ref(ref)`
 
 ## Citation Index
 
-`CitationIndexService` 負責建立或重建 `citation_index.json`。當 canonical Markdown revision hash 或 locator version 改變時，cache 會被視為 stale 並重建。
+`CitationIndexService` 負責建立或重建 `citation_index.jsonl`，並用 `citation_index.status.json` 記錄 build/rebuild 狀態。當 canonical Markdown revision hash 或 locator version 改變時，cache 會被視為 stale 並重建。
 
 ## Table Citation
 
@@ -52,7 +52,9 @@ A2T table cell 可掛 citation refs。當 cited cell 或 row 被更新時，舊 
 - `table_cite`
 - `find_evidence_spans`
 - `verify_citation_ref`
-- `evidence(op="search" | "verify")`
+- `evidence(op="find" | "verify" | "locate")`
+
+實務上，PDF 引用優先使用 `find_evidence_spans` 回傳的 AssetRef；`discover_sources` 適合先找表格可抽取來源，但它的 span ref 目前較偏 discovery payload，正式引用仍建議再走 `find_evidence_spans` / `verify_citation_ref`。
 
 ## DOCX Citation Safety
 

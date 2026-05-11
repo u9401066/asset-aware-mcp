@@ -7,7 +7,7 @@ uv sync
 uv run python -m src.presentation.server
 ```
 
-`0.6.27` 的預設安裝不會安裝 Marker，因為 upstream `marker-pdf` 1.10.2 仍要求 `Pillow<11`，而此版本安全 runtime 需要 `Pillow>=12.2.0`。目前請使用預設 PyMuPDF 後端；`use_marker=True` 或 `parse_pdf_structure` 會回報 Marker 暫不可用，而不是靜默使用不安全依賴。
+`0.6.27` 的預設安裝不會安裝 Marker，因為 upstream `marker-pdf` 1.10.2 仍要求 `Pillow<11`，而此版本安全 runtime 需要 `Pillow>=12.2.0`。目前請使用預設 PyMuPDF 後端。`parse_pdf_structure` 會建立 Marker-required background job，Marker security hold 會在 job status/result 裡明確回報；`ingest_documents(use_marker=true)` 在非 strict 情境可退回 PyMuPDF，`require_marker=true` 則 fail closed。
 
 來源：`pyproject.toml`、`README.md`、`CHANGELOG.md`。
 
@@ -21,7 +21,7 @@ export_document_segmentation(doc_id="...")
 find_evidence_spans(doc_id="...", query="outcome")
 ```
 
-長任務會回傳 background job。這包含 PDF ingest、Marker parse、OCR 與部分 conversion，目的是避免 Cline/Codex/VS Code stdio MCP request 被大型文件阻塞。
+長任務會回傳 background job。這包含 PDF ingest、Marker-required parse 與 OCR，目的是避免 Cline/Codex/VS Code stdio MCP request 被大型文件阻塞。Conversion tools 目前多為同步 progress 回報，仍可能受 client request timeout 限制。
 
 ## 最短 DOCX 流程
 

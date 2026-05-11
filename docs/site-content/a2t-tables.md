@@ -48,14 +48,14 @@ A2T 是 Anything to Table。它用 `TableContext` 表示可由文件、DOCX 表�
 `table_draft` 讓 agent 先建立草稿：
 
 ```text
-create -> update -> add_rows -> restore -> commit
+create -> update -> add_rows -> resume -> commit
 ```
 
 這適合多步 extraction：先規劃欄位，再逐文件補資料，最後提交為正式 TableContext。
 
 ## DOCX Bridge
 
-DOCX table block 可以用 `docx_table_to_context` 轉成 TableContext，結構化編輯後再用 `docx_table_from_context` 寫回 DFM。Chart data 則用 `docx_chart_data` 擷取底層資料。
+DOCX table block 可以用 `docx_table_to_context(register=true)` 轉成 TableContext。初次 register 會讓 table 在目前 session 可見；經過 mutating table operation 後，TableContext 會進入 durable table persistence。結構化編輯後可用 `docx_table_from_context` 寫回 DFM。Chart data 則用 `docx_chart_data` 擷取底層資料。
 
 ## Resources
 

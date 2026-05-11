@@ -10,7 +10,7 @@
 | 04 | [DOCX Bidirectional Edit](04-docx-edit-pipeline.jpg) | Round-trip DOCX editing workflow |
 | 05 | [Cross-Document Search](05-knowledge-graph-search.jpg) | 3 parallel query paths via KG |
 | 06 | [Installation Steps](06-installation-steps.jpg) | 7-step installation with troubleshooting |
-| 07 | [PDF ETL Pipeline](07-pdf-etl-pipeline.jpg) | Dual-engine parsing: PyMuPDF + Marker |
+| 07 | [PDF ETL Pipeline](07-pdf-etl-pipeline.jpg) | PyMuPDF default path plus Marker security-hold diagnostics |
 | 08 | [Knowledge Graph Architecture](08-knowledge-graph-architecture.jpg) | lightrag-hku 3-layer KG |
 
 ## Conceptual
