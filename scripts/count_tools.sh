@@ -21,7 +21,11 @@ module_count=0
 for file in "$TOOLS_DIR"/*.py; do
     if [ -f "$file" ] && [ "$(basename "$file")" != "__init__.py" ]; then
         module=$(basename "$file" .py)
-        count=$(grep -c '@mcp.tool()' "$file" 2>/dev/null || echo 0)
+        count=$(grep -c '@mcp.tool()' "$file" 2>/dev/null || true)
+        count=${count:-0}
+        if [ "$count" -eq 0 ]; then
+            continue
+        fi
         printf "%-25s %2d tools\n" "$module:" "$count"
         total_tools=$((total_tools + count))
         module_count=$((module_count + 1))
@@ -41,7 +45,11 @@ resource_module_count=0
 for file in "$RESOURCES_DIR"/*.py; do
     if [ -f "$file" ] && [ "$(basename "$file")" != "__init__.py" ]; then
         module=$(basename "$file" .py)
-        count=$(grep -c '@mcp.resource(' "$file" 2>/dev/null || echo 0)
+        count=$(grep -c '@mcp.resource(' "$file" 2>/dev/null || true)
+        count=${count:-0}
+        if [ "$count" -eq 0 ]; then
+            continue
+        fi
         printf "%-25s %2d resources\n" "$module:" "$count"
         total_resources=$((total_resources + count))
         resource_module_count=$((resource_module_count + 1))

@@ -26,6 +26,9 @@ Get-ChildItem -Path $ToolsDir -Filter "*.py" |
     Sort-Object Name |
     ForEach-Object {
         $count = Count-Pattern -Path $_.FullName -Pattern "@mcp\.tool\(\)"
+        if ($count -eq 0) {
+            return
+        }
         "{0,-25} {1,2} tools" -f ($_.BaseName + ":"), $count
         $script:totalTools += $count
         $script:toolModules += 1
@@ -41,6 +44,9 @@ Get-ChildItem -Path $ResourcesDir -Filter "*.py" |
     Sort-Object Name |
     ForEach-Object {
         $count = Count-Pattern -Path $_.FullName -Pattern "@mcp\.resource\("
+        if ($count -eq 0) {
+            return
+        }
         "{0,-25} {1,2} resources" -f ($_.BaseName + ":"), $count
         $script:totalResources += $count
         $script:resourceModules += 1

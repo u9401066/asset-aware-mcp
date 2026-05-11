@@ -1,4 +1,15 @@
-# Progress (Updated: 2026-05-08)
+# Progress (Updated: 2026-05-11)
+
+## 2026-05-11
+
+- Fast-forwarded the main worktree to `origin/master` / `v0.6.27` after moving older VSIX-installed LLM wiki harness files to `/tmp/asset-aware-harness-backup-20260511091421` so upstream tracked files could land cleanly.
+- Marked VSIX-managed assistant harness paths as local `skip-worktree` to keep extension auto-sync noise out of normal Git status while preserving the tracked source assets for release packaging.
+- Fixed `scripts/count_tools.sh` and `scripts/count_tools.ps1` so helper modules with zero endpoints no longer break counts or inflate module totals.
+- Added `tests/unit/test_count_tools_script.py`; focused validation passed with `2 passed`, and `./scripts/count_tools.sh` now reports 59 tools, 13 resources, 72 total MCP endpoints.
+- Built a complete GitHub Wiki page set covering architecture, all tools/resources, workflows, VSIX setup, Git harness hygiene, developer guide, release checks, and code map. The same pages are mirrored under `docs/wiki/` as versioned wiki source.
+- Generated 11 current web-sized JPG diagrams under `docs/wiki/assets/` with updated `v0.6.27`, 59-tool, and 13-resource labeling, then embedded them in the matching wiki pages.
+- Merged the newly initialized GitHub Wiki remote initial page into `/tmp/asset-aware-mcp.wiki`, kept the generated full wiki content, and pushed `master` to `asset-aware-mcp.wiki.git`; remote head is `d6b3a17`.
+- Verified the published Wiki: root wiki URL, `_pages`, representative content pages, raw `Home.md`, and raw `assets/overview-architecture.jpg` all returned HTTP 200, and the rendered Home page contains the expected `Asset-Aware MCP Wiki`, `59 tools`, and architecture diagram references.
 
 ## 2026-05-08
 
