@@ -67,6 +67,13 @@ MedPaper can then link or embed that evidence with Foam syntax:
 The anchor name may be derived from `span_id`, but the canonical proof remains
 the Asset-Aware `source_revision_id` + locator ranges + text hash.
 
+For direct promotion, `citation_bundle(output_format="foam", citation_key="...")`
+exports a Foam-compatible evidence pack with YAML frontmatter, `^spn-...` block
+anchors, wikilink/embed strings, verification status, locator hashes, and the
+machine-readable AssetRef JSON beside each quote. When `wiki_root` is supplied,
+the bundle can be written into a Foam wiki and the managed evidence index block
+can be updated in place.
+
 ## Current Asset-Aware Coverage
 
 Already aligned:
@@ -80,13 +87,31 @@ Already aligned:
   line spans, section id/title, and extraction source for MedPaper graph notes.
 - `find_evidence_spans` and `verify_citation_ref` expose re-verifiable
   span-level AssetRef payloads.
+- `citation_bundle(output_format="foam", citation_key="...")` emits a
+  promotion-ready Foam evidence pack while keeping AssetRef verification data
+  embedded beside each `^spn-...` block anchor.
+- `evidence(op="health", wiki_root="...")` scans Foam Markdown notes for
+  embedded span/table/figure AssetRefs and `[[note#^...]]` links, then reports
+  stale source revisions, quote/hash mismatches, missing spans/assets, and
+  missing target anchors.
+- `document_asset(op="foam_notes", ...)` promotes manifest table/figure assets
+  into `table_evidence` / `figure_evidence` Foam notes with source block/order,
+  line span, section context, source PDF hash, and asset locator hash.
+- `evidence(op="claim_promotion", ...)` produces exact-quote claim candidates
+  with embedded AssetRefs and full verification payloads, and refuses Foam
+  writes unless every candidate verifies against the current citation index
+  first.
+- DOCX/DFM blocks preserve Word-origin locators in `DfmBlock.metadata`:
+  `source_part`, `source_story`, `source_element`, paragraph/table/source
+  indexes, run ranges, table cell locators, text hash, and
+  `locator_version=docx-dfm-locator-v1`.
 - DFM -> DOCX Track Changes can emit reviewable `w:del` / `w:ins`, giving
   human-visible edit provenance before a changed DOCX is treated as a new
   source revision.
 - `save_docx(track_changes=True)` writes `revisions.jsonl` with
   `schema=asset-aware.docx-revisions.v1`, block ids, old/new text hashes,
-  char/byte ranges, context, and a locator object for each delete/insert
-  chunk.
+  char/byte ranges, context, the DOCX block locator, and a locator object for
+  each delete/insert chunk.
 
 Still intentionally delegated to MedPaper:
 

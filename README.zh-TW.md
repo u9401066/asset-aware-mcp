@@ -39,7 +39,7 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 
 - 📄 **資產感知 ETL** - PDF → Markdown，以 PyMuPDF 為預設解析路徑並保留 Marker code path：
   - **PyMuPDF**（預設）- 快速提取（~50MB）
-  - **Marker**（`use_marker=True`）- 高精度結構化解析 code path 保留；v0.6.28 packaged runtime 因 upstream `marker-pdf` 尚未支援 patched Pillow 而暫時 security hold
+  - **Marker**（`use_marker=True`）- 高精度結構化解析 code path 保留；v0.6.29 packaged runtime 仍因 upstream `marker-pdf` 尚未支援 patched Pillow 而暫時 security hold
 - 🧩 **統一 Segmentation 匯出** - 產生正規化 `segmentation.json`，整合 manifest、blocks、reading order 與持久化 line span。
 - 🖼️ **版面 Overlay 偵錯** - 可從 `original.pdf` 產生 page overlay，直接檢查 bbox、區塊類型與 reading order。
 - 🔤 **按需 OCR 前處理** - 針對掃描型 PDF 提供可選 `ocrmypdf` 前處理流程，再進行 ETL。
@@ -47,7 +47,7 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 🔄 **非同步任務流水線** - 支援大型 PDF ingest、Marker-required parse、OCR 與 conversion 的非同步處理與進度追蹤。
 - 🗺️ **文件清單 (Manifest)** - 為 Agent 提供結構化的文件「地圖」，實現精確數據存取。
 - 🧠 **LightRAG 整合** - 知識圖譜 + 向量索引，支援跨文件對比與推理。
-- 🧾 **Verified Citation Bundles** - `citation_bundle` 與 `consult_knowledge_graph(verify_references=true)` 可輸出含 locator、quote/hash、context、CRAAP scaffold 與 verification 的 evidence bundle。
+- 🧾 **Verified Citation Bundles** - `citation_bundle`、Foam evidence pack、citation health check、table/figure evidence notes 與 claim promotion 可輸出含 locator、quote/hash、context、CRAAP scaffold 與 verification 的 evidence bundle。
 - 📝 **Docx 即時編輯 (DFM)** - 以 Markdown 格式編輯 .docx 檔案，透過 **Docx-Flavored Markdown** 格式。支援 `.docx` / `.docm`，也支援 `.doc`、`.odt`、`.ods` 經 LibreOffice 自動轉換後攝入。提供 17 個工具：匯入、讀取、儲存、列出、刪除、匯出、strict 往返保真驗證、DOCX→PDF/DOC/ODT、表格結構編輯計畫，以及 Docx ↔ A2T 表格橋接。
 - 📊 **A2T (Anything to Table)** - 7 個 operation-based 工具，從**任意來源**（PDF 資產、知識圖譜、URL、使用者輸入）建立專業表格。支援：**引用管理** (AssetRef)、**變更審計**、**Schema 演進**、**模板**、**草稿機制**與**節省 Token 的續作模式**。
 - 🖥️ **VS Code 管理擴充功能** - 提供圖形化介面監控伺服器狀態、已匯入文件、document artifacts、citation spans，以及 **A2T 表格與草稿**，支援一鍵開啟 Excel。
@@ -133,7 +133,7 @@ asset-aware-mcp/
 # 安裝依賴 (使用 uv) — 預設不安裝 Marker/torch
 uv sync
 
-# v0.6.28：Marker extra 暫時停用；marker-pdf 1.10.2 鎖 Pillow<11，
+# v0.6.29：Marker extra 暫時停用；marker-pdf 1.10.2 鎖 Pillow<11，
 # 但安全 runtime 需要 Pillow>=12.2.0。請先使用預設 PyMuPDF backend。
 
 # 啟動 MCP 伺服器
@@ -151,7 +151,7 @@ VS Code 擴充套件在透過 `uv` / `uvx` 啟動 MCP server 時，會優先使�
 - 執行時資料留在 workspace：`.env` 與 `assetAwareMcp.dataDir` 預設指向 `./data`，讓攝入結果與 launched server 使用的 uv cache 跟著專案存放，避免佔用全域資源。
 
 Marker 說明：
-v0.6.28 將 Marker backend 暫時放入 security hold：upstream `marker-pdf` 1.10.2 需要 `Pillow<11`，但本版安全 runtime 需要 `Pillow>=12.2.0`。預設安裝只使用 PyMuPDF 後端；`use_marker=True` / `parse_pdf_structure` 會回報 Marker 暫不可用，直到 upstream Marker 支援 patched Pillow。
+自 v0.6.28 起 Marker backend 暫時放入 security hold：upstream `marker-pdf` 1.10.2 需要 `Pillow<11`，但本版安全 runtime 需要 `Pillow>=12.2.0`。預設安裝只使用 PyMuPDF 後端；`use_marker=True` / `parse_pdf_structure` 會回報 Marker 暫不可用，直到 upstream Marker 支援 patched Pillow。
 
 ## 🔌 MCP 工具
 
@@ -166,7 +166,7 @@ v0.6.28 將 Marker backend 暫時放入 security hold：upstream `marker-pdf` 1.
 | `convert_pdf_to_pptx` | 依據 PDF Markdown 與圖像重建可編輯的 PPTX 投影片；預設建立 conversion background job |
 | `inspect_document_manifest` | 在抓取資產前先檢視文件結構 |
 | `fetch_document_asset` | 精確獲取表格 (MD) / 圖片 (B64) / 章節內容 |
-| `parse_pdf_structure` | 建立 Marker-required background job；v0.6.28 會在 upstream Marker 支援 patched Pillow 前回報 unavailable |
+| `parse_pdf_structure` | 建立 Marker-required background job；在 upstream Marker 支援 patched Pillow 前會回報 unavailable |
 | `search_source_location` | 搜尋精確來源位置（頁碼 + bbox） |
 | `export_document_segmentation` | 匯出含 reading order 與 line range 的統一 `segmentation.json` |
 | `visualize_document_layout` | 產生 page overlay，檢查 bbox / 類型 / reading order |
@@ -282,7 +282,7 @@ v0.6.28 將 Marker backend 暫時放入 security hold：upstream `marker-pdf` 1.
 
 安裝建議：
 - 預設安裝：`uv sync`
-- Marker backend：v0.6.28 暫時停用；`marker` / `pdf` extras 保留名稱但不安裝 `marker-pdf`。
+- Marker backend：v0.6.29 暫時停用；`marker` / `pdf` extras 保留名稱但不安裝 `marker-pdf`。
 - VS Code extension：`assetAwareMcp.enableMarkerBackend` 設定仍保留，但 security hold 期間 launcher 不會安裝 `marker-pdf`。
 
 - [技術規格書](docs/spec.md) - 詳細技術定義

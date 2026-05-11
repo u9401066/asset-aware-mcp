@@ -1,5 +1,30 @@
 # Active Context
 
+## 2026-05-11 - v0.6.29 DFM/citation-ready release prep
+
+- Multi-subagent review confirmed DFM is correct for the supported mainline: DOCX/DOC ingest, DocxIR/DFM/split Markdown+YAML, no-op/text/existing-table-cell edits, `save_docx`, strict validation, and layout smoke. The boundary remains explicit: arbitrary Word structural edits and legacy `.doc` source-conversion layout drift are not claimed as fully solved.
+- Multi-subagent review confirmed citation-ready is usable as a core loop: PDF span -> AssetRef -> verification -> bundle/Foam -> health check -> claim promotion. The strongest remaining product direction is making Foam/wiki promotion more durable and reviewable.
+- Release scope moved to `0.6.29` because `v0.6.28` is already tagged. Version files, README/VSIX README, changelog, wiki source, GitHub Pages payload, and Memory Bank are aligned to `0.6.29`.
+- Citation-ready was strengthened once more before release: Foam claim promotion notes now keep the original AssetRef JSON and an explicit Verification Payload JSON fence, so wiki-layer promotion can preserve full verification evidence while still failing closed before writes.
+- Release harness audit is now clean after restoring local skip-worktree LLM wiki harness files to the tracked Asset-Aware-scoped wording and moving untracked retired Zotero/PubMed harness leftovers to `/tmp/asset-aware-retired-harness-backup-20260511T164609Z`.
+- Release gates passed for the `0.6.29` candidate: Ruff, format, MyPy, `uv lock --check`, full pytest (`840 passed, 21 skipped`), docs site check, JS syntax, release harness audit, tool count, VSIX sync-assets, VSIX `test:ci` (`119 passing` plus package contents), VSIX install/update smoke, `uv build`, VSIX package, artifact audit, Docker build/import smoke, and `git diff --check`.
+- Docker smoke required one compatibility fix: the production Dockerfile no longer depends on BuildKit cache mounts, so hosts without `docker buildx` can complete the release build.
+
+## 2026-05-11 - Real IRB folder DOCX/PDF round-trip smoke
+
+- Ran a real Asset-Aware smoke over `/home/eric/workspace251226/asset-aware-mcp/一般案-新案2025.00 (20250520)_20260128R` with 26 files: 18 DOCX, 5 legacy DOC, and 3 PDF. Original source hashes/mtimes were preserved; all generated artifacts live under `tmp/asset_aware_real_roundtrip_20260511T144132Z`.
+- Initial result: 16/23 Word-like files passed strict validator + LibreOffice PDF raster layout checks; 2 failed save guards, 2 failed strict validator, 3 had validator-pass layout diffs, and 1 PDF content DOCX conversion failed despite complete ETL artifacts.
+- Fixed the reproduced root causes: Markdown table blank rows are no longer mistaken for separator rows, split-format break blocks are protected/non-editable, terminal line-break normalization no longer creates false expected edits, break-only runs no longer receive duplicate `\n` text, and PDF->DOCX image embedding re-encodes python-docx-unrecognized JPEG headers through PNG.
+- Targeted fix verification over the previously failing real files passed: `02`, `06-3`, `12`, `17`, and `18` all reached strict 100.0 with layout max mean diff `0.0`; `※審查費繳費單下載相關公告...pdf` now converts to content DOCX with one embedded figure. Fix-check artifacts live under `tmp/asset_aware_real_roundtrip_fixcheck_20260511T150045Z`.
+- Full after-fix real-folder run over all 26 files passed source-integrity checks (`changed_count=0`): 18 DOCX reached strict 100.0 and layout diff `0.0`, all 5 legacy DOC files reached strict 100.0, and the two remaining layout warnings are isolated to `.doc` source-to-LibreOffice conversion baseline drift while converted-DOCX-to-IR rebuild diff is `0.0`. All 3 PDFs passed artifact/citation checks with citation lines carrying locator/hash/context/offset fields.
+- Citation-ready provenance was strengthened so PDF manifests now persist root-level `source_pdf_sha256` plus `selected_page_map`, separating the original PDF byte identity from markdown/citation locator hashes.
+- Foam/LLM wiki promotion support now lives on the existing evidence bundle path: `citation_bundle(output_format="foam", citation_key="...")` emits a Foam-compatible evidence pack with YAML frontmatter, `^spn-...` anchors, wikilink/embed strings, verification status, locator hashes, and embedded AssetRef JSON. `evidence(op="bundle", output_format="foam", citation_key="...")` routes to the same exporter.
+- Foam promotion moved from export-only to wiki-maintenance capable: `citation_bundle(..., wiki_root=..., output_path=..., index_path=...)` writes the evidence pack under the Foam root and updates a managed evidence index block; `evidence(op="health", wiki_root=...)` scans Markdown notes for embedded span AssetRefs and `[[note#^spn-...]]` links, then reports stale/mismatched refs and missing target notes/anchors.
+- Table/Figure Foam notes now hang off `document_asset(op="foam_notes", ...)`: manifest table/figure assets become `table_evidence` / `figure_evidence` notes with source block/order, line span, section context, source PDF hash, asset locator hash, and embedded table/figure AssetRef JSON. Foam health now validates span/table/figure refs and generic `[[note#^...]]` anchors.
+- DOCX DFM blocks now carry Word-origin locator metadata in `DfmBlock.metadata`: `locator_version=docx-dfm-locator-v1`, `source_part`, `source_story`, `source_element`, paragraph/table/source indexes, run ranges, text char/byte/hash locator, and table cell locators; `get_docx_content(block_id=...)`, `list_docx_blocks`, split `format.yaml`, and Track Changes `revisions.jsonl` expose the locator so Word forms can be promoted/audited closer to PDF spans.
+- Claim promotion workflow is now available through `evidence(op="claim_promotion" | "claims" | "promote_claims", ...)`: it proposes exact-quote claim candidates with embedded AssetRefs and Foam anchors, and Foam writes are blocked unless every candidate verifies against the current citation index.
+- Regression validation passed: latest focused DOCX/citation/docs slice `uv run pytest tests/unit/test_document_service.py tests/test_dfm.py tests/unit/test_docx_adapter_tables.py tests/unit/test_docx_service.py tests/unit/test_mcp_tool_layer.py tests/unit/test_docs_site_reference_sync.py -q` -> `285 passed`; `uv run mypy src --ignore-missing-imports`, Ruff, format checks, docs-site check, and `git diff --check` passed. Full `uv run pytest -q` still has 2 unrelated local harness-boundary failures from existing Cline/Claude assistant assets (`838 passed, 21 skipped, 2 failed`).
+
 ## 2026-05-11 - v0.6.28 feature release prep
 
 - Preparing `v0.6.28` from `master` after adding six requested capability refinements: conversion background jobs, verified citation bundle export, KG answers with verified evidence, DOCX table structural edit plans, ETL profile auto-detect, and a VSIX artifact/citation viewer.
@@ -77,35 +102,15 @@
 
 ## Current Goals
 
-- Complete the `0.6.28` feature release with docs/wiki/site/MEM alignment, full local gates, exact-path segmented commits, push, GitHub Wiki/Pages verification, and annotated tag publication while leaving VSIX-managed harness auto-sync paths ignored locally.
-
-- 正在完成 0.6.16 release prep：整合 multi-agent repo review 修正，完成 Marker/LightRAG/PyMuPDF/segmentation/table/DOCX/VSIX/release hygiene 補強，並進行 MEM+GIT+PUSH+TAG 發布。
+- Complete the `0.6.29` DFM/citation-ready release with docs/wiki/site/MEM alignment, full local gates, exact-path segmented commits, push, GitHub Pages verification, and annotated tag publication while leaving real test data and generated artifacts uncommitted.
 
 ## 🎯 當前焦點
 
-- **當前版本真相為 0.6.16**：本次 patch 版本以 2026-04-29 issue report 與 5-agent repo review 為依據，修正 Marker optional backend、LightRAG prompt、PyMuPDF segmentation provenance、A2T table citation safety、DOCX legacy conversion overwrite、VSIX harness migration 與 release/docs drift
-- **0.6.16 local gates 已完成**：full `uv run pytest -q` → `686 passed, 21 skipped`；Ruff、format、MyPy、`uv lock --check`、VSIX `npm run test:ci`、sync-assets check、package contents 與 `git diff --check` 均通過
-- **Release hygiene 更新**：CI/release 改用 `uv sync --frozen` / `uv lock --check`；README/diagram/Copilot harness/Marker docs 更新為 59 tools / 13 resources；VSIX README banner/version 已對齊 `v0.6.16`
-- **Workspace git policy 本輪決策**：納入 tracked workspace 變更與新 regression tests；忽略 `.asset-aware-mcp/` 與 `.vscode/mcp.json.invalid.*.bak` 這類本機 runtime/backup 產物
-- **VSIX assistant assets 改為 manifest-based non-destructive sync**：啟動時只會更新「先前由 extension 寫入且未被使用者修改」的檔案；同路徑自訂檔會保留，避免吃掉 custom harness
-- **VSIX bundled harness 自洽性補齊**：`sync-assets`/VSIX package 現在包含 `.github/bylaws/**` 與 `.claude/skills/**`，避免 Copilot instructions 引用不存在的 harness assets
-- **MCP config merge fail-closed**：Copilot/Cline malformed JSON 與 Codex suspicious TOML/read failures 會備份/警告並跳過寫入，不再用空白 config 覆蓋原檔
-- **DFM→DOCX Track Changes citation-ready sidecar**：`save_docx(track_changes=True)` 會輸出 `revisions.jsonl`，每筆 delete/insert chunk 含 block id、old/new text hash、char/byte range、context 與 locator
-- **DocxValidator 格式 gate 強化**：格式比較已由第一 run 抽樣改成逐 run 比對，strict gate 可抓到 later-run italic/color/underline 等回歸
-- **Track Changes XML 寫回加固**：單一 hyperlink/SDT 包裹的文字修訂會保留外層容器；revision runs 依來源/updated run span 套用樣式，不再全部使用第一個 run 樣式
-- **MedPaper/Foam 對齊邊界已文件化**：Asset-Aware 作為 decomposition/locator authority，MedPaper 作為 Foam note writer；對齊驗證以 stable identity、source revision、locator range、hash、context、CRAAP scaffold 與 `revisions.jsonl` 為 gate
-- **Release gate parity 已落地**：GitHub CI、tagged release workflow、local `scripts/release.sh` 現在共享 Python/extension/Cline/artifact/Docker/version consistency 檢查
-- **0.6.15 local gates 已完成**：Ruff、format、MyPy、full pytest、Cline/release harness audit、VSIX CI/package contents、VSIX install/update smoke、uv build、VSIX package、artifact audit、Docker smoke、version sync 與 diff hygiene 已通過；activation smoke 因本機無 display/xvfb 跳過
-- **Agent asset 全覆蓋規劃已補齊**：新增 `docs/agent-asset-gap-analysis.md`，明確拆成格式轉換、資產拆解、結構導航、語義理解四層，並量化目前完成度約 35%
-- **建議採分段發布**：先發格式入口補齊（RTF/TXT/MD/CSV/HTML），再發 XLSX 原生化，其次是 agent 理解增強，最後才是 PPTX/EPUB/EML 等高成本格式
-- **Section truth 已收斂**：manifest generator 現在是 section metadata 最終寫入點；Marker ingest 不再先算 section 再被 generator 用另一套規則覆蓋
-- **Line span 正式化完成**：fetch asset 已可直接回傳 line range / section context，Marker blocks 也在 ETL 階段持久化 line span
-- **Segmentation correctness 修復完成**：已修正 stale `original.pdf`、same-page asset 錯配與 section line range 顯示語意
-- **MCP 處理可視化**：已把 progress 從單純 ETL 擴展到 segmentation、layout overlay、OCR、knowledge graph、table render
-- **v0.5.2 已發布**：Marker optional + Server 版本釘定 + Windows DLL 錯誤修正
-- **版本釘定**：Extension 啟動時 `--from asset-aware-mcp==X.Y.Z`，版本變更自動 `--upgrade`
-- **Windows 修正**：`except (ImportError, OSError)` 捕獲 torch DLL 載入失敗
-- **save_docx 穩定化**：MCP/agent 透過 TableContext 改表格後，`save_docx` 先同步 IR/DFM，再輸出 DOCX，避免最後一步產生空白內容
+- **版本真相為 0.6.29**：本次 release 是 `v0.6.28` 之後的 DFM real-corpus / citation-ready Foam promotion patch，不重用既有 tag。
+- **DFM 主線結論**：支援範圍內可正確進行 DFM 拆解與重組；文件與 release notes 必須保留 `.doc` conversion drift、結構性表格變更、header/footer/footnote locator 測試深度等邊界。
+- **Citation-ready 主線結論**：EvidenceSpan / AssetRef / verify / bundle / Foam / health / claim promotion 已可用；CRAAP 仍是保守 scaffold，不可宣稱已完成 source quality 評分。
+- **Git policy**：只 stage tracked source/docs/test/version changes；`tmp/`、真實 IRB source folder、`dist/`、VSIX artifact、runtime cache、ignored data 皆不可提交。
+- **Release blockers**：若 VSIX install smoke 或 Docker smoke 因 host-level dependency 失敗，必須記錄為環境阻塞；不把 generated artifacts 或 real corpus outputs 混入 release。
 
 ## 🆕 ETL / Layout / OCR 可視化 (2026-03-18)
 

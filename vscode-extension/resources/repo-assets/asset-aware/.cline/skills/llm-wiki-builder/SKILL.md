@@ -1,12 +1,13 @@
 ---
 name: llm-wiki-builder
-description: "Build or refresh Foam-compatible LLM wikis from Asset-Aware document evidence and local Markdown notes."
+description: "Codex workflow skill for building Foam-compatible LLM wikis from Asset-Aware document evidence and local Markdown notes."
 ---
 
 # LLM Wiki Builder
 
-Use this skill when the user asks to create, refresh, repair, or extend a Foam
-wiki or LLM-readable literature wiki.
+Use this skill when working on Foam, LLM wiki, literature wiki, citation-ready
+notes, or Markdown knowledge graph tasks in this repository or an installed
+workspace.
 
 ## Read First
 
@@ -15,23 +16,22 @@ wiki or LLM-readable literature wiki.
 - Asset-Aware document outputs: `content.md`, `blocks.json`, `manifest.json`,
   `segmentation.json`, and citation span AssetRefs when available
 
-## Multi-Tool Choreography
+## Workflow
 
-1. Inspect the filesystem for the wiki root, Foam markers, existing note style,
-   and link conventions.
-2. Use Asset-Aware/document tools when PDFs, DOCX, DFM, tables, figures,
-   segmentation, or span-level citations are part of the request.
-3. If a separate workspace explicitly provides Zotero Keeper or PubMed Search,
+1. Find the wiki root and existing Foam conventions.
+2. Build a note map before editing files.
+3. Gather evidence through Asset-Aware/document tools for PDFs, DOCX, DFM,
+   tables, figures, sections, segmentation, and span-level evidence.
+   If a separate workspace explicitly provides Zotero Keeper or PubMed Search,
    treat those as external sources and follow their own harness rules; do not
    install or maintain those harnesses from this repository.
-4. Write or update Markdown notes with Foam-compatible wikilinks and preserved
-   source identifiers.
-5. Validate generated links and report unresolved wiki TODOs separately from
-   completed notes.
+4. Write Markdown notes with stable filenames, one H1, clean sections, and
+   Foam-compatible wikilinks.
+5. Validate links, attachments, and source markers before reporting completion.
 
-## Output Contract
+## Guardrails
 
-- Keep the note graph readable in Foam and useful for LLM retrieval.
-- Preserve source provenance close to claims.
 - Ask before bulk rewrites, destructive cleanup, or external-library imports.
-- Do not leave broken wikilinks hidden in generated files.
+- Keep source identifiers near claims.
+- Do not leave unresolved wikilinks unless they are marked as intentional TODOs.
+- Keep generated notes human-readable and chunkable for LLM retrieval.

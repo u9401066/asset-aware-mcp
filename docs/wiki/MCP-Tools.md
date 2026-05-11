@@ -12,7 +12,7 @@
 | `search_source_location` | `doc_id`, `query`, `block_types` | 搜尋文件來源位置，回傳 page/bbox/block context |
 | `find_evidence_spans` | `doc_id`, `query`, `span_id`, `span_kinds`, `limit` | 搜尋 citation-ready evidence spans |
 | `verify_citation_ref` | `ref` | 驗證 AssetRef 是否仍符合 citation index 與 locator/hash |
-| `citation_bundle` | `doc_id`, query/span filters, `include_verification`, `output_format` | 匯出 verified evidence bundle，包含 AssetRef、quote/hash、locator、context、CRAAP 與 verification |
+| `citation_bundle` | `doc_id`, query/span filters, `include_verification`, `output_format`, `citation_key`, Foam write options | 匯出 verified evidence bundle，包含 AssetRef、quote/hash、locator、context、CRAAP 與 verification；`output_format="foam"` 產生 Foam evidence pack，可用 `wiki_root` 寫檔並更新 index |
 | `ingest_documents` | `file_paths`, `async_mode`, `use_marker`, OCR/Marker/page options | 攝入 PDF，建立 manifest、markdown、blocks、assets、citation artifacts |
 | `list_documents` | 無 | 列出已處理文件摘要 |
 | `delete_document` | `doc_id` | 刪除 PDF 文件 artifacts |
@@ -24,15 +24,15 @@
 | `ocr_pdf_document` | `pdf_path`, `output_path`, OCR options | 建立 background OCR ingest job |
 | `fetch_document_asset` | `doc_id`, `asset_type`, `asset_id`, `max_size` | 依 asset identity 擷取 table/figure/section/full_text |
 | `document` | `op`, PDF ingest/parse/list/delete/inspect parameters | Consolidated PDF document entrypoint；conversion 請用 `convert_document` |
-| `document_asset` | `op`, `doc_id`, asset/search/section parameters | Consolidated asset and section entrypoint |
-| `evidence` | `op`, `doc_id`, query/span/ref parameters | Consolidated citation evidence entrypoint，支援 `find` / `verify` / `bundle` / `locate` |
+| `document_asset` | `op`, `doc_id`, asset/search/section parameters, Foam note options | Consolidated asset and section entrypoint；`op="foam_notes"` 可將 table/figure 寫成 Foam notes |
+| `evidence` | `op`, `doc_id`, query/span/ref parameters, `output_format`, `citation_key`, `wiki_root` | Consolidated citation evidence entrypoint，支援 `find` / `verify` / `bundle` / `claim_promotion` / `health` / `locate`；bundle 可輸出/寫入 Foam evidence pack，claim promotion 會強制 verify 後才允許寫 Foam，health 可掃 wiki citation drift |
 | `convert_document` | `source`, `target_format`, `source_format`, `output_path`, `mode`, `md_text`, `async_mode` | Consolidated conversion entrypoint；預設建立 background conversion job |
 
 Operation notes:
 
 - `document` accepts `ingest` / `import`, `parse`, `list`, `delete`, and `inspect`; PDF/DOCX/Markdown conversions live behind `convert_document`.
-- `document_asset` accepts asset fetch plus section tree/detail/blocks/search operations.
-- `evidence` accepts `find`, `verify`, `bundle`, and `locate` / `search_location`; the old `search` wording is avoided because the code routes citation lookup through `find`.
+- `document_asset` accepts asset fetch plus section tree/detail/blocks/search operations; `foam_notes` writes table/figure asset notes and updates the managed asset index block.
+- `evidence` accepts `find`, `verify`, `bundle`, `health`, and `locate` / `search_location`; the old `search` wording is avoided because the code routes citation lookup through `find`.
 - PDF ingest、Marker parse、OCR 與 conversion requests 都可 job-backed；conversion tools 預設 `async_mode=true`，大型 LibreOffice/PDF conversion 不會卡住 MCP request path。`parse_pdf_structure(output_dir=...)` and `ocr_pdf_document(output_path=...)` still accept compatibility parameters, but background job mode owns the final artifact paths.
 
 ## `docx_tools.py` - 17 tools
@@ -40,9 +40,9 @@ Operation notes:
 | Tool | 主要參數 | 功能 |
 |---|---|---|
 | `ingest_docx` | `file_path` | 攝入 `.docx` / `.docm`，或透過 LibreOffice 轉換 `.doc` / `.odt` / `.ods` 後轉為 DocxIR + DFM |
-| `get_docx_content` | `doc_id`, `block_id` | 讀取完整 DFM 或單一 block |
+| `get_docx_content` | `doc_id`, `block_id` | 讀取完整 DFM 或單一 block；單一 block payload 會包含 DOCX locator metadata |
 | `save_docx` | `doc_id`, `dfm_content`, `output_path`, `from_md`, `force`, `track_changes`, `revision_author` | 將 DFM/Markdown 寫回 DOCX |
-| `list_docx_blocks` | `doc_id` | 列出 DOCX block 摘要 |
+| `list_docx_blocks` | `doc_id` | 列出 DOCX block 摘要與 compact DOCX locator |
 | `list_docx_documents` | 無 | 列出已攝入 DOCX/DFM 文件 |
 | `delete_docx` | `doc_id` | 刪除 DOCX/DFM artifacts |
 | `convert_docx_to_doc` | `doc_id`, `output_path`, `mode`, `async_mode` | 建立 background conversion job，轉為 legacy DOC |

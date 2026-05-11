@@ -7,6 +7,34 @@
 
 ## [Unreleased]
 
+## [0.6.29] - 2026-05-11
+
+### Added
+
+- **Real-corpus DFM round-trip hardening**
+  - Validated the DOCX/DOC/PDF round-trip flow against the full real IRB folder corpus: 26 files, source hashes unchanged, 18/18 DOCX strict 100.0 with layout diff 0.0, 5/5 legacy DOC strict 100.0, and 3/3 PDFs with citation artifacts.
+  - Added DFM regressions for blank Markdown table rows, protected break blocks, terminal line-break no-op saves, and break-only run write-back.
+
+- **DOCX locator metadata for DFM promotion**
+  - DFM blocks now preserve Word-origin locators: source part/story/element, paragraph/table/source indexes, run ranges, char/byte/text hashes, table cell locators, nested-table parent cells, and `locator_version=docx-dfm-locator-v1`.
+  - Block reads, block listings, split `format.yaml`, and Track Changes `revisions.jsonl` expose the same locator metadata for promotion and audit workflows.
+
+- **Foam citation-ready workflow**
+  - `citation_bundle(output_format="foam", wiki_root=...)` can write Foam evidence packs and update a managed evidence index block.
+  - `evidence(op="health")` scans Foam notes for span/table/figure AssetRefs and `[[note#^anchor]]` wikilinks, reporting stale refs, hash mismatches, missing assets, and broken anchors.
+  - `document_asset(op="foam_notes")` promotes manifest tables and figures into `table_evidence` / `figure_evidence` Foam notes with asset locator hashes.
+  - `evidence(op="claim_promotion" | "claims" | "promote_claims")` proposes exact-quote claim candidates and blocks Foam writes unless every candidate verifies first; Foam claim notes now embed the full verification payload.
+
+### Fixed
+
+- PDF-to-DOCX conversion now re-encodes python-docx-unrecognized JPEG headers through PNG while preserving the original PDF SHA and selected-page map in the manifest.
+- Release harness hygiene now passes with Asset-Aware-scoped LLM wiki assets and retired Zotero/PubMed harness leftovers excluded from the release workspace.
+- Docker release smoke no longer requires BuildKit cache mounts, so hosts without the `docker buildx` component can still build the production image.
+
+### Changed
+
+- Updated docs, GitHub Pages payload, wiki source, README files, VSIX README, changelog, and memory bank for `0.6.29` / `62 tools + 13 resources = 75 MCP endpoints`.
+
 ## [0.6.28] - 2026-05-11
 
 ### Added

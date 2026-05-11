@@ -35,10 +35,10 @@ Asset-Aware MCP 是一個 citation-ready 文件處理與知識工作流 MCP Serv
 
 | 項目 | 狀態 |
 |---|---|
-| 最新程式版本 | `0.6.28` |
+| 最新程式版本 | `0.6.29` |
 | Python | `>=3.10`，以 `uv` 管理 |
 | MCP endpoints | 62 tools、13 resources，共 75 endpoints |
-| PDF 後端 | 預設 PyMuPDF；Marker backend 在 `0.6.28` 因 `Pillow` 安全相容性暫時 hold |
+| PDF 後端 | 預設 PyMuPDF；Marker backend 自 `0.6.28` 起因 `Pillow` 安全相容性暫時 hold |
 | DOCX | DOCX/DOC/DFM round trip、Track Changes、LibreOffice conversion、strict validation |
 | Knowledge graph | LightRAG (`lightrag-hku`) + Ollama/OpenAI，可選 verified citation bundle |
 | VS Code extension | 內建 MCP provider、Cline/Codex/Copilot config merge、assistant harness sync、artifact/citation viewer |

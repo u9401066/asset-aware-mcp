@@ -25,10 +25,8 @@ COPY pyproject.toml uv.lock README.md ./
 COPY src/ ./src/
 
 # Install locked runtime deps first, then the local project without re-resolving.
-# BuildKit keeps the uv download cache outside the image layers, which avoids
-# repeated slow local release smoke builds without shipping cache data.
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv export --frozen --no-dev --no-emit-project --format requirements-txt -o requirements.txt \
+# Keep this step compatible with Docker legacy builder hosts used in release smoke.
+RUN uv export --frozen --no-dev --no-emit-project --format requirements-txt -o requirements.txt \
     && uv pip install --system -r requirements.txt \
     && uv pip install --system --no-deps "."
 
@@ -61,7 +59,7 @@ USER mcp
 
 # Health metadata
 LABEL maintainer="u9401066@gap.kmu.edu.tw" \
-      version="0.6.28" \
+      version="0.6.29" \
       description="Asset-Aware Medical RAG MCP Server"
 
 ENTRYPOINT ["python", "-m", "src.presentation.server"]

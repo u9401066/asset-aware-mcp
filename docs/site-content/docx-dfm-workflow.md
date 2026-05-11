@@ -23,6 +23,13 @@ DFM 是 Docx-Flavored Markdown，用於讓 LLM 或 agent 編輯 Word 文件時�
 - media/assets
 - original package XML parts
 
+每個 DFM block 也會保留 DOCX locator metadata，包含 `locator_version`、
+`source_part`、`source_story`、`source_element`、`source_order`、
+`paragraph_index` 或 `table_index`、文字 `char_range` / `byte_range` /
+`text_sha256`，以及 paragraph 的 `run_ranges`。表格 block 另外保存
+`row_count`、`column_count` 與 `cell_locators`；nested table 會保留
+`parent_table_id` 和 `parent_cell`。
+
 ## Editing
 
 讀取內容：
@@ -56,6 +63,11 @@ save_docx(
 - context
 - locator metadata
 - author/time metadata
+
+locator metadata 會帶回原始 Word part，例如 `word/document.xml`、
+`word/header*.xml`、`word/footer*.xml` 或 `word/footnotes.xml`，並在可用時
+包含 paragraph/table/run/cell index，讓 Word 表單也能像 PDF span 一樣被
+promotion 前重新定位與查核。
 
 這讓 agent 修改可以回到 Word review workflow，同時保留 citation-ready evidence trail。
 

@@ -296,10 +296,10 @@ code locations.
 
 | Item | Current Status |
 |---|---|
-| Latest code version | `0.6.28` |
+| Latest code version | `0.6.29` |
 | Runtime | Python `>=3.10`, managed with `uv` |
 | MCP endpoints | 62 tools and 13 resources, 75 endpoints total |
-| PDF backend | PyMuPDF by default; Marker is on security hold in `0.6.28` |
+| PDF backend | PyMuPDF by default; Marker has been on security hold since `0.6.28` |
 | DOCX | DOCX/DOC/DFM round trip, Track Changes, LibreOffice conversion, strict validation |
 | Knowledge graph | LightRAG (`lightrag-hku`) with Ollama/OpenAI-compatible backends and verified citation bundles |
 | VS Code extension | Native MCP provider plus Cline/Codex/Copilot config merge, harness sync, and artifact/citation viewer |

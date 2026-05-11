@@ -6,15 +6,15 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.28/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.29/resources/banner.png)
 
-## What's New in v0.6.28
+## What's New in v0.6.29
 
-- **Conversion background jobs**: PDF/DOCX/Markdown conversion tools now default to async conversion jobs with status/result reporting.
-- **Verified citation bundles**: `citation_bundle`, `evidence(op="bundle")`, and `consult_knowledge_graph(verify_references=true)` expose citation-ready evidence packages.
-- **DOCX table edit planning**: preview table cell/row/column/header changes before write-back.
-- **ETL profile auto-detect**: detect the best built-in profile from PDF path, `doc_id`, or sample text.
-- **Artifact and citation viewer**: the Documents tree now opens generated artifacts and citation-index spans directly.
+- **Real DFM corpus smoke**: validated a 26-file IRB folder across DOCX, legacy DOC, and PDF without source mutation.
+- **DOCX locator metadata**: DFM blocks expose Word part/story/index/run/cell locators for promotion and audit.
+- **Foam evidence workflow**: write evidence packs, update index notes, run citation health checks, and create table/figure evidence notes.
+- **Claim promotion**: exact-quote claim candidates now include AssetRefs and full verification payloads; Foam writes fail closed if verification fails.
+- **PDF citation provenance**: PDF manifests keep original source SHA and selected-page maps through conversion.
 - **62 tools** across 7 modules, plus 13 MCP resources
 
 ## 🧪 Current Main Branch
@@ -106,7 +106,7 @@ This extension provides a sophisticated **ETL (Extract, Transform, Load) Pipelin
 
 - **📄 PDF ETL**:
   - **PyMuPDF** (default) - Fast extraction (~50MB dependency)
-  - **Marker** (`use_marker=True`) - Temporarily unavailable in v0.6.28 until upstream `marker-pdf` supports patched Pillow
+  - **Marker** (`use_marker=True`) - Temporarily unavailable in v0.6.29 until upstream `marker-pdf` supports patched Pillow
 - **🧩 Unified Segmentation**: Export normalized `segmentation.json` with reading order and markdown line ranges
 - **🖼️ Layout Overlay**: Visual bbox/type/reading-order inspection from the original PDF
 - **🔤 OCR Preprocessing**: Optional scanned-PDF cleanup before ETL
@@ -180,7 +180,7 @@ Runtime note:
 The extension prefers a managed Python 3.11 runtime when launching the MCP server via `uv`/`uvx`. This avoids package builds on machines without native toolchains, especially macOS systems missing Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
 
 Marker note:
-The extension does not install Marker or torch in v0.6.28. `assetAwareMcp.enableMarkerBackend` is retained for compatibility, but the launcher ignores it while upstream `marker-pdf` requires `Pillow<11` and the secure runtime requires `Pillow>=12.2.0`.
+The extension does not install Marker or torch in v0.6.29. `assetAwareMcp.enableMarkerBackend` is retained for compatibility, but the launcher ignores it while upstream `marker-pdf` requires `Pillow<11` and the secure runtime requires `Pillow>=12.2.0`.
 
 Installation scope & storage:
 - The VSIX installs as a user/global extension (standard VS Code behavior), so you do not need a separate install per workspace.

@@ -35,7 +35,7 @@ and local Markdown notes. Use with `.clinerules/35-foam-llm-wiki.md`.
 - Use one `# H1` per note.
 - Keep generated notes readable, not just chunkable.
 - Put source identifiers near claims, especially for synthesized paragraphs.
-- Use `[[wikilinks]]` only for notes that exist or are being created.
+- Use `[[note-slug]]` only when the target exists or is created in this run.
 - Use relative Markdown links for PDFs, figures, tables, and exported files.
 
 ## 5. Validate
@@ -45,7 +45,7 @@ and local Markdown notes. Use with `.clinerules/35-foam-llm-wiki.md`.
 - Check that no raw tool dump was accidentally pasted into final notes.
 - Report skipped or unresolved evidence separately from completed notes.
 
-## 6. Report
+## 6. Report The Result
 
 - Summarize created, updated, preserved, and skipped notes.
 - List unresolved TODOs separately from completed links.

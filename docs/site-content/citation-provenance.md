@@ -37,7 +37,9 @@ AssetRef 是工具間傳遞引用的 compact object。`verify_citation_ref(ref)`
 - quote/text hash 是否匹配。
 - source revision 是否 stale。
 
-`0.6.27` 已修正 AssetRef serialization/reload 會掉 `locator_source_sha256` 的問題。`0.6.28` 進一步加入 `citation_bundle(...)`，可一次匯出多個 verified EvidenceSpan，包含 AssetRef、quote/hash、locator、context、CRAAP scaffold 與 verification 結果。
+`0.6.27` 已修正 AssetRef serialization/reload 會掉 `locator_source_sha256` 的問題。`0.6.28` 進一步加入 `citation_bundle(...)`，可一次匯出多個 verified EvidenceSpan，包含 AssetRef、quote/hash、locator、context、CRAAP scaffold 與 verification 結果。`0.6.29` 把 Foam 工作流補成閉環：可安全寫入 evidence pack、更新 index note、掃 wiki health、產生 table/figure evidence notes，並用 claim promotion workflow 在寫入前強制 verify。
+
+若要交給 Foam/LLM wiki，使用 `citation_bundle(output_format="foam", citation_key="...")` 可直接取得含 YAML frontmatter、`^spn-...` block anchor、wikilink/embed 與 AssetRef JSON 的 evidence pack。
 
 ## Citation Index
 
@@ -55,11 +57,88 @@ A2T table cell 可掛 citation refs。當 cited cell 或 row 被更新時，舊 
 - `citation_bundle`
 - `evidence(op="find" | "verify" | "bundle" | "locate")`
 
-實務上，PDF 引用優先使用 `find_evidence_spans` 回傳的 AssetRef；若要給人類文件、KG answer 或外部審查使用，建議用 `citation_bundle(output_format="json")` 或 `evidence(op="bundle")` 取得一整包可驗證 evidence。`discover_sources` 適合先找表格可抽取來源，但它的 span ref 目前較偏 discovery payload，正式引用仍建議再走 `find_evidence_spans` / `citation_bundle` / `verify_citation_ref`。
+實務上，PDF 引用優先使用 `find_evidence_spans` 回傳的 AssetRef；若要給人類文件、KG answer 或外部審查使用，建議用 `citation_bundle(output_format="json")` 或 `evidence(op="bundle")` 取得一整包可驗證 evidence；若要 promotion 到 Foam note，使用 `citation_bundle(output_format="foam", citation_key="paper-key")` 或 `evidence(op="bundle", output_format="foam", citation_key="paper-key")`。若提供 `wiki_root`，bundle 會安全寫入 Foam wiki 內的 evidence note，並可更新 index note。`discover_sources` 適合先找表格可抽取來源，但它的 span ref 目前較偏 discovery payload，正式引用仍建議再走 `find_evidence_spans` / `citation_bundle` / `verify_citation_ref`。
+
+## Foam Evidence Pack
+
+`output_format="foam"` 會輸出 Foam-compatible Markdown：
+
+- 檔案層 YAML frontmatter：`type: evidence_pack`、`source_doc_id`、`bundle_version`、returned/matched counts。
+- 每個 evidence span 都有 `^spn-...` block anchor，可被 `[[paper-key#^spn-...]]` 或 `![[paper-key#^spn-...]]` 引用。
+- 每個 evidence block 保留 `source_revision_id`、`locator_source_sha256`、`text_sha256`、page/line locator 與 verification status。
+- 每個 evidence block 內嵌 AssetRef JSON，MedPaper/Foam 層可保存它並在 promotion 前呼叫 `verify_citation_ref`。
+
+可寫檔的最小流程：
+
+```text
+citation_bundle(
+  doc_id="doc_...",
+  query="outcome",
+  output_format="foam",
+  citation_key="paper-key",
+  wiki_root="/path/to/wiki",
+  output_path="evidence/paper-key.md",
+  index_path="Evidence Index.md",
+  overwrite=true
+)
+```
+
+完成後可跑 health check：
+
+```text
+evidence(op="health", wiki_root="/path/to/wiki", output_format="json")
+```
+
+Health check 會掃 Markdown 檔內的 span/table/figure AssetRef JSON 與 `[[note#^...]]` wikilink，回報 stale/mismatch/missing span 或 asset、quote hash mismatch、source revision drift，以及 missing target note/anchor。
+
+## Claim Promotion Workflow
+
+`evidence(op="claim_promotion", doc_id="...", query="...", output_format="json")`
+會從 citation index 產生 claim candidates。每個 candidate 都只用 exact
+evidence quote 形成 `claim_text`，不會替 LLM 發明新主張，並附上原始
+AssetRef、Foam anchor、evidence wikilink 與 verification payload。Foam 輸出會同時保留原始 AssetRef JSON 與完整 Verification Payload JSON fence，讓 wiki 層可離線保存候選資料，promotion 前仍回到 `verify_citation_ref` 驗證。
+
+若要寫入 Foam：
+
+```text
+evidence(
+  op="claim_promotion",
+  doc_id="doc_...",
+  query="outcome",
+  output_format="foam",
+  citation_key="paper-key",
+  wiki_root="/path/to/wiki",
+  output_path="claims/paper-key-claims.md",
+  overwrite=true
+)
+```
+
+寫檔前會強制檢查每個 candidate 的 verification；只要有
+`source_revision_id`、locator、quote hash 或 span mismatch，工具會回傳
+blocked 結果，不會把 claim promotion pack 寫進 wiki。
+
+## Table/Figure Foam Notes
+
+Manifest 中的 table/figure asset 可以直接 promotion 成 Foam note：
+
+```text
+document_asset(
+  op="foam_notes",
+  doc_id="doc_...",
+  asset_type="all",
+  asset_id="all",
+  wiki_root="/path/to/wiki",
+  output_dir="assets",
+  citation_key="paper-key",
+  overwrite=true
+)
+```
+
+輸出 note 類型會是 `type: table_evidence` 或 `type: figure_evidence`，並保留 `asset_id`、page、line range、`source_block_id`、`source_order`、section context、source PDF hash 與 asset locator hash。每個 note 內也會嵌入 table/figure AssetRef JSON，讓 `evidence(op="health")` 可回 manifest 驗證 asset 是否仍存在與 locator 是否漂移。
 
 ## DOCX Citation Safety
 
-DOCX save path 會檢查 DFM checksum、doc id drift、pre-save integrity、post-save integrity。Track Changes sidecar `revisions.jsonl` 會保存文字修改的 locator context，讓 Word review 和 citation audit 可以對齊。
+DOCX save path 會檢查 DFM checksum、doc id drift、pre-save integrity、post-save integrity。DFM block 現在會保存 Word 來源 locator：`source_part`、`source_story`、`source_element`、`paragraph_index` / `table_index`、`run_ranges`、table `cell_locators`、`text_sha256` 與 `locator_version=docx-dfm-locator-v1`。Track Changes sidecar `revisions.jsonl` 會把同一份 DOCX locator 放進 revision record 與 locator object，讓 Word review 和 citation audit 可以對齊。
 
 ## 實務建議
 

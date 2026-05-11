@@ -39,7 +39,7 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 
 - 📄 **Asset-Aware ETL** - PDF → Markdown with a PyMuPDF-first parser and retained Marker code path:
   - **PyMuPDF** (default) - Fast extraction (~50MB)
-  - **Marker** (`use_marker=True`) - High-precision structured parsing code path retained, but packaged runtime is on security hold in v0.6.28 until upstream `marker-pdf` supports patched Pillow
+  - **Marker** (`use_marker=True`) - High-precision structured parsing code path retained, but packaged runtime remains on security hold in v0.6.29 until upstream `marker-pdf` supports patched Pillow
 - 🧩 **Unified Segmentation Export** - Normalized `segmentation.json` merges manifest, blocks, reading order, and persisted markdown line spans for downstream tools and extensions.
 - 🖼️ **Layout Overlay Debugging** - Render page overlays from `original.pdf` to inspect bbox, segment type, and reading order visually.
 - 🔤 **On-Demand OCR Preprocessing** - Optional `ocrmypdf` preprocessing path for scanned PDFs before ETL.
@@ -47,7 +47,7 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 - 🔄 **Async Job Pipeline** - Supports asynchronous ingest, Marker-required parse, OCR, and conversion jobs with progress tracking.
 - 🗺️ **Document Manifest** - Provides a structured "map" of the document for precise data access by Agents.
 - 🧠 **LightRAG Integration** - Knowledge Graph + Vector Index, supporting cross-document comparison and reasoning.
-- 🧾 **Verified Citation Bundles** - `citation_bundle` and `consult_knowledge_graph(verify_references=True)` export citation-ready spans with locator, quote/hash, context, CRAAP scaffold, and verification status.
+- 🧾 **Verified Citation Bundles** - `citation_bundle`, Foam evidence packs, citation health checks, table/figure evidence notes, and claim promotion export citation-ready spans with locator, quote/hash, context, CRAAP scaffold, and verification status.
 - 📝 **Docx Editing (DFM)** - Edit .docx files in Markdown via **Docx-Flavored Markdown** format. Supports legacy `.doc`, `.odt`, and `.ods` ingest via LibreOffice auto-conversion. 17 tools: ingest, read, save, list, delete, export, strict round-trip validation, DOCX→PDF/DOC/ODT, table edit planning, and Docx ↔ A2T bridges.
 - 🛡️ **DFM Integrity Checker** - Automatic validation and auto-repair at every pipeline stage (post-ingest, pre-save, post-save). Catches orphan markers, column mismatches, and format inconsistencies.
 - 📊 **A2T (Anything to Table)** - 7 operation-based tools for building professional tables from **any source** (PDF assets, Knowledge Graph, URLs, user input). Features: **Citations** (AssetRef), **Audit Trail**, **Schema Evolution**, **Templates**, **Drafting**, and **Token-efficient resumption**.
@@ -138,7 +138,7 @@ Visual overview for the project. All diagrams use consistent GitHub README style
 # Install dependencies (using uv) — default install skips Marker/torch
 uv sync
 
-# v0.6.28: Marker extra is temporarily empty because marker-pdf pins
+# v0.6.29: Marker extra is temporarily empty because marker-pdf pins
 # Pillow<11 while the secure runtime requires Pillow>=12.2.0.
 # Use the default PyMuPDF backend until upstream marker-pdf supports patched Pillow.
 
@@ -156,7 +156,7 @@ Installation scope note:
 - Runtime data stays with your repo: `.env` and `assetAwareMcp.dataDir` default to `./data`, so ingested assets and the uv cache used by the launched server remain scoped to the current workspace.
 
 Marker note:
-In v0.6.28 the packaged Marker extra is intentionally on security hold: upstream `marker-pdf` 1.10.2 requires `Pillow<11`, while this release pins `Pillow>=12.2.0` for patched image-processing security. Default installs use the PyMuPDF backend only. `use_marker=True` / `parse_pdf_structure` will report that Marker is unavailable until upstream Marker supports a patched Pillow range.
+Since v0.6.28 the packaged Marker extra has intentionally stayed on security hold: upstream `marker-pdf` 1.10.2 requires `Pillow<11`, while this release pins `Pillow>=12.2.0` for patched image-processing security. Default installs use the PyMuPDF backend only. `use_marker=True` / `parse_pdf_structure` will report that Marker is unavailable until upstream Marker supports a patched Pillow range.
 
 ## 🔌 MCP Tools
 
@@ -171,7 +171,7 @@ In v0.6.28 the packaged Marker extra is intentionally on security hold: upstream
 | `convert_pdf_to_pptx` | Rebuild editable PPTX slides from extracted PDF markdown and figures; defaults to a conversion background job |
 | `inspect_document_manifest` | Inspect document structure before fetching specific assets |
 | `fetch_document_asset` | Precisely retrieve tables (MD) / figures (B64) / sections |
-| `parse_pdf_structure` | Queue structured parsing work; Marker output is unavailable in v0.6.28 until upstream Marker supports patched Pillow |
+| `parse_pdf_structure` | Queue structured parsing work; Marker output remains unavailable until upstream Marker supports patched Pillow |
 | `search_source_location` | Search exact source locations with page + bbox for verification |
 | `export_document_segmentation` | Export normalized `segmentation.json` with reading order + line ranges |
 | `visualize_document_layout` | Render page overlay images for bbox / type / reading-order inspection |
@@ -283,7 +283,7 @@ Different journals/formats need different extraction settings. Use these tools t
 
 Installation guidance:
 - Default install: `uv sync`
-- Marker backend: temporarily disabled in v0.6.28 because `marker-pdf` pins vulnerable `Pillow<11`; the `marker` / `pdf` extras are compatibility placeholders until upstream supports patched Pillow.
+- Marker backend: temporarily disabled in v0.6.29 because `marker-pdf` pins vulnerable `Pillow<11`; the `marker` / `pdf` extras are compatibility placeholders until upstream supports patched Pillow.
 - VS Code extension: `assetAwareMcp.enableMarkerBackend` is retained as a setting, but the launcher will not install `marker-pdf` while the security hold is active.
 
 - [Technical Spec](docs/spec.md) - Detailed technical specification
