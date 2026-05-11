@@ -11,6 +11,7 @@
 - After the GitHub Wiki was initialized, `/tmp/asset-aware-mcp.wiki` was merged with the remote initial page using `--allow-unrelated-histories` and pushed to `asset-aware-mcp.wiki.git`; remote `master` now points at `d6b3a17`.
 - GitHub Wiki verification passed: the root wiki URL returns HTTP 200, `_pages` lists the generated pages, representative pages such as `MCP-Tools`, `PDF-Document-Workflow`, `DOCX-DFM-Workflow`, `VS-Code-Extension-And-MCP-Setup`, `Git-Harness-Hygiene`, and `Code-Map` return HTTP 200, and the raw `overview-architecture.jpg` asset returns HTTP 200 as `image/jpeg`.
 - A PubMed-style GitHub Pages documentation site now lives under `docs/` and is published from `master` `/docs` at `https://u9401066.github.io/asset-aware-mcp/#/overview-zh`. The site uses `docs/index.html`, `docs/site.css`, `docs/site.js`, generated `docs/site-content.js`, and generated `docs/site-content/*.md`; `scripts/build_docs_site.py --check` is wired into CI docs-check to keep the site payload aligned with `docs/wiki/**`.
+- The docs site was refined for human readers: Home now starts with task-oriented path cards, `Design-And-UX.md` documents audience, information architecture, page rhythm, UI choices, visual direction, and completeness criteria, and the CSS palette was adjusted away from the earlier single warm/green note. Main repo `master` contains `27aca29`; GitHub Wiki `master` contains `404b640`.
 
 ## 2026-05-08 - v0.6.27 security and release hygiene patch
 

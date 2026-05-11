@@ -12,6 +12,7 @@
 - Verified the published Wiki: root wiki URL, `_pages`, representative content pages, raw `Home.md`, and raw `assets/overview-architecture.jpg` all returned HTTP 200, and the rendered Home page contains the expected `Asset-Aware MCP Wiki`, `59 tools`, and architecture diagram references.
 - Added and published a full GitHub Pages docs site matching the PubMed Search MCP site pattern: language switch, searchable grouped navigation, hash routes, rendered Markdown, outline panel, Mermaid support, and generated content payload from `docs/wiki/**`.
 - Configured GitHub Pages source to `master` `/docs`; `https://u9401066.github.io/asset-aware-mcp/` returns HTTP 200, `site.css`, `site.js`, `site-content.js`, and `wiki/assets/overview-architecture.jpg` return HTTP 200, and latest Pages build status is `built` for commit `aff5fa3`.
+- Improved the docs site for human UX: added task cards to the overview, added `Design And UX Notes` to both Pages and GitHub Wiki, documented the site IA/layout/completeness contract, refined the visual palette, and verified `#/design-ux`, `site-content/design-ux.md`, and the GitHub Wiki design page all return HTTP 200.
 
 ## 2026-05-08
 
