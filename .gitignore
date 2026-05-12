@@ -42,6 +42,7 @@ logs/
 *.tmp
 *.temp
 *.cache
+/tmp/
 
 # 測試覆蓋率
 coverage/
