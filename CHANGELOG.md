@@ -7,6 +7,16 @@
 
 ## [Unreleased]
 
+## [0.6.31] - 2026-05-13
+
+### Fixed
+
+- **VSIX dependency security hotfix**
+  - Updated the VS Code extension lockfile so the transitive `fast-uri`
+    dependency resolves to the patched `3.1.2` release.
+  - Verified `npm audit` now reports `0` vulnerabilities for the VSIX package
+    tree.
+
 ## [0.6.30] - 2026-05-13
 
 ### Added
