@@ -7,6 +7,35 @@
 
 ## [Unreleased]
 
+## [0.6.30] - 2026-05-13
+
+### Added
+
+- Added display-crop metadata for PDF figure assets: `raw_path`, `figure_bbox`,
+  `crop_bbox`, `caption_bbox`, `caption_confidence`, and
+  `extraction_strategy`, while keeping legacy manifest compatibility.
+- Added regression coverage for decimal figure captions, spatial caption
+  matching, page-crop preference, caption-anchored large figure crops,
+  multi-panel figure grouping, and isolated fast fallback timeouts.
+
+### Fixed
+
+- PyMuPDF figure extraction now prefers page-region crops from
+  `page.get_image_rects(xref)` and rendered clips instead of raw XObject
+  bitmaps, preserving PDF labels, annotations, and nearby captions.
+- Large vector/XObject hybrid figures such as Miller Fig. 33.1 can now fall
+  back to caption-anchored page crops when the embedded image rectangle is too
+  small to represent the visual figure.
+- Multi-panel figures with `(A)` / `(B)` style captions are grouped into one
+  captioned crop when appropriate, without crossing the next caption boundary.
+- Figure caption detection now handles decimal labels such as `Fig. 33.4` from
+  both built-in and JSON ETL profiles.
+- Fast image extraction timeouts now run in an isolated child process, avoiding
+  long hangs in request-path PDF ingest while preserving deterministic fallback
+  behavior.
+- LightRAG adapter import remains lazy so `ENABLE_LIGHTRAG=false` deployments do
+  not fail on optional knowledge-graph dependency drift.
+
 ## [0.6.29] - 2026-05-11
 
 ### Added

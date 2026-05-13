@@ -16,7 +16,7 @@ PDF pipeline 將原始 PDF 轉成可檢索、可視覺化、可引用的文件 a
 - `document(op="ingest", ...)`
 - `parse_pdf_structure(...)`，Marker 專用 high-precision parse job
 
-預設後端是 PyMuPDF。`0.6.29` 的 Marker extra 仍暫時為空，因為 `marker-pdf` 對 Pillow 的舊版 pin 會和安全 runtime 衝突。`parse_pdf_structure(...)` 是 Marker-required background job；security hold 或 backend unavailable 會出現在 job status/result 裡。一般 `ingest_documents(use_marker=true)` 會把 Marker preference 傳進 job，Marker 不可用時可退回 PyMuPDF；若 `require_marker=true` 則 fail closed。
+預設後端是 PyMuPDF。`0.6.30` 的 Marker extra 仍暫時為空，因為 `marker-pdf` 對 Pillow 的舊版 pin 會和安全 runtime 衝突。`parse_pdf_structure(...)` 是 Marker-required background job；security hold 或 backend unavailable 會出現在 job status/result 裡。一般 `ingest_documents(use_marker=true)` 會把 Marker preference 傳進 job，Marker 不可用時可退回 PyMuPDF；若 `require_marker=true` 則 fail closed。
 
 ## 產物
 
