@@ -59,6 +59,54 @@ class TestFigureAsset:
         assert figure.page == 5
         assert figure.ext == "png"
 
+    def test_figure_asset_preserves_page_crop_metadata(self):
+        """Figure assets should preserve page crop and caption geometry."""
+        figure = FigureAsset(
+            id="fig_1_1",
+            page=5,
+            path="./data/doc_test/images/fig_1_1.png",
+            ext="png",
+            caption="Figure 1. Test",
+            width=800,
+            height=600,
+            raw_path="./data/doc_test/images/fig_1_1_raw.jpeg",
+            figure_bbox=[10.0, 20.0, 210.0, 220.0],
+            crop_bbox=[0.0, 10.0, 300.0, 280.0],
+            caption_bbox=[12.0, 230.0, 290.0, 260.0],
+            caption_confidence=0.91,
+            extraction_strategy="xobject_page_crop",
+        )
+
+        dumped = figure.model_dump()
+
+        assert dumped["raw_path"].endswith("fig_1_1_raw.jpeg")
+        assert dumped["figure_bbox"] == [10.0, 20.0, 210.0, 220.0]
+        assert dumped["crop_bbox"] == [0.0, 10.0, 300.0, 280.0]
+        assert dumped["caption_bbox"] == [12.0, 230.0, 290.0, 260.0]
+        assert dumped["caption_confidence"] == pytest.approx(0.91)
+        assert dumped["extraction_strategy"] == "xobject_page_crop"
+
+    def test_figure_asset_accepts_legacy_manifest_without_crop_metadata(self):
+        """Legacy manifests without crop fields should load with safe defaults."""
+        figure = FigureAsset.model_validate(
+            {
+                "id": "fig_1_1",
+                "page": 5,
+                "path": "./data/doc_test/images/fig_1_1.png",
+                "ext": "png",
+                "caption": "Figure 1. Test",
+                "width": 800,
+                "height": 600,
+            }
+        )
+
+        assert figure.raw_path == ""
+        assert figure.figure_bbox == []
+        assert figure.crop_bbox == []
+        assert figure.caption_bbox == []
+        assert figure.caption_confidence == 0.0
+        assert figure.extraction_strategy == ""
+
     def test_get_media_type(self):
         """Test getting media type from figure."""
         figure = FigureAsset(

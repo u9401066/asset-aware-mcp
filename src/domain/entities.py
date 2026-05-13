@@ -74,6 +74,30 @@ class FigureAsset(BaseModel):
     caption: str = Field("", description="Figure caption if detected")
     width: int = Field(0, description="Image width in pixels")
     height: int = Field(0, description="Image height in pixels")
+    raw_path: str = Field(
+        "",
+        description="Optional local path to the raw embedded image before page-region cropping",
+    )
+    figure_bbox: list[float] = Field(
+        default_factory=list,
+        description="Figure bounding box on the PDF page as [x0, y0, x1, y1]",
+    )
+    crop_bbox: list[float] = Field(
+        default_factory=list,
+        description="Rendered page-region crop box as [x0, y0, x1, y1]",
+    )
+    caption_bbox: list[float] = Field(
+        default_factory=list,
+        description="Caption bounding box on the PDF page as [x0, y0, x1, y1]",
+    )
+    caption_confidence: float = Field(
+        0.0,
+        description="Confidence score for spatial figure-caption association",
+    )
+    extraction_strategy: str = Field(
+        "",
+        description="Image extraction strategy, e.g. xobject_page_crop/vector_region",
+    )
 
     # Enhanced fields from Docling
     figure_type: str = Field("", description="Figure type: chart/diagram/photo/etc.")

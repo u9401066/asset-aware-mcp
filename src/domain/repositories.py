@@ -203,6 +203,16 @@ class KnowledgeGraphInterface(ABC):
         """Extract top entities from text."""
         ...
 
+    @abstractmethod
+    async def export_graph(
+        self,
+        format: str = "summary",
+        limit: int = 50,
+        entity_types: list[str] | None = None,
+    ) -> dict[str, object]:
+        """Export knowledge graph data in a presentation-friendly format."""
+        ...
+
 
 class JobStoreInterface(ABC):
     """

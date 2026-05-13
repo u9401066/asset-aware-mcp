@@ -1311,6 +1311,16 @@ class DocumentService:
                     line_source=str(
                         matched_block.metadata.get("line_match_strategy") or ""
                     ),
+                    raw_path="",
+                    figure_bbox=self._bbox_list(matched_block.bbox),
+                    crop_bbox=self._bbox_list(matched_block.bbox),
+                    caption_bbox=self._bbox_list(
+                        matched_block.metadata.get("caption_bbox")
+                    ),
+                    caption_confidence=1.0
+                    if str(matched_block.metadata.get("caption") or "").strip()
+                    else 0.0,
+                    extraction_strategy="marker_block_render",
                 )
             )
 
@@ -1441,19 +1451,17 @@ class DocumentService:
         if hasattr(self.pdf_extractor, "extract_figure_captions"):
             page_captions = self.pdf_extractor.extract_figure_captions(pdf_path)
 
-        min_px = 50
-        if hasattr(self.pdf_extractor, "profile"):
-            min_px = self.pdf_extractor.profile.filters.min_figure_px
-        elif hasattr(self.pdf_extractor, "_MIN_FIGURE_PX"):
-            min_px = self.pdf_extractor._MIN_FIGURE_PX
+        min_px = self.profile.filters.min_figure_px
+        if hasattr(self.pdf_extractor, "_MIN_FIGURE_PX"):
+            min_px = int(getattr(self.pdf_extractor, "_MIN_FIGURE_PX", min_px))
 
         candidates_by_page: dict[int, list[dict[str, Any]]] = {}
         seen_hashes_by_page: dict[int, set[str]] = {}
 
         for img_data in raw_images:
-            image_bytes = img_data["image_bytes"]
-            w = img_data["width"]
-            h = img_data["height"]
+            display_bytes = img_data.get("page_image_bytes") or img_data["image_bytes"]
+            w = int(img_data.get("page_crop_width") or img_data["width"])
+            h = int(img_data.get("page_crop_height") or img_data["height"])
 
             if w < min_px or h < min_px:
                 continue
@@ -1464,12 +1472,12 @@ class DocumentService:
             if aspect_ratio >= 8.0:
                 continue
 
-            variance = self._image_variance(image_bytes)
+            variance = self._image_variance(display_bytes)
             if variance < 5.0:
                 continue
 
             page_num = int(img_data["page"])
-            image_hash = hashlib.sha256(image_bytes).hexdigest()
+            image_hash = hashlib.sha256(display_bytes).hexdigest()
             page_hashes = seen_hashes_by_page.setdefault(page_num, set())
             if image_hash in page_hashes:
                 continue
@@ -1519,50 +1527,509 @@ class DocumentService:
                     for item in candidates
                     if float(item["variance"]) >= 15.0 and int(item["area"]) >= 40_000
                 ][:2]
+            candidates = sorted(candidates, key=self._figure_candidate_order_key)
+            caps = page_captions.get(page_num, [])
+            grouped_candidates, consumed_candidate_indexes, grouped_caption_indexes = (
+                self._build_caption_group_candidates(
+                    pdf_path,
+                    page_num,
+                    candidates,
+                    caps,
+                )
+            )
+            if grouped_candidates:
+                candidates = grouped_candidates + [
+                    item
+                    for idx, item in enumerate(candidates)
+                    if idx not in consumed_candidate_indexes
+                ]
+                used_captions.setdefault(page_num, set()).update(
+                    grouped_caption_indexes
+                )
 
             for local_index, img_data in enumerate(candidates, start=1):
-                w = img_data["width"]
-                h = img_data["height"]
+                display_bytes = (
+                    img_data.get("page_image_bytes") or img_data["image_bytes"]
+                )
+                display_ext = str(img_data.get("page_image_ext") or img_data["ext"])
+                w = int(img_data.get("page_crop_width") or img_data["width"])
+                h = int(img_data.get("page_crop_height") or img_data["height"])
                 original_page = remap_page_number(page_num, page_map)
 
                 # Generate figure ID using the curated local page order.
                 fig_id = f"fig_{original_page}_{local_index}"
 
-                # Save image
-                image_path = self.repository.save_image(
-                    doc_id=doc_id,
-                    image_id=fig_id,
-                    data=img_data["image_bytes"],
-                    ext=img_data["ext"],
-                )
+                raw_path = ""
+                if self._should_save_raw_image(img_data, display_bytes, w, h):
+                    raw_image_path = self.repository.save_image(
+                        doc_id=doc_id,
+                        image_id=f"{fig_id}_raw",
+                        data=img_data["image_bytes"],
+                        ext=img_data["ext"],
+                    )
+                    raw_path = str(raw_image_path)
 
-                # Associate caption: pick next unused caption on same page
+                # Associate caption by geometry first; fall back to legacy FIFO.
                 caption = img_data.get("caption", "")
+                caption_bbox: list[float] = self._bbox_list(
+                    img_data.get("caption_bbox")
+                )
+                caption_confidence = float(img_data.get("caption_confidence") or 0.0)
                 if not caption:
                     caps = page_captions.get(page_num, [])
                     if page_num not in used_captions:
                         used_captions[page_num] = set()
-                    for idx, cap in enumerate(caps):
-                        if idx not in used_captions[page_num]:
-                            caption = cap["caption"]
-                            used_captions[page_num].add(idx)
-                            break
+                    match = self._match_caption_for_image(
+                        img_data,
+                        caps,
+                        used_caption_indexes=used_captions[page_num],
+                    )
+                    if match is not None:
+                        caption = str(match["caption"])
+                        caption_bbox = list(match.get("bbox") or [])
+                        caption_confidence = float(match.get("confidence") or 0.0)
+                        used_captions[page_num].add(int(match["index"]))
+
+                figure_bbox = self._bbox_list(img_data.get("bbox"))
+                crop_bbox = self._bbox_list(img_data.get("page_crop_bbox"))
+                extraction_strategy = str(img_data.get("extraction_strategy") or "")
+                anchored_crop = self._render_caption_anchored_figure_crop(
+                    pdf_path,
+                    page_number=page_num,
+                    image_data=img_data,
+                    caption_bbox=caption_bbox,
+                )
+                if anchored_crop:
+                    display_bytes = anchored_crop["image"]
+                    display_ext = anchored_crop["ext"]
+                    w = int(anchored_crop["width"])
+                    h = int(anchored_crop["height"])
+                    crop_bbox = list(anchored_crop["bbox"])
+                    figure_bbox = list(anchored_crop["figure_bbox"])
+                    extraction_strategy = "caption_anchor_page_crop"
+
+                # Save display image. For PyMuPDF xobjects this is the page-region
+                # crop, preserving PDF text/vector overlays that raw image objects miss.
+                image_path = self.repository.save_image(
+                    doc_id=doc_id,
+                    image_id=fig_id,
+                    data=display_bytes,
+                    ext=display_ext,
+                )
 
                 figures.append(
                     FigureAsset(
                         id=fig_id,
                         page=original_page,
                         path=str(image_path),
-                        ext=img_data["ext"],
+                        ext=display_ext,
                         width=w,
                         height=h,
                         caption=caption,
+                        raw_path=raw_path,
+                        figure_bbox=figure_bbox,
+                        crop_bbox=crop_bbox,
+                        caption_bbox=caption_bbox,
+                        caption_confidence=caption_confidence,
+                        extraction_strategy=extraction_strategy,
                         figure_type="",
                         source=source,
                     )
                 )
 
         return figures
+
+    def _build_caption_group_candidates(
+        self,
+        pdf_path: Path,
+        page_num: int,
+        candidates: list[dict[str, Any]],
+        captions: list[dict],
+    ) -> tuple[list[dict[str, Any]], set[int], set[int]]:
+        """Build one display crop per caption when a figure spans many xobjects."""
+        grouped: list[dict[str, Any]] = []
+        consumed_candidate_indexes: set[int] = set()
+        consumed_caption_indexes: set[int] = set()
+
+        caption_items: list[tuple[int, dict[str, Any], list[float]]] = []
+        for caption_index, caption in enumerate(captions):
+            caption_bbox = self._bbox_list(caption.get("bbox"))
+            if caption_bbox:
+                caption_items.append((caption_index, caption, caption_bbox))
+
+        caption_items.sort(key=lambda item: (item[2][1], item[2][0]))
+
+        for item_index, (caption_index, caption, caption_bbox) in enumerate(
+            caption_items
+        ):
+            next_caption_bbox = (
+                caption_items[item_index + 1][2]
+                if item_index + 1 < len(caption_items)
+                else None
+            )
+            matches: list[tuple[int, dict[str, Any]]] = []
+            for candidate_index, candidate in enumerate(candidates):
+                if candidate_index in consumed_candidate_indexes:
+                    continue
+                if self._candidate_belongs_to_caption(
+                    candidate,
+                    caption_bbox,
+                    next_caption_bbox=next_caption_bbox,
+                    caption_text=str(caption.get("caption") or ""),
+                ):
+                    matches.append((candidate_index, candidate))
+
+            if len(matches) < 2:
+                continue
+
+            figure_bbox = self._union_bboxes(
+                [
+                    self._bbox_list(item.get("bbox") or item.get("page_crop_bbox"))
+                    for _, item in matches
+                ]
+            )
+            crop_bbox = self._union_bboxes([figure_bbox, caption_bbox])
+            first = matches[0][1]
+            rendered = self._render_caption_anchored_figure_crop(
+                pdf_path,
+                page_number=page_num,
+                image_data=first,
+                caption_bbox=caption_bbox,
+            )
+            extraction_strategy = (
+                "caption_anchor_page_crop" if rendered else "caption_group_page_crop"
+            )
+            if not rendered:
+                rendered = self._render_page_region_image(
+                    pdf_path,
+                    page_number=page_num,
+                    bbox=crop_bbox,
+                    padding=8.0,
+                )
+            if not rendered:
+                continue
+
+            grouped.append(
+                {
+                    **first,
+                    "bbox": list(rendered.get("figure_bbox") or figure_bbox),
+                    "page_image_bytes": rendered["image"],
+                    "page_image_ext": rendered["ext"],
+                    "page_crop_bbox": rendered["bbox"],
+                    "page_crop_width": rendered["width"],
+                    "page_crop_height": rendered["height"],
+                    "caption": str(caption.get("caption") or ""),
+                    "caption_bbox": caption_bbox,
+                    "caption_confidence": 1.0,
+                    "extraction_strategy": extraction_strategy,
+                    "grouped_candidate_count": len(matches),
+                    "save_raw_image": False,
+                }
+            )
+            consumed_candidate_indexes.update(index for index, _ in matches)
+            consumed_caption_indexes.add(caption_index)
+
+        return grouped, consumed_candidate_indexes, consumed_caption_indexes
+
+    @classmethod
+    def _candidate_belongs_to_caption(
+        cls,
+        candidate: dict[str, Any],
+        caption_bbox: list[float],
+        *,
+        next_caption_bbox: list[float] | None = None,
+        caption_text: str = "",
+    ) -> bool:
+        """Return whether an image candidate is spatially part of a captioned figure."""
+        image_bbox = cls._bbox_list(
+            candidate.get("bbox") or candidate.get("page_crop_bbox")
+        )
+        if not image_bbox or not caption_bbox:
+            return False
+        img_x0, img_y0, img_x1, img_y1 = image_bbox
+        cap_x0, cap_y0, cap_x1, cap_y1 = caption_bbox
+
+        if next_caption_bbox:
+            next_y0 = next_caption_bbox[1]
+            image_center_y = (img_y0 + img_y1) / 2.0
+            if img_y0 >= next_y0 - 8.0 or image_center_y >= next_y0 - 8.0:
+                return False
+
+        if img_y0 > cap_y0 + 8.0:
+            return False
+        vertical_gap = cls._vertical_gap(img_y0, img_y1, cap_y0, cap_y1)
+        is_multipanel_caption = bool(
+            re.search(r"\([A-Z]\)", caption_text)
+            or re.search(r"\b[A-Z]\s*(?:and|,)\s*[A-Z]\b", caption_text)
+        )
+        max_vertical_gap = 260.0 if is_multipanel_caption else 150.0
+        if vertical_gap > max_vertical_gap:
+            return False
+
+        expanded_cap_x0 = cap_x0 - 80.0
+        expanded_cap_x1 = cap_x1 + 80.0
+        horizontal_overlap = max(
+            0.0,
+            min(img_x1, expanded_cap_x1) - max(img_x0, expanded_cap_x0),
+        )
+        if horizontal_overlap > 0:
+            return True
+        image_center_x = (img_x0 + img_x1) / 2.0
+        return expanded_cap_x0 <= image_center_x <= expanded_cap_x1
+
+    @staticmethod
+    def _union_bboxes(bboxes: list[list[float]]) -> list[float]:
+        """Return a bbox enclosing all non-empty bboxes."""
+        valid = [bbox for bbox in bboxes if len(bbox) >= 4]
+        if not valid:
+            return []
+        return [
+            round(min(bbox[0] for bbox in valid), 3),
+            round(min(bbox[1] for bbox in valid), 3),
+            round(max(bbox[2] for bbox in valid), 3),
+            round(max(bbox[3] for bbox in valid), 3),
+        ]
+
+    @staticmethod
+    def _render_page_region_image(
+        pdf_path: Path,
+        *,
+        page_number: int,
+        bbox: list[float],
+        padding: float = 8.0,
+        zoom: float = 2.0,
+    ) -> dict[str, Any] | None:
+        """Render a page-region crop for a grouped captioned figure."""
+        if len(bbox) < 4 or page_number < 1:
+            return None
+
+        try:
+            import fitz
+        except Exception:
+            return None
+
+        try:
+            with fitz.open(str(pdf_path)) as doc:
+                if page_number > len(doc):
+                    return None
+                page = doc[page_number - 1]
+                clip = fitz.Rect(
+                    bbox[0] - padding,
+                    bbox[1] - padding,
+                    bbox[2] + padding,
+                    bbox[3] + padding,
+                )
+                clip = clip & page.rect
+                if clip.is_empty:
+                    return None
+                pix = page.get_pixmap(
+                    matrix=fitz.Matrix(zoom, zoom),
+                    clip=clip,
+                    alpha=False,
+                )
+                return {
+                    "image": cast("bytes", pix.tobytes("png")),
+                    "ext": "png",
+                    "width": pix.width,
+                    "height": pix.height,
+                    "bbox": [
+                        round(float(clip.x0), 3),
+                        round(float(clip.y0), 3),
+                        round(float(clip.x1), 3),
+                        round(float(clip.y1), 3),
+                    ],
+                }
+        except Exception:
+            return None
+
+    def _render_caption_anchored_figure_crop(
+        self,
+        pdf_path: Path,
+        *,
+        page_number: int,
+        image_data: dict[str, Any],
+        caption_bbox: list[float],
+    ) -> dict[str, Any] | None:
+        """Render a wide figure crop when a tiny XObject belongs to a large captioned figure."""
+        image_bbox = self._bbox_list(image_data.get("bbox"))
+        if not image_bbox or not caption_bbox:
+            return None
+        if str(image_data.get("extraction_strategy") or "") != "xobject_page_crop":
+            return None
+
+        img_x0, img_y0, img_x1, img_y1 = image_bbox
+        cap_x0, cap_y0, cap_x1, cap_y1 = caption_bbox
+        image_width = max(img_x1 - img_x0, 1.0)
+        image_height = max(img_y1 - img_y0, 1.0)
+        caption_width = max(cap_x1 - cap_x0, 1.0)
+
+        # Large textbook/vector figures can contain only one small embedded bitmap
+        # (for example a probe illustration) while the rest is PDF vector/text.
+        if caption_width < 300.0:
+            return None
+        if image_width >= caption_width * 0.35 or image_height >= 160.0:
+            return None
+
+        figure_height = min(380.0, max(220.0, caption_width * 0.70))
+        crop_bbox = [
+            cap_x0 - 8.0,
+            max(0.0, cap_y0 - figure_height),
+            cap_x1 + 8.0,
+            cap_y1 + 4.0,
+        ]
+        rendered = self._render_page_region_image(
+            pdf_path,
+            page_number=page_number,
+            bbox=crop_bbox,
+            padding=0.0,
+            zoom=2.5,
+        )
+        if not rendered:
+            return None
+        rendered["figure_bbox"] = [
+            rendered["bbox"][0],
+            rendered["bbox"][1],
+            rendered["bbox"][2],
+            round(float(cap_y0), 3),
+        ]
+        return rendered
+
+    @staticmethod
+    def _figure_candidate_order_key(item: dict[str, Any]) -> tuple[float, float, int]:
+        """Return stable page reading order for figure IDs and captions."""
+        bbox = DocumentService._bbox_list(
+            item.get("bbox") or item.get("page_crop_bbox")
+        )
+        if bbox:
+            return (bbox[1], bbox[0], int(item.get("index_on_page") or 0))
+        return (0.0, 0.0, int(item.get("index_on_page") or 0))
+
+    @staticmethod
+    def _bbox_list(value: Any) -> list[float]:
+        """Normalize optional bbox values to JSON-safe float lists."""
+        if not isinstance(value, (list, tuple)) or len(value) < 4:
+            return []
+        return [round(float(item), 3) for item in value[:4]]
+
+    def _should_save_raw_image(
+        self,
+        image_data: dict[str, Any],
+        display_bytes: bytes,
+        display_width: int,
+        display_height: int,
+    ) -> bool:
+        """Return whether the original XObject is useful enough to persist."""
+        if not image_data.get("page_image_bytes") or not image_data.get(
+            "save_raw_image",
+            True,
+        ):
+            return False
+
+        raw_bytes = image_data.get("image_bytes")
+        if not isinstance(raw_bytes, (bytes, bytearray)) or not raw_bytes:
+            return False
+        if hashlib.sha256(raw_bytes).digest() == hashlib.sha256(display_bytes).digest():
+            return False
+
+        raw_width = int(image_data.get("width") or 0)
+        raw_height = int(image_data.get("height") or 0)
+        if (
+            raw_width < self._get_min_figure_px()
+            or raw_height < self._get_min_figure_px()
+        ):
+            return False
+
+        raw_area = max(raw_width * raw_height, 1)
+        display_area = max(display_width * display_height, 1)
+        if display_area <= raw_area * 1.10:
+            return False
+
+        return self._image_variance(bytes(raw_bytes)) >= 5.0
+
+    @classmethod
+    def _match_caption_for_image(
+        cls,
+        image_data: dict[str, Any],
+        captions: list[dict],
+        *,
+        used_caption_indexes: set[int],
+    ) -> dict[str, Any] | None:
+        """Match the most likely caption to an image using page geometry."""
+        figure_bbox = cls._bbox_list(image_data.get("bbox")) or cls._bbox_list(
+            image_data.get("page_crop_bbox")
+        )
+        if not figure_bbox:
+            return None
+
+        fig_x0, fig_y0, fig_x1, fig_y1 = figure_bbox
+        fig_center_x = (fig_x0 + fig_x1) / 2.0
+        fig_width = max(fig_x1 - fig_x0, 1.0)
+        best: dict[str, Any] | None = None
+        best_score = -1.0
+
+        for idx, cap in enumerate(captions):
+            if idx in used_caption_indexes:
+                continue
+            caption = str(cap.get("caption") or "")
+            bbox = cls._bbox_list(cap.get("bbox"))
+            if not caption or not bbox:
+                continue
+            cap_x0, cap_y0, cap_x1, cap_y1 = bbox
+            if cap_y0 < fig_y1 - 8.0:
+                continue
+            cap_center_x = (cap_x0 + cap_x1) / 2.0
+            vertical_gap = cls._vertical_gap(fig_y0, fig_y1, cap_y0, cap_y1)
+            if vertical_gap > 180.0:
+                continue
+            if any(
+                other_idx != idx
+                and other_idx not in used_caption_indexes
+                and (other_bbox := cls._bbox_list(other.get("bbox")))
+                and fig_y1 < other_bbox[1] < cap_y0
+                for other_idx, other in enumerate(captions)
+            ):
+                continue
+            horizontal_offset = abs(fig_center_x - cap_center_x)
+            horizontal_overlap = max(0.0, min(fig_x1, cap_x1) - max(fig_x0, cap_x0))
+            overlap_ratio = horizontal_overlap / min(
+                fig_width,
+                max(cap_x1 - cap_x0, 1.0),
+            )
+
+            below_bonus = 0.35 if cap_y0 >= fig_y0 else 0.0
+            overlap_bonus = min(overlap_ratio, 1.0) * 0.35
+            distance_penalty = min(vertical_gap / 240.0, 1.0) * 0.45
+            offset_penalty = min(horizontal_offset / max(fig_width, 1.0), 1.0) * 0.30
+            score = (
+                0.75 + below_bonus + overlap_bonus - distance_penalty - offset_penalty
+            )
+
+            if score > best_score:
+                best_score = score
+                best = {
+                    "index": idx,
+                    "caption": caption,
+                    "bbox": bbox,
+                    "confidence": max(0.0, min(score, 1.0)),
+                }
+
+        if best is None or float(best["confidence"]) < 0.50:
+            return None
+        return best
+
+    @staticmethod
+    def _vertical_gap(
+        fig_y0: float,
+        fig_y1: float,
+        cap_y0: float,
+        cap_y1: float,
+    ) -> float:
+        """Return vertical gap between figure and caption boxes."""
+        if cap_y0 >= fig_y1:
+            return cap_y0 - fig_y1
+        if fig_y0 >= cap_y1:
+            return fig_y0 - cap_y1
+        return 0.0
 
     async def _extract_tables(
         self,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import json
 from hashlib import sha256
 from pathlib import Path
@@ -9,6 +10,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from PIL import Image, ImageDraw
 
 from src.application.document_service import (
     DocumentService,
@@ -27,6 +29,17 @@ from src.domain.entities import (
 from src.domain.etl_profile import ETLProfile
 from src.infrastructure.file_storage import FileStorage
 from src.infrastructure.marker_adapter import MarkerBlock, MarkerParseResult
+
+
+def _test_png_bytes(label: str, *, size: tuple[int, int] = (140, 110)) -> bytes:
+    image = Image.new("RGB", size, "white")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((8, 8, size[0] - 8, size[1] - 8), outline="black", width=4)
+    draw.line((12, 12, size[0] - 12, size[1] - 12), fill="black", width=3)
+    draw.text((18, 18), label, fill="black")
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
 
 
 def test_normalize_page_ranges_merges_adjacent_ranges() -> None:
@@ -359,6 +372,510 @@ async def test_required_marker_oom_does_not_write_fallback_artifacts(
     assert result.success is False
     assert "marker_max_pages_per_chunk=1" in (result.error or "")
     service._ingest_single.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_extract_and_save_images_prefers_page_crop_and_spatial_caption(
+    tmp_path: Path,
+) -> None:
+    repository = MagicMock()
+    saved_paths: dict[str, Path] = {}
+
+    def fake_save_image(doc_id: str, image_id: str, data: bytes, ext: str) -> Path:
+        path = tmp_path / doc_id / "images" / f"{image_id}.{ext}"
+        saved_paths[image_id] = path
+        return path
+
+    repository.save_image.side_effect = fake_save_image
+    raw_left = _test_png_bytes("raw-left")
+    raw_right = _test_png_bytes("raw-right")
+    crop_left = _test_png_bytes("crop-left-label", size=(288, 272))
+    crop_right = _test_png_bytes("crop-right-label", size=(288, 272))
+
+    pdf_extractor = MagicMock()
+    pdf_extractor.extract_images.return_value = [
+        {
+            "page": 4,
+            "image_bytes": raw_left,
+            "ext": "jpeg",
+            "width": 120,
+            "height": 90,
+            "index_on_page": 1,
+            "bbox": [40.0, 80.0, 160.0, 170.0],
+            "page_image_bytes": crop_left,
+            "page_image_ext": "png",
+            "page_crop_bbox": [28.0, 68.0, 172.0, 204.0],
+            "page_crop_width": 288,
+            "page_crop_height": 272,
+            "extraction_strategy": "xobject_page_crop",
+        },
+        {
+            "page": 4,
+            "image_bytes": raw_right,
+            "ext": "jpeg",
+            "width": 120,
+            "height": 90,
+            "index_on_page": 2,
+            "bbox": [260.0, 80.0, 380.0, 170.0],
+            "page_image_bytes": crop_right,
+            "page_image_ext": "png",
+            "page_crop_bbox": [248.0, 68.0, 392.0, 204.0],
+            "page_crop_width": 288,
+            "page_crop_height": 272,
+            "extraction_strategy": "xobject_page_crop",
+        },
+    ]
+    pdf_extractor.extract_figure_captions.return_value = {
+        4: [
+            {
+                "number": "4.1",
+                "caption": "Figure 4.1 Left image caption",
+                "bbox": [38.0, 178.0, 170.0, 198.0],
+            },
+            {
+                "number": "4.2",
+                "caption": "Figure 4.2 Right image caption",
+                "bbox": [258.0, 178.0, 390.0, 198.0],
+            },
+        ]
+    }
+
+    service = DocumentService(
+        repository=repository,
+        pdf_extractor=pdf_extractor,
+        profile=ETLProfile.default(),
+    )
+
+    figures = await service._extract_and_save_images(
+        "doc_test",
+        tmp_path / "source.pdf",
+    )
+
+    assert [figure.caption for figure in figures] == [
+        "Figure 4.1 Left image caption",
+        "Figure 4.2 Right image caption",
+    ]
+    assert figures[0].path == str(saved_paths["fig_4_1"])
+    assert figures[0].raw_path == str(saved_paths["fig_4_1_raw"])
+    assert figures[0].ext == "png"
+    assert figures[0].width == 288
+    assert figures[0].height == 272
+    assert figures[0].figure_bbox == [40.0, 80.0, 160.0, 170.0]
+    assert figures[0].crop_bbox == [28.0, 68.0, 172.0, 204.0]
+    assert figures[0].caption_bbox == [38.0, 178.0, 170.0, 198.0]
+    assert figures[0].caption_confidence > 0.8
+    assert figures[0].extraction_strategy == "xobject_page_crop"
+    assert repository.save_image.call_args_list[0].kwargs == {
+        "doc_id": "doc_test",
+        "image_id": "fig_4_1_raw",
+        "data": raw_left,
+        "ext": "jpeg",
+    }
+    assert repository.save_image.call_args_list[1].kwargs == {
+        "doc_id": "doc_test",
+        "image_id": "fig_4_1",
+        "data": crop_left,
+        "ext": "png",
+    }
+
+
+def test_match_caption_by_geometry_prefers_nearest_same_column() -> None:
+    figure = {
+        "bbox": [260.0, 80.0, 380.0, 170.0],
+        "page_crop_bbox": [248.0, 68.0, 392.0, 204.0],
+    }
+    captions = [
+        {
+            "caption": "Figure 4.1 Left image caption",
+            "bbox": [38.0, 178.0, 170.0, 198.0],
+        },
+        {
+            "caption": "Figure 4.2 Right image caption",
+            "bbox": [258.0, 178.0, 390.0, 198.0],
+        },
+    ]
+
+    match = DocumentService._match_caption_for_image(
+        figure,
+        captions,
+        used_caption_indexes=set(),
+    )
+
+    assert match is not None
+    assert match["caption"] == "Figure 4.2 Right image caption"
+    assert match["bbox"] == [258.0, 178.0, 390.0, 198.0]
+    assert match["confidence"] > 0.8
+
+
+def test_match_caption_by_geometry_rejects_far_caption() -> None:
+    figure = {
+        "bbox": [40.0, 80.0, 160.0, 170.0],
+        "page_crop_bbox": [28.0, 68.0, 172.0, 204.0],
+    }
+    captions = [
+        {
+            "caption": "Figure 4.9 Unrelated far caption",
+            "bbox": [40.0, 430.0, 170.0, 455.0],
+        }
+    ]
+
+    match = DocumentService._match_caption_for_image(
+        figure,
+        captions,
+        used_caption_indexes=set(),
+    )
+
+    assert match is None
+
+
+@pytest.mark.asyncio
+async def test_extract_and_save_images_does_not_fifo_assign_unmatched_caption(
+    tmp_path: Path,
+) -> None:
+    repository = MagicMock()
+    repository.save_image.side_effect = (
+        lambda doc_id, image_id, data, ext: tmp_path
+        / doc_id
+        / "images"
+        / f"{image_id}.{ext}"
+    )
+    crop = _test_png_bytes("crop-label", size=(288, 272))
+
+    pdf_extractor = MagicMock()
+    pdf_extractor.extract_images.return_value = [
+        {
+            "page": 4,
+            "image_bytes": _test_png_bytes("raw"),
+            "ext": "jpeg",
+            "width": 120,
+            "height": 90,
+            "index_on_page": 1,
+            "bbox": [40.0, 80.0, 160.0, 170.0],
+            "page_image_bytes": crop,
+            "page_image_ext": "png",
+            "page_crop_bbox": [28.0, 68.0, 172.0, 204.0],
+            "page_crop_width": 288,
+            "page_crop_height": 272,
+            "extraction_strategy": "xobject_page_crop",
+        }
+    ]
+    pdf_extractor.extract_figure_captions.return_value = {
+        4: [
+            {
+                "number": "4.9",
+                "caption": "Figure 4.9 Unrelated far caption",
+                "bbox": [40.0, 430.0, 170.0, 455.0],
+            }
+        ]
+    }
+
+    service = DocumentService(
+        repository=repository,
+        pdf_extractor=pdf_extractor,
+        profile=ETLProfile.default(),
+    )
+
+    figures = await service._extract_and_save_images(
+        "doc_test", tmp_path / "source.pdf"
+    )
+
+    assert len(figures) == 1
+    assert figures[0].caption == ""
+    assert figures[0].caption_bbox == []
+    assert figures[0].caption_confidence == 0.0
+
+
+@pytest.mark.asyncio
+async def test_extract_and_save_images_expands_tiny_xobject_to_caption_anchor_crop(
+    monkeypatch, tmp_path: Path
+) -> None:
+    repository = MagicMock()
+    saved_payloads: dict[str, bytes] = {}
+
+    def fake_save_image(doc_id: str, image_id: str, data: bytes, ext: str) -> Path:
+        saved_payloads[image_id] = data
+        return tmp_path / doc_id / "images" / f"{image_id}.{ext}"
+
+    repository.save_image.side_effect = fake_save_image
+    tiny_crop = _test_png_bytes("tiny-probe", size=(80, 180))
+    anchored = _test_png_bytes("full-figure-33-1", size=(1291, 953))
+
+    pdf_extractor = MagicMock()
+    pdf_extractor.extract_images.return_value = [
+        {
+            "page": 2,
+            "image_bytes": _test_png_bytes("raw-probe"),
+            "ext": "jpeg",
+            "width": 27,
+            "height": 62,
+            "index_on_page": 1,
+            "bbox": [54.89, 606.564, 82.154, 668.868],
+            "page_image_bytes": tiny_crop,
+            "page_image_ext": "png",
+            "page_crop_bbox": [43.0, 598.564, 558.697, 742.116],
+            "page_crop_width": 1032,
+            "page_crop_height": 288,
+            "extraction_strategy": "xobject_page_crop",
+        }
+    ]
+    pdf_extractor.extract_figure_captions.return_value = {
+        2: [
+            {
+                "number": "33.1",
+                "caption": "Figure 33.1 Evolution of transesophageal echocardiography",
+                "bbox": [51.0, 707.38, 550.697, 734.116],
+            }
+        ]
+    }
+
+    service = DocumentService(
+        repository=repository,
+        pdf_extractor=pdf_extractor,
+        profile=ETLProfile.default(),
+    )
+    monkeypatch.setattr(
+        service,
+        "_render_page_region_image",
+        lambda *_args, **_kwargs: {
+            "image": anchored,
+            "ext": "png",
+            "width": 1291,
+            "height": 953,
+            "bbox": [43.0, 354.0, 559.0, 738.116],
+        },
+    )
+
+    figures = await service._extract_and_save_images(
+        "doc_test", tmp_path / "source.pdf"
+    )
+
+    assert len(figures) == 1
+    assert figures[0].extraction_strategy == "caption_anchor_page_crop"
+    assert figures[0].width == 1291
+    assert figures[0].height == 953
+    assert figures[0].crop_bbox == [43.0, 354.0, 559.0, 738.116]
+    assert figures[0].figure_bbox == [43.0, 354.0, 559.0, 707.38]
+    assert figures[0].caption_bbox == [51.0, 707.38, 550.697, 734.116]
+    assert saved_payloads["fig_2_1"] == anchored
+
+
+@pytest.mark.asyncio
+async def test_extract_and_save_images_groups_multiple_xobjects_under_caption(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    repository = MagicMock()
+    repository.save_image.side_effect = (
+        lambda doc_id, image_id, data, ext: tmp_path
+        / doc_id
+        / "images"
+        / f"{image_id}.{ext}"
+    )
+    component_a = _test_png_bytes("panel-a")
+    component_b = _test_png_bytes("panel-b")
+    grouped = _test_png_bytes("grouped-caption-crop", size=(500, 360))
+
+    pdf_extractor = MagicMock()
+    pdf_extractor.extract_images.return_value = [
+        {
+            "page": 3,
+            "image_bytes": component_a,
+            "ext": "jpeg",
+            "width": 130,
+            "height": 100,
+            "index_on_page": 1,
+            "bbox": [50.0, 60.0, 180.0, 160.0],
+            "page_image_bytes": component_a,
+            "page_image_ext": "png",
+            "page_crop_bbox": [40.0, 50.0, 190.0, 220.0],
+            "page_crop_width": 300,
+            "page_crop_height": 340,
+            "extraction_strategy": "xobject_page_crop",
+        },
+        {
+            "page": 3,
+            "image_bytes": component_b,
+            "ext": "jpeg",
+            "width": 130,
+            "height": 100,
+            "index_on_page": 2,
+            "bbox": [200.0, 60.0, 330.0, 160.0],
+            "page_image_bytes": component_b,
+            "page_image_ext": "png",
+            "page_crop_bbox": [190.0, 50.0, 340.0, 220.0],
+            "page_crop_width": 300,
+            "page_crop_height": 340,
+            "extraction_strategy": "xobject_page_crop",
+        },
+        {
+            "page": 3,
+            "image_bytes": _test_png_bytes("next-figure"),
+            "ext": "jpeg",
+            "width": 130,
+            "height": 100,
+            "index_on_page": 3,
+            "bbox": [50.0, 230.0, 180.0, 330.0],
+            "page_image_bytes": _test_png_bytes("next-figure-crop"),
+            "page_image_ext": "png",
+            "page_crop_bbox": [40.0, 220.0, 190.0, 390.0],
+            "page_crop_width": 300,
+            "page_crop_height": 340,
+            "extraction_strategy": "xobject_page_crop",
+        },
+    ]
+    pdf_extractor.extract_figure_captions.return_value = {
+        3: [
+            {
+                "number": "42.1",
+                "caption": "Figure 42.1 Multipanel caption",
+                "bbox": [45.0, 180.0, 360.0, 210.0],
+            }
+        ]
+    }
+    service = DocumentService(
+        repository=repository,
+        pdf_extractor=pdf_extractor,
+        profile=ETLProfile.default(),
+    )
+    monkeypatch.setattr(
+        service,
+        "_render_page_region_image",
+        lambda *_args, **_kwargs: {
+            "image": grouped,
+            "ext": "png",
+            "width": 500,
+            "height": 360,
+            "bbox": [42.0, 52.0, 362.0, 222.0],
+        },
+    )
+
+    figures = await service._extract_and_save_images(
+        "doc_test", tmp_path / "source.pdf"
+    )
+
+    assert len(figures) == 2
+    assert figures[0].caption == "Figure 42.1 Multipanel caption"
+    assert figures[0].extraction_strategy == "caption_group_page_crop"
+    assert figures[0].figure_bbox == [50.0, 60.0, 330.0, 160.0]
+    assert figures[0].crop_bbox == [42.0, 52.0, 362.0, 222.0]
+    assert figures[0].caption_bbox == [45.0, 180.0, 360.0, 210.0]
+    assert figures[0].caption_confidence == pytest.approx(1.0)
+    assert figures[0].width == 500
+    assert figures[0].height == 360
+    assert figures[1].figure_bbox == [50.0, 230.0, 180.0, 330.0]
+    assert repository.save_image.call_args_list[0].kwargs["data"] == grouped
+
+
+def test_caption_group_candidates_respect_next_caption_boundary(
+    monkeypatch, tmp_path: Path
+) -> None:
+    service = DocumentService(
+        repository=MagicMock(),
+        pdf_extractor=MagicMock(),
+        profile=ETLProfile.default(),
+    )
+    monkeypatch.setattr(
+        service,
+        "_render_page_region_image",
+        lambda *_args, **_kwargs: {
+            "image": _test_png_bytes("grouped", size=(400, 240)),
+            "ext": "png",
+            "width": 400,
+            "height": 240,
+            "bbox": [40.0, 50.0, 340.0, 210.0],
+        },
+    )
+
+    candidates = [
+        {
+            "bbox": [50.0, 60.0, 180.0, 160.0],
+            "page_crop_bbox": [40.0, 50.0, 190.0, 170.0],
+        },
+        {
+            "bbox": [200.0, 60.0, 330.0, 160.0],
+            "page_crop_bbox": [190.0, 50.0, 340.0, 170.0],
+        },
+        {
+            "bbox": [50.0, 245.0, 180.0, 340.0],
+            "page_crop_bbox": [40.0, 235.0, 190.0, 350.0],
+        },
+    ]
+    captions = [
+        {
+            "number": "42.1",
+            "caption": "Figure 42.1 Multipanel caption",
+            "bbox": [45.0, 180.0, 360.0, 210.0],
+        },
+        {
+            "number": "42.2",
+            "caption": "Figure 42.2 Next caption",
+            "bbox": [45.0, 230.0, 360.0, 260.0],
+        },
+    ]
+
+    grouped, consumed, caption_indexes = service._build_caption_group_candidates(
+        tmp_path / "source.pdf",
+        3,
+        candidates,
+        captions,
+    )
+
+    assert len(grouped) == 1
+    assert consumed == {0, 1}
+    assert caption_indexes == {0}
+    assert grouped[0]["grouped_candidate_count"] == 2
+
+
+def test_caption_group_candidates_keep_distant_ab_multipanel_together(
+    monkeypatch, tmp_path: Path
+) -> None:
+    service = DocumentService(
+        repository=MagicMock(),
+        pdf_extractor=MagicMock(),
+        profile=ETLProfile.default(),
+    )
+    monkeypatch.setattr(
+        service,
+        "_render_page_region_image",
+        lambda *_args, **_kwargs: {
+            "image": _test_png_bytes("grouped-ab", size=(1042, 640)),
+            "ext": "png",
+            "width": 1042,
+            "height": 640,
+            "bbox": [51.0, 40.0, 572.0, 356.0],
+        },
+    )
+
+    candidates = [
+        {
+            "bbox": [110.0, 56.0, 376.0, 147.0],
+            "page_crop_bbox": [98.0, 38.0, 388.0, 219.0],
+        },
+        {
+            "bbox": [60.0, 144.0, 564.0, 279.0],
+            "page_crop_bbox": [52.0, 136.0, 572.0, 356.0],
+        },
+    ]
+    captions = [
+        {
+            "number": "33.4",
+            "caption": "Figure 33.4. (A) Schematic of multiple-beat gated full-volume image acquisition. (B) Creation of the three-dimensional full-volume image from narrow subvolumes.",
+            "bbox": [63.0, 312.0, 563.0, 348.0],
+        }
+    ]
+
+    grouped, consumed, caption_indexes = service._build_caption_group_candidates(
+        tmp_path / "source.pdf",
+        8,
+        candidates,
+        captions,
+    )
+
+    assert len(grouped) == 1
+    assert consumed == {0, 1}
+    assert caption_indexes == {0}
+    assert grouped[0]["bbox"] == [60.0, 56.0, 564.0, 279.0]
+    assert grouped[0]["grouped_candidate_count"] == 2
 
 
 @pytest.mark.asyncio

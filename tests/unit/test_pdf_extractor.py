@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import fitz
+
 import src.infrastructure.pdf_extractor as pdf_extractor
+from src.domain.etl_profile import ETLProfile, ETLProfileRegistry
 from src.infrastructure.pdf_extractor import PyMuPDFExtractor
 
 
@@ -67,6 +70,50 @@ def test_extract_figure_captions_returns_worker_payload(monkeypatch) -> None:
     assert process.terminated is False
 
 
+def test_extract_figure_captions_supports_decimal_figure_numbers_and_bbox(
+    tmp_path: Path,
+) -> None:
+    pdf_path = tmp_path / "caption.pdf"
+    doc = fitz.open()
+    page = doc.new_page(width=400, height=240)
+    page.insert_text(
+        (40, 80),
+        "Fig. 42.1 Transducer manipulation. Sliding and tilting are shown.",
+    )
+    doc.save(pdf_path)
+    doc.close()
+
+    extractor = PyMuPDFExtractor()
+
+    captions = extractor._extract_figure_captions_direct(pdf_path)
+
+    assert captions[1][0]["number"] == "42.1"
+    assert captions[1][0]["caption"].startswith("Figure 42.1. Transducer")
+    assert len(captions[1][0]["bbox"]) == 4
+
+
+def test_default_json_profile_supports_decimal_figure_captions() -> None:
+    profile = ETLProfileRegistry.load_from_json(Path("profiles/default.json"))
+
+    match = profile.compile_figure_caption_re().search(
+        "Figure 42.1 Transducer manipulation. Sliding and tilting are shown."
+    )
+
+    assert match is not None
+    assert match.group(1) == "42.1"
+
+
+def test_figure_caption_regex_without_line_start_matches_inline_text() -> None:
+    profile = ETLProfile(figure_caption_require_line_start=False)
+
+    match = profile.compile_figure_caption_re().search(
+        "Intro sentence before Fig. 42.1 Transducer manipulation. Sliding works."
+    )
+
+    assert match is not None
+    assert match.group(1) == "42.1"
+
+
 def test_extract_figure_captions_times_out_and_returns_empty(monkeypatch) -> None:
     queue = _FakeQueue()
     process = _FakeProcess(alive_after_join=True)
@@ -102,3 +149,88 @@ def test_pdf_worker_context_falls_back_to_spawn(monkeypatch) -> None:
 
     assert pdf_extractor._get_pdf_worker_context() is spawn_context
     assert calls == ["fork", "spawn"]
+
+
+def test_extract_images_direct_emits_page_crop_for_xobject(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "figure-page.pdf"
+    raw_image = tmp_path / "embedded.png"
+
+    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 80, 60), False)
+    pix.clear_with(128)
+    pix.save(raw_image)
+
+    doc = fitz.open()
+    page = doc.new_page(width=300, height=260)
+    page.insert_image(fitz.Rect(60, 50, 180, 140), filename=str(raw_image))
+    page.insert_text((62, 38), "A label above the image")
+    page.insert_text((60, 160), "Figure 1. Rendered page crop caption")
+    doc.save(pdf_path)
+    doc.close()
+
+    extractor = PyMuPDFExtractor()
+
+    images = extractor._extract_images_direct(pdf_path)
+
+    page_crop_images = [
+        image
+        for image in images
+        if image.get("extraction_strategy") == "xobject_page_crop"
+    ]
+    assert page_crop_images
+    image = page_crop_images[0]
+    assert image["page"] == 1
+    assert image["bbox"] == [60.0, 50.0, 180.0, 140.0]
+    assert image["page_crop_bbox"][1] < 50.0
+    assert image["page_crop_bbox"][3] > 140.0
+    assert image["page_image_ext"] == "png"
+    assert image["page_crop_width"] > image["width"]
+    assert image["page_crop_height"] > image["height"]
+    assert image["page_image_bytes"].startswith(b"\x89PNG")
+
+
+def test_extract_images_fast_emits_page_crop_for_xobject(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "figure-page-fast.pdf"
+    raw_image = tmp_path / "embedded-fast.png"
+
+    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 80, 60), False)
+    pix.clear_with(180)
+    pix.save(raw_image)
+
+    doc = fitz.open()
+    page = doc.new_page(width=300, height=260)
+    page.insert_image(fitz.Rect(60, 50, 180, 140), filename=str(raw_image))
+    page.insert_text((62, 38), "Fast fallback label")
+    page.insert_text((60, 160), "Figure 1. Fast fallback crop caption")
+    doc.save(pdf_path)
+    doc.close()
+
+    extractor = PyMuPDFExtractor()
+
+    images = extractor._extract_images_fast(pdf_path)
+
+    assert images
+    image = images[0]
+    assert image["extraction_strategy"] == "xobject_page_crop"
+    assert image["bbox"] == [60.0, 50.0, 180.0, 140.0]
+    assert image["page_crop_bbox"][1] < 50.0
+    assert image["page_crop_bbox"][3] > 140.0
+    assert image["page_image_ext"] == "png"
+    assert image["page_image_bytes"].startswith(b"\x89PNG")
+
+
+def test_extract_images_fast_fallback_times_out_and_returns_empty(monkeypatch) -> None:
+    queue = _FakeQueue()
+    process = _FakeProcess(alive_after_join=True)
+    context = _FakeContext(queue, process)
+    monkeypatch.setattr(
+        "src.infrastructure.pdf_extractor.multiprocessing.get_context",
+        lambda _method: context,
+    )
+
+    extractor = PyMuPDFExtractor()
+
+    result = extractor._extract_images_fast_with_timeout(Path("stuck.pdf"))
+
+    assert result == []
+    assert process.join_calls == [90.0, 5]
+    assert process.terminated is True

@@ -33,7 +33,7 @@
     "supplementary"
   ],
   "table_caption_pattern": "(?:Table|TABLE|Tab\\.?)\\s+(\\d+)\\s*[.:,]?\\s*(.*)",
-  "figure_caption_pattern": "^\\s*(?:Figure|FIGURE|Fig\\.?)\\s+(\\d+)\\s*[.:,]?\\s*(.*)",
+  "figure_caption_pattern": "^\\s*(?:Figure|FIGURE|Fig\\.?)\\s+(\\d+(?:\\.\\d+)?)\\s*[.:,]?\\s*(.*)",
   "figure_caption_require_line_start": true,
   "filters": {
     "min_figure_px": 50,

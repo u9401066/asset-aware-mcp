@@ -31,8 +31,13 @@ DEFAULT_TABLE_TIMEOUT_SECONDS = 4.0
 DEFAULT_TABLE_DOCUMENT_TIMEOUT_SECONDS = 25.0
 DEFAULT_TEXT_DOCUMENT_TIMEOUT_SECONDS = 30.0
 DEFAULT_IMAGE_DOCUMENT_TIMEOUT_SECONDS = 25.0
+DEFAULT_FAST_IMAGE_DOCUMENT_TIMEOUT_SECONDS = 90.0
 DEFAULT_CAPTION_DOCUMENT_TIMEOUT_SECONDS = 20.0
 DEFAULT_IMAGE_STRATEGY_TIMEOUT_SECONDS = 3.0
+DEFAULT_FIGURE_CROP_X_PADDING = 12.0
+DEFAULT_FIGURE_CROP_TOP_PADDING = 18.0
+DEFAULT_FIGURE_CROP_BOTTOM_PADDING = 72.0
+DEFAULT_FIGURE_CROP_ZOOM = 2.0
 
 
 def _extract_tables_worker(pdf_path_str: str, queue: Any) -> None:
@@ -65,6 +70,16 @@ def _extract_images_worker(pdf_path_str: str, queue: Any) -> None:
         queue.put(("error", str(exc)))
 
 
+def _extract_images_fast_worker(pdf_path_str: str, queue: Any) -> None:
+    """Run fast PyMuPDF image fallback in a child process."""
+    try:
+        extractor = PyMuPDFExtractor()
+        images = extractor._extract_images_fast(Path(pdf_path_str))
+        queue.put(("ok", images))
+    except Exception as exc:  # pragma: no cover - worker isolation path
+        queue.put(("error", str(exc)))
+
+
 def _extract_figure_captions_worker(pdf_path_str: str, queue: Any) -> None:
     """Run PyMuPDF figure caption extraction in a child process."""
     try:
@@ -80,6 +95,16 @@ def _env_flag(name: str, default: bool) -> bool:
     if raw_value is None:
         return default
     return raw_value.strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _env_float(name: str, default: float) -> float:
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    try:
+        return float(raw_value)
+    except ValueError:
+        return default
 
 
 def _get_pdf_worker_context() -> Any:
@@ -468,26 +493,75 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             process.terminate()
             process.join(5)
             logger.warning(
-                "PyMuPDF image extraction timed out for %s after %.1fs; using xobject-only fallback",
+                "PyMuPDF image extraction timed out for %s after %.1fs; using isolated page-crop fallback",
                 pdf_path,
                 timeout_seconds,
             )
-            return self._extract_images_fast(pdf_path)
+            return self._extract_images_fast_with_timeout(pdf_path)
 
         try:
             status, payload = queue.get_nowait()
         except Exception:
-            return self._extract_images_fast(pdf_path)
+            return self._extract_images_fast_with_timeout(pdf_path)
 
         if status == "ok" and isinstance(payload, list):
             return payload
 
         logger.warning(
-            "PyMuPDF image extraction worker failed for %s: %s; using xobject-only fallback",
+            "PyMuPDF image extraction worker failed for %s: %s; using isolated page-crop fallback",
             pdf_path,
             payload,
         )
-        return self._extract_images_fast(pdf_path)
+        return self._extract_images_fast_with_timeout(pdf_path)
+
+    def _extract_images_fast_with_timeout(self, pdf_path: Path) -> list[dict]:
+        """Run fast fallback in a child process so fallback cannot hang ingestion."""
+        raw_timeout = os.environ.get(
+            "PYMUPDF_FAST_IMAGE_DOCUMENT_TIMEOUT_SECONDS",
+            str(DEFAULT_FAST_IMAGE_DOCUMENT_TIMEOUT_SECONDS),
+        )
+        try:
+            timeout_seconds = float(raw_timeout)
+        except ValueError:
+            timeout_seconds = DEFAULT_FAST_IMAGE_DOCUMENT_TIMEOUT_SECONDS
+
+        if timeout_seconds <= 0:
+            return self._extract_images_fast(pdf_path)
+
+        ctx = _get_pdf_worker_context()
+        queue = ctx.Queue()
+        process = ctx.Process(
+            target=_extract_images_fast_worker,
+            args=(str(pdf_path), queue),
+            daemon=True,
+        )
+        process.start()
+        process.join(timeout_seconds)
+
+        if process.is_alive():
+            process.terminate()
+            process.join(5)
+            logger.warning(
+                "PyMuPDF fast image fallback timed out for %s after %.1fs; skipping images",
+                pdf_path,
+                timeout_seconds,
+            )
+            return []
+
+        try:
+            status, payload = queue.get_nowait()
+        except Exception:
+            return []
+
+        if status == "ok" and isinstance(payload, list):
+            return payload
+
+        logger.warning(
+            "PyMuPDF fast image fallback failed for %s: %s; skipping images",
+            pdf_path,
+            payload,
+        )
+        return []
 
     def _extract_images_direct(self, pdf_path: Path) -> list[dict]:
         """
@@ -523,6 +597,51 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                     try:
                         image_data = self._extract_single_image(doc, img)
                         if image_data:
+                            image_rects = page.get_image_rects(img[0])
+                            if not image_rects:
+                                img_dict = {
+                                    "page": page_num + 1,
+                                    "image_bytes": image_data["image"],
+                                    "ext": image_data["ext"],
+                                    "width": image_data["width"],
+                                    "height": image_data["height"],
+                                    "index_on_page": img_index + 1,
+                                    "extraction_strategy": "xobject_raw",
+                                }
+                                images.append(img_dict)
+                                page_images_found.append(img_dict)
+                                continue
+
+                            for rect_index, image_rect in enumerate(image_rects):
+                                crop_data = self._render_page_crop(
+                                    page,
+                                    image_rect,
+                                )
+                                if not crop_data:
+                                    continue
+                                rect_suffix = (
+                                    img_index + 1
+                                    if len(image_rects) == 1
+                                    else ((img_index + 1) * 100 + rect_index + 1)
+                                )
+                                img_dict = {
+                                    "page": page_num + 1,
+                                    "image_bytes": image_data["image"],
+                                    "ext": image_data["ext"],
+                                    "width": image_data["width"],
+                                    "height": image_data["height"],
+                                    "index_on_page": rect_suffix,
+                                    "bbox": self._rect_to_list(image_rect),
+                                    "page_image_bytes": crop_data["image"],
+                                    "page_image_ext": crop_data["ext"],
+                                    "page_crop_bbox": crop_data["bbox"],
+                                    "page_crop_width": crop_data["width"],
+                                    "page_crop_height": crop_data["height"],
+                                    "extraction_strategy": "xobject_page_crop",
+                                }
+                                images.append(img_dict)
+                                page_images_found.append(img_dict)
+                        elif image_data:
                             img_dict = {
                                 "page": page_num + 1,
                                 "image_bytes": image_data["image"],
@@ -565,6 +684,13 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                                         "width": vector_image["width"],
                                         "height": vector_image["height"],
                                         "index_on_page": 900 + idx,  # 900+ for vector
+                                        "bbox": self._rect_to_list(
+                                            vector_image["bbox"]
+                                        ),
+                                        "page_crop_bbox": self._rect_to_list(
+                                            vector_image["bbox"]
+                                        ),
+                                        "extraction_strategy": "vector_region",
                                     }
                                 )
                     except Exception:
@@ -592,6 +718,13 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                                         "width": region_image["width"],
                                         "height": region_image["height"],
                                         "index_on_page": 800 + idx,  # 800+ for regions
+                                        "bbox": self._rect_to_list(
+                                            region_image["bbox"]
+                                        ),
+                                        "page_crop_bbox": self._rect_to_list(
+                                            region_image["bbox"]
+                                        ),
+                                        "extraction_strategy": "non_text_region",
                                     }
                                 )
                     except Exception:
@@ -601,6 +734,64 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             doc.close()
 
         return images
+
+    def _render_page_crop(
+        self, page: fitz.Page, bbox: fitz.Rect
+    ) -> dict[str, Any] | None:
+        """Render an expanded page-region crop around a figure bbox."""
+        if bbox.is_empty:
+            return None
+
+        x_padding = _env_float(
+            "PYMUPDF_FIGURE_CROP_X_PADDING",
+            DEFAULT_FIGURE_CROP_X_PADDING,
+        )
+        top_padding = _env_float(
+            "PYMUPDF_FIGURE_CROP_TOP_PADDING",
+            DEFAULT_FIGURE_CROP_TOP_PADDING,
+        )
+        bottom_padding = _env_float(
+            "PYMUPDF_FIGURE_CROP_BOTTOM_PADDING",
+            DEFAULT_FIGURE_CROP_BOTTOM_PADDING,
+        )
+        zoom = _env_float("PYMUPDF_FIGURE_CROP_ZOOM", DEFAULT_FIGURE_CROP_ZOOM)
+
+        clip = fitz.Rect(
+            bbox.x0 - x_padding,
+            bbox.y0 - top_padding,
+            bbox.x1 + x_padding,
+            bbox.y1 + bottom_padding,
+        )
+        clip = clip & page.rect
+        if clip.is_empty:
+            return None
+
+        pix = page.get_pixmap(
+            matrix=fitz.Matrix(zoom, zoom),
+            clip=clip,
+            alpha=False,
+        )
+        image_bytes = pix.tobytes("png")
+        size_mb = len(image_bytes) / (1024 * 1024)
+        if size_mb > self.max_image_size_mb:
+            return None
+
+        return {
+            "image": image_bytes,
+            "ext": "png",
+            "width": pix.width,
+            "height": pix.height,
+            "bbox": self._rect_to_list(clip),
+        }
+
+    @staticmethod
+    def _rect_to_list(rect: fitz.Rect | list[float] | tuple[float, ...]) -> list[float]:
+        """Normalize fitz rectangles for JSON-safe manifest metadata."""
+        if isinstance(rect, fitz.Rect):
+            values = [rect.x0, rect.y0, rect.x1, rect.y1]
+        else:
+            values = list(rect[:4])
+        return [round(float(value), 3) for value in values]
 
     def _extract_images_fast(self, pdf_path: Path) -> list[dict]:
         """Fast fallback that only extracts embedded XObject images."""
@@ -615,16 +806,47 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                         image_data = self._extract_single_image(doc, img)
                         if not image_data:
                             continue
-                        images.append(
-                            {
-                                "page": page_num + 1,
-                                "image_bytes": image_data["image"],
-                                "ext": image_data["ext"],
-                                "width": image_data["width"],
-                                "height": image_data["height"],
-                                "index_on_page": img_index + 1,
-                            }
-                        )
+                        image_rects = page.get_image_rects(img[0])
+                        if not image_rects:
+                            images.append(
+                                {
+                                    "page": page_num + 1,
+                                    "image_bytes": image_data["image"],
+                                    "ext": image_data["ext"],
+                                    "width": image_data["width"],
+                                    "height": image_data["height"],
+                                    "index_on_page": img_index + 1,
+                                    "extraction_strategy": "xobject_raw",
+                                }
+                            )
+                            continue
+
+                        for rect_index, image_rect in enumerate(image_rects):
+                            crop_data = self._render_page_crop(page, image_rect)
+                            if not crop_data:
+                                continue
+                            rect_suffix = (
+                                img_index + 1
+                                if len(image_rects) == 1
+                                else ((img_index + 1) * 100 + rect_index + 1)
+                            )
+                            images.append(
+                                {
+                                    "page": page_num + 1,
+                                    "image_bytes": image_data["image"],
+                                    "ext": image_data["ext"],
+                                    "width": image_data["width"],
+                                    "height": image_data["height"],
+                                    "index_on_page": rect_suffix,
+                                    "bbox": self._rect_to_list(image_rect),
+                                    "page_image_bytes": crop_data["image"],
+                                    "page_image_ext": crop_data["ext"],
+                                    "page_crop_bbox": crop_data["bbox"],
+                                    "page_crop_width": crop_data["width"],
+                                    "page_crop_height": crop_data["height"],
+                                    "extraction_strategy": "xobject_page_crop",
+                                }
+                            )
                     except Exception:
                         logger.debug(
                             "Fast image extraction failed on page %d",
@@ -1311,10 +1533,14 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                 matches = self._figure_caption_re.finditer(text)
                 page_captions: list[dict] = []
                 seen_numbers: set[str] = set()  # dedup by figure number
+                text_blocks = page.get_text("blocks")
                 for m in matches:
                     fig_num = m.group(1)
                     # Reject implausible figure numbers
-                    if int(fig_num) > self.profile.filters.max_caption_number:
+                    if (
+                        int(fig_num.split(".", 1)[0])
+                        > self.profile.filters.max_caption_number
+                    ):
                         continue
                     # Dedup: keep only the first occurrence of each figure number per page
                     if fig_num in seen_numbers:
@@ -1324,10 +1550,12 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                     if len(fig_text) < self.profile.filters.min_caption_body_len:
                         continue
                     seen_numbers.add(fig_num)
+                    caption = f"Figure {fig_num}. {fig_text}".strip()
                     page_captions.append(
                         {
                             "number": fig_num,
-                            "caption": f"Figure {fig_num}. {fig_text}".strip(),
+                            "caption": caption,
+                            "bbox": self._find_caption_bbox(text_blocks, caption),
                         }
                     )
                 if page_captions:
@@ -1336,6 +1564,42 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             doc.close()
 
         return captions
+
+    def _find_caption_bbox(
+        self,
+        text_blocks: list[tuple],
+        caption: str,
+    ) -> list[float]:
+        """Best-effort location for a detected caption in page text blocks."""
+        normalized_caption = self._normalize_caption_text(caption)
+        best_bbox: list[float] = []
+        best_score = 0
+
+        for block in text_blocks:
+            if len(block) < 5:
+                continue
+            block_text = str(block[4] or "")
+            normalized_block = self._normalize_caption_text(block_text)
+            if not normalized_block:
+                continue
+            score = 0
+            if normalized_caption and normalized_caption in normalized_block:
+                score = len(normalized_caption)
+            elif (
+                normalized_caption[:24] and normalized_caption[:24] in normalized_block
+            ):
+                score = len(normalized_caption[:24])
+            if score > best_score:
+                best_score = score
+                best_bbox = [round(float(value), 3) for value in block[:4]]
+
+        return best_bbox
+
+    @staticmethod
+    def _normalize_caption_text(text: str) -> str:
+        """Normalize caption text for fuzzy block lookup."""
+        normalized = text.lower().replace("figure", "fig")
+        return re.sub(r"[^a-z0-9]+", "", normalized)
 
     def _table_to_markdown(self, table: Any) -> str:
         """Convert PyMuPDF table to markdown format."""

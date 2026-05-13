@@ -26,7 +26,6 @@ from src.infrastructure.excel_renderer import ExcelRenderer
 from src.infrastructure.file_storage import FileStorage
 from src.infrastructure.job_store import FileJobStore
 from src.infrastructure.layout_visualizer import LayoutVisualizer
-from src.infrastructure.lightrag_adapter import LightRAGAdapter
 from src.infrastructure.ocr_processor import OCRProcessor
 from src.infrastructure.pdf_extractor import PyMuPDFExtractor
 from src.infrastructure.subprocess_ingest_worker_runner import (
@@ -34,7 +33,25 @@ from src.infrastructure.subprocess_ingest_worker_runner import (
 )
 
 if TYPE_CHECKING:
+    from src.domain.repositories import KnowledgeGraphInterface
     from src.infrastructure.marker_adapter import MarkerPDFExtractor
+
+
+def _build_knowledge_graph() -> KnowledgeGraphInterface | None:
+    """Build the optional knowledge graph backend only when enabled."""
+    if not settings.enable_lightrag:
+        return None
+
+    try:
+        from src.infrastructure.lightrag_adapter import LightRAGAdapter
+    except ImportError as exc:
+        raise RuntimeError(
+            "LightRAG is enabled, but LightRAGAdapter dependencies could not be loaded. "
+            "Install a compatible LightRAG stack or set ENABLE_LIGHTRAG=false."
+        ) from exc
+
+    return LightRAGAdapter()
+
 
 # ============================================================================
 # Infrastructure
@@ -55,7 +72,7 @@ except (FileNotFoundError, KeyError, json.JSONDecodeError):
 repository = FileStorage(settings.data_dir)
 pdf_extractor = PyMuPDFExtractor(profile=etl_profile)  # Lightweight, always available
 marker_extractor: MarkerPDFExtractor | None = None  # Lazy-loaded
-knowledge_graph = LightRAGAdapter() if settings.enable_lightrag else None
+knowledge_graph = _build_knowledge_graph()
 job_store = FileJobStore(settings.data_dir)
 excel_renderer = ExcelRenderer(settings.table_output_dir)
 layout_visualizer = LayoutVisualizer()

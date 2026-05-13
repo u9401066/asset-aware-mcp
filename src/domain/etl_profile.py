@@ -113,7 +113,7 @@ class ETLProfile:
     # ── Caption detection patterns ────────────────────────────────────
     table_caption_pattern: str = r"(?:Table|TABLE|Tab\.?)\s+(\d+)\s*[.:,]?\s*(.*)"
     figure_caption_pattern: str = (
-        r"^\s*(?:Figure|FIGURE|Fig\.?)\s+(\d+)\s*[.:,]?\s*(.*)"
+        r"^\s*(?:Figure|FIGURE|Fig\.?)\s+(\d+(?:\.\d+)?)\s*[.:,]?\s*(.*)"
     )
     # Whether figure captions require line-start anchor (MULTILINE)
     figure_caption_require_line_start: bool = True
@@ -174,10 +174,13 @@ class ETLProfile:
 
     def compile_figure_caption_re(self) -> re.Pattern:
         """Compile figure caption detection pattern."""
+        pattern = self.figure_caption_pattern
         flags = re.IGNORECASE
         if self.figure_caption_require_line_start:
             flags |= re.MULTILINE
-        return re.compile(self.figure_caption_pattern, flags)
+        elif pattern.startswith("^"):
+            pattern = pattern[1:]
+        return re.compile(pattern, flags)
 
     def compile_numbered_section_re(self) -> re.Pattern:
         """Compile numbered section heading pattern."""
