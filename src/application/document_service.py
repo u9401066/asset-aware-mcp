@@ -12,7 +12,6 @@ import inspect
 import logging
 import re
 import shutil
-import tempfile
 import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -23,12 +22,25 @@ from src.application.citation_artifacts import (
     remove_citation_index,
     save_citation_status,
 )
+from src.application.document_markdown_conversion import MarkdownConversionMixin
+from src.application.document_page_scope import (
+    PageRange,
+    build_doc_id_unique_suffix,
+    build_page_number_map,
+    format_page_ranges,
+    materialize_pdf_page_subset,
+    normalize_page_ranges,
+    remap_markdown_page_markers,
+    remap_page_number,
+    remap_toc_pages,
+)
+from src.application.document_repository_operations import (
+    DocumentRepositoryOperationsMixin,
+)
 from src.application.markdown_block_builder import build_markdown_blocks
-from src.application.output_paths import resolve_document_output_path
 from src.domain.citation import build_evidence_spans
 from src.domain.entities import (
     DocumentManifest,
-    DocumentSummary,
     FigureAsset,
     IngestResult,
     SectionAsset,
@@ -59,151 +71,21 @@ if TYPE_CHECKING:
 
 
 ToolProgressCallback = Callable[[int, int, str, str], Awaitable[None] | None]
-PageRange = tuple[int, int]
 
-_PAGE_MARKER_RE = re.compile(r"<!-- Page (\d+) -->")
 logger = logging.getLogger(__name__)
 
-
-def format_page_ranges(page_ranges: list[PageRange] | tuple[PageRange, ...]) -> str:
-    """Format normalized inclusive page ranges for logs and doc_id scopes."""
-    parts = []
-    for start_page, end_page in page_ranges:
-        if start_page == end_page:
-            parts.append(str(start_page))
-        else:
-            parts.append(f"{start_page}-{end_page}")
-    return ",".join(parts)
-
-
-def build_page_number_map(
-    page_ranges: list[PageRange] | tuple[PageRange, ...],
-) -> list[int]:
-    """Expand normalized ranges into a sequential subset→original page map."""
-    page_numbers: list[int] = []
-    for start_page, end_page in page_ranges:
-        page_numbers.extend(range(start_page, end_page + 1))
-    return page_numbers
-
-
-def normalize_page_ranges(
-    page_ranges: list[str] | None,
-    total_pages: int,
-) -> tuple[PageRange, ...]:
-    """Validate and merge user-supplied 1-indexed inclusive page ranges."""
-    if not page_ranges:
-        return ()
-
-    normalized: list[PageRange] = []
-    for raw_spec in page_ranges:
-        spec = raw_spec.strip()
-        if not spec:
-            continue
-
-        if "-" in spec:
-            start_text, end_text = spec.split("-", 1)
-            start_page = int(start_text)
-            end_page = int(end_text)
-        else:
-            start_page = int(spec)
-            end_page = start_page
-
-        if start_page < 1 or end_page < 1:
-            raise ValueError("Page numbers must be >= 1")
-        if start_page > end_page:
-            raise ValueError(f"Invalid page range: {spec}")
-        if end_page > total_pages:
-            raise ValueError(
-                f"Page range {spec} exceeds total page count {total_pages}"
-            )
-
-        normalized.append((start_page, end_page))
-
-    if not normalized:
-        return ()
-
-    normalized.sort()
-    merged: list[PageRange] = [normalized[0]]
-    for start_page, end_page in normalized[1:]:
-        prev_start, prev_end = merged[-1]
-        if start_page <= prev_end + 1:
-            merged[-1] = (prev_start, max(prev_end, end_page))
-        else:
-            merged.append((start_page, end_page))
-    return tuple(merged)
-
-
-def remap_page_number(page_number: int, page_map: list[int] | None) -> int:
-    """Translate subset-local page numbers back to original PDF page numbers."""
-    if not page_map or page_number < 1 or page_number > len(page_map):
-        return page_number
-    return page_map[page_number - 1]
-
-
-def build_doc_id_unique_suffix(
-    source_path: Path,
-    page_ranges: list[PageRange] | tuple[PageRange, ...] | None = None,
-) -> str:
-    """Build a stable DocId uniqueness suffix that includes page scoping."""
-    suffix = str(source_path.absolute())
-    if page_ranges:
-        suffix = f"{suffix}#pages={format_page_ranges(page_ranges)}"
-    return suffix
-
-
-def materialize_pdf_page_subset(
-    source_path: Path,
-    output_path: Path,
-    page_ranges: list[PageRange] | tuple[PageRange, ...],
-) -> Path:
-    """Persist a subset PDF containing only the requested inclusive page ranges."""
-    import fitz  # type: ignore
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    subset_pdf = fitz.open()
-    try:
-        with fitz.open(str(source_path)) as source_pdf:
-            for start_page, end_page in page_ranges:
-                subset_pdf.insert_pdf(
-                    source_pdf,
-                    from_page=start_page - 1,
-                    to_page=end_page - 1,
-                )
-        subset_pdf.save(output_path)
-    finally:
-        subset_pdf.close()
-    return output_path
-
-
-def remap_markdown_page_markers(markdown: str, page_map: list[int] | None) -> str:
-    """Rewrite subset-local markdown page markers to original PDF numbers."""
-    if not page_map:
-        return markdown
-
-    marker_index = 0
-
-    def replace_page_marker(match: re.Match[str]) -> str:
-        nonlocal marker_index
-        if marker_index >= len(page_map):
-            return match.group(0)
-        original_page = page_map[marker_index]
-        marker_index += 1
-        return f"<!-- Page {original_page} -->"
-
-    return _PAGE_MARKER_RE.sub(replace_page_marker, markdown)
-
-
-def remap_toc_pages(
-    toc: list[tuple[int, str, int]],
-    page_map: list[int] | None,
-) -> list[tuple[int, str, int]]:
-    """Translate PDF TOC page numbers from subset-local to original numbering."""
-    if not page_map:
-        return toc
-    return [
-        (level, title, remap_page_number(page_number, page_map))
-        for level, title, page_number in toc
-    ]
+__all__ = [
+    "DocumentService",
+    "PageRange",
+    "build_doc_id_unique_suffix",
+    "build_page_number_map",
+    "format_page_ranges",
+    "materialize_pdf_page_subset",
+    "normalize_page_ranges",
+    "remap_markdown_page_markers",
+    "remap_page_number",
+    "remap_toc_pages",
+]
 
 
 async def _invoke_progress_callback(
@@ -221,7 +103,7 @@ async def _invoke_progress_callback(
         await result
 
 
-class DocumentService:
+class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin):
     """
     Application service for document operations.
 
@@ -285,6 +167,7 @@ class DocumentService:
         deskew: bool = False,
         marker_max_pages_per_chunk: int = 0,
         extract_figures: bool = True,
+        index_knowledge_graph: bool = False,
         page_ranges: list[str] | None = None,
         require_marker: bool = False,
     ) -> list[IngestResult]:
@@ -338,6 +221,7 @@ class DocumentService:
                     deskew=deskew,
                     marker_max_pages_per_chunk=marker_max_pages_per_chunk,
                     extract_figures=extract_figures,
+                    index_knowledge_graph=index_knowledge_graph,
                     page_ranges=page_ranges,
                     require_marker=require_marker,
                 )
@@ -365,6 +249,7 @@ class DocumentService:
                     ocr_language=ocr_language,
                     rotate_pages=rotate_pages,
                     deskew=deskew,
+                    index_knowledge_graph=index_knowledge_graph,
                     page_ranges=page_ranges,
                 )
                 if use_marker and result.success:
@@ -387,6 +272,7 @@ class DocumentService:
         ocr_language: str = "eng",
         rotate_pages: bool = False,
         deskew: bool = False,
+        index_knowledge_graph: bool = False,
         page_ranges: list[str] | None = None,
     ) -> IngestResult:
         """Ingest a single PDF file."""
@@ -557,7 +443,11 @@ class DocumentService:
 
             # Step 5: Extract entities from knowledge graph (if available)
             entities = []
-            if self.knowledge_graph and self.knowledge_graph.is_available:
+            if (
+                index_knowledge_graph
+                and self.knowledge_graph
+                and self.knowledge_graph.is_available
+            ):
                 await _invoke_progress_callback(
                     progress_callback,
                     current_step,
@@ -578,12 +468,17 @@ class DocumentService:
                         "LightRAG indexing failed for %s", doc_id.value, exc_info=True
                     )
             else:
+                skip_reason = (
+                    "disabled for this ingest request"
+                    if not index_knowledge_graph
+                    else "knowledge graph unavailable"
+                )
                 await _invoke_progress_callback(
                     progress_callback,
                     current_step,
                     total_steps,
                     "Skipping Knowledge Graph",
-                    f"Knowledge graph indexing skipped for {path.name}",
+                    f"Knowledge graph indexing skipped for {path.name}: {skip_reason}",
                 )
             current_step += 1
 
@@ -669,6 +564,7 @@ class DocumentService:
         deskew: bool = False,
         marker_max_pages_per_chunk: int = 0,
         extract_figures: bool = True,
+        index_knowledge_graph: bool = False,
         page_ranges: list[str] | None = None,
         require_marker: bool = False,
     ) -> IngestResult:
@@ -876,7 +772,11 @@ class DocumentService:
 
             # Step 8: Index in knowledge graph (if available)
             entities = []
-            if self.knowledge_graph and self.knowledge_graph.is_available:
+            if (
+                index_knowledge_graph
+                and self.knowledge_graph
+                and self.knowledge_graph.is_available
+            ):
                 await _invoke_progress_callback(
                     progress_callback,
                     current_step,
@@ -896,12 +796,17 @@ class DocumentService:
 
                     logging.warning(f"LightRAG indexing failed: {e}")
             else:
+                skip_reason = (
+                    "disabled for this ingest request"
+                    if not index_knowledge_graph
+                    else "knowledge graph unavailable"
+                )
                 await _invoke_progress_callback(
                     progress_callback,
                     current_step,
                     total_steps,
                     "Skipping Knowledge Graph",
-                    f"Knowledge graph indexing skipped for {path.name}",
+                    f"Knowledge graph indexing skipped for {path.name}: {skip_reason}",
                 )
             current_step += 1
 
@@ -2079,513 +1984,3 @@ class DocumentService:
 
             logging.warning(f"Table extraction failed: {e}")
             return []
-
-    async def list_documents(self) -> list[DocumentSummary]:
-        """List all processed documents."""
-        return self.repository.list_documents()
-
-    async def get_manifest(self, doc_id: str) -> DocumentManifest | None:
-        """Get manifest for a specific document."""
-        return self.repository.load_manifest(doc_id)
-
-    async def document_exists(self, doc_id: str) -> bool:
-        """Check if a document exists."""
-        return self.repository.document_exists(doc_id)
-
-    async def delete_document(self, doc_id: str) -> dict[str, Any]:
-        """Delete a stored PDF document and its local artifacts."""
-        manifest = self.repository.load_manifest(doc_id)
-        if manifest is None:
-            return {"success": False, "error": f"Document not found: {doc_id}"}
-
-        deleted = self.repository.delete_document(doc_id)
-        if not deleted:
-            return {
-                "success": False,
-                "error": f"Failed to delete document directory for {doc_id}",
-            }
-
-        warnings: list[str] = []
-        knowledge_graph_status: str | None = None
-        if self.knowledge_graph and self.knowledge_graph.is_available:
-            try:
-                kg_result = await self.knowledge_graph.delete_document(doc_id)
-                knowledge_graph_status = str(kg_result.get("status", "unknown"))
-                if knowledge_graph_status not in {"success", "not_found"}:
-                    warnings.append(
-                        "Knowledge graph deletion did not complete successfully; local artifacts were deleted first."
-                    )
-            except Exception as exc:
-                warnings.append(
-                    "Knowledge graph deletion failed; local artifacts were deleted first. "
-                    f"Reason: {exc}"
-                )
-
-        result = {
-            "success": True,
-            "doc_id": doc_id,
-            "filename": manifest.filename,
-            "warnings": warnings,
-        }
-        if knowledge_graph_status is not None:
-            result["knowledge_graph_status"] = knowledge_graph_status
-        return result
-
-    async def convert_pdf_to_docx(
-        self,
-        doc_id: str,
-        output_path: str | None = None,
-        *,
-        mode: str = "content",
-    ) -> dict[str, Any]:
-        """
-        Convert an ingested PDF document to DOCX.
-
-        Supported modes:
-        - ``content``: rebuild a readable DOCX from extracted markdown and figures.
-        - ``fidelity``: currently unsupported because PDF ETL is not layout-reversible.
-        """
-        if mode != "content":
-            return {
-                "success": False,
-                "error": (
-                    "PDF → DOCX currently supports content mode only. "
-                    "Layout-fidelity reconstruction is not available."
-                ),
-            }
-
-        manifest = self.repository.load_manifest(doc_id)
-        if manifest is None:
-            return {"success": False, "error": f"Document not found: {doc_id}"}
-
-        markdown = self.repository.load_markdown(doc_id)
-        if markdown is None:
-            return {
-                "success": False,
-                "error": f"Markdown content not found for {doc_id}",
-            }
-
-        doc_dir = self.repository.get_doc_dir(doc_id)
-        try:
-            out_path = resolve_document_output_path(
-                doc_dir,
-                output_path,
-                default_name="converted_from_pdf.docx",
-                allowed_suffixes={".docx"},
-            )
-        except ValueError as e:
-            return {"success": False, "error": str(e)}
-
-        try:
-            self._build_docx_from_markdown(markdown, manifest, out_path)
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-
-        return {
-            "success": True,
-            "doc_id": doc_id,
-            "output_path": str(out_path),
-            "mode": mode,
-            "figures_embedded": len(manifest.assets.figures),
-            "tables_found": len(manifest.assets.tables),
-        }
-
-    async def convert_pdf_to_pptx(
-        self,
-        doc_id: str,
-        output_path: str | None = None,
-        *,
-        mode: str = "content",
-    ) -> dict[str, Any]:
-        """
-        Convert an ingested PDF document to PPTX slides.
-
-        Supported modes:
-        - ``content``: slide-oriented rendering from extracted markdown + figures.
-        """
-        if mode != "content":
-            return {
-                "success": False,
-                "error": (
-                    "PDF → PPTX currently supports content mode only. "
-                    "Layout-fidelity reconstruction is not available."
-                ),
-            }
-
-        manifest = self.repository.load_manifest(doc_id)
-        if manifest is None:
-            return {"success": False, "error": f"Document not found: {doc_id}"}
-
-        markdown = self.repository.load_markdown(doc_id)
-        if markdown is None:
-            return {
-                "success": False,
-                "error": f"Markdown content not found for {doc_id}",
-            }
-
-        doc_dir = self.repository.get_doc_dir(doc_id)
-        try:
-            out_path = resolve_document_output_path(
-                doc_dir,
-                output_path,
-                default_name="converted_from_pdf.pptx",
-                allowed_suffixes={".pptx"},
-            )
-        except ValueError as e:
-            return {"success": False, "error": str(e)}
-
-        try:
-            build_stats = self._build_pptx_from_markdown(markdown, manifest, out_path)
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-
-        return {
-            "success": True,
-            "doc_id": doc_id,
-            "output_path": str(out_path),
-            "mode": mode,
-            "slides_created": build_stats.get("total_slides", 0),
-            "figure_slides": build_stats.get("figure_slides", 0),
-        }
-
-    def _build_docx_from_markdown(
-        self,
-        markdown: str,
-        manifest: DocumentManifest,
-        output_path: Path,
-    ) -> None:
-        """Render extracted markdown into a readable DOCX document."""
-        from docx import Document
-        from docx.enum.text import WD_BREAK
-        from docx.image.exceptions import UnrecognizedImageError
-        from docx.shared import Cm
-
-        document = Document()
-        if manifest.title:
-            document.add_heading(manifest.title, level=0)
-            document.core_properties.title = manifest.title
-
-        lines = markdown.splitlines()
-        index = 0
-        while index < len(lines):
-            raw_line = lines[index].rstrip()
-            stripped = raw_line.strip()
-
-            if not stripped:
-                index += 1
-                continue
-
-            if stripped.startswith("<!--") and stripped.endswith("-->"):
-                if stripped.lower().startswith("<!-- page") and document.paragraphs:
-                    document.paragraphs[-1].add_run().add_break(WD_BREAK.PAGE)
-                index += 1
-                continue
-
-            if stripped.startswith("#"):
-                level = min(len(stripped) - len(stripped.lstrip("#")), 9)
-                document.add_heading(stripped[level:].strip(), level=level)
-                index += 1
-                continue
-
-            if self._is_table_start(lines, index):
-                index = self._append_markdown_table(document, lines, index)
-                continue
-
-            if self._is_list_item(stripped):
-                index = self._append_markdown_list(document, lines, index)
-                continue
-
-            paragraph_lines = [stripped]
-            index += 1
-            while index < len(lines):
-                next_line = lines[index].strip()
-                if (
-                    not next_line
-                    or next_line.startswith(("<!--", "#"))
-                    or self._is_list_item(next_line)
-                    or self._is_table_start(lines, index)
-                ):
-                    break
-                paragraph_lines.append(next_line)
-                index += 1
-
-            document.add_paragraph(" ".join(paragraph_lines))
-
-        if manifest.assets.figures:
-            document.add_page_break()
-            document.add_heading("Extracted Figures", level=1)
-            with tempfile.TemporaryDirectory() as image_tmp_dir:
-                for figure in manifest.assets.figures:
-                    if figure.caption:
-                        document.add_paragraph(figure.caption)
-                    figure_path = Path(figure.path)
-                    if figure_path.exists():
-                        try:
-                            document.add_picture(str(figure_path), width=Cm(15))
-                        except UnrecognizedImageError:
-                            compatible_path = self._normalize_image_for_docx(
-                                figure_path,
-                                Path(image_tmp_dir),
-                            )
-                            document.add_picture(str(compatible_path), width=Cm(15))
-
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        document.save(str(output_path))
-
-    @staticmethod
-    def _normalize_image_for_docx(image_path: Path, output_dir: Path) -> Path:
-        """Re-encode readable images into a header form python-docx accepts."""
-        from PIL import Image
-
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_path = output_dir / f"{image_path.stem}.png"
-        with Image.open(image_path) as image:
-            if image.mode not in {"RGB", "RGBA"}:
-                converted = image.convert("RGB")
-                converted.save(output_path, format="PNG")
-            else:
-                image.save(output_path, format="PNG")
-        return output_path
-
-    def _build_pptx_from_markdown(
-        self,
-        markdown: str,
-        manifest: DocumentManifest,
-        output_path: Path,
-    ) -> dict[str, int]:
-        """Render extracted markdown into a slide deck."""
-        from pptx import Presentation
-        from pptx.util import Inches
-
-        presentation = Presentation()
-        title_or_fallback = manifest.title or manifest.filename
-        title_layout = self._get_slide_layout(presentation, 0)
-        content_layout = self._get_slide_layout(presentation, 1, default_index=0)
-        figure_layout = self._get_slide_layout(
-            presentation, 5, default_index=content_layout
-        )
-        blank_layout = self._get_slide_layout(
-            presentation, 6, default_index=content_layout
-        )
-
-        slides = self._segment_markdown_to_slides(markdown, title_or_fallback)
-        for slide_title, items in slides:
-            layout = content_layout if items else title_layout
-            slide = presentation.slides.add_slide(layout)
-            if slide.shapes.title:
-                slide.shapes.title.text = slide_title
-            if items and len(slide.placeholders) > 1:
-                text_frame = slide.placeholders[1].text_frame
-                text_frame.clear()
-                for index, (text, level) in enumerate(items):
-                    paragraph = (
-                        text_frame.paragraphs[0]
-                        if index == 0 and text_frame.paragraphs
-                        else text_frame.add_paragraph()
-                    )
-                    paragraph.text = text
-                    paragraph.level = max(level, 0)
-
-        figure_slides = 0
-        for figure_index, figure in enumerate(manifest.assets.figures, start=1):
-            figure_path = Path(figure.path)
-            if not figure_path.exists():
-                continue
-
-            slide = presentation.slides.add_slide(figure_layout)
-            if slide.shapes.title:
-                slide.shapes.title.text = (
-                    figure.caption or f"Figure {figure_index}" or title_or_fallback
-                )
-
-            left = Inches(0.75)
-            top = Inches(1.5)
-            max_width = Inches(9)
-            try:
-                slide.shapes.add_picture(
-                    str(figure_path), left=left, top=top, width=max_width
-                )
-            except Exception:
-                slide = presentation.slides.add_slide(blank_layout)
-                if slide.shapes.title:
-                    slide.shapes.title.text = (
-                        figure.caption or f"Figure {figure_index}" or title_or_fallback
-                    )
-                slide.shapes.add_picture(
-                    str(figure_path), left=left, top=top, width=max_width
-                )
-
-            figure_slides += 1
-
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        presentation.save(str(output_path))
-
-        return {
-            "total_slides": len(presentation.slides),
-            "figure_slides": figure_slides,
-        }
-
-    @staticmethod
-    def _is_list_item(line: str) -> bool:
-        return bool(re.match(r"^([-*+]\s+|\d+[.)]\s+)", line))
-
-    @staticmethod
-    def _is_table_start(lines: list[str], index: int) -> bool:
-        if index + 1 >= len(lines):
-            return False
-        header = lines[index].strip()
-        separator = lines[index + 1].strip()
-        return (
-            header.startswith("|")
-            and header.endswith("|")
-            and separator.startswith("|")
-            and separator.endswith("|")
-            and set(separator.replace("|", "").replace(" ", "")) <= {"-", ":"}
-        )
-
-    @staticmethod
-    def _split_markdown_row(line: str) -> list[str]:
-        return [cell.strip() for cell in line.strip().strip("|").split("|")]
-
-    def _append_markdown_table(
-        self, document: Any, lines: list[str], index: int
-    ) -> int:
-        header_cells = self._split_markdown_row(lines[index])
-        index += 2  # Skip header + separator
-
-        rows: list[list[str]] = []
-        while index < len(lines):
-            current = lines[index].strip()
-            if not (current.startswith("|") and current.endswith("|")):
-                break
-            rows.append(self._split_markdown_row(current))
-            index += 1
-
-        table = document.add_table(rows=1, cols=len(header_cells))
-        table.style = "Table Grid"
-        for col_index, value in enumerate(header_cells):
-            table.rows[0].cells[col_index].text = value
-
-        for row in rows:
-            cells = table.add_row().cells
-            for col_index, value in enumerate(row[: len(header_cells)]):
-                cells[col_index].text = value
-
-        return index
-
-    def _append_markdown_list(self, document: Any, lines: list[str], index: int) -> int:
-        while index < len(lines):
-            stripped = lines[index].strip()
-            if not self._is_list_item(stripped):
-                break
-            style = (
-                "List Number" if re.match(r"^\d+[.)]\s+", stripped) else "List Bullet"
-            )
-            text = re.sub(r"^([-*+]\s+|\d+[.)]\s+)", "", stripped)
-            document.add_paragraph(text, style=style)
-            index += 1
-        return index
-
-    @staticmethod
-    def _get_slide_layout(
-        presentation: Any,
-        index: int,
-        *,
-        default_index: int | Any = 0,
-    ) -> Any:
-        """Safely fetch a slide layout, falling back when missing."""
-        layouts = presentation.slide_layouts
-        if 0 <= index < len(layouts):
-            return layouts[index]
-        if isinstance(default_index, int):
-            safe_index = min(max(default_index, 0), len(layouts) - 1)
-            return layouts[safe_index]
-        return default_index
-
-    def _segment_markdown_to_slides(
-        self,
-        markdown: str,
-        fallback_title: str,
-    ) -> list[tuple[str, list[tuple[str, int]]]]:
-        """
-        Partition markdown into slide-sized chunks anchored by headings.
-
-        Returns:
-            List of (title, [(text, level), ...]) tuples.
-        """
-        slides: list[tuple[str, list[tuple[str, int]]]] = []
-        lines = markdown.splitlines()
-        index = 0
-
-        current_title = fallback_title
-        current_items: list[tuple[str, int]] = []
-
-        while index < len(lines):
-            raw_line = lines[index]
-            stripped = raw_line.strip()
-            if not stripped:
-                index += 1
-                continue
-
-            if stripped.startswith("<!--"):
-                index += 1
-                continue
-
-            if stripped.startswith("#"):
-                if current_items or slides:
-                    slides.append((current_title, current_items))
-                level = len(stripped) - len(stripped.lstrip("#"))
-                heading_text = stripped[level:].strip() or fallback_title
-                current_title = heading_text
-                current_items = []
-                index += 1
-                continue
-
-            if self._is_table_start(lines, index):
-                header_cells = self._split_markdown_row(lines[index])
-                index += 2  # Skip header and separator
-                preview_row: list[str] = []
-                while index < len(lines):
-                    row_line = lines[index].strip()
-                    if not (row_line.startswith("|") and row_line.endswith("|")):
-                        break
-                    preview_row = self._split_markdown_row(row_line)
-                    index += 1
-                    if preview_row:
-                        break
-
-                preview = " | ".join(header_cells)
-                if preview_row:
-                    preview += " — " + " | ".join(preview_row)
-                current_items.append((f"Table: {preview}", 0))
-                continue
-
-            if self._is_list_item(stripped):
-                indent = len(raw_line) - len(raw_line.lstrip(" "))
-                level = min(indent // 2, 4)
-                text = re.sub(r"^([-*+]\s+|\d+[.)]\s+)", "", stripped)
-                current_items.append((text, level))
-                index += 1
-                continue
-
-            paragraph_lines = [stripped]
-            index += 1
-            while index < len(lines):
-                next_line = lines[index].strip()
-                if (
-                    not next_line
-                    or next_line.startswith(("<!--", "#"))
-                    or self._is_list_item(next_line)
-                    or self._is_table_start(lines, index)
-                ):
-                    break
-                paragraph_lines.append(next_line)
-                index += 1
-
-            merged_paragraph = " ".join(paragraph_lines)
-            current_items.append((merged_paragraph, 0))
-
-        if current_items or not slides:
-            slides.append((current_title, current_items))
-
-        return slides

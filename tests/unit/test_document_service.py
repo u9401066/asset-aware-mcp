@@ -132,6 +132,87 @@ async def test_delete_document_warns_when_kg_delete_fails() -> None:
 
 
 @pytest.mark.asyncio
+async def test_ingest_can_skip_knowledge_graph_indexing(
+    monkeypatch, tmp_path: Path
+) -> None:
+    pdf_path = tmp_path / "paper.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4 fake")
+    repository = FileStorage(tmp_path / "data")
+    pdf_extractor = MagicMock()
+    pdf_extractor.get_page_count.return_value = 1
+    pdf_extractor.extract_text.return_value = "# Title\n\nBody"
+    pdf_extractor.extract_images.return_value = []
+    pdf_extractor.extract_tables.return_value = []
+    pdf_extractor.get_toc.return_value = []
+    pdf_extractor.get_title.return_value = ""
+    knowledge_graph = MagicMock()
+    knowledge_graph.is_available = True
+    knowledge_graph.insert = AsyncMock(
+        side_effect=AssertionError("KG insert should be skipped")
+    )
+    knowledge_graph.extract_entities = AsyncMock(
+        side_effect=AssertionError("KG entity extraction should be skipped")
+    )
+
+    service = DocumentService(
+        repository=repository,
+        pdf_extractor=pdf_extractor,
+        knowledge_graph=knowledge_graph,
+    )
+    monkeypatch.setattr(service, "_extract_and_save_images", AsyncMock(return_value=[]))
+    monkeypatch.setattr(service, "_extract_tables", AsyncMock(return_value=[]))
+
+    results = await service.ingest(
+        [str(pdf_path)],
+        index_knowledge_graph=False,
+    )
+
+    assert results[0].success is True
+    knowledge_graph.insert.assert_not_awaited()
+    knowledge_graph.extract_entities.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_ingest_skips_knowledge_graph_by_default(
+    monkeypatch, tmp_path: Path
+) -> None:
+    pdf_path = tmp_path / "paper.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4 fake")
+    repository = FileStorage(tmp_path / "data")
+    pdf_extractor = MagicMock()
+    pdf_extractor.get_page_count.return_value = 1
+    pdf_extractor.extract_text.return_value = "# Title\n\nBody"
+    pdf_extractor.extract_images.return_value = []
+    pdf_extractor.extract_tables.return_value = []
+    pdf_extractor.get_toc.return_value = []
+    pdf_extractor.get_title.return_value = ""
+    knowledge_graph = MagicMock()
+    knowledge_graph.is_available = True
+    knowledge_graph.insert = AsyncMock(
+        side_effect=AssertionError("KG insert should require an explicit opt-in")
+    )
+    knowledge_graph.extract_entities = AsyncMock(
+        side_effect=AssertionError(
+            "KG entity extraction should require an explicit opt-in"
+        )
+    )
+
+    service = DocumentService(
+        repository=repository,
+        pdf_extractor=pdf_extractor,
+        knowledge_graph=knowledge_graph,
+    )
+    monkeypatch.setattr(service, "_extract_and_save_images", AsyncMock(return_value=[]))
+    monkeypatch.setattr(service, "_extract_tables", AsyncMock(return_value=[]))
+
+    results = await service.ingest([str(pdf_path)])
+
+    assert results[0].success is True
+    knowledge_graph.insert.assert_not_awaited()
+    knowledge_graph.extract_entities.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_convert_pdf_to_docx_rejects_fidelity_mode() -> None:
     service = DocumentService(repository=MagicMock(), pdf_extractor=MagicMock())
 
