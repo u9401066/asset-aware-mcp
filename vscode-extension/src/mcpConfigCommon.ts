@@ -2,6 +2,15 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
+    booleanEnv,
+    DEFAULT_DATA_DIR,
+    DEFAULT_ENABLE_LIGHTRAG,
+    DEFAULT_LLM_BACKEND,
+    DEFAULT_OLLAMA_EMBEDDING_MODEL,
+    DEFAULT_OLLAMA_HOST,
+    DEFAULT_OLLAMA_MODEL,
+} from './defaults';
+import {
     DEFAULT_TORCH_BACKEND,
     getUvRunArgs,
     getUvxLaunch,
@@ -100,11 +109,11 @@ export function buildAssetAwareEnv(
     const config = vscode.workspace.getConfiguration('assetAwareMcp');
     const baseRoot = workspaceRoot ?? context.globalStorageUri.fsPath;
     const envVars: Record<string, string> = {
-        LLM_BACKEND: config.get('llmBackend', 'ollama'),
-        OLLAMA_HOST: config.get('ollamaHost', 'http://localhost:11434'),
-        OLLAMA_MODEL: config.get('ollamaModel', 'qwen2.5:7b'),
-        OLLAMA_EMBEDDING_MODEL: config.get('ollamaEmbeddingModel', 'nomic-embed-text'),
-        ENABLE_LIGHTRAG: 'true',
+        LLM_BACKEND: config.get('llmBackend', DEFAULT_LLM_BACKEND),
+        OLLAMA_HOST: config.get('ollamaHost', DEFAULT_OLLAMA_HOST),
+        OLLAMA_MODEL: config.get('ollamaModel', DEFAULT_OLLAMA_MODEL),
+        OLLAMA_EMBEDDING_MODEL: config.get('ollamaEmbeddingModel', DEFAULT_OLLAMA_EMBEDDING_MODEL),
+        ENABLE_LIGHTRAG: booleanEnv(config.get('enableLightRag', DEFAULT_ENABLE_LIGHTRAG)),
     };
 
     const openaiKey = config.get<string>('openaiApiKey', '');
@@ -119,7 +128,7 @@ export function buildAssetAwareEnv(
         normalizeEmbeddingEnv(envVars);
     }
 
-    const dataDir = envVars['DATA_DIR'] || config.get<string>('dataDir', './data');
+    const dataDir = envVars['DATA_DIR'] || config.get<string>('dataDir', DEFAULT_DATA_DIR);
     envVars['DATA_DIR'] = path.isAbsolute(dataDir) ? dataDir : path.resolve(baseRoot, dataDir);
     const uvCacheDir = envVars['UV_CACHE_DIR'] || path.join(envVars['DATA_DIR'], '.uv-cache');
     envVars['UV_CACHE_DIR'] = path.isAbsolute(uvCacheDir)

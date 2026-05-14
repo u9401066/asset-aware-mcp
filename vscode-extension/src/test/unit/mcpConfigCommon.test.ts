@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { buildAssetAwareLaunchSpec } from '../../mcpConfigCommon';
+import { buildAssetAwareEnv, buildAssetAwareLaunchSpec } from '../../mcpConfigCommon';
 import { __resetConfiguration } from './mock-vscode';
 
 describe('mcpConfigCommon', () => {
@@ -19,6 +19,16 @@ describe('mcpConfigCommon', () => {
         fs.rmSync(tempDir, { recursive: true, force: true });
         (vscode.workspace as any).workspaceFolders = undefined;
         __resetConfiguration();
+    });
+
+    it('defaults to Granite RAG without enabling LightRAG', () => {
+        const context = { globalStorageUri: { fsPath: path.join(tempDir, 'global') } } as any;
+
+        const env = buildAssetAwareEnv(context, tempDir);
+
+        assert.strictEqual(env.OLLAMA_MODEL, 'granite4.1');
+        assert.strictEqual(env.OLLAMA_EMBEDDING_MODEL, 'nomic-embed-text');
+        assert.strictEqual(env.ENABLE_LIGHTRAG, 'false');
     });
 
     it('builds local-source env from detected source root', () => {

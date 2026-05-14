@@ -53,6 +53,38 @@ def _extract_doc_ids(value: Any) -> list[str]:
     return sorted(doc_ids)
 
 
+def _foam_link_target(value: Any) -> str:
+    """Return a conservative Foam note target for KG entity links."""
+    target = str(value or "").strip()
+    target = re.sub(r"\s+", " ", target)
+    target = target.replace("[[", "").replace("]]", "").replace("|", "-")
+    return target or "unknown"
+
+
+def _entity_wikilink(entity_id: Any) -> str:
+    return f"[[{_foam_link_target(entity_id)}]]"
+
+
+def _verified_evidence_foam_links(payload: dict[str, Any]) -> list[str]:
+    """Collect unique Foam wikilinks from verified evidence bundles."""
+    links: list[str] = []
+    seen: set[str] = set()
+    for bundle in payload.get("bundles", []):
+        if not isinstance(bundle, dict):
+            continue
+        for entry in bundle.get("entries", []):
+            if not isinstance(entry, dict):
+                continue
+            foam = entry.get("foam") or {}
+            if not isinstance(foam, dict):
+                continue
+            link = str(foam.get("wikilink") or "").strip()
+            if link and link not in seen:
+                seen.add(link)
+                links.append(link)
+    return links
+
+
 async def _verified_evidence_payload(
     *,
     query: str,
@@ -111,9 +143,12 @@ def _format_verified_evidence(payload: dict[str, Any]) -> str:
             f"- `{doc_id}`: {bundle.get('returned', 0)}/{bundle.get('matched_count', 0)} spans"
         )
         for entry in bundle.get("entries", [])[:3]:
+            foam_link = str((entry.get("foam") or {}).get("wikilink") or "")
+            link_suffix = f" {foam_link}" if foam_link else ""
             lines.append(
                 "  - "
                 f"`{entry.get('span_id')}` "
+                f"{link_suffix}"
                 f"p.{entry.get('page') or '?'} "
                 f"{entry.get('line_display') or ''}: "
                 f"{str(entry.get('quote') or '')[:120]}"
@@ -226,14 +261,72 @@ async def consult_knowledge_graph(
             result=result,
             evidence_limit=evidence_limit,
         )
+        foam_links = _verified_evidence_foam_links(verified)
         if isinstance(result, dict):
-            result = {**result, "verified_evidence": verified}
+            result = {
+                **result,
+                "verified_evidence": verified,
+                "foam_links": foam_links,
+                "verified_foam_links": foam_links,
+                "foam_link_details": [
+                    {"link": link, "link_kind": "verified_evidence"}
+                    for link in foam_links
+                ],
+            }
         else:
             result = f"{result}\n\n{_format_verified_evidence(verified)}"
 
     await report_progress(ctx, 100, message="Knowledge graph query finished")
     await log_message(ctx, "info", "consult_knowledge_graph complete")
     return result
+
+
+def _format_knowledge_graph_foam(result: dict[str, Any], *, limit: int) -> str:
+    if "error" in result:
+        return f"Error: {result['error']}"
+
+    nodes = cast("list[dict[str, Any]]", result.get("nodes", []))[:limit]
+    edges = cast("list[dict[str, Any]]", result.get("edges", []))[:limit]
+
+    lines = [
+        "## Knowledge Graph Discovery Link Candidates",
+        "",
+        f"**Nodes:** {len(nodes)}",
+        f"**Edges:** {len(edges)}",
+        "",
+        "### Entities",
+    ]
+    if not nodes:
+        lines.append("_No entities exported_")
+    for node in nodes:
+        entity_id = node.get("id", "")
+        entity_type = str(node.get("type") or "unknown")
+        description = str(node.get("description") or "").strip()
+        line = f"- {_entity_wikilink(entity_id)} ({entity_type})"
+        if description:
+            line += f": {description[:160]}"
+        lines.append(line)
+
+    lines.extend(["", "### Relationships"])
+    if not edges:
+        lines.append("_No relationships exported_")
+    for edge in edges:
+        source = _entity_wikilink(edge.get("source", ""))
+        target = _entity_wikilink(edge.get("target", ""))
+        keywords = str(edge.get("keywords") or "").strip()
+        line = f"- {source} -> {target}"
+        if keywords:
+            line += f" ({keywords})"
+        lines.append(line)
+
+    lines.extend(
+        [
+            "",
+            "---",
+            "_Entity links are KG discovery links. Use `consult_knowledge_graph(..., verify_references=True)` for citation-ready evidence links._",
+        ]
+    )
+    return "\n".join(lines)
 
 
 @mcp.tool()
@@ -250,6 +343,7 @@ async def export_knowledge_graph(
     Output Formats:
     - "summary": Statistics + sample nodes/edges (default, recommended)
     - "json": Full node and edge data as JSON
+    - "foam": Foam/wiki-link entity and relationship list
     - "mermaid": Mermaid.js diagram syntax for visualization
 
     Args:
@@ -277,9 +371,10 @@ async def export_knowledge_graph(
     )
     await report_progress(ctx, 10, message="Exporting knowledge graph")
     try:
+        backend_format = "json" if format == "foam" else format
         result = await asyncio.wait_for(
             knowledge_graph.export_graph(
-                format=format,
+                format=backend_format,
                 limit=limit,
             ),
             timeout=KNOWLEDGE_TOOL_TIMEOUT_SECONDS,
@@ -294,6 +389,8 @@ async def export_knowledge_graph(
     await report_progress(ctx, 100, message="Knowledge graph export finished")
     await log_message(ctx, "info", "export_knowledge_graph complete")
 
+    if format == "foam":
+        return _format_knowledge_graph_foam(result, limit=limit)
     if format == "mermaid" and "diagram" in result:
         return (
             "## Knowledge Graph Visualization\n\n"

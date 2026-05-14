@@ -13,6 +13,15 @@ export function getMissingOllamaModels(
     return required.filter(model => !installed.has(model));
 }
 
+export function getRequiredOllamaModelsForLightRag(
+    ollamaModel: string | undefined,
+    embeddingModel: string | undefined,
+    enableLightRag: boolean,
+): string[] {
+    const required = [ollamaModel, enableLightRag ? embeddingModel : undefined];
+    return required.map(model => model?.trim()).filter(Boolean) as string[];
+}
+
 export async function checkOllamaModels(
     host: string,
     requiredModels: Array<string | undefined>,

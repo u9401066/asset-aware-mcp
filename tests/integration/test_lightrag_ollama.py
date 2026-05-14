@@ -3,7 +3,8 @@ Integration test for LightRAG with Ollama backend.
 
 This test requires:
 1. Ollama running locally (http://localhost:11434)
-2. Models: qwen2.5:7b, nomic-embed-text
+2. Models: granite4.1, nomic-embed-text
+3. ENABLE_LIGHTRAG=true for adapter initialization
 
 Run with: uv run pytest tests/integration/test_lightrag_ollama.py -v
 """
@@ -86,6 +87,8 @@ class TestOllamaIntegration:
         """Test LightRAG adapter can initialize with Ollama."""
         if ollama_models is None:
             pytest.skip("Ollama not available")
+        if not settings.enable_lightrag:
+            pytest.skip("LightRAG is disabled by default; set ENABLE_LIGHTRAG=true")
 
         # Ensure we're using Ollama backend
         assert settings.llm_backend == "ollama"

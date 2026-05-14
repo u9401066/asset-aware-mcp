@@ -3,22 +3,23 @@ import {
     checkOllamaModels,
     formatOllamaPullCommands,
     getMissingOllamaModels,
+    getRequiredOllamaModelsForLightRag,
 } from '../../ollama';
 
 describe('ollama helpers', () => {
     it('reports missing configured models', () => {
         const missing = getMissingOllamaModels(
-            ['qwen2.5:3b', 'llama3.1:8b'],
-            ['qwen2.5:7b', 'nomic-embed-text'],
+            ['mistral', 'granite3.3:8b'],
+            ['granite4.1', 'nomic-embed-text'],
         );
 
-        assert.deepStrictEqual(missing, ['qwen2.5:7b', 'nomic-embed-text']);
+        assert.deepStrictEqual(missing, ['granite4.1', 'nomic-embed-text']);
     });
 
     it('deduplicates and ignores blank required models', () => {
         const missing = getMissingOllamaModels(
-            ['qwen2.5:7b'],
-            ['qwen2.5:7b', ' ', undefined, 'qwen2.5:7b'],
+            ['granite4.1'],
+            ['granite4.1', ' ', undefined, 'granite4.1'],
         );
 
         assert.deepStrictEqual(missing, []);
@@ -26,8 +27,22 @@ describe('ollama helpers', () => {
 
     it('formats pull commands for actionable setup guidance', () => {
         assert.strictEqual(
-            formatOllamaPullCommands(['qwen2.5:7b', 'nomic-embed-text']),
-            'ollama pull qwen2.5:7b\nollama pull nomic-embed-text',
+            formatOllamaPullCommands(['granite4.1', 'nomic-embed-text']),
+            'ollama pull granite4.1\nollama pull nomic-embed-text',
+        );
+    });
+
+    it('requires only the Granite LLM model when LightRAG is disabled', () => {
+        assert.deepStrictEqual(
+            getRequiredOllamaModelsForLightRag('granite4.1', 'nomic-embed-text', false),
+            ['granite4.1'],
+        );
+    });
+
+    it('requires the embedding model only when LightRAG is enabled', () => {
+        assert.deepStrictEqual(
+            getRequiredOllamaModelsForLightRag('granite4.1', 'nomic-embed-text', true),
+            ['granite4.1', 'nomic-embed-text'],
         );
     });
 
@@ -35,17 +50,17 @@ describe('ollama helpers', () => {
         const originalFetch = globalThis.fetch;
         (globalThis as any).fetch = async () => ({
             ok: true,
-            json: async () => ({ models: [{ name: 'qwen2.5:3b' }] }),
+            json: async () => ({ models: [{ name: 'granite4.1' }] }),
         });
 
         try {
             const status = await checkOllamaModels(
                 'http://localhost:11434',
-                ['qwen2.5:3b', 'nomic-embed-text'],
+                ['granite4.1', 'nomic-embed-text'],
             );
 
             assert.strictEqual(status.connected, true);
-            assert.deepStrictEqual(status.models, ['qwen2.5:3b']);
+            assert.deepStrictEqual(status.models, ['granite4.1']);
             assert.deepStrictEqual(status.missingModels, ['nomic-embed-text']);
         } finally {
             globalThis.fetch = originalFetch;

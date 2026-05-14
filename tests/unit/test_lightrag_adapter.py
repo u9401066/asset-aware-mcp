@@ -5,6 +5,7 @@ from __future__ import annotations
 import builtins
 import sys
 import types
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock
 
@@ -166,6 +167,68 @@ async def test_extract_entities_includes_text_context_in_prompt(
     assert "UniqueContextTerm" in prompt
     assert "Context:" in prompt
     assert entities == ["Remimazolam"]
+
+
+@pytest.mark.asyncio
+async def test_extract_entities_parses_multilingual_medical_terms(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeQueryParam:
+        def __init__(self, mode: str) -> None:
+            self.mode = mode
+
+    fake_module = types.ModuleType("lightrag")
+    fake_module.QueryParam = FakeQueryParam
+    monkeypatch.setitem(sys.modules, "lightrag", fake_module)
+
+    rag = FakeLightRAG()
+    rag.aquery.return_value = "- 瑞馬唑侖\n- IL-6\n- TNF-alpha\n- Remimazolam"
+    adapter = LightRAGAdapter(rag)  # type: ignore[arg-type]
+
+    entities = await adapter.extract_entities("context", limit=5)
+
+    assert entities == ["瑞馬唑侖", "IL-6", "TNF-alpha", "Remimazolam"]
+
+
+@pytest.mark.asyncio
+async def test_export_graph_reads_graphml_attribute_names(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    graphml = """<?xml version="1.0" encoding="UTF-8"?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns">
+  <key id="k_type" for="node" attr.name="entity_type" attr.type="string"/>
+  <key id="k_desc" for="node" attr.name="description" attr.type="string"/>
+  <key id="k_weight" for="edge" attr.name="weight" attr.type="double"/>
+  <key id="k_kw" for="edge" attr.name="keywords" attr.type="string"/>
+  <graph id="G" edgedefault="undirected">
+    <node id="Remimazolam">
+      <data key="k_type">DRUG</data>
+      <data key="k_desc">Sedation agent</data>
+    </node>
+    <node id="Propofol">
+      <data key="k_type">DRUG</data>
+      <data key="k_desc">Comparator</data>
+    </node>
+    <edge source="Remimazolam" target="Propofol">
+      <data key="k_weight">0.8</data>
+      <data key="k_kw">sedation comparison</data>
+    </edge>
+  </graph>
+</graphml>
+"""
+    (tmp_path / "graph_chunk_entity_relation.graphml").write_text(
+        graphml,
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(lightrag_adapter.settings, "lightrag_working_dir", tmp_path)
+
+    result = await LightRAGAdapter().export_graph(format="json", limit=10)
+
+    assert result["nodes"][0]["type"] == "DRUG"
+    assert result["nodes"][0]["description"] == "Sedation agent"
+    assert result["edges"][0]["keywords"] == "sedation comparison"
+    assert result["edges"][0]["weight"] == "0.8"
 
 
 @pytest.mark.asyncio

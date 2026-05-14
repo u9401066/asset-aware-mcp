@@ -9,6 +9,9 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
+DEFAULT_OLLAMA_MODEL = "granite4.1"
+DEFAULT_OLLAMA_EMBEDDING_MODEL = "nomic-embed-text"
+
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
@@ -36,10 +39,11 @@ class Settings(BaseSettings):
         default="http://localhost:11434", description="Ollama server URL"
     )
     ollama_model: str = Field(
-        default="llama3.1:8b", description="Ollama model for LLM tasks"
+        default=DEFAULT_OLLAMA_MODEL, description="Ollama model for LLM tasks"
     )
     ollama_embedding_model: str = Field(
-        default="nomic-embed-text", description="Ollama model for embeddings"
+        default=DEFAULT_OLLAMA_EMBEDDING_MODEL,
+        description="Ollama model for embeddings",
     )
     ollama_llm_timeout: float = Field(
         default=300.0, description="Ollama chat request timeout in seconds"
@@ -87,7 +91,7 @@ class Settings(BaseSettings):
 
     # Feature flags
     enable_lightrag: bool = Field(
-        default=True, description="Enable LightRAG knowledge graph"
+        default=False, description="Enable LightRAG knowledge graph"
     )
     enable_mistral_ocr: bool = Field(
         default=False, description="Enable Mistral OCR (requires API key)"

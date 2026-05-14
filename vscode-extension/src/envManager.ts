@@ -7,6 +7,19 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+    booleanEnv,
+    DEFAULT_DATA_DIR,
+    DEFAULT_ENABLE_LIGHTRAG,
+    DEFAULT_ETL_PROFILE,
+    DEFAULT_LIGHTRAG_EMBEDDING_MODEL,
+    DEFAULT_LIGHTRAG_WORKING_DIR,
+    DEFAULT_LLM_BACKEND,
+    DEFAULT_OLLAMA_EMBEDDING_MODEL,
+    DEFAULT_OLLAMA_HOST,
+    DEFAULT_OLLAMA_MODEL,
+    DEFAULT_OPENAI_MODEL,
+} from './defaults';
 
 export interface EnvConfig {
     LLM_BACKEND?: string;
@@ -22,6 +35,7 @@ export interface EnvConfig {
     LIGHTRAG_WORKING_DIR?: string;
     LIGHTRAG_DIR?: string;
     ETL_PROFILE?: string;
+    ENABLE_LIGHTRAG?: string;
     [key: string]: string | undefined;
 }
 
@@ -43,16 +57,17 @@ export interface CitationSpanSummary {
 }
 
 const DEFAULT_ENV: EnvConfig = {
-    LLM_BACKEND: 'ollama',
-    OLLAMA_HOST: 'http://localhost:11434',
-    OLLAMA_MODEL: 'qwen2.5:7b',
-    OLLAMA_EMBEDDING_MODEL: 'nomic-embed-text',
+    LLM_BACKEND: DEFAULT_LLM_BACKEND,
+    OLLAMA_HOST: DEFAULT_OLLAMA_HOST,
+    OLLAMA_MODEL: DEFAULT_OLLAMA_MODEL,
+    OLLAMA_EMBEDDING_MODEL: DEFAULT_OLLAMA_EMBEDDING_MODEL,
     OPENAI_API_KEY: '',
-    OPENAI_MODEL: 'gpt-4o-mini',
-    LIGHTRAG_EMBEDDING_MODEL: 'text-embedding-3-small',
-    DATA_DIR: './data',
-    LIGHTRAG_WORKING_DIR: './data/lightrag_db',
-    ETL_PROFILE: 'default'
+    OPENAI_MODEL: DEFAULT_OPENAI_MODEL,
+    LIGHTRAG_EMBEDDING_MODEL: DEFAULT_LIGHTRAG_EMBEDDING_MODEL,
+    DATA_DIR: DEFAULT_DATA_DIR,
+    LIGHTRAG_WORKING_DIR: DEFAULT_LIGHTRAG_WORKING_DIR,
+    ETL_PROFILE: DEFAULT_ETL_PROFILE,
+    ENABLE_LIGHTRAG: booleanEnv(DEFAULT_ENABLE_LIGHTRAG),
 };
 
 export class EnvManager {
@@ -218,33 +233,39 @@ export class EnvManager {
             '# LLM Backend Selection',
             '# ============================================',
             '# Options: "ollama" (local) or "openai" (cloud)',
-            `LLM_BACKEND=${env.LLM_BACKEND || 'ollama'}`,
+            `LLM_BACKEND=${env.LLM_BACKEND || DEFAULT_LLM_BACKEND}`,
             '',
             '# ============================================',
             '# ETL Profile (Document Extraction Settings)',
             '# ============================================',
             '# Options: "default", "arxiv", "nature", "ieee", "elsevier"',
-            `ETL_PROFILE=${env.ETL_PROFILE || 'default'}`,
+            `ETL_PROFILE=${env.ETL_PROFILE || DEFAULT_ETL_PROFILE}`,
             '',
             '# ============================================',
             '# Ollama Settings (for local LLM)',
             '# ============================================',
-            `OLLAMA_HOST=${env.OLLAMA_HOST || 'http://localhost:11434'}`,
-            `OLLAMA_MODEL=${env.OLLAMA_MODEL || 'qwen2.5:7b'}`,
-            `OLLAMA_EMBEDDING_MODEL=${env.OLLAMA_EMBEDDING_MODEL || 'nomic-embed-text'}`,
+            `OLLAMA_HOST=${env.OLLAMA_HOST || DEFAULT_OLLAMA_HOST}`,
+            `OLLAMA_MODEL=${env.OLLAMA_MODEL || DEFAULT_OLLAMA_MODEL}`,
+            `OLLAMA_EMBEDDING_MODEL=${env.OLLAMA_EMBEDDING_MODEL || DEFAULT_OLLAMA_EMBEDDING_MODEL}`,
             '',
             '# ============================================',
             '# OpenAI Settings (for cloud LLM)',
             '# ============================================',
             `OPENAI_API_KEY=${env.OPENAI_API_KEY || ''}`,
-            `OPENAI_MODEL=${env.OPENAI_MODEL || 'gpt-4o-mini'}`,
-            `LIGHTRAG_EMBEDDING_MODEL=${env.LIGHTRAG_EMBEDDING_MODEL || env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small'}`,
+            `OPENAI_MODEL=${env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL}`,
+            `LIGHTRAG_EMBEDDING_MODEL=${env.LIGHTRAG_EMBEDDING_MODEL || env.OPENAI_EMBEDDING_MODEL || DEFAULT_LIGHTRAG_EMBEDDING_MODEL}`,
             '',
             '# ============================================',
             '# Storage Settings',
             '# ============================================',
-            `DATA_DIR=${env.DATA_DIR || './data'}`,
-            `LIGHTRAG_WORKING_DIR=${env.LIGHTRAG_WORKING_DIR || env.LIGHTRAG_DIR || './data/lightrag_db'}`,
+            `DATA_DIR=${env.DATA_DIR || DEFAULT_DATA_DIR}`,
+            `LIGHTRAG_WORKING_DIR=${env.LIGHTRAG_WORKING_DIR || env.LIGHTRAG_DIR || DEFAULT_LIGHTRAG_WORKING_DIR}`,
+            '',
+            '# ============================================',
+            '# Optional Knowledge Graph',
+            '# ============================================',
+            '# Leave false for CPU-only or document-only workflows.',
+            `ENABLE_LIGHTRAG=${env.ENABLE_LIGHTRAG || booleanEnv(DEFAULT_ENABLE_LIGHTRAG)}`,
             ''
         ];
 
@@ -256,7 +277,7 @@ export class EnvManager {
      */
     getDataDir(): string {
         const env = this.readEnvSync();
-        const dataDir = env.DATA_DIR || './data';
+        const dataDir = env.DATA_DIR || DEFAULT_DATA_DIR;
         if (path.isAbsolute(dataDir)) {
             return dataDir;
         }

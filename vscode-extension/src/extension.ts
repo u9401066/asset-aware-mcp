@@ -16,6 +16,13 @@ import { AssetAwareMcpProvider, LAST_SERVER_VERSION_KEY } from './mcpProvider';
 import { StatusBarManager } from './statusBar';
 import { SettingsPanel } from './settingsPanel';
 import { EnvManager } from './envManager';
+import {
+    DEFAULT_ENABLE_LIGHTRAG,
+    DEFAULT_OLLAMA_EMBEDDING_MODEL,
+    DEFAULT_OLLAMA_HOST,
+    DEFAULT_OLLAMA_MODEL,
+    envBoolean,
+} from './defaults';
 import { InstallInfo, StatusTreeProvider } from './statusTreeProvider';
 import { DocumentTreeProvider } from './documentTreeProvider';
 import { TableTreeProvider } from './tableTreeProvider';
@@ -27,6 +34,7 @@ import { installCopilotMcpConfig } from './copilotMcpConfig';
 import {
     checkOllamaModels,
     formatOllamaPullCommands,
+    getRequiredOllamaModelsForLightRag,
     OllamaModelStatus,
 } from './ollama';
 import {
@@ -55,6 +63,7 @@ let extensionContext: vscode.ExtensionContext;
 let outputChannel: vscode.OutputChannel;
 let resolvedUvPath: string | null = null;
 let runtimeSyncListenersRegistered = false;
+let mcpProviderDisposable: vscode.Disposable | undefined;
 
 export interface AssetAwareExtensionApi {
     getMcpProviderForTests(): AssetAwareMcpProvider | undefined;
@@ -74,6 +83,40 @@ function log(message: string): void {
     const timestamp = new Date().toISOString();
     outputChannel?.appendLine(`[${timestamp}] ${message}`);
     console.log(`[Asset-Aware MCP] ${message}`);
+}
+
+function registerMcpServerProvider(
+    context: vscode.ExtensionContext,
+    provider: AssetAwareMcpProvider,
+): boolean {
+    if (typeof vscode.lm?.registerMcpServerDefinitionProvider !== 'function') {
+        log('WARNING: vscode.lm.registerMcpServerDefinitionProvider is not available.');
+        log('This might be because:');
+        log('  1. VS Code version is too old (need 1.96+)');
+        log('  2. The MCP proposed API is not enabled');
+        log('  3. GitHub Copilot extension is not installed');
+        return false;
+    }
+
+    mcpProviderDisposable?.dispose();
+    mcpProviderDisposable = vscode.lm.registerMcpServerDefinitionProvider(
+        'asset-aware-mcp.servers',
+        provider,
+    );
+    context.subscriptions.push(mcpProviderDisposable);
+    return true;
+}
+
+export function __registerMcpServerProviderForTests(
+    context: vscode.ExtensionContext,
+    provider: AssetAwareMcpProvider,
+): boolean {
+    return registerMcpServerProvider(context, provider);
+}
+
+export function __resetMcpServerProviderRegistrationForTests(): void {
+    mcpProviderDisposable?.dispose();
+    mcpProviderDisposable = undefined;
 }
 
 /**
@@ -268,19 +311,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<AssetA
         context.globalState.update(LAST_SERVER_VERSION_KEY, currentVersion);
 
         // Check if MCP API is available (it's a proposed API)
-        if (typeof vscode.lm?.registerMcpServerDefinitionProvider === 'function') {
-            const providerDisposable = vscode.lm.registerMcpServerDefinitionProvider(
-                'asset-aware-mcp.servers',
-                mcpProvider
-            );
-            context.subscriptions.push(providerDisposable);
+        if (registerMcpServerProvider(context, mcpProvider)) {
             log('MCP server provider registered successfully');
-        } else {
-            log('WARNING: vscode.lm.registerMcpServerDefinitionProvider is not available.');
-            log('This might be because:');
-            log('  1. VS Code version is too old (need 1.96+)');
-            log('  2. The MCP proposed API is not enabled');
-            log('  3. GitHub Copilot extension is not installed');
         }
 
         // Step 6: Register commands
@@ -683,13 +715,7 @@ function registerCommands(context: vscode.ExtensionContext): void {
             // Recreate provider with upgrade flag
             mcpProvider = new AssetAwareMcpProvider(getStorageRoot(), outputChannel, extensionContext, true);
 
-            if (typeof vscode.lm?.registerMcpServerDefinitionProvider === 'function') {
-                const providerDisposable = vscode.lm.registerMcpServerDefinitionProvider(
-                    'asset-aware-mcp.servers',
-                    mcpProvider
-                );
-                context.subscriptions.push(providerDisposable);
-            }
+            registerMcpServerProvider(context, mcpProvider);
             mcpProvider.refresh();
 
             vscode.window.showInformationMessage(
@@ -881,18 +907,24 @@ async function runSetupWizard(): Promise<void> {
     }
 }
 
-function getRequiredOllamaModels(): string[] {
+async function getRequiredOllamaModels(): Promise<string[]> {
     const config = vscode.workspace.getConfiguration('assetAwareMcp');
-    return [
-        config.get<string>('ollamaModel', 'qwen2.5:7b'),
-        config.get<string>('ollamaEmbeddingModel', 'nomic-embed-text'),
-    ];
+    const env = await envManager.readEnv();
+    return getRequiredOllamaModelsForLightRag(
+        env.OLLAMA_MODEL || config.get<string>('ollamaModel', DEFAULT_OLLAMA_MODEL),
+        env.OLLAMA_EMBEDDING_MODEL || config.get<string>('ollamaEmbeddingModel', DEFAULT_OLLAMA_EMBEDDING_MODEL),
+        envBoolean(
+            env.ENABLE_LIGHTRAG,
+            config.get<boolean>('enableLightRag', DEFAULT_ENABLE_LIGHTRAG),
+        ),
+    );
 }
 
 async function getOllamaModelStatus(): Promise<OllamaModelStatus> {
     const config = vscode.workspace.getConfiguration('assetAwareMcp');
-    const host = config.get<string>('ollamaHost', 'http://localhost:11434');
-    return checkOllamaModels(host, getRequiredOllamaModels());
+    const env = await envManager.readEnv();
+    const host = env.OLLAMA_HOST || config.get<string>('ollamaHost', DEFAULT_OLLAMA_HOST);
+    return checkOllamaModels(host, await getRequiredOllamaModels());
 }
 
 async function checkAndUpdateOllamaStatus(status?: OllamaModelStatus): Promise<boolean> {
@@ -921,6 +953,7 @@ interface ExtensionStatus {
     llmBackend: string;
     ollamaHost: string;
     ollamaModel: string;
+    lightRagEnabled: boolean;
     ollamaConnected: boolean;
     ollamaMissingModels: string[];
     openaiConfigured: boolean;
@@ -942,8 +975,12 @@ async function getExtensionStatus(): Promise<ExtensionStatus> {
         envExists: fs.existsSync(envManager.getEnvPath()),
         envPath: envManager.getEnvPath(),
         llmBackend: env.LLM_BACKEND || 'ollama',
-        ollamaHost: env.OLLAMA_HOST || config.get<string>('ollamaHost', 'http://localhost:11434'),
-        ollamaModel: env.OLLAMA_MODEL || config.get<string>('ollamaModel', 'qwen2.5:7b'),
+        ollamaHost: env.OLLAMA_HOST || config.get<string>('ollamaHost', DEFAULT_OLLAMA_HOST),
+        ollamaModel: env.OLLAMA_MODEL || config.get<string>('ollamaModel', DEFAULT_OLLAMA_MODEL),
+        lightRagEnabled: envBoolean(
+            env.ENABLE_LIGHTRAG,
+            config.get<boolean>('enableLightRag', DEFAULT_ENABLE_LIGHTRAG),
+        ),
         ollamaConnected: ollamaStatus.connected,
         ollamaMissingModels: ollamaStatus.missingModels,
         openaiConfigured: !!(env.OPENAI_API_KEY),
@@ -1009,6 +1046,7 @@ function getStatusWebviewContent(status: ExtensionStatus, webview: vscode.Webvie
 	        <div class="item"><span>.env File:</span><span class="status ${status.envExists ? 'ok' : 'error'}">${status.envExists ? checkmark + ' Exists' : cross + ' Missing'}</span></div>
 	        <div class="item"><span>Path:</span><code>${envPath}</code></div>
 	        <div class="item"><span>LLM Backend:</span><span class="info">${llmBackend}</span></div>
+	        <div class="item"><span>Knowledge Graph:</span><span class="status ${status.lightRagEnabled ? 'ok' : 'warning'}">${status.lightRagEnabled ? checkmark + ' Enabled' : 'Disabled'}</span></div>
 	    </div>
 	    <div class="section">
 	        <h2>Ollama Connection</h2>

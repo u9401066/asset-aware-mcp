@@ -6,8 +6,21 @@
  */
 
 import * as vscode from 'vscode';
+import {
+    DEFAULT_DATA_DIR,
+    DEFAULT_ENABLE_LIGHTRAG,
+    DEFAULT_ETL_PROFILE,
+    DEFAULT_LIGHTRAG_EMBEDDING_MODEL,
+    DEFAULT_LIGHTRAG_WORKING_DIR,
+    DEFAULT_LLM_BACKEND,
+    DEFAULT_OLLAMA_EMBEDDING_MODEL,
+    DEFAULT_OLLAMA_HOST,
+    DEFAULT_OLLAMA_MODEL,
+    DEFAULT_OPENAI_MODEL,
+    envBoolean,
+} from './defaults';
 import { EnvManager } from './envManager';
-import { checkOllamaModels, formatOllamaPullCommands } from './ollama';
+import { checkOllamaModels, formatOllamaPullCommands, getRequiredOllamaModelsForLightRag } from './ollama';
 
 function escapeHtml(value: string): string {
     return value
@@ -38,6 +51,7 @@ const ALLOWED_ENV_KEYS = new Set([
     'LIGHTRAG_EMBEDDING_MODEL',
     'DATA_DIR',
     'LIGHTRAG_WORKING_DIR',
+    'ENABLE_LIGHTRAG',
 ]);
 
 export class SettingsPanel {
@@ -141,10 +155,14 @@ export class SettingsPanel {
     private async _testOllamaConnection(host: string): Promise<void> {
         try {
             const env = await this._envManager.readEnv();
-            const status = await checkOllamaModels(host, [
-                env.OLLAMA_MODEL || 'qwen2.5:7b',
-                env.OLLAMA_EMBEDDING_MODEL || 'nomic-embed-text',
-            ]);
+            const status = await checkOllamaModels(
+                host,
+                getRequiredOllamaModelsForLightRag(
+                    env.OLLAMA_MODEL || DEFAULT_OLLAMA_MODEL,
+                    env.OLLAMA_EMBEDDING_MODEL || DEFAULT_OLLAMA_EMBEDDING_MODEL,
+                    envBoolean(env.ENABLE_LIGHTRAG, DEFAULT_ENABLE_LIGHTRAG),
+                ),
+            );
             if (status.connected) {
                 const models = status.models.join(', ') || 'None';
                 vscode.window.showInformationMessage(`✅ Ollama connected! Models: ${models}`);
@@ -187,6 +205,7 @@ export class SettingsPanel {
         const nonce = getNonce();
         const webview = this._panel.webview;
         const value = (key: string, fallback = '') => escapeHtml(env[key] || fallback);
+        const lightRagEnabled = envBoolean(env['ENABLE_LIGHTRAG'], DEFAULT_ENABLE_LIGHTRAG);
 
         return `<!DOCTYPE html>
 <html lang="en">
@@ -357,7 +376,7 @@ export class SettingsPanel {
                 <label for="llmBackend">Backend</label>
                 <p class="description">Choose between local Ollama or cloud OpenAI</p>
                 <select id="llmBackend" name="LLM_BACKEND">
-                    <option value="ollama" ${env['LLM_BACKEND'] === 'ollama' ? 'selected' : ''}>Ollama (Local)</option>
+                    <option value="ollama" ${env['LLM_BACKEND'] === DEFAULT_LLM_BACKEND || !env['LLM_BACKEND'] ? 'selected' : ''}>Ollama (Local)</option>
                     <option value="openai" ${env['LLM_BACKEND'] === 'openai' ? 'selected' : ''}>OpenAI (Cloud)</option>
                 </select>
             </div>
@@ -370,7 +389,7 @@ export class SettingsPanel {
                 <label for="etlProfile">Document Format Profile</label>
                 <p class="description">Different journals/formats need different extraction settings. Choose a profile that matches your documents.</p>
                 <select id="etlProfile" name="ETL_PROFILE">
-                    <option value="default" ${env['ETL_PROFILE'] === 'default' || !env['ETL_PROFILE'] ? 'selected' : ''}>Default (General purpose)</option>
+                    <option value="default" ${env['ETL_PROFILE'] === DEFAULT_ETL_PROFILE || !env['ETL_PROFILE'] ? 'selected' : ''}>Default (General purpose)</option>
                     <option value="arxiv" ${env['ETL_PROFILE'] === 'arxiv' ? 'selected' : ''}>arXiv (Double-column preprints)</option>
                     <option value="nature" ${env['ETL_PROFILE'] === 'nature' ? 'selected' : ''}>Nature/Scientific Reports</option>
                     <option value="ieee" ${env['ETL_PROFILE'] === 'ieee' ? 'selected' : ''}>IEEE (Roman numeral sections)</option>
@@ -387,26 +406,26 @@ export class SettingsPanel {
                 <label for="ollamaHost">Ollama Host URL</label>
                 <div class="input-group">
                     <input type="text" id="ollamaHost" name="OLLAMA_HOST"
-                           value="${value('OLLAMA_HOST', 'http://localhost:11434')}"
-                           placeholder="http://localhost:11434">
+                           value="${value('OLLAMA_HOST', DEFAULT_OLLAMA_HOST)}"
+                           placeholder="${DEFAULT_OLLAMA_HOST}">
                     <button type="button" id="testOllamaButton" class="btn btn-secondary">Test Connection</button>
                 </div>
             </div>
 
             <div class="form-group">
                 <label for="ollamaModel">LLM Model</label>
-                <p class="description">Model for text generation (e.g., qwen2.5:7b, llama3.2)</p>
+                <p class="description">Model for text generation (default: granite4.1)</p>
                 <input type="text" id="ollamaModel" name="OLLAMA_MODEL"
-                       value="${value('OLLAMA_MODEL', 'qwen2.5:7b')}"
-                       placeholder="qwen2.5:7b">
+                       value="${value('OLLAMA_MODEL', DEFAULT_OLLAMA_MODEL)}"
+                       placeholder="${DEFAULT_OLLAMA_MODEL}">
             </div>
 
             <div class="form-group">
                 <label for="ollamaEmbeddingModel">Embedding Model</label>
                 <p class="description">Model for text embeddings (e.g., nomic-embed-text)</p>
                 <input type="text" id="ollamaEmbeddingModel" name="OLLAMA_EMBEDDING_MODEL"
-                       value="${value('OLLAMA_EMBEDDING_MODEL', 'nomic-embed-text')}"
-                       placeholder="nomic-embed-text">
+                       value="${value('OLLAMA_EMBEDDING_MODEL', DEFAULT_OLLAMA_EMBEDDING_MODEL)}"
+                       placeholder="${DEFAULT_OLLAMA_EMBEDDING_MODEL}">
             </div>
         </div>
 
@@ -428,15 +447,15 @@ export class SettingsPanel {
             <div class="form-group">
                 <label for="openaiModel">Model</label>
                 <input type="text" id="openaiModel" name="OPENAI_MODEL"
-                       value="${value('OPENAI_MODEL', 'gpt-4o-mini')}"
-                       placeholder="gpt-4o-mini">
+                       value="${value('OPENAI_MODEL', DEFAULT_OPENAI_MODEL)}"
+                       placeholder="${DEFAULT_OPENAI_MODEL}">
             </div>
 
             <div class="form-group">
                 <label for="openaiEmbeddingModel">Embedding Model</label>
                 <input type="text" id="openaiEmbeddingModel" name="LIGHTRAG_EMBEDDING_MODEL"
-                       value="${escapeHtml(env['LIGHTRAG_EMBEDDING_MODEL'] || env['OPENAI_EMBEDDING_MODEL'] || 'text-embedding-3-small')}"
-                       placeholder="text-embedding-3-small">
+                       value="${escapeHtml(env['LIGHTRAG_EMBEDDING_MODEL'] || env['OPENAI_EMBEDDING_MODEL'] || DEFAULT_LIGHTRAG_EMBEDDING_MODEL)}"
+                       placeholder="${DEFAULT_LIGHTRAG_EMBEDDING_MODEL}">
             </div>
         </div>
 
@@ -447,16 +466,24 @@ export class SettingsPanel {
                 <label for="dataDir">Data Directory</label>
                 <p class="description">Directory for storing processed documents and manifests</p>
                 <input type="text" id="dataDir" name="DATA_DIR"
-                       value="${value('DATA_DIR', './data')}"
-                       placeholder="./data">
+                       value="${value('DATA_DIR', DEFAULT_DATA_DIR)}"
+                       placeholder="${DEFAULT_DATA_DIR}">
             </div>
 
             <div class="form-group">
                 <label for="lightragDir">LightRAG Directory</label>
                 <p class="description">Directory for LightRAG knowledge graph data</p>
                 <input type="text" id="lightragDir" name="LIGHTRAG_WORKING_DIR"
-                       value="${escapeHtml(env['LIGHTRAG_WORKING_DIR'] || env['LIGHTRAG_DIR'] || './data/lightrag_db')}"
-                       placeholder="./data/lightrag_db">
+                       value="${escapeHtml(env['LIGHTRAG_WORKING_DIR'] || env['LIGHTRAG_DIR'] || DEFAULT_LIGHTRAG_WORKING_DIR)}"
+                       placeholder="${DEFAULT_LIGHTRAG_WORKING_DIR}">
+            </div>
+
+            <div class="form-group">
+                <label for="enableLightRag">
+                    <input type="checkbox" id="enableLightRag" name="ENABLE_LIGHTRAG" value="true" ${lightRagEnabled ? 'checked' : ''}>
+                    Enable LightRAG knowledge graph
+                </label>
+                <p class="description">Optional KG indexing and querying. Leave disabled for CPU-only or document-only workflows.</p>
             </div>
         </div>
 
@@ -496,6 +523,9 @@ export class SettingsPanel {
             const settings = {};
             formData.forEach((value, key) => {
                 settings[key] = value;
+            });
+            document.querySelectorAll('input[type="checkbox"][name]').forEach((input) => {
+                settings[input.name] = input.checked ? 'true' : 'false';
             });
             vscode.postMessage({ command: 'save', settings });
         });

@@ -5,8 +5,15 @@
  */
 
 import * as vscode from 'vscode';
+import {
+    DEFAULT_ENABLE_LIGHTRAG,
+    DEFAULT_OLLAMA_EMBEDDING_MODEL,
+    DEFAULT_OLLAMA_HOST,
+    DEFAULT_OLLAMA_MODEL,
+    envBoolean,
+} from './defaults';
 import { EnvManager } from './envManager';
-import { checkOllamaModels } from './ollama';
+import { checkOllamaModels, getRequiredOllamaModelsForLightRag } from './ollama';
 
 export interface InstallInfo {
     scope: string;
@@ -80,13 +87,22 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
             backend === 'ollama' ? 'hubot' : 'cloud'
         ));
 
+        const lightRagEnabled = envBoolean(env.ENABLE_LIGHTRAG, DEFAULT_ENABLE_LIGHTRAG);
+        items.push(new StatusItem(
+            'Knowledge Graph',
+            lightRagEnabled ? 'Enabled' : 'Disabled',
+            vscode.TreeItemCollapsibleState.None,
+            lightRagEnabled ? 'graph' : 'circle-slash'
+        ));
+
         // Ollama Connection
         const ollamaStatus = await checkOllamaModels(
-            env.OLLAMA_HOST || 'http://localhost:11434',
-            [
-                env.OLLAMA_MODEL || 'qwen2.5:7b',
-                env.OLLAMA_EMBEDDING_MODEL || 'nomic-embed-text',
-            ],
+            env.OLLAMA_HOST || DEFAULT_OLLAMA_HOST,
+            getRequiredOllamaModelsForLightRag(
+                env.OLLAMA_MODEL || DEFAULT_OLLAMA_MODEL,
+                env.OLLAMA_EMBEDDING_MODEL || DEFAULT_OLLAMA_EMBEDDING_MODEL,
+                lightRagEnabled,
+            ),
         );
         items.push(new StatusItem(
             'Ollama',

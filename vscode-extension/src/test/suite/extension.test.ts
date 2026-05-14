@@ -28,20 +28,15 @@ suite('Extension Test Suite', () => {
     });
 
     nonSmokeTest('Commands should be registered', async () => {
+        const extension = vscode.extensions.getExtension('u9401066.asset-aware-mcp');
+        assert.ok(extension, 'Extension should be installed');
+        await extension.activate();
         const commands = await vscode.commands.getCommands(true);
 
-        const expectedCommands = [
-            'assetAwareMcp.setupWizard',
-            'assetAwareMcp.openSettings',
-            'assetAwareMcp.installAssistantAssets',
-            'assetAwareMcp.configureExternalMcp',
-            'assetAwareMcp.showStatus',
-            'assetAwareMcp.checkConnection',
-            'assetAwareMcp.editEnv',
-            'assetAwareMcp.refreshStatus',
-            'assetAwareMcp.checkDependencies',
-            'assetAwareMcp.showOutput'
-        ];
+        const expectedCommands = (
+            extension.packageJSON.contributes?.commands ?? []
+        ).map((command: { command: string }) => command.command);
+        assert.ok(expectedCommands.length > 0, 'Package manifest should declare commands');
 
         for (const cmd of expectedCommands) {
             assert.ok(
@@ -56,8 +51,9 @@ suite('Extension Test Suite', () => {
 
         assert.strictEqual(config.get('llmBackend'), 'ollama');
         assert.strictEqual(config.get('ollamaHost'), 'http://localhost:11434');
-        assert.strictEqual(config.get('ollamaModel'), 'qwen2.5:7b');
+        assert.strictEqual(config.get('ollamaModel'), 'granite4.1');
         assert.strictEqual(config.get('ollamaEmbeddingModel'), 'nomic-embed-text');
+        assert.strictEqual(config.get('enableLightRag'), false);
         assert.strictEqual(config.get('dataDir'), './data');
     });
 
@@ -128,7 +124,7 @@ suite('Utility Functions Test Suite', () => {
 # This is a comment
 LLM_BACKEND=ollama
 OLLAMA_HOST="http://localhost:11434"
-OLLAMA_MODEL='qwen2.5:7b'
+OLLAMA_MODEL='granite4.1'
 EMPTY_VALUE=
         `.trim();
 
@@ -158,7 +154,7 @@ EMPTY_VALUE=
 
         assert.strictEqual(env['LLM_BACKEND'], 'ollama');
         assert.strictEqual(env['OLLAMA_HOST'], 'http://localhost:11434');
-        assert.strictEqual(env['OLLAMA_MODEL'], 'qwen2.5:7b');
+        assert.strictEqual(env['OLLAMA_MODEL'], 'granite4.1');
         assert.strictEqual(env['EMPTY_VALUE'], '');
     });
 });

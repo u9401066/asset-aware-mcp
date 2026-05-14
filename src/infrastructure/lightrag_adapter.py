@@ -21,6 +21,17 @@ if TYPE_CHECKING:
     from lightrag import LightRAG  # type: ignore
 
 MIN_LIGHTRAG_HKU_VERSION = (1, 4, 11)
+ENTITY_PARSE_STOPWORDS = {
+    "and",
+    "context",
+    "entities",
+    "entity",
+    "the",
+    "this",
+    "these",
+    "top",
+    "terms",
+}
 
 
 def _parse_version_tuple(raw_version: str) -> tuple[int, int, int]:
@@ -46,6 +57,76 @@ def _validate_lightrag_hku_distribution() -> None:
             f"LightRAG backend requires `lightrag-hku>={minimum}`, "
             f"but {installed_version} is installed."
         )
+
+
+def _clean_entity_candidate(value: str) -> str:
+    candidate = value.strip()
+    candidate = re.sub(r"^\s*(?:[-*•]|\d+[\.)])\s*", "", candidate)
+    candidate = candidate.strip(" \t\r\n`*_\"'“”():：;；,.，。[]{}")
+    candidate = re.sub(r"\s+", " ", candidate)
+    return candidate
+
+
+def _parse_entity_candidates(response: str, *, limit: int) -> list[str]:
+    """Parse a bounded entity list from LightRAG natural-language output."""
+    entities: list[str] = []
+    seen: set[str] = set()
+
+    def add(raw: str) -> None:
+        candidate = _clean_entity_candidate(raw)
+        if not candidate:
+            return
+        if candidate.casefold() in ENTITY_PARSE_STOPWORDS:
+            return
+        if len(candidate) < 2 and not re.search(r"[\u4e00-\u9fff]", candidate):
+            return
+        key = candidate.casefold()
+        if key in seen:
+            return
+        seen.add(key)
+        entities.append(candidate)
+
+    for quoted in re.findall(r"[\"“”']([^\"“”']+)[\"“”']", response):
+        add(quoted)
+
+    for line in response.splitlines():
+        bullet = re.match(r"^\s*(?:[-*•]|\d+[\.)])\s*(.+)", line)
+        if not bullet:
+            continue
+        for part in re.split(r"[,;，；]", bullet.group(1)):
+            add(part)
+
+    term_pattern = (
+        r"[\u4e00-\u9fff]{2,}(?:[-\u4e00-\u9fffA-Za-z0-9]+)?"
+        r"|[A-Z]{2,}(?:-[A-Za-z0-9]+)*"
+        r"|[A-Za-z]+(?:-[A-Za-z0-9]+)+"
+        r"|[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*"
+    )
+    for match in re.findall(term_pattern, response):
+        add(match)
+
+    return entities[:limit]
+
+
+def _graphml_key_aliases(root: Any, ns: dict[str, str]) -> dict[str, str]:
+    aliases = {
+        "d1": "entity_type",
+        "d2": "description",
+        "d7": "weight",
+        "d9": "keywords",
+    }
+    attr_aliases = {
+        "entity_type": "entity_type",
+        "description": "description",
+        "weight": "weight",
+        "keywords": "keywords",
+    }
+    for key_node in root.findall("g:key", ns):
+        key_id = str(key_node.get("id") or "")
+        attr_name = str(key_node.get("attr.name") or "")
+        if key_id and attr_name in attr_aliases:
+            aliases[key_id] = attr_aliases[attr_name]
+    return aliases
 
 
 # ============================================================================
@@ -451,32 +532,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
             if not result:
                 return []
 
-            # Parse entities from response
-            # LightRAG returns natural language, so we extract capitalized terms
-            import re
-
-            # Find quoted terms or capitalized words
-            entities = []
-
-            # Try to find quoted entities first
-            quoted = re.findall(r'"([^"]+)"', str(result))
-            entities.extend(quoted)
-
-            # Also find capitalized multi-word terms
-            caps = re.findall(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b", str(result))
-            for cap in caps:
-                if cap not in entities and cap not in ["The", "This", "These", "What"]:
-                    entities.append(cap)
-
-            # Deduplicate and limit
-            seen = set()
-            unique_entities = []
-            for e in entities:
-                if e.lower() not in seen:
-                    seen.add(e.lower())
-                    unique_entities.append(e)
-
-            return unique_entities[:limit]
+            return _parse_entity_candidates(str(result), limit=limit)
 
         except Exception:
             return []
@@ -516,6 +572,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
         tree = ET.parse(graph_file)  # noqa: S314  # nosec B314
         root = tree.getroot()
         ns = {"g": "http://graphml.graphdrawing.org/xmlns"}
+        key_aliases = _graphml_key_aliases(root, ns)
 
         # Extract nodes
         nodes: list[dict[str, str]] = []
@@ -531,9 +588,10 @@ class LightRAGAdapter(KnowledgeGraphInterface):
             for data in node.findall("g:data", ns):
                 key = data.get("key", "")
                 text = data.text or ""
-                if key == "d1":  # entity_type
+                field_name = key_aliases.get(key, key)
+                if field_name == "entity_type":
                     entity_type = text
-                elif key == "d2":  # description
+                elif field_name == "description":
                     # Truncate long descriptions
                     description = text[:200] + "..." if len(text) > 200 else text
 
@@ -566,9 +624,10 @@ class LightRAGAdapter(KnowledgeGraphInterface):
             for data in edge.findall("g:data", ns):
                 key = data.get("key", "")
                 text = data.text or ""
-                if key == "d9":  # keywords
+                field_name = key_aliases.get(key, key)
+                if field_name == "keywords":
                     keywords = text
-                elif key == "d7":  # weight
+                elif field_name == "weight":
                     weight = text
 
             edges.append(

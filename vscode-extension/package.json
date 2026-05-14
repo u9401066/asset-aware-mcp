@@ -2,7 +2,7 @@
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
     "description": "Medical RAG MCP Server with precise document asset retrieval and Docx editing (DFM) — tables, figures, sections from PDFs + .docx/.doc round-trip with integrity validation",
-    "version": "0.6.31",
+    "version": "0.6.32",
     "publisher": "u9401066",
     "engines": {
         "vscode": "^1.96.0"
@@ -138,7 +138,7 @@
                 },
                 "assetAwareMcp.ollamaModel": {
                     "type": "string",
-                    "default": "qwen2.5:7b",
+                    "default": "granite4.1",
                     "description": "Ollama LLM model name"
                 },
                 "assetAwareMcp.ollamaEmbeddingModel": {
@@ -165,6 +165,11 @@
                     "type": "string",
                     "default": "./data",
                     "description": "Directory for storing processed documents"
+                },
+                "assetAwareMcp.enableLightRag": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable optional LightRAG knowledge graph indexing and querying. Leave disabled for CPU-only or document-only workflows."
                 },
                 "assetAwareMcp.enableMarkerBackend": {
                     "type": "boolean",
