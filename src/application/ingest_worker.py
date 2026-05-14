@@ -97,6 +97,7 @@ async def run_worker(
             deskew=args.deskew,
             marker_max_pages_per_chunk=args.marker_max_pages_per_chunk,
             extract_figures=args.extract_figures,
+            index_knowledge_graph=args.index_knowledge_graph,
             page_ranges=_parse_page_ranges(args.page_ranges_json) or None,
             require_marker=args.require_marker,
             progress_callback=progress_callback,
@@ -140,6 +141,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--deskew", action="store_true")
     parser.add_argument("--marker-max-pages-per-chunk", type=int, default=0)
     parser.add_argument("--extract-figures", action="store_true")
+    parser.add_argument("--index-knowledge-graph", action="store_true")
     parser.add_argument("--page-ranges-json", default="[]")
     parser.add_argument("--etl-profile", default="")
     return parser

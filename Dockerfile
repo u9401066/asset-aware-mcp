@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # ============================================================================
-# Asset-Aware MCP — Production Dockerfile (multi-stage)
+# Asset-Aware MCP ??Production Dockerfile (multi-stage)
 # ============================================================================
 # Usage:
 #   docker build -t asset-aware-mcp .
@@ -10,7 +10,7 @@
 #     asset-aware-mcp
 # ============================================================================
 
-# Stage 1: Builder — install dependencies
+# Stage 1: Builder ??install dependencies
 FROM python:3.12-slim-bookworm AS builder
 
 RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources \
@@ -42,9 +42,6 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy application source
-COPY src/ ./src/
-
 # Create data directory owned by mcp user
 RUN mkdir -p /app/data && chown -R mcp:mcp /app
 
@@ -59,7 +56,7 @@ USER mcp
 
 # Health metadata
 LABEL maintainer="u9401066@gap.kmu.edu.tw" \
-      version="0.6.31" \
+      version="0.6.32" \
       description="Asset-Aware Medical RAG MCP Server"
 
-ENTRYPOINT ["python", "-m", "src.presentation.server"]
+ENTRYPOINT ["asset-aware-mcp"]

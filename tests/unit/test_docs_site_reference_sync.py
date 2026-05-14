@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 TOOLS_DIR = ROOT / "src" / "presentation" / "tools"
 RESOURCES_DIR = ROOT / "src" / "presentation" / "resources"
 WIKI_DIR = ROOT / "docs" / "wiki"
+SITE_CONTENT_DIR = ROOT / "docs" / "site-content"
 
 
 def _is_mcp_decorator(decorator: ast.expr, name: str) -> bool:
@@ -80,6 +81,14 @@ def _markdown_sections(markdown: str) -> dict[str, str]:
     return sections
 
 
+def _project_version() -> str:
+    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'(?m)^version\s*=\s*"([^"]+)"', text)
+    if match is None:
+        raise AssertionError("pyproject.toml must define [project].version")
+    return match.group(1)
+
+
 def test_mcp_tools_reference_matches_registered_tools() -> None:
     markdown = (WIKI_DIR / "MCP-Tools.md").read_text(encoding="utf-8")
     sections = _markdown_sections(markdown)
@@ -116,3 +125,17 @@ def test_start_here_navigation_matches_design_notes() -> None:
         "vs-code-extension",
         "design-ux",
     ]
+
+
+def test_overview_docs_show_current_project_version() -> None:
+    version = _project_version()
+
+    paths = [
+        WIKI_DIR / "Home.md",
+        SITE_CONTENT_DIR / "overview.md",
+        SITE_CONTENT_DIR / "overview-zh.md",
+        ROOT / "scripts" / "build_docs_site.py",
+    ]
+
+    for path in paths:
+        assert f"`{version}`" in path.read_text(encoding="utf-8"), path

@@ -14,12 +14,15 @@ Document Resources - MCP Resources for Documents and Knowledge Graph
 
 from __future__ import annotations
 
+import asyncio
 from typing import cast
 
 from src.presentation.dependencies import document_service, knowledge_graph
 from src.presentation.markdown_utils import escape_table_cell
 from src.presentation.mcp_app import mcp
 from src.presentation.tools.document_tools import list_documents
+
+KNOWLEDGE_RESOURCE_TIMEOUT_SECONDS = 45.0
 
 
 def _display_line_range(start_line: int, end_line: int) -> str:
@@ -287,7 +290,18 @@ async def resource_knowledge_graph_summary() -> str:
     if knowledge_graph is None:
         return "LightRAG is not enabled. Set ENABLE_LIGHTRAG=true in .env"
 
-    result = await knowledge_graph.export_graph(format="summary", limit=30)
+    try:
+        result = await asyncio.wait_for(
+            knowledge_graph.export_graph(format="summary", limit=30),
+            timeout=KNOWLEDGE_RESOURCE_TIMEOUT_SECONDS,
+        )
+    except TimeoutError:
+        return (
+            "Knowledge graph summary timed out before completion. "
+            f"timeout_seconds={KNOWLEDGE_RESOURCE_TIMEOUT_SECONDS}"
+        )
+    except Exception as exc:
+        return f"Error: Knowledge graph summary failed: {exc}"
 
     if "error" in result:
         return f"Error: {result['error']}"

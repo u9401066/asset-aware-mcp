@@ -7,14 +7,26 @@ drift before a release path silently skips a production-grade gate.
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def is_git_ignored(path: str) -> bool:
+    result = subprocess.run(
+        ["git", "check-ignore", "-q", "--", path],
+        cwd=ROOT,
+        check=False,
+    )
+    return result.returncode == 0
 
 
 def require_absent(paths: list[str]) -> list[str]:
     return [
         f"{path}: non Asset-Aware harness asset must not be present"
         for path in paths
-        if Path(path).exists()
+        if Path(path).exists() and not is_git_ignored(path)
     ]
 
 
@@ -129,13 +141,18 @@ def main() -> int:
                 "actions/setup-node@v6",
                 "python3 scripts/audit_release_harness.py",
                 "python3 scripts/audit_release_artifacts.py",
+                "python3 scripts/smoke_built_wheel.py",
                 "npm run test:ci",
                 "xvfb-run -a npm run test:install-smoke -- --require-activation",
                 "cross-platform-smoke",
                 "release-preflight",
                 "Verify release secrets are configured before publishing",
                 "Package VSIX before publishing PyPI",
-                "Docker smoke import",
+                "Smoke built wheel runtime before publishing",
+                "Docker smoke diagnostics",
+                "asset-aware-mcp doctor --json",
+                "asset-aware-mcp list-tools --json",
+                "scripts/smoke_mcp_stdio.py",
                 "needs: publish-pypi",
                 "needs: release-preflight",
                 "Verify PyPI package is available",
@@ -177,6 +194,7 @@ def main() -> int:
                 "python3 scripts/check_cline_skills.py",
                 "python3 scripts/audit_release_harness.py",
                 "python3 scripts/audit_release_artifacts.py",
+                "python3 scripts/smoke_built_wheel.py",
                 "npm run sync-assets:check",
                 "npm run test:ci",
                 "npm run test:install-smoke -- --require-activation",
@@ -192,10 +210,12 @@ def main() -> int:
             [
                 "python3 scripts/audit_release_harness.py",
                 "python3 scripts/audit_release_artifacts.py",
+                "python3 scripts/smoke_built_wheel.py",
                 "npm --prefix vscode-extension run sync-assets:check",
                 "npm run test:install-smoke",
                 "docker build",
                 "docker run",
+                "scripts/smoke_mcp_stdio.py",
             ],
         )
     )

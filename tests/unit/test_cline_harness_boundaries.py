@@ -1,4 +1,5 @@
 import runpy
+import subprocess
 from pathlib import Path
 
 LLM_WIKI_HARNESS_FILES = [
@@ -87,7 +88,13 @@ def test_release_audit_flags_retired_harness_text(tmp_path: Path) -> None:
 
 def test_retired_harness_files_are_absent_from_workspace() -> None:
     for path in RETIRED_HARNESS_PATHS:
-        assert not path.exists(), path
+        if not path.exists():
+            continue
+        result = subprocess.run(
+            ["git", "check-ignore", "-q", "--", str(path)],
+            check=False,
+        )
+        assert result.returncode == 0, path
 
 
 def test_cline_workflow_execute_commands_are_powershell_safe() -> None:

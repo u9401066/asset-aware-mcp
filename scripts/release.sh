@@ -58,6 +58,7 @@ rm -rf dist/ build/ *.egg-info/
 # 建置套件
 uv build
 python3 scripts/audit_release_artifacts.py
+python3 scripts/smoke_built_wheel.py
 
 echo "Built packages:"
 ls -la dist/
@@ -101,7 +102,9 @@ python3 scripts/audit_release_artifacts.py
 echo -e "\n${YELLOW}🐳 Step 4.1: Docker Smoke${NC}"
 
 docker build -t asset-aware-mcp:smoke .
-docker run --rm --entrypoint python asset-aware-mcp:smoke -c "import src.presentation.server; print('server import ok')"
+docker run --rm asset-aware-mcp:smoke doctor --json
+docker run --rm asset-aware-mcp:smoke list-tools --json
+uv run python scripts/smoke_mcp_stdio.py -- docker run --rm -i asset-aware-mcp:smoke
 
 echo -e "${GREEN}✓ Docker smoke passed${NC}"
 

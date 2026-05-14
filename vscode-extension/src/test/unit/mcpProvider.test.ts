@@ -44,6 +44,19 @@ describe('AssetAwareMcpProvider', () => {
         assert.strictEqual(servers[0].args[servers[0].args.length - 1], 'asset-aware-mcp');
     });
 
+    it('production launch definition includes runtime env needed for server availability checks', () => {
+        const provider = new AssetAwareMcpProvider(tempDir, undefined, makeContext());
+
+        const servers = provider.provideMcpServerDefinitions({} as any) as any[];
+
+        assert.strictEqual(servers.length, 1);
+        assert.ok(servers[0].command.endsWith('uv.exe') || servers[0].command === 'uv');
+        assert.ok(servers[0].env.DATA_DIR);
+        assert.ok(servers[0].env.UV_CACHE_DIR);
+        assert.match(servers[0].env.ASSET_AWARE_MARKER_OUTPUT_LOG, /marker\.log$/);
+        assert.strictEqual(servers[0].args[servers[0].args.length - 1], 'asset-aware-mcp');
+    });
+
     it('uses preferred python in development mode', () => {
         fs.mkdirSync(path.join(tempDir, 'src'), { recursive: true });
         fs.writeFileSync(path.join(tempDir, 'src', 'server.py'), 'def main():\n    pass\n');

@@ -58,7 +58,7 @@ class SubprocessIngestWorkerRunner:
             result_path,
             progress_path,
         )
-        env = self._worker_environment(log_path)
+        env = self._worker_environment(log_path, request.parameters)
         if profile_name := request.parameters.get("etl_profile"):
             env["ETL_PROFILE"] = str(profile_name)
 
@@ -186,6 +186,7 @@ class SubprocessIngestWorkerRunner:
             ("rotate_pages", "--rotate-pages"),
             ("deskew", "--deskew"),
             ("extract_figures", "--extract-figures"),
+            ("index_knowledge_graph", "--index-knowledge-graph"),
         ]:
             if parameters.get(flag):
                 cmd.append(name)
@@ -201,13 +202,19 @@ class SubprocessIngestWorkerRunner:
         return Path.cwd() / "data" / "logs"
 
     @staticmethod
-    def _worker_environment(log_path: Path) -> dict[str, str]:
+    def _worker_environment(
+        log_path: Path,
+        parameters: dict[str, Any] | None = None,
+    ) -> dict[str, str]:
+        parameters = parameters or {}
         env = os.environ.copy()
         env["DATA_DIR"] = str(settings.data_dir.resolve())
         env["TABLE_OUTPUT_DIR"] = str(settings.table_output_dir.resolve())
         env["LIGHTRAG_WORKING_DIR"] = str(settings.lightrag_working_dir.resolve())
         env["ETL_PROFILE"] = settings.etl_profile
-        env["ENABLE_LIGHTRAG"] = "true" if settings.enable_lightrag else "false"
+        index_knowledge_graph = bool(parameters.get("index_knowledge_graph", False))
+        enable_lightrag = settings.enable_lightrag and index_knowledge_graph
+        env["ENABLE_LIGHTRAG"] = "true" if enable_lightrag else "false"
         env["ENABLE_MISTRAL_OCR"] = "true" if settings.enable_mistral_ocr else "false"
         env["ASSET_AWARE_SUPPRESS_MARKER_OUTPUT"] = "true"
         env["ASSET_AWARE_MARKER_OUTPUT_LOG"] = str(log_path)

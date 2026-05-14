@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -102,3 +103,28 @@ async def test_resource_document_figures_escapes_pipe_cells() -> None:
     assert "`fig\\|1`" in result
     assert "Alpha \\| Beta" in result
     assert "640×480" in result
+
+
+@pytest.mark.asyncio
+async def test_resource_knowledge_graph_summary_times_out(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """KG resource requests should be bounded like KG tool calls."""
+    from src.presentation.resources import document_resources
+
+    async def slow_export_graph(**_kwargs):
+        await asyncio.sleep(1)
+        return {"format": "summary"}
+
+    with patch.object(document_resources, "knowledge_graph") as mock_graph:
+        mock_graph.export_graph = AsyncMock(side_effect=slow_export_graph)
+        monkeypatch.setattr(
+            document_resources,
+            "KNOWLEDGE_RESOURCE_TIMEOUT_SECONDS",
+            0.01,
+            raising=False,
+        )
+
+        result = await document_resources.resource_knowledge_graph_summary()
+
+    assert "timed out" in result

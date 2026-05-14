@@ -87,6 +87,23 @@ async def get_job_status(job_id: str) -> str:
             lines.append(f"**Duration:** {job.duration_seconds:.1f}s")
 
     lines.append(f"\n**Input Files:** {len(job.input_files)}")
+    for file_path in job.input_files:
+        lines.append(f"  - `{file_path}`")
+
+    if job.result and isinstance(job.result.get("interrupted_job"), dict):
+        interrupted = job.result["interrupted_job"]
+        lines.append("\n**Interrupted Job Recovery:**")
+        lines.append("- **reason:** MCP server restarted before completion")
+        previous_phase = interrupted.get("previous_phase")
+        if previous_phase:
+            lines.append(f"- **last_phase:** {previous_phase}")
+        previous_message = interrupted.get("previous_message")
+        if previous_message:
+            lines.append(f"- **last_message:** {previous_message}")
+        previous_error = interrupted.get("previous_error")
+        if previous_error:
+            lines.append(f"- **last_error:** {previous_error}")
+
     result_documents = []
     if job.result and isinstance(job.result.get("documents"), list):
         result_documents = job.result["documents"]
@@ -236,6 +253,29 @@ async def list_jobs(active_only: bool = False) -> str:
         lines.append(
             f"- **Files:** {job.input_file_count} → {job.output_doc_count} docs"
         )
+        detail = await job_service.get_job(job.job_id)
+        if detail is not None:
+            if detail.input_files:
+                lines.append("- **Input Files:**")
+                for file_path in detail.input_files:
+                    lines.append(f"  - `{file_path}`")
+            if detail.output_doc_ids:
+                lines.append("- **Partial/Output Documents:**")
+                for doc_id in detail.output_doc_ids:
+                    lines.append(f"  - `{doc_id}`")
+            if detail.result and isinstance(detail.result.get("interrupted_job"), dict):
+                interrupted = detail.result["interrupted_job"]
+                previous_phase = interrupted.get("previous_phase")
+                previous_message = interrupted.get("previous_message")
+                previous_error = interrupted.get("previous_error")
+                if previous_phase:
+                    lines.append(f"- **Last Phase Before Restart:** {previous_phase}")
+                if previous_message:
+                    lines.append(
+                        f"- **Last Message Before Restart:** {previous_message}"
+                    )
+                if previous_error:
+                    lines.append(f"- **Last Error Before Restart:** {previous_error}")
         lines.append("")
 
     return "\n".join(lines)

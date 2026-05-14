@@ -603,7 +603,20 @@ class JobService:
             if isinstance(owner_pid, int) and self._process_is_alive(owner_pid):
                 return job
 
+        interrupted_context = {
+            "reason": "mcp_server_restart",
+            "previous_status": job.status.value,
+            "previous_phase": job.progress.current_phase,
+            "previous_message": job.progress.message,
+            "previous_error": job.error,
+            "input_files": list(job.input_files),
+            "output_doc_ids": list(job.output_doc_ids),
+        }
+        result_payload = dict(job.result or {})
+        result_payload["interrupted_job"] = interrupted_context
+
         job.fail("MCP server restarted before this job completed")
+        job.result = result_payload
         job.progress.current_phase = "Interrupted"
         job.progress.message = (
             "This job was still active when the MCP server restarted. "

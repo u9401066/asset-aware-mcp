@@ -8,6 +8,13 @@ import {
     resolveCliPathFromVSCodeExecutablePath,
     runTests,
 } from '@vscode/test-electron';
+import {
+    DEFAULT_TORCH_BACKEND,
+    findUvPath,
+    getAssetAwareRuntimeProbeArgs,
+    getUvxLaunch,
+    PREFERRED_RUNTIME_PYTHON,
+} from '../uv';
 
 const execFileAsync = promisify(execFile);
 
@@ -20,6 +27,8 @@ const packageJson = JSON.parse(
 const currentVersion = packageJson.version;
 const requireActivation = process.argv.includes('--require-activation') ||
     process.env.ASSET_AWARE_MCP_REQUIRE_ACTIVATION === '1';
+const verifyRuntimeCommand = process.argv.includes('--verify-runtime-command') ||
+    process.env.ASSET_AWARE_MCP_VERIFY_RUNTIME_COMMAND === '1';
 type VSCodeQuality = 'stable' | 'insiders';
 
 function parseVSCodeQuality(): VSCodeQuality {
@@ -135,6 +144,56 @@ async function listInstalledVersions(cliPath: string, userDataDir: string, exten
         .filter(Boolean);
 }
 
+async function verifyRuntimeDiagnostics(): Promise<void> {
+    const uvPath = await findUvPath();
+    if (!uvPath) {
+        throw new Error('Could not find uv for Asset-Aware MCP runtime diagnostics.');
+    }
+
+    const launch = getUvxLaunch(
+        uvPath,
+        PREFERRED_RUNTIME_PYTHON,
+        false,
+        DEFAULT_TORCH_BACKEND,
+        currentVersion,
+    );
+    const probeOutput = await runCommand(
+        launch.command,
+        getAssetAwareRuntimeProbeArgs(launch.args),
+        extensionRoot,
+    );
+    if (!probeOutput.includes('asset-aware-mcp runtime ready')) {
+        throw new Error(`Runtime import probe did not report readiness: ${probeOutput}`);
+    }
+
+    const helpOutput = await runCommand(
+        launch.command,
+        [...launch.args, 'asset-aware-mcp', '--help'],
+        extensionRoot,
+    );
+    if (!helpOutput.includes('doctor') || !helpOutput.includes('list-tools')) {
+        throw new Error(`Runtime --help did not expose diagnostics commands: ${helpOutput}`);
+    }
+
+    const doctorOutput = await runCommand(
+        launch.command,
+        [...launch.args, 'asset-aware-mcp', 'doctor', '--json'],
+        extensionRoot,
+    );
+    if (!doctorOutput.includes('"package"') || !doctorOutput.includes('"runtime"')) {
+        throw new Error(`Runtime doctor did not return diagnostics JSON: ${doctorOutput}`);
+    }
+
+    const toolsOutput = await runCommand(
+        launch.command,
+        [...launch.args, 'asset-aware-mcp', 'list-tools', '--json'],
+        extensionRoot,
+    );
+    if (!toolsOutput.includes('list_documents') || !toolsOutput.includes('consult_knowledge_graph')) {
+        throw new Error(`Runtime list-tools did not expose core MCP tools: ${toolsOutput}`);
+    }
+}
+
 function assertInstalledVersion(lines: string[], expectedVersion: string): void {
     const expected = `${publisherExtensionId}@${expectedVersion}`;
     if (!lines.includes(expected)) {
@@ -209,6 +268,16 @@ async function main(): Promise<void> {
     const oldVsixPath = path.join(extensionRoot, 'asset-aware-mcp-0.2.10.vsix');
     const vscodeQuality = parseVSCodeQuality();
     console.log(`VS Code quality for install smoke: ${vscodeQuality}`);
+
+    if (verifyRuntimeCommand) {
+        await verifyRuntimeDiagnostics();
+        console.log('Asset-Aware MCP runtime diagnostics command smoke test passed.');
+    } else {
+        console.log(
+            'Skipping runtime diagnostics command smoke test. ' +
+            'Set ASSET_AWARE_MCP_VERIFY_RUNTIME_COMMAND=1 to require runtime import and --help checks.',
+        );
+    }
 
     let vscodeExecutablePath: string | undefined;
     const localCliPath = findAvailableCli(vscodeQuality);

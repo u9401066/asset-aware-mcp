@@ -171,6 +171,9 @@ jobs:
       - name: Build Python artifacts
         run: uv build
 
+      - name: Smoke built wheel runtime before publishing
+        run: python3 scripts/smoke_built_wheel.py
+
       - name: Package VSIX before publishing PyPI
         run: |
           cd vscode-extension
@@ -187,7 +190,7 @@ jobs:
       - name: Audit prepublish release artifacts
         run: python3 scripts/audit_release_artifacts.py
 
-      - name: Docker smoke import
+      - name: Docker smoke diagnostics
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             VERSION="${{ inputs.version }}"
@@ -195,7 +198,9 @@ jobs:
             VERSION="${GITHUB_REF#refs/tags/v}"
           fi
           docker build -t "asset-aware-mcp:${VERSION}-release-smoke" .
-          docker run --rm --entrypoint python "asset-aware-mcp:${VERSION}-release-smoke" -c "import src.presentation.server; print('server import ok')"
+          docker run --rm "asset-aware-mcp:${VERSION}-release-smoke" doctor --json
+          docker run --rm "asset-aware-mcp:${VERSION}-release-smoke" list-tools --json
+          uv run python scripts/smoke_mcp_stdio.py -- docker run --rm -i "asset-aware-mcp:${VERSION}-release-smoke"
 
   # ==========================================
   # 發布到 PyPI
@@ -223,7 +228,9 @@ jobs:
           uv build
 
       - name: Audit Python release artifacts
-        run: python3 scripts/audit_release_artifacts.py
+        run: |
+          python3 scripts/audit_release_artifacts.py
+          python3 scripts/smoke_built_wheel.py
 
       - name: Check whether PyPI version already exists
         id: pypi_exists
@@ -299,7 +306,10 @@ jobs:
           fi
 
           for attempt in $(seq 1 12); do
-            if timeout 90s uvx --refresh --python "${{ env.PYTHON_VERSION }}" --from "asset-aware-mcp==$VERSION" python -c "import src.presentation.server; print('asset-aware-mcp PyPI import OK')"; then
+            if timeout 90s uvx --refresh --python "${{ env.PYTHON_VERSION }}" --from "asset-aware-mcp==$VERSION" asset-aware-mcp --help \
+              && timeout 90s uvx --refresh --python "${{ env.PYTHON_VERSION }}" --from "asset-aware-mcp==$VERSION" asset-aware-mcp doctor --json \
+              && timeout 90s uvx --refresh --python "${{ env.PYTHON_VERSION }}" --from "asset-aware-mcp==$VERSION" asset-aware-mcp list-tools --json \
+              && timeout 90s uv run --no-project --python "${{ env.PYTHON_VERSION }}" --with "asset-aware-mcp==$VERSION" python scripts/smoke_mcp_stdio.py -- asset-aware-mcp; then
               exit 0
             fi
             echo "PyPI package asset-aware-mcp==$VERSION not available yet (attempt $attempt/12); retrying..."

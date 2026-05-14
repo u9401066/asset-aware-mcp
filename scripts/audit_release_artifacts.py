@@ -13,9 +13,13 @@ ROOT = Path(__file__).resolve().parents[1]
 MAX_SDIST_BYTES = 5 * 1024 * 1024
 MAX_WHEEL_BYTES = 5 * 1024 * 1024
 REQUIRED_PYTHON_PACKAGE_FILES = [
+    "src/server.py",
     "src/application/ingest_worker.py",
+    "src/presentation/server.py",
+    "src/presentation/diagnostics.py",
     "src/presentation/markdown_utils.py",
 ]
+REQUIRED_CONSOLE_SCRIPT = "asset-aware-mcp = src.server:main"
 
 
 def read_project_version() -> str:
@@ -139,9 +143,20 @@ def check_wheel(version: str) -> list[str]:
         errors.append(f"{wheel}: too large ({wheel.stat().st_size} bytes)")
     with zipfile.ZipFile(wheel) as zf:
         names = zf.namelist()
+        entry_points = [
+            name for name in names if name.endswith(".dist-info/entry_points.txt")
+        ]
+        if entry_points:
+            entry_points_text = zf.read(entry_points[0]).decode("utf-8")
+        else:
+            entry_points_text = ""
     missing = missing_required_files(names)
     if missing:
         errors.append(f"{wheel}: missing required file(s): {', '.join(missing)}")
+    if not entry_points:
+        errors.append(f"{wheel}: missing dist-info/entry_points.txt")
+    elif REQUIRED_CONSOLE_SCRIPT not in entry_points_text:
+        errors.append(f"{wheel}: missing console script {REQUIRED_CONSOLE_SCRIPT!r}")
     forbidden_prefixes = [
         "tests/",
         "vscode-extension/",

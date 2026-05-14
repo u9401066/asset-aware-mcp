@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 TOOLS_DIR = ROOT / "src" / "presentation" / "tools"
@@ -27,6 +30,13 @@ def _count_modules(directory: Path, pattern: str) -> tuple[int, int]:
 
 
 def test_count_tools_shell_skips_helper_modules() -> None:
+    if os.name == "nt":
+        pytest.skip(
+            "shell count script is covered by POSIX CI; use PowerShell on Windows"
+        )
+    if shutil.which("bash") is None:
+        pytest.skip("bash is not available on this platform")
+
     expected_tools, expected_tool_modules = _count_modules(TOOLS_DIR, r"@mcp\.tool\(\)")
     expected_resources, expected_resource_modules = _count_modules(
         RESOURCES_DIR,
