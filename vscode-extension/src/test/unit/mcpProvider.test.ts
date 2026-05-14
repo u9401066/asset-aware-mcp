@@ -45,12 +45,16 @@ describe('AssetAwareMcpProvider', () => {
     });
 
     it('production launch definition includes runtime env needed for server availability checks', () => {
-        const provider = new AssetAwareMcpProvider(tempDir, undefined, makeContext());
+        const provider = new AssetAwareMcpProvider(
+            tempDir,
+            undefined,
+            makeContext({ globalState: { get: () => 'uv' } }),
+        );
 
         const servers = provider.provideMcpServerDefinitions({} as any) as any[];
 
         assert.strictEqual(servers.length, 1);
-        assert.ok(servers[0].command.endsWith('uv.exe') || servers[0].command === 'uv');
+        assert.strictEqual(servers[0].command, 'uvx');
         assert.ok(servers[0].env.DATA_DIR);
         assert.ok(servers[0].env.UV_CACHE_DIR);
         assert.match(servers[0].env.ASSET_AWARE_MARKER_OUTPUT_LOG, /marker\.log$/);
