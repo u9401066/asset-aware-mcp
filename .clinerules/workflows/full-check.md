@@ -55,7 +55,15 @@ This is required before release. Activation smoke is required for release enviro
 </execute_command>
 
 <execute_command>
-<command>docker run --rm --entrypoint python asset-aware-mcp:smoke -c "import src.presentation.server; print('server import ok')"</command>
+<command>docker run --rm asset-aware-mcp:smoke doctor --json</command>
+</execute_command>
+
+<execute_command>
+<command>docker run --rm asset-aware-mcp:smoke list-tools --json</command>
+</execute_command>
+
+<execute_command>
+<command>uv run python scripts/smoke_mcp_stdio.py -- docker run --rm -i asset-aware-mcp:smoke</command>
 </execute_command>
 
 If it fails, stop and report the failures.
@@ -67,6 +75,10 @@ If it fails, stop and report the failures.
 
 <execute_command>
 <command>python3 scripts/audit_release_artifacts.py</command>
+</execute_command>
+
+<execute_command>
+<command>python3 scripts/smoke_built_wheel.py</command>
 </execute_command>
 
 ## Step 5: Diff hygiene

@@ -9,7 +9,7 @@ uv sync
 uv run python -m src.presentation.server
 ```
 
-`0.6.31` 的預設安裝仍不會安裝 Marker，因為 upstream `marker-pdf` 1.10.2 仍要求 `Pillow<11`，而此版本安全 runtime 需要 `Pillow>=12.2.0`。目前請使用預設 PyMuPDF 後端。`parse_pdf_structure` 會建立 Marker-required background job，Marker security hold 會在 job status/result 裡明確回報；`ingest_documents(use_marker=true)` 在非 strict 情境可退回 PyMuPDF，`require_marker=true` 則 fail closed。
+`0.6.32` 的預設安裝仍不會安裝 Marker，因為 upstream `marker-pdf` 1.10.2 仍要求 `Pillow<11`，而此版本安全 runtime 需要 `Pillow>=12.2.0`。目前請使用預設 PyMuPDF 後端。`parse_pdf_structure` 會建立 Marker-required background job，Marker security hold 會在 job status/result 裡明確回報；`ingest_documents(use_marker=true)` 在非 strict 情境可退回 PyMuPDF，`require_marker=true` 則 fail closed。
 
 來源：`pyproject.toml`、`README.md`、`CHANGELOG.md`。
 

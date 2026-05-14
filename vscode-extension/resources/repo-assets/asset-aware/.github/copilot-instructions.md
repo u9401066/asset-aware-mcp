@@ -26,7 +26,7 @@
 
 ### LLM 後端
 
-- **預設**: Ollama (本地) — `qwen2.5:7b` + `nomic-embed-text`
+- **預設**: Ollama (本地) — `granite4.1`；`nomic-embed-text` 僅在啟用 LightRAG/KG 時需要
 - **備選**: OpenAI (需 API Key)
 
 ---

@@ -39,7 +39,7 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 
 - 📄 **Asset-Aware ETL** - PDF → Markdown with a PyMuPDF-first parser and retained Marker code path:
   - **PyMuPDF** (default) - Fast extraction (~50MB)
-  - **Marker** (`use_marker=True`) - High-precision structured parsing code path retained, but packaged runtime remains on security hold in v0.6.31 until upstream `marker-pdf` supports patched Pillow
+  - **Marker** (`use_marker=True`) - High-precision structured parsing code path retained, but packaged runtime remains on security hold in v0.6.32 until upstream `marker-pdf` supports patched Pillow
 - 🧩 **Unified Segmentation Export** - Normalized `segmentation.json` merges manifest, blocks, reading order, and persisted markdown line spans for downstream tools and extensions.
 - 🖼️ **Layout Overlay Debugging** - Render page overlays from `original.pdf` to inspect bbox, segment type, and reading order visually.
 - 🔤 **On-Demand OCR Preprocessing** - Optional `ocrmypdf` preprocessing path for scanned PDFs before ETL.
@@ -138,7 +138,7 @@ Visual overview for the project. All diagrams use consistent GitHub README style
 # Install dependencies (using uv) — default install skips Marker/torch
 uv sync
 
-# v0.6.31: Marker extra is temporarily empty because marker-pdf pins
+# v0.6.32: Marker extra is temporarily empty because marker-pdf pins
 # Pillow<11 while the secure runtime requires Pillow>=12.2.0.
 # Use the default PyMuPDF backend until upstream marker-pdf supports patched Pillow.
 
@@ -283,7 +283,7 @@ Different journals/formats need different extraction settings. Use these tools t
 
 Installation guidance:
 - Default install: `uv sync`
-- Marker backend: temporarily disabled in v0.6.31 because `marker-pdf` pins vulnerable `Pillow<11`; the `marker` / `pdf` extras are compatibility placeholders until upstream supports patched Pillow.
+- Marker backend: temporarily disabled in v0.6.32 because `marker-pdf` pins vulnerable `Pillow<11`; the `marker` / `pdf` extras are compatibility placeholders until upstream supports patched Pillow.
 - VS Code extension: `assetAwareMcp.enableMarkerBackend` is retained as a setting, but the launcher will not install `marker-pdf` while the security hold is active.
 
 - [Technical Spec](docs/spec.md) - Detailed technical specification

@@ -7,6 +7,44 @@
 
 ## [Unreleased]
 
+## [0.6.32] - 2026-05-14
+
+### Added
+
+- Added real MCP stdio, built-wheel, and Docker stdio smoke gates so release
+  candidates verify the installed console script and MCP transport, not only
+  imports or `--help`.
+- Added CLI runtime diagnostics: `doctor`, `health`, `list-tools`, and stdio
+  default startup now share the packaged `asset-aware-mcp` entry point.
+- Added KG-to-Foam smoke coverage proving PDF ingest, LightRAG entity capture,
+  verified citation bundles, and Foam wiki links work together.
+
+### Changed
+
+- Split oversized production modules into focused helpers/mixins:
+  `document_tools.py`, `document_service.py`, and `docx_adapter.py` are now all
+  below 2000 lines while preserving public APIs and monkeypatch anchors.
+- Split the monolithic MCP tool-layer unit test file into focused test modules
+  by tool domain and job-service behavior.
+- Tightened bundled LLM wiki harness docs to Asset-Aware document/KG evidence
+  scope and removed retired Zotero/PubMed harness drift from release checks.
+- Cleaned local orphan outputs, stale VSIX artifacts, invalid MCP backups,
+  retired assistant harness leftovers, and old review scratch files from the
+  repo workspace.
+- Changed the local RAG LLM default to `granite4.1` and made LightRAG/KG
+  opt-in by default so CPU-only or document-only installs do not need KG
+  dependencies or embedding models.
+
+### Fixed
+
+- PDF ingest and parse paths now route long-running work through background jobs
+  with explicit Marker preflight/security-hold reporting, reducing stdio smoke
+  regressions in Cline/Codex/VS Code clients.
+- Citation verification now fails closed when locator metadata or quote/text
+  hashes are stripped from span AssetRefs.
+- Docker packaging no longer masks missing wheel files with a runtime source
+  copy, so packaged smoke tests exercise the actual built artifact.
+
 ## [0.6.31] - 2026-05-13
 
 ### Fixed

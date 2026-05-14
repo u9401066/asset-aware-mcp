@@ -1,37 +1,37 @@
 ---
 name: llm-wiki-builder
-description: "Codex workflow skill for building Foam-compatible LLM wikis from Asset-Aware document evidence and local Markdown notes."
+description: "Build or refresh Foam-compatible LLM wikis from Asset-Aware document evidence, knowledge graph output, and local Markdown notes."
 ---
 
 # LLM Wiki Builder
 
-Use this skill when working on Foam, LLM wiki, literature wiki, citation-ready
-notes, or Markdown knowledge graph tasks in this repository or an installed
-workspace.
+Use this skill when the user asks to create, refresh, repair, or extend a Foam
+wiki or LLM-readable evidence wiki.
 
 ## Read First
 
 - `.clinerules/35-foam-llm-wiki.md`
 - `.clinerules/workflows/llm-wiki-build.md`
-- Asset-Aware document outputs: `content.md`, `blocks.json`, `manifest.json`,
-  `segmentation.json`, and citation span AssetRefs when available
+- `.cline/skills/asset-aware-mcp-harness/SKILL.md`
 
-## Workflow
+## Multi-Tool Choreography
 
-1. Find the wiki root and existing Foam conventions.
-2. Build a note map before editing files.
-3. Gather evidence through Asset-Aware/document tools for PDFs, DOCX, DFM,
-   tables, figures, sections, segmentation, and span-level evidence.
-   If a separate workspace explicitly provides Zotero Keeper or PubMed Search,
-   treat those as external sources and follow their own harness rules; do not
-   install or maintain those harnesses from this repository.
-4. Write Markdown notes with stable filenames, one H1, clean sections, and
-   Foam-compatible wikilinks.
-5. Validate links, attachments, and source markers before reporting completion.
+1. Inspect the filesystem for the wiki root, Foam markers, existing note style,
+   and link conventions.
+2. Use Asset-Aware document tools when PDFs, DOCX, DFM, tables, figures, or
+   span-level citations are part of the request.
+3. Use evidence tools to create verified Foam bundles, promote table/figure
+   notes, and validate AssetRefs.
+4. Use knowledge graph tools only when KG is enabled and the user needs
+   cross-document discovery.
+5. Write or update Markdown notes with Foam-compatible wikilinks and preserved
+   source identifiers.
+6. Validate generated links and report unresolved wiki TODOs separately from
+   completed notes.
 
-## Guardrails
+## Output Contract
 
-- Ask before bulk rewrites, destructive cleanup, or external-library imports.
-- Keep source identifiers near claims.
-- Do not leave unresolved wikilinks unless they are marked as intentional TODOs.
-- Keep generated notes human-readable and chunkable for LLM retrieval.
+- Keep the note graph readable in Foam and useful for LLM retrieval.
+- Preserve source provenance close to claims.
+- Ask before bulk rewrites, destructive cleanup, or workspace-wide renames.
+- Do not leave broken wikilinks hidden in generated files.

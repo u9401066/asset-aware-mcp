@@ -2,6 +2,12 @@
 
 ![Knowledge graph workflow](assets/knowledge-graph-workflow.jpg)
 
+## Runtime Defaults
+
+- Local RAG/text generation defaults to `OLLAMA_MODEL=granite4.1`.
+- Ollama embeddings stay on `OLLAMA_EMBEDDING_MODEL=nomic-embed-text` for KG/vector storage.
+- LightRAG/KG is opt-in: keep `ENABLE_LIGHTRAG=false` for CPU-only or document-only workflows, and set it to `true` only when the KG backend and required Ollama models are installed.
+
 ## 角色
 
 Knowledge graph 由 LightRAG 提供，用於跨文件查詢、關聯摘要與圖譜匯出。它不是 citation locator 的唯一來源；citation-ready locator 仍以 document artifacts、segmentation 與 citation index 為準。

@@ -8,7 +8,7 @@
 
 ```bash
 uv run pytest tests/unit/test_count_tools_script.py -q
-uv run pytest tests/unit/test_mcp_tool_layer.py -q
+uv run pytest tests/unit/test_mcp_docx_tools.py tests/unit/test_mcp_job_tools.py tests/unit/test_mcp_document_tools.py tests/unit/test_mcp_table_tools.py tests/unit/test_mcp_profile_tools.py tests/unit/test_mcp_knowledge_tools.py tests/unit/test_mcp_server_startup.py tests/unit/test_job_service_concurrency.py tests/unit/test_pdf_validation.py -q
 uv run pytest tests/unit/test_docx_service.py -q
 ```
 
@@ -33,10 +33,15 @@ npm run test:install-smoke
 
 `test:install-smoke` 需要可執行的 VS Code CLI；Linux headless activation 另需 `xvfb-run`，下載版 VS Code 也需要系統圖形 runtime libraries（例如 `libgbm.so.1`）。
 
+Before PyPI publish, runtime is verified from the built wheel with
+`scripts/smoke_built_wheel.py`. After PyPI publish, the workflow verifies
+`uvx --from asset-aware-mcp==$VERSION` diagnostics and MCP stdio handshake.
+
 ## Release Harness
 
 ```bash
 python scripts/audit_release_artifacts.py
+python scripts/smoke_built_wheel.py
 python scripts/audit_release_harness.py
 ./scripts/release.sh
 ```
@@ -49,6 +54,9 @@ Release workflow 會檢查：
 - retired external harness 是否被誤打包。
 - Node/GitHub Actions release path。
 - Marketplace publish visibility/retry。
+
+The release harness now treats built-wheel console script execution and MCP
+stdio handshake as first-class gates, not just import or `--help` checks.
 
 ## Tool Count
 
@@ -70,7 +78,9 @@ Grand total:      75 MCP endpoints
 
 ```bash
 docker build -t asset-aware-mcp:smoke .
-docker run --rm --entrypoint python asset-aware-mcp:smoke -c "import src.presentation.server"
+docker run --rm asset-aware-mcp:smoke doctor --json
+docker run --rm asset-aware-mcp:smoke list-tools --json
+uv run python scripts/smoke_mcp_stdio.py -- docker run --rm -i asset-aware-mcp:smoke
 ```
 
 Docker build context 已忽略 local uv/runtime caches、assistant harness folders 與 document processing artifacts，避免 release smoke 被本機輸出拖慢或污染。

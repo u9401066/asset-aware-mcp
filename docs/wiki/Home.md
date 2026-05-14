@@ -35,7 +35,7 @@ Asset-Aware MCP 是一個 citation-ready 文件處理與知識工作流 MCP Serv
 
 | 項目 | 狀態 |
 |---|---|
-| 最新程式版本 | `0.6.31` |
+| 最新程式版本 | `0.6.32` |
 | Python | `>=3.10`，以 `uv` 管理 |
 | MCP endpoints | 62 tools、13 resources，共 75 endpoints |
 | PDF 後端 | 預設 PyMuPDF；Marker backend 自 `0.6.28` 起因 `Pillow` 安全相容性暫時 hold |

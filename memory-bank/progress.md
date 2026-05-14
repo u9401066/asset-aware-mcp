@@ -1,4 +1,13 @@
-# Progress (Updated: 2026-05-11)
+# Progress (Updated: 2026-05-14)
+
+## 2026-05-14
+
+- Preparing `v0.6.32` for production release after a repo-wide health pass. The release includes oversized module splits, stronger runtime/release smokes, KG/Foam practical coverage, assistant-harness cleanup, and version/docs/VSIX synchronization.
+- Updated the release candidate's local RAG defaults: `OLLAMA_MODEL=granite4.1`, `ENABLE_LIGHTRAG=false` by default, and VSIX Ollama checks only require the embedding model when KG is explicitly enabled.
+- Split tracked source/test files over 2000 lines into maintainable modules: `document_tools.py`, `document_service.py`, `docx_adapter.py`, and the old MCP tool-layer test monolith now have smaller focused support modules and test files.
+- Cleaned retired VSIX-installed harness leftovers and orphan/generated artifacts from the workspace while preserving local verification dependencies such as `.venv`, `.uv-cache`, and `vscode-extension/node_modules`.
+- Repaired the `0.6.32` version bump after unsafe PowerShell encoding touched README/docs files; regenerated GitHub Pages content and VSIX repo-assets with UTF-8-safe writes.
+- Fresh non-Docker release verification passed after the Granite/KG default change: `uv run ruff check .`, `uv run ruff format --check src tests scripts`, `uv run mypy src --ignore-missing-imports`, `uv lock --check`, docs-site check, release harness audit, VSIX asset sync check, full `uv run pytest -q` (`887 passed, 22 skipped`), VSIX `npm run test:ci` (`125 passing` plus package contents), `uv build`, VSIX package, artifact audit, built-wheel runtime/stdout MCP smoke, and VSIX install/update smoke. Docker build was stopped by the user because it hangs in this environment and is waived for this local release run.
 
 ## 2026-05-11
 
@@ -14,7 +23,7 @@
 - Added Claim Promotion Workflow via `evidence(op="claim_promotion" | "claims" | "promote_claims", ...)`: candidates are exact evidence quotes with AssetRef/verification payloads and Foam anchors; wiki writes fail closed unless every candidate verifies first.
 - Tightened claim promotion Foam output so each candidate note keeps both the original AssetRef JSON and a full Verification Payload JSON fence, with regression coverage proving valid claims write the payload and invalid claims remain blocked.
 - Restored local skip-worktree LLM wiki harness files to Asset-Aware scope and moved untracked retired Zotero/PubMed harness leftovers to `/tmp/asset-aware-retired-harness-backup-20260511T164609Z`; `python3 scripts/audit_release_harness.py` now passes.
-- Added regression coverage in `tests/test_dfm.py`, `tests/unit/test_docx_adapter_tables.py`, `tests/unit/test_docx_service.py`, `tests/unit/test_document_service.py`, and `tests/unit/test_mcp_tool_layer.py`; focused validation previously passed with `285 passed`, plus `uv run mypy src --ignore-missing-imports`, docs-site check, Ruff/format, and `git diff --check`.
+- Added regression coverage in `tests/test_dfm.py`, `tests/unit/test_docx_adapter_tables.py`, `tests/unit/test_docx_service.py`, `tests/unit/test_document_service.py`, and the split `tests/unit/test_mcp_*` tool-layer modules; focused validation previously passed with mypy, docs-site check, Ruff/format, and `git diff --check`.
 - Implementing `v0.6.28` feature release: conversion tools now default to background `JobType.CONVERSION`, `citation_bundle` / `evidence(op="bundle")` export verified evidence packages, `consult_knowledge_graph(verify_references=true)` attaches verified evidence, DOCX table edit planning previews structural changes, ETL profile auto-detect suggests/activates built-in profiles, and the VSIX Documents tree exposes artifact/citation viewer nodes.
 - Updated endpoint inventory to 62 tools in 7 modules and 13 resources in 2 modules, 75 MCP endpoints total. Focused validation already passed for new Python tool behavior, JobService conversion flow, MCP tool registration/counts, VSIX EnvManager/DocumentTreeProvider tests, Ruff/format on changed files, and VSIX compile/lint/unit slices.
 - Documentation alignment is in progress for `v0.6.29`: wiki source, GitHub Pages payload, README files, VSIX README, changelog, memory bank, and tool counts are being synchronized before release gates, segmented commits, push, and tag publication.

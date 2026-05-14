@@ -1,6 +1,6 @@
 [project]
 name = "asset-aware-mcp"
-version = "0.6.31"
+version = "0.6.32"
 description = "Medical RAG with Asset-Aware MCP - Precise PDF asset retrieval (tables, figures, sections) for AI Agents"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -119,8 +119,8 @@ ignore = [
     "RUF001", # ambiguous unicode char in string (CJK false positives)
     "RUF002", # ambiguous unicode char in docstring (CJK false positives)
     "RUF003", # ambiguous unicode char in comment (CJK false positives)
-    "PERF203", # try-except in loop — unavoidable for per-item error recovery
-    "PERF401", # list.append in loop — sometimes more readable than extend
+    "PERF203", # try-except in loop ??unavoidable for per-item error recovery
+    "PERF401", # list.append in loop ??sometimes more readable than extend
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -172,7 +172,7 @@ addopts = ["-v", "--tb=short", "-ra"]
 
 [tool.bandit]
 exclude_dirs = ["tests", "scripts"]
-skips = ["B101"]  # assert_used — fine in application code
+skips = ["B101"]  # assert_used ??fine in application code
 
 [dependency-groups]
 dev = [

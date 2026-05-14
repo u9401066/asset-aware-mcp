@@ -9,11 +9,11 @@ The Settings Panel lets you configure your LLM backend and storage options.
 Run LLMs locally on your machine:
 
 - **Ollama Host**: Usually `http://localhost:11434`
-- **LLM Model**: `qwen2.5:7b` (recommended)
-- **Embedding Model**: `nomic-embed-text`
+- **LLM Model**: `granite4.1` (default)
+- **Embedding Model**: `nomic-embed-text` (only required when LightRAG/KG is enabled)
 
 **Recommended Ollama Models:**
-- `qwen2.5:7b` - Good balance of speed and quality
+- `granite4.1` - Default enterprise-ready local RAG/text-generation model
 - `llama3.2` - Meta's latest model
 - `mistral` - Fast and efficient
 
@@ -29,6 +29,7 @@ Use OpenAI's cloud API:
 
 - **Data Directory**: Where processed documents are stored
 - **LightRAG Directory**: Knowledge graph storage
+- **LightRAG/KG**: Optional and disabled by default for CPU-only or document-only workflows
 
 ## Tips
 
