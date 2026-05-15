@@ -207,6 +207,17 @@ PAGES = [
         "LightRAG/Ollama/OpenAI knowledge graph 設定與使用。",
     ),
     Page(
+        "llm-wiki",
+        "llm-wiki",
+        "all",
+        "user",
+        "LLM Wiki Knowledge Base",
+        "Foam-compatible LLM wiki workflow, evidence packs, examples, and health checks.",
+        "LLM-Wiki-Knowledge-Base.md",
+        "LLM Wiki 知識庫",
+        "Foam-compatible LLM wiki 建置流程、evidence pack、簡單範例與 health check。",
+    ),
+    Page(
         "background-jobs",
         "background-jobs",
         "all",
@@ -343,6 +354,10 @@ PAGE_COPY_OVERRIDES: dict[str, dict[str, str]] = {
     "knowledge-graph": {
         "title_zh": "知識圖譜",
         "blurb_zh": "選用的 LightRAG/Ollama/OpenAI 設定，以及可驗證證據的 KG 使用方式。",
+    },
+    "llm-wiki": {
+        "title_zh": "LLM Wiki 知識庫",
+        "blurb_zh": "Foam-compatible LLM wiki 建置流程、evidence pack、簡單範例與 health check。",
     },
     "background-jobs": {
         "title_zh": "背景任務",

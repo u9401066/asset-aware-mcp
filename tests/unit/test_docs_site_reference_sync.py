@@ -214,6 +214,7 @@ def test_docs_shell_uses_current_metrics_and_has_no_known_text_corruption() -> N
         WIKI_DIR / "Design-And-UX.md",
         WIKI_DIR / "Getting-Started.md",
         WIKI_DIR / "Knowledge-Graph.md",
+        WIKI_DIR / "LLM-Wiki-Knowledge-Base.md",
     ]
 
     for path in paths:
@@ -256,6 +257,26 @@ def test_english_overview_matches_chapter_ia() -> None:
     assert "Docs IA And UX Spec" in overview
     assert "Design / UX Notes" not in overview
     assert "human-facing UX" not in overview
+
+
+def test_llm_wiki_guide_has_examples_and_guardrails() -> None:
+    guide = (WIKI_DIR / "LLM-Wiki-Knowledge-Base.md").read_text(encoding="utf-8")
+    sidebar = (WIKI_DIR / "_Sidebar.md").read_text(encoding="utf-8")
+    slugs = {page.slug for page in build_docs_site.PAGES}
+
+    assert "llm-wiki" in slugs
+    assert "[LLM Wiki Knowledge Base](LLM-Wiki-Knowledge-Base)" in sidebar
+    for required in [
+        "citation_bundle(",
+        "document_asset(",
+        "evidence(",
+        'op="health"',
+        "consult_knowledge_graph(",
+        "[[evidence/trial-2026-primary-outcome]]",
+        "wiki_root",
+        "KG 是 discovery layer",
+    ]:
+        assert required in guide
 
 
 def test_workflow_chapters_do_not_document_nonexistent_public_ops() -> None:

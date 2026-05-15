@@ -51,7 +51,7 @@ KG 查詢本身回傳 structured/data/text payload，不會把 graph 當成唯�
 | 情境 | 建議輸出 |
 |---|---|
 | Agent 要立刻使用 KG 結果 | `consult_knowledge_graph(response_mode="structured", verify_references=true)`，回傳 answer、references、`verified_evidence` |
-| 要寫入 Foam/LLM wiki | 先用 KG 找候選主題，再用 `citation_bundle(..., output_format="foam")` 或 `document_asset(op="foam_notes", ...)` 產生帶 wiki link / evidence pack 的 Markdown |
+| 要寫入 Foam/LLM wiki | 先讀 [LLM Wiki Knowledge Base](#/llm-wiki)，再用 KG 找候選主題，最後用 `citation_bundle(..., output_format="foam")` 或 `document_asset(op="foam_notes", ...)` 產生帶 wiki link / evidence pack 的 Markdown |
 | 要視覺化關係 | `export_knowledge_graph(format="json")` 匯出 graph data，再交給外部圖譜或網站渲染 |
 
 因此 wiki link 是文件 synthesis 層的呈現格式；KG 是 discovery layer，citation index/evidence bundle 才是可驗證證據層。

@@ -53,7 +53,8 @@ KG/RAG 串成可驗證的文件流程。
 | 第一次安裝 | [快速開始](#/getting-started) | [VS Code Extension And MCP Setup](#/vs-code-extension) |
 | 處理 PDF | [流程章節](#/workflow-chapters) | [PDF Document Workflow](#/pdf-workflow) |
 | 編輯 Word / DFM | [流程章節](#/workflow-chapters) | [DOCX DFM Workflow](#/docx-dfm-workflow) |
-| 產出引用結論 | [Citation Provenance](#/citation-provenance) | [Knowledge Graph](#/knowledge-graph) |
+| 產出引用結論 | [Citation Provenance](#/citation-provenance) | [LLM Wiki Knowledge Base](#/llm-wiki) |
+| 建立 LLM wiki | [LLM Wiki Knowledge Base](#/llm-wiki) | [Knowledge Graph](#/knowledge-graph) |
 | 做表格 | [A2T Tables](#/a2t-tables) | [DOCX DFM Workflow](#/docx-dfm-workflow) |
 | 查完整 API | [MCP Tools](#/mcp-tools) | [MCP Resources](#/mcp-resources) |
 | 準備發布 | [Release And Testing](#/release-testing) | [Git Harness Hygiene](#/git-harness-hygiene) |

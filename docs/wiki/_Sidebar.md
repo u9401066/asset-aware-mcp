@@ -12,6 +12,7 @@
 - [Citation Provenance](Citation-Provenance)
 - [A2T Tables](A2T-Tables)
 - [Knowledge Graph](Knowledge-Graph)
+- [LLM Wiki Knowledge Base](LLM-Wiki-Knowledge-Base)
 - [Background Jobs](Background-Jobs)
 - [ETL Profiles](ETL-Profiles)
 

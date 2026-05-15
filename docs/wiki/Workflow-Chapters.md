@@ -79,9 +79,10 @@ MCP reference；不要一開始就從 62 個 tools 裡找入口。
 |---|---|---|
 | 查 KG | `knowledge(op="consult")` / `consult_knowledge_graph` | `verify_references=true` 可附 verified evidence |
 | 匯出 graph | `knowledge(op="export")` / `export_knowledge_graph` | JSON / summary / visualization input |
-| 寫 wiki | `citation_bundle(output_format="foam")` 或 `document_asset(op="foam_notes")` | KG 是 discovery layer，不是唯一引用來源 |
+| 建置 LLM wiki | [LLM Wiki Knowledge Base](LLM-Wiki-Knowledge-Base) | Foam notes、evidence packs、asset notes、health check |
+| 寫 evidence note | `citation_bundle(output_format="foam")` 或 `document_asset(op="foam_notes")` | KG 是 discovery layer，不是唯一引用來源 |
 
-詳細頁：[Knowledge Graph](Knowledge-Graph)。
+詳細頁：[Knowledge Graph](Knowledge-Graph)、[LLM Wiki Knowledge Base](LLM-Wiki-Knowledge-Base)。
 
 ## Chapter 7：上線與 Reference
 
