@@ -17,8 +17,8 @@ import {
     DEFAULT_LLM_BACKEND,
     DEFAULT_OLLAMA_EMBEDDING_MODEL,
     DEFAULT_OLLAMA_HOST,
-    DEFAULT_OLLAMA_MODEL,
     DEFAULT_OPENAI_MODEL,
+    defaultOllamaModelForHardware,
 } from './defaults';
 
 export interface EnvConfig {
@@ -56,19 +56,21 @@ export interface CitationSpanSummary {
     line: number;
 }
 
-const DEFAULT_ENV: EnvConfig = {
-    LLM_BACKEND: DEFAULT_LLM_BACKEND,
-    OLLAMA_HOST: DEFAULT_OLLAMA_HOST,
-    OLLAMA_MODEL: DEFAULT_OLLAMA_MODEL,
-    OLLAMA_EMBEDDING_MODEL: DEFAULT_OLLAMA_EMBEDDING_MODEL,
-    OPENAI_API_KEY: '',
-    OPENAI_MODEL: DEFAULT_OPENAI_MODEL,
-    LIGHTRAG_EMBEDDING_MODEL: DEFAULT_LIGHTRAG_EMBEDDING_MODEL,
-    DATA_DIR: DEFAULT_DATA_DIR,
-    LIGHTRAG_WORKING_DIR: DEFAULT_LIGHTRAG_WORKING_DIR,
-    ETL_PROFILE: DEFAULT_ETL_PROFILE,
-    ENABLE_LIGHTRAG: booleanEnv(DEFAULT_ENABLE_LIGHTRAG),
-};
+function defaultEnv(): EnvConfig {
+    return {
+        LLM_BACKEND: DEFAULT_LLM_BACKEND,
+        OLLAMA_HOST: DEFAULT_OLLAMA_HOST,
+        OLLAMA_MODEL: defaultOllamaModelForHardware(),
+        OLLAMA_EMBEDDING_MODEL: DEFAULT_OLLAMA_EMBEDDING_MODEL,
+        OPENAI_API_KEY: '',
+        OPENAI_MODEL: DEFAULT_OPENAI_MODEL,
+        LIGHTRAG_EMBEDDING_MODEL: DEFAULT_LIGHTRAG_EMBEDDING_MODEL,
+        DATA_DIR: DEFAULT_DATA_DIR,
+        LIGHTRAG_WORKING_DIR: DEFAULT_LIGHTRAG_WORKING_DIR,
+        ETL_PROFILE: DEFAULT_ETL_PROFILE,
+        ENABLE_LIGHTRAG: booleanEnv(DEFAULT_ENABLE_LIGHTRAG),
+    };
+}
 
 export class EnvManager {
     private workspaceRoot: string;
@@ -125,7 +127,7 @@ export class EnvManager {
      */
     async readEnv(): Promise<EnvConfig> {
         if (!this.exists()) {
-            return { ...DEFAULT_ENV };
+            return defaultEnv();
         }
 
         try {
@@ -133,7 +135,7 @@ export class EnvManager {
             return this.parseEnvContent(content);
         } catch (error) {
             console.error('Error reading .env file:', error);
-            return { ...DEFAULT_ENV };
+            return defaultEnv();
         }
     }
 
@@ -141,7 +143,7 @@ export class EnvManager {
      * Parse .env content to object
      */
     private parseEnvContent(content: string): EnvConfig {
-        const env: EnvConfig = { ...DEFAULT_ENV };
+        const env: EnvConfig = defaultEnv();
         const explicitKeys = new Set<string>();
         const lines = content.split('\n');
 
@@ -183,7 +185,7 @@ export class EnvManager {
      * Create default .env file
      */
     async createDefaultEnv(): Promise<void> {
-        const content = this.generateEnvContent(DEFAULT_ENV);
+        const content = this.generateEnvContent(defaultEnv());
         fs.mkdirSync(path.dirname(this.envPath), { recursive: true });
         fs.writeFileSync(this.envPath, content, 'utf-8');
     }
@@ -245,7 +247,7 @@ export class EnvManager {
             '# Ollama Settings (for local LLM)',
             '# ============================================',
             `OLLAMA_HOST=${env.OLLAMA_HOST || DEFAULT_OLLAMA_HOST}`,
-            `OLLAMA_MODEL=${env.OLLAMA_MODEL || DEFAULT_OLLAMA_MODEL}`,
+            `OLLAMA_MODEL=${env.OLLAMA_MODEL || defaultOllamaModelForHardware()}`,
             `OLLAMA_EMBEDDING_MODEL=${env.OLLAMA_EMBEDDING_MODEL || DEFAULT_OLLAMA_EMBEDDING_MODEL}`,
             '',
             '# ============================================',
@@ -289,14 +291,14 @@ export class EnvManager {
      */
     private readEnvSync(): EnvConfig {
         if (!this.exists()) {
-            return { ...DEFAULT_ENV };
+            return defaultEnv();
         }
 
         try {
             const content = fs.readFileSync(this.envPath, 'utf-8');
             return this.parseEnvContent(content);
         } catch {
-            return { ...DEFAULT_ENV };
+            return defaultEnv();
         }
     }
 

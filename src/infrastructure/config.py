@@ -4,13 +4,61 @@ Infrastructure Layer - Configuration
 Environment variables and settings.
 """
 
+import os
+from collections.abc import Mapping
 from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
-DEFAULT_OLLAMA_MODEL = "granite4.1"
+DEFAULT_OLLAMA_CPU_MODEL = "granite4.1:3b"
+DEFAULT_OLLAMA_GPU_MODEL = "granite4.1:8b"
+DEFAULT_OLLAMA_MODEL = DEFAULT_OLLAMA_CPU_MODEL
 DEFAULT_OLLAMA_EMBEDDING_MODEL = "nomic-embed-text"
+GPU_MODEL_HINT_ENV_VARS = (
+    "ASSET_AWARE_HAS_GPU",
+    "ASSET_AWARE_USE_GPU",
+    "ASSET_AWARE_GPU",
+)
+GPU_VISIBLE_DEVICE_ENV_VARS = ("NVIDIA_VISIBLE_DEVICES", "CUDA_VISIBLE_DEVICES")
+TRUE_ENV_VALUES = {"1", "true", "yes", "on"}
+FALSE_ENV_VALUES = {"0", "false", "no", "off", "none", "void", "-1"}
+
+
+def _normalized_env_value(value: str | None) -> str:
+    return (value or "").strip().lower()
+
+
+def env_prefers_gpu_model(env: Mapping[str, str] | None = None) -> bool:
+    """Return whether environment hints prefer the GPU-sized local model.
+
+    This intentionally avoids probing hardware or starting subprocesses during
+    settings import. Operators can opt into the larger default with
+    ``ASSET_AWARE_HAS_GPU=true`` or by running in a GPU container that sets
+    ``NVIDIA_VISIBLE_DEVICES``/``CUDA_VISIBLE_DEVICES``.
+    """
+    source = os.environ if env is None else env
+    for key in GPU_MODEL_HINT_ENV_VARS:
+        value = _normalized_env_value(source.get(key))
+        if value in TRUE_ENV_VALUES:
+            return True
+        if value in FALSE_ENV_VALUES:
+            return False
+
+    for key in GPU_VISIBLE_DEVICE_ENV_VARS:
+        value = _normalized_env_value(source.get(key))
+        if value and value not in FALSE_ENV_VALUES:
+            return True
+    return False
+
+
+def default_ollama_model(env: Mapping[str, str] | None = None) -> str:
+    """Choose the pinned Granite default without requiring KG dependencies."""
+    return (
+        DEFAULT_OLLAMA_GPU_MODEL
+        if env_prefers_gpu_model(env)
+        else DEFAULT_OLLAMA_CPU_MODEL
+    )
 
 
 class Settings(BaseSettings):
@@ -39,7 +87,8 @@ class Settings(BaseSettings):
         default="http://localhost:11434", description="Ollama server URL"
     )
     ollama_model: str = Field(
-        default=DEFAULT_OLLAMA_MODEL, description="Ollama model for LLM tasks"
+        default_factory=default_ollama_model,
+        description="Ollama model for LLM tasks",
     )
     ollama_embedding_model: str = Field(
         default=DEFAULT_OLLAMA_EMBEDDING_MODEL,

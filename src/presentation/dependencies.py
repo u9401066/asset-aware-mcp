@@ -46,8 +46,11 @@ def _build_knowledge_graph() -> KnowledgeGraphInterface | None:
         from src.infrastructure.lightrag_adapter import LightRAGAdapter
     except ImportError as exc:
         raise RuntimeError(
-            "LightRAG is enabled, but LightRAGAdapter dependencies could not be loaded. "
-            "Install a compatible LightRAG stack or set ENABLE_LIGHTRAG=false."
+            "LightRAG is enabled, but the LightRAG backend is not installed. "
+            "Install the optional extra via "
+            "`uv tool install --upgrade 'asset-aware-mcp[lightrag]'` "
+            "(or run the VS Code command 'Asset-Aware MCP: Install LightRAG Backend'), "
+            "or set ENABLE_LIGHTRAG=false."
         ) from exc
 
     return LightRAGAdapter()

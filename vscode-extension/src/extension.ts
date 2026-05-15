@@ -20,7 +20,7 @@ import {
     DEFAULT_ENABLE_LIGHTRAG,
     DEFAULT_OLLAMA_EMBEDDING_MODEL,
     DEFAULT_OLLAMA_HOST,
-    DEFAULT_OLLAMA_MODEL,
+    defaultOllamaModelForHardware,
     envBoolean,
 } from './defaults';
 import { InstallInfo, StatusTreeProvider } from './statusTreeProvider';
@@ -31,6 +31,7 @@ import { installAssistantAssets } from './assistantAssets';
 import { installClineMcpServer } from './clineMcpConfig';
 import { installCodexMcpServer } from './codexMcpConfig';
 import { installCopilotMcpConfig } from './copilotMcpConfig';
+import { findLocalAssetAwareSource } from './mcpConfigCommon';
 import {
     checkOllamaModels,
     formatOllamaPullCommands,
@@ -515,6 +516,85 @@ async function prepareRuntimeWithProgress(uvPath: string, needsUpgrade: boolean 
     );
 }
 
+async function installOptionalExtra(extraName: string, description: string): Promise<void> {
+    if (!resolvedUvPath) {
+        resolvedUvPath = await ensureUvInstalled();
+    }
+    if (!resolvedUvPath) {
+        vscode.window.showErrorMessage(
+            'Asset-Aware MCP requires uv before optional backends can be installed.',
+        );
+        return;
+    }
+
+    // Detect launch mode: when the extension is launching the server from a local source
+    // checkout (`uv run --directory <repo> python -m src.server`), the active venv is the
+    // workspace's `.venv`, not the `uv tool` env. In that case `uv tool install` would
+    // succeed but have zero effect on the running server, so emit `uv sync --extra ...`
+    // against the source root instead.
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const localSource = findLocalAssetAwareSource(workspaceRoot, workspaceRoot);
+
+    const uvForShell = resolvedUvPath === 'uv' ? 'uv' : `"${resolvedUvPath}"`;
+    let installCommand: string;
+    let modeLabel: string;
+    let terminalCwd: string | undefined;
+    if (localSource) {
+        installCommand = `${uvForShell} sync --extra ${extraName}`;
+        modeLabel = `local source checkout at ${localSource}`;
+        terminalCwd = localSource;
+    } else {
+        const extensionVersion = extensionContext.extension.packageJSON.version as string;
+        const spec = `asset-aware-mcp[${extraName}]==${extensionVersion}`;
+        installCommand = `${uvForShell} tool install --upgrade --python ${PREFERRED_RUNTIME_PYTHON} "${spec}"`;
+        modeLabel = `uv tool install (published wheel pinned to ${extensionVersion})`;
+    }
+
+    const proceed = await vscode.window.showInformationMessage(
+        `Install the optional "${extraName}" extra?\n\n` +
+            `${description}\n\n` +
+            `Mode: ${modeLabel}\n` +
+            `Command: ${installCommand}`,
+        { modal: true },
+        'Install',
+        'Cancel',
+    );
+    if (proceed !== 'Install') {
+        return;
+    }
+
+    const terminal = vscode.window.createTerminal({
+        name: `Asset-Aware MCP: Install ${extraName}`,
+        cwd: terminalCwd,
+    });
+    terminal.sendText(installCommand);
+    terminal.show();
+
+    log(`Installing optional extra "${extraName}" via: ${installCommand}`);
+}
+
+async function runInstallMarkerBackendMenu(): Promise<void> {
+    const message =
+        'Marker backend is currently on security hold.\n\n' +
+        MARKER_BACKEND_SECURITY_HOLD_MESSAGE +
+        '\n\nUntil marker-pdf supports Pillow>=12.2.0, Asset-Aware MCP keeps using ' +
+        'the PyMuPDF backend (lightweight, no torch/transformers required).';
+
+    const choice = await vscode.window.showWarningMessage(
+        message,
+        { modal: true },
+        'Open marker-pdf releases',
+        'View Pillow CVE notes',
+        'Close',
+    );
+
+    if (choice === 'Open marker-pdf releases') {
+        vscode.env.openExternal(vscode.Uri.parse('https://github.com/datalab-to/marker/releases'));
+    } else if (choice === 'View Pillow CVE notes') {
+        vscode.env.openExternal(vscode.Uri.parse('https://pillow.readthedocs.io/en/stable/releasenotes/12.0.0.html'));
+    }
+}
+
 function ensureExternalMcpRuntimeAndSync(
     context: vscode.ExtensionContext,
     uvPath: string,
@@ -725,6 +805,21 @@ function registerCommands(context: vscode.ExtensionContext): void {
     );
 
     context.subscriptions.push(
+        vscode.commands.registerCommand('assetAwareMcp.installLightragBackend', async () => {
+            await installOptionalExtra(
+                'lightrag',
+                'LightRAG knowledge-graph backend (~80–120 MB: pandas, numpy, tiktoken, google-genai)',
+            );
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('assetAwareMcp.installMarkerBackend', async () => {
+            await runInstallMarkerBackendMenu();
+        })
+    );
+
+    context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.openTableExcel', async (item: any) => {
             if (item && item.value) {
                 const dataDir = envManager.getDataDir();
@@ -911,7 +1006,7 @@ async function getRequiredOllamaModels(): Promise<string[]> {
     const config = vscode.workspace.getConfiguration('assetAwareMcp');
     const env = await envManager.readEnv();
     return getRequiredOllamaModelsForLightRag(
-        env.OLLAMA_MODEL || config.get<string>('ollamaModel', DEFAULT_OLLAMA_MODEL),
+        env.OLLAMA_MODEL || config.get<string>('ollamaModel', defaultOllamaModelForHardware()),
         env.OLLAMA_EMBEDDING_MODEL || config.get<string>('ollamaEmbeddingModel', DEFAULT_OLLAMA_EMBEDDING_MODEL),
         envBoolean(
             env.ENABLE_LIGHTRAG,
@@ -976,7 +1071,7 @@ async function getExtensionStatus(): Promise<ExtensionStatus> {
         envPath: envManager.getEnvPath(),
         llmBackend: env.LLM_BACKEND || 'ollama',
         ollamaHost: env.OLLAMA_HOST || config.get<string>('ollamaHost', DEFAULT_OLLAMA_HOST),
-        ollamaModel: env.OLLAMA_MODEL || config.get<string>('ollamaModel', DEFAULT_OLLAMA_MODEL),
+        ollamaModel: env.OLLAMA_MODEL || config.get<string>('ollamaModel', defaultOllamaModelForHardware()),
         lightRagEnabled: envBoolean(
             env.ENABLE_LIGHTRAG,
             config.get<boolean>('enableLightRag', DEFAULT_ENABLE_LIGHTRAG),

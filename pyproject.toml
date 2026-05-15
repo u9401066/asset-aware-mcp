@@ -1,6 +1,6 @@
 [project]
 name = "asset-aware-mcp"
-version = "0.6.33"
+version = "0.6.34"
 description = "Medical RAG with Asset-Aware MCP - Precise PDF asset retrieval (tables, figures, sections) for AI Agents"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -29,36 +29,47 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    # --- Core runtime (always imported in src/) ---
     "mcp>=1.0.0",
-    "lightrag-hku>=1.4.11",
-    "mistralai>=1.0.0",
     "pydantic>=2.0.0",
+    "pydantic-settings>=2.12.0",
+    "httpx>=0.28.1",
+    "requests>=2.33.0",
+    "Pillow>=12.2.0",
+    "PyMuPDF>=1.24.0",        # Core PDF backend (lightweight)
+    "python-docx>=1.2.0",
+    "python-pptx>=1.0.2",
+    "xlsxwriter>=3.2.9",
+    "lxml>=6.1.0",
+    "tabulate>=0.9.0",
+    "pyyaml>=6.0.0",
+    "python-dotenv>=1.2.2",
     "aiofiles>=24.0.0",
+    # --- Security floor pins (not imported directly; enforce min versions
+    # on transitive deps pulled by lightrag[api]/requests/etc. to keep
+    # CVE-patched releases. Safe to prune only if upstream graph guarantees
+    # the same minimums). ---
     "aiohttp>=3.13.4",
     "cryptography>=46.0.7",
-    "httpx>=0.28.1",
-    "Pillow>=12.2.0",
     "protobuf>=6.33.5",
     "pyasn1>=0.6.3",
     "PyJWT>=2.12.0",
-    "PyMuPDF>=1.24.0", # Core PDF backend (lightweight)
-    "python-dotenv>=1.2.2",
     "python-multipart>=0.0.27",
-    "requests>=2.33.0",
     "urllib3>=2.6.3",
-    "xlsxwriter>=3.2.9",
-    "pydantic-settings>=2.12.0",
-    "tabulate>=0.9.0",
-    "lxml>=6.1.0",
-    "pyyaml>=6.0.0",
-    "python-docx>=1.2.0",
-    "python-pptx>=1.0.2",
 ]
 
 [project.optional-dependencies]
-# Temporarily empty since v0.6.28: marker-pdf 1.10.2 pins Pillow<11,
-# while the secure runtime requires Pillow>=12.2.0. Re-enable this extra
-# when upstream marker-pdf supports a patched Pillow range.
+# Optional LightRAG knowledge-graph backend. Adds pandas/numpy/tiktoken/
+# google-genai (~80-120 MB). Disabled by default; enable via
+# `uv tool install --upgrade asset-aware-mcp[lightrag]` or the
+# "Asset-Aware MCP: Install LightRAG Backend" VS Code command.
+lightrag = [
+    "lightrag-hku>=1.4.11",
+]
+# Reserved for the optional Marker PDF backend. Temporarily empty:
+# marker-pdf 1.10.2 pins Pillow<11 while the secure runtime requires
+# Pillow>=12.2.0. Re-populate when upstream marker-pdf supports a
+# patched Pillow range.
 marker = []
 pdf = []
 

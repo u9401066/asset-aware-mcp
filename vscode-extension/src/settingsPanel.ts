@@ -414,7 +414,7 @@ export class SettingsPanel {
 
             <div class="form-group">
                 <label for="ollamaModel">LLM Model</label>
-                <p class="description">Model for text generation (default: granite4.1)</p>
+                <p class="description">Model for text generation (CPU default: granite4.1:3b; GPU hint: granite4.1:8b)</p>
                 <input type="text" id="ollamaModel" name="OLLAMA_MODEL"
                        value="${value('OLLAMA_MODEL', DEFAULT_OLLAMA_MODEL)}"
                        placeholder="${DEFAULT_OLLAMA_MODEL}">

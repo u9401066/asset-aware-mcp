@@ -299,6 +299,7 @@ def merge_rules(settings: dict, *, server_name: str) -> None:
         "圖片",
         "章節",
         "知識圖譜",
+        "知識圖",
         "段落定位",
         "證據定位",
     ]:

@@ -9,7 +9,7 @@ import {
     DEFAULT_ENABLE_LIGHTRAG,
     DEFAULT_OLLAMA_EMBEDDING_MODEL,
     DEFAULT_OLLAMA_HOST,
-    DEFAULT_OLLAMA_MODEL,
+    defaultOllamaModelForHardware,
     envBoolean,
 } from './defaults';
 import { EnvManager } from './envManager';
@@ -99,7 +99,7 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
         const ollamaStatus = await checkOllamaModels(
             env.OLLAMA_HOST || DEFAULT_OLLAMA_HOST,
             getRequiredOllamaModelsForLightRag(
-                env.OLLAMA_MODEL || DEFAULT_OLLAMA_MODEL,
+                env.OLLAMA_MODEL || defaultOllamaModelForHardware(),
                 env.OLLAMA_EMBEDDING_MODEL || DEFAULT_OLLAMA_EMBEDDING_MODEL,
                 lightRagEnabled,
             ),

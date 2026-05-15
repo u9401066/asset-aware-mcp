@@ -58,9 +58,10 @@ describe('clineMcpConfig', () => {
         assert.ok(settings.mcpServers.other);
         assert.ok(settings.mcpServers['asset-aware-mcp']);
         assert.ok(settings.mcpRules.assetAwareDocs.servers.includes('asset-aware-mcp'));
-        for (const trigger of ['文件', '引用', '表格', '圖表', '知識圖譜']) {
+        for (const trigger of ['文件', '引用', '表格', '圖表', '知識圖譜', '知識圖', '證據']) {
             assert.ok(settings.mcpRules.assetAwareDocs.triggers.includes(trigger));
         }
+        assert.ok(!settings.mcpRules.assetAwareDocs.triggers.some((trigger: string) => trigger.includes('?') || trigger.includes('�')));
     });
 
     it('preserves Cline-local disabled and alwaysAllow metadata on managed entries', () => {
@@ -111,7 +112,7 @@ describe('clineMcpConfig', () => {
         assert.strictEqual(entry.env.DATA_DIR, path.join(tempDir, 'next-data'));
     });
 
-    it('does not auto-overwrite a managed Cline DATA_DIR from another workspace', () => {
+    it('auto-tracks the current workspace DATA_DIR even if a previous workspace was installed', () => {
         const otherWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), 'asset-aware-other-workspace-'));
         fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
         fs.writeFileSync(settingsPath, JSON.stringify({
@@ -130,14 +131,38 @@ describe('clineMcpConfig', () => {
         try {
             const updated = installClineMcpServer(context, '/usr/bin/uv');
 
-            assert.strictEqual(updated, false);
+            assert.strictEqual(updated, true);
             const entry = readSettings().mcpServers['asset-aware-mcp'];
-            assert.strictEqual(entry.command, '/old/uv');
-            assert.strictEqual(entry.env.DATA_DIR, path.join(otherWorkspace, 'data'));
+            assert.strictEqual(entry.command, '/usr/bin/uv');
+            assert.strictEqual(entry.env.DATA_DIR, path.join(tempDir, 'data'));
             assert.deepStrictEqual(entry.alwaysAllow, ['ingest_pdf']);
         } finally {
             fs.rmSync(otherWorkspace, { recursive: true, force: true });
         }
+    });
+
+    it('auto-upgrades DATA_DIR from the globalStorage fallback to the current workspace', () => {
+        fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+        const fallbackDataDir = path.join(context.globalStorageUri.fsPath, 'data');
+        fs.writeFileSync(settingsPath, JSON.stringify({
+            mcpServers: {
+                'asset-aware-mcp': {
+                    command: '/old/uv',
+                    args: ['tool', 'run', 'asset-aware-mcp'],
+                    env: {
+                        DATA_DIR: fallbackDataDir,
+                    },
+                    alwaysAllow: ['ingest_pdf'],
+                },
+            },
+        }, null, 2));
+
+        const updated = installClineMcpServer(context, '/usr/bin/uv');
+
+        assert.strictEqual(updated, true);
+        const entry = readSettings().mcpServers['asset-aware-mcp'];
+        assert.strictEqual(entry.env.DATA_DIR, path.join(tempDir, 'data'));
+        assert.deepStrictEqual(entry.alwaysAllow, ['ingest_pdf']);
     });
 
     it('allows manual Cline workspace takeover for a managed cross-workspace DATA_DIR', () => {

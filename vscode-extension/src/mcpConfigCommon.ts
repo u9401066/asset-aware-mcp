@@ -8,7 +8,7 @@ import {
     DEFAULT_LLM_BACKEND,
     DEFAULT_OLLAMA_EMBEDDING_MODEL,
     DEFAULT_OLLAMA_HOST,
-    DEFAULT_OLLAMA_MODEL,
+    defaultOllamaModelForHardware,
 } from './defaults';
 import {
     DEFAULT_TORCH_BACKEND,
@@ -102,6 +102,24 @@ export function findLocalAssetAwareSource(workspaceRoot?: string, fallbackRoot?:
     return undefined;
 }
 
+function configuredOllamaModel(config: vscode.WorkspaceConfiguration): string {
+    const inspected = config.inspect<string>('ollamaModel');
+    const explicitValues = inspected
+        ? [
+            inspected.globalValue,
+            inspected.workspaceValue,
+            inspected.workspaceFolderValue,
+            inspected.globalLanguageValue,
+            inspected.workspaceLanguageValue,
+            inspected.workspaceFolderLanguageValue,
+        ]
+        : [];
+    if (explicitValues.some(value => typeof value === 'string' && value.trim() !== '')) {
+        return config.get('ollamaModel', defaultOllamaModelForHardware());
+    }
+    return defaultOllamaModelForHardware();
+}
+
 export function buildAssetAwareEnv(
     context: vscode.ExtensionContext,
     workspaceRoot: string | undefined = getPrimaryWorkspaceRoot(),
@@ -111,7 +129,7 @@ export function buildAssetAwareEnv(
     const envVars: Record<string, string> = {
         LLM_BACKEND: config.get('llmBackend', DEFAULT_LLM_BACKEND),
         OLLAMA_HOST: config.get('ollamaHost', DEFAULT_OLLAMA_HOST),
-        OLLAMA_MODEL: config.get('ollamaModel', DEFAULT_OLLAMA_MODEL),
+        OLLAMA_MODEL: configuredOllamaModel(config),
         OLLAMA_EMBEDDING_MODEL: config.get('ollamaEmbeddingModel', DEFAULT_OLLAMA_EMBEDDING_MODEL),
         ENABLE_LIGHTRAG: booleanEnv(config.get('enableLightRag', DEFAULT_ENABLE_LIGHTRAG)),
     };

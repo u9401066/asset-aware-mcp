@@ -3,7 +3,7 @@ Integration test for LightRAG with Ollama backend.
 
 This test requires:
 1. Ollama running locally (http://localhost:11434)
-2. Models: granite4.1, nomic-embed-text
+2. Models: granite4.1:3b (CPU) or granite4.1:8b (GPU), nomic-embed-text
 3. ENABLE_LIGHTRAG=true for adapter initialization
 
 Run with: uv run pytest tests/integration/test_lightrag_ollama.py -v

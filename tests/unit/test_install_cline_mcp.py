@@ -183,5 +183,6 @@ def test_merge_rules_adds_readable_traditional_chinese_triggers() -> None:
     install_cline_mcp.merge_rules(settings, server_name="asset-aware-mcp")
 
     triggers = settings["mcpRules"]["assetAwareDocs"]["triggers"]
-    for trigger in ["文件", "引用", "表格", "圖表", "知識圖譜"]:
+    for trigger in ["文件", "引用", "表格", "圖表", "知識圖譜", "知識圖", "證據"]:
         assert trigger in triggers
+    assert not any("�" in trigger or "?" in trigger for trigger in triggers)

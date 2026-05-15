@@ -154,6 +154,13 @@ export const workspace = {
         get: (key: string, defaultValue?: any) => configurationValues.has(`assetAwareMcp.${key}`)
             ? configurationValues.get(`assetAwareMcp.${key}`)
             : defaultValue,
+        inspect: (key: string) => {
+            const fullKey = `assetAwareMcp.${key}`;
+            const value = configurationValues.get(fullKey);
+            return configurationValues.has(fullKey)
+                ? { globalValue: value }
+                : {};
+        },
     }),
     workspaceFolders: undefined as any,
 };

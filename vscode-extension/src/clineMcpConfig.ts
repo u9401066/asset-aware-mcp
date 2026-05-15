@@ -152,9 +152,14 @@ function mergeManagedEntry(
     };
 }
 
+// Windows and macOS (HFS+/APFS default) treat filesystem paths as case-insensitive.
+// Linux is case-sensitive. Normalize accordingly so DATA_DIR comparisons survive
+// drive-letter casing differences on Windows and canonical-case variations on macOS.
+const FS_CASE_INSENSITIVE = process.platform === 'win32' || process.platform === 'darwin';
+
 function normalizeForCompare(value: string): string {
     const resolved = path.resolve(value);
-    return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+    return FS_CASE_INSENSITIVE ? resolved.toLowerCase() : resolved;
 }
 
 function isInsideOrSame(parentPath: string, childPath: string): boolean {
@@ -164,9 +169,19 @@ function isInsideOrSame(parentPath: string, childPath: string): boolean {
     return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
+function isInsideExtensionGlobalStorage(
+    context: vscode.ExtensionContext,
+    candidate: string,
+): boolean {
+    // Detect the fallback path produced by buildAssetAwareEnv() when no workspace was open.
+    // Such DATA_DIR values are never user customizations — always safe to upgrade.
+    return isInsideOrSame(context.globalStorageUri.fsPath, candidate);
+}
+
 function isCrossWorkspaceDataDirChange(
     existing: ClineMcpServerEntry,
     next: ClineMcpServerEntry,
+    context: vscode.ExtensionContext,
     workspaceRoot: string | undefined = getPrimaryWorkspaceRoot(),
 ): boolean {
     const existingDataDir = existing.env?.DATA_DIR;
@@ -175,6 +190,20 @@ function isCrossWorkspaceDataDirChange(
         return false;
     }
     if (!path.isAbsolute(existingDataDir) || !path.isAbsolute(nextDataDir)) {
+        return false;
+    }
+
+    // Existing DATA_DIR is the globalStorage fallback our own installer wrote when no workspace
+    // was active. It is not a user customization; always upgrade to the current workspace.
+    if (isInsideExtensionGlobalStorage(context, existingDataDir)) {
+        return false;
+    }
+
+    // Match Copilot's per-workspace `.vscode/mcp.json` behavior: when the current workspace's
+    // DATA_DIR is the new target, adopt it automatically. Cline's settings file is global
+    // (single entry shared by all workspaces), so tracking the active workspace is the only
+    // sane default — otherwise Cline keeps writing into the previously installed workspace.
+    if (isInsideOrSame(workspaceRoot, nextDataDir)) {
         return false;
     }
 
@@ -216,7 +245,9 @@ function mergeAssetAwareRules(settings: ClineMcpSettings): boolean {
         '表格',
         '圖表',
         '圖片',
+        '章節',
         '知識圖譜',
+        '知識圖',
         '段落定位',
         '證據定位',
     ]) {
@@ -279,7 +310,7 @@ export function installClineMcpServer(
     if (existing && !isAssetAwareLaunch(existing.command, existing.args)) {
         return false;
     }
-    if (existing && !options.forceWorkspace && isCrossWorkspaceDataDirChange(existing, nextEntry)) {
+    if (existing && !options.forceWorkspace && isCrossWorkspaceDataDirChange(existing, nextEntry, context)) {
         return false;
     }
 

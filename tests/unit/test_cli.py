@@ -7,6 +7,17 @@ import json
 from src import server
 
 
+def _clear_ollama_model_env(monkeypatch) -> None:
+    monkeypatch.delenv("OLLAMA_MODEL", raising=False)
+    monkeypatch.delenv("OLLAMA_EMBEDDING_MODEL", raising=False)
+    monkeypatch.delenv("ENABLE_LIGHTRAG", raising=False)
+    monkeypatch.delenv("ASSET_AWARE_HAS_GPU", raising=False)
+    monkeypatch.delenv("ASSET_AWARE_USE_GPU", raising=False)
+    monkeypatch.delenv("ASSET_AWARE_GPU", raising=False)
+    monkeypatch.delenv("NVIDIA_VISIBLE_DEVICES", raising=False)
+    monkeypatch.delenv("CUDA_VISIBLE_DEVICES", raising=False)
+
+
 def test_help_prints_cli_usage_without_starting_stdio_server(
     monkeypatch,
     capsys,
@@ -66,16 +77,48 @@ def test_doctor_uses_safe_granite_defaults_when_kg_not_configured(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
-    monkeypatch.delenv("OLLAMA_MODEL", raising=False)
-    monkeypatch.delenv("OLLAMA_EMBEDDING_MODEL", raising=False)
-    monkeypatch.delenv("ENABLE_LIGHTRAG", raising=False)
+    _clear_ollama_model_env(monkeypatch)
 
     assert server.main(["doctor", "--json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["features"]["ollama"]["model"] == "granite4.1"
+    assert payload["features"]["ollama"]["model"] == "granite4.1:3b"
     assert payload["features"]["ollama"]["embedding_model"] == "nomic-embed-text"
     assert payload["features"]["lightrag"]["enabled"] is False
+
+
+def test_doctor_uses_gpu_granite_default_when_gpu_hint_is_enabled(
+    monkeypatch,
+    tmp_path,
+    capsys,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
+    _clear_ollama_model_env(monkeypatch)
+    monkeypatch.setenv("ASSET_AWARE_HAS_GPU", "true")
+
+    assert server.main(["doctor", "--json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["features"]["ollama"]["model"] == "granite4.1:8b"
+    assert payload["features"]["lightrag"]["enabled"] is False
+
+
+def test_doctor_keeps_explicit_ollama_model_when_gpu_hint_is_enabled(
+    monkeypatch,
+    tmp_path,
+    capsys,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
+    _clear_ollama_model_env(monkeypatch)
+    monkeypatch.setenv("ASSET_AWARE_HAS_GPU", "true")
+    monkeypatch.setenv("OLLAMA_MODEL", "operator-model:latest")
+
+    assert server.main(["doctor", "--json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["features"]["ollama"]["model"] == "operator-model:latest"
 
 
 def test_health_outputs_human_readable_runtime_status(

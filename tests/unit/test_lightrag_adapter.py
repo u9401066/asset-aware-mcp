@@ -10,11 +10,13 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import httpx
-import numpy as np
 import pytest
 
-import src.infrastructure.lightrag_adapter as lightrag_adapter
-from src.infrastructure.lightrag_adapter import (
+np = pytest.importorskip("numpy")
+pytest.importorskip("lightrag")
+
+import src.infrastructure.lightrag_adapter as lightrag_adapter  # noqa: E402
+from src.infrastructure.lightrag_adapter import (  # noqa: E402
     LightRAGAdapter,
     ollama_embedding,
     ollama_model_complete,

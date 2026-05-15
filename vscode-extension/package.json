@@ -2,7 +2,7 @@
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
     "description": "Medical RAG MCP Server with precise document asset retrieval and Docx editing (DFM) — tables, figures, sections from PDFs + .docx/.doc round-trip with integrity validation",
-    "version": "0.6.32",
+    "version": "0.6.34",
     "publisher": "u9401066",
     "engines": {
         "vscode": "^1.96.0"
@@ -95,6 +95,14 @@
                 "title": "Asset-Aware MCP: Upgrade Server to Latest Version"
             },
             {
+                "command": "assetAwareMcp.installLightragBackend",
+                "title": "Asset-Aware MCP: Install LightRAG Backend (optional)"
+            },
+            {
+                "command": "assetAwareMcp.installMarkerBackend",
+                "title": "Asset-Aware MCP: Install Marker Backend (optional)"
+            },
+            {
                 "command": "assetAwareMcp.openTableExcel",
                 "title": "Asset-Aware MCP: Open in Excel"
             },
@@ -138,8 +146,8 @@
                 },
                 "assetAwareMcp.ollamaModel": {
                     "type": "string",
-                    "default": "granite4.1",
-                    "description": "Ollama LLM model name"
+                    "default": "granite4.1:3b",
+                    "description": "Ollama LLM model name. CPU default is granite4.1:3b; set ASSET_AWARE_HAS_GPU=true or choose granite4.1:8b for GPU installs."
                 },
                 "assetAwareMcp.ollamaEmbeddingModel": {
                     "type": "string",

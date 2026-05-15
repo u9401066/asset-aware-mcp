@@ -47,8 +47,11 @@ def _validate_lightrag_hku_distribution() -> None:
     except PackageNotFoundError as exc:
         raise RuntimeError(
             "LightRAG backend requires the `lightrag-hku` distribution. "
-            "Install this project with `uv sync`; do not install the unrelated "
-            "`lightrag` package from PyPI."
+            "Install the optional extra via "
+            "`uv tool install --upgrade 'asset-aware-mcp[lightrag]'` "
+            "(or use the VS Code command 'Asset-Aware MCP: Install LightRAG Backend'). "
+            "For source checkouts run `uv sync --extra lightrag`. "
+            "Do not install the unrelated `lightrag` package from PyPI."
         ) from exc
 
     if _parse_version_tuple(installed_version) < MIN_LIGHTRAG_HKU_VERSION:
@@ -396,8 +399,10 @@ class LightRAGAdapter(KnowledgeGraphInterface):
 
         except ImportError as e:
             raise RuntimeError(
-                "LightRAG backend is not available. Install `lightrag-hku` "
-                "(not the unrelated `lightrag` package) with `uv sync` for this project."
+                "LightRAG backend is not available. Install the optional extra: "
+                "`uv tool install --upgrade 'asset-aware-mcp[lightrag]'` "
+                "(or `uv sync --extra lightrag` for source checkouts). "
+                "Do not install the unrelated `lightrag` package from PyPI."
             ) from e
 
     async def insert(self, doc_id: str, text: str) -> None:

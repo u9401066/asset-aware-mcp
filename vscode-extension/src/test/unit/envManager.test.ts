@@ -7,14 +7,66 @@ import { DfmSessionManager, normalizeSessionPath } from '../../dfm/dfmEditorServ
 
 describe('EnvManager', () => {
     let tempDir: string;
+    let originalAssetAwareHasGpu: string | undefined;
+    let originalAssetAwareUseGpu: string | undefined;
+    let originalAssetAwareGpu: string | undefined;
+    let originalNvidiaVisibleDevices: string | undefined;
+    let originalCudaVisibleDevices: string | undefined;
 
     beforeEach(() => {
         tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'asset-aware-env-'));
         fs.writeFileSync(path.join(tempDir, 'pyproject.toml'), '[project]\nname = "asset-aware-mcp"\n');
+        originalAssetAwareHasGpu = process.env.ASSET_AWARE_HAS_GPU;
+        originalAssetAwareUseGpu = process.env.ASSET_AWARE_USE_GPU;
+        originalAssetAwareGpu = process.env.ASSET_AWARE_GPU;
+        originalNvidiaVisibleDevices = process.env.NVIDIA_VISIBLE_DEVICES;
+        originalCudaVisibleDevices = process.env.CUDA_VISIBLE_DEVICES;
+        delete process.env.ASSET_AWARE_HAS_GPU;
+        delete process.env.ASSET_AWARE_USE_GPU;
+        delete process.env.ASSET_AWARE_GPU;
+        delete process.env.NVIDIA_VISIBLE_DEVICES;
+        delete process.env.CUDA_VISIBLE_DEVICES;
     });
 
     afterEach(() => {
         fs.rmSync(tempDir, { recursive: true, force: true });
+        restoreEnv('ASSET_AWARE_HAS_GPU', originalAssetAwareHasGpu);
+        restoreEnv('ASSET_AWARE_USE_GPU', originalAssetAwareUseGpu);
+        restoreEnv('ASSET_AWARE_GPU', originalAssetAwareGpu);
+        restoreEnv('NVIDIA_VISIBLE_DEVICES', originalNvidiaVisibleDevices);
+        restoreEnv('CUDA_VISIBLE_DEVICES', originalCudaVisibleDevices);
+    });
+
+    function restoreEnv(key: string, value: string | undefined): void {
+        if (value === undefined) {
+            delete process.env[key];
+        } else {
+            process.env[key] = value;
+        }
+    }
+
+    it('writes the CPU-friendly Granite model in a new default env', async () => {
+        const manager = new EnvManager(tempDir);
+
+        await manager.createDefaultEnv();
+
+        const content = fs.readFileSync(path.join(tempDir, '.env'), 'utf8');
+        assert.ok(content.includes('OLLAMA_MODEL=granite4.1:3b'));
+        const env = await manager.readEnv();
+        assert.strictEqual(env.OLLAMA_MODEL, 'granite4.1:3b');
+        assert.strictEqual(env.ENABLE_LIGHTRAG, 'false');
+    });
+
+    it('writes the 8b Granite model in a new default env when GPU hint is enabled', async () => {
+        process.env.ASSET_AWARE_HAS_GPU = 'true';
+        const manager = new EnvManager(tempDir);
+
+        await manager.createDefaultEnv();
+
+        const content = fs.readFileSync(path.join(tempDir, '.env'), 'utf8');
+        assert.ok(content.includes('OLLAMA_MODEL=granite4.1:8b'));
+        const env = await manager.readEnv();
+        assert.strictEqual(env.OLLAMA_MODEL, 'granite4.1:8b');
     });
 
     it('finds current manifest naming scheme', () => {

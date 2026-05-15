@@ -51,7 +51,7 @@ suite('Extension Test Suite', () => {
 
         assert.strictEqual(config.get('llmBackend'), 'ollama');
         assert.strictEqual(config.get('ollamaHost'), 'http://localhost:11434');
-        assert.strictEqual(config.get('ollamaModel'), 'granite4.1');
+        assert.strictEqual(config.get('ollamaModel'), 'granite4.1:3b');
         assert.strictEqual(config.get('ollamaEmbeddingModel'), 'nomic-embed-text');
         assert.strictEqual(config.get('enableLightRag'), false);
         assert.strictEqual(config.get('dataDir'), './data');
@@ -124,7 +124,7 @@ suite('Utility Functions Test Suite', () => {
 # This is a comment
 LLM_BACKEND=ollama
 OLLAMA_HOST="http://localhost:11434"
-OLLAMA_MODEL='granite4.1'
+OLLAMA_MODEL='granite4.1:3b'
 EMPTY_VALUE=
         `.trim();
 
@@ -154,7 +154,7 @@ EMPTY_VALUE=
 
         assert.strictEqual(env['LLM_BACKEND'], 'ollama');
         assert.strictEqual(env['OLLAMA_HOST'], 'http://localhost:11434');
-        assert.strictEqual(env['OLLAMA_MODEL'], 'granite4.1');
+        assert.strictEqual(env['OLLAMA_MODEL'], 'granite4.1:3b');
         assert.strictEqual(env['EMPTY_VALUE'], '');
     });
 });
