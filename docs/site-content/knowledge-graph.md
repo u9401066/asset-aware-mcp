@@ -1,6 +1,6 @@
 <!-- Generated from Knowledge-Graph.md by scripts/build_docs_site.py -->
 
-# Knowledge Graph
+﻿# Knowledge Graph
 
 ![Knowledge graph workflow](wiki/assets/knowledge-graph-workflow.jpg)
 
@@ -35,6 +35,29 @@ ollama pull granite4.1:3b
 ollama pull granite4.1:8b
 ollama pull nomic-embed-text
 ```
+
+## Installing the LightRAG Backend (opt-in extra)
+
+Since v0.6.34 the LightRAG / knowledge-graph dependency stack is shipped as an
+**optional extra** so default installs stay slim. Install it before flipping
+`ENABLE_LIGHTRAG=true`, otherwise the server will fail to boot with a
+`lightrag-hku` missing diagnostic.
+
+- **Published install (uv tool / uvx users, including the VS Code extension)**:
+
+  ```bash
+  uv tool install --upgrade --python 3.11 'asset-aware-mcp[lightrag]'
+  ```
+
+- **Local source checkout (developing this repo)**:
+
+  ```bash
+  uv sync --extra lightrag
+  ```
+
+- **VS Code extension users** can run the command `Asset-Aware MCP: Install LightRAG Backend`
+  from the Command Palette; it auto-detects which mode you are in and emits the
+  matching command.
 
 KG indexing is opt-in. A KG-ready smoke flow is:
 

@@ -1,8 +1,7 @@
 # LLM Wiki Build Workflow
 
-Build or refresh a Foam-compatible LLM wiki from Asset-Aware document evidence,
-knowledge graph output, and local Markdown notes. Use with
-`.clinerules/35-foam-llm-wiki.md`.
+Build or refresh a Foam-compatible LLM wiki from Zotero, PubMed, and document
+evidence. Use with `.clinerules/35-foam-llm-wiki.md`.
 
 ## 1. Locate The Wiki
 
@@ -18,7 +17,7 @@ knowledge graph output, and local Markdown notes. Use with
 - Create a short map before writing files:
   - hub note
   - topic notes
-  - document/source notes
+  - literature/source notes
   - method or protocol notes
   - unresolved TODO notes
 - Prefer a few well-linked notes over one large dump.
@@ -26,13 +25,14 @@ knowledge graph output, and local Markdown notes. Use with
 
 ## 3. Gather Evidence With Tools
 
-- Use `citation_bundle(output_format="foam")` for verified span evidence packs.
-- Use `document_asset(op="foam_notes")` to promote table and figure evidence
-  notes with stable AssetRefs.
-- Use `evidence(op="health")` to validate existing or generated note links,
-  anchors, and embedded AssetRefs.
-- Use `consult_knowledge_graph(..., verify_references=true)` only when
-  LightRAG/KG is enabled and cross-document discovery is needed.
+- Use Zotero tools for library state, existing items, collections, and saved
+  metadata before re-fetching external data.
+- Use PubMed tools for discovery and follow-up:
+  - `unified_search`
+  - `fetch_article_details`
+  - related, citing, reference, timeline, export, and full-text tools when needed
+- Use document or asset-aware tools when the user provides PDFs, DOCX, DFM,
+  tables, figures, or span-level citation requirements.
 - Record provenance as you gather it; do not reconstruct citations from memory.
 
 ## 4. Write Foam-Compatible Notes
@@ -56,5 +56,5 @@ knowledge graph output, and local Markdown notes. Use with
 
 - Summarize created, updated, preserved, and skipped notes.
 - List unresolved TODOs separately from completed links.
-- Mention any evidence gaps, missing PDFs, stale AssetRefs, or uncertain
-  verification status.
+- Mention any evidence gaps, missing PDFs, duplicate Zotero items, or uncertain
+  preprint/peer-review status.

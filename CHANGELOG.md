@@ -7,6 +7,76 @@
 
 ## [Unreleased]
 
+## [0.6.34] - 2026-05-15
+
+### Added
+
+- Added VS Code commands `Asset-Aware MCP: Install LightRAG Backend (optional)`
+  and `Asset-Aware MCP: Install Marker Backend (optional)` for menu-driven
+  install of optional heavyweight extras.
+- `Install LightRAG Backend` is **launch-mode-aware**: it now detects local
+  source checkouts via `findLocalAssetAwareSource` and emits
+  `uv sync --extra lightrag` (run in the source workspace) instead of
+  `uv tool install`, so the dependency lands in the venv the extension actually
+  launches against. Published/uvx installs still get the existing
+  `uv tool install --upgrade --python 3.11 'asset-aware-mcp[lightrag]==<version>'`
+  command. The confirmation modal now shows the detected mode and exact command.
+- Documented the new optional `[lightrag]` extra and `Install LightRAG Backend`
+  command in `README.md`, `docs/wiki/Knowledge-Graph.md`, and
+  `vscode-extension/README.md` so users know KG must be opted in before turning
+  `ENABLE_LIGHTRAG=true` on.
+
+### Changed
+
+- Slimmed default install footprint from ~1190 MB to ~227 MB by moving
+  `lightrag-hku` to a new `[lightrag]` optional extra and removing the unused
+  `mistralai` dependency. Core PDF/DOCX/A2T flows keep working unchanged; KG
+  features require `uv tool install --upgrade 'asset-aware-mcp[lightrag]'` or
+  the new VS Code command.
+- Grouped and commented `dependencies` in `pyproject.toml` into a core-runtime
+  tier and a security-floor pins tier so the intent of each line is explicit.
+
+### Fixed
+
+- `src/infrastructure/lightrag_adapter.py` `RuntimeError` diagnostics now point
+  at the correct install path (`uv tool install --upgrade 'asset-aware-mcp[lightrag]'`
+  for published installs, `uv sync --extra lightrag` for source checkouts)
+  instead of the stale pre-extra `uv sync` instructions.
+
+### Notes
+
+- Marker backend remains on security hold (marker-pdf pins `Pillow<11` while
+  the project requires `Pillow>=12.2.0` for CVE coverage). The new install
+  command shows the security notice and links to the upstream tracker.
+
+## [0.6.33] - 2026-05-15
+
+### Added
+
+- Added Cline installer regression coverage for readable Traditional Chinese
+  `mcpRules` triggers and Cline harness boundary checks.
+- Added direct Cline CLI install smoke coverage using the generated
+  `cline_mcp_settings.json` launch command plus MCP stdio handshake validation.
+
+### Changed
+
+- Changed local RAG defaults from unpinned `granite4.1` to pinned Granite
+  models: CPU installs use `granite4.1:3b`, while GPU-hinted installs use
+  `granite4.1:8b`; LightRAG/KG remains opt-in.
+- Refreshed the GitHub Pages documentation site to better match the current
+  code surface, safe Granite/LightRAG defaults, tool/resource counts, and
+  workflow-oriented navigation.
+- Tightened bundled LLM wiki Cline/Codex harness assets so they stay scoped to
+  Asset-Aware document evidence, citation bundles, and optional KG exports.
+
+### Fixed
+
+- Replaced mojibake Cline auto-selection trigger strings with readable
+  Traditional Chinese triggers for documents, citations, tables, figures, and
+  knowledge graphs.
+- Removed retired Zotero/PubMed workflow references from Asset-Aware LLM wiki
+  harness files and synced the corrected files into the VSIX repo-assets bundle.
+
 ## [0.6.32] - 2026-05-14
 
 ### Added

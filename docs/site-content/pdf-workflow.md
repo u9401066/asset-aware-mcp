@@ -1,6 +1,6 @@
 <!-- Generated from PDF-Document-Workflow.md by scripts/build_docs_site.py -->
 
-# PDF Document Workflow
+﻿# PDF Document Workflow
 
 ![PDF document workflow](wiki/assets/pdf-document-workflow.jpg)
 
@@ -18,7 +18,7 @@ PDF pipeline 將原始 PDF 轉成可檢索、可視覺化、可引用的文件 a
 - `document(op="ingest", ...)`
 - `parse_pdf_structure(...)`，Marker 專用 high-precision parse job
 
-預設後端是 PyMuPDF。`0.6.33` 的 Marker extra 仍暫時為空，因為 `marker-pdf` 對 Pillow 的舊版 pin 會和安全 runtime 衝突。`parse_pdf_structure(...)` 是 Marker-required 入口；security hold 或 backend unavailable 會在建立 job 前回傳明確診斷。一般 `ingest_documents(use_marker=true)` 只代表偏好 Marker，公開工具沒有 `require_marker` 參數，Marker 不可用時會走 PyMuPDF 安全流程。
+預設後端是 PyMuPDF。`0.6.34` 的 Marker extra 仍暫時為空，因為 `marker-pdf` 對 Pillow 的舊版 pin 會和安全 runtime 衝突。`parse_pdf_structure(...)` 是 Marker-required 入口；security hold 或 backend unavailable 會在建立 job 前回傳明確診斷。一般 `ingest_documents(use_marker=true)` 只代表偏好 Marker，公開工具沒有 `require_marker` 參數，Marker 不可用時會走 PyMuPDF 安全流程。
 
 ## 產物
 

@@ -5,7 +5,7 @@ PDF、DOCX/DFM、表格、圖片、section、citation index、Foam evidence pack
 KG/RAG 串成可驗證的文件流程。
 
 這個網站改成章節式導覽：先選你正在做的任務，再進入對應的詳細頁或 reference。
-目前內容對齊 `0.6.33` 正式文件。
+目前內容對齊 `0.6.34` 正式文件。
 
 <div class="path-grid">
   <section class="path-card">

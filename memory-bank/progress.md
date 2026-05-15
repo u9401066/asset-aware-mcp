@@ -1,9 +1,39 @@
-# Progress (Updated: 2026-05-14)
+# Progress (Updated: 2026-05-15)
+
+## 2026-05-15 (evening) — v0.6.34 GPT subagent review + source-mode install fix
+
+- Done: ran 3 parallel `reviewer-openai` subagents to cross-check the dependency slim-down. 2 real findings fixed, 1 confirmed non-bug.
+- Done (fix 1, REAL BUG): `installOptionalExtra` in `vscode-extension/src/extension.ts` is now launch-mode-aware. Detects `findLocalAssetAwareSource` and emits `uv sync --extra <extra>` (cwd = source root) when local source is in use; keeps `uv tool install --upgrade --python 3.11 'asset-aware-mcp[<extra>]==<version>'` for published/uvx installs. Confirmation modal shows the detected mode + exact command. Imports `findLocalAssetAwareSource` from `./mcpConfigCommon`.
+- Done (fix 2, STALE TEXT): `src/infrastructure/lightrag_adapter.py` `_validate_lightrag_hku_distribution()` and the lazy LightRAG ImportError diagnostic now both point at `uv tool install --upgrade 'asset-aware-mcp[lightrag]'` (primary) with `uv sync --extra lightrag` as source-checkout fallback.
+- Confirmed non-bug: `clineMcpConfig.ts::isCrossWorkspaceDataDirChange` dead-looking final return is intentional per inline comment + auto-tracks test; left as-is.
+- Done: documented `[lightrag]` extra in `README.md`, `docs/wiki/Knowledge-Graph.md`, `vscode-extension/README.md`.
+- Done: version bump 0.6.33 → 0.6.34 across canonical files; regenerated docs site via `python scripts/build_docs_site.py` (25 files written); `uv lock` updated to 0.6.34; VSIX `npm run sync-assets` propagated harness drift into repo-assets.
+- Verified: VSIX lint clean, `test:unit` 131 passing, Python unit tests on touched modules 11 passed + 1 skipped.
+
+## 2026-05-15 (afternoon) — Dependency slim-down
+
+- Done: cut default install footprint from ~1190 MB → **~227 MB** (~963 MB saved). Moved `lightrag-hku` to a new `[lightrag]` optional extra in `pyproject.toml`; removed unused `mistralai` dependency (zero usages); regrouped runtime/security-floor pins with explanatory comments.
+- Done: added VS Code commands `Asset-Aware MCP: Install LightRAG Backend (optional)` and `Asset-Aware MCP: Install Marker Backend (optional)` with terminal-driven install and security-hold modal respectively (`vscode-extension/src/extension.ts` + `package.json`).
+- Done: updated `src/presentation/dependencies.py` LightRAG error message to direct users to the new install path (extra + VS Code command).
+- Done: updated `tests/unit/test_lightrag_adapter.py` to `pytest.importorskip` numpy + lightrag so it cleanly skips on slim installs.
+- Done: regenerated `uv.lock` (removed mistralai + opentelemetry stack); `uv sync` cleared marker/torch/transformers/scipy/sklearn/sympy/cv2/pandas/surya-ocr/tiktoken leftovers.
+- Verified: VSIX `npm run lint` clean, `npm run test:unit` 131 passing, Python `pytest tests/unit` 708 passed + 2 skipped, runtime imports `from src.presentation import server` clean with `_HAS_LIGHTRAG=False`.
+- Doing: CHANGELOG + Memory Bank sync (this entry).
+- Pre-existing issue (NOT caused by this work): `tests/unit/test_cline_harness_boundaries.py::test_llm_wiki_harness_stays_asset_aware_scoped` fails due to in-flight unstaged edits to `.cline/skills/llm-wiki-builder/SKILL.md`, `.codex/skills/llm-wiki-builder/SKILL.md`, and `.clinerules/35-foam-llm-wiki.md` that still mention `.github/zotero-research-workflow.md`. Stashing those edits makes the test pass.
+
+## 2026-05-15
+
+- Preparing `v0.6.33` for production release after a Cline/MCP-focused multi-subagent check. The release tightens Cline install/merge behavior, Granite RAG defaults, LLM wiki harness ownership, VSIX repo-assets, and the productized docs site.
+- Confirmed Cline can use this MCP through three layers: installer/config tests preserve unrelated servers and Cline metadata, generated launch commands pass MCP stdio smoke with `list_documents`, and VSIX install/update/activation smoke verifies the installed MCP provider launch definition pins `asset-aware-mcp==0.6.33`.
+- Fixed the release-blocking LLM wiki harness drift back to retired Zotero/PubMed workflow language. `.cline`, `.codex`, `.clinerules`, and `vscode-extension/resources/repo-assets/asset-aware/**` now stay scoped to Asset-Aware document evidence, Foam citation bundles, AssetRefs, and optional KG discovery; release harness audit and Cline harness boundary tests pass.
+- Updated default local RAG behavior to pinned Granite models: CPU `granite4.1:3b`, GPU hint `granite4.1:8b`, `ENABLE_LIGHTRAG=false` by default, and embedding-model checks only when KG is enabled.
+- Completed release verification: `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy src --ignore-missing-imports`, `uv lock --check`, `python scripts/build_docs_site.py --check`, `node --check docs/site.js docs/site-content.js`, `python scripts/audit_release_harness.py`, VSIX `sync-assets:check`, full `uv run pytest -q` (`903 passed, 22 skipped`), VSIX `npm run test:ci` (`130 passing` plus package contents), VSIX `npm run test:install-smoke -- --require-activation`, `uv build`, release artifact audit, built-wheel runtime/MCP stdio smoke, local MCP stdio smoke, VSIX package, Docker build, Docker `doctor`, Docker `list-tools`, and Docker stdio smoke.
+- `uv build` succeeded using workspace cache after an initial host/network/cache failure path. Docker no longer needs a local waiver for this candidate because `asset-aware-mcp:0.6.33-smoke` built and passed runtime MCP checks.
 
 ## 2026-05-14
 
 - Preparing `v0.6.32` for production release after a repo-wide health pass. The release includes oversized module splits, stronger runtime/release smokes, KG/Foam practical coverage, assistant-harness cleanup, and version/docs/VSIX synchronization.
-- Updated the release candidate's local RAG defaults: `OLLAMA_MODEL=granite4.1`, `ENABLE_LIGHTRAG=false` by default, and VSIX Ollama checks only require the embedding model when KG is explicitly enabled.
+- Updated the release candidate's local RAG defaults: `OLLAMA_MODEL=granite4.1:3b` on CPU, `granite4.1:8b` when GPU hints are enabled, `ENABLE_LIGHTRAG=false` by default, and VSIX Ollama checks only require the embedding model when KG is explicitly enabled.
 - Split tracked source/test files over 2000 lines into maintainable modules: `document_tools.py`, `document_service.py`, `docx_adapter.py`, and the old MCP tool-layer test monolith now have smaller focused support modules and test files.
 - Cleaned retired VSIX-installed harness leftovers and orphan/generated artifacts from the workspace while preserving local verification dependencies such as `.venv`, `.uv-cache`, and `vscode-extension/node_modules`.
 - Repaired the `0.6.32` version bump after unsafe PowerShell encoding touched README/docs files; regenerated GitHub Pages content and VSIX repo-assets with UTF-8-safe writes.

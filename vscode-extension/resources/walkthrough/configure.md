@@ -9,11 +9,12 @@ The Settings Panel lets you configure your LLM backend and storage options.
 Run LLMs locally on your machine:
 
 - **Ollama Host**: Usually `http://localhost:11434`
-- **LLM Model**: `granite4.1` (default)
+- **LLM Model**: `granite4.1:3b` (CPU default); GPU installs can use `granite4.1:8b`
 - **Embedding Model**: `nomic-embed-text` (only required when LightRAG/KG is enabled)
 
 **Recommended Ollama Models:**
-- `granite4.1` - Default enterprise-ready local RAG/text-generation model
+- `granite4.1:3b` - Default enterprise-ready local RAG/text-generation model for CPU installs
+- `granite4.1:8b` - Recommended Granite default for GPU installs
 - `llama3.2` - Meta's latest model
 - `mistral` - Fast and efficient
 

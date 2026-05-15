@@ -3,13 +3,13 @@ paths:
   - ".clinerules/workflows/llm-wiki-build.md"
   - ".cline/skills/llm-wiki-builder/SKILL.md"
   - ".codex/skills/llm-wiki-builder/SKILL.md"
+  - ".github/zotero-research-workflow.md"
 ---
 
 # Foam LLM Wiki Rules
 
-Use these rules when turning Asset-Aware PDF, DOCX, DFM, table, figure,
-knowledge graph, or project evidence into a Foam-compatible Markdown wiki for
-LLM-assisted reading and synthesis.
+Use these rules when turning Zotero, PubMed, PDF/full-text, or project evidence
+into a Foam-compatible Markdown wiki for LLM-assisted reading and synthesis.
 
 ## Asset Boundaries
 
@@ -17,8 +17,8 @@ LLM-assisted reading and synthesis.
 - Detect the wiki root before writing. Prefer an existing Foam workspace layout
   such as `.foam/`, `.vscode/settings.json`, or an existing note graph.
 - Ask before bulk rewrites, renames, deletions, or moving an existing wiki root.
-- Keep raw exports, JSON payloads, and tool responses out of final notes unless
-  the user explicitly asks for an appendix.
+- Keep raw exports, RIS, JSON, and tool responses out of final notes unless the
+  user explicitly asks for an appendix.
 
 ## Foam Rendering Invariants
 
@@ -34,21 +34,21 @@ LLM-assisted reading and synthesis.
 
 ## Evidence And Citation Hygiene
 
-- Preserve document IDs, AssetRefs, DOI, URL, title, source filename, page,
-  line, char, byte, quote hash, and access status whenever available.
-- Distinguish verified evidence bundles, KG discovery candidates, and unverified
-  local notes.
+- Preserve PMID, DOI, PMCID, Zotero key, URL, title, journal, year, and access
+  status whenever available.
+- Distinguish imported Zotero items, candidate PubMed results, and preprints.
 - Cite claims at paragraph or bullet level using compact source markers such as
-  `doc_abc#spn_123`, `DOI:...`, or `URL:...`.
-- Prefer exact text spans, section names, page numbers, line offsets, or quote
-  hashes when an Asset-Aware tool provides them.
+  `PMID:12345678`, `DOI:...`, or `Zotero:ABC123`.
+- Prefer exact text spans, section names, page numbers, or quote hashes when a
+  full-text or asset-aware tool provides them.
 - Do not claim that a note is citation-ready unless its source markers can be
-  traced back to a concrete document span, table, figure, or verified AssetRef.
+  traced back to a concrete article, item, or document span.
 
 ## Workflow And Skill Split
 
 - Rules define durable wiki constraints and rendering invariants.
 - Workflows define the complete user-facing sequence for making or refreshing
   an LLM wiki.
-- Skills orchestrate filesystem search, Asset-Aware evidence extraction,
-  optional KG discovery, Markdown writes, and link validation.
+- Skills orchestrate multiple tools: filesystem search, Zotero inspection,
+  PubMed discovery, full-text/asset extraction when available, Markdown writes,
+  and link validation.

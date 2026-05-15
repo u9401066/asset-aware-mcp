@@ -26,7 +26,7 @@
 
 ### LLM 後端
 
-- **預設**: Ollama (本地) — `granite4.1`；`nomic-embed-text` 僅在啟用 LightRAG/KG 時需要
+- **預設**: Ollama (本地) — CPU `granite4.1:3b`；GPU hint `granite4.1:8b`；`nomic-embed-text` 僅在啟用 LightRAG/KG 時需要
 - **備選**: OpenAI (需 API Key)
 
 ---
