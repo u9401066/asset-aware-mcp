@@ -2,14 +2,8 @@
 
 - [Home](Home)
 - [Getting Started](Getting-Started)
-- [Design And UX Notes](Design-And-UX)
-- [Architecture](Architecture)
-
-## API Surface
-
-- [MCP Tools](MCP-Tools)
-- [MCP Resources](MCP-Resources)
-- [Code Map](Code-Map)
+- [VS Code Extension And MCP Setup](VS-Code-Extension-And-MCP-Setup)
+- [Workflow Chapters](Workflow-Chapters)
 
 ## Workflows
 
@@ -21,9 +15,17 @@
 - [Background Jobs](Background-Jobs)
 - [ETL Profiles](ETL-Profiles)
 
-## Operations
+## Developers
 
-- [VS Code Extension And MCP Setup](VS-Code-Extension-And-MCP-Setup)
+- [Architecture](Architecture)
 - [Git Harness Hygiene](Git-Harness-Hygiene)
 - [Developer Guide](Developer-Guide)
 - [Release And Testing](Release-And-Testing)
+- [MCP Tool Consolidation Plan](MCP-Tool-Consolidation)
+- [Code Map](Code-Map)
+- [Docs IA And UX Spec](Design-And-UX)
+
+## Reference
+
+- [MCP Tools](MCP-Tools)
+- [MCP Resources](MCP-Resources)

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import re
 import sys
@@ -16,6 +17,8 @@ DOCS_DIR = ROOT / "docs"
 WIKI_DIR = DOCS_DIR / "wiki"
 CONTENT_DIR = DOCS_DIR / "site-content"
 CONTENT_JS = DOCS_DIR / "site-content.js"
+TOOLS_DIR = ROOT / "src" / "presentation" / "tools"
+RESOURCES_DIR = ROOT / "src" / "presentation" / "resources"
 
 
 @dataclass(frozen=True)
@@ -31,19 +34,25 @@ class Page:
     blurb_zh: str | None = None
 
     def metadata(self) -> dict[str, Any]:
+        overrides = PAGE_COPY_OVERRIDES.get(self.slug, {})
+        title = overrides.get("title", self.title)
+        blurb = overrides.get("blurb", self.blurb)
+        title_zh = overrides.get("title_zh", self.title_zh)
+        blurb_zh = overrides.get("blurb_zh", self.blurb_zh)
+        audience = overrides.get("audience", self.audience)
         payload: dict[str, Any] = {
             "slug": self.slug,
             "group": self.group,
             "lang": self.lang,
-            "audience": self.audience,
-            "title": self.title,
-            "blurb": self.blurb,
+            "audience": audience,
+            "title": title,
+            "blurb": blurb,
             "file": f"site-content/{self.slug}.md",
         }
-        if self.title_zh:
-            payload["titleByLang"] = {"zh": self.title_zh}
-        if self.blurb_zh:
-            payload["blurbByLang"] = {"zh": self.blurb_zh}
+        if title_zh:
+            payload["titleByLang"] = {"zh": title_zh}
+        if blurb_zh:
+            payload["blurbByLang"] = {"zh": blurb_zh}
         return payload
 
 
@@ -88,15 +97,26 @@ PAGES = [
         "VSIX setup、MCP provider 與 AI-client config merge。",
     ),
     Page(
+        "workflow-chapters",
+        "workflow-chapters",
+        "all",
+        "start",
+        "Workflow Chapters",
+        "Choose the right chapter before opening a detailed workflow page.",
+        "Workflow-Chapters.md",
+        "流程章節",
+        "先選章節，再進入對應的詳細流程與 reference。",
+    ),
+    Page(
         "design-ux",
         "design-ux",
         "all",
-        "start",
-        "Design And UX Notes",
-        "Human-facing information architecture, layout, and completeness rules.",
+        "developer",
+        "Docs IA And UX Spec",
+        "Maintainer-facing rules for docs information architecture, layout, and coverage.",
         "Design-And-UX.md",
-        "設計與 UX 說明",
-        "面向人類閱讀的資訊架構、版面與完整性規則。",
+        "文件站 IA / UX 規格",
+        "給維護者使用的文件站資訊架構、版面與完整性規則。",
     ),
     Page(
         "architecture",
@@ -242,6 +262,17 @@ PAGES = [
         "Release gates、focused tests、VSIX checks 與 artifact audits。",
     ),
     Page(
+        "mcp-tool-consolidation",
+        "mcp-tool-consolidation",
+        "all",
+        "developer",
+        "MCP Tool Consolidation Plan",
+        "Target 17-tool op-based surface and legacy direct-tool mapping.",
+        "MCP-Tool-Consolidation.md",
+        "MCP Tool 整併計畫",
+        "目標 17-tool op-based surface 與 legacy direct-tool 對照表。",
+    ),
+    Page(
         "code-map",
         "code-map",
         "all",
@@ -254,72 +285,221 @@ PAGES = [
     ),
 ]
 
+PAGE_COPY_OVERRIDES: dict[str, dict[str, str]] = {
+    "overview": {
+        "title": "Overview",
+        "blurb": "A short map of the product, workflow chapters, and verified code surface.",
+    },
+    "overview-zh": {
+        "title": "總覽",
+        "blurb": "產品定位、章節式導覽、目前 endpoint 數量與上線檢查。",
+    },
+    "getting-started": {
+        "title_zh": "快速開始",
+        "blurb_zh": "安裝、設定與第一輪 runtime 驗證。",
+    },
+    "workflow-chapters": {
+        "title_zh": "流程章節",
+        "blurb_zh": "先選章節，再進入對應的詳細流程與 reference。",
+    },
+    "vs-code-extension": {
+        "title_zh": "VS Code Extension 與 MCP 設定",
+        "blurb_zh": "VSIX setup、MCP provider，以及 Cline/Codex/Copilot 設定合併。",
+    },
+    "design-ux": {
+        "title": "Docs IA And UX Spec",
+        "blurb": "Maintainer-facing rules for docs information architecture, layout, and coverage.",
+        "title_zh": "文件站 IA / UX 規格",
+        "blurb_zh": "給維護者使用的文件站資訊架構、版面與完整性規則。",
+    },
+    "architecture": {
+        "title_zh": "架構",
+        "blurb_zh": "DDD layer、runtime surface 與資料流。",
+    },
+    "mcp-tools": {
+        "title_zh": "MCP Tools",
+        "blurb_zh": "依 module 對齊目前公開的 62-tool MCP surface。",
+    },
+    "mcp-resources": {
+        "title_zh": "MCP Resources",
+        "blurb_zh": "Document 與 table resource URI contract。",
+    },
+    "pdf-workflow": {
+        "title_zh": "PDF 文件流程",
+        "blurb_zh": "PDF ingest、OCR、layout、segmentation、asset 與 background job。",
+    },
+    "docx-dfm-workflow": {
+        "title_zh": "DOCX / DFM 流程",
+        "blurb_zh": "DOCX/DOC round trip、DFM 編輯與 strict validation。",
+    },
+    "citation-provenance": {
+        "title_zh": "引用與證據來源",
+        "blurb_zh": "AssetRef、locator、hash、CRAAP scaffold 與 evidence span 規則。",
+    },
+    "a2t-tables": {
+        "title_zh": "A2T 表格",
+        "blurb_zh": "TableContext、cell citation、draft、audit trail 與 rendering。",
+    },
+    "knowledge-graph": {
+        "title_zh": "知識圖譜",
+        "blurb_zh": "選用的 LightRAG/Ollama/OpenAI 設定，以及可驗證證據的 KG 使用方式。",
+    },
+    "background-jobs": {
+        "title_zh": "背景任務",
+        "blurb_zh": "Async job lifecycle、progress、cancel 與 artifacts。",
+    },
+    "etl-profiles": {
+        "title_zh": "ETL Profiles",
+        "blurb_zh": "內建與自訂 ETL profile 的行為。",
+    },
+    "git-harness-hygiene": {
+        "title_zh": "Git Harness Hygiene",
+        "blurb_zh": "VSIX-managed harness assets 的 local skip-worktree policy。",
+    },
+    "developer-guide": {
+        "title_zh": "開發者指南",
+        "blurb_zh": "Implementation boundary、測試、文件與 extension sync。",
+    },
+    "release-testing": {
+        "title_zh": "Release 與測試",
+        "blurb_zh": "Release gates、focused tests、VSIX checks 與 artifact audits。",
+    },
+    "mcp-tool-consolidation": {
+        "title_zh": "MCP Tool 整併計畫",
+        "blurb_zh": "目標 17-tool op-based surface 與 legacy direct-tool 對照表。",
+    },
+    "code-map": {
+        "title_zh": "Code Map",
+        "blurb_zh": "每個主要能力在 repo 中的位置。",
+    },
+}
+
 SLUG_BY_WIKI_STEM = {
     Path(page.source).stem: page.slug for page in PAGES if page.source is not None
 }
+
+
+def _is_mcp_decorator(decorator: ast.expr, name: str) -> bool:
+    if not isinstance(decorator, ast.Call):
+        return False
+    func = decorator.func
+    return (
+        isinstance(func, ast.Attribute)
+        and func.attr == name
+        and isinstance(func.value, ast.Name)
+        and func.value.id == "mcp"
+    )
+
+
+def endpoint_stats() -> dict[str, int | str]:
+    tool_count = 0
+    for path in sorted(TOOLS_DIR.glob("*.py")):
+        if path.name == "__init__.py":
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        tool_count += sum(
+            1
+            for node in tree.body
+            if isinstance(node, ast.AsyncFunctionDef | ast.FunctionDef)
+            and any(
+                _is_mcp_decorator(decorator, "tool")
+                for decorator in node.decorator_list
+            )
+        )
+
+    resource_count = 0
+    for path in sorted(RESOURCES_DIR.glob("*.py")):
+        if path.name == "__init__.py":
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        resource_count += sum(
+            1
+            for node in tree.body
+            if isinstance(node, ast.AsyncFunctionDef | ast.FunctionDef)
+            and any(
+                _is_mcp_decorator(decorator, "resource")
+                for decorator in node.decorator_list
+            )
+        )
+
+    version_match = re.search(
+        r'(?m)^version\s*=\s*"([^"]+)"',
+        (ROOT / "pyproject.toml").read_text(encoding="utf-8"),
+    )
+    version = version_match.group(1) if version_match else "unknown"
+    return {
+        "version": version,
+        "tools": tool_count,
+        "resources": resource_count,
+        "endpoints": tool_count + resource_count,
+    }
+
 
 EN_OVERVIEW = """# Asset-Aware MCP Docs
 
 ![Asset-Aware MCP architecture overview](wiki/assets/overview-architecture.jpg)
 
 Asset-Aware MCP is a citation-ready document workflow server for AI agents. The
-site is built for human readers first: choose a task, follow the workflow, then
-drop into the complete reference pages when you need exact tools, resources, or
-code locations.
+site is organized as chapters: start the runtime, choose a document workflow,
+anchor claims to evidence, then use reference and release gates when you need
+exact contracts.
 
 <div class="path-grid">
   <section class="path-card">
-    <p class="card-kicker">First run</p>
-    <h3>Start the server</h3>
+    <p class="card-kicker">Path 1</p>
+    <h3>Start the runtime</h3>
     <p>Install dependencies, configure an MCP client, and verify the VS Code extension or stdio server.</p>
     <p><a href="#/getting-started">Getting Started</a> · <a href="#/vs-code-extension">VSIX / MCP Setup</a></p>
   </section>
   <section class="path-card">
-    <p class="card-kicker">Document workflows</p>
-    <h3>Handle PDF, DOCX, and tables</h3>
-    <p>Pick the workflow you need instead of starting from a raw tool list.</p>
-    <p><a href="#/pdf-workflow">PDF</a> · <a href="#/docx-dfm-workflow">DOCX/DFM</a> · <a href="#/a2t-tables">A2T</a></p>
+    <p class="card-kicker">Path 2</p>
+    <h3>Choose a document workflow</h3>
+    <p>Separate PDF, DOCX/DFM, A2T tables, background jobs, and ETL profiles before reading details.</p>
+    <p><a href="#/workflow-chapters">Workflow Chapters</a> · <a href="#/pdf-workflow">PDF</a> · <a href="#/docx-dfm-workflow">DOCX</a></p>
   </section>
   <section class="path-card">
-    <p class="card-kicker">Reference</p>
-    <h3>Check the public MCP surface</h3>
-    <p>Use the complete tools/resources pages when you need exact names and contracts.</p>
-    <p><a href="#/mcp-tools">MCP Tools</a> · <a href="#/mcp-resources">Resources</a> · <a href="#/code-map">Code Map</a></p>
+    <p class="card-kicker">Path 3</p>
+    <h3>Anchor evidence</h3>
+    <p>Keep claims tied to spans, locators, hashes, context, and citation bundles; KG remains a discovery layer.</p>
+    <p><a href="#/citation-provenance">Citation Provenance</a> · <a href="#/knowledge-graph">Knowledge Graph</a></p>
   </section>
   <section class="path-card">
-    <p class="card-kicker">Design rationale</p>
-    <h3>Why the site is arranged this way</h3>
-    <p>Read the human-facing UX decisions behind navigation, layout, and completeness.</p>
-    <p><a href="#/design-ux">Design / UX Notes</a></p>
+    <p class="card-kicker">Path 4</p>
+    <h3>Reference and release</h3>
+    <p>Use exact tool/resource contracts, code locations, and release checks when preparing production changes.</p>
+    <p><a href="#/mcp-tools">MCP Tools</a> · <a href="#/mcp-resources">Resources</a> · <a href="#/release-testing">Release</a></p>
   </section>
 </div>
 
 | Item | Current Status |
 |---|---|
-| Latest code version | `0.6.32` |
+| Latest code version | `0.6.33` |
 | Runtime | Python `>=3.10`, managed with `uv` |
 | MCP endpoints | 62 tools and 13 resources, 75 endpoints total |
 | PDF backend | PyMuPDF by default; Marker has been on security hold since `0.6.28` |
 | DOCX | DOCX/DOC/DFM round trip, Track Changes, LibreOffice conversion, strict validation |
-| Knowledge graph | LightRAG (`lightrag-hku`) with Ollama/OpenAI-compatible backends and verified citation bundles |
+| RAG default | CPU `granite4.1:3b`; GPU hint `granite4.1:8b` |
+| Knowledge graph | Opt-in LightRAG (`lightrag-hku`) with verified citation bundles |
 | VS Code extension | Native MCP provider plus Cline/Codex/Copilot config merge, harness sync, and artifact/citation viewer |
 
 ## Reading Path
 
-Start with [Getting Started](#/getting-started), then choose the workflow you
-need: [PDF](#/pdf-workflow), [DOCX/DFM](#/docx-dfm-workflow),
-[Citation Provenance](#/citation-provenance), [A2T Tables](#/a2t-tables), or
-[Knowledge Graph](#/knowledge-graph).
-
-Developers should read [Architecture](#/architecture), [MCP Tools](#/mcp-tools),
-[MCP Resources](#/mcp-resources), [Code Map](#/code-map), and
-[Release And Testing](#/release-testing). The site design rationale is documented
-in [Design And UX Notes](#/design-ux).
+Start with [Getting Started](#/getting-started), then use
+[Workflow Chapters](#/workflow-chapters) to choose PDF, DOCX/DFM, citation, A2T,
+KG/RAG, or release checks. Maintainers can use [Docs IA And UX Spec](#/design-ux)
+to keep future site changes consistent.
 
 ## Source Of Truth
 
 This site is generated from `docs/wiki/**`. Tool and resource counts come from
 `./scripts/count_tools.sh`, not from memory or old diagrams.
+
+## Launch Readiness
+
+The GitHub Pages payload is treated as a release artifact. Before publishing,
+run `scripts/build_docs_site.py --check` and
+`tests/unit/test_docs_site_reference_sync.py` so the version, endpoint counts,
+navigation metadata, image assets, and shell copy stay aligned with code.
 """
 
 
@@ -366,9 +546,12 @@ def build_outputs() -> dict[Path, str]:
         outputs[CONTENT_DIR / f"{page.slug}.md"] = markdown
 
     pages_payload = [page.metadata() for page in PAGES]
+    stats_payload = endpoint_stats()
     js = (
         "window.ASSET_AWARE_DOC_PAGES = "
         f"{json.dumps(pages_payload, ensure_ascii=False, indent=2)};\n"
+        "window.ASSET_AWARE_DOC_STATS = "
+        f"{json.dumps(stats_payload, ensure_ascii=False, indent=2)};\n"
         "window.ASSET_AWARE_DOC_PAGE_CONTENT = "
         f"{json.dumps(content, ensure_ascii=False, indent=2)};\n"
     )

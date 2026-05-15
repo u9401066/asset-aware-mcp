@@ -2,6 +2,12 @@
 
 const DOC_PAGES = window.ASSET_AWARE_DOC_PAGES || [];
 const embeddedContent = window.ASSET_AWARE_DOC_PAGE_CONTENT || {};
+const DOC_STATS = window.ASSET_AWARE_DOC_STATS || {
+  version: "0.6.33",
+  tools: 62,
+  resources: 13,
+  endpoints: 75,
+};
 const LANGUAGE_STORAGE_KEY = "asset-aware-docs-language";
 const SUPPORTED_LANGUAGES = ["en", "zh"];
 const LANGUAGE_META = {
@@ -11,15 +17,15 @@ const LANGUAGE_META = {
 const NAV_GROUPS = ["start", "user", "developer", "reference"];
 const UI_COPY = {
   en: {
-    siteEyebrow: "Documentation Site",
+    siteEyebrow: "Documentation",
     tagline: "Citation-ready document workflows for AI agents.",
     filterLabel: "Filter pages",
     filterPlaceholder: "PDF, DOCX, citation, VSIX...",
     sidebarNote:
-      "Content is generated from docs/wiki. The GitHub Wiki and Pages site share the same functionality source.",
-    heroKicker: "Complete docs site",
+      "Generated from docs/wiki and checked against the MCP code surface before release.",
+    heroKicker: "Production docs for v{version}",
     heroCopy:
-      "A workflow-oriented handbook for Asset-Aware MCP: user flows, developer architecture, MCP tools and resources, citation provenance, VSIX setup, and release checks.",
+      "Task-first documentation for Asset-Aware MCP: install, document workflows, citation provenance, optional KG/RAG, VSIX setup, and release checks aligned with the current code.",
     menu: "Menu",
     outlineTitle: "On This Page",
     noPages: "No pages match this filter.",
@@ -29,10 +35,25 @@ const UI_COPY = {
     toolMetric: "MCP tools",
     resourceMetric: "MCP resources",
     endpointMetric: "endpoints",
+    quickActions: {
+      start: "Install",
+      workflow: "Workflow chapters",
+      kg: "KG / RAG",
+      release: "Release checks",
+    },
+    status: {
+      pdf: "PyMuPDF default",
+      ragLabel: "RAG default",
+      rag: "Ollama granite4.1:3b",
+      kgLabel: "KG safety",
+      kg: "LightRAG opt-in",
+      releaseLabel: "Release gates",
+      release: "CI + VSIX smoke",
+    },
     groups: {
       start: "Start Here",
-      user: "Workflows",
-      developer: "For Developers",
+      user: "Document Workflows",
+      developer: "Maintainers",
       reference: "Reference",
     },
   },
@@ -42,10 +63,10 @@ const UI_COPY = {
     filterLabel: "篩選頁面",
     filterPlaceholder: "PDF、DOCX、citation、VSIX...",
     sidebarNote:
-      "文件內容由 docs/wiki 生成；GitHub Wiki 與 Pages site 共用同一份功能說明來源。",
-    heroKicker: "完整文件網站",
+      "內容由 docs/wiki 生成，並在 release gate 中和 MCP tools/resources 程式面同步檢查。",
+    heroKicker: "v{version} 正式文件",
     heroCopy:
-      "以角色與工作流整理 Asset-Aware MCP：使用者流程、開發者架構、MCP tools/resources、citation provenance、VSIX 設定與 release checks。",
+      "以任務優先整理 Asset-Aware MCP：安裝、文件工作流、citation provenance、可選 KG/RAG、VSIX 設定與上線檢查都對齊目前程式碼。",
     menu: "選單",
     outlineTitle: "本頁內容",
     noPages: "沒有符合篩選條件的頁面。",
@@ -55,10 +76,25 @@ const UI_COPY = {
     toolMetric: "MCP tools",
     resourceMetric: "MCP resources",
     endpointMetric: "endpoints",
+    quickActions: {
+      start: "開始安裝",
+      workflow: "流程章節",
+      kg: "KG / RAG",
+      release: "上線檢查",
+    },
+    status: {
+      pdf: "預設 PyMuPDF",
+      ragLabel: "RAG 預設",
+      rag: "Ollama granite4.1:3b",
+      kgLabel: "KG 安全性",
+      kg: "LightRAG opt-in",
+      releaseLabel: "上線 gate",
+      release: "CI + VSIX smoke",
+    },
     groups: {
       start: "開始",
-      user: "工作流",
-      developer: "開發者",
+      user: "文件流程",
+      developer: "開發者與上線",
       reference: "參考",
     },
   },
@@ -81,7 +117,21 @@ const heroCopy = document.getElementById("hero-copy");
 const toolMetricLabel = document.getElementById("tool-metric-label");
 const resourceMetricLabel = document.getElementById("resource-metric-label");
 const endpointMetricLabel = document.getElementById("endpoint-metric-label");
+const toolMetricValue = document.getElementById("tool-metric-value");
+const resourceMetricValue = document.getElementById("resource-metric-value");
+const endpointMetricValue = document.getElementById("endpoint-metric-value");
+const statusVersion = document.getElementById("status-version");
+const statusPdf = document.getElementById("status-pdf");
+const statusRagLabel = document.getElementById("status-rag-label");
+const statusRag = document.getElementById("status-rag");
+const statusKgLabel = document.getElementById("status-kg-label");
+const statusKg = document.getElementById("status-kg");
+const statusReleaseLabel = document.getElementById("status-release-label");
+const statusRelease = document.getElementById("status-release");
+const summaryBand = document.querySelector(".summary-band");
+const statusStrip = document.querySelector(".status-strip");
 const languageControls = Array.from(document.querySelectorAll("[data-lang]"));
+const quickActionLinks = Array.from(document.querySelectorAll("[data-quick-action]"));
 let mermaidInitialized = false;
 let activeLang = preferredLanguage();
 
@@ -178,12 +228,31 @@ function localizeStaticText() {
   filterLabel.textContent = uiText("filterLabel");
   filterInput.placeholder = uiText("filterPlaceholder");
   sidebarNoteText.textContent = uiText("sidebarNote");
-  heroKicker.textContent = uiText("heroKicker");
+  heroKicker.textContent = uiText("heroKicker").replace("{version}", DOC_STATS.version);
   heroCopy.textContent = uiText("heroCopy");
   navToggle.textContent = uiText("menu");
   toolMetricLabel.textContent = uiText("toolMetric");
   resourceMetricLabel.textContent = uiText("resourceMetric");
   endpointMetricLabel.textContent = uiText("endpointMetric");
+  toolMetricValue.textContent = String(DOC_STATS.tools);
+  resourceMetricValue.textContent = String(DOC_STATS.resources);
+  endpointMetricValue.textContent = String(DOC_STATS.endpoints);
+  statusVersion.textContent = `v${DOC_STATS.version}`;
+  statusPdf.textContent = uiText("status").pdf;
+  statusRagLabel.textContent = uiText("status").ragLabel;
+  statusRag.textContent = uiText("status").rag;
+  statusKgLabel.textContent = uiText("status").kgLabel;
+  statusKg.textContent = uiText("status").kg;
+  statusReleaseLabel.textContent = uiText("status").releaseLabel;
+  statusRelease.textContent = uiText("status").release;
+
+  quickActionLinks.forEach((link) => {
+    const action = link.getAttribute("data-quick-action");
+    const label = uiText("quickActions")?.[action];
+    if (label) {
+      link.textContent = label;
+    }
+  });
 }
 
 function switchLanguage(nextLang) {
@@ -344,6 +413,7 @@ function wireDocAnchors() {
 }
 
 function searchHaystack(page) {
+  const content = embeddedContent[page.slug] || "";
   return [
     page.title,
     page.blurb,
@@ -351,6 +421,7 @@ function searchHaystack(page) {
     page.titleByLang?.zh,
     page.blurbByLang?.en,
     page.blurbByLang?.zh,
+    content.replace(/[`#[\]()*_|>-]/g, " "),
   ]
     .filter(Boolean)
     .join(" ")
@@ -412,6 +483,14 @@ async function renderPage() {
   renderLanguageControls();
   pageTitle.textContent = pageText(page, "title");
   pageKicker.textContent = pageText(page, "blurb");
+  const isOverview = page.group === "overview";
+  document.body.classList.toggle("compact-doc-page", !isOverview);
+  if (summaryBand) {
+    summaryBand.hidden = !isOverview;
+  }
+  if (statusStrip) {
+    statusStrip.hidden = !isOverview;
+  }
   renderNav(filterInput.value);
 
   try {

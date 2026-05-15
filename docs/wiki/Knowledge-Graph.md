@@ -4,15 +4,55 @@
 
 ## Runtime Defaults
 
-- Local RAG/text generation defaults to `OLLAMA_MODEL=granite4.1`.
+- Local RAG/text generation defaults to `OLLAMA_MODEL=granite4.1:3b` for CPU-friendly installs.
+- GPU installs can set `ASSET_AWARE_HAS_GPU=true` (or run with `NVIDIA_VISIBLE_DEVICES` / `CUDA_VISIBLE_DEVICES`) to default to `OLLAMA_MODEL=granite4.1:8b`.
 - Ollama embeddings stay on `OLLAMA_EMBEDDING_MODEL=nomic-embed-text` for KG/vector storage.
 - LightRAG/KG is opt-in: keep `ENABLE_LIGHTRAG=false` for CPU-only or document-only workflows, and set it to `true` only when the KG backend and required Ollama models are installed.
+
+CPU-only deployment can still use Ollama for small local models. A conservative setup is:
+
+```env
+LLM_BACKEND=ollama
+OLLAMA_MODEL=granite4.1:3b
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+ENABLE_LIGHTRAG=false
+```
+
+For GPU-backed workstations, use:
+
+```env
+ASSET_AWARE_HAS_GPU=true
+OLLAMA_MODEL=granite4.1:8b
+```
+
+Enable KG only after both the LLM model and embedding model are pulled:
+
+```bash
+ollama pull granite4.1:3b
+# or, on GPU installs:
+ollama pull granite4.1:8b
+ollama pull nomic-embed-text
+```
+
+For KG indexing on CPU, expect it to be useful for discovery, clustering, and candidate relation extraction; keep citation-critical claims anchored to evidence spans.
 
 ## 角色
 
 Knowledge graph 由 LightRAG 提供，用於跨文件查詢、關聯摘要與圖譜匯出。它不是 citation locator 的唯一來源；citation-ready locator 仍以 document artifacts、segmentation 與 citation index 為準。
 
 來源：`src/application/knowledge_service.py`、`src/infrastructure/lightrag_adapter.py`、`src/presentation/tools/knowledge_tools.py`。
+
+## 呈現方式
+
+KG 查詢本身回傳 structured/data/text payload，不會把 graph 當成唯一引用來源。對人類可讀的 wiki 呈現通常走兩條路：
+
+| 情境 | 建議輸出 |
+|---|---|
+| Agent 要立刻使用 KG 結果 | `consult_knowledge_graph(response_mode="structured", verify_references=true)`，回傳 answer、references、`verified_evidence` |
+| 要寫入 Foam/LLM wiki | 先用 KG 找候選主題，再用 `citation_bundle(..., output_format="foam")` 或 `document_asset(op="foam_notes", ...)` 產生帶 wiki link / evidence pack 的 Markdown |
+| 要視覺化關係 | `export_knowledge_graph(format="json")` 匯出 graph data，再交給外部圖譜或網站渲染 |
+
+因此 wiki link 是文件 synthesis 層的呈現格式；KG 是 discovery layer，citation index/evidence bundle 才是可驗證證據層。
 
 ## 查詢
 

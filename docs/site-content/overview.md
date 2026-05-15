@@ -5,60 +5,63 @@
 ![Asset-Aware MCP architecture overview](wiki/assets/overview-architecture.jpg)
 
 Asset-Aware MCP is a citation-ready document workflow server for AI agents. The
-site is built for human readers first: choose a task, follow the workflow, then
-drop into the complete reference pages when you need exact tools, resources, or
-code locations.
+site is organized as chapters: start the runtime, choose a document workflow,
+anchor claims to evidence, then use reference and release gates when you need
+exact contracts.
 
 <div class="path-grid">
   <section class="path-card">
-    <p class="card-kicker">First run</p>
-    <h3>Start the server</h3>
+    <p class="card-kicker">Path 1</p>
+    <h3>Start the runtime</h3>
     <p>Install dependencies, configure an MCP client, and verify the VS Code extension or stdio server.</p>
     <p><a href="#/getting-started">Getting Started</a> · <a href="#/vs-code-extension">VSIX / MCP Setup</a></p>
   </section>
   <section class="path-card">
-    <p class="card-kicker">Document workflows</p>
-    <h3>Handle PDF, DOCX, and tables</h3>
-    <p>Pick the workflow you need instead of starting from a raw tool list.</p>
-    <p><a href="#/pdf-workflow">PDF</a> · <a href="#/docx-dfm-workflow">DOCX/DFM</a> · <a href="#/a2t-tables">A2T</a></p>
+    <p class="card-kicker">Path 2</p>
+    <h3>Choose a document workflow</h3>
+    <p>Separate PDF, DOCX/DFM, A2T tables, background jobs, and ETL profiles before reading details.</p>
+    <p><a href="#/workflow-chapters">Workflow Chapters</a> · <a href="#/pdf-workflow">PDF</a> · <a href="#/docx-dfm-workflow">DOCX</a></p>
   </section>
   <section class="path-card">
-    <p class="card-kicker">Reference</p>
-    <h3>Check the public MCP surface</h3>
-    <p>Use the complete tools/resources pages when you need exact names and contracts.</p>
-    <p><a href="#/mcp-tools">MCP Tools</a> · <a href="#/mcp-resources">Resources</a> · <a href="#/code-map">Code Map</a></p>
+    <p class="card-kicker">Path 3</p>
+    <h3>Anchor evidence</h3>
+    <p>Keep claims tied to spans, locators, hashes, context, and citation bundles; KG remains a discovery layer.</p>
+    <p><a href="#/citation-provenance">Citation Provenance</a> · <a href="#/knowledge-graph">Knowledge Graph</a></p>
   </section>
   <section class="path-card">
-    <p class="card-kicker">Design rationale</p>
-    <h3>Why the site is arranged this way</h3>
-    <p>Read the human-facing UX decisions behind navigation, layout, and completeness.</p>
-    <p><a href="#/design-ux">Design / UX Notes</a></p>
+    <p class="card-kicker">Path 4</p>
+    <h3>Reference and release</h3>
+    <p>Use exact tool/resource contracts, code locations, and release checks when preparing production changes.</p>
+    <p><a href="#/mcp-tools">MCP Tools</a> · <a href="#/mcp-resources">Resources</a> · <a href="#/release-testing">Release</a></p>
   </section>
 </div>
 
 | Item | Current Status |
 |---|---|
-| Latest code version | `0.6.32` |
+| Latest code version | `0.6.33` |
 | Runtime | Python `>=3.10`, managed with `uv` |
 | MCP endpoints | 62 tools and 13 resources, 75 endpoints total |
 | PDF backend | PyMuPDF by default; Marker has been on security hold since `0.6.28` |
 | DOCX | DOCX/DOC/DFM round trip, Track Changes, LibreOffice conversion, strict validation |
-| Knowledge graph | LightRAG (`lightrag-hku`) with Ollama/OpenAI-compatible backends and verified citation bundles |
+| RAG default | CPU `granite4.1:3b`; GPU hint `granite4.1:8b` |
+| Knowledge graph | Opt-in LightRAG (`lightrag-hku`) with verified citation bundles |
 | VS Code extension | Native MCP provider plus Cline/Codex/Copilot config merge, harness sync, and artifact/citation viewer |
 
 ## Reading Path
 
-Start with [Getting Started](#/getting-started), then choose the workflow you
-need: [PDF](#/pdf-workflow), [DOCX/DFM](#/docx-dfm-workflow),
-[Citation Provenance](#/citation-provenance), [A2T Tables](#/a2t-tables), or
-[Knowledge Graph](#/knowledge-graph).
-
-Developers should read [Architecture](#/architecture), [MCP Tools](#/mcp-tools),
-[MCP Resources](#/mcp-resources), [Code Map](#/code-map), and
-[Release And Testing](#/release-testing). The site design rationale is documented
-in [Design And UX Notes](#/design-ux).
+Start with [Getting Started](#/getting-started), then use
+[Workflow Chapters](#/workflow-chapters) to choose PDF, DOCX/DFM, citation, A2T,
+KG/RAG, or release checks. Maintainers can use [Docs IA And UX Spec](#/design-ux)
+to keep future site changes consistent.
 
 ## Source Of Truth
 
 This site is generated from `docs/wiki/**`. Tool and resource counts come from
 `./scripts/count_tools.sh`, not from memory or old diagrams.
+
+## Launch Readiness
+
+The GitHub Pages payload is treated as a release artifact. Before publishing,
+run `scripts/build_docs_site.py --check` and
+`tests/unit/test_docs_site_reference_sync.py` so the version, endpoint counts,
+navigation metadata, image assets, and shell copy stay aligned with code.

@@ -1,71 +1,63 @@
 # Asset-Aware MCP Docs
 
-![Asset-Aware MCP architecture overview](assets/overview-architecture.jpg)
+Asset-Aware MCP 是給 AI agents 使用的 citation-ready 文件工作流伺服器。它把
+PDF、DOCX/DFM、表格、圖片、section、citation index、Foam evidence pack 與選用
+KG/RAG 串成可驗證的文件流程。
 
-Asset-Aware MCP 是一個 citation-ready 文件處理與知識工作流 MCP Server。這個文件站主要給人類閱讀：先用任務入口幫你找到路，再把完整工具、資源、程式碼位置與 release gate 留在 reference 頁查證。
+這個網站改成章節式導覽：先選你正在做的任務，再進入對應的詳細頁或 reference。
 
 <div class="path-grid">
   <section class="path-card">
-    <p class="card-kicker">第一次使用</p>
-    <h3>把 server 跑起來</h3>
-    <p>安裝、設定 MCP client、確認 VS Code extension 與 stdio server 可用。</p>
-    <p><a href="#/getting-started">開始使用</a> · <a href="#/vs-code-extension">VSIX / MCP 設定</a></p>
+    <p class="card-kicker">Path 1</p>
+    <h3>先跑起來</h3>
+    <p>安裝、設定 MCP client、檢查 runtime、確認 VS Code extension 或 stdio server 可用。</p>
+    <p><a href="#/getting-started">快速開始</a> · <a href="#/vs-code-extension">VSIX / MCP 設定</a></p>
   </section>
   <section class="path-card">
-    <p class="card-kicker">文件工作流</p>
-    <h3>處理 PDF / DOCX / 表格</h3>
-    <p>依照任務選 PDF ingest、DOCX/DFM round trip、citation evidence 或 A2T table。</p>
-    <p><a href="#/pdf-workflow">PDF</a> · <a href="#/docx-dfm-workflow">DOCX/DFM</a> · <a href="#/a2t-tables">A2T</a></p>
+    <p class="card-kicker">Path 2</p>
+    <h3>選文件流程</h3>
+    <p>PDF、DOCX/DFM、A2T table、background jobs、ETL profile 先分流，不混在同一頁。</p>
+    <p><a href="#/workflow-chapters">流程章節</a> · <a href="#/pdf-workflow">PDF</a> · <a href="#/docx-dfm-workflow">DOCX</a></p>
   </section>
   <section class="path-card">
-    <p class="card-kicker">查完整功能</p>
-    <h3>確認目前公開 MCP surface</h3>
-    <p>完整 62 tools、13 resources、程式碼地圖與 release checks 都放在 reference/developer 頁。</p>
-    <p><a href="#/mcp-tools">MCP Tools</a> · <a href="#/mcp-resources">Resources</a> · <a href="#/code-map">Code Map</a></p>
+    <p class="card-kicker">Path 3</p>
+    <h3>建立可驗證證據</h3>
+    <p>所有 claim 都回到 span、locator、hash、context 與 citation bundle；KG 只做 discovery layer。</p>
+    <p><a href="#/citation-provenance">引用與證據</a> · <a href="#/knowledge-graph">知識圖譜</a></p>
   </section>
   <section class="path-card">
-    <p class="card-kicker">網站設計</p>
-    <h3>了解為什麼這樣排</h3>
-    <p>這個站採任務導向首頁、左側資訊架構、頁內 outline、reference 分層查表。</p>
-    <p><a href="#/design-ux">Design / UX Notes</a></p>
+    <p class="card-kicker">Path 4</p>
+    <h3>查 reference 與上線 gates</h3>
+    <p>需要精確 tool/resource contract、code 位置、release 檢查時，再進 reference。</p>
+    <p><a href="#/mcp-tools">MCP Tools</a> · <a href="#/mcp-resources">Resources</a> · <a href="#/release-testing">Release</a></p>
   </section>
 </div>
 
-目前版本真相：
+## 目前狀態
 
-| 項目 | 狀態 |
+| 項目 | 目前值 |
 |---|---|
-| 最新程式版本 | `0.6.32` |
-| Python | `>=3.10`，以 `uv` 管理 |
-| MCP endpoints | 62 tools、13 resources，共 75 endpoints |
-| PDF 後端 | 預設 PyMuPDF；Marker backend 自 `0.6.28` 起因 `Pillow` 安全相容性暫時 hold |
-| DOCX | DOCX/DOC/DFM round trip、Track Changes、LibreOffice conversion、strict validation |
-| Knowledge graph | LightRAG (`lightrag-hku`) + Ollama/OpenAI，可選 verified citation bundle |
-| VS Code extension | 內建 MCP provider、Cline/Codex/Copilot config merge、assistant harness sync、artifact/citation viewer |
+| 版本 | `0.6.33` |
+| MCP surface | 62 tools、13 resources，共 75 endpoints |
+| PDF backend | PyMuPDF default；Marker 保留但因 Pillow 安全相容性暫停作為 packaged runtime |
+| RAG default | CPU `granite4.1:3b`；GPU hint `granite4.1:8b` |
+| KG | LightRAG/KG opt-in；CPU-only 或純文件流程不需要 KG |
+| VS Code extension | MCP provider、Cline/Codex/Copilot config merge、assistant harness sync、artifact/citation viewer |
 
-來源錨點：`pyproject.toml`、`CHANGELOG.md`、`src/presentation/tools/**`、`src/presentation/resources/**`、`vscode-extension/src/**`。
+## 最短路徑
 
-## 怎麼讀這個站
-
-- 想安裝與驗證：先看 [Getting Started](Getting-Started)，再看 [VS Code Extension And MCP Setup](VS-Code-Extension-And-MCP-Setup)。
-- 想完成文件任務：從 [PDF Document Workflow](PDF-Document-Workflow)、[DOCX DFM Workflow](DOCX-DFM-Workflow)、[Citation Provenance](Citation-Provenance)、[A2T Tables](A2T-Tables) 選一條路。
-- 想理解架構：看 [Architecture](Architecture) 和 [Code Map](Code-Map)。
-- 想查所有功能：看 [MCP Tools](MCP-Tools) 和 [MCP Resources](MCP-Resources)。
-- 想維護或發布：看 [Developer Guide](Developer-Guide)、[Release And Testing](Release-And-Testing)、[Git Harness Hygiene](Git-Harness-Hygiene)。
-- 想知道網站 UX 原則：看 [Design And UX Notes](Design-And-UX)。
-
-## 主要工作流
-
-| 工作流 | 用途 | 主要入口 |
+| 你要做什麼 | 先讀 | 然後讀 |
 |---|---|---|
-| PDF ingestion | 產生 `{doc_id}_manifest.json`、`{doc_id}_full.md`、assets metadata 與 segmentation | `ingest_documents`、`document(op="ingest")` |
-| Citation evidence | 找出可引用 span、驗證 AssetRef、匯出 verified bundle | `find_evidence_spans`、`verify_citation_ref`、`citation_bundle`、`evidence(...)` |
-| DOCX/DFM editing | 將 Word 轉為 DFM、編輯後保真寫回 | `ingest_docx`、`save_docx`、`docx(...)` |
-| Table extraction | 建立 A2T TableContext、附來源引用、渲染輸出 | `plan_table`、`table_manage`、`table_data`、`table_cite` |
-| Knowledge graph | 跨文件 LightRAG 查詢、匯出與 evidence verification | `consult_knowledge_graph(verify_references=true)`、`export_knowledge_graph` |
-| Async jobs | 將長任務與 conversion 移出 MCP request path | `get_job_status`、`list_jobs`、`cancel_job` |
-| VSIX setup | 安裝 MCP provider 與 assistant harness | VS Code extension commands and settings |
+| 第一次安裝 | [快速開始](Getting-Started) | [VS Code Extension And MCP Setup](VS-Code-Extension-And-MCP-Setup) |
+| 處理 PDF | [流程章節](Workflow-Chapters) | [PDF Document Workflow](PDF-Document-Workflow) |
+| 編輯 Word / DFM | [流程章節](Workflow-Chapters) | [DOCX DFM Workflow](DOCX-DFM-Workflow) |
+| 產出引用結論 | [Citation Provenance](Citation-Provenance) | [Knowledge Graph](Knowledge-Graph) |
+| 做表格 | [A2T Tables](A2T-Tables) | [DOCX DFM Workflow](DOCX-DFM-Workflow) |
+| 查完整 API | [MCP Tools](MCP-Tools) | [MCP Resources](MCP-Resources) |
+| 準備發布 | [Release And Testing](Release-And-Testing) | [Git Harness Hygiene](Git-Harness-Hygiene) |
 
-## 文件更新原則
+## Code 對齊
 
-Wiki 以目前 `origin/master` 程式碼為準，不從記憶重建工具數量。工具與資源數量來自 `./scripts/count_tools.sh`，功能說明對應目前 `src/presentation/tools` 與 `src/presentation/resources` 的公開 MCP surface。
+網站內容由 `docs/wiki/**` 產生到 GitHub Pages payload。工具與 resource 數量來自
+`src/presentation/tools/**`、`src/presentation/resources/**`，並由
+`tests/unit/test_docs_site_reference_sync.py` 檢查 reference、metadata、連結與 endpoint 統計。

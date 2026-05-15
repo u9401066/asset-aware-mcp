@@ -8,9 +8,20 @@
       name="description"
       content="Asset-Aware MCP documentation for PDF, DOCX, DFM, citation provenance, A2T tables, knowledge graphs, MCP tools, resources, and VS Code extension setup."
     />
-    <link rel="stylesheet" href="site.css?v=20260511-human-docs" />
+    <meta name="theme-color" content="#087669" />
+    <meta name="color-scheme" content="light" />
+    <link rel="canonical" href="https://u9401066.github.io/asset-aware-mcp/" />
+    <meta property="og:title" content="Asset-Aware MCP Docs" />
+    <meta
+      property="og:description"
+      content="Production documentation for citation-ready PDF, DOCX, DFM, table, knowledge graph, and MCP workflows."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="wiki/assets/overview-architecture.jpg" />
+    <link rel="stylesheet" href="site.css?v=20260515-docs-chapters" />
   </head>
   <body>
+    <a class="skip-link" href="#doc-content">Skip to documentation</a>
     <div class="layout-shell">
       <aside class="sidebar" id="sidebar">
         <div class="brand-block">
@@ -59,33 +70,58 @@
             選單
           </button>
           <div>
-            <p id="page-kicker" class="page-kicker">專案定位、endpoint 盤點與文件地圖。</p>
+            <p id="page-kicker" class="page-kicker">產品總覽、章節導覽與目前 code surface。</p>
             <h2 id="page-title" class="page-title">總覽</h2>
           </div>
         </header>
 
         <section class="summary-band" aria-label="Site summary">
           <div>
-            <p id="hero-kicker" class="hero-kicker">完整文件網站</p>
+            <p id="hero-kicker" class="hero-kicker">v0.6.33 正式文件</p>
             <p id="hero-copy">
-              以角色與工作流整理 Asset-Aware MCP：使用者流程、開發者架構、MCP
-              tools/resources、citation provenance、VSIX 設定與 release checks。
+              章節式整理 Asset-Aware MCP：先安裝，再選 PDF、DOCX、citation、A2T 或 KG 流程；
+              reference 與 release gate 保留給查 contract 和準備上線時使用。
             </p>
+            <div class="hero-actions" aria-label="Quick documentation paths">
+              <a href="#/getting-started" data-quick-action="start">開始安裝</a>
+              <a href="#/workflow-chapters" data-quick-action="workflow">流程章節</a>
+              <a href="#/knowledge-graph" data-quick-action="kg">KG / RAG</a>
+              <a href="#/release-testing" data-quick-action="release">上線檢查</a>
+            </div>
           </div>
           <dl class="hero-metrics">
             <div>
-              <dt>59</dt>
+              <dt id="tool-metric-value">62</dt>
               <dd id="tool-metric-label">MCP tools</dd>
             </div>
             <div>
-              <dt>13</dt>
+              <dt id="resource-metric-value">13</dt>
               <dd id="resource-metric-label">MCP resources</dd>
             </div>
             <div>
-              <dt>72</dt>
+              <dt id="endpoint-metric-value">75</dt>
               <dd id="endpoint-metric-label">endpoints</dd>
             </div>
           </dl>
+        </section>
+
+        <section class="status-strip" aria-label="Runtime defaults">
+          <div>
+            <span id="status-version">v0.6.33</span>
+            <strong id="status-pdf">PyMuPDF default</strong>
+          </div>
+          <div>
+            <span id="status-rag-label">RAG default</span>
+            <strong id="status-rag">Ollama granite4.1:3b</strong>
+          </div>
+          <div>
+            <span id="status-kg-label">KG safety</span>
+            <strong id="status-kg">LightRAG opt-in</strong>
+          </div>
+          <div>
+            <span id="status-release-label">Release gates</span>
+            <strong id="status-release">CI + VSIX smoke</strong>
+          </div>
         </section>
 
         <div class="doc-layout">
@@ -97,7 +133,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-    <script src="site-content.js?v=20260511-human-docs"></script>
-    <script src="site.js?v=20260511-human-docs"></script>
+    <script src="site-content.js?v=20260515-docs-chapters"></script>
+    <script src="site.js?v=20260515-docs-chapters"></script>
   </body>
 </html>

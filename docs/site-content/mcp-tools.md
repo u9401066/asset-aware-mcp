@@ -4,6 +4,10 @@
 
 ![MCP endpoint distribution](wiki/assets/mcp-endpoint-map.jpg)
 
+Tool consolidation is planned but not yet applied to the default public surface.
+See [MCP Tool Consolidation Plan](#/mcp-tool-consolidation) for the 17-tool
+target and legacy direct-tool mapping.
+
 工具數量由 `./scripts/count_tools.sh` 產生：62 tools in 7 modules。下列為目前公開 MCP tool surface，來源為 `src/presentation/tools/**`。
 
 ## `document_tools.py` - 19 tools
@@ -26,14 +30,14 @@
 | `ocr_pdf_document` | `pdf_path`, `output_path`, OCR options | 建立 background OCR ingest job |
 | `fetch_document_asset` | `doc_id`, `asset_type`, `asset_id`, `max_size` | 依 asset identity 擷取 table/figure/section/full_text |
 | `document` | `op`, PDF ingest/parse/list/delete/inspect parameters | Consolidated PDF document entrypoint；conversion 請用 `convert_document` |
-| `document_asset` | `op`, `doc_id`, asset/search/section parameters, Foam note options | Consolidated asset and section entrypoint；`op="foam_notes"` 可將 table/figure 寫成 Foam notes |
+| `document_asset` | `op`, `doc_id`, asset/section parameters, Foam note options | Consolidated asset and section entrypoint；section search 是章節導覽，source locator 請用 `search_source_location` 或 `evidence(op="locate")`；`op="foam_notes"` 可將 table/figure 寫成 Foam notes |
 | `evidence` | `op`, `doc_id`, query/span/ref parameters, `output_format`, `citation_key`, `wiki_root` | Consolidated citation evidence entrypoint，支援 `find` / `verify` / `bundle` / `claim_promotion` / `health` / `locate`；bundle 可輸出/寫入 Foam evidence pack，claim promotion 會強制 verify 後才允許寫 Foam，health 可掃 wiki citation drift |
 | `convert_document` | `source`, `target_format`, `source_format`, `output_path`, `mode`, `md_text`, `async_mode` | Consolidated conversion entrypoint；預設建立 background conversion job |
 
 Operation notes:
 
 - `document` accepts `ingest` / `import`, `parse`, `list`, `delete`, and `inspect`; PDF/DOCX/Markdown conversions live behind `convert_document`.
-- `document_asset` accepts asset fetch plus section tree/detail/blocks/search operations; `foam_notes` writes table/figure asset notes and updates the managed asset index block.
+- `document_asset` accepts asset fetch plus section tree/detail/blocks/search operations; `foam_notes` writes table/figure asset notes and updates the managed asset index block. Source locator search stays in `search_source_location` / `evidence(op="locate")`.
 - `evidence` accepts `find`, `verify`, `bundle`, `health`, and `locate` / `search_location`; the old `search` wording is avoided because the code routes citation lookup through `find`.
 - PDF ingest、Marker parse、OCR 與 conversion requests 都可 job-backed；conversion tools 預設 `async_mode=true`，大型 LibreOffice/PDF conversion 不會卡住 MCP request path。`parse_pdf_structure(output_dir=...)` and `ocr_pdf_document(output_path=...)` still accept compatibility parameters, but background job mode owns the final artifact paths.
 

@@ -7,7 +7,23 @@ uv sync
 uv run python -m src.presentation.server
 ```
 
-`0.6.32` 的預設安裝仍不會安裝 Marker，因為 upstream `marker-pdf` 1.10.2 仍要求 `Pillow<11`，而此版本安全 runtime 需要 `Pillow>=12.2.0`。目前請使用預設 PyMuPDF 後端。`parse_pdf_structure` 會建立 Marker-required background job，Marker security hold 會在 job status/result 裡明確回報；`ingest_documents(use_marker=true)` 在非 strict 情境可退回 PyMuPDF，`require_marker=true` 則 fail closed。
+正式使用前先跑 diagnostics：
+
+```bash
+uv run asset-aware-mcp doctor --json
+uv run asset-aware-mcp list-tools --json
+```
+
+目前 `0.6.33` 的安全預設是：
+
+| 設定 | 預設 | 原因 |
+|---|---|---|
+| PDF backend | PyMuPDF | 不需要大型模型，也避開 Marker/Pillow 安全相容性問題 |
+| `OLLAMA_MODEL` | `granite4.1:3b` | CPU-friendly 本機 RAG/text generation 預設模型；設定 `ASSET_AWARE_HAS_GPU=true` 或 `NVIDIA_VISIBLE_DEVICES` 時會選 `granite4.1:8b`，也可手動覆寫成任何已安裝 Ollama 模型 |
+| `OLLAMA_EMBEDDING_MODEL` | `nomic-embed-text` | 只有啟用 LightRAG/KG 時才需要 embedding model |
+| `ENABLE_LIGHTRAG` | `false` | CPU-only 或文件處理情境不會因 KG 沒裝好而失敗 |
+
+`0.6.33` 的預設安裝仍不會安裝 Marker，因為 upstream `marker-pdf` 1.10.2 仍要求 `Pillow<11`，而此版本安全 runtime 需要 `Pillow>=12.2.0`。目前請使用預設 PyMuPDF 後端。`parse_pdf_structure` 是 Marker-required 入口，Marker backend unavailable 或 security hold 會在建立 job 前回傳明確診斷；`ingest_documents(use_marker=true)` 只代表偏好 Marker，公開工具沒有 `require_marker` 參數，Marker 不可用時會回到 PyMuPDF 的安全流程。
 
 來源：`pyproject.toml`、`README.md`、`CHANGELOG.md`。
 
