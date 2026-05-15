@@ -105,7 +105,7 @@ const UI_COPY = {
       user: "文件流程",
       evidence: "證據與知識庫",
       operations: "維運與上線",
-      developer: "開發者與上線",
+      developer: "開發者與維護者",
       reference: "參考",
     },
   },
@@ -119,7 +119,9 @@ const pageOutline = document.getElementById("page-outline");
 const pageTitle = document.getElementById("page-title");
 const pageKicker = document.getElementById("page-kicker");
 const navToggle = document.getElementById("nav-toggle");
+const navClose = document.getElementById("nav-close");
 const sidebar = document.getElementById("sidebar");
+const sidebarBackdrop = document.getElementById("sidebar-backdrop");
 const siteEyebrow = document.getElementById("site-eyebrow");
 const siteTagline = document.getElementById("site-tagline");
 const sidebarNoteText = document.getElementById("sidebar-note-text");
@@ -143,13 +145,16 @@ const summaryBand = document.querySelector(".summary-band");
 const statusStrip = document.querySelector(".status-strip");
 const languageControls = Array.from(document.querySelectorAll("[data-lang]"));
 const quickActionLinks = Array.from(document.querySelectorAll("[data-quick-action]"));
+const markdownRenderer = window.marked;
 let mermaidInitialized = false;
 let activeLang = preferredLanguage();
 
-marked.setOptions({
-  gfm: true,
-  breaks: false,
-});
+if (markdownRenderer?.setOptions) {
+  markdownRenderer.setOptions({
+    gfm: true,
+    breaks: false,
+  });
+}
 
 function preferredLanguage() {
   try {
@@ -161,8 +166,7 @@ function preferredLanguage() {
     // Storage can be blocked in local or privacy-constrained contexts.
   }
 
-  const browserLanguage = (window.navigator.language || "").toLowerCase();
-  return browserLanguage.startsWith("zh") ? "zh" : "en";
+  return "zh";
 }
 
 function persistLanguage(lang) {
@@ -221,7 +225,20 @@ function pageMatchesLanguage(page) {
 
 function closeSidebar() {
   sidebar.classList.remove("open");
+  document.body.classList.remove("nav-open");
+  if (sidebarBackdrop) {
+    sidebarBackdrop.hidden = true;
+  }
   navToggle.setAttribute("aria-expanded", "false");
+}
+
+function openSidebar() {
+  sidebar.classList.add("open");
+  document.body.classList.add("nav-open");
+  if (sidebarBackdrop) {
+    sidebarBackdrop.hidden = false;
+  }
+  navToggle.setAttribute("aria-expanded", "true");
 }
 
 function renderLanguageControls() {
@@ -293,6 +310,41 @@ function escapeHtml(text) {
     .replaceAll('"', "&quot;");
 }
 
+function fallbackMarkdown(markdown) {
+  return markdown
+    .split(/\n{2,}/)
+    .map((block) => {
+      const trimmed = block.trim();
+      if (!trimmed) {
+        return "";
+      }
+      const heading = trimmed.match(/^(#{1,3})\s+(.+)$/);
+      if (heading) {
+        const level = heading[1].length;
+        return `<h${level}>${escapeHtml(heading[2])}</h${level}>`;
+      }
+      return `<p>${escapeHtml(trimmed).replace(/\n/g, "<br>")}</p>`;
+    })
+    .join("\n");
+}
+
+function renderMarkdown(markdown) {
+  if (markdownRenderer?.parse) {
+    return markdownRenderer.parse(markdown);
+  }
+  return fallbackMarkdown(markdown);
+}
+
+function removeRedundantPageHeading(isOverview) {
+  if (isOverview) {
+    return;
+  }
+  const firstElement = docContent.firstElementChild;
+  if (firstElement?.tagName === "H1") {
+    firstElement.remove();
+  }
+}
+
 function slugifyHeading(text) {
   return (
     (text || "section")
@@ -314,6 +366,13 @@ function wrapScrollableTables() {
     wrapper.className = "table-scroll";
     table.replaceWith(wrapper);
     wrapper.appendChild(table);
+  });
+}
+
+function enhanceDocumentMedia() {
+  docContent.querySelectorAll("img").forEach((image) => {
+    image.loading = "lazy";
+    image.decoding = "async";
   });
 }
 
@@ -439,6 +498,27 @@ function searchHaystack(page) {
     .toLowerCase();
 }
 
+function pageSearchSnippet(page, normalized) {
+  if (!normalized) {
+    return pageText(page, "blurb");
+  }
+  const text = (embeddedContent[page.slug] || "")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/[`#[\]()*_|>-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const lower = text.toLowerCase();
+  const index = lower.indexOf(normalized);
+  if (index === -1) {
+    return pageText(page, "blurb");
+  }
+  const start = Math.max(0, index - 42);
+  const end = Math.min(text.length, index + normalized.length + 72);
+  const prefix = start > 0 ? "..." : "";
+  const suffix = end < text.length ? "..." : "";
+  return `${prefix}${text.slice(start, end)}${suffix}`;
+}
+
 function renderNav(filter = "") {
   const normalized = filter.trim().toLowerCase();
   const active = currentSlug();
@@ -449,6 +529,13 @@ function renderNav(filter = "") {
     return searchHaystack(page).includes(normalized);
   });
 
+  const resultLabel =
+    activeLang === "zh"
+      ? `${pages.length} 個結果`
+      : `${pages.length} ${pages.length === 1 ? "result" : "results"}`;
+  const resultCount = normalized
+    ? `<p class="nav-result-count">${escapeHtml(resultLabel)}</p>`
+    : "";
   const sections = NAV_GROUPS.map((group) => {
     const groupedPages = pages.filter((page) => page.audience === group);
     if (!groupedPages.length) {
@@ -464,6 +551,11 @@ function renderNav(filter = "") {
               <a class="page-link ${page.slug === active ? "active" : ""}" href="#/${page.slug}">
                 <strong>${escapeHtml(pageText(page, "title"))}</strong>
                 <span>${escapeHtml(pageText(page, "blurb"))}</span>
+                ${
+                  normalized
+                    ? `<span class="page-hit">${escapeHtml(pageSearchSnippet(page, normalized))}</span>`
+                    : ""
+                }
               </a>
             `,
           )
@@ -472,7 +564,8 @@ function renderNav(filter = "") {
     `;
   }).join("");
 
-  nav.innerHTML = sections || `<p class="nav-empty">${escapeHtml(uiText("noPages"))}</p>`;
+  nav.innerHTML =
+    resultCount + (sections || `<p class="nav-empty">${escapeHtml(uiText("noPages"))}</p>`);
 }
 
 async function renderPage() {
@@ -481,6 +574,11 @@ async function renderPage() {
 
   if (!page) {
     page = pageBySlug(defaultSlugForLanguage(activeLang)) || DOC_PAGES[0];
+    if (!page) {
+      renderNav(filterInput.value);
+      pageOutline.hidden = true;
+      return;
+    }
     window.location.hash = `#/${page.slug}`;
     return;
   }
@@ -513,8 +611,10 @@ async function renderPage() {
       throw new Error(`Missing embedded content for ${page.slug}.`);
     }
 
-    docContent.innerHTML = marked.parse(markdown);
+    docContent.innerHTML = renderMarkdown(markdown);
+    removeRedundantPageHeading(isOverview);
     wrapScrollableTables();
+    enhanceDocumentMedia();
     buildPageOutline();
     wireDocAnchors();
     await renderMermaidBlocks();
@@ -547,8 +647,21 @@ languageControls.forEach((button) => {
 });
 
 navToggle.addEventListener("click", () => {
-  const isOpen = sidebar.classList.toggle("open");
-  navToggle.setAttribute("aria-expanded", String(isOpen));
+  if (sidebar.classList.contains("open")) {
+    closeSidebar();
+  } else {
+    openSidebar();
+  }
+});
+
+navClose?.addEventListener("click", closeSidebar);
+sidebarBackdrop?.addEventListener("click", closeSidebar);
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && sidebar.classList.contains("open")) {
+    closeSidebar();
+    navToggle.focus();
+  }
 });
 
 window.addEventListener("hashchange", () => {

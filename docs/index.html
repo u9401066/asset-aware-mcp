@@ -24,6 +24,14 @@
     <a class="skip-link" href="#doc-content">Skip to documentation</a>
     <div class="layout-shell">
       <aside class="sidebar" id="sidebar">
+        <button
+          id="nav-close"
+          class="sidebar-close"
+          type="button"
+          aria-label="Close navigation"
+        >
+          關閉
+        </button>
         <div class="brand-block">
           <p id="site-eyebrow" class="eyebrow">文件網站</p>
           <h1>Asset-Aware MCP</h1>
@@ -57,6 +65,7 @@
           </p>
         </div>
       </aside>
+      <div class="sidebar-backdrop" id="sidebar-backdrop" hidden></div>
 
       <main class="content-shell">
         <header class="topbar">
@@ -125,11 +134,28 @@
         </section>
 
         <div class="doc-layout">
-          <article id="doc-content" class="doc-content" aria-live="polite"></article>
+          <article id="doc-content" class="doc-content" aria-live="polite">
+            <h1>Asset-Aware MCP Docs</h1>
+            <p>
+              Asset-Aware MCP 文件站提供 PDF、DOCX/DFM、citation provenance、A2T
+              tables、LLM wiki、KG/RAG、VS Code extension 與上線檢查的章節式導覽。
+            </p>
+            <p>
+              若完整互動文件尚未載入，請確認瀏覽器允許執行本頁 JavaScript，或直接閱讀
+              <a href="site-content/overview-zh.md">site-content/overview-zh.md</a>。
+            </p>
+          </article>
           <aside id="page-outline" class="page-outline" aria-label="On this page" hidden></aside>
         </div>
       </main>
     </div>
+
+    <noscript>
+      <section class="noscript-note">
+        本文件站需要 JavaScript 來載入章節導覽；無法執行時可直接開啟
+        <a href="site-content/overview-zh.md">site-content/overview-zh.md</a>。
+      </section>
+    </noscript>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>

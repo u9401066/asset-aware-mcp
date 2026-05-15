@@ -283,11 +283,22 @@ def test_docs_shell_uses_current_metrics_and_has_no_known_text_corruption() -> N
     assert '<dt id="tool-metric-value">62</dt>' in index_html
     assert '<dt id="endpoint-metric-value">75</dt>' in index_html
     assert '<a class="skip-link" href="#doc-content">' in index_html
+    assert 'id="nav-close"' in index_html
+    assert 'id="sidebar-backdrop"' in index_html
+    assert "<noscript>" in index_html
     assert "20260515-docs-chapters" in index_html
     assert "KG / RAG" in index_html
     assert f'version: "{version}"' in site_js
+    assert "const markdownRenderer = window.marked" in site_js
+    assert 'return "zh";' in site_js
+    assert "removeRedundantPageHeading(isOverview)" in site_js
+    assert "sidebarBackdrop?.addEventListener" in site_js
     assert 'classList.toggle("overview-doc-page", isOverview)' in site_js
     assert 'summaryBand.setAttribute("aria-hidden"' in site_js
+    assert "body.nav-open" in site_css
+    assert ".sidebar-close" in site_css
+    assert ".nav-result-count" in site_css
+    assert "max-height: min(58vh, 520px)" in site_css
     assert "body.overview-doc-page .summary-band:not([hidden])" in site_css
     assert "body.overview-doc-page .status-strip:not([hidden])" in site_css
 
@@ -425,6 +436,9 @@ def test_sidebar_and_design_spec_match_product_ia() -> None:
 
 def test_docs_links_point_to_known_pages_and_assets() -> None:
     known_slugs = {page.slug for page in build_docs_site.PAGES}
+    known_wiki_stems = {
+        Path(page.source).stem for page in build_docs_site.PAGES if page.source
+    }
     pages_and_shell = [
         ROOT / "docs" / "index.html",
         *sorted(SITE_CONTENT_DIR.glob("*.md")),
@@ -440,3 +454,11 @@ def test_docs_links_point_to_known_pages_and_assets() -> None:
         text = path.read_text(encoding="utf-8")
         for asset in re.findall(r"\]\(assets/([^)]+)\)", text):
             assert (WIKI_DIR / "assets" / asset).is_file(), (path, asset)
+        for target in re.findall(r"\]\(([^)\s]+)\)", text):
+            if (
+                target.startswith(("#", "assets/", "wiki/", "mailto:"))
+                or "://" in target
+            ):
+                continue
+            wiki_stem = target.split("#", 1)[0]
+            assert wiki_stem in known_wiki_stems, (path, target)

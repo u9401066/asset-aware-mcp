@@ -499,19 +499,19 @@ exact contracts.
   <section class="path-card">
     <p class="card-kicker">Path 2</p>
     <h3>Choose a document workflow</h3>
-    <p>Separate PDF, DOCX/DFM, A2T tables, background jobs, and ETL profiles before reading details.</p>
+    <p>Separate PDF, document sections, DOCX/DFM, and A2T tables before reading details.</p>
     <p><a href="#/workflow-chapters">Workflow Chapters</a> · <a href="#/pdf-workflow">PDF</a> · <a href="#/docx-dfm-workflow">DOCX</a></p>
   </section>
   <section class="path-card">
     <p class="card-kicker">Path 3</p>
     <h3>Anchor evidence</h3>
-    <p>Keep claims tied to spans, locators, hashes, context, and citation bundles; KG remains a discovery layer.</p>
-    <p><a href="#/citation-provenance">Citation Provenance</a> · <a href="#/knowledge-graph">Knowledge Graph</a></p>
+    <p>Keep claims tied to spans, locators, hashes, context, and citation bundles; LLM wiki is the presentation layer.</p>
+    <p><a href="#/citation-provenance">Citation Provenance</a> · <a href="#/llm-wiki">LLM Wiki</a> · <a href="#/knowledge-graph">Knowledge Graph</a></p>
   </section>
   <section class="path-card">
     <p class="card-kicker">Path 4</p>
-    <h3>Reference and release</h3>
-    <p>Use exact tool/resource contracts, code locations, and release checks when preparing production changes.</p>
+    <h3>Operate, reference, and release</h3>
+    <p>Use background jobs, ETL profiles, exact tool/resource contracts, code locations, and release checks when preparing production changes.</p>
     <p><a href="#/tool-chooser">Tool Chooser</a> · <a href="#/mcp-tools">MCP Tools</a> · <a href="#/release-testing">Release</a></p>
   </section>
 </div>
