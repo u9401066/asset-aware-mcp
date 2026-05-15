@@ -29,7 +29,7 @@ EvidenceSpan 是引用候選片段，通常由 PDF ingest、segmentation 或 cit
 
 ## AssetRef
 
-AssetRef 是工具間傳遞引用的 compact object。`verify_citation_ref(ref)` 會檢查 ref 是否仍符合現有 citation index，包含：
+AssetRef 是工具間傳遞引用的 compact object。`verify_citation_ref(ref)` 目前驗證的是 span-level AssetRef，會檢查 ref 是否仍符合現有 citation index，包含：
 
 - block identity 是否存在。
 - page/line/char/byte/bbox locator 是否一致。
@@ -66,7 +66,7 @@ A2T table cell 可掛 citation refs。當 cited cell 或 row 被更新時，舊 
 - 檔案層 YAML frontmatter：`type: evidence_pack`、`source_doc_id`、`bundle_version`、returned/matched counts。
 - 每個 evidence span 都有 `^spn-...` block anchor，可被 `[[paper-key#^spn-...]]` 或 `![[paper-key#^spn-...]]` 引用。
 - 每個 evidence block 保留 `source_revision_id`、`locator_source_sha256`、`text_sha256`、page/line locator 與 verification status。
-- 每個 evidence block 內嵌 AssetRef JSON，MedPaper/Foam 層可保存它並在 promotion 前呼叫 `verify_citation_ref`。
+- 每個 evidence block 內嵌 span-level AssetRef JSON，MedPaper/Foam 層可保存它並在 promotion 前呼叫 `verify_citation_ref`。
 
 可寫檔的最小流程：
 
@@ -89,7 +89,7 @@ citation_bundle(
 evidence(op="health", wiki_root="/path/to/wiki", output_format="json")
 ```
 
-Health check 會掃 Markdown 檔內的 span/table/figure AssetRef JSON 與 `[[note#^...]]` wikilink，回報 stale/mismatch/missing span 或 asset、quote hash mismatch、source revision drift，以及 missing target note/anchor。
+Health check 會掃 Markdown 檔內的 span/table/figure AssetRef JSON 與 `[[note#^...]]` wikilink，回報 stale/mismatch/missing span 或 asset、quote hash mismatch、source revision drift，以及 missing target note/anchor。Table/figure AssetRef 主要靠 wiki health 回 manifest 驗證；`verify_citation_ref` 只處理 span-level ref。
 
 ## Claim Promotion Workflow
 

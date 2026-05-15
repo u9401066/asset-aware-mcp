@@ -152,6 +152,17 @@ PAGES = [
         "Document 與 table resource URI contract。",
     ),
     Page(
+        "tool-chooser",
+        "tool-chooser",
+        "all",
+        "reference",
+        "Tool Chooser",
+        "Task-oriented lookup for choosing the right MCP tool or resource.",
+        "Tool-Chooser.md",
+        "Tool Chooser",
+        "依任務選擇正確 MCP tool 或 resource 的快速查表。",
+    ),
+    Page(
         "pdf-workflow",
         "pdf-workflow",
         "all",
@@ -161,6 +172,17 @@ PAGES = [
         "PDF-Document-Workflow.md",
         "PDF 文件工作流",
         "PDF ingest、OCR、layout、segmentation 與 assets。",
+    ),
+    Page(
+        "document-sections",
+        "document-sections",
+        "all",
+        "user",
+        "Document Sections And Navigation",
+        "Section tree, block navigation, source locator boundaries, and examples.",
+        "Document-Sections-And-Navigation.md",
+        "文件章節與導覽",
+        "Section tree、block navigation、source locator 邊界與使用範例。",
     ),
     Page(
         "docx-dfm-workflow",
@@ -177,7 +199,7 @@ PAGES = [
         "citation-provenance",
         "citation-provenance",
         "all",
-        "user",
+        "evidence",
         "Citation Provenance",
         "AssetRef, locator, hash, and evidence span rules.",
         "Citation-Provenance.md",
@@ -196,21 +218,10 @@ PAGES = [
         "TableContext、cell citation、draft 與 rendering。",
     ),
     Page(
-        "knowledge-graph",
-        "knowledge-graph",
-        "all",
-        "user",
-        "Knowledge Graph",
-        "LightRAG/Ollama/OpenAI knowledge graph setup and usage.",
-        "Knowledge-Graph.md",
-        "知識圖譜",
-        "LightRAG/Ollama/OpenAI knowledge graph 設定與使用。",
-    ),
-    Page(
         "llm-wiki",
         "llm-wiki",
         "all",
-        "user",
+        "evidence",
         "LLM Wiki Knowledge Base",
         "Foam-compatible LLM wiki workflow, evidence packs, examples, and health checks.",
         "LLM-Wiki-Knowledge-Base.md",
@@ -218,10 +229,21 @@ PAGES = [
         "Foam-compatible LLM wiki 建置流程、evidence pack、簡單範例與 health check。",
     ),
     Page(
+        "knowledge-graph",
+        "knowledge-graph",
+        "all",
+        "evidence",
+        "Knowledge Graph",
+        "LightRAG/Ollama/OpenAI knowledge graph setup and usage.",
+        "Knowledge-Graph.md",
+        "知識圖譜",
+        "LightRAG/Ollama/OpenAI knowledge graph 設定與使用。",
+    ),
+    Page(
         "background-jobs",
         "background-jobs",
         "all",
-        "user",
+        "operations",
         "Background Jobs",
         "Async job lifecycle, progress, cancellation, and artifacts.",
         "Background-Jobs.md",
@@ -232,7 +254,7 @@ PAGES = [
         "etl-profiles",
         "etl-profiles",
         "all",
-        "user",
+        "operations",
         "ETL Profiles",
         "Built-in and custom ETL profile behavior.",
         "ETL-Profiles.md",
@@ -265,7 +287,7 @@ PAGES = [
         "release-testing",
         "release-testing",
         "all",
-        "developer",
+        "operations",
         "Release And Testing",
         "Release gates, focused tests, VSIX checks, and artifact audits.",
         "Release-And-Testing.md",
@@ -335,9 +357,17 @@ PAGE_COPY_OVERRIDES: dict[str, dict[str, str]] = {
         "title_zh": "MCP Resources",
         "blurb_zh": "Document 與 table resource URI contract。",
     },
+    "tool-chooser": {
+        "title_zh": "Tool Chooser",
+        "blurb_zh": "依任務選擇正確 MCP tool 或 resource 的快速查表。",
+    },
     "pdf-workflow": {
         "title_zh": "PDF 文件流程",
         "blurb_zh": "PDF ingest、OCR、layout、segmentation、asset 與 background job。",
+    },
+    "document-sections": {
+        "title_zh": "文件章節與導覽",
+        "blurb_zh": "Section tree、block navigation、source locator 邊界與使用範例。",
     },
     "docx-dfm-workflow": {
         "title_zh": "DOCX / DFM 流程",
@@ -482,7 +512,7 @@ exact contracts.
     <p class="card-kicker">Path 4</p>
     <h3>Reference and release</h3>
     <p>Use exact tool/resource contracts, code locations, and release checks when preparing production changes.</p>
-    <p><a href="#/mcp-tools">MCP Tools</a> · <a href="#/mcp-resources">Resources</a> · <a href="#/release-testing">Release</a></p>
+    <p><a href="#/tool-chooser">Tool Chooser</a> · <a href="#/mcp-tools">MCP Tools</a> · <a href="#/release-testing">Release</a></p>
   </section>
 </div>
 
@@ -507,7 +537,8 @@ to keep future site changes consistent.
 ## Source Of Truth
 
 This site is generated from `docs/wiki/**`. Tool and resource counts come from
-`./scripts/count_tools.sh`, not from memory or old diagrams.
+`scripts/build_docs_site.py`, which parses the registered MCP decorators in
+`src/presentation/tools/**` and `src/presentation/resources/**`.
 
 ## Launch Readiness
 

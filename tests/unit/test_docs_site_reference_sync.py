@@ -48,6 +48,32 @@ def _tool_names_by_module() -> dict[str, list[str]]:
     return modules
 
 
+def _tool_argument_names_by_name() -> dict[str, set[str]]:
+    signatures: dict[str, set[str]] = {}
+    for path in sorted(TOOLS_DIR.glob("*.py")):
+        if path.name == "__init__.py":
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in tree.body:
+            if not isinstance(node, ast.AsyncFunctionDef | ast.FunctionDef):
+                continue
+            if not any(
+                _is_mcp_decorator(decorator, "tool")
+                for decorator in node.decorator_list
+            ):
+                continue
+            params = {
+                arg.arg
+                for arg in [
+                    *node.args.posonlyargs,
+                    *node.args.args,
+                    *node.args.kwonlyargs,
+                ]
+            }
+            signatures[node.name] = params
+    return signatures
+
+
 def _resource_uris_by_module() -> dict[str, dict[str, str]]:
     modules: dict[str, dict[str, str]] = {}
     for path in sorted(RESOURCES_DIR.glob("*.py")):
@@ -96,6 +122,14 @@ def _assert_no_text_corruption(path: Path) -> None:
     assert not PRIVATE_USE_RE.search(text), path
 
 
+def _site_nav_groups() -> list[str]:
+    site_js = (ROOT / "docs" / "site.js").read_text(encoding="utf-8")
+    match = re.search(r"const NAV_GROUPS = \[(?P<body>.*?)\];", site_js, re.S)
+    if match is None:
+        raise AssertionError("docs/site.js must define NAV_GROUPS")
+    return re.findall(r'"([^"]+)"', match.group("body"))
+
+
 def test_mcp_tools_reference_matches_registered_tools() -> None:
     markdown = (WIKI_DIR / "MCP-Tools.md").read_text(encoding="utf-8")
     sections = _markdown_sections(markdown)
@@ -138,7 +172,23 @@ def test_docs_page_metadata_is_product_ready() -> None:
     slugs = [page.slug for page in build_docs_site.PAGES]
     assert len(slugs) == len(set(slugs))
 
-    valid_audiences = {"start", "user", "developer", "reference"}
+    valid_audiences = {
+        "start",
+        "user",
+        "evidence",
+        "operations",
+        "developer",
+        "reference",
+    }
+    assert _site_nav_groups() == [
+        "start",
+        "user",
+        "evidence",
+        "operations",
+        "reference",
+        "developer",
+    ]
+    assert {page.audience for page in build_docs_site.PAGES} == valid_audiences
     for page in build_docs_site.PAGES:
         assert page.audience in valid_audiences, page.slug
         assert page.lang in {"en", "zh", "all"}, page.slug
@@ -211,10 +261,12 @@ def test_docs_shell_uses_current_metrics_and_has_no_known_text_corruption() -> N
         ROOT / "docs" / "site-content.js",
         WIKI_DIR / "Home.md",
         WIKI_DIR / "Workflow-Chapters.md",
+        WIKI_DIR / "Document-Sections-And-Navigation.md",
         WIKI_DIR / "Design-And-UX.md",
         WIKI_DIR / "Getting-Started.md",
         WIKI_DIR / "Knowledge-Graph.md",
         WIKI_DIR / "LLM-Wiki-Knowledge-Base.md",
+        WIKI_DIR / "Tool-Chooser.md",
     ]
 
     for path in paths:
@@ -279,6 +331,63 @@ def test_llm_wiki_guide_has_examples_and_guardrails() -> None:
         assert required in guide
 
 
+def test_product_ia_separates_workflows_evidence_and_reference() -> None:
+    pages = {page.slug: page for page in build_docs_site.PAGES}
+    sidebar = (WIKI_DIR / "_Sidebar.md").read_text(encoding="utf-8")
+    site_js = (ROOT / "docs" / "site.js").read_text(encoding="utf-8")
+    ordered_slugs = [page.slug for page in build_docs_site.PAGES]
+
+    assert pages["document-sections"].audience == "user"
+    assert pages["citation-provenance"].audience == "evidence"
+    assert pages["knowledge-graph"].audience == "evidence"
+    assert pages["llm-wiki"].audience == "evidence"
+    assert pages["background-jobs"].audience == "operations"
+    assert pages["etl-profiles"].audience == "operations"
+    assert pages["release-testing"].audience == "operations"
+    assert pages["tool-chooser"].audience == "reference"
+    assert (
+        "[Document Sections And Navigation](Document-Sections-And-Navigation)"
+        in sidebar
+    )
+    assert "## Evidence & Knowledge" in sidebar
+    assert "## Operations" in sidebar
+    assert "[Tool Chooser](Tool-Chooser)" in sidebar
+    assert '"evidence"' in site_js
+    assert '"operations"' in site_js
+    assert "證據與知識庫" in site_js
+    assert "維運與上線" in site_js
+    assert ordered_slugs.index("citation-provenance") < ordered_slugs.index("llm-wiki")
+    assert ordered_slugs.index("llm-wiki") < ordered_slugs.index("knowledge-graph")
+
+
+def test_docs_tool_call_examples_use_current_signatures() -> None:
+    signatures = _tool_argument_names_by_name()
+    pages = [
+        WIKI_DIR / "Citation-Provenance.md",
+        WIKI_DIR / "Document-Sections-And-Navigation.md",
+        WIKI_DIR / "Knowledge-Graph.md",
+        WIKI_DIR / "LLM-Wiki-Knowledge-Base.md",
+        WIKI_DIR / "Tool-Chooser.md",
+        WIKI_DIR / "Workflow-Chapters.md",
+    ]
+    call_pattern = re.compile(
+        r"\b(?P<name>[a-zA-Z_][a-zA-Z0-9_]*)\s*\((?P<body>[^()]*)\)",
+        re.S,
+    )
+
+    for path in pages:
+        text = path.read_text(encoding="utf-8")
+        for match in call_pattern.finditer(text):
+            name = match.group("name")
+            if name not in signatures:
+                continue
+            kwargs = set(
+                re.findall(r"\b([a-zA-Z_][a-zA-Z0-9_]*)\s*=", match.group("body"))
+            )
+            unsupported = kwargs - signatures[name]
+            assert not unsupported, (path.name, name, sorted(unsupported))
+
+
 def test_workflow_chapters_do_not_document_nonexistent_public_ops() -> None:
     workflow = (WIKI_DIR / "Workflow-Chapters.md").read_text(encoding="utf-8")
     getting_started = (WIKI_DIR / "Getting-Started.md").read_text(encoding="utf-8")
@@ -295,12 +404,21 @@ def test_workflow_chapters_do_not_document_nonexistent_public_ops() -> None:
 
 def test_sidebar_and_design_spec_match_product_ia() -> None:
     sidebar = (WIKI_DIR / "_Sidebar.md").read_text(encoding="utf-8")
+    design = (WIKI_DIR / "Design-And-UX.md").read_text(encoding="utf-8")
     design_page = next(
         page for page in build_docs_site.PAGES if page.slug == "design-ux"
     )
 
     assert "[Workflow Chapters](Workflow-Chapters)" in sidebar
     assert "[Docs IA And UX Spec](Design-And-UX)" in sidebar
+    for label in [
+        "Document Workflows",
+        "Evidence & Knowledge",
+        "Operations",
+        "Reference",
+        "Maintainers",
+    ]:
+        assert label in design
     assert design_page.audience == "developer"
     assert design_page.metadata()["title"] == "Docs IA And UX Spec"
 

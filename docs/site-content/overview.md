@@ -32,7 +32,7 @@ exact contracts.
     <p class="card-kicker">Path 4</p>
     <h3>Reference and release</h3>
     <p>Use exact tool/resource contracts, code locations, and release checks when preparing production changes.</p>
-    <p><a href="#/mcp-tools">MCP Tools</a> · <a href="#/mcp-resources">Resources</a> · <a href="#/release-testing">Release</a></p>
+    <p><a href="#/tool-chooser">Tool Chooser</a> · <a href="#/mcp-tools">MCP Tools</a> · <a href="#/release-testing">Release</a></p>
   </section>
 </div>
 
@@ -57,7 +57,8 @@ to keep future site changes consistent.
 ## Source Of Truth
 
 This site is generated from `docs/wiki/**`. Tool and resource counts come from
-`./scripts/count_tools.sh`, not from memory or old diagrams.
+`scripts/build_docs_site.py`, which parses the registered MCP decorators in
+`src/presentation/tools/**` and `src/presentation/resources/**`.
 
 ## Launch Readiness
 

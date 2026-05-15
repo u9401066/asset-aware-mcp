@@ -36,6 +36,30 @@ ollama pull granite4.1:8b
 ollama pull nomic-embed-text
 ```
 
+KG indexing is opt-in. A KG-ready smoke flow is:
+
+```env
+ENABLE_LIGHTRAG=true
+LLM_BACKEND=ollama
+OLLAMA_MODEL=granite4.1:3b
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+```
+
+Restart the MCP server after changing these values, then ingest with KG indexing explicitly enabled:
+
+```text
+ingest_documents(
+  file_paths=["/papers/trial.pdf"],
+  async_mode=true,
+  index_knowledge_graph=true
+)
+get_job_status(job_id="...")
+export_knowledge_graph(format="summary", limit=20)
+```
+
+Only continue to `consult_knowledge_graph(...)` after the summary shows graph content. A normal
+`ingest_documents(...)` call keeps `index_knowledge_graph=false`, so it will not populate LightRAG.
+
 For KG indexing on CPU, expect it to be useful for discovery, clustering, and candidate relation extraction; keep citation-critical claims anchored to evidence spans.
 
 ## 角色

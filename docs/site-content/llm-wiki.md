@@ -50,8 +50,7 @@ evidence(
   op="bundle",
   doc_id="doc_abc",
   query="primary outcome",
-  output_format="json",
-  include_verification=true
+  output_format="json"
 )
 ```
 
@@ -70,7 +69,7 @@ citation_bundle(
 ```
 
 產物會是普通 Markdown，含 YAML frontmatter、Foam block anchor、source locator、
-AssetRef JSON 與 verification payload。這讓 topic note 可以連到 evidence note，而不是
+AssetRef JSON 與 verification status/issues。這讓 topic note 可以連到 evidence note，而不是
 把來源資訊藏在聊天紀錄裡。
 
 ## 最小實例：Table/Figure Notes
@@ -107,7 +106,7 @@ sources:
 # Primary Outcome
 
 - The intervention improved the primary outcome in the analyzed cohort.
-  Evidence: ![[evidence/trial-2026-primary-outcome#^spn-primary-outcome]]
+  Evidence: ![[evidence/trial-2026-primary-outcome#^spn-actual-returned-span-id]]
 
 ## Open Questions
 
@@ -119,11 +118,24 @@ sources:
 - 一個 note 只放一個 `# H1`。
 - 新檔名用 stable lowercase kebab-case。
 - `[[wikilink]]` 只連到已存在或本次會建立的 note。
+- Evidence anchor 不要手寫；從 `citation_bundle(...)` 回傳的 `embed` 或 `wikilink` 複製。
 - 具體 claim 附近要有 evidence link 或 source marker，不只放在 bibliography。
 
 ## KG 與 LLM Wiki 如何分工
 
 KG 可以先找主題和關係：
+
+```text
+ingest_documents(
+  file_paths=["/papers/trial.pdf"],
+  async_mode=true,
+  index_knowledge_graph=true
+)
+get_job_status(job_id="...")
+export_knowledge_graph(format="summary", limit=20)
+```
+
+確認 graph 有內容後再查：
 
 ```text
 consult_knowledge_graph(
@@ -157,5 +169,6 @@ evidence(
 )
 ```
 
-Health check 會檢查 Foam evidence note 裡的 AssetRef、locator、asset note 與 index block。
+Health check 會檢查 Foam evidence note 裡的 embedded AssetRef JSON、span/table/figure
+locator、asset note 與 `[[note#^anchor]]` link 是否還能回到原始文件。
 若出現 drift，先回原始文件重建 bundle，再更新 topic note。

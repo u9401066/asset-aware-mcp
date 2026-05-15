@@ -6,6 +6,9 @@ Tool consolidation is planned but not yet applied to the default public surface.
 See [MCP Tool Consolidation Plan](MCP-Tool-Consolidation) for the 17-tool
 target and legacy direct-tool mapping.
 
+如果你不是在查完整參數，先從 [Tool Chooser](Tool-Chooser) 依任務選入口，再回到本頁查
+精確 tool contract。
+
 工具數量由 `./scripts/count_tools.sh` 產生：62 tools in 7 modules。下列為目前公開 MCP tool surface，來源為 `src/presentation/tools/**`。
 
 ## `document_tools.py` - 19 tools

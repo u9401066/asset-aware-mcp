@@ -14,7 +14,14 @@ const LANGUAGE_META = {
   en: { htmlLang: "en", label: "EN" },
   zh: { htmlLang: "zh-TW", label: "繁中" },
 };
-const NAV_GROUPS = ["start", "user", "developer", "reference"];
+const NAV_GROUPS = [
+  "start",
+  "user",
+  "evidence",
+  "operations",
+  "reference",
+  "developer",
+];
 const UI_COPY = {
   en: {
     siteEyebrow: "Documentation",
@@ -53,6 +60,8 @@ const UI_COPY = {
     groups: {
       start: "Start Here",
       user: "Document Workflows",
+      evidence: "Evidence & Knowledge",
+      operations: "Operations",
       developer: "Maintainers",
       reference: "Reference",
     },
@@ -94,6 +103,8 @@ const UI_COPY = {
     groups: {
       start: "開始",
       user: "文件流程",
+      evidence: "證據與知識庫",
+      operations: "維運與上線",
       developer: "開發者與上線",
       reference: "參考",
     },
