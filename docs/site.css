@@ -32,6 +32,10 @@ body {
   overflow-x: hidden;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 a {
   color: var(--accent);
 }
@@ -248,7 +252,7 @@ input:focus-visible {
 }
 
 .summary-band {
-  display: grid;
+  display: none;
   grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.9fr);
   gap: 1rem;
   align-items: stretch;
@@ -259,6 +263,10 @@ input:focus-visible {
   border-radius: 8px;
   background: var(--surface);
   box-shadow: var(--shadow);
+}
+
+body.overview-doc-page .summary-band:not([hidden]) {
+  display: grid;
 }
 
 .summary-band p {
@@ -327,10 +335,14 @@ input:focus-visible {
 }
 
 .status-strip {
-  display: grid;
+  display: none;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.65rem;
   margin-bottom: 1rem;
+}
+
+body.overview-doc-page .status-strip:not([hidden]) {
+  display: grid;
 }
 
 .status-strip div {

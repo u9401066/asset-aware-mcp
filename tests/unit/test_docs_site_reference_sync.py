@@ -226,12 +226,17 @@ def test_docs_shell_uses_current_metrics_and_has_no_known_text_corruption() -> N
     version = _project_version()
     index_html = (ROOT / "docs" / "index.html").read_text(encoding="utf-8")
     site_js = (ROOT / "docs" / "site.js").read_text(encoding="utf-8")
+    site_css = (ROOT / "docs" / "site.css").read_text(encoding="utf-8")
     assert '<dt id="tool-metric-value">62</dt>' in index_html
     assert '<dt id="endpoint-metric-value">75</dt>' in index_html
     assert '<a class="skip-link" href="#doc-content">' in index_html
     assert "20260515-docs-chapters" in index_html
     assert "KG / RAG" in index_html
     assert f'version: "{version}"' in site_js
+    assert 'classList.toggle("overview-doc-page", isOverview)' in site_js
+    assert 'summaryBand.setAttribute("aria-hidden"' in site_js
+    assert "body.overview-doc-page .summary-band:not([hidden])" in site_css
+    assert "body.overview-doc-page .status-strip:not([hidden])" in site_css
 
 
 def test_homepage_is_chapter_oriented_and_kept_short() -> None:

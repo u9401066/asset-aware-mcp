@@ -484,12 +484,15 @@ async function renderPage() {
   pageTitle.textContent = pageText(page, "title");
   pageKicker.textContent = pageText(page, "blurb");
   const isOverview = page.group === "overview";
+  document.body.classList.toggle("overview-doc-page", isOverview);
   document.body.classList.toggle("compact-doc-page", !isOverview);
   if (summaryBand) {
     summaryBand.hidden = !isOverview;
+    summaryBand.setAttribute("aria-hidden", String(!isOverview));
   }
   if (statusStrip) {
     statusStrip.hidden = !isOverview;
+    statusStrip.setAttribute("aria-hidden", String(!isOverview));
   }
   renderNav(filterInput.value);
 
