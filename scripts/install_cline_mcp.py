@@ -22,6 +22,11 @@ import sys
 from pathlib import Path
 
 DEFAULT_SERVER_NAME = "asset-aware-mcp"
+DEFAULT_TEXT_RESPONSE_CHARS = "12000"
+DEFAULT_IMAGE_RESPONSE_CHARS = "750000"
+DEFAULT_TABLE_STARTUP_LOAD_MAX_BYTES = str(20 * 1024 * 1024)
+DEFAULT_SECTION_TREE_LOAD_MAX_BYTES = str(20 * 1024 * 1024)
+DEFAULT_SEGMENTATION_SOURCE_LOAD_MAX_BYTES = str(20 * 1024 * 1024)
 
 
 def repo_root() -> Path:
@@ -147,9 +152,25 @@ def build_server_config(*, uv: str, root: Path) -> dict:
     data_dir = resolve_data_dir(root)
     return {
         "command": uv,
-        "args": ["run", "--directory", str(root), "python", "-m", "src.server"],
+        "args": [
+            "run",
+            "--python",
+            "3.11",
+            "--directory",
+            str(root),
+            "python",
+            "-m",
+            "src.server",
+        ],
         "env": {
             "DATA_DIR": str(data_dir),
+            "ENABLE_LIGHTRAG": "false",
+            "UV_CACHE_DIR": str(data_dir / ".uv-cache"),
+            "ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS": DEFAULT_TEXT_RESPONSE_CHARS,
+            "ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS": DEFAULT_IMAGE_RESPONSE_CHARS,
+            "ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES": DEFAULT_TABLE_STARTUP_LOAD_MAX_BYTES,
+            "ASSET_AWARE_SECTION_TREE_LOAD_MAX_BYTES": DEFAULT_SECTION_TREE_LOAD_MAX_BYTES,
+            "ASSET_AWARE_SEGMENTATION_SOURCE_LOAD_MAX_BYTES": DEFAULT_SEGMENTATION_SOURCE_LOAD_MAX_BYTES,
             # Marker/surya progress bars can corrupt stdio MCP JSON-RPC transport.
             # Keep raw third-party progress disabled for Cline by default.
             "ASSET_AWARE_SUPPRESS_MARKER_OUTPUT": "true",

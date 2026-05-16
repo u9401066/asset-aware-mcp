@@ -6,10 +6,17 @@ export const DEFAULT_OLLAMA_MODEL = DEFAULT_OLLAMA_CPU_MODEL;
 export const DEFAULT_OLLAMA_EMBEDDING_MODEL = 'nomic-embed-text';
 export const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
 export const DEFAULT_LIGHTRAG_EMBEDDING_MODEL = 'text-embedding-3-small';
+export const DEFAULT_OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+export const DEFAULT_OPENROUTER_MODEL = 'liquid/lfm-2.5-1.2b-instruct:free';
 export const DEFAULT_DATA_DIR = './data';
 export const DEFAULT_LIGHTRAG_WORKING_DIR = './data/lightrag_db';
 export const DEFAULT_ETL_PROFILE = 'default';
 export const DEFAULT_ENABLE_LIGHTRAG = false;
+export const DEFAULT_MCP_TEXT_RESPONSE_CHARS = '12000';
+export const DEFAULT_MCP_IMAGE_RESPONSE_CHARS = '750000';
+export const DEFAULT_TABLE_STARTUP_LOAD_MAX_BYTES = String(20 * 1024 * 1024);
+export const DEFAULT_SECTION_TREE_LOAD_MAX_BYTES = String(20 * 1024 * 1024);
+export const DEFAULT_SEGMENTATION_SOURCE_LOAD_MAX_BYTES = String(20 * 1024 * 1024);
 
 export function envBoolean(value: string | undefined, fallback: boolean): boolean {
     if (value === undefined || value.trim() === '') {

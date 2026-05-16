@@ -2,7 +2,7 @@
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
     "description": "Medical RAG MCP Server with precise document asset retrieval and Docx editing (DFM) — tables, figures, sections from PDFs + .docx/.doc round-trip with integrity validation",
-    "version": "0.6.34",
+    "version": "0.6.35",
     "publisher": "u9401066",
     "engines": {
         "vscode": "^1.96.0"
@@ -135,9 +135,10 @@
                     "default": "ollama",
                     "enum": [
                         "ollama",
-                        "openai"
+                        "openai",
+                        "openrouter"
                     ],
-                    "description": "LLM backend to use (ollama for local, openai for cloud)"
+                    "description": "LLM backend to use (ollama for local, openai for cloud, openrouter for the fast/free preset)"
                 },
                 "assetAwareMcp.ollamaHost": {
                     "type": "string",
@@ -168,6 +169,21 @@
                     "type": "string",
                     "default": "text-embedding-3-small",
                     "description": "OpenAI embedding model name for LightRAG"
+                },
+                "assetAwareMcp.openrouterApiKey": {
+                    "type": "string",
+                    "default": "",
+                    "description": "OpenRouter API key (required when using the openrouter backend)"
+                },
+                "assetAwareMcp.openrouterBaseUrl": {
+                    "type": "string",
+                    "default": "https://openrouter.ai/api/v1",
+                    "description": "OpenRouter OpenAI-compatible API base URL"
+                },
+                "assetAwareMcp.openrouterModel": {
+                    "type": "string",
+                    "default": "liquid/lfm-2.5-1.2b-instruct:free",
+                    "description": "OpenRouter model for low-cost summaries and draft RAG answers"
                 },
                 "assetAwareMcp.dataDir": {
                     "type": "string",

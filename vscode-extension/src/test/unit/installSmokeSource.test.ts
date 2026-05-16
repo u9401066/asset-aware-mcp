@@ -25,6 +25,11 @@ describe('install smoke quality selector', () => {
 
         assert.match(installSmokeSource, /getAssetAwareRuntimeProbeArgs/);
         assert.match(installSmokeSource, /ASSET_AWARE_MCP_VERIFY_RUNTIME_COMMAND/);
+        assert.match(installSmokeSource, /UV_CACHE_DIR/);
+        assert.match(installSmokeSource, /ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS/);
+        assert.match(installSmokeSource, /ASSET_AWARE_SECTION_TREE_LOAD_MAX_BYTES/);
+        assert.match(installSmokeSource, /ASSET_AWARE_SEGMENTATION_SOURCE_LOAD_MAX_BYTES/);
+        assert.match(installSmokeSource, /--isolated/);
         assert.match(installSmokeSource, /asset-aware-mcp runtime ready/);
         assert.match(installSmokeSource, /--help/);
         assert.match(installSmokeSource, /doctor', '--json'/);

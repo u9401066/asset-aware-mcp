@@ -53,6 +53,8 @@ suite('Extension Test Suite', () => {
         assert.strictEqual(config.get('ollamaHost'), 'http://localhost:11434');
         assert.strictEqual(config.get('ollamaModel'), 'granite4.1:3b');
         assert.strictEqual(config.get('ollamaEmbeddingModel'), 'nomic-embed-text');
+        assert.strictEqual(config.get('openrouterBaseUrl'), 'https://openrouter.ai/api/v1');
+        assert.strictEqual(config.get('openrouterModel'), 'liquid/lfm-2.5-1.2b-instruct:free');
         assert.strictEqual(config.get('enableLightRag'), false);
         assert.strictEqual(config.get('dataDir'), './data');
     });

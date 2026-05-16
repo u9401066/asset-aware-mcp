@@ -42,6 +42,9 @@ describe('copilotMcpConfig', () => {
         assert.strictEqual(settings.servers['asset-aware-mcp'].command, '/usr/bin/uv');
         assert.ok(settings.servers['asset-aware-mcp'].args.includes('asset-aware-mcp'));
         assert.ok(settings.servers['asset-aware-mcp'].env.DATA_DIR.startsWith(tempDir));
+        assert.strictEqual(settings.servers['asset-aware-mcp'].env.ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS, '12000');
+        assert.strictEqual(settings.servers['asset-aware-mcp'].env.ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS, '750000');
+        assert.strictEqual(settings.servers['asset-aware-mcp'].env.ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES, '20971520');
     });
 
     it('preserves unrelated servers and is idempotent', () => {
@@ -66,6 +69,38 @@ describe('copilotMcpConfig', () => {
         assert.strictEqual(updated, true);
         const settings = readMcpJson();
         assert.ok(settings.servers['asset-aware-mcp'].args.includes('--upgrade'));
+    });
+
+    it('preserves custom env metadata while refreshing managed launch env', () => {
+        fs.mkdirSync(path.join(tempDir, '.vscode'), { recursive: true });
+        fs.writeFileSync(path.join(tempDir, '.env'), 'DATA_DIR=next-data\nOLLAMA_MODEL=from-env\n');
+        fs.writeFileSync(path.join(tempDir, '.vscode', 'mcp.json'), JSON.stringify({
+            servers: {
+                'asset-aware-mcp': {
+                    type: 'stdio',
+                    command: '/old/uv',
+                    args: ['tool', 'run', 'asset-aware-mcp'],
+                    env: {
+                        HTTP_PROXY: 'http://proxy.local:8080',
+                        SSL_CERT_FILE: '/etc/ssl/corp.pem',
+                        ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS: '0',
+                        ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS: '999999999',
+                    },
+                },
+            },
+        }, null, 2));
+
+        const updated = installCopilotMcpConfig(makeContext(), '/usr/bin/uv');
+
+        assert.strictEqual(updated, true);
+        const entry = readMcpJson().servers['asset-aware-mcp'];
+        assert.strictEqual(entry.env.HTTP_PROXY, 'http://proxy.local:8080');
+        assert.strictEqual(entry.env.SSL_CERT_FILE, '/etc/ssl/corp.pem');
+        assert.strictEqual(entry.env.OLLAMA_MODEL, 'from-env');
+        assert.strictEqual(entry.env.DATA_DIR, path.join(tempDir, 'next-data'));
+        assert.strictEqual(entry.env.ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS, '12000');
+        assert.strictEqual(entry.env.ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS, '750000');
+        assert.strictEqual(entry.env.ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES, '20971520');
     });
 
     it('does not overwrite a custom server using the same key', () => {

@@ -69,6 +69,9 @@ describe('codexMcpConfig', () => {
         assert.ok(content.includes('[mcp_servers.other]'));
         assert.ok(content.includes('[mcp_servers.asset-aware-mcp]'));
         assert.ok(content.includes('Managed by asset-aware-mcp VS Code extension'));
+        assert.ok(content.includes('ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS = "12000"'));
+        assert.ok(content.includes('ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS = "750000"'));
+        assert.ok(content.includes('ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES = "20971520"'));
     });
 
     it('updates managed blocks without duplicating them', () => {
@@ -86,6 +89,38 @@ describe('codexMcpConfig', () => {
 
         const content = fs.readFileSync(path.join(tempDir, 'config.toml'), 'utf-8');
         assert.ok(content.includes('"--upgrade"'));
+    });
+
+    it('preserves custom managed env metadata while refreshing launch env', () => {
+        fs.writeFileSync(path.join(tempDir, '.env'), 'DATA_DIR=next-data\nOLLAMA_MODEL=from-env\n');
+        fs.writeFileSync(path.join(tempDir, 'config.toml'), [
+            '# user comment',
+            '',
+            '# Managed by asset-aware-mcp VS Code extension. Remove this block to opt out.',
+            '[mcp_servers.asset-aware-mcp]',
+            'command = "/old/uv"',
+            'args = ["tool", "run", "asset-aware-mcp"]',
+            '',
+            '[mcp_servers.asset-aware-mcp.env]',
+            'HTTP_PROXY = "http://proxy.local:8080"',
+            'SSL_CERT_FILE = "C:\\\\certs\\\\corp.pem"',
+            'ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS = "0"',
+            'ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS = "999999999"',
+            '',
+        ].join('\n'));
+
+        const updated = installCodexMcpServer(context, '/usr/bin/uv');
+
+        assert.strictEqual(updated, true);
+        const content = fs.readFileSync(path.join(tempDir, 'config.toml'), 'utf-8');
+        assert.ok(content.includes('# user comment'));
+        assert.ok(content.includes('HTTP_PROXY = "http://proxy.local:8080"'));
+        assert.ok(content.includes('SSL_CERT_FILE = "C:\\\\certs\\\\corp.pem"'));
+        assert.ok(content.includes('OLLAMA_MODEL = "from-env"'));
+        assert.ok(content.includes(`DATA_DIR = "${__test__.escapeTomlString(path.join(tempDir, 'next-data'))}"`));
+        assert.ok(content.includes('ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS = "12000"'));
+        assert.ok(content.includes('ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS = "750000"'));
+        assert.ok(content.includes('ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES = "20971520"'));
     });
 
     it('does not overwrite a custom same-key block', () => {

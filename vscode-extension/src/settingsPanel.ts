@@ -17,6 +17,8 @@ import {
     DEFAULT_OLLAMA_HOST,
     DEFAULT_OLLAMA_MODEL,
     DEFAULT_OPENAI_MODEL,
+    DEFAULT_OPENROUTER_BASE_URL,
+    DEFAULT_OPENROUTER_MODEL,
     envBoolean,
 } from './defaults';
 import { EnvManager } from './envManager';
@@ -48,6 +50,9 @@ const ALLOWED_ENV_KEYS = new Set([
     'OLLAMA_EMBEDDING_MODEL',
     'OPENAI_API_KEY',
     'OPENAI_MODEL',
+    'OPENROUTER_API_KEY',
+    'OPENROUTER_BASE_URL',
+    'OPENROUTER_MODEL',
     'LIGHTRAG_EMBEDDING_MODEL',
     'DATA_DIR',
     'LIGHTRAG_WORKING_DIR',
@@ -85,6 +90,9 @@ export class SettingsPanel {
                         break;
                     case 'setProfile':
                         await this._setEtlProfile(message.profile);
+                        break;
+                    case 'useOpenRouterPreset':
+                        await this._useOpenRouterPreset();
                         break;
                 }
             },
@@ -198,6 +206,19 @@ export class SettingsPanel {
             vscode.commands.executeCommand('assetAwareMcp.refreshStatus');
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to set ETL profile: ${error}`);
+        }
+    }
+
+    private async _useOpenRouterPreset(): Promise<void> {
+        try {
+            await this._envManager.updateEnv('LLM_BACKEND', 'openrouter');
+            await this._envManager.updateEnv('OPENROUTER_BASE_URL', DEFAULT_OPENROUTER_BASE_URL);
+            await this._envManager.updateEnv('OPENROUTER_MODEL', DEFAULT_OPENROUTER_MODEL);
+            vscode.window.showInformationMessage('OpenRouter fast/free preset selected.');
+            await this._update();
+            vscode.commands.executeCommand('assetAwareMcp.refreshStatus');
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to set OpenRouter preset: ${error}`);
         }
     }
 
@@ -374,10 +395,11 @@ export class SettingsPanel {
 
             <div class="form-group">
                 <label for="llmBackend">Backend</label>
-                <p class="description">Choose between local Ollama or cloud OpenAI</p>
+                <p class="description">Choose local Ollama, OpenAI, or the OpenRouter fast/free preset</p>
                 <select id="llmBackend" name="LLM_BACKEND">
                     <option value="ollama" ${env['LLM_BACKEND'] === DEFAULT_LLM_BACKEND || !env['LLM_BACKEND'] ? 'selected' : ''}>Ollama (Local)</option>
                     <option value="openai" ${env['LLM_BACKEND'] === 'openai' ? 'selected' : ''}>OpenAI (Cloud)</option>
+                    <option value="openrouter" ${env['LLM_BACKEND'] === 'openrouter' ? 'selected' : ''}>OpenRouter (Fast/free preset)</option>
                 </select>
             </div>
         </div>
@@ -410,6 +432,15 @@ export class SettingsPanel {
                            placeholder="${DEFAULT_OLLAMA_HOST}">
                     <button type="button" id="testOllamaButton" class="btn btn-secondary">Test Connection</button>
                 </div>
+            </div>
+
+            <div class="form-group">
+                <label for="ollamaModelPreset">Model Preset</label>
+                <select id="ollamaModelPreset">
+                    <option value="granite4.1:3b" ${(env['OLLAMA_MODEL'] || DEFAULT_OLLAMA_MODEL) === 'granite4.1:3b' ? 'selected' : ''}>Granite 4.1 3B (CPU)</option>
+                    <option value="granite4.1:8b" ${(env['OLLAMA_MODEL'] || DEFAULT_OLLAMA_MODEL) === 'granite4.1:8b' ? 'selected' : ''}>Granite 4.1 8B (GPU)</option>
+                    <option value="custom" ${!['granite4.1:3b', 'granite4.1:8b'].includes(env['OLLAMA_MODEL'] || DEFAULT_OLLAMA_MODEL) ? 'selected' : ''}>Custom</option>
+                </select>
             </div>
 
             <div class="form-group">
@@ -459,6 +490,41 @@ export class SettingsPanel {
             </div>
         </div>
 
+        <div class="section" id="openrouterSection">
+            <h2>OpenRouter Settings</h2>
+
+            <div class="form-group">
+                <button type="button" id="useOpenRouterPresetButton" class="btn btn-secondary">Use fast/free preset</button>
+                <p class="hint">Sets model to ${DEFAULT_OPENROUTER_MODEL}. API key stays in your local .env.</p>
+            </div>
+
+            <div class="form-group">
+                <label for="openrouterApiKey">API Key</label>
+                <p class="description">OpenRouter API key for OpenAI-compatible chat completions</p>
+                <div class="input-group">
+                    <input type="password" id="openrouterApiKey" name="OPENROUTER_API_KEY"
+                           value="${value('OPENROUTER_API_KEY')}"
+                           placeholder="sk-or-...">
+                    <button type="button" id="toggleOpenrouterApiKey" class="toggle-visibility">Show</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="openrouterBaseUrl">Base URL</label>
+                <input type="text" id="openrouterBaseUrl" name="OPENROUTER_BASE_URL"
+                       value="${value('OPENROUTER_BASE_URL', DEFAULT_OPENROUTER_BASE_URL)}"
+                       placeholder="${DEFAULT_OPENROUTER_BASE_URL}">
+            </div>
+
+            <div class="form-group">
+                <label for="openrouterModel">Model</label>
+                <p class="description">Fast low-cost model for summaries and draft RAG answers</p>
+                <input type="text" id="openrouterModel" name="OPENROUTER_MODEL"
+                       value="${value('OPENROUTER_MODEL', DEFAULT_OPENROUTER_MODEL)}"
+                       placeholder="${DEFAULT_OPENROUTER_MODEL}">
+            </div>
+        </div>
+
         <div class="section">
             <h2>📂 Storage</h2>
 
@@ -503,15 +569,33 @@ export class SettingsPanel {
                 backend === 'ollama' ? 'block' : 'none';
             document.getElementById('openaiSection').style.display =
                 backend === 'openai' ? 'block' : 'none';
+            document.getElementById('openrouterSection').style.display =
+                backend === 'openrouter' ? 'block' : 'none';
         }
 
         document.getElementById('llmBackend').addEventListener('change', updateSectionVisibility);
         document.getElementById('etlProfile').addEventListener('change', (event) => {
             setProfile(event.target.value);
         });
+        document.getElementById('ollamaModelPreset').addEventListener('change', (event) => {
+            const value = event.target.value;
+            if (value !== 'custom') {
+                document.getElementById('ollamaModel').value = value;
+            }
+        });
         document.getElementById('testOllamaButton').addEventListener('click', testOllama);
         document.getElementById('toggleOpenaiApiKey').addEventListener('click', () => {
             togglePassword('openaiApiKey');
+        });
+        document.getElementById('toggleOpenrouterApiKey').addEventListener('click', () => {
+            togglePassword('openrouterApiKey');
+        });
+        document.getElementById('useOpenRouterPresetButton').addEventListener('click', () => {
+            document.getElementById('llmBackend').value = 'openrouter';
+            document.getElementById('openrouterBaseUrl').value = '${DEFAULT_OPENROUTER_BASE_URL}';
+            document.getElementById('openrouterModel').value = '${DEFAULT_OPENROUTER_MODEL}';
+            updateSectionVisibility();
+            vscode.postMessage({ command: 'useOpenRouterPreset' });
         });
         document.getElementById('refreshButton').addEventListener('click', refreshForm);
         updateSectionVisibility();

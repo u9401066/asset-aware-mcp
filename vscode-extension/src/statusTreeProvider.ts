@@ -79,7 +79,7 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
         ));
 
         // LLM Backend
-        const backend = env.LLM_BACKEND || 'ollama';
+        const backend = (env.LLM_BACKEND || 'ollama').toLowerCase();
         items.push(new StatusItem(
             'LLM Backend',
             backend.toUpperCase(),
@@ -95,34 +95,44 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
             lightRagEnabled ? 'graph' : 'circle-slash'
         ));
 
-        // Ollama Connection
-        const ollamaStatus = await checkOllamaModels(
-            env.OLLAMA_HOST || DEFAULT_OLLAMA_HOST,
-            getRequiredOllamaModelsForLightRag(
-                env.OLLAMA_MODEL || defaultOllamaModelForHardware(),
-                env.OLLAMA_EMBEDDING_MODEL || DEFAULT_OLLAMA_EMBEDDING_MODEL,
-                lightRagEnabled,
-            ),
-        );
-        items.push(new StatusItem(
-            'Ollama',
-            ollamaStatus.connected ? 'Connected' : 'Disconnected',
-            vscode.TreeItemCollapsibleState.None,
-            ollamaStatus.connected ? 'check' : 'error',
-            'assetAwareMcp.checkConnection'
-        ));
+        // Ollama is required for local generation and for LightRAG embeddings.
+        const requiresOllama = backend === 'ollama' || lightRagEnabled;
+        if (requiresOllama) {
+            const ollamaStatus = await checkOllamaModels(
+                env.OLLAMA_HOST || DEFAULT_OLLAMA_HOST,
+                getRequiredOllamaModelsForLightRag(
+                    env.OLLAMA_MODEL || defaultOllamaModelForHardware(),
+                    env.OLLAMA_EMBEDDING_MODEL || DEFAULT_OLLAMA_EMBEDDING_MODEL,
+                    lightRagEnabled,
+                ),
+            );
+            items.push(new StatusItem(
+                'Ollama',
+                ollamaStatus.connected ? 'Connected' : 'Disconnected',
+                vscode.TreeItemCollapsibleState.None,
+                ollamaStatus.connected ? 'check' : 'error',
+                'assetAwareMcp.checkConnection'
+            ));
 
-        items.push(new StatusItem(
-            'Ollama Models',
-            ollamaStatus.connected && ollamaStatus.missingModels.length === 0
-                ? 'Available'
-                : ollamaStatus.connected
-                    ? `Missing: ${ollamaStatus.missingModels.join(', ')}`
-                    : 'Not checked',
-            vscode.TreeItemCollapsibleState.None,
-            ollamaStatus.connected && ollamaStatus.missingModels.length === 0 ? 'check' : 'warning',
-            'assetAwareMcp.checkConnection'
-        ));
+            items.push(new StatusItem(
+                'Ollama Models',
+                ollamaStatus.connected && ollamaStatus.missingModels.length === 0
+                    ? 'Available'
+                    : ollamaStatus.connected
+                        ? `Missing: ${ollamaStatus.missingModels.join(', ')}`
+                        : 'Not checked',
+                vscode.TreeItemCollapsibleState.None,
+                ollamaStatus.connected && ollamaStatus.missingModels.length === 0 ? 'check' : 'warning',
+                'assetAwareMcp.checkConnection'
+            ));
+        } else {
+            items.push(new StatusItem(
+                'Ollama',
+                'Not required',
+                vscode.TreeItemCollapsibleState.None,
+                'dash'
+            ));
+        }
 
         // OpenAI API Key
         const openaiConfigured = !!(env.OPENAI_API_KEY);
@@ -131,6 +141,14 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusItem> {
             openaiConfigured ? 'Configured' : 'Not Set',
             vscode.TreeItemCollapsibleState.None,
             openaiConfigured ? 'check' : 'dash'
+        ));
+
+        const openrouterConfigured = !!(env.OPENROUTER_API_KEY);
+        items.push(new StatusItem(
+            'OpenRouter API',
+            openrouterConfigured ? 'Configured' : 'Not Set',
+            vscode.TreeItemCollapsibleState.None,
+            openrouterConfigured ? 'check' : 'dash'
         ));
 
         // Data Directory

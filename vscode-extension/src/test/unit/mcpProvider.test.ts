@@ -58,6 +58,9 @@ describe('AssetAwareMcpProvider', () => {
         assert.ok(servers[0].env.DATA_DIR);
         assert.ok(servers[0].env.UV_CACHE_DIR);
         assert.match(servers[0].env.ASSET_AWARE_MARKER_OUTPUT_LOG, /marker\.log$/);
+        assert.strictEqual(servers[0].env.ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS, '12000');
+        assert.strictEqual(servers[0].env.ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS, '750000');
+        assert.strictEqual(servers[0].env.ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES, '20971520');
         assert.strictEqual(servers[0].args[servers[0].args.length - 1], 'asset-aware-mcp');
     });
 

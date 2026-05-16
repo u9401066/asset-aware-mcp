@@ -6,8 +6,15 @@ import {
     DEFAULT_DATA_DIR,
     DEFAULT_ENABLE_LIGHTRAG,
     DEFAULT_LLM_BACKEND,
+    DEFAULT_MCP_IMAGE_RESPONSE_CHARS,
+    DEFAULT_MCP_TEXT_RESPONSE_CHARS,
     DEFAULT_OLLAMA_EMBEDDING_MODEL,
     DEFAULT_OLLAMA_HOST,
+    DEFAULT_OPENROUTER_BASE_URL,
+    DEFAULT_OPENROUTER_MODEL,
+    DEFAULT_SECTION_TREE_LOAD_MAX_BYTES,
+    DEFAULT_SEGMENTATION_SOURCE_LOAD_MAX_BYTES,
+    DEFAULT_TABLE_STARTUP_LOAD_MAX_BYTES,
     defaultOllamaModelForHardware,
 } from './defaults';
 import {
@@ -69,6 +76,17 @@ export function normalizeEmbeddingEnv(envVars: Record<string, string>): void {
     }
 }
 
+function clampSafetyLimitEnv(envVars: Record<string, string>, key: string, value: string): void {
+    const fallback = Number(value);
+    const raw = envVars[key]?.trim();
+    const parsed = raw ? Number(raw) : NaN;
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > fallback) {
+        envVars[key] = value;
+        return;
+    }
+    envVars[key] = String(parsed);
+}
+
 export function findLocalAssetAwareSource(workspaceRoot?: string, fallbackRoot?: string): string | undefined {
     const possiblePaths = Array.from(
         new Set(
@@ -120,6 +138,28 @@ function configuredOllamaModel(config: vscode.WorkspaceConfiguration): string {
     return defaultOllamaModelForHardware();
 }
 
+function configuredString(
+    config: vscode.WorkspaceConfiguration,
+    key: string,
+    fallback: string,
+): string | undefined {
+    const inspected = config.inspect<string>(key);
+    const explicitValues = inspected
+        ? [
+            inspected.globalValue,
+            inspected.workspaceValue,
+            inspected.workspaceFolderValue,
+            inspected.globalLanguageValue,
+            inspected.workspaceLanguageValue,
+            inspected.workspaceFolderLanguageValue,
+        ]
+        : [];
+    if (explicitValues.some(value => typeof value === 'string' && value.trim() !== '')) {
+        return config.get(key, fallback);
+    }
+    return undefined;
+}
+
 export function buildAssetAwareEnv(
     context: vscode.ExtensionContext,
     workspaceRoot: string | undefined = getPrimaryWorkspaceRoot(),
@@ -140,6 +180,18 @@ export function buildAssetAwareEnv(
         envVars['OPENAI_MODEL'] = config.get('openaiModel', 'gpt-4o-mini');
         envVars['LIGHTRAG_EMBEDDING_MODEL'] = config.get('openaiEmbeddingModel', 'text-embedding-3-small');
     }
+    const openrouterKey = config.get<string>('openrouterApiKey', '');
+    if (openrouterKey) {
+        envVars['OPENROUTER_API_KEY'] = openrouterKey;
+    }
+    const openrouterBaseUrl = configuredString(config, 'openrouterBaseUrl', DEFAULT_OPENROUTER_BASE_URL);
+    if (openrouterBaseUrl) {
+        envVars['OPENROUTER_BASE_URL'] = openrouterBaseUrl;
+    }
+    const openrouterModel = configuredString(config, 'openrouterModel', DEFAULT_OPENROUTER_MODEL);
+    if (openrouterModel) {
+        envVars['OPENROUTER_MODEL'] = openrouterModel;
+    }
 
     if (workspaceRoot) {
         Object.assign(envVars, parseEnvFile(path.join(workspaceRoot, '.env')));
@@ -156,6 +208,11 @@ export function buildAssetAwareEnv(
         envVars['ASSET_AWARE_SUPPRESS_MARKER_OUTPUT'] ?? 'true';
     envVars['ASSET_AWARE_MARKER_OUTPUT_LOG'] =
         envVars['ASSET_AWARE_MARKER_OUTPUT_LOG'] ?? path.join(envVars['DATA_DIR'], 'logs', 'marker.log');
+    clampSafetyLimitEnv(envVars, 'ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS', DEFAULT_MCP_TEXT_RESPONSE_CHARS);
+    clampSafetyLimitEnv(envVars, 'ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS', DEFAULT_MCP_IMAGE_RESPONSE_CHARS);
+    clampSafetyLimitEnv(envVars, 'ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES', DEFAULT_TABLE_STARTUP_LOAD_MAX_BYTES);
+    clampSafetyLimitEnv(envVars, 'ASSET_AWARE_SECTION_TREE_LOAD_MAX_BYTES', DEFAULT_SECTION_TREE_LOAD_MAX_BYTES);
+    clampSafetyLimitEnv(envVars, 'ASSET_AWARE_SEGMENTATION_SOURCE_LOAD_MAX_BYTES', DEFAULT_SEGMENTATION_SOURCE_LOAD_MAX_BYTES);
 
     return envVars;
 }
@@ -219,4 +276,15 @@ export function isAssetAwareLaunch(command: string | undefined, args: unknown): 
 
 export function entriesEqual(a: unknown, b: unknown): boolean {
     return JSON.stringify(a) === JSON.stringify(b);
+}
+
+export function mergeManagedEnv(
+    existing: Record<string, string> | undefined,
+    next: Record<string, string> | undefined,
+): Record<string, string> | undefined {
+    const merged = {
+        ...(existing ?? {}),
+        ...(next ?? {}),
+    };
+    return Object.keys(merged).length > 0 ? merged : undefined;
 }

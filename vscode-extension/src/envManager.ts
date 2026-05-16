@@ -15,9 +15,16 @@ import {
     DEFAULT_LIGHTRAG_EMBEDDING_MODEL,
     DEFAULT_LIGHTRAG_WORKING_DIR,
     DEFAULT_LLM_BACKEND,
+    DEFAULT_MCP_IMAGE_RESPONSE_CHARS,
+    DEFAULT_MCP_TEXT_RESPONSE_CHARS,
     DEFAULT_OLLAMA_EMBEDDING_MODEL,
     DEFAULT_OLLAMA_HOST,
     DEFAULT_OPENAI_MODEL,
+    DEFAULT_OPENROUTER_BASE_URL,
+    DEFAULT_OPENROUTER_MODEL,
+    DEFAULT_SECTION_TREE_LOAD_MAX_BYTES,
+    DEFAULT_SEGMENTATION_SOURCE_LOAD_MAX_BYTES,
+    DEFAULT_TABLE_STARTUP_LOAD_MAX_BYTES,
     defaultOllamaModelForHardware,
 } from './defaults';
 
@@ -28,6 +35,9 @@ export interface EnvConfig {
     OLLAMA_EMBEDDING_MODEL?: string;
     OPENAI_API_KEY?: string;
     OPENAI_MODEL?: string;
+    OPENROUTER_API_KEY?: string;
+    OPENROUTER_BASE_URL?: string;
+    OPENROUTER_MODEL?: string;
     LIGHTRAG_EMBEDDING_MODEL?: string;
     /** Legacy alias retained when reading older .env files. */
     OPENAI_EMBEDDING_MODEL?: string;
@@ -36,6 +46,11 @@ export interface EnvConfig {
     LIGHTRAG_DIR?: string;
     ETL_PROFILE?: string;
     ENABLE_LIGHTRAG?: string;
+    ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS?: string;
+    ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS?: string;
+    ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES?: string;
+    ASSET_AWARE_SECTION_TREE_LOAD_MAX_BYTES?: string;
+    ASSET_AWARE_SEGMENTATION_SOURCE_LOAD_MAX_BYTES?: string;
     [key: string]: string | undefined;
 }
 
@@ -64,11 +79,19 @@ function defaultEnv(): EnvConfig {
         OLLAMA_EMBEDDING_MODEL: DEFAULT_OLLAMA_EMBEDDING_MODEL,
         OPENAI_API_KEY: '',
         OPENAI_MODEL: DEFAULT_OPENAI_MODEL,
+        OPENROUTER_API_KEY: '',
+        OPENROUTER_BASE_URL: DEFAULT_OPENROUTER_BASE_URL,
+        OPENROUTER_MODEL: DEFAULT_OPENROUTER_MODEL,
         LIGHTRAG_EMBEDDING_MODEL: DEFAULT_LIGHTRAG_EMBEDDING_MODEL,
         DATA_DIR: DEFAULT_DATA_DIR,
         LIGHTRAG_WORKING_DIR: DEFAULT_LIGHTRAG_WORKING_DIR,
         ETL_PROFILE: DEFAULT_ETL_PROFILE,
         ENABLE_LIGHTRAG: booleanEnv(DEFAULT_ENABLE_LIGHTRAG),
+        ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS: DEFAULT_MCP_TEXT_RESPONSE_CHARS,
+        ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS: DEFAULT_MCP_IMAGE_RESPONSE_CHARS,
+        ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES: DEFAULT_TABLE_STARTUP_LOAD_MAX_BYTES,
+        ASSET_AWARE_SECTION_TREE_LOAD_MAX_BYTES: DEFAULT_SECTION_TREE_LOAD_MAX_BYTES,
+        ASSET_AWARE_SEGMENTATION_SOURCE_LOAD_MAX_BYTES: DEFAULT_SEGMENTATION_SOURCE_LOAD_MAX_BYTES,
     };
 }
 
@@ -258,6 +281,15 @@ export class EnvManager {
             `LIGHTRAG_EMBEDDING_MODEL=${env.LIGHTRAG_EMBEDDING_MODEL || env.OPENAI_EMBEDDING_MODEL || DEFAULT_LIGHTRAG_EMBEDDING_MODEL}`,
             '',
             '# ============================================',
+            '# OpenRouter Settings (optional fast/free preset)',
+            '# ============================================',
+            '# Use LLM_BACKEND=openrouter for low-cost summaries and draft RAG answers.',
+            '# OpenRouter generation still uses OLLAMA_EMBEDDING_MODEL for LightRAG retrieval.',
+            `OPENROUTER_API_KEY=${env.OPENROUTER_API_KEY || ''}`,
+            `OPENROUTER_BASE_URL=${env.OPENROUTER_BASE_URL || DEFAULT_OPENROUTER_BASE_URL}`,
+            `OPENROUTER_MODEL=${env.OPENROUTER_MODEL || DEFAULT_OPENROUTER_MODEL}`,
+            '',
+            '# ============================================',
             '# Storage Settings',
             '# ============================================',
             `DATA_DIR=${env.DATA_DIR || DEFAULT_DATA_DIR}`,
@@ -268,6 +300,16 @@ export class EnvManager {
             '# ============================================',
             '# Leave false for CPU-only or document-only workflows.',
             `ENABLE_LIGHTRAG=${env.ENABLE_LIGHTRAG || booleanEnv(DEFAULT_ENABLE_LIGHTRAG)}`,
+            '',
+            '# ============================================',
+            '# MCP Client Safety Limits',
+            '# ============================================',
+            '# Keep responses bounded for stdio clients such as Cline/Copilot/Codex.',
+            `ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS=${env.ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS || DEFAULT_MCP_TEXT_RESPONSE_CHARS}`,
+            `ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS=${env.ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS || DEFAULT_MCP_IMAGE_RESPONSE_CHARS}`,
+            `ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES=${env.ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES || DEFAULT_TABLE_STARTUP_LOAD_MAX_BYTES}`,
+            `ASSET_AWARE_SECTION_TREE_LOAD_MAX_BYTES=${env.ASSET_AWARE_SECTION_TREE_LOAD_MAX_BYTES || DEFAULT_SECTION_TREE_LOAD_MAX_BYTES}`,
+            `ASSET_AWARE_SEGMENTATION_SOURCE_LOAD_MAX_BYTES=${env.ASSET_AWARE_SEGMENTATION_SOURCE_LOAD_MAX_BYTES || DEFAULT_SEGMENTATION_SOURCE_LOAD_MAX_BYTES}`,
             ''
         ];
 

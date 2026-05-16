@@ -7,6 +7,7 @@ import {
     entriesEqual,
     getPrimaryWorkspaceRoot,
     isAssetAwareLaunch,
+    mergeManagedEnv,
 } from './mcpConfigCommon';
 
 interface CopilotMcpServerEntry {
@@ -74,6 +75,7 @@ function mergeManagedEntry(
         ...existing,
         ...next,
         type: 'stdio',
+        env: mergeManagedEnv(existing.env, next.env),
     };
 }
 

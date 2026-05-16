@@ -52,9 +52,17 @@ describe('EnvManager', () => {
 
         const content = fs.readFileSync(path.join(tempDir, '.env'), 'utf8');
         assert.ok(content.includes('OLLAMA_MODEL=granite4.1:3b'));
+        assert.ok(content.includes('OPENROUTER_BASE_URL=https://openrouter.ai/api/v1'));
+        assert.ok(content.includes('OPENROUTER_MODEL=liquid/lfm-2.5-1.2b-instruct:free'));
         const env = await manager.readEnv();
         assert.strictEqual(env.OLLAMA_MODEL, 'granite4.1:3b');
+        assert.strictEqual(env.OPENROUTER_MODEL, 'liquid/lfm-2.5-1.2b-instruct:free');
         assert.strictEqual(env.ENABLE_LIGHTRAG, 'false');
+        assert.strictEqual(env.ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS, '12000');
+        assert.strictEqual(env.ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS, '750000');
+        assert.strictEqual(env.ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES, '20971520');
+        assert.strictEqual(env.ASSET_AWARE_SECTION_TREE_LOAD_MAX_BYTES, '20971520');
+        assert.strictEqual(env.ASSET_AWARE_SEGMENTATION_SOURCE_LOAD_MAX_BYTES, '20971520');
     });
 
     it('writes the 8b Granite model in a new default env when GPU hint is enabled', async () => {
@@ -111,6 +119,23 @@ describe('EnvManager', () => {
 
         assert.strictEqual(env.LIGHTRAG_EMBEDDING_MODEL, 'text-embedding-legacy');
         assert.strictEqual(env.OPENAI_EMBEDDING_MODEL, 'text-embedding-legacy');
+    });
+
+    it('persists OpenRouter API key and model settings', async () => {
+        const manager = new EnvManager(tempDir);
+
+        await manager.updateEnv('LLM_BACKEND', 'openrouter');
+        await manager.updateEnv('OPENROUTER_API_KEY', 'sk-or-test');
+        await manager.updateEnv('OPENROUTER_MODEL', 'liquid/custom:free');
+
+        const content = fs.readFileSync(path.join(tempDir, '.env'), 'utf8');
+        assert.ok(content.includes('LLM_BACKEND=openrouter'));
+        assert.ok(content.includes('OPENROUTER_API_KEY=sk-or-test'));
+        assert.ok(content.includes('OPENROUTER_MODEL=liquid/custom:free'));
+
+        const env = await manager.readEnv();
+        assert.strictEqual(env.OPENROUTER_API_KEY, 'sk-or-test');
+        assert.strictEqual(env.OPENROUTER_MODEL, 'liquid/custom:free');
     });
 
     it('lists document artifacts and citation span summaries', () => {

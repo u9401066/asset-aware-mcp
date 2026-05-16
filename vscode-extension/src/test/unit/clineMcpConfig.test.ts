@@ -110,6 +110,35 @@ describe('clineMcpConfig', () => {
         assert.strictEqual(entry.env.HTTP_PROXY, 'http://proxy.local:8080');
         assert.strictEqual(entry.env.OLLAMA_MODEL, 'from-env');
         assert.strictEqual(entry.env.DATA_DIR, path.join(tempDir, 'next-data'));
+        assert.strictEqual(entry.env.ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS, '12000');
+        assert.strictEqual(entry.env.ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS, '750000');
+        assert.strictEqual(entry.env.ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES, '20971520');
+    });
+
+    it('replaces stale managed Cline OOM guard env while preserving custom env metadata', () => {
+        fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+        fs.writeFileSync(settingsPath, JSON.stringify({
+            mcpServers: {
+                'asset-aware-mcp': {
+                    command: '/old/uv',
+                    args: ['tool', 'run', 'asset-aware-mcp'],
+                    env: {
+                        HTTP_PROXY: 'http://proxy.local:8080',
+                        ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS: '0',
+                        ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS: '999999999',
+                    },
+                },
+            },
+        }, null, 2));
+
+        const updated = installClineMcpServer(context, '/usr/bin/uv');
+
+        assert.strictEqual(updated, true);
+        const entry = readSettings().mcpServers['asset-aware-mcp'];
+        assert.strictEqual(entry.env.HTTP_PROXY, 'http://proxy.local:8080');
+        assert.strictEqual(entry.env.ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS, '12000');
+        assert.strictEqual(entry.env.ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS, '750000');
+        assert.strictEqual(entry.env.ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES, '20971520');
     });
 
     it('auto-tracks the current workspace DATA_DIR even if a previous workspace was installed', () => {

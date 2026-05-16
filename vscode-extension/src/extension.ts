@@ -1005,21 +1005,32 @@ async function runSetupWizard(): Promise<void> {
 async function getRequiredOllamaModels(): Promise<string[]> {
     const config = vscode.workspace.getConfiguration('assetAwareMcp');
     const env = await envManager.readEnv();
+    const backend = (env.LLM_BACKEND || config.get<string>('llmBackend', 'ollama')).toLowerCase();
+    const lightRagEnabled = envBoolean(
+        env.ENABLE_LIGHTRAG,
+        config.get<boolean>('enableLightRag', DEFAULT_ENABLE_LIGHTRAG),
+    );
+    if (backend !== 'ollama' && !lightRagEnabled) {
+        return [];
+    }
     return getRequiredOllamaModelsForLightRag(
-        env.OLLAMA_MODEL || config.get<string>('ollamaModel', defaultOllamaModelForHardware()),
+        backend === 'ollama'
+            ? env.OLLAMA_MODEL || config.get<string>('ollamaModel', defaultOllamaModelForHardware())
+            : undefined,
         env.OLLAMA_EMBEDDING_MODEL || config.get<string>('ollamaEmbeddingModel', DEFAULT_OLLAMA_EMBEDDING_MODEL),
-        envBoolean(
-            env.ENABLE_LIGHTRAG,
-            config.get<boolean>('enableLightRag', DEFAULT_ENABLE_LIGHTRAG),
-        ),
+        lightRagEnabled,
     );
 }
 
 async function getOllamaModelStatus(): Promise<OllamaModelStatus> {
     const config = vscode.workspace.getConfiguration('assetAwareMcp');
     const env = await envManager.readEnv();
+    const requiredModels = await getRequiredOllamaModels();
+    if (requiredModels.length === 0) {
+        return { connected: true, models: [], missingModels: [] };
+    }
     const host = env.OLLAMA_HOST || config.get<string>('ollamaHost', DEFAULT_OLLAMA_HOST);
-    return checkOllamaModels(host, await getRequiredOllamaModels());
+    return checkOllamaModels(host, requiredModels);
 }
 
 async function checkAndUpdateOllamaStatus(status?: OllamaModelStatus): Promise<boolean> {

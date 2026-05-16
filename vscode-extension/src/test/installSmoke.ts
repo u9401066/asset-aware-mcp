@@ -9,6 +9,13 @@ import {
     runTests,
 } from '@vscode/test-electron';
 import {
+    DEFAULT_MCP_IMAGE_RESPONSE_CHARS,
+    DEFAULT_MCP_TEXT_RESPONSE_CHARS,
+    DEFAULT_SECTION_TREE_LOAD_MAX_BYTES,
+    DEFAULT_SEGMENTATION_SOURCE_LOAD_MAX_BYTES,
+    DEFAULT_TABLE_STARTUP_LOAD_MAX_BYTES,
+} from '../defaults';
+import {
     DEFAULT_TORCH_BACKEND,
     findUvPath,
     getAssetAwareRuntimeProbeArgs,
@@ -44,7 +51,12 @@ function parseVSCodeQuality(): VSCodeQuality {
     throw new Error(`Unsupported VS Code quality "${rawValue}". Use "stable" or "insiders".`);
 }
 
-async function runCommand(command: string, args: string[], cwd?: string): Promise<string> {
+async function runCommand(
+    command: string,
+    args: string[],
+    cwd?: string,
+    env: NodeJS.ProcessEnv = process.env,
+): Promise<string> {
     const maxBuffer = 1024 * 1024 * 10;
     const isWindowsCmd = process.platform === 'win32' && path.extname(command).toLowerCase() === '.cmd';
 
@@ -61,7 +73,7 @@ async function runCommand(command: string, args: string[], cwd?: string): Promis
             shellCommand,
         ], {
             cwd,
-            env: process.env,
+            env,
             maxBuffer,
         });
 
@@ -70,7 +82,7 @@ async function runCommand(command: string, args: string[], cwd?: string): Promis
 
     const { stdout, stderr } = await execFileAsync(command, args, {
         cwd,
-        env: process.env,
+        env,
         maxBuffer,
     });
 
@@ -149,6 +161,25 @@ async function verifyRuntimeDiagnostics(): Promise<void> {
     if (!uvPath) {
         throw new Error('Could not find uv for Asset-Aware MCP runtime diagnostics.');
     }
+    const runtimeDirs = createIsolatedDirs('asset-aware-runtime');
+    const runtimeDataDir = path.join(runtimeDirs.baseDir, 'data');
+    const runtimeLogDir = path.join(runtimeDataDir, 'logs');
+    const runtimeCacheDir = path.join(runtimeDataDir, '.uv-cache');
+    fs.mkdirSync(runtimeLogDir, { recursive: true });
+    fs.mkdirSync(runtimeCacheDir, { recursive: true });
+    const runtimeEnv: NodeJS.ProcessEnv = {
+        ...process.env,
+        DATA_DIR: runtimeDataDir,
+        UV_CACHE_DIR: runtimeCacheDir,
+        ENABLE_LIGHTRAG: 'false',
+        ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS: DEFAULT_MCP_TEXT_RESPONSE_CHARS,
+        ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS: DEFAULT_MCP_IMAGE_RESPONSE_CHARS,
+        ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES: DEFAULT_TABLE_STARTUP_LOAD_MAX_BYTES,
+        ASSET_AWARE_SECTION_TREE_LOAD_MAX_BYTES: DEFAULT_SECTION_TREE_LOAD_MAX_BYTES,
+        ASSET_AWARE_SEGMENTATION_SOURCE_LOAD_MAX_BYTES: DEFAULT_SEGMENTATION_SOURCE_LOAD_MAX_BYTES,
+        ASSET_AWARE_SUPPRESS_MARKER_OUTPUT: 'true',
+        ASSET_AWARE_MARKER_OUTPUT_LOG: path.join(runtimeLogDir, 'marker.log'),
+    };
 
     const launch = getUvxLaunch(
         uvPath,
@@ -157,10 +188,14 @@ async function verifyRuntimeDiagnostics(): Promise<void> {
         DEFAULT_TORCH_BACKEND,
         currentVersion,
     );
+    const diagnosticArgs = launch.args[0] === 'tool' && launch.args[1] === 'run'
+        ? ['tool', 'run', '--isolated', ...launch.args.slice(2)]
+        : ['--isolated', ...launch.args];
     const probeOutput = await runCommand(
         launch.command,
-        getAssetAwareRuntimeProbeArgs(launch.args),
+        getAssetAwareRuntimeProbeArgs(diagnosticArgs),
         extensionRoot,
+        runtimeEnv,
     );
     if (!probeOutput.includes('asset-aware-mcp runtime ready')) {
         throw new Error(`Runtime import probe did not report readiness: ${probeOutput}`);
@@ -168,8 +203,9 @@ async function verifyRuntimeDiagnostics(): Promise<void> {
 
     const helpOutput = await runCommand(
         launch.command,
-        [...launch.args, 'asset-aware-mcp', '--help'],
+        [...diagnosticArgs, 'asset-aware-mcp', '--help'],
         extensionRoot,
+        runtimeEnv,
     );
     if (!helpOutput.includes('doctor') || !helpOutput.includes('list-tools')) {
         throw new Error(`Runtime --help did not expose diagnostics commands: ${helpOutput}`);
@@ -177,8 +213,9 @@ async function verifyRuntimeDiagnostics(): Promise<void> {
 
     const doctorOutput = await runCommand(
         launch.command,
-        [...launch.args, 'asset-aware-mcp', 'doctor', '--json'],
+        [...diagnosticArgs, 'asset-aware-mcp', 'doctor', '--json'],
         extensionRoot,
+        runtimeEnv,
     );
     if (!doctorOutput.includes('"package"') || !doctorOutput.includes('"runtime"')) {
         throw new Error(`Runtime doctor did not return diagnostics JSON: ${doctorOutput}`);
@@ -186,8 +223,9 @@ async function verifyRuntimeDiagnostics(): Promise<void> {
 
     const toolsOutput = await runCommand(
         launch.command,
-        [...launch.args, 'asset-aware-mcp', 'list-tools', '--json'],
+        [...diagnosticArgs, 'asset-aware-mcp', 'list-tools', '--json'],
         extensionRoot,
+        runtimeEnv,
     );
     if (!toolsOutput.includes('list_documents') || !toolsOutput.includes('consult_knowledge_graph')) {
         throw new Error(`Runtime list-tools did not expose core MCP tools: ${toolsOutput}`);

@@ -6,6 +6,7 @@ import {
     ASSET_AWARE_SERVER_KEY,
     buildAssetAwareLaunchSpec,
     isAssetAwareLaunch,
+    mergeManagedEnv,
 } from './mcpConfigCommon';
 
 interface CodexServerSpec {
@@ -79,6 +80,97 @@ function renderManagedBlock(serverKey: string, spec: CodexServerSpec): string {
     }
 
     return lines.join('\n') + '\n';
+}
+
+function envBlockHeaderPattern(serverKey: string): RegExp {
+    const escapedKey = serverKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`^\\s*\\[\\s*mcp_servers\\.${escapedKey}\\.env\\s*\\]\\s*$`);
+}
+
+function parseTomlStringValue(value: string): string | undefined {
+    const trimmed = value.trim();
+    if (trimmed.startsWith("'") && trimmed.endsWith("'") && trimmed.length >= 2) {
+        return trimmed.slice(1, -1);
+    }
+    if (!trimmed.startsWith('"') || !trimmed.endsWith('"') || trimmed.length < 2) {
+        return undefined;
+    }
+
+    let out = '';
+    for (let i = 1; i < trimmed.length - 1; i += 1) {
+        const char = trimmed[i];
+        if (char !== '\\') {
+            out += char;
+            continue;
+        }
+        i += 1;
+        const escaped = trimmed[i];
+        if (escaped === undefined || i >= trimmed.length - 1) {
+            return undefined;
+        }
+        switch (escaped) {
+            case 'n':
+                out += '\n';
+                break;
+            case 'r':
+                out += '\r';
+                break;
+            case 't':
+                out += '\t';
+                break;
+            case '"':
+            case '\\':
+                out += escaped;
+                break;
+            default:
+                out += escaped;
+                break;
+        }
+    }
+    return out;
+}
+
+function extractManagedEnv(block: string | undefined, serverKey: string): Record<string, string> | undefined {
+    if (!block) {
+        return undefined;
+    }
+
+    const envHeader = envBlockHeaderPattern(serverKey);
+    const anyHeader = anyTableHeaderPattern();
+    const env: Record<string, string> = {};
+    let inEnv = false;
+
+    for (const rawLine of block.split(/\r?\n/)) {
+        if (envHeader.test(rawLine)) {
+            inEnv = true;
+            continue;
+        }
+        if (!inEnv) {
+            continue;
+        }
+        if (anyHeader.test(rawLine)) {
+            break;
+        }
+
+        const line = stripTomlComment(rawLine).trim();
+        if (!line) {
+            continue;
+        }
+        const eqIndex = line.indexOf('=');
+        if (eqIndex <= 0) {
+            continue;
+        }
+        const key = line.slice(0, eqIndex).trim();
+        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+            continue;
+        }
+        const parsed = parseTomlStringValue(line.slice(eqIndex + 1));
+        if (parsed !== undefined) {
+            env[key] = parsed;
+        }
+    }
+
+    return Object.keys(env).length > 0 ? env : undefined;
 }
 
 function extractManagedBlock(content: string, serverKey: string): string | undefined {
@@ -315,13 +407,7 @@ export function installCodexMcpServer(
 
     const configPath = getCodexConfigPath();
     const launch = buildAssetAwareLaunchSpec(context, uvPath, { needsUpgrade });
-    const spec: CodexServerSpec = {
-        command: launch.command,
-        args: launch.args,
-        env: launch.env,
-    };
-
-    if (!isAssetAwareLaunch(spec.command, spec.args)) {
+    if (!isAssetAwareLaunch(launch.command, launch.args)) {
         return false;
     }
 
@@ -334,10 +420,17 @@ export function installCodexMcpServer(
         return false;
     }
     const original = content;
+    const existingBlock = extractManagedBlock(content, ASSET_AWARE_SERVER_KEY);
     const stripped = stripManagedBlock(content, ASSET_AWARE_SERVER_KEY);
     if (stripped.blockedByCustom) {
         return false;
     }
+    const existingEnv = extractManagedEnv(existingBlock, ASSET_AWARE_SERVER_KEY);
+    const spec: CodexServerSpec = {
+        command: launch.command,
+        args: launch.args,
+        env: mergeManagedEnv(existingEnv, launch.env) ?? {},
+    };
 
     content = ensureTrailingBlankLine(stripped.content) + renderManagedBlock(ASSET_AWARE_SERVER_KEY, spec);
     if (content === original) {

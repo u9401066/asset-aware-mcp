@@ -7,6 +7,7 @@ import {
     entriesEqual,
     getPrimaryWorkspaceRoot,
     isAssetAwareLaunch,
+    mergeManagedEnv,
 } from './mcpConfigCommon';
 
 const CLINE_EXTENSION_ID = 'saoudrizwan.claude-dev';
@@ -141,12 +142,7 @@ function mergeManagedEntry(
     return {
         ...existing,
         ...next,
-        env: existing.env || next.env
-            ? {
-                ...(existing.env ?? {}),
-                ...(next.env ?? {}),
-            }
-            : undefined,
+        env: mergeManagedEnv(existing.env, next.env),
         disabled: existing.disabled ?? next.disabled,
         alwaysAllow: existing.alwaysAllow,
     };

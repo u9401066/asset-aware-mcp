@@ -6,9 +6,9 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.34/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.35/resources/banner.png)
 
-## What's New in v0.6.34
+## What's New in v0.6.35
 
 - **Cline install hardening**: generated Cline settings now include readable Traditional Chinese `mcpRules` triggers for documents, citations, tables, figures, and knowledge graphs.
 - **Cline smoke coverage**: release checks now exercise the CLI installer, the exact generated launch command, and a real MCP stdio handshake.
@@ -106,7 +106,7 @@ This extension provides a sophisticated **ETL (Extract, Transform, Load) Pipelin
 
 - **📄 PDF ETL**:
   - **PyMuPDF** (default) - Fast extraction (~50MB dependency)
-  - **Marker** (`use_marker=True`) - Temporarily unavailable in v0.6.34 until upstream `marker-pdf` supports patched Pillow
+  - **Marker** (`use_marker=True`) - Temporarily unavailable in v0.6.35 until upstream `marker-pdf` supports patched Pillow
 - **🧩 Unified Segmentation**: Export normalized `segmentation.json` with reading order and markdown line ranges
 - **🖼️ Layout Overlay**: Visual bbox/type/reading-order inspection from the original PDF
 - **🔤 OCR Preprocessing**: Optional scanned-PDF cleanup before ETL
@@ -190,9 +190,11 @@ The agent retrieves exactly what it needs:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `assetAwareMcp.llmBackend` | `ollama` | LLM backend (ollama/openai) |
+| `assetAwareMcp.llmBackend` | `ollama` | LLM backend (`ollama`, `openai`, or `openrouter`) |
 | `assetAwareMcp.ollamaHost` | `http://localhost:11434` | Ollama URL |
 | `assetAwareMcp.ollamaModel` | `granite4.1:3b` | CPU-friendly local RAG/text-generation default; set `ASSET_AWARE_HAS_GPU=true` or choose `granite4.1:8b` for GPU installs |
+| `assetAwareMcp.openrouterApiKey` | empty | OpenRouter API key for the optional fast/free preset |
+| `assetAwareMcp.openrouterModel` | `liquid/lfm-2.5-1.2b-instruct:free` | Fast low-cost model for summaries and draft RAG answers |
 | `assetAwareMcp.enableLightRag` | `false` | Optional KG indexing/querying; keep off for CPU-only or document-only workflows |
 | `assetAwareMcp.dataDir` | `./data` | Storage for processed assets |
 | `.env: LIGHTRAG_WORKING_DIR` | `./data/lightrag_db` | LightRAG working directory written by the setup wizard / settings panel |
@@ -203,7 +205,7 @@ Runtime note:
 The extension prefers a managed Python 3.11 runtime when launching the MCP server via `uv`/`uvx`. This avoids package builds on machines without native toolchains, especially macOS systems missing Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
 
 Marker note:
-The extension does not install Marker or torch in v0.6.34. `assetAwareMcp.enableMarkerBackend` is retained for compatibility, but the launcher ignores it while upstream `marker-pdf` requires `Pillow<11` and the secure runtime requires `Pillow>=12.2.0`.
+The extension does not install Marker or torch in v0.6.35. `assetAwareMcp.enableMarkerBackend` is retained for compatibility, but the launcher ignores it while upstream `marker-pdf` requires `Pillow<11` and the secure runtime requires `Pillow>=12.2.0`.
 
 Installation scope & storage:
 - The VSIX installs as a user/global extension (standard VS Code behavior), so you do not need a separate install per workspace.

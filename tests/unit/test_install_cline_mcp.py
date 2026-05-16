@@ -170,7 +170,15 @@ def test_build_server_config_sets_workspace_data_dir_from_env(tmp_path: Path) ->
 
     config = install_cline_mcp.build_server_config(uv="uv", root=tmp_path)
 
+    assert config["args"][:3] == ["run", "--python", "3.11"]
     assert config["env"]["DATA_DIR"] == str(tmp_path / "custom-data")
+    assert config["env"]["ENABLE_LIGHTRAG"] == "false"
+    assert config["env"]["UV_CACHE_DIR"] == str(tmp_path / "custom-data" / ".uv-cache")
+    assert config["env"]["ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS"] == "12000"
+    assert config["env"]["ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS"] == "750000"
+    assert config["env"]["ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES"] == "20971520"
+    assert config["env"]["ASSET_AWARE_SECTION_TREE_LOAD_MAX_BYTES"] == "20971520"
+    assert config["env"]["ASSET_AWARE_SEGMENTATION_SOURCE_LOAD_MAX_BYTES"] == "20971520"
     assert config["env"]["ASSET_AWARE_SUPPRESS_MARKER_OUTPUT"] == "true"
     assert config["env"]["ASSET_AWARE_MARKER_OUTPUT_LOG"] == str(
         tmp_path / "custom-data" / "logs" / "marker.log"

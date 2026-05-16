@@ -57,6 +57,11 @@ describe('mcpConfigCommon', () => {
         assert.strictEqual(env.OLLAMA_MODEL, 'granite4.1:3b');
         assert.strictEqual(env.OLLAMA_EMBEDDING_MODEL, 'nomic-embed-text');
         assert.strictEqual(env.ENABLE_LIGHTRAG, 'false');
+        assert.strictEqual(env.ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS, '12000');
+        assert.strictEqual(env.ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS, '750000');
+        assert.strictEqual(env.ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES, '20971520');
+        assert.strictEqual(env.ASSET_AWARE_SECTION_TREE_LOAD_MAX_BYTES, '20971520');
+        assert.strictEqual(env.ASSET_AWARE_SEGMENTATION_SOURCE_LOAD_MAX_BYTES, '20971520');
     });
 
     it('uses the 8b Granite RAG default when GPU hint is enabled', () => {
@@ -78,6 +83,58 @@ describe('mcpConfigCommon', () => {
 
         assert.strictEqual(env.OLLAMA_MODEL, 'operator-model');
         assert.strictEqual(env.DATA_DIR, path.resolve(tempDir, 'operator-data'));
+    });
+
+    it('loads OpenRouter preset settings from workspace .env', () => {
+        fs.writeFileSync(path.join(tempDir, '.env'), [
+            'LLM_BACKEND=openrouter',
+            'OPENROUTER_API_KEY=sk-or-test',
+            'OPENROUTER_BASE_URL=https://openrouter.ai/api/v1',
+            'OPENROUTER_MODEL=liquid/lfm-2.5-1.2b-instruct:free',
+            '',
+        ].join('\n'));
+        const context = { globalStorageUri: { fsPath: path.join(tempDir, 'global') } } as any;
+
+        const env = buildAssetAwareEnv(context, tempDir);
+
+        assert.strictEqual(env.LLM_BACKEND, 'openrouter');
+        assert.strictEqual(env.OPENROUTER_API_KEY, 'sk-or-test');
+        assert.strictEqual(env.OPENROUTER_BASE_URL, 'https://openrouter.ai/api/v1');
+        assert.strictEqual(env.OPENROUTER_MODEL, 'liquid/lfm-2.5-1.2b-instruct:free');
+    });
+
+    it('uses explicit VS Code OpenRouter settings without requiring a .env file', () => {
+        __setConfigurationValue('assetAwareMcp.llmBackend', 'openrouter');
+        __setConfigurationValue('assetAwareMcp.openrouterApiKey', 'sk-or-config');
+        __setConfigurationValue('assetAwareMcp.openrouterModel', 'liquid/custom:free');
+        const context = { globalStorageUri: { fsPath: path.join(tempDir, 'global') } } as any;
+
+        const env = buildAssetAwareEnv(context, tempDir);
+
+        assert.strictEqual(env.LLM_BACKEND, 'openrouter');
+        assert.strictEqual(env.OPENROUTER_API_KEY, 'sk-or-config');
+        assert.strictEqual(env.OPENROUTER_MODEL, 'liquid/custom:free');
+        assert.strictEqual(env.OPENROUTER_BASE_URL, undefined);
+    });
+
+    it('clamps unsafe .env OOM guard values back to VSIX safety defaults', () => {
+        fs.writeFileSync(path.join(tempDir, '.env'), [
+            'ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS=0',
+            'ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS=999999999',
+            'ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES=0',
+            'ASSET_AWARE_SECTION_TREE_LOAD_MAX_BYTES=0',
+            'ASSET_AWARE_SEGMENTATION_SOURCE_LOAD_MAX_BYTES=999999999',
+            '',
+        ].join('\n'));
+        const context = { globalStorageUri: { fsPath: path.join(tempDir, 'global') } } as any;
+
+        const env = buildAssetAwareEnv(context, tempDir);
+
+        assert.strictEqual(env.ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS, '12000');
+        assert.strictEqual(env.ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS, '750000');
+        assert.strictEqual(env.ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES, '20971520');
+        assert.strictEqual(env.ASSET_AWARE_SECTION_TREE_LOAD_MAX_BYTES, '20971520');
+        assert.strictEqual(env.ASSET_AWARE_SEGMENTATION_SOURCE_LOAD_MAX_BYTES, '20971520');
     });
 
     it('keeps explicit VS Code Ollama model override when GPU hint is enabled', () => {
@@ -118,5 +175,8 @@ describe('mcpConfigCommon', () => {
             launch.env.ASSET_AWARE_MARKER_OUTPUT_LOG,
             path.join(sourceRoot, 'child-data', 'logs', 'marker.log'),
         );
+        assert.strictEqual(launch.env.ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS, '12000');
+        assert.strictEqual(launch.env.ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS, '750000');
+        assert.strictEqual(launch.env.ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES, '20971520');
     });
 });
