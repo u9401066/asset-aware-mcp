@@ -1,6 +1,6 @@
 <!-- Generated from Knowledge-Graph.md by scripts/build_docs_site.py -->
 
-﻿# Knowledge Graph
+# Knowledge Graph
 
 ![Knowledge graph workflow](wiki/assets/knowledge-graph-workflow.jpg)
 
@@ -18,6 +18,18 @@ LLM_BACKEND=ollama
 OLLAMA_MODEL=granite4.1:3b
 OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 ENABLE_LIGHTRAG=false
+```
+
+For fast low-cost summaries and draft RAG answers, the optional OpenRouter preset
+uses an OpenAI-compatible chat endpoint while keeping retrieval embeddings on
+the configured embedding backend:
+
+```env
+LLM_BACKEND=openrouter
+OPENROUTER_API_KEY=sk-or-...
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_MODEL=liquid/lfm-2.5-1.2b-instruct:free
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 ```
 
 For GPU-backed workstations, use:

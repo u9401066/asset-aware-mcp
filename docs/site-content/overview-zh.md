@@ -1,13 +1,13 @@
 <!-- Generated from Home.md by scripts/build_docs_site.py -->
 
-﻿# Asset-Aware MCP Docs
+# Asset-Aware MCP Docs
 
 Asset-Aware MCP 是給 AI agents 使用的 citation-ready 文件工作流伺服器。它把
 PDF、DOCX/DFM、表格、圖片、section、citation index、Foam evidence pack 與選用
 KG/RAG 串成可驗證的文件流程。
 
 這個網站改成章節式導覽：先選你正在做的任務，再進入對應的詳細頁或 reference。
-目前內容對齊 `0.6.34` 正式文件。
+目前內容對齊 `0.6.35` 正式文件。
 
 <div class="path-grid">
   <section class="path-card">

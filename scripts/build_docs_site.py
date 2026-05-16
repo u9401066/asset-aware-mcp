@@ -518,7 +518,7 @@ exact contracts.
 
 | Item | Current Status |
 |---|---|
-| Latest code version | `0.6.34` |
+| Latest code version | `0.6.35` |
 | Runtime | Python `>=3.10`, managed with `uv` |
 | MCP endpoints | 62 tools and 13 resources, 75 endpoints total |
 | PDF backend | PyMuPDF by default; Marker has been on security hold since `0.6.28` |

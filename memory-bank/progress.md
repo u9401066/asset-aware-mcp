@@ -1,4 +1,39 @@
-# Progress (Updated: 2026-05-15)
+# Progress (Updated: 2026-05-16)
+
+## 2026-05-16 - v0.6.35 emergency OOM hotfix
+
+- Done: bounded MCP response surfaces that were OOM-prone under Cline: document
+  extraction, DOCX/DFM content, section/table resources, KG responses, job
+  results, citation helpers, and image/base64 payloads now return previews,
+  summaries, or artifact paths when oversized.
+- Done: startup memory pressure reduced through lazy optional adapters, minimized
+  ingest worker imports, worker results that avoid embedding full manifests,
+  streaming hashes, duplicate segmentation avoidance, and table startup load
+  caps.
+- Done: VSIX/installer safety env aligned across native MCP provider, Cline,
+  Copilot, Codex, `.env` defaults, and `scripts/install_cline_mcp.py`.
+  Managed config updates preserve user env such as proxy/cert settings while
+  replacing stale unsafe response-limit values.
+- Done: release harness blockers fixed: retired LLM wiki harness text removed
+  from source and synced repo-assets, docs site version metadata aligned, and
+  install smoke runtime diagnostics isolated from global uv cache/tool state.
+- Done: OpenRouter optional preset added for VSIX users. Settings can select
+  `openrouter`, store `OPENROUTER_API_KEY`, adjust OpenRouter base/model, apply
+  the `liquid/lfm-2.5-1.2b-instruct:free` fast/free preset, and choose Ollama
+  CPU/GPU model presets while preserving custom Ollama model input.
+- Done: Python LightRAG adapter can use OpenRouter's OpenAI-compatible chat API
+  for fast summaries and draft RAG answers while keeping KG retrieval embeddings
+  on the configured embedding backend.
+- Verified: focused OpenRouter/Python checks passed (`7 passed`), full Python
+  suite passed earlier in the hotfix cycle (`919 passed, 23 skipped`), VSIX
+  `npm run test:ci` passed (`138 passing`), default VSIX install/update smoke
+  passed, `uv build` produced 0.6.35 wheel/sdist, VSIX packaging produced
+  `asset-aware-mcp-0.6.35.vsix`, release harness/docs/sync checks passed, and
+  git diff hygiene had no whitespace errors. Per the user's fast-release
+  instruction, the final publish step skips additional full-suite and Docker
+  reruns.
+- Release target: bump and publish `v0.6.35` because `v0.6.34` is already tagged
+  locally and remotely.
 
 ## 2026-05-15 (evening) — v0.6.34 GPT subagent review + source-mode install fix
 

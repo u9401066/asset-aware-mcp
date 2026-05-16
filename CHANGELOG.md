@@ -7,6 +7,46 @@
 
 ## [Unreleased]
 
+## [0.6.35] - 2026-05-16
+
+### Added
+
+- Added shared response-size guards for MCP text, JSON, and image payloads so
+  large document/DFM/table/KG requests return bounded previews or artifact
+  references instead of flooding Cline/stdio clients.
+- Added regression coverage for large MCP responses, Cline installer safety env,
+  VSIX-managed Copilot/Codex/Cline env preservation, subprocess worker startup,
+  table startup caps, and release harness drift.
+- Added an optional OpenRouter fast/free preset for low-cost summaries and draft
+  RAG answers using `liquid/lfm-2.5-1.2b-instruct:free` via the
+  OpenAI-compatible OpenRouter API.
+
+### Changed
+
+- VSIX and Cline launch specs now inject conservative safety defaults:
+  `ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS=12000`,
+  `ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS=750000`, and
+  `ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES=20971520`.
+- Startup paths now avoid eager optional-heavy imports and large persisted table
+  loads unless explicitly needed, keeping default source/uvx launches slim.
+- VSIX install smoke runtime diagnostics now run with isolated uv cache/data
+  directories and `--isolated`, so release checks are not polluted by a user's
+  global uv tool/cache state.
+- VS Code settings now expose OpenRouter API key/base URL/model fields, an
+  OpenRouter preset button, and Ollama CPU/GPU model preset selection while
+  preserving custom model input.
+
+### Fixed
+
+- Fixed Cline OOM-prone responses from simple document extraction, DFM/DOCX
+  reads, table resources, section tools, KG queries, job results, and citation
+  helpers by returning bounded content and stable artifact paths.
+- Fixed VSIX-managed Copilot and Codex config updates so custom user env such as
+  `HTTP_PROXY` and `SSL_CERT_FILE` are preserved while stale unsafe OOM guard
+  values are replaced.
+- Fixed release blockers from retired LLM wiki harness text and stale docs-site
+  version metadata.
+
 ## [0.6.34] - 2026-05-15
 
 ### Added

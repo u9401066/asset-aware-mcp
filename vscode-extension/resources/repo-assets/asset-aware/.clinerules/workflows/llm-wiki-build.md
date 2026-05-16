@@ -1,7 +1,7 @@
 # LLM Wiki Build Workflow
 
-Build or refresh a Foam-compatible LLM wiki from Zotero, PubMed, and document
-evidence. Use with `.clinerules/35-foam-llm-wiki.md`.
+Build or refresh a Foam-compatible LLM wiki from Asset-Aware document evidence.
+Use with `.clinerules/35-foam-llm-wiki.md`.
 
 ## 1. Locate The Wiki
 
@@ -25,14 +25,10 @@ evidence. Use with `.clinerules/35-foam-llm-wiki.md`.
 
 ## 3. Gather Evidence With Tools
 
-- Use Zotero tools for library state, existing items, collections, and saved
-  metadata before re-fetching external data.
-- Use PubMed tools for discovery and follow-up:
-  - `unified_search`
-  - `fetch_article_details`
-  - related, citing, reference, timeline, export, and full-text tools when needed
 - Use document or asset-aware tools when the user provides PDFs, DOCX, DFM,
   tables, figures, or span-level citation requirements.
+- Use citation bundle, evidence health, manifest, and asset-resource tools to
+  gather traceable source spans and reviewable claim payloads.
 - Record provenance as you gather it; do not reconstruct citations from memory.
 
 ## 4. Write Foam-Compatible Notes
@@ -56,5 +52,5 @@ evidence. Use with `.clinerules/35-foam-llm-wiki.md`.
 
 - Summarize created, updated, preserved, and skipped notes.
 - List unresolved TODOs separately from completed links.
-- Mention any evidence gaps, missing PDFs, duplicate Zotero items, or uncertain
-  preprint/peer-review status.
+- Mention any evidence gaps, missing source documents, unresolved assets, or
+  uncertain preprint/peer-review status.

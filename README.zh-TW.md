@@ -39,7 +39,7 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 
 - 📄 **資產感知 ETL** - PDF → Markdown，以 PyMuPDF 為預設解析路徑並保留 Marker code path：
   - **PyMuPDF**（預設）- 快速提取（~50MB）
-  - **Marker**（`use_marker=True`）- 高精度結構化解析 code path 保留；v0.6.34 packaged runtime 仍因 upstream `marker-pdf` 尚未支援 patched Pillow 而暫時 security hold
+  - **Marker**（`use_marker=True`）- 高精度結構化解析 code path 保留；v0.6.35 packaged runtime 仍因 upstream `marker-pdf` 尚未支援 patched Pillow 而暫時 security hold
 - 🧩 **統一 Segmentation 匯出** - 產生正規化 `segmentation.json`，整合 manifest、blocks、reading order 與持久化 line span。
 - 🖼️ **版面 Overlay 偵錯** - 可從 `original.pdf` 產生 page overlay，直接檢查 bbox、區塊類型與 reading order。
 - 🔤 **按需 OCR 前處理** - 針對掃描型 PDF 提供可選 `ocrmypdf` 前處理流程，再進行 ETL。
@@ -133,7 +133,7 @@ asset-aware-mcp/
 # 安裝依賴 (使用 uv) — 預設不安裝 Marker/torch
 uv sync
 
-# v0.6.34：Marker extra 暫時停用；marker-pdf 1.10.2 鎖 Pillow<11，
+# v0.6.35：Marker extra 暫時停用；marker-pdf 1.10.2 鎖 Pillow<11，
 # 但安全 runtime 需要 Pillow>=12.2.0。請先使用預設 PyMuPDF backend。
 
 # 啟動 MCP 伺服器
@@ -282,7 +282,8 @@ Marker 說明：
 
 安裝建議：
 - 預設安裝：`uv sync`
-- Marker backend：v0.6.34 暫時停用；`marker` / `pdf` extras 保留名稱但不安裝 `marker-pdf`。
+- OpenRouter optional preset（v0.6.35 起）：在 VS Code extension Settings 選 `openrouter`，填入 `OPENROUTER_API_KEY`；預設 `OPENROUTER_MODEL=liquid/lfm-2.5-1.2b-instruct:free`，適合低成本快速摘要與 RAG 草稿查詢。
+- Marker backend：v0.6.35 暫時停用；`marker` / `pdf` extras 保留名稱但不安裝 `marker-pdf`。
 - VS Code extension：`assetAwareMcp.enableMarkerBackend` 設定仍保留，但 security hold 期間 launcher 不會安裝 `marker-pdf`。
 
 - [技術規格書](docs/spec.md) - 詳細技術定義

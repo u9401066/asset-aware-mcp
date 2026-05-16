@@ -1,5 +1,44 @@
 # Active Context
 
+## 2026-05-16 - v0.6.35 emergency OOM hotfix release prep
+
+- Emergency scope: Cline/stdio OOM prevention for simple document extraction,
+  DOCX/DFM reads, section/table/KG/job/citation payloads, plus VSIX-managed MCP
+  launch safety. The hotfix adds bounded MCP text/JSON/image responses, artifact
+  references for oversized payloads, table startup load caps, lazy optional-heavy
+  imports, subprocess worker startup minimization, and streaming/manifest-safe
+  document flows.
+- VSIX/Cline/Copilot/Codex launch configs now inject conservative safety env:
+  `ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS=12000`,
+  `ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS=750000`, and
+  `ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES=20971520`. Existing managed custom
+  env such as `HTTP_PROXY` and `SSL_CERT_FILE` is preserved while stale unsafe
+  OOM guard values are overwritten.
+- Release hardening: install smoke runtime diagnostics now isolate uv
+  `DATA_DIR`/`UV_CACHE_DIR` and use `--isolated`; retired LLM wiki harness text
+  was removed; docs/site version drift was fixed; VSIX repo-assets were synced.
+- User-requested OpenRouter preset is now in scope for the same release: VSIX
+  settings expose `openrouter` as an LLM backend, local `OPENROUTER_API_KEY`,
+  OpenRouter base URL/model fields, a fast/free preset button for
+  `liquid/lfm-2.5-1.2b-instruct:free`, and Ollama CPU/GPU model preset
+  selection. Runtime uses OpenRouter for chat/summary/RAG answer generation
+  while keeping LightRAG retrieval embeddings on the configured embedding path.
+- Version target is **0.6.35** because `v0.6.34` already exists locally and on
+  origin. `pyproject.toml`, `src/__init__.py`, `Dockerfile`,
+  `vscode-extension/package.json`, `package-lock.json`, docs source, generated
+  docs site payload, CHANGELOG, and Memory Bank are aligned for the tag.
+- Verification before tagging: focused OpenRouter/Python tests passed (`7
+  passed`), full Python suite passed earlier in the hotfix cycle (`919 passed,
+  23 skipped`), VSIX `npm run test:ci` passed (`138 passing`), default VSIX
+  install/update smoke passed, `uv build` produced 0.6.35 wheel/sdist, VSIX
+  package produced `asset-aware-mcp-0.6.35.vsix`, release harness/docs/sync
+  checks passed, and `git diff --check` had only LF/CRLF warnings. Per the
+  user's fast-release instruction on 2026-05-16, no additional full-suite rerun
+  and no Docker smoke are required for the final publish step. The isolated
+  `uvx --from .` stdio smoke attempted a network dependency resolve and was
+  stopped when the user switched to fast publish; CI/release should cover the
+  remote resolver path after publication.
+
 ## 2026-05-15 — v0.6.34 release: GPT subagent review + source-mode install fix
 
 - Ran a 3-agent parallel `reviewer-openai` code review of the dependency slim-down. 3 findings:
