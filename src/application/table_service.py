@@ -7,6 +7,7 @@ citation management, audit trail, and schema evolution.
 
 import json
 import logging
+import os
 import uuid
 from datetime import datetime
 from html import escape
@@ -26,6 +27,26 @@ from src.domain.table_entities import (
 from src.domain.value_objects import AssetRef
 
 logger = logging.getLogger(__name__)
+TABLE_STARTUP_LOAD_MAX_BYTES_ENV = "ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES"
+DEFAULT_TABLE_STARTUP_LOAD_MAX_BYTES = 20 * 1024 * 1024
+TABLE_PREVIEW_CELL_MAX_CHARS = 500
+
+
+def _startup_load_max_bytes() -> int:
+    raw = os.environ.get(TABLE_STARTUP_LOAD_MAX_BYTES_ENV, "").strip()
+    if not raw:
+        return DEFAULT_TABLE_STARTUP_LOAD_MAX_BYTES
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return DEFAULT_TABLE_STARTUP_LOAD_MAX_BYTES
+
+
+def _preview_cell(value: object) -> str:
+    text = str(value if value is not None else "-")
+    if len(text) > TABLE_PREVIEW_CELL_MAX_CHARS:
+        text = f"{text[:TABLE_PREVIEW_CELL_MAX_CHARS]}... [truncated chars={len(text)}]"
+    return text.replace("|", "\\|").replace("\n", "<br>")
 
 
 class TableService:
@@ -56,8 +77,16 @@ class TableService:
 
     def _load_existing_tables(self) -> None:
         """Load table metadata from disk on startup."""
+        max_bytes = _startup_load_max_bytes()
         for json_file in self.storage_dir.glob("*.json"):
             try:
+                if max_bytes and json_file.stat().st_size > max_bytes:
+                    logger.warning(
+                        "Skipping large table file during startup: %s (%s bytes)",
+                        json_file,
+                        json_file.stat().st_size,
+                    )
+                    continue
                 with json_file.open(encoding="utf-8") as f:
                     data = json.load(f)
                     # Reconstruct TableContext
@@ -365,7 +394,7 @@ class TableService:
         # Rows
         row_lines = []
         for row in context.rows[:limit]:
-            vals = [str(row.get(h, "-")) for h in headers]
+            vals = [_preview_cell(row.get(h, "-")) for h in headers]
             row_lines.append("| " + " | ".join(vals) + " |")
 
         preview = f"### {context.title}\n\n{header_line}\n{sep_line}\n" + "\n".join(
@@ -875,8 +904,16 @@ class TableService:
 
     def _load_existing_drafts(self) -> None:
         """Load drafts from disk on startup."""
+        max_bytes = _startup_load_max_bytes()
         for json_file in self.draft_dir.glob("draft_*.json"):
             try:
+                if max_bytes and json_file.stat().st_size > max_bytes:
+                    logger.warning(
+                        "Skipping large draft file during startup: %s (%s bytes)",
+                        json_file,
+                        json_file.stat().st_size,
+                    )
+                    continue
                 with json_file.open(encoding="utf-8") as f:
                     data = json.load(f)
                     draft = TableDraft(

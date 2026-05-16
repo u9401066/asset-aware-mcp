@@ -14,6 +14,7 @@ from typing import Any
 from src.domain.job import JobStatus
 from src.presentation.dependencies import job_service
 from src.presentation.mcp_app import mcp
+from src.presentation.response_limits import format_limited_text_response
 
 
 def _normalize_op(op: str) -> str:
@@ -197,7 +198,12 @@ async def get_job_status(job_id: str) -> str:
         else:
             lines.append("Use `inspect_document_manifest(<doc_id>)` to view details.")
 
-    return "\n".join(lines)
+    return format_limited_text_response(
+        title=f"Job Status: {job_id}",
+        text="\n".join(lines),
+        language="markdown",
+        guidance="inspect artifact paths directly for full outputs",
+    )
 
 
 @mcp.tool()
@@ -278,7 +284,12 @@ async def list_jobs(active_only: bool = False) -> str:
                     lines.append(f"- **Last Error Before Restart:** {previous_error}")
         lines.append("")
 
-    return "\n".join(lines)
+    return format_limited_text_response(
+        title="Job List",
+        text="\n".join(lines),
+        language="markdown",
+        guidance="use get_job_status(job_id) for a focused job",
+    )
 
 
 @mcp.tool()

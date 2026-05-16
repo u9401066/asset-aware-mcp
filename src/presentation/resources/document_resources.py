@@ -20,6 +20,10 @@ from typing import cast
 from src.presentation.dependencies import document_service, knowledge_graph
 from src.presentation.markdown_utils import escape_table_cell
 from src.presentation.mcp_app import mcp
+from src.presentation.response_limits import (
+    format_limited_file_response,
+    format_limited_text_response,
+)
 from src.presentation.tools.document_tools import list_documents
 
 KNOWLEDGE_RESOURCE_TIMEOUT_SECONDS = 45.0
@@ -59,7 +63,12 @@ async def resource_document_segmentation(doc_id: str) -> str:
             f"Segmentation not found for {doc_id}. "
             "Run export_document_segmentation first to create segmentation.json."
         )
-    return segmentation_path.read_text(encoding="utf-8")
+    return format_limited_file_response(
+        title=f"Segmentation Resource Preview: {doc_id}",
+        path=segmentation_path,
+        language="json",
+        guidance="use `export_document_segmentation(doc_id, page=..., limit=...)` for focused slices",
+    )
 
 
 @mcp.resource("document://{doc_id}/figures")
@@ -106,7 +115,12 @@ async def resource_document_figures(doc_id: str) -> str:
         ]
     )
 
-    return "\n".join(lines)
+    return format_limited_text_response(
+        title=f"Document Figures: {doc_id}",
+        text="\n".join(lines),
+        language="markdown",
+        guidance="fetch individual figures by id",
+    )
 
 
 @mcp.resource("document://{doc_id}/tables")
@@ -152,7 +166,12 @@ async def resource_document_tables(doc_id: str) -> str:
         ]
     )
 
-    return "\n".join(lines)
+    return format_limited_text_response(
+        title=f"Document Tables: {doc_id}",
+        text="\n".join(lines),
+        language="markdown",
+        guidance="fetch individual tables by id",
+    )
 
 
 @mcp.resource("document://{doc_id}/sections")
@@ -187,7 +206,12 @@ async def resource_document_sections(doc_id: str) -> str:
         ]
     )
 
-    return "\n".join(lines)
+    return format_limited_text_response(
+        title=f"Document Sections: {doc_id}",
+        text="\n".join(lines),
+        language="markdown",
+        guidance="fetch a specific section by id",
+    )
 
 
 @mcp.resource("document://{doc_id}/outline")
@@ -274,7 +298,12 @@ async def resource_document_outline(doc_id: str) -> str:
         ]
     )
 
-    return "\n".join(lines)
+    return format_limited_text_response(
+        title=f"Document Outline: {doc_id}",
+        text="\n".join(lines),
+        language="markdown",
+        guidance="use specific document resources for smaller views",
+    )
 
 
 @mcp.resource("knowledge-graph://summary")
@@ -331,4 +360,9 @@ async def resource_knowledge_graph_summary() -> str:
         ]
     )
 
-    return "\n".join(lines)
+    return format_limited_text_response(
+        title="Knowledge Graph Summary Resource",
+        text="\n".join(lines),
+        language="markdown",
+        guidance="use consult_knowledge_graph for focused queries",
+    )

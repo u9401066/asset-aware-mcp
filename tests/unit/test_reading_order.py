@@ -271,6 +271,48 @@ class TestSegmentationServiceReadingOrder:
         assert section_segment.line_start == 1
         assert section_segment.line_end == 10
 
+    async def test_oversized_blocks_json_falls_back_to_manifest_segments(
+        self,
+        temp_dir,
+        monkeypatch,
+    ) -> None:
+        """Segmentation export should not load blocks artifacts above the safe cap."""
+        manifest = DocumentManifest(
+            doc_id="doc_test",
+            filename="test.pdf",
+            title="Test",
+            page_count=1,
+            markdown_path="",
+            assets=DocumentAssets(
+                sections=[
+                    SectionAsset(
+                        id="sec_intro",
+                        title="Introduction",
+                        level=1,
+                        page=1,
+                        preview="",
+                    )
+                ],
+                tables=[],
+                figures=[],
+            ),
+        )
+        (temp_dir / "blocks.json").write_text(" " * 256, encoding="utf-8")
+        monkeypatch.setenv("ASSET_AWARE_SEGMENTATION_SOURCE_LOAD_MAX_BYTES", "16")
+        repository = MagicMock()
+        repository.load_manifest.return_value = manifest
+        repository.get_doc_dir.return_value = temp_dir
+        repository.load_blocks.side_effect = AssertionError("blocks should not load")
+        repository.load_markdown.return_value = ""
+
+        service = SegmentationService(repository=repository)
+        segmentation = await service.export_document_segmentation("doc_test")
+
+        assert [segment.segment_id for segment in segmentation.segments] == [
+            "sec_intro"
+        ]
+        assert segmentation.locator_source_sha256 == ""
+
     async def test_manifest_table_segment_keeps_line_anchor(self, temp_dir) -> None:
         manifest = DocumentManifest(
             doc_id="doc_test",

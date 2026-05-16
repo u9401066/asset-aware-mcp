@@ -73,6 +73,16 @@ if TYPE_CHECKING:
 ToolProgressCallback = Callable[[int, int, str, str], Awaitable[None] | None]
 
 logger = logging.getLogger(__name__)
+_HASH_CHUNK_SIZE = 1024 * 1024
+
+
+def _sha256_file(path: Path) -> str:
+    hasher = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(_HASH_CHUNK_SIZE):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
 
 __all__ = [
     "DocumentService",
@@ -318,7 +328,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
 
         try:
             total_page_count = self.pdf_extractor.get_page_count(path)
-            source_pdf_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+            source_pdf_sha256 = _sha256_file(path)
             normalized_page_ranges = normalize_page_ranges(
                 page_ranges, total_page_count
             )
@@ -607,7 +617,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
 
         try:
             total_page_count = self.pdf_extractor.get_page_count(path)
-            source_pdf_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+            source_pdf_sha256 = _sha256_file(path)
             normalized_page_ranges = normalize_page_ranges(
                 page_ranges, total_page_count
             )

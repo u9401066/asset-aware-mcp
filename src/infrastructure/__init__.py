@@ -1,51 +1,59 @@
-# Infrastructure Layer - External Dependencies
+"""Infrastructure package exports.
+
+Keep this module side-effect-light: importing configuration should not import
+optional OCR/KG adapters or their transitive model/runtime dependencies.
+"""
+
+from __future__ import annotations
+
+from importlib.util import find_spec
+from typing import Any
 
 from .config import settings
 from .file_storage import FileStorage
 from .job_store import FileJobStore, InMemoryJobStore, JobStoreInterface
 
-try:
-    from .lightrag_adapter import LightRAGAdapter
 
-    _HAS_LIGHTRAG = True
-except (ImportError, OSError):
-    _HAS_LIGHTRAG = False
-    LightRAGAdapter = None  # type: ignore
+def _module_available(module_name: str) -> bool:
+    try:
+        return find_spec(module_name) is not None
+    except (ImportError, ModuleNotFoundError, ValueError):
+        return False
 
-try:
+
+_HAS_LIGHTRAG = _module_available("lightrag")
+_HAS_MARKER = _module_available("marker")
+_HAS_PYMUPDF = _module_available("fitz")
+
+
+def __getattr__(name: str) -> Any:
+    if name == "LightRAGAdapter":
+        from .lightrag_adapter import LightRAGAdapter
+
+        return LightRAGAdapter
+    if name == "MarkerPDFExtractor":
+        from .marker_adapter import MarkerPDFExtractor
+
+        return MarkerPDFExtractor
+    if name == "PyMuPDFExtractor":
+        from .pdf_extractor import PyMuPDFExtractor
+
+        return PyMuPDFExtractor
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def get_pdf_extractor() -> Any:
+    """Get the default PDF extractor without importing it at package load time."""
+    if not _HAS_PYMUPDF:
+        raise ImportError("No PDF extractor available. Install PyMuPDF.")
     from .pdf_extractor import PyMuPDFExtractor
 
-    _HAS_PYMUPDF = True
-except (ImportError, OSError):
-    _HAS_PYMUPDF = False
-    PyMuPDFExtractor = None  # type: ignore
-
-try:
-    from .marker_adapter import MarkerPDFExtractor
-
-    _HAS_MARKER = True
-except (ImportError, OSError):
-    _HAS_MARKER = False
-    MarkerPDFExtractor = None  # type: ignore
-
-
-def get_pdf_extractor() -> PyMuPDFExtractor:
-    """
-    Get the best available PDF extractor.
-
-    Priority:
-    1. PyMuPDF (AGPL licensed)
-    """
-    if _HAS_PYMUPDF:
-        return PyMuPDFExtractor()
-    else:
-        raise ImportError("No PDF extractor available. Install with:\n  uv add PyMuPDF")
+    return PyMuPDFExtractor()
 
 
 __all__ = [
     "_HAS_LIGHTRAG",
     "_HAS_MARKER",
-    # Availability flags
     "_HAS_PYMUPDF",
     "FileJobStore",
     "FileStorage",
@@ -53,7 +61,6 @@ __all__ = [
     "JobStoreInterface",
     "LightRAGAdapter",
     "MarkerPDFExtractor",
-    # PDF Extractors
     "PyMuPDFExtractor",
     "get_pdf_extractor",
     "settings",

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
-from copy import deepcopy
-from typing import TYPE_CHECKING
+import os
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from src.application.output_paths import resolve_document_output_path
 from src.domain.citation import LOCATOR_VERSION, blocks_locator_sha256
@@ -15,9 +16,34 @@ from src.domain.reading_order import ReadingOrderPolicy
 from src.domain.segmentation import DocumentSegment, DocumentSegmentation
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from src.domain.repositories import DocumentRepository
+
+SEGMENTATION_SOURCE_LOAD_MAX_BYTES_ENV = (
+    "ASSET_AWARE_SEGMENTATION_SOURCE_LOAD_MAX_BYTES"
+)
+DEFAULT_SEGMENTATION_SOURCE_LOAD_MAX_BYTES = 20 * 1024 * 1024
+_STREAM_BYTES = 1024 * 1024
+
+
+def _segmentation_source_load_max_bytes() -> int:
+    raw = os.environ.get(SEGMENTATION_SOURCE_LOAD_MAX_BYTES_ENV, "").strip()
+    if not raw:
+        return DEFAULT_SEGMENTATION_SOURCE_LOAD_MAX_BYTES
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return DEFAULT_SEGMENTATION_SOURCE_LOAD_MAX_BYTES
+
+
+def _sha256_file(path: Path) -> str:
+    hasher = hashlib.sha256()
+    with path.open("rb") as handle:
+        while True:
+            chunk = handle.read(_STREAM_BYTES)
+            if not chunk:
+                break
+            hasher.update(chunk)
+    return hasher.hexdigest()
 
 
 class SegmentationService:
@@ -38,21 +64,14 @@ class SegmentationService:
             raise ValueError(f"Document not found: {doc_id}")
 
         doc_dir = self.repository.get_doc_dir(doc_id)
-        markdown = self.repository.load_markdown(doc_id) or ""
-        source_revision_id = (
-            hashlib.sha256(markdown.encode("utf-8")).hexdigest() if markdown else ""
+        markdown, source_revision_id = self._load_markdown_bounded(
+            doc_id,
+            doc_dir,
+            manifest.markdown_path,
         )
-        blocks = self.repository.load_blocks(doc_id)
-        if not isinstance(blocks, list):
-            blocks_path = doc_dir / "blocks.json"
-            blocks = (
-                json.loads(blocks_path.read_text(encoding="utf-8"))
-                if blocks_path.exists()
-                else None
-            )
+        blocks = self._load_blocks_bounded(doc_id, doc_dir)
 
         if blocks is not None:
-            blocks = deepcopy(blocks)
             if markdown and any(
                 not isinstance((block.get("metadata") or {}).get("line_start"), int)
                 for block in blocks
@@ -96,6 +115,59 @@ class SegmentationService:
             segments=segments,
         )
 
+    def _load_markdown_bounded(
+        self,
+        doc_id: str,
+        doc_dir: Path,
+        manifest_markdown_path: str,
+    ) -> tuple[str, str]:
+        max_bytes = _segmentation_source_load_max_bytes()
+        candidates: list[Path] = []
+        if manifest_markdown_path:
+            candidates.append(Path(manifest_markdown_path))
+        candidates.append(doc_dir / f"{doc_id}_full.md")
+
+        for path in candidates:
+            if not path.exists():
+                continue
+            try:
+                file_size = path.stat().st_size
+            except OSError:
+                continue
+            source_revision_id = _sha256_file(path)
+            if max_bytes > 0 and file_size > max_bytes:
+                return "", source_revision_id
+            return path.read_text(encoding="utf-8"), source_revision_id
+
+        markdown = self.repository.load_markdown(doc_id) or ""
+        source_revision_id = (
+            hashlib.sha256(markdown.encode("utf-8")).hexdigest() if markdown else ""
+        )
+        return markdown, source_revision_id
+
+    def _load_blocks_bounded(
+        self,
+        doc_id: str,
+        doc_dir: Path,
+    ) -> list[dict[str, Any]] | None:
+        blocks_path = doc_dir / "blocks.json"
+        if blocks_path.exists():
+            max_bytes = _segmentation_source_load_max_bytes()
+            try:
+                file_size = blocks_path.stat().st_size
+            except OSError:
+                return None
+            if max_bytes > 0 and file_size > max_bytes:
+                return None
+            try:
+                data = json.loads(blocks_path.read_text(encoding="utf-8"))
+            except Exception:
+                return None
+            return data if isinstance(data, list) else None
+
+        blocks = self.repository.load_blocks(doc_id)
+        return blocks if isinstance(blocks, list) else None
+
     async def save_document_segmentation(
         self,
         doc_id: str,
@@ -103,6 +175,21 @@ class SegmentationService:
         page: int | None = None,
         limit: int | None = None,
     ) -> Path:
+        target, _segmentation = await self.build_and_save_document_segmentation(
+            doc_id,
+            output_path=output_path,
+            page=page,
+            limit=limit,
+        )
+        return target
+
+    async def build_and_save_document_segmentation(
+        self,
+        doc_id: str,
+        output_path: str | None = None,
+        page: int | None = None,
+        limit: int | None = None,
+    ) -> tuple[Path, DocumentSegmentation]:
         segmentation = await self.export_document_segmentation(
             doc_id,
             page=page,
@@ -119,12 +206,12 @@ class SegmentationService:
             segmentation.model_dump_json(indent=2, exclude_none=True),
             encoding="utf-8",
         )
-        return target
+        return target, segmentation
 
     def _segments_from_blocks(
         self,
         manifest: DocumentManifest,
-        blocks: list[dict[str, object]],
+        blocks: list[dict[str, Any]],
         default_source_backend: str,
         *,
         markdown: str = "",
@@ -541,7 +628,7 @@ class SegmentationService:
     @staticmethod
     def _infer_backend_from_blocks(
         manifest: DocumentManifest,
-        blocks: list[dict[str, object]],
+        blocks: list[dict[str, Any]],
     ) -> str:
         backends = {
             str(metadata.get("source_backend"))

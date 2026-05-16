@@ -11,8 +11,6 @@ import re
 from importlib.metadata import PackageNotFoundError, version
 from typing import TYPE_CHECKING, Any, cast
 
-import numpy as np
-
 from src.domain.repositories import KnowledgeGraphInterface
 
 from .config import settings
@@ -190,10 +188,79 @@ async def ollama_model_complete(
         return content
 
 
+def _chat_content_to_text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for part in content:
+            if isinstance(part, dict):
+                value = part.get("text") or part.get("content")
+                if value:
+                    parts.append(str(value))
+            elif part:
+                parts.append(str(part))
+        return "".join(parts)
+    return str(content or "")
+
+
+async def openrouter_model_complete(
+    prompt: str,
+    system_prompt: str | None = None,
+    history_messages: list[dict[str, str]] | None = None,
+    **kwargs: str | int | float,
+) -> str:
+    """OpenRouter completion function using the OpenAI-compatible chat API."""
+    import httpx
+
+    model = str(kwargs.get("model", settings.openrouter_model))
+    base_url = str(kwargs.get("base_url", settings.openrouter_base_url)).rstrip("/")
+    api_key = str(
+        kwargs.get("api_key", settings.openrouter_api_key or settings.openai_api_key)
+    ).strip()
+    timeout = float(kwargs.get("timeout", settings.ollama_llm_timeout))
+
+    if not api_key:
+        raise RuntimeError(
+            "OpenRouter backend requires OPENROUTER_API_KEY "
+            "(or OPENAI_API_KEY as a compatibility fallback)."
+        )
+
+    messages: list[dict[str, str]] = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    if history_messages:
+        messages.extend(history_messages)
+    messages.append({"role": "user", "content": prompt})
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.post(
+            f"{base_url}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": model,
+                "messages": messages,
+                "stream": False,
+                "temperature": kwargs.get("temperature", 0.2),
+                "max_tokens": kwargs.get("max_tokens", 1024),
+            },
+        )
+        response.raise_for_status()
+        result = response.json()
+        choices = result.get("choices", [])
+        if not choices:
+            return ""
+        message = choices[0].get("message", {})
+        return _chat_content_to_text(message.get("content"))
+
+
 async def ollama_embedding(
     texts: list[str],
     **kwargs: str | int | float,
-) -> np.ndarray:
+) -> Any:
     """
     Ollama embedding function for LightRAG.
 
@@ -205,6 +272,7 @@ async def ollama_embedding(
         NumPy array of embedding vectors (required by LightRAG)
     """
     import httpx
+    import numpy as np
 
     model = str(kwargs.get("model", settings.ollama_embedding_model))
     host = str(kwargs.get("host", settings.ollama_host))
@@ -356,8 +424,10 @@ class LightRAGAdapter(KnowledgeGraphInterface):
             working_dir = settings.lightrag_working_dir
             working_dir.mkdir(parents=True, exist_ok=True)
 
-            # Choose backend based on settings
-            if settings.llm_backend == "ollama":
+            # Choose backend based on settings. The OpenRouter preset uses
+            # OpenRouter for generation and local Ollama embeddings for KG retrieval.
+            backend = settings.llm_backend.strip().lower()
+            if backend == "ollama":
                 # Use Ollama (local LLM)
                 self._rag = LightRAG(
                     working_dir=str(working_dir),
@@ -377,6 +447,27 @@ class LightRAGAdapter(KnowledgeGraphInterface):
                     max_parallel_insert=1,  # Sequential processing for stability
                     llm_model_max_async=1,  # One LLM call at a time
                     chunk_token_size=800,  # Smaller chunks for better extraction
+                )
+            elif backend == "openrouter":
+                self._rag = LightRAG(
+                    working_dir=str(working_dir),
+                    llm_model_func=openrouter_model_complete,
+                    llm_model_name=settings.openrouter_model,
+                    llm_model_kwargs={
+                        "api_key": settings.openrouter_api_key
+                        or settings.openai_api_key,
+                        "base_url": settings.openrouter_base_url,
+                        "model": settings.openrouter_model,
+                    },
+                    embedding_func=EmbeddingFunc(
+                        embedding_dim=768,  # nomic-embed-text dimension
+                        max_token_size=8192,
+                        func=ollama_embedding,
+                    ),
+                    entity_extract_max_gleaning=0,
+                    max_parallel_insert=1,
+                    llm_model_max_async=1,
+                    chunk_token_size=800,
                 )
             else:
                 # Use OpenAI

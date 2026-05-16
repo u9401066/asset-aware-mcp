@@ -7,6 +7,7 @@ Application Layer - Section Service
 from __future__ import annotations
 
 import json
+import os
 import re
 from typing import TYPE_CHECKING, Literal
 
@@ -18,6 +19,18 @@ if TYPE_CHECKING:
     from src.domain.repositories import DocumentRepository
 
 _DOC_ID_RE = re.compile(r"^(?:doc|docx)_[a-z0-9_]+$")
+SECTION_TREE_LOAD_MAX_BYTES_ENV = "ASSET_AWARE_SECTION_TREE_LOAD_MAX_BYTES"
+DEFAULT_SECTION_TREE_LOAD_MAX_BYTES = 20 * 1024 * 1024
+
+
+def _section_tree_load_max_bytes() -> int:
+    raw = os.environ.get(SECTION_TREE_LOAD_MAX_BYTES_ENV, "").strip()
+    if not raw:
+        return DEFAULT_SECTION_TREE_LOAD_MAX_BYTES
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return DEFAULT_SECTION_TREE_LOAD_MAX_BYTES
 
 
 class SectionService:
@@ -46,6 +59,7 @@ class SectionService:
         self.data_dir = data_dir.resolve() if data_dir is not None else None
         self.repository = repository
         self._tree_cache: dict[str, SectionTree] = {}
+        self._tree_load_errors: dict[str, str] = {}
 
     def _get_doc_dir(self, doc_id: str) -> Path:
         if self.repository is not None:
@@ -88,6 +102,21 @@ class SectionService:
         if not blocks_path.exists():
             return None
 
+        max_bytes = _section_tree_load_max_bytes()
+        if max_bytes > 0:
+            try:
+                file_size = blocks_path.stat().st_size
+            except OSError:
+                return None
+            if file_size > max_bytes:
+                self._tree_load_errors[doc_id] = (
+                    f"??blocks.json for doc_id `{doc_id}` is {file_size} bytes, "
+                    f"above the safe section tree load limit ({max_bytes} bytes). "
+                    "Use focused document assets or raise "
+                    f"`{SECTION_TREE_LOAD_MAX_BYTES_ENV}` only for trusted local runs."
+                )
+                return None
+
         try:
             blocks = json.loads(blocks_path.read_text(encoding="utf-8"))
         except Exception:
@@ -110,8 +139,15 @@ class SectionService:
 
         # 快取
         self._tree_cache[doc_id] = tree
+        self._tree_load_errors.pop(doc_id, None)
 
         return tree
+
+    def _tree_unavailable_message(self, doc_id: str) -> str:
+        return self._tree_load_errors.get(
+            doc_id,
+            f"??blocks.json not found for doc_id: `{doc_id}`",
+        )
 
     def clear_cache(self, doc_id: str | None = None) -> None:
         """

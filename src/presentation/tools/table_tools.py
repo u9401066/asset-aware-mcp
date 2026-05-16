@@ -25,6 +25,7 @@ from src.presentation.dependencies import (
 from src.presentation.markdown_utils import escape_table_cell
 from src.presentation.mcp_app import mcp
 from src.presentation.mcp_context import log_message, report_progress
+from src.presentation.response_limits import format_limited_text_response, text_sha256
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import Context
@@ -34,9 +35,68 @@ else:
     Context = Any
 
 logger = logging.getLogger(__name__)
+ASSET_REF_QUOTE_MAX_CHARS = 1_000
+TABLE_INLINE_VALUE_MAX_CHARS = 2_000
+TABLE_JSON_STRING_MAX_CHARS = 1_000
+TABLE_JSON_MAX_ITEMS = 25
+TABLE_LIST_MAX_ROWS = 500
+
+
+def _inline_preview(value: Any, max_chars: int = TABLE_INLINE_VALUE_MAX_CHARS) -> str:
+    text = str(value) if value is not None else ""
+    if len(text) <= max_chars:
+        return text
+    return (
+        f"{text[:max_chars]}... "
+        f"[truncated chars={len(text)} sha256={text_sha256(text)}]"
+    )
+
+
+def _bounded_json_value(value: Any, *, depth: int = 0) -> Any:
+    if isinstance(value, str):
+        if len(value) <= TABLE_JSON_STRING_MAX_CHARS:
+            return value
+        return {
+            "preview": value[:TABLE_JSON_STRING_MAX_CHARS],
+            "chars": len(value),
+            "sha256": text_sha256(value),
+            "truncated": True,
+        }
+    if isinstance(value, dict):
+        items = list(value.items())
+        result = {
+            str(key): _bounded_json_value(item, depth=depth + 1)
+            for key, item in items[:TABLE_JSON_MAX_ITEMS]
+        }
+        if len(items) > TABLE_JSON_MAX_ITEMS:
+            result["_omitted_keys"] = len(items) - TABLE_JSON_MAX_ITEMS
+        return result
+    if isinstance(value, list):
+        bounded_items = [
+            _bounded_json_value(item, depth=depth + 1)
+            for item in value[:TABLE_JSON_MAX_ITEMS]
+        ]
+        if len(value) > TABLE_JSON_MAX_ITEMS:
+            bounded_items.append({"_omitted_items": len(value) - TABLE_JSON_MAX_ITEMS})
+        return bounded_items
+    return value
+
+
+def _bounded_json_dumps(value: Any) -> str:
+    return json.dumps(_bounded_json_value(value), indent=2, ensure_ascii=False)
+
+
+def _limited_table_response(title: str, text: str, guidance: str) -> str:
+    return format_limited_text_response(
+        title=title,
+        text=text,
+        language="markdown",
+        guidance=guidance,
+    )
 
 
 def _span_asset_ref(span: EvidenceSpan) -> dict[str, Any]:
+    quote = span.text
     ref: dict[str, Any] = {
         "source_type": "span",
         "doc_id": span.doc_id,
@@ -45,9 +105,11 @@ def _span_asset_ref(span: EvidenceSpan) -> dict[str, Any]:
         "page": span.page,
         "source_revision_id": span.source_revision_id,
         "locator_version": span.locator_version,
-        "quote": span.text,
+        "quote": quote[:ASSET_REF_QUOTE_MAX_CHARS],
         "quote_sha256": span.text_sha256,
         "excerpt": span.text[:200],
+        "quote_chars": len(quote),
+        "quote_truncated": len(quote) > ASSET_REF_QUOTE_MAX_CHARS,
         "craap": span.craap.model_dump(exclude_none=True),
     }
     if span.line_start is not None and span.line_end is not None:
@@ -220,7 +282,11 @@ async def _plan_schema(
         ]
     )
 
-    return "\n".join(lines)
+    return _limited_table_response(
+        "Table Schema Planning",
+        "\n".join(lines),
+        "create a table or narrow the planning inputs for a smaller response",
+    )
 
 
 def _list_templates() -> str:
@@ -347,7 +413,13 @@ async def table_manage(
         elif operation == "list":
             return _table_list()
         elif operation == "preview":
-            return table_service.preview_table(table_id, limit)
+            effective_limit = max(1, min(limit, 100))
+            return format_limited_text_response(
+                title=f"Table Preview: {table_id}",
+                text=table_service.preview_table(table_id, effective_limit),
+                language="markdown",
+                guidance="use a smaller preview limit or render to an output file",
+            )
         elif operation == "resume":
             return _table_resume(table_id)
         elif operation == "render":
@@ -400,14 +472,23 @@ def _table_list() -> str:
     lines = ["# 📊 Tables\n"]
     lines.append("| ID | Title | Intent | Rows | Cites | Created |")
     lines.append("|----|-------|--------|------|-------|---------|")
-    for t in tables:
+    visible_tables = tables[:TABLE_LIST_MAX_ROWS]
+    for t in visible_tables:
         lines.append(
             f"| `{escape_table_cell(t['id'])}` | {escape_table_cell(t['title'])} | "
             f"{escape_table_cell(t['intent'])} | {escape_table_cell(t['rows'])} | "
             f"{escape_table_cell(t['citations'])} | "
             f"{escape_table_cell(t['created_at'])} |"
         )
-    return "\n".join(lines)
+    if len(tables) > len(visible_tables):
+        lines.append(
+            f"\n_Showing first {len(visible_tables)} of {len(tables)} tables._"
+        )
+    return _limited_table_response(
+        "Tables",
+        "\n".join(lines),
+        "use `table_manage('resume', table_id=...)` for focused reads",
+    )
 
 
 def _table_resume(table_id: str) -> str:
@@ -426,9 +507,13 @@ def _table_resume(table_id: str) -> str:
     if status["last_rows"]:
         lines.append("\n## Last Rows")
         lines.append("```json")
-        lines.append(json.dumps(status["last_rows"], indent=2, ensure_ascii=False))
+        lines.append(_bounded_json_dumps(status["last_rows"]))
         lines.append("```")
-    return "\n".join(lines)
+    return _limited_table_response(
+        f"Table Resume: {table_id}",
+        "\n".join(lines),
+        "render to an output file or inspect a specific row/cell",
+    )
 
 
 async def _table_render(
@@ -451,11 +536,17 @@ async def _table_render(
             f"- **Path:** `{result['file_path']}`\n"
             f"- **Rows:** {result['row_count']}"
         )
+    content = format_limited_text_response(
+        title=f"Table Render: {table_id}",
+        text=str(result.get("content", "")),
+        language="markdown" if fmt == "markdown" else "html",
+        guidance="render to an output file or request a smaller preview",
+    )
     return (
         f"✅ Rendered!\n"
         f"- **Format:** {result['format']}\n"
         f"- **Rows:** {result['row_count']}\n\n"
-        f"{result.get('content', '')}"
+        f"{content}"
     )
 
 
@@ -588,7 +679,7 @@ def _data_get_row(table_id: str, row_index: int) -> str:
     lines = [
         f"## Row {result['row_index']}",
         "```json",
-        json.dumps(result["data"], indent=2, ensure_ascii=False),
+        _bounded_json_dumps(result["data"]),
         "```",
     ]
     if result.get("citations"):
@@ -597,7 +688,11 @@ def _data_get_row(table_id: str, row_index: int) -> str:
             refs_count = len(cite.get("refs", []))
             conf = cite.get("confidence", "N/A")
             lines.append(f"  - `{col}`: {refs_count} refs (confidence: {conf})")
-    return "\n".join(lines)
+    return _limited_table_response(
+        f"Table Row: {table_id}/{row_index}",
+        "\n".join(lines),
+        "use `get_cell` for focused reads or render the table to a file",
+    )
 
 
 def _data_update_row(table_id: str, row_index: int, row: dict | None) -> str:
@@ -623,7 +718,7 @@ def _data_get_cell(table_id: str, row_index: int, column_name: str) -> str:
         return "❌ `row_index` and `column_name` are required."
     result = table_service.get_cell(table_id, row_index, column_name)
     lines = [
-        f"**Cell [{row_index}:{column_name}]:** `{result['value']}`",
+        f"**Cell [{row_index}:{column_name}]:** `{_inline_preview(result['value'])}`",
     ]
     if result.get("citation"):
         cite = result["citation"]
@@ -631,7 +726,11 @@ def _data_get_cell(table_id: str, row_index: int, column_name: str) -> str:
         lines.append(
             f"**Citation:** {refs_count} refs, confidence: {cite.get('confidence', 'N/A')}"
         )
-    return "\n".join(lines)
+    return _limited_table_response(
+        f"Table Cell: {table_id}/{row_index}/{column_name}",
+        "\n".join(lines),
+        "render the table to a file for full cell content",
+    )
 
 
 def _data_update_cell(
@@ -640,6 +739,8 @@ def _data_update_cell(
     if row_index < 0 or not column_name:
         return "❌ `row_index` and `column_name` are required."
     result = table_service.update_cell(table_id, row_index, column_name, value)
+    result["old_value"] = _inline_preview(result.get("old_value"))
+    result["new_value"] = _inline_preview(result.get("new_value"))
     value_str = str(value) if value is not None else ""
     char_count = len(value_str)
     line_count = value_str.count("\n")
@@ -652,13 +753,18 @@ def _data_update_cell(
     )
     if line_count > 0:
         msg += f" (含 {line_count} 個換行符，將以 `<br>` 轉義寫入 DFM)"
-    return msg
+    return _limited_table_response(
+        f"Table Cell Update: {table_id}/{row_index}/{column_name}",
+        msg,
+        "use table history or render to a file for full content",
+    )
 
 
 def _data_clear_cell(table_id: str, row_index: int, column_name: str) -> str:
     if row_index < 0 or not column_name:
         return "❌ `row_index` and `column_name` are required."
     result = table_service.clear_cell(table_id, row_index, column_name)
+    result["old_value"] = _inline_preview(result.get("old_value"))
     return f"✅ Cell [{row_index}:{column_name}] cleared. Old value: `{result['old_value']}`"
 
 
@@ -761,35 +867,61 @@ def _cite_get(
             return f"No citation for {result['cell']}."
         refs = cite.get("refs", [])
         lines = [f"## Citation: {result['cell']}", ""]
-        for i, ref in enumerate(refs):
+        visible_refs = refs[:50]
+        for i, ref in enumerate(visible_refs):
             lines.append(
                 f"  [{i}] **{ref['source_type']}**: {ref.get('label', ref.get('excerpt', ref.get('url', ''))[:60])}"
             )
+        if len(refs) > len(visible_refs):
+            lines.append(f"... {len(refs) - len(visible_refs)} more refs omitted")
         if cite.get("confidence") is not None:
             lines.append(f"\n**Confidence:** {cite['confidence']}")
         if cite.get("notes"):
-            lines.append(f"**Notes:** {cite['notes']}")
-        return "\n".join(lines)
+            lines.append(f"**Notes:** {_inline_preview(cite['notes'])}")
+        return _limited_table_response(
+            f"Table Citation: {table_id}/{result['cell']}",
+            "\n".join(lines),
+            "use citation indexes or source artifacts for full reference text",
+        )
     elif "row" in result:
         # Row citations
         cites = result.get("citations", {})
         if not cites:
             return f"No citations for row {result['row']}."
         lines = [f"## Row {result['row']} Citations\n"]
-        for col, cite in cites.items():
+        visible_cites = list(cites.items())[:500]
+        for col, cite in visible_cites:
             refs_count = len(cite.get("refs", []))
             lines.append(f"- **{col}**: {refs_count} refs")
-        return "\n".join(lines)
+        if len(cites) > len(visible_cites):
+            lines.append(
+                f"... {len(cites) - len(visible_cites)} more cited cells omitted"
+            )
+        return _limited_table_response(
+            f"Table Row Citations: {table_id}/{result['row']}",
+            "\n".join(lines),
+            "request a single cited cell for details",
+        )
     else:
         # Table-level
         total = result.get("total_citations", 0)
         if total == 0:
             return f"No citations in table `{table_id}`."
         lines = [f"## Table Citations ({total} cells)\n"]
-        for key, cite in result.get("citations", {}).items():
+        citations = result.get("citations", {})
+        visible_cites = list(citations.items())[:500]
+        for key, cite in visible_cites:
             refs_count = len(cite.get("refs", []))
             lines.append(f"- `{key}`: {refs_count} refs")
-        return "\n".join(lines)
+        if len(citations) > len(visible_cites):
+            lines.append(
+                f"... {len(citations) - len(visible_cites)} more cited cells omitted"
+            )
+        return _limited_table_response(
+            f"Table Citations: {table_id}",
+            "\n".join(lines),
+            "request row or cell-level citations for details",
+        )
 
 
 def _cite_remove(
@@ -817,8 +949,11 @@ def _cite_cell_history(
     if not history:
         return f"No history for [{row_index}:{column_name}]."
     lines = [f"## Cell History [{row_index}:{column_name}]\n"]
-    for entry in history:
+    visible_history = history[:20]
+    for entry in visible_history:
         ts = entry["timestamp"][:19]
+        entry["old_value"] = _inline_preview(entry.get("old_value", ""), 500)
+        entry["new_value"] = _inline_preview(entry.get("new_value", ""), 500)
         lines.append(
             f"- **{ts}** `{entry['operation']}`: {entry.get('old_value', '')} → {entry.get('new_value', '')}"
         )
@@ -1103,21 +1238,30 @@ def _draft_resume(draft_id: str) -> str:
     if draft.proposed_columns:
         lines.append("\n## Columns")
         lines.append("```json")
-        lines.append(json.dumps(draft.proposed_columns, indent=2, ensure_ascii=False))
+        lines.append(_bounded_json_dumps(draft.proposed_columns))
         lines.append("```")
     if draft.extraction_plan:
         lines.append("\n## Plan")
-        for i, step in enumerate(draft.extraction_plan, 1):
-            lines.append(f"{i}. {step}")
+        visible_steps = draft.extraction_plan[:TABLE_JSON_MAX_ITEMS]
+        for i, step in enumerate(visible_steps, 1):
+            lines.append(f"{i}. {_inline_preview(step)}")
+        if len(draft.extraction_plan) > len(visible_steps):
+            lines.append(
+                f"... {len(draft.extraction_plan) - len(visible_steps)} more steps omitted"
+            )
     if draft.pending_rows:
         lines.append(f"\n## Pending ({len(draft.pending_rows)} rows)")
         lines.append("```json")
-        lines.append(json.dumps(draft.pending_rows[-2:], indent=2, ensure_ascii=False))
+        lines.append(_bounded_json_dumps(draft.pending_rows[-2:]))
         lines.append("```")
     if draft.notes:
-        lines.append(f"\n## Notes\n{draft.notes}")
+        lines.append(f"\n## Notes\n{_inline_preview(draft.notes)}")
     lines.append(f"\n**Est. Tokens:** ~{draft.estimate_tokens()}")
-    return "\n".join(lines)
+    return _limited_table_response(
+        f"Table Draft: {draft_id}",
+        "\n".join(lines),
+        "commit the draft or inspect persisted draft artifacts for full content",
+    )
 
 
 def _draft_commit(draft_id: str) -> str:
@@ -1187,6 +1331,9 @@ async def discover_sources(
     """
     lines = [f"# 🔍 Sources for: {query}\n"]
     found_any = False
+    limit = max(1, min(limit, 50))
+    max_docs = 10
+    emitted_results = 0
 
     # 1. Search in documents
     if doc_ids:
@@ -1195,11 +1342,13 @@ async def discover_sources(
         # Get all document IDs from service
         try:
             all_docs = await document_service.list_documents()
-            target_docs = [d.doc_id for d in all_docs] if all_docs else []
+            target_docs = [d.doc_id for d in all_docs[:max_docs]] if all_docs else []
         except Exception:  # Service may be unavailable
             target_docs = []
 
     for doc_id in target_docs:
+        if emitted_results >= limit:
+            break
         try:
             manifest = await document_service.get_manifest(doc_id)
             if not manifest:
@@ -1251,6 +1400,9 @@ async def discover_sources(
                 found_any = True
                 lines.append(f"## 📄 {doc_id} ({manifest.title})")
                 for r in doc_results[:limit]:
+                    if emitted_results >= limit:
+                        break
+                    emitted_results += 1
                     asset_label = r.get("asset_id") or r.get("span_id") or "source"
                     display_label = r.get("label") or r.get("excerpt") or asset_label
                     lines.append(
@@ -1296,4 +1448,9 @@ async def discover_sources(
         "\n💡 Copy the AssetRef JSON and use `table_cite('add', ...)` to attach as citation."
     )
 
-    return "\n".join(lines)
+    return format_limited_text_response(
+        title=f"Source Discovery: {query}",
+        text="\n".join(lines),
+        language="markdown",
+        guidance="pass doc_ids and a smaller limit for focused source discovery",
+    )

@@ -15,6 +15,7 @@ from typing import Literal
 
 from src.presentation.dependencies import asset_service, section_service
 from src.presentation.mcp_app import mcp
+from src.presentation.response_limits import format_limited_text_response
 
 
 @mcp.tool()
@@ -48,13 +49,20 @@ async def list_section_tree(
         │   └── 📄 Management (P2972-2975, 8 blocks)
         └── 📑 Respiratory Failure (P2975-2985, 30 blocks)
     """
-    return await section_service.list_section_tree(doc_id, max_depth, format)
+    result = await section_service.list_section_tree(doc_id, max_depth, format)
+    return format_limited_text_response(
+        title=f"Section Tree: {doc_id}",
+        text=result,
+        language="json" if format == "json" else "markdown",
+        guidance="use max_depth or a narrower section query",
+    )
 
 
 @mcp.tool()
 async def get_section_detail(
     doc_id: str,
     path: str,
+    max_chars: int | None = None,
 ) -> str:
     """
     取得特定 section 的詳細資訊。
@@ -74,7 +82,14 @@ async def get_section_detail(
     Example:
         get_section_detail("abc123", "Chapter 79/Shock and Sepsis")
     """
-    return await section_service.get_section_detail(doc_id, path)
+    result = await section_service.get_section_detail(doc_id, path)
+    return format_limited_text_response(
+        title=f"Section Detail: {doc_id}/{path}",
+        text=result,
+        max_chars=max_chars,
+        language="markdown",
+        guidance="use `get_section_blocks(..., limit=...)` or a narrower section path",
+    )
 
 
 @mcp.tool()
@@ -115,8 +130,20 @@ async def get_section_blocks(
         # 只取得表格
         get_section_blocks("abc123", "Chapter 79", block_types=["Table"])
     """
-    return await section_service.get_section_blocks(
-        doc_id, path, include_children, block_types, limit
+    effective_limit = 50 if limit is None else max(1, min(limit, 100))
+    result = await section_service.get_section_blocks(
+        doc_id, path, include_children, block_types, effective_limit
+    )
+    if limit is None and "Showing first" not in result:
+        result += (
+            "\n\n_Response capped at 50 blocks by default. "
+            "Pass an explicit smaller path or limit for focused reads._"
+        )
+    return format_limited_text_response(
+        title=f"Section Blocks: {doc_id}/{path}",
+        text=result,
+        language="markdown",
+        guidance="use limit or block_types for a smaller read",
     )
 
 
@@ -125,6 +152,7 @@ async def search_sections(
     doc_id: str,
     query: str,
     fuzzy: bool = True,
+    max_chars: int | None = None,
 ) -> str:
     """
     搜尋 section 名稱（用於快速定位章節）。
@@ -154,13 +182,21 @@ async def search_sections(
            - Path: `Chapter 79/Cardiac/Cardiogenic Shock`
            - Pages: 2980-2982
     """
-    return await section_service.search_sections(doc_id, query, fuzzy)
+    result = await section_service.search_sections(doc_id, query, fuzzy)
+    return format_limited_text_response(
+        title=f"Section Search: {doc_id}",
+        text=result,
+        max_chars=max_chars,
+        language="markdown",
+        guidance="use a narrower query or inspect a specific section path",
+    )
 
 
 @mcp.tool()
 async def get_section_content(
     doc_id: str,
     section_id: str,
+    max_chars: int | None = None,
 ) -> str:
     """
     📖 Section-level 快取：直接讀取特定章節內容。
@@ -183,14 +219,22 @@ async def get_section_content(
     content = result.text_content or ""
     est_tokens = len(content) // 4
 
-    lines = [
-        f"## Section: {section_id}",
-        f"**Page:** {result.page or 'Unknown'}",
-        f"**Est. Tokens:** ~{est_tokens}",
-        "",
-        "---",
-        "",
-        content,
-    ]
+    text = "\n".join(
+        [
+            f"## Section: {section_id}",
+            f"**Page:** {result.page or 'Unknown'}",
+            f"**Est. Tokens:** ~{est_tokens}",
+            "",
+            "---",
+            "",
+            content,
+        ]
+    )
 
-    return "\n".join(lines)
+    return format_limited_text_response(
+        title=f"Section Content: {doc_id}/{section_id}",
+        text=text,
+        max_chars=max_chars,
+        language="markdown",
+        guidance="use `fetch_document_asset(..., max_chars=...)` or a narrower section/block read",
+    )

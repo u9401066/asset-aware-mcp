@@ -157,6 +157,19 @@ class TestSectionServiceLoad:
         tree = service._load_tree("nonexistent_doc")
         assert tree is None
 
+    def test_load_tree_skips_oversized_blocks_json(self, temp_dir: Path, monkeypatch):
+        """Oversized blocks.json should not be loaded into a SectionTree."""
+        doc_dir = temp_dir / "doc_large"
+        doc_dir.mkdir()
+        (doc_dir / "blocks.json").write_text(" " * 128, encoding="utf-8")
+        monkeypatch.setenv("ASSET_AWARE_SECTION_TREE_LOAD_MAX_BYTES", "16")
+        service = SectionService(data_dir=temp_dir)
+
+        tree = service._load_tree("doc_large")
+
+        assert tree is None
+        assert "safe section tree load limit" in service._tree_load_errors["doc_large"]
+
     def test_load_tree_rejects_doc_id_path_traversal(self, temp_dir: Path):
         """doc_id cannot escape the configured data directory."""
         outside = temp_dir.parent / "doc_escape_123"

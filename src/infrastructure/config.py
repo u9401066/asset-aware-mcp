@@ -15,6 +15,8 @@ DEFAULT_OLLAMA_CPU_MODEL = "granite4.1:3b"
 DEFAULT_OLLAMA_GPU_MODEL = "granite4.1:8b"
 DEFAULT_OLLAMA_MODEL = DEFAULT_OLLAMA_CPU_MODEL
 DEFAULT_OLLAMA_EMBEDDING_MODEL = "nomic-embed-text"
+DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+DEFAULT_OPENROUTER_MODEL = "liquid/lfm-2.5-1.2b-instruct:free"
 GPU_MODEL_HINT_ENV_VARS = (
     "ASSET_AWARE_HAS_GPU",
     "ASSET_AWARE_USE_GPU",
@@ -103,7 +105,8 @@ class Settings(BaseSettings):
 
     # LLM Backend selection
     llm_backend: str = Field(
-        default="ollama", description="LLM backend: 'ollama' or 'openai'"
+        default="ollama",
+        description="LLM backend: 'ollama', 'openai', or 'openrouter'",
     )
 
     # ETL Profile selection
@@ -119,6 +122,18 @@ class Settings(BaseSettings):
     # OpenAI settings (optional, if using OpenAI backend)
     openai_api_key: str = Field(
         default="", description="OpenAI API key (only if llm_backend='openai')"
+    )
+    openrouter_api_key: str = Field(
+        default="",
+        description="OpenRouter API key (only if llm_backend='openrouter')",
+    )
+    openrouter_base_url: str = Field(
+        default=DEFAULT_OPENROUTER_BASE_URL,
+        description="OpenRouter OpenAI-compatible API base URL",
+    )
+    openrouter_model: str = Field(
+        default=DEFAULT_OPENROUTER_MODEL,
+        description="OpenRouter model for fast low-cost summaries and draft RAG answers",
     )
     lightrag_embedding_model: str = Field(
         default="text-embedding-3-small",

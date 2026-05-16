@@ -216,6 +216,8 @@ class SubprocessIngestWorkerRunner:
         enable_lightrag = settings.enable_lightrag and index_knowledge_graph
         env["ENABLE_LIGHTRAG"] = "true" if enable_lightrag else "false"
         env["ENABLE_MISTRAL_OCR"] = "true" if settings.enable_mistral_ocr else "false"
+        env.setdefault("ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS", "12000")
+        env.setdefault("ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS", "750000")
         env["ASSET_AWARE_SUPPRESS_MARKER_OUTPUT"] = "true"
         env["ASSET_AWARE_MARKER_OUTPUT_LOG"] = str(log_path)
         if settings.etl_profile_json is not None:

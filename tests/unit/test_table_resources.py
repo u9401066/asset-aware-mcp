@@ -10,7 +10,7 @@ class _FakeTableService:
         self.storage_dir = storage_dir
 
     def get_table_context(self, table_id: str) -> object:
-        if table_id == "../secret":
+        if table_id in {"../secret", "big"}:
             return object()
         raise ValueError(table_id)
 
@@ -40,6 +40,33 @@ async def test_table_content_resource_blocks_path_traversal(
 
     assert result == "Table not found: ../secret"
     assert "do not leak" not in result
+
+
+@pytest.mark.asyncio
+async def test_table_content_resource_large_markdown_returns_preview(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    storage_dir = tmp_path / "tables"
+    storage_dir.mkdir()
+    (storage_dir / "big.md").write_text(
+        "| A |\n" + ("| T |\n" * 30_000), encoding="utf-8"
+    )
+
+    from src.presentation.resources import table_resources
+
+    monkeypatch.setattr(
+        table_resources,
+        "table_service",
+        _FakeTableService(storage_dir),
+    )
+
+    result = await table_resources.resource_table_content("big")
+
+    assert len(result) < 20_000
+    assert "big.md" in result
+    assert "sha256:" in result
+    assert "| T |\n" * 5_000 not in result
 
 
 class _FakeListTableService:

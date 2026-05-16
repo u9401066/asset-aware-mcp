@@ -1248,17 +1248,31 @@ def _audit_foam_wiki_health(
         }
     note_index = _foam_note_index(root)
     files = sorted(root.rglob("*.md"))
+    max_file_bytes = 5 * 1024 * 1024
+    readable_files: list[Path] = []
+    skipped_large_files: list[dict[str, Any]] = []
+    for path in files:
+        try:
+            size = path.stat().st_size
+        except OSError:
+            continue
+        if size > max_file_bytes:
+            skipped_large_files.append(
+                {"file": str(path.relative_to(root)), "size_bytes": size}
+            )
+            continue
+        readable_files.append(path)
     asset_ref_results: list[dict[str, Any]] = []
     wikilink_issues: list[dict[str, str]] = []
     anchors_by_file: dict[Path, set[str]] = {}
 
-    for path in files:
+    for path in readable_files:
         text = path.read_text(encoding="utf-8")
         anchors_by_file[path] = set(
             re.findall(r"(?m)(\^[A-Za-z0-9][A-Za-z0-9-]*)\s*$", text)
         )
 
-    for path in files:
+    for path in readable_files:
         text = path.read_text(encoding="utf-8")
         for ref in _extract_json_fences(text):
             if ref.get("source_type") not in {"span", "table", "figure"}:
@@ -1298,12 +1312,18 @@ def _audit_foam_wiki_health(
                     }
                 )
 
+    detail_limit = 100
     invalid_refs = [item for item in asset_ref_results if not item["valid"]]
+    visible_invalid_refs = invalid_refs[:detail_limit]
+    visible_wikilink_issues = wikilink_issues[:detail_limit]
     payload = {
         "success": True,
         "operation": "foam_health",
         "wiki_root": str(root),
         "files_scanned": len(files),
+        "files_analyzed": len(readable_files),
+        "skipped_large_files": skipped_large_files[:detail_limit],
+        "skipped_large_files_omitted": max(0, len(skipped_large_files) - detail_limit),
         "asset_refs": len(asset_ref_results),
         "span_asset_refs": len(
             [item for item in asset_ref_results if item["source_type"] == "span"]
@@ -1311,8 +1331,10 @@ def _audit_foam_wiki_health(
         "valid_refs": len(asset_ref_results) - len(invalid_refs),
         "invalid_refs": len(invalid_refs),
         "wikilink_issues": len(wikilink_issues),
-        "asset_ref_results": asset_ref_results,
-        "wikilink_issue_details": wikilink_issues,
+        "asset_ref_results": asset_ref_results[:detail_limit],
+        "asset_ref_results_omitted": max(0, len(asset_ref_results) - detail_limit),
+        "wikilink_issue_details": visible_wikilink_issues,
+        "wikilink_issue_details_omitted": max(0, len(wikilink_issues) - detail_limit),
     }
     if output_format == "json":
         return payload
@@ -1328,13 +1350,17 @@ def _audit_foam_wiki_health(
     ]
     if invalid_refs:
         lines.extend(["", "## Invalid AssetRefs"])
-        for item in invalid_refs:
+        for item in visible_invalid_refs:
             lines.append(
                 f"- `{item['file']}` `{item['span_id']}`: "
                 f"{', '.join(item['issues']) or item['status']}"
             )
+        if len(invalid_refs) > detail_limit:
+            lines.append(f"- _...and {len(invalid_refs) - detail_limit} more_")
     if wikilink_issues:
         lines.extend(["", "## Wikilink Issues"])
-        for item in wikilink_issues:
+        for item in visible_wikilink_issues:
             lines.append(f"- `{item['file']}` {item['wikilink']}: {item['issue']}")
+        if len(wikilink_issues) > detail_limit:
+            lines.append(f"- _...and {len(wikilink_issues) - detail_limit} more_")
     return "\n".join(lines)

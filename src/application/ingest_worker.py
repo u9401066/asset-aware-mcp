@@ -43,7 +43,8 @@ def _write_json_atomic(path: Path, payload: str) -> None:
 
 
 def _write_result(path: Path, result: IngestResult) -> None:
-    _write_json_atomic(path, result.model_dump_json(indent=2))
+    payload = result.model_dump(mode="json", exclude={"manifest"})
+    _write_json_atomic(path, json.dumps(payload, ensure_ascii=False, indent=2))
 
 
 def _make_progress_callback(

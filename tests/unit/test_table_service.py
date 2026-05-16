@@ -55,6 +55,23 @@ def test_add_rows_persistence(table_service, tmp_path):
     assert context.rows[0]["Drug"] == "Remimazolam"
 
 
+def test_table_service_skips_large_table_files_on_startup(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Large persisted table files should not be loaded during MCP startup."""
+    from src.infrastructure.excel_renderer import ExcelRenderer
+
+    table_path = tmp_path / "tbl_huge.json"
+    table_path.write_text("x" * 200, encoding="utf-8")
+    monkeypatch.setenv("ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES", "100")
+
+    service = TableService(
+        table_output_dir=tmp_path, table_renderer=ExcelRenderer(tmp_path)
+    )
+
+    assert service.list_tables() == []
+
+
 def test_table_citation_preserves_locator_source_hash(table_service, tmp_path):
     columns = [{"name": "Finding", "type": "text"}]
     table_id = table_service.create_table("citation", "Evidence", columns)

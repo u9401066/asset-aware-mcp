@@ -19,6 +19,69 @@ import pytest
 # ============================================================================
 
 
+def test_ingest_worker_result_omits_large_manifest_payload(tmp_path: Path) -> None:
+    """Worker result JSON should not serialize full manifest/table markdown."""
+    from src.application.ingest_worker import _write_result
+    from src.domain.entities import (
+        DocumentAssets,
+        DocumentManifest,
+        IngestResult,
+        TableAsset,
+    )
+
+    result_path = tmp_path / "result.json"
+    large_markdown = "| A |\n" + ("| X |\n" * 30_000)
+    result = IngestResult(
+        doc_id="doc_big",
+        filename="paper.pdf",
+        success=True,
+        manifest=DocumentManifest(
+            doc_id="doc_big",
+            filename="paper.pdf",
+            markdown_path="data/doc_big/doc_big_full.md",
+            manifest_path="data/doc_big/doc_big_manifest.json",
+            assets=DocumentAssets(
+                tables=[
+                    TableAsset(
+                        id="tab_1",
+                        page=1,
+                        markdown=large_markdown,
+                        row_count=30_000,
+                        col_count=1,
+                    )
+                ]
+            ),
+        ),
+    )
+
+    _write_result(result_path, result)
+
+    payload = result_path.read_text(encoding="utf-8")
+    assert "manifest" not in payload
+    assert "X" * 30_000 not in payload
+    restored = IngestResult.model_validate_json(payload)
+    assert restored.doc_id == "doc_big"
+    assert restored.manifest is None
+
+
+def test_ingest_worker_main_builds_minimal_dependencies_without_table_service(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PDF workers should not load table/draft stores during composition."""
+    from src.application.table_service import TableService
+    from src.presentation import ingest_worker_main
+
+    def fail_table_service_init(*_args, **_kwargs):
+        raise AssertionError("TableService should not be built by ingest worker")
+
+    monkeypatch.setattr(TableService, "__init__", fail_table_service_init)
+
+    deps = ingest_worker_main._build_worker_dependencies()
+
+    assert deps.document_service is not None
+    assert callable(deps.marker_extractor_factory)
+
+
 class TestJobServiceConcurrency:
     """Tests for job concurrency limit."""
 

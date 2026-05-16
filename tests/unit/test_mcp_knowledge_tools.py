@@ -163,6 +163,54 @@ class TestKnowledgeTools:
             include_references=False,
         )
 
+    async def test_consult_knowledge_graph_large_structured_result_is_bounded(
+        self,
+    ) -> None:
+        """Large structured KG payloads should not be returned wholesale."""
+        with patch(
+            "src.presentation.tools.knowledge_tools.knowledge_service"
+        ) as mock_svc:
+            mock_svc.query_structured = AsyncMock(
+                return_value={
+                    "success": True,
+                    "answer": "A" * 90_000,
+                    "references": [{"doc_id": "doc_big", "chunk": "B" * 50_000}],
+                }
+            )
+            from src.presentation.tools.knowledge_tools import consult_knowledge_graph
+
+            result = await consult_knowledge_graph("test")
+
+        assert isinstance(result, dict)
+        assert result["response_truncated"] is True
+        assert result["sha256"].startswith("sha256:")
+        assert len(str(result)) < 20_000
+        assert "A" * 30_000 not in str(result)
+
+    async def test_export_knowledge_graph_json_large_result_returns_preview(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Large graph JSON exports should be bounded."""
+        from src.presentation.tools import knowledge_tools
+
+        mock_graph = MagicMock()
+        mock_graph.export_graph = AsyncMock(
+            return_value={
+                "nodes": [
+                    {"id": f"n{i}", "description": "N" * 1000} for i in range(200)
+                ],
+                "edges": [{"source": "a", "target": "b", "keywords": "E" * 1000}],
+            }
+        )
+        monkeypatch.setattr(knowledge_tools, "knowledge_graph", mock_graph)
+
+        result = await knowledge_tools.export_knowledge_graph(format="json", limit=500)
+
+        assert len(result) < 20_000
+        assert "sha256:" in result
+        assert "knowledge graph" in result.lower()
+        assert "N" * 30_000 not in result
+
     async def test_consult_knowledge_graph_attaches_verified_evidence(self) -> None:
         """KG answers can attach verified citation bundles for source docs."""
         with (

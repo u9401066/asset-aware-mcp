@@ -15,6 +15,10 @@ from typing import TYPE_CHECKING, Any, cast
 from src.presentation.dependencies import knowledge_graph, knowledge_service
 from src.presentation.mcp_app import mcp
 from src.presentation.mcp_context import log_message, report_progress
+from src.presentation.response_limits import (
+    format_limited_json_response,
+    format_limited_text_response,
+)
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import Context
@@ -22,6 +26,8 @@ else:
     Context = Any
 
 KNOWLEDGE_TOOL_TIMEOUT_SECONDS = 45.0
+KNOWLEDGE_VERIFY_DOC_LIMIT = 5
+KNOWLEDGE_EXPORT_LIMIT_MAX = 200
 
 
 def _normalize_op(op: str) -> str:
@@ -94,7 +100,9 @@ async def _verified_evidence_payload(
 ) -> dict[str, Any]:
     from src.presentation.tools.document_tools import citation_bundle
 
-    target_doc_ids = list(dict.fromkeys(doc_ids or _extract_doc_ids(result)))
+    evidence_limit = max(1, min(evidence_limit, 10))
+    discovered_doc_ids = list(dict.fromkeys(doc_ids or _extract_doc_ids(result)))
+    target_doc_ids = discovered_doc_ids[:KNOWLEDGE_VERIFY_DOC_LIMIT]
     if not target_doc_ids:
         return {
             "success": False,
@@ -126,6 +134,7 @@ async def _verified_evidence_payload(
         else "empty",
         "query": query,
         "doc_ids": target_doc_ids,
+        "omitted_doc_ids_count": max(0, len(discovered_doc_ids) - len(target_doc_ids)),
         "bundles": bundles,
     }
 
@@ -278,6 +287,18 @@ async def consult_knowledge_graph(
 
     await report_progress(ctx, 100, message="Knowledge graph query finished")
     await log_message(ctx, "info", "consult_knowledge_graph complete")
+    if isinstance(result, str):
+        return format_limited_text_response(
+            title="Knowledge Graph Query",
+            text=result,
+            language="markdown",
+            guidance="retry with a narrower query or response_mode='structured'",
+        )
+    result = format_limited_json_response(
+        title="Knowledge Graph Query",
+        payload=result,
+        guidance="retry with a narrower query or response_mode='text'",
+    )
     return result
 
 
@@ -366,6 +387,7 @@ async def export_knowledge_graph(
     if knowledge_graph is None:
         return "Error: LightRAG is not enabled. Set ENABLE_LIGHTRAG=true in .env"
 
+    limit = max(1, min(limit, KNOWLEDGE_EXPORT_LIMIT_MAX))
     await log_message(
         ctx, "info", f"export_knowledge_graph start: format={format} limit={limit}"
     )
@@ -390,13 +412,24 @@ async def export_knowledge_graph(
     await log_message(ctx, "info", "export_knowledge_graph complete")
 
     if format == "foam":
-        return _format_knowledge_graph_foam(result, limit=limit)
+        return format_limited_text_response(
+            title="Knowledge Graph Foam Export",
+            text=_format_knowledge_graph_foam(result, limit=limit),
+            language="markdown",
+            guidance="lower the limit for a smaller graph view",
+        )
     if format == "mermaid" and "diagram" in result:
-        return (
+        text = (
             "## Knowledge Graph Visualization\n\n"
             f"**Nodes:** {result.get('node_count', 0)} | "
             f"**Edges:** {result.get('edge_count', 0)}\n\n"
             f"```mermaid\n{result['diagram']}\n```\n"
+        )
+        return format_limited_text_response(
+            title="Knowledge Graph Mermaid Export",
+            text=text,
+            language="markdown",
+            guidance="lower the limit for a smaller diagram",
         )
     elif format == "summary":
         lines = [
@@ -424,11 +457,21 @@ async def export_knowledge_graph(
             if edge.get("keywords"):
                 lines.append(f"  _Keywords: {edge['keywords']}_")
 
-        return "\n".join(lines)
+        return format_limited_text_response(
+            title="Knowledge Graph Summary",
+            text="\n".join(lines),
+            language="markdown",
+            guidance="lower the limit for a smaller graph summary",
+        )
     else:
         import json
 
-        return json.dumps(result, indent=2, ensure_ascii=False)
+        return format_limited_text_response(
+            title="Knowledge Graph JSON Export",
+            text=json.dumps(result, indent=2, ensure_ascii=False),
+            language="json",
+            guidance="use format='summary' or a lower limit for a smaller response",
+        )
 
 
 @mcp.tool()

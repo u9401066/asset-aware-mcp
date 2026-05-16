@@ -35,6 +35,12 @@ from src.presentation.dependencies import (
 from src.presentation.markdown_utils import escape_table_cell
 from src.presentation.mcp_app import mcp
 from src.presentation.mcp_context import log_message, report_progress
+from src.presentation.response_limits import (
+    format_limited_text_response,
+    max_text_response_chars,
+    text_exceeds_response_limit,
+    text_sha256,
+)
 from src.presentation.tools.conversion_job_support import (
     conversion_result_payload,
     create_conversion_job_response,
@@ -85,6 +91,35 @@ def _format_docx_locator(metadata: dict[str, Any] | None) -> str:
     if "parent_cell" in metadata:
         parts.append(f"cell {metadata['parent_cell']}")
     return " ".join(parts)
+
+
+def _summarize_large_docx_metadata(metadata: Any) -> dict[str, Any]:
+    """Return a bounded summary of large DOCX locator metadata."""
+    if not isinstance(metadata, dict):
+        return {"type": type(metadata).__name__, "preview": str(metadata)[:200]}
+
+    summary: dict[str, Any] = {}
+    for key, value in metadata.items():
+        if isinstance(value, str):
+            summary[key] = value if len(value) <= 200 else value[:200]
+        elif isinstance(value, (int, float, bool)) or value is None:
+            summary[key] = value
+        elif isinstance(value, list):
+            summary[f"{key}_count"] = len(value)
+            summary[f"{key}_sample"] = value[:3]
+        elif isinstance(value, dict):
+            summary[f"{key}_count"] = len(value)
+            summary[f"{key}_sample_keys"] = list(value.keys())[:10]
+        else:
+            summary[f"{key}_type"] = type(value).__name__
+    return summary
+
+
+def _docx_artifact_path(doc_id: str, filename: str) -> str | None:
+    try:
+        return str(docx_service.repository.get_doc_dir(doc_id) / filename)
+    except Exception:
+        return None
 
 
 def _get_pending_table_contexts(doc_id: str) -> list[TableContext]:
@@ -237,6 +272,7 @@ async def ingest_docx(file_path: str, ctx: Context | None = None) -> str:
 async def get_docx_content(
     doc_id: str,
     block_id: str | None = None,
+    max_chars: int | None = None,
 ) -> str:
     """
     取得 docx 文件的可編輯 DFM 內容。
@@ -254,12 +290,50 @@ async def get_docx_content(
         block = await docx_service.get_block_content(doc_id, block_id)
         if block is None:
             return f"❌ 找不到區塊 {block_id}（doc_id={doc_id}）"
-        return json.dumps(block, ensure_ascii=False, indent=2)
+        content = block.get("content")
+        if isinstance(content, str) and text_exceeds_response_limit(content, max_chars):
+            limit = min(max_text_response_chars(max_chars), 2_000)
+            block = dict(block)
+            block["content"] = content[:limit]
+            block["content_truncated"] = True
+            block["content_chars"] = len(content)
+            block["content_sha256"] = text_sha256(content)
+        metadata = block.get("metadata")
+        metadata_json = json.dumps(metadata, ensure_ascii=False, default=str)
+        if metadata is not None and text_exceeds_response_limit(
+            metadata_json,
+            max_chars,
+        ):
+            block = dict(block)
+            block["metadata"] = _summarize_large_docx_metadata(metadata)
+            block["metadata_truncated"] = True
+            block["metadata_chars"] = len(metadata_json)
+            block["metadata_sha256"] = text_sha256(metadata_json)
+            artifact_path = _docx_artifact_path(doc_id, "ir.json")
+            if artifact_path:
+                block["metadata_artifact_path"] = artifact_path
+        payload = json.dumps(block, ensure_ascii=False, indent=2)
+        return format_limited_text_response(
+            title=f"DOCX Block: {doc_id}/{block_id}",
+            text=payload,
+            source_path=_docx_artifact_path(doc_id, "ir.json"),
+            max_chars=max_chars,
+            language="json",
+            guidance="request a smaller block or inspect the persisted `ir.json` artifact",
+        )
 
     dfm = await docx_service.get_dfm(doc_id)
     if dfm is None:
         return f"❌ 找不到文件 {doc_id}，請先使用 ingest_docx 攝入。"
-    return dfm
+    source_path = _docx_artifact_path(doc_id, "content.dfm")
+    return format_limited_text_response(
+        title=f"DFM Content Preview: {doc_id}",
+        text=dfm,
+        source_path=source_path,
+        max_chars=max_chars,
+        language="markdown",
+        guidance='use `list_docx_blocks` then `get_docx_content(doc_id, block_id="<id>")` for focused reads',
+    )
 
 
 @mcp.tool()
@@ -381,7 +455,7 @@ async def save_docx(
 
 
 @mcp.tool()
-async def list_docx_blocks(doc_id: str) -> str:
+async def list_docx_blocks(doc_id: str, limit: int | None = None) -> str:
     """
     列出 docx 文件中所有區塊的摘要。
 
@@ -404,7 +478,9 @@ async def list_docx_blocks(doc_id: str) -> str:
     lines.append("| ID | 類型 | 可編輯 | Locator | 樣式 | 預覽 |")
     lines.append("|---|---|---|---|---|---|")
 
-    for b in blocks:
+    effective_limit = 100 if limit is None else max(1, min(limit, 1_000))
+    visible_blocks = blocks[:effective_limit]
+    for b in visible_blocks:
         editable = "✅" if b["editable"] else "🔒"
         locator = _format_docx_locator(b.get("metadata"))
         style = escape_table_cell(b.get("style") or "")
@@ -420,7 +496,19 @@ async def list_docx_blocks(doc_id: str) -> str:
             )
         )
 
-    return "\n".join(lines)
+    if len(blocks) > len(visible_blocks):
+        lines.append(
+            f"\n_Showing first {len(visible_blocks)} of {len(blocks)} blocks. "
+            "Pass `limit` or read a focused `block_id`._"
+        )
+
+    return format_limited_text_response(
+        title=f"DOCX Blocks: {doc_id}",
+        text="\n".join(lines),
+        source_path=_docx_artifact_path(doc_id, "ir.json"),
+        language="markdown",
+        guidance="use `get_docx_content(doc_id, block_id=...)` for focused block reads",
+    )
 
 
 @mcp.tool()
@@ -782,7 +870,13 @@ async def docx_validate_roundtrip(
         ctx, 100, message=f"Finished round-trip validation for {doc_id}"
     )
 
-    return report.to_markdown()
+    return format_limited_text_response(
+        title=f"DOCX Roundtrip Validation: {doc_id}",
+        text=report.to_markdown(),
+        source_path=rebuilt_path,
+        language="markdown",
+        guidance="inspect the rebuilt DOCX artifact or rerun with focused validation inputs",
+    )
 
 
 @mcp.tool()
@@ -798,6 +892,7 @@ async def docx(
     track_changes: bool = False,
     revision_author: str = "Asset-Aware MCP",
     strict: bool = False,
+    max_chars: int | None = None,
     ctx: Context | None = None,
 ) -> Any:
     """
@@ -814,7 +909,7 @@ async def docx(
     if operation in {"get", "content", "read"}:
         if not doc_id:
             return _missing_docx_param("doc_id")
-        return await get_docx_content(doc_id, block_id=block_id)
+        return await get_docx_content(doc_id, block_id=block_id, max_chars=max_chars)
     if operation == "save":
         if not doc_id:
             return _missing_docx_param("doc_id")

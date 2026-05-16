@@ -16,6 +16,7 @@ Document Tools - ETL + 文件管理 MCP 工具
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -26,7 +27,6 @@ from src.application.output_paths import (
     resolve_document_output_path,
 )
 from src.domain.marker_errors import MarkerBackendUnavailable
-from src.infrastructure.marker_adapter import MarkerPDFExtractor
 from src.presentation.dependencies import (
     asset_service,
     document_service,
@@ -42,6 +42,14 @@ from src.presentation.mcp_context import (
     create_subrange_progress_callback,
     log_message,
     report_progress,
+)
+from src.presentation.response_limits import (
+    format_limited_json_response,
+    format_limited_text_response,
+    format_omitted_image_response,
+    image_exceeds_response_limit,
+    max_text_response_chars,
+    text_sha256,
 )
 from src.presentation.tools.citation_support import (
     asset_ref_from_span,
@@ -71,6 +79,97 @@ from src.presentation.tools.document_evidence_support import (
     _write_foam_claim_promotion_pack,
     _write_foam_evidence_pack,
 )
+
+
+class MarkerPDFExtractor:
+    """Lazy proxy for Marker availability checks used by MCP tools/tests."""
+
+    @staticmethod
+    def require_backend_available() -> None:
+        from src.infrastructure.marker_adapter import MarkerPDFExtractor as _Marker
+
+        _Marker.require_backend_available()
+
+
+JSON_TEXT_FIELD_MAX_CHARS = 1_000
+
+
+def _truncate_json_text_field(container: dict[str, Any], key: str) -> bool:
+    value = container.get(key)
+    if not isinstance(value, str) or len(value) <= JSON_TEXT_FIELD_MAX_CHARS:
+        return False
+    container[f"{key}_chars"] = len(value)
+    container[f"{key}_sha256"] = text_sha256(value)
+    container[f"{key}_truncated"] = True
+    container[key] = value[:JSON_TEXT_FIELD_MAX_CHARS]
+    return True
+
+
+def _bounded_evidence_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Preserve JSON contract while bounding large quote/context fields."""
+    bounded = deepcopy(payload)
+    original_json = json.dumps(payload, ensure_ascii=False, default=str)
+    truncated = False
+    for entry in bounded.get("entries", []):
+        if not isinstance(entry, dict):
+            continue
+        for key in ("quote", "context_before", "context_after", "claim_text"):
+            truncated = _truncate_json_text_field(entry, key) or truncated
+        asset_ref = entry.get("asset_ref")
+        if isinstance(asset_ref, dict):
+            truncated = _truncate_json_text_field(asset_ref, "quote") or truncated
+            truncated = _truncate_json_text_field(asset_ref, "excerpt") or truncated
+        evidence = entry.get("evidence")
+        if isinstance(evidence, dict):
+            for key in ("quote", "context_before", "context_after"):
+                truncated = _truncate_json_text_field(evidence, key) or truncated
+            nested_ref = evidence.get("asset_ref")
+            if isinstance(nested_ref, dict):
+                truncated = _truncate_json_text_field(nested_ref, "quote") or truncated
+    if truncated:
+        bounded["response_truncated"] = True
+        bounded["content_chars"] = len(original_json)
+        bounded["sha256"] = text_sha256(original_json)
+    limit = max_text_response_chars()
+    entries = bounded.get("entries")
+    if limit > 0 and isinstance(entries, list):
+        for keep in (3, 1):
+            bounded_json = json.dumps(
+                bounded, ensure_ascii=False, indent=2, default=str
+            )
+            if len(bounded_json) <= limit:
+                break
+            if len(entries) <= keep:
+                continue
+            bounded["entries"] = entries[:keep]
+            bounded["entries_omitted"] = max(0, len(entries) - keep)
+            bounded["response_truncated"] = True
+            bounded.setdefault("content_chars", len(original_json))
+            bounded.setdefault("sha256", text_sha256(original_json))
+        bounded_json = json.dumps(bounded, ensure_ascii=False, indent=2, default=str)
+        if len(bounded_json) > limit:
+            for entry in bounded.get("entries", []):
+                if not isinstance(entry, dict):
+                    continue
+                entry.pop("craap", None)
+                asset_ref = entry.get("asset_ref")
+                if isinstance(asset_ref, dict):
+                    asset_ref.pop("craap", None)
+                foam = entry.get("foam")
+                if isinstance(foam, dict):
+                    foam.pop("frontmatter", None)
+                verification = entry.get("verification")
+                if isinstance(verification, dict):
+                    entry["verification"] = {
+                        "valid": verification.get("valid"),
+                        "status": verification.get("status"),
+                        "issues": verification.get("issues") or [],
+                    }
+            bounded["response_truncated"] = True
+            bounded.setdefault("content_chars", len(original_json))
+            bounded.setdefault("sha256", text_sha256(original_json))
+    return bounded
+
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import Context
@@ -594,9 +693,19 @@ async def citation_bundle(
         except (FileExistsError, ValueError) as exc:
             return {"success": False, "doc_id": doc_id, "error": str(exc)}
     if output_format == "json":
-        return payload
+        bounded_payload = _bounded_evidence_payload(payload)
+        return format_limited_json_response(
+            title=f"Citation Bundle: {doc_id}",
+            payload=bounded_payload,
+            guidance="write a Foam evidence pack to disk for full quotes",
+        )
     if output_format == "foam":
-        return _format_foam_evidence_pack(payload)
+        return format_limited_text_response(
+            title=f"Foam Evidence Pack: {doc_id}",
+            text=_format_foam_evidence_pack(payload),
+            language="markdown",
+            guidance="pass wiki_root/output_path to write the full evidence pack",
+        )
     return _format_citation_bundle(payload)
 
 
@@ -796,7 +905,12 @@ async def list_documents() -> str:
         output_lines.append(f"- **ingested:** {doc.ingested_at}")
         output_lines.append("")
 
-    return "\n".join(output_lines)
+    return format_limited_text_response(
+        title="Documents List",
+        text="\n".join(output_lines),
+        language="markdown",
+        guidance="inspect a specific document manifest for details",
+    )
 
 
 @mcp.tool()
@@ -1072,7 +1186,13 @@ async def inspect_document_manifest(doc_id: str) -> str:
         if len(manifest.lightrag_entities) > 20:
             output_lines.append(f"... and {len(manifest.lightrag_entities) - 20} more")
 
-    return "\n".join(output_lines)
+    return format_limited_text_response(
+        title=f"Document Manifest: {doc_id}",
+        text="\n".join(output_lines),
+        source_path=manifest.manifest_path,
+        language="markdown",
+        guidance="use document resources or fetch specific assets by id",
+    )
 
 
 @mcp.tool()
@@ -1087,14 +1207,12 @@ async def export_document_segmentation(
     await log_message(ctx, "info", f"export_document_segmentation start: {doc_id}")
     await report_progress(ctx, 10, message=f"Loading manifest for {doc_id}")
 
-    target = await segmentation_service.save_document_segmentation(
+    (
+        target,
+        segmentation,
+    ) = await segmentation_service.build_and_save_document_segmentation(
         doc_id,
         output_path=output_path,
-        page=page,
-        limit=limit,
-    )
-    segmentation = await segmentation_service.export_document_segmentation(
-        doc_id,
         page=page,
         limit=limit,
     )
@@ -1191,6 +1309,21 @@ async def visualize_document_layout(
     if overlay.output_path:
         summary.append(f"**Saved To:** {overlay.output_path}")
 
+    if image_exceeds_response_limit(overlay.image_base64):
+        summary.extend(
+            [
+                "",
+                format_omitted_image_response(
+                    title=f"Layout Overlay: {doc_id}/page-{page}",
+                    data=overlay.image_base64,
+                    mime_type="image/png",
+                    source_path=overlay.output_path,
+                    guidance="pass output_path to persist the overlay, or reduce page/image size",
+                ),
+            ]
+        )
+        return [TextContent(type="text", text="\n".join(summary))]
+
     return [
         TextContent(type="text", text="\n".join(summary)),
         ImageContent(type="image", data=overlay.image_base64, mimeType="image/png"),
@@ -1248,6 +1381,7 @@ async def fetch_document_asset(
     asset_type: str,
     asset_id: str = "full",
     max_size: int | None = None,
+    max_chars: int | None = None,
     ctx: Context | None = None,
 ) -> list[TextContent | ImageContent]:
     """
@@ -1304,6 +1438,13 @@ async def fetch_document_asset(
         await report_progress(
             ctx, 100, message=f"Fetched {asset_type} {asset_id} from {doc_id}"
         )
+        source_path = None
+        try:
+            manifest = repository.load_manifest(doc_id)
+            figure = manifest.assets.find_figure(asset_id) if manifest else None
+            source_path = getattr(figure, "path", None) if figure else None
+        except Exception:
+            source_path = None
         metadata_lines = [
             f"## Figure: {result.asset_id}",
             f"**Page:** {result.page or 'Unknown'}",
@@ -1317,6 +1458,20 @@ async def fetch_document_asset(
             metadata_lines.append(f"**Section:** {result.section_title}")
         if result.source_block_id:
             metadata_lines.append(f"**Source Block:** {result.source_block_id}")
+        if image_exceeds_response_limit(result.image_base64):
+            metadata_lines.extend(
+                [
+                    "",
+                    format_omitted_image_response(
+                        title=f"Figure Image: {doc_id}/{asset_id}",
+                        data=result.image_base64,
+                        mime_type=result.image_media_type or "image/png",
+                        source_path=source_path,
+                        guidance="retry with a smaller max_size or open the artifact path directly",
+                    ),
+                ]
+            )
+            return [TextContent(type="text", text="\n".join(metadata_lines))]
         return [
             TextContent(type="text", text="\n".join(metadata_lines)),
             ImageContent(
@@ -1341,7 +1496,21 @@ async def fetch_document_asset(
             lines.append(f"**Source Block:** {result.source_block_id}")
         lines.append("")
         lines.append(result.text_content or "")
-        return [TextContent(type="text", text="\n".join(lines))]
+        source_path = None
+        try:
+            doc_dir = repository.get_doc_dir(doc_id)
+            source_path = doc_dir / f"{doc_id}_full.md"
+        except Exception:
+            source_path = None
+        text = format_limited_text_response(
+            title=f"{asset_type}: {result.asset_id}",
+            text="\n".join(lines),
+            source_path=source_path,
+            max_chars=max_chars,
+            language="markdown",
+            guidance="use a section/table asset_id or evidence span query for a smaller read",
+        )
+        return [TextContent(type="text", text=text)]
 
 
 @mcp.tool()
@@ -1428,6 +1597,7 @@ async def document_asset(
     asset_type: str | None = None,
     asset_id: str = "full",
     max_size: int | None = None,
+    max_chars: int | None = None,
     path: str | None = None,
     query: str | None = None,
     max_depth: int | None = None,
@@ -1457,6 +1627,7 @@ async def document_asset(
             asset_type,
             asset_id,
             max_size=max_size,
+            max_chars=max_chars,
             ctx=ctx,
         )
     if operation in {"foam_notes", "asset_notes"}:
@@ -1604,15 +1775,37 @@ async def evidence(
             except (FileExistsError, ValueError) as exc:
                 return {"success": False, "doc_id": doc_id, "error": str(exc)}
         if output_format == "json":
-            return payload
+            bounded_payload = _bounded_evidence_payload(payload)
+            return format_limited_json_response(
+                title=f"Claim Promotion: {doc_id}",
+                payload=bounded_payload,
+                guidance="write a Foam claim pack to disk for full verification payloads",
+            )
         if output_format == "foam":
-            return _format_foam_claim_promotion_pack(payload)
+            return format_limited_text_response(
+                title=f"Foam Claim Promotion Pack: {doc_id}",
+                text=_format_foam_claim_promotion_pack(payload),
+                language="markdown",
+                guidance="pass wiki_root/output_path to write the full claim pack",
+            )
         return _format_claim_promotion_markdown(payload)
     if operation in {"health", "foam_health", "wiki_health"}:
-        return _audit_foam_wiki_health(
+        result = _audit_foam_wiki_health(
             wiki_root,
             output_format=output_format,
             repository=repository,
+        )
+        if isinstance(result, dict):
+            return format_limited_json_response(
+                title="Foam Wiki Health",
+                payload=result,
+                guidance="audit a narrower wiki root or inspect saved notes directly",
+            )
+        return format_limited_text_response(
+            title="Foam Wiki Health",
+            text=str(result),
+            language="markdown",
+            guidance="audit a narrower wiki root or inspect saved notes directly",
         )
     if operation in {"locate", "search_location"}:
         if not doc_id:

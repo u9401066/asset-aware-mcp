@@ -118,6 +118,21 @@ class TestDocxTools:
             result = await get_docx_content("doc123")
             assert result == "# Test\n\nHello world"
 
+    async def test_get_docx_content_large_dfm_returns_preview(self) -> None:
+        """Large DFM files should not be returned wholesale to MCP clients."""
+        large_dfm = "<!-- @b:p001 -->\n" + ("A" * 60_000)
+        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
+            mock_svc.get_dfm = AsyncMock(return_value=large_dfm)
+            mock_svc.repository.get_doc_dir.return_value = Path("/data/doc123")
+            from src.presentation.tools.docx_tools import get_docx_content
+
+            result = await get_docx_content("doc123")
+
+        assert len(result) < 20_000
+        assert "content.dfm" in result
+        assert "sha256:" in result
+        assert "A" * 30_000 not in result
+
     async def test_get_docx_content_block(self) -> None:
         """get_docx_content returns specific block as JSON."""
         with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
@@ -129,6 +144,72 @@ class TestDocxTools:
             result = await get_docx_content("doc123", block_id="p001")
             parsed = json.loads(result)
             assert parsed["id"] == "p001"
+
+    async def test_get_docx_content_large_block_metadata_returns_bounded_json(
+        self,
+    ) -> None:
+        """Large block locator metadata should be summarized instead of inlined."""
+        large_metadata = {
+            "locator_version": "docx-dfm-locator-v1",
+            "source_part": "word/document.xml",
+            "run_ranges": [
+                {"run": index, "char_start": index * 10, "char_end": index * 10 + 9}
+                for index in range(2_000)
+            ],
+            "cell_locators": {
+                f"r{index}c0": {"text": "M" * 80, "sha256": f"hash-{index}"}
+                for index in range(800)
+            },
+        }
+        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
+            mock_svc.get_block_content = AsyncMock(
+                return_value={
+                    "id": "t001",
+                    "type": "table",
+                    "content": "D" * 60_000,
+                    "metadata": large_metadata,
+                }
+            )
+            mock_svc.repository.get_doc_dir.return_value = Path("/data/doc123")
+            from src.presentation.tools.docx_tools import get_docx_content
+
+            result = await get_docx_content("doc123", block_id="t001")
+
+        assert len(result) < 20_000
+        parsed = json.loads(result)
+        assert parsed["content_truncated"] is True
+        assert parsed["content_sha256"].startswith("sha256:")
+        assert parsed["metadata_truncated"] is True
+        assert parsed["metadata_sha256"].startswith("sha256:")
+        assert parsed["metadata"]["run_ranges_count"] == 2_000
+        assert parsed["metadata"]["cell_locators_count"] == 800
+        assert "ir.json" in parsed["metadata_artifact_path"]
+        assert "D" * 30_000 not in result
+        assert "M" * 1_000 not in result
+
+    async def test_list_docx_blocks_caps_large_block_listing(self) -> None:
+        """Huge DOCX block catalogs should list a bounded prefix."""
+        blocks = [
+            {
+                "id": f"p{index:04d}",
+                "type": "paragraph",
+                "editable": True,
+                "style": "Normal",
+                "preview": "A" * 200,
+                "metadata": {"source_part": "word/document.xml"},
+            }
+            for index in range(700)
+        ]
+        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
+            mock_svc.list_blocks = AsyncMock(return_value=blocks)
+            mock_svc.repository.get_doc_dir.return_value = Path("/data/doc123")
+            from src.presentation.tools.docx_tools import list_docx_blocks
+
+            result = await list_docx_blocks("doc123")
+
+        assert "Showing first 100 of 700 blocks" in result
+        assert "p0099" in result
+        assert "p0100" not in result
 
     async def test_save_docx_failure(self) -> None:
         """save_docx returns error on failure."""
@@ -632,6 +713,32 @@ class TestDocxTools:
             mock_validator.validate.assert_called_once()
             _, kwargs = mock_validator.validate.call_args
             assert kwargs["strict"] is True
+
+    async def test_docx_validate_roundtrip_large_report_returns_preview(
+        self, tmp_path: Path
+    ) -> None:
+        """Large validator reports should be bounded before returning to MCP."""
+        with (
+            patch("src.presentation.tools.docx_tools.docx_service") as mock_svc,
+            patch("src.presentation.tools.docx_tools.docx_validator") as mock_validator,
+        ):
+            doc_dir = tmp_path / "docx_123"
+            doc_dir.mkdir()
+            (doc_dir / "original.docx").write_bytes(b"docx")
+            mock_svc.repository.get_doc_dir.return_value = doc_dir
+            mock_svc._load_ir.return_value = {"doc_id": "docx_123"}
+            mock_svc.adapter.ir_to_docx.return_value = None
+            report = MagicMock()
+            report.to_markdown.return_value = "# Report\n" + ("R" * 80_000)
+            mock_validator.validate.return_value = report
+
+            from src.presentation.tools.docx_tools import docx_validate_roundtrip
+
+            result = await docx_validate_roundtrip("docx_123")
+
+        assert len(result) < 20_000
+        assert "sha256:" in result
+        assert "R" * 30_000 not in result
 
     async def test_docx_validate_roundtrip_rejects_output_escape(
         self, tmp_path: Path

@@ -44,6 +44,16 @@ if TYPE_CHECKING:
     from src.domain.repositories import DocumentRepository
 
 logger = logging.getLogger(__name__)
+_HASH_CHUNK_SIZE = 1024 * 1024
+
+
+def _sha256_file(path: Path) -> str:
+    hasher = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(_HASH_CHUNK_SIZE):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
 
 RESERVED_DOCX_ARTIFACT_NAMES = {
     "content.dfm",
@@ -142,7 +152,7 @@ class DocxService(DocxIrSerializationMixin):
             # Generate doc_id from sanitized filename stem + content hash.
             # sanitize_id_stem ensures the id is filesystem-safe even for
             # filenames with CJK/accented/special characters.
-            checksum = hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+            checksum = _sha256_file(path)[:16]
             safe_stem = sanitize_id_stem(path.stem)
             doc_id = f"docx_{safe_stem}_{checksum}"
 

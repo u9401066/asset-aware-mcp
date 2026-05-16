@@ -16,6 +16,10 @@ import json
 from src.presentation.dependencies import table_service
 from src.presentation.markdown_utils import escape_table_cell
 from src.presentation.mcp_app import mcp
+from src.presentation.response_limits import (
+    format_limited_file_response,
+    format_limited_text_response,
+)
 
 
 @mcp.resource("tables://list")
@@ -37,7 +41,12 @@ async def resource_table_list() -> str:
                 created_at=escape_table_cell(t["created_at"]),
             )
         )
-    return "\n".join(lines)
+    return format_limited_text_response(
+        title="Tables Resource List",
+        text="\n".join(lines),
+        language="markdown",
+        guidance="open a specific table resource for details",
+    )
 
 
 @mcp.resource("table://{table_id}/content")
@@ -54,7 +63,12 @@ async def resource_table_content(table_id: str) -> str:
         md_path = (storage_root / f"{table_id}.md").resolve()
         md_path.relative_to(storage_root)
         if md_path.exists():
-            return md_path.read_text(encoding="utf-8")
+            return format_limited_file_response(
+                title=f"Table Resource Preview: {table_id}",
+                path=md_path,
+                language="markdown",
+                guidance="use table status or preview operations for a smaller read",
+            )
         else:
             # Fallback to preview
             return table_service.preview_table(table_id, limit=100)
@@ -76,7 +90,12 @@ async def resource_table_status(table_id: str) -> str:
     """
     try:
         status = table_service.get_table_status(table_id)
-        return json.dumps(status, indent=2, ensure_ascii=False)
+        return format_limited_text_response(
+            title=f"Table Status: {table_id}",
+            text=json.dumps(status, indent=2, ensure_ascii=False),
+            language="json",
+            guidance="use table preview for row samples",
+        )
     except ValueError:
         return f"Table not found: {table_id}"
 
@@ -102,7 +121,12 @@ async def resource_draft_list() -> str:
                 status=escape_table_cell(status),
             )
         )
-    return "\n".join(lines)
+    return format_limited_text_response(
+        title="Drafts Resource List",
+        text="\n".join(lines),
+        language="markdown",
+        guidance="open a specific draft resource for details",
+    )
 
 
 @mcp.resource("draft://{draft_id}/content")
@@ -114,21 +138,26 @@ async def resource_draft_content(draft_id: str) -> str:
     """
     try:
         draft = table_service.get_draft(draft_id)
-        return json.dumps(
-            {
-                "table_id": draft.table_id,
-                "intent": draft.intent,
-                "title": draft.title,
-                "proposed_columns": draft.proposed_columns,
-                "extraction_plan": draft.extraction_plan,
-                "source_doc_ids": draft.source_doc_ids,
-                "source_sections": draft.source_sections,
-                "pending_rows": draft.pending_rows,
-                "notes": draft.notes,
-                "est_tokens": draft.estimate_tokens(),
-            },
-            indent=2,
-            ensure_ascii=False,
+        return format_limited_text_response(
+            title=f"Draft Resource: {draft_id}",
+            text=json.dumps(
+                {
+                    "table_id": draft.table_id,
+                    "intent": draft.intent,
+                    "title": draft.title,
+                    "proposed_columns": draft.proposed_columns,
+                    "extraction_plan": draft.extraction_plan,
+                    "source_doc_ids": draft.source_doc_ids,
+                    "source_sections": draft.source_sections,
+                    "pending_rows": draft.pending_rows,
+                    "notes": draft.notes,
+                    "est_tokens": draft.estimate_tokens(),
+                },
+                indent=2,
+                ensure_ascii=False,
+            ),
+            language="json",
+            guidance="commit or inspect a smaller draft subset",
         )
     except ValueError:
         return f"Draft not found: {draft_id}"

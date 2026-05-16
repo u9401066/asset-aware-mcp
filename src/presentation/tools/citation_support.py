@@ -21,6 +21,8 @@ __all__ = [
     "load_or_build_evidence_spans",
 ]
 
+ASSET_REF_QUOTE_MAX_CHARS = 1_000
+
 
 def display_line_range(start_line: int, end_line: int) -> str:
     if start_line < 0 or end_line < 0 or end_line < start_line:
@@ -54,6 +56,8 @@ def coerce_range(value: Any) -> list[int | None] | None:
 
 
 def asset_ref_from_span(span: EvidenceSpan) -> dict[str, Any]:
+    quote = span.text
+    quote_truncated = len(quote) > ASSET_REF_QUOTE_MAX_CHARS
     ref: dict[str, Any] = {
         "source_type": "span",
         "doc_id": span.doc_id,
@@ -63,9 +67,11 @@ def asset_ref_from_span(span: EvidenceSpan) -> dict[str, Any]:
         "source_revision_id": span.source_revision_id,
         "locator_version": span.locator_version,
         "locator_source_sha256": span.locator_source_sha256,
-        "quote": span.text,
+        "quote": quote[:ASSET_REF_QUOTE_MAX_CHARS],
         "quote_sha256": span.text_sha256,
         "excerpt": span.text[:200],
+        "quote_chars": len(quote),
+        "quote_truncated": quote_truncated,
         "craap": span.craap.model_dump(exclude_none=True),
     }
     if span.asset_id:

@@ -14,6 +14,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.domain.entities import FetchResult
+from src.domain.value_objects import AssetType
+
 # ============================================================================
 # Docx Tools
 # ============================================================================
@@ -196,6 +199,85 @@ class TestDocumentTools:
         assert kwargs["parameters"]["operation"] == "parse_pdf_structure"
         assert kwargs["parameters"]["require_marker"] is True
         assert kwargs["parameters"]["page_ranges"] == []
+
+    async def test_fetch_document_asset_large_full_text_returns_preview(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Large full_text payloads should be capped before returning to Cline."""
+        from src.presentation.tools import document_tools
+
+        large_text = "# Full Text\n\n" + ("B" * 80_000)
+        mock_assets = MagicMock()
+        mock_assets.fetch_asset = AsyncMock(
+            return_value=FetchResult(
+                doc_id="doc_big",
+                asset_type=AssetType.FULL_TEXT,
+                asset_id="full",
+                success=True,
+                text_content=large_text,
+                line_start=0,
+                line_end=1,
+                line_source="document",
+            )
+        )
+        monkeypatch.setattr(document_tools, "asset_service", mock_assets)
+        monkeypatch.setattr(
+            document_tools.repository,
+            "get_doc_dir",
+            lambda doc_id: Path("/data") / doc_id,
+        )
+
+        result = await document_tools.fetch_document_asset(
+            "doc_big",
+            "full_text",
+            "full",
+        )
+
+        assert len(result) == 1
+        text = result[0].text
+        assert len(text) < 20_000
+        assert "full_text" in text
+        assert "sha256:" in text
+        assert "B" * 30_000 not in text
+
+    async def test_fetch_document_asset_large_figure_base64_returns_pointer(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Huge figure base64 payloads should be omitted from MCP image responses."""
+        from src.presentation.tools import document_tools
+
+        mock_assets = MagicMock()
+        mock_assets.fetch_asset = AsyncMock(
+            return_value=FetchResult(
+                doc_id="doc_fig",
+                asset_type=AssetType.FIGURE,
+                asset_id="fig_1",
+                success=True,
+                image_base64="A" * 900_000,
+                image_media_type="image/png",
+                text_content="Page 1 | huge figure",
+                page=1,
+                width=6000,
+                height=4000,
+            )
+        )
+        monkeypatch.setattr(document_tools, "asset_service", mock_assets)
+
+        result = await document_tools.fetch_document_asset(
+            "doc_fig",
+            "figure",
+            "fig_1",
+            max_size=0,
+        )
+
+        assert len(result) == 1
+        text = result[0].text
+        assert len(text) < 20_000
+        assert "image_base64_chars" in text
+        assert "sha256:" in text
+        assert "A" * 30_000 not in text
 
     async def test_search_source_location_no_blocks(self) -> None:
         """search_source_location returns error when blocks.json missing."""
@@ -526,6 +608,53 @@ class TestDocumentTools:
         assert result["entries"][0]["locator_source_sha256"]
         assert result["entries"][0]["foam"]["block_anchor"].startswith("^spn-")
         assert result["entries"][0]["foam"]["wikilink"].startswith("[[doc_123#^spn-")
+
+    async def test_citation_bundle_large_json_payload_returns_bounded_record(
+        self,
+    ) -> None:
+        """Large citation JSON payloads should not inline full quotes/context."""
+        from src.domain.citation import EvidenceSpan, blocks_locator_sha256
+
+        markdown = "A" * 90_000
+        blocks = [
+            {
+                "block_id": "blk_big",
+                "block_type": "Text",
+                "page": 3,
+                "text": markdown,
+                "metadata": {"line_start": 1, "line_end": 300},
+            }
+        ]
+        span = EvidenceSpan.create(
+            doc_id="doc_big",
+            source_revision_id=hashlib.sha256(markdown.encode("utf-8")).hexdigest(),
+            span_kind="block",
+            text=markdown,
+            block_id="blk_big",
+            page=3,
+            line_start=1,
+            line_end=300,
+            char_start=0,
+            char_end=len(markdown),
+            markdown=markdown,
+            locator_source_sha256=blocks_locator_sha256(blocks),
+        )
+        with patch("src.presentation.tools.document_tools.repository") as mock_repo:
+            mock_repo.load_citation_index.return_value = [span]
+            mock_repo.load_markdown.return_value = markdown
+            mock_repo.load_blocks.return_value = blocks
+            from src.presentation.tools.document_tools import citation_bundle
+
+            result = await citation_bundle(
+                "doc_big",
+                output_format="json",
+            )
+
+        assert result["success"] is True
+        assert result["response_truncated"] is True
+        assert result["sha256"].startswith("sha256:")
+        assert len(json.dumps(result)) < 20_000
+        assert "A" * 30_000 not in json.dumps(result)
 
     async def test_citation_bundle_exports_foam_evidence_pack(self) -> None:
         """citation_bundle(output_format='foam') returns Foam-ready anchors."""
@@ -1340,10 +1469,9 @@ class TestDocumentTools:
         with patch(
             "src.presentation.tools.document_tools.segmentation_service"
         ) as mock_seg:
-            mock_seg.save_document_segmentation = AsyncMock(
-                return_value=Path("workspace/segmentation.json")
+            mock_seg.build_and_save_document_segmentation = AsyncMock(
+                return_value=(Path("workspace/segmentation.json"), segmentation)
             )
-            mock_seg.export_document_segmentation = AsyncMock(return_value=segmentation)
             from src.presentation.tools.document_tools import (
                 export_document_segmentation,
             )
@@ -1352,6 +1480,35 @@ class TestDocumentTools:
 
         assert "Unified Segmentation Export" in result
         assert "segmentation.json" in result
+
+    async def test_export_document_segmentation_reuses_saved_result(self) -> None:
+        """Segmentation export should not rebuild the same large payload twice."""
+        segmentation = MagicMock(
+            doc_id="doc_big",
+            source_backend="pymupdf",
+            segments=[],
+            page_count=10,
+        )
+        segmentation.page_count_summary.return_value = {}
+
+        with patch(
+            "src.presentation.tools.document_tools.segmentation_service"
+        ) as mock_seg:
+            mock_seg.build_and_save_document_segmentation = AsyncMock(
+                return_value=(Path("workspace/segmentation.json"), segmentation)
+            )
+            mock_seg.export_document_segmentation = AsyncMock(
+                side_effect=AssertionError("segmentation was rebuilt")
+            )
+            from src.presentation.tools.document_tools import (
+                export_document_segmentation,
+            )
+
+            result = await export_document_segmentation("doc_big")
+
+        assert "Unified Segmentation Export" in result
+        mock_seg.build_and_save_document_segmentation.assert_awaited_once()
+        mock_seg.export_document_segmentation.assert_not_called()
 
     async def test_visualize_document_layout_returns_overlay(self) -> None:
         """visualize_document_layout returns text and image payload."""
@@ -1540,6 +1697,7 @@ class TestDocumentTools:
             "section",
             "sec_1",
             max_size=512,
+            max_chars=None,
             ctx=None,
         )
 

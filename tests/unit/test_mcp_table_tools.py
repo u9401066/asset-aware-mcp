@@ -7,7 +7,8 @@ error handling, input validation, and response formatting.
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 # ============================================================================
 # Docx Tools
@@ -122,6 +123,27 @@ class TestTableTools:
         result = await table_manage("unknown_op")
         assert "❌" in result
 
+    async def test_table_manage_render_large_markdown_returns_preview(self) -> None:
+        """Large markdown/html table renders should not be inlined to Cline."""
+        large_table = "| A |\n|---|\n" + ("| X |\n" * 30_000)
+        with patch("src.presentation.tools.table_tools.table_service") as mock_svc:
+            mock_svc.render_table = AsyncMock(
+                return_value={
+                    "success": True,
+                    "format": "markdown",
+                    "content": large_table,
+                    "row_count": 30_000,
+                }
+            )
+            from src.presentation.tools.table_tools import table_manage
+
+            result = await table_manage("render", table_id="tbl_big", format="markdown")
+
+        assert len(result) < 20_000
+        assert "sha256:" in result
+        assert "table render" in result.lower()
+        assert "| X |\n" * 20_000 not in result
+
     async def test_table_data_add_rows_missing(self) -> None:
         """table_data add_rows requires rows."""
         from src.presentation.tools.table_tools import table_data
@@ -135,6 +157,39 @@ class TestTableTools:
 
         result = await table_data("get_row", "tbl_123")
         assert "❌" in result
+
+    async def test_table_data_get_row_large_cell_returns_bounded_json(self) -> None:
+        """Large row cell values should be summarized in JSON responses."""
+        with patch("src.presentation.tools.table_tools.table_service") as mock_svc:
+            mock_svc.get_row.return_value = {
+                "row_index": 0,
+                "data": {"Finding": "A" * 80_000},
+                "citations": {},
+            }
+            from src.presentation.tools.table_tools import table_data
+
+            result = await table_data("get_row", "tbl_big", row_index=0)
+
+        assert len(result) < 20_000
+        assert "sha256:" in result
+        assert "A" * 30_000 not in result
+
+    async def test_table_data_get_cell_large_value_returns_preview(self) -> None:
+        """Large cell values should not be inlined in full."""
+        with patch("src.presentation.tools.table_tools.table_service") as mock_svc:
+            mock_svc.get_cell.return_value = {"value": "B" * 80_000}
+            from src.presentation.tools.table_tools import table_data
+
+            result = await table_data(
+                "get_cell",
+                "tbl_big",
+                row_index=0,
+                column_name="Finding",
+            )
+
+        assert len(result) < 20_000
+        assert "sha256:" in result
+        assert "B" * 30_000 not in result
 
     async def test_table_cite_add_missing_params(self) -> None:
         """table_cite add requires row_index, column_name, refs."""
@@ -157,7 +212,29 @@ class TestTableTools:
         result = await table_draft("create")
         assert "❌" in result
 
+    async def test_table_draft_resume_large_payload_returns_preview(self) -> None:
+        """Draft resume should summarize large notes and pending row values."""
+        draft = SimpleNamespace(
+            title="Draft",
+            intent="summary",
+            table_id="",
+            proposed_columns=[{"name": "Finding", "description": "C" * 80_000}],
+            extraction_plan=["D" * 80_000 for _ in range(3)],
+            pending_rows=[{"Finding": "E" * 80_000}],
+            notes="F" * 80_000,
+            estimate_tokens=lambda: 100_000,
+        )
+        with patch("src.presentation.tools.table_tools.table_service") as mock_svc:
+            mock_svc.get_draft.return_value = draft
+            from src.presentation.tools.table_tools import table_draft
 
-# ============================================================================
+            result = await table_draft("resume", draft_id="draft_big")
+
+        assert len(result) < 20_000
+        assert "sha256:" in result
+        assert "C" * 30_000 not in result
+        assert "F" * 30_000 not in result
+
+
 # Profile Tools
 # ============================================================================

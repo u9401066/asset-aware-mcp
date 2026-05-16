@@ -74,6 +74,37 @@ async def test_resource_document_segmentation_reads_existing_json_without_export
 
 
 @pytest.mark.asyncio
+async def test_resource_document_segmentation_large_file_returns_preview(
+    tmp_path,
+) -> None:
+    """Huge segmentation resources should point to the artifact instead of inlining it."""
+    doc_dir = tmp_path / "doc_big"
+    doc_dir.mkdir()
+    segmentation_path = doc_dir / "segmentation.json"
+    segmentation_path.write_text(
+        '{"doc_id":"doc_big","segments":['
+        + ('{"text":"' + ("C" * 200) + '"},') * 500
+        + "{}]}",
+        encoding="utf-8",
+    )
+
+    with patch(
+        "src.presentation.resources.document_resources.document_service"
+    ) as mock_service:
+        mock_service.repository.get_doc_dir.return_value = doc_dir
+        from src.presentation.resources.document_resources import (
+            resource_document_segmentation,
+        )
+
+        result = await resource_document_segmentation("doc_big")
+
+    assert len(result) < 20_000
+    assert "segmentation.json" in result
+    assert "sha256:" in result
+    assert "C" * 30_000 not in result
+
+
+@pytest.mark.asyncio
 async def test_resource_document_figures_escapes_pipe_cells() -> None:
     manifest = MagicMock(
         title="Demo",
