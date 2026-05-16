@@ -34,6 +34,12 @@
   reruns.
 - Release target: bump and publish `v0.6.35` because `v0.6.34` is already tagged
   locally and remotely.
+- Post-push correction: the first `v0.6.35` tag workflow failed before publish
+  because root LLM wiki harness files still contained retired Zotero/PubMed
+  workflow text while VSIX repo-assets had the corrected Asset-Aware copies.
+  Fixed the root source files and verified the exact blocker with
+  `test_llm_wiki_harness_stays_asset_aware_scoped` plus VSIX
+  `sync-assets:check`; the release tag is retargeted to include this fix.
 
 ## 2026-05-15 (evening) — v0.6.34 GPT subagent review + source-mode install fix
 

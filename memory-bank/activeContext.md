@@ -38,6 +38,13 @@
   `uvx --from .` stdio smoke attempted a network dependency resolve and was
   stopped when the user switched to fast publish; CI/release should cover the
   remote resolver path after publication.
+- Post-push release correction: the first `v0.6.35` tag run failed before
+  artifact publication because root LLM wiki harness files still carried retired
+  Zotero/PubMed wording while VSIX repo-assets had the corrected Asset-Aware
+  copies. Root source harness files were corrected, with targeted verification:
+  `test_llm_wiki_harness_stays_asset_aware_scoped` passed and VSIX
+  `sync-assets:check` passed. The failed tag is being retargeted to this source
+  fix before publication proceeds.
 
 ## 2026-05-15 — v0.6.34 release: GPT subagent review + source-mode install fix
 

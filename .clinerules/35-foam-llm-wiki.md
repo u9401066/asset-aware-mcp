@@ -3,12 +3,11 @@ paths:
   - ".clinerules/workflows/llm-wiki-build.md"
   - ".cline/skills/llm-wiki-builder/SKILL.md"
   - ".codex/skills/llm-wiki-builder/SKILL.md"
-  - ".github/zotero-research-workflow.md"
 ---
 
 # Foam LLM Wiki Rules
 
-Use these rules when turning Zotero, PubMed, PDF/full-text, or project evidence
+Use these rules when turning Asset-Aware PDF/DOCX/full-text or project evidence
 into a Foam-compatible Markdown wiki for LLM-assisted reading and synthesis.
 
 ## Asset Boundaries
@@ -34,11 +33,11 @@ into a Foam-compatible Markdown wiki for LLM-assisted reading and synthesis.
 
 ## Evidence And Citation Hygiene
 
-- Preserve PMID, DOI, PMCID, Zotero key, URL, title, journal, year, and access
+- Preserve DOI, PMCID, URL, title, journal, year, source document ID, and access
   status whenever available.
-- Distinguish imported Zotero items, candidate PubMed results, and preprints.
+- Distinguish ingested documents, externally supplied references, and preprints.
 - Cite claims at paragraph or bullet level using compact source markers such as
-  `PMID:12345678`, `DOI:...`, or `Zotero:ABC123`.
+  `DOI:...`, `doc_id:...`, `span_id:...`, or `AssetRef:...`.
 - Prefer exact text spans, section names, page numbers, or quote hashes when a
   full-text or asset-aware tool provides them.
 - Do not claim that a note is citation-ready unless its source markers can be
@@ -49,6 +48,6 @@ into a Foam-compatible Markdown wiki for LLM-assisted reading and synthesis.
 - Rules define durable wiki constraints and rendering invariants.
 - Workflows define the complete user-facing sequence for making or refreshing
   an LLM wiki.
-- Skills orchestrate multiple tools: filesystem search, Zotero inspection,
-  PubMed discovery, full-text/asset extraction when available, Markdown writes,
-  and link validation.
+- Skills orchestrate multiple tools: filesystem search, Asset-Aware document
+  inspection, citation bundle creation, full-text/asset extraction when
+  available, Markdown writes, and link validation.
