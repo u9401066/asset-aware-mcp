@@ -34,6 +34,7 @@ describe('install smoke quality selector', () => {
         assert.match(installSmokeSource, /--help/);
         assert.match(installSmokeSource, /doctor', '--json'/);
         assert.match(installSmokeSource, /list-tools', '--json'/);
-        assert.match(installSmokeSource, /consult_knowledge_graph/);
+        assert.match(installSmokeSource, /list_documents/);
+        assert.match(installSmokeSource, /knowledge/);
     });
 });

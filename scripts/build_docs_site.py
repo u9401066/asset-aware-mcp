@@ -135,10 +135,10 @@ PAGES = [
         "all",
         "reference",
         "MCP Tools",
-        "Complete 62-tool public MCP surface by module.",
+        "Balanced 30-tool public MCP surface by module.",
         "MCP-Tools.md",
         "MCP 工具",
-        "依 module 整理的完整 62-tool MCP surface。",
+        "依 module 整理的 balanced 30-tool MCP surface。",
     ),
     Page(
         "mcp-resources",
@@ -300,10 +300,10 @@ PAGES = [
         "all",
         "developer",
         "MCP Tool Consolidation Plan",
-        "Target 17-tool op-based surface and legacy direct-tool mapping.",
+        "Balanced 30-tool default, compact 17-tool mode, and legacy mapping.",
         "MCP-Tool-Consolidation.md",
         "MCP Tool 整併計畫",
-        "目標 17-tool op-based surface 與 legacy direct-tool 對照表。",
+        "balanced 30-tool 預設、compact 17-tool 模式與 legacy direct-tool 對照表。",
     ),
     Page(
         "code-map",
@@ -351,7 +351,7 @@ PAGE_COPY_OVERRIDES: dict[str, dict[str, str]] = {
     },
     "mcp-tools": {
         "title_zh": "MCP Tools",
-        "blurb_zh": "依 module 對齊目前公開的 62-tool MCP surface。",
+        "blurb_zh": "依 module 對齊 balanced 30-tool MCP surface。",
     },
     "mcp-resources": {
         "title_zh": "MCP Resources",
@@ -411,7 +411,7 @@ PAGE_COPY_OVERRIDES: dict[str, dict[str, str]] = {
     },
     "mcp-tool-consolidation": {
         "title_zh": "MCP Tool 整併計畫",
-        "blurb_zh": "目標 17-tool op-based surface 與 legacy direct-tool 對照表。",
+        "blurb_zh": "balanced 30-tool 預設、compact 17-tool 模式與 legacy direct-tool 對照表。",
     },
     "code-map": {
         "title_zh": "Code Map",
@@ -437,20 +437,12 @@ def _is_mcp_decorator(decorator: ast.expr, name: str) -> bool:
 
 
 def endpoint_stats() -> dict[str, int | str]:
-    tool_count = 0
-    for path in sorted(TOOLS_DIR.glob("*.py")):
-        if path.name == "__init__.py":
-            continue
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-        tool_count += sum(
-            1
-            for node in tree.body
-            if isinstance(node, ast.AsyncFunctionDef | ast.FunctionDef)
-            and any(
-                _is_mcp_decorator(decorator, "tool")
-                for decorator in node.decorator_list
-            )
-        )
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+
+    from src.presentation.tool_surface import BALANCED_TOOLS
+
+    public_tool_count = len(BALANCED_TOOLS)
 
     resource_count = 0
     for path in sorted(RESOURCES_DIR.glob("*.py")):
@@ -474,9 +466,9 @@ def endpoint_stats() -> dict[str, int | str]:
     version = version_match.group(1) if version_match else "unknown"
     return {
         "version": version,
-        "tools": tool_count,
+        "tools": public_tool_count,
         "resources": resource_count,
-        "endpoints": tool_count + resource_count,
+        "endpoints": public_tool_count + resource_count,
     }
 
 
@@ -518,9 +510,9 @@ exact contracts.
 
 | Item | Current Status |
 |---|---|
-| Latest code version | `0.6.35` |
+| Latest code version | `0.7.0` |
 | Runtime | Python `>=3.10`, managed with `uv` |
-| MCP endpoints | 62 tools and 13 resources, 75 endpoints total |
+| MCP endpoints | 30 public tools and 13 resources, 43 endpoints total |
 | PDF backend | PyMuPDF by default; Marker has been on security hold since `0.6.28` |
 | DOCX | DOCX/DOC/DFM round trip, Track Changes, LibreOffice conversion, strict validation |
 | RAG default | CPU `granite4.1:3b`; GPU hint `granite4.1:8b` |
@@ -536,9 +528,9 @@ to keep future site changes consistent.
 
 ## Source Of Truth
 
-This site is generated from `docs/wiki/**`. Tool and resource counts come from
-`scripts/build_docs_site.py`, which parses the registered MCP decorators in
-`src/presentation/tools/**` and `src/presentation/resources/**`.
+This site is generated from `docs/wiki/**`. Public tool counts come from the
+balanced runtime surface in `src/presentation/tool_surface.py`; resource counts
+still come from the registered MCP resource decorators.
 
 ## Launch Readiness
 

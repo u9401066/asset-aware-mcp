@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
-# gh_update_repo_metadata.sh — Update GitHub repo description & topics
+# Update GitHub repo description and topics.
 # Usage: ./scripts/gh_update_repo_metadata.sh
 set -euo pipefail
 
 REPO="${GH_REPO:-u9401066/asset-aware-mcp}"
 
-# ── Description ──────────────────────────────────────────────────────
-DESCRIPTION="Asset-Aware MCP Server — AI Agent precisely accesses tables, figures, sections from PDFs + .docx round-trip editing (DFM) with 62 tools / 13 resources, segmentation export, layout overlay, OCR preprocessing, knowledge graph (LightRAG)"
+DESCRIPTION="Asset-Aware MCP Server for AI agents: precise PDF/DOCX assets, A2T tables, structural pointers, 30 public tools / 13 resources, 63 legacy tools, segmentation, OCR, and LightRAG"
 
-# ── Topics ───────────────────────────────────────────────────────────
 TOPICS=(
   ai
   document-processing
@@ -29,14 +27,6 @@ TOPICS=(
   segmentation
 )
 
-echo "📝 Updating repo description..."
+echo "Updating $REPO metadata"
 gh repo edit "$REPO" --description "$DESCRIPTION"
-
-echo "🏷️  Updating topics..."
-gh repo edit "$REPO" $(printf -- '--add-topic %s ' "${TOPICS[@]}")
-
-echo ""
-echo "✅ Done. Verify at: https://github.com/$REPO"
-echo ""
-echo "📋 Current state:"
-gh repo view "$REPO" --json description,repositoryTopics --jq '{description, topics: [.repositoryTopics[].name]}'
+gh repo edit "$REPO" --add-topic "$(IFS=,; echo "${TOPICS[*]}")"

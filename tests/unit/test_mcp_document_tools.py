@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -35,6 +36,30 @@ class TestDocumentTools:
 
             result = await list_documents()
             assert "ingest_documents" in result
+
+    async def test_list_documents_shows_facade_next_actions(self) -> None:
+        """list_documents guides agents toward facade ops instead of legacy direct tools."""
+        from src.domain.entities import DocumentSummary
+
+        with patch(
+            "src.presentation.tools.document_tools.document_service"
+        ) as mock_svc:
+            mock_svc.list_documents = AsyncMock(
+                return_value=[
+                    DocumentSummary(
+                        doc_id="doc_123",
+                        filename="paper.pdf",
+                        title="Paper",
+                        page_count=2,
+                    )
+                ]
+            )
+            from src.presentation.tools.document_tools import list_documents
+
+            result = await list_documents()
+
+        assert 'document(op="inspect", doc_id="doc_123")' in result
+        assert 'document(op="prepare_ai", doc_id="doc_123")' in result
 
     async def test_parse_pdf_structure_file_not_found(self) -> None:
         """parse_pdf_structure returns error for missing file."""
@@ -199,6 +224,767 @@ class TestDocumentTools:
         assert kwargs["parameters"]["operation"] == "parse_pdf_structure"
         assert kwargs["parameters"]["require_marker"] is True
         assert kwargs["parameters"]["page_ranges"] == []
+
+    async def test_document_ocr_facade_routes_to_direct(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """document(op='ocr') should preserve the direct OCR tool contract."""
+        from src.presentation.tools import document_tools
+
+        async def fake_ocr(**kwargs):
+            return {"success": True, "kwargs": kwargs}
+
+        monkeypatch.setattr(document_tools, "ocr_pdf_document", fake_ocr)
+
+        result = await document_tools.document(
+            op="ocr",
+            pdf_path="scan.pdf",
+            output_path="scan.md",
+            ocr_language="chi_tra",
+            rotate_pages=True,
+            deskew=True,
+        )
+
+        assert result["success"] is True
+        assert result["kwargs"] == {
+            "pdf_path": "scan.pdf",
+            "output_path": "scan.md",
+            "language": "chi_tra",
+            "rotate_pages": True,
+            "deskew": True,
+            "ctx": None,
+        }
+
+    async def test_document_export_segmentation_facade_routes_to_direct(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """document(op='export_segmentation') should route to the direct tool."""
+        from src.presentation.tools import document_tools
+
+        async def fake_export(**kwargs):
+            return {"success": True, "kwargs": kwargs}
+
+        monkeypatch.setattr(document_tools, "export_document_segmentation", fake_export)
+
+        result = await document_tools.document(
+            op="export_segmentation",
+            doc_id="doc_1",
+            page=2,
+            limit=10,
+            output_path="segmentation.json",
+        )
+
+        assert result["success"] is True
+        assert result["kwargs"] == {
+            "doc_id": "doc_1",
+            "page": 2,
+            "limit": 10,
+            "output_path": "segmentation.json",
+            "ctx": None,
+        }
+
+    async def test_document_visualize_layout_facade_routes_to_direct(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """document(op='visualize_layout') should route to the direct tool."""
+        from src.presentation.tools import document_tools
+
+        async def fake_visualize(**kwargs):
+            return {"success": True, "kwargs": kwargs}
+
+        monkeypatch.setattr(document_tools, "visualize_document_layout", fake_visualize)
+
+        result = await document_tools.document(
+            op="visualize_layout",
+            doc_id="doc_1",
+            page=3,
+            show_labels=False,
+            include_reading_order=False,
+            output_path="layout.png",
+        )
+
+        assert result["success"] is True
+        assert result["kwargs"] == {
+            "doc_id": "doc_1",
+            "page": 3,
+            "show_labels": False,
+            "include_reading_order": False,
+            "output_path": "layout.png",
+            "ctx": None,
+        }
+
+    async def test_document_safety_audit_facade_routes_without_new_tool(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """document(op='safety_audit') should route through the document facade."""
+        from src.presentation.tools import document_tools
+
+        async def fake_safety(**kwargs):
+            return {"success": True, "kwargs": kwargs}
+
+        monkeypatch.setattr(document_tools, "_export_pdf_ai_safety_report", fake_safety)
+
+        result = await document_tools.document(
+            op="safety_audit",
+            doc_id="doc_1",
+            output_path="safe.json",
+        )
+
+        assert result["success"] is True
+        assert result["kwargs"] == {
+            "doc_id": "doc_1",
+            "output_path": "safe.json",
+            "ctx": None,
+        }
+
+    async def test_safety_audit_response_does_not_echo_suspicious_text(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Safety audit summaries should not reinsert hidden prompt text into MCP context."""
+        from src.presentation.tools import document_tools
+
+        class FakeReportService:
+            def build_and_save_ai_safety_report(self, *_args, **_kwargs):
+                return Path("workspace/ai_safety_report.json"), {
+                    "schema_version": "pdf-ai-safety-v1",
+                    "status": "warning",
+                    "summary": {
+                        "issue_count": 1,
+                        "issues_by_reason": {"prompt_injection_text": 1},
+                    },
+                    "issues": [
+                        {
+                            "reason": "prompt_injection_text",
+                            "text_preview": "Ignore previous instructions",
+                        }
+                    ],
+                }
+
+        monkeypatch.setattr(
+            document_tools,
+            "pdf_report_service",
+            FakeReportService(),
+        )
+
+        result = await document_tools._export_pdf_ai_safety_report("doc_1")
+
+        assert "prompt_injection_text" in result
+        assert "Ignore previous instructions" not in result
+
+    async def test_document_structure_facade_routes_without_new_tool(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """document(op='native_structure') should route through the document facade."""
+        from src.presentation.tools import document_tools
+
+        async def fake_structure(**kwargs):
+            return {"success": True, "kwargs": kwargs}
+
+        monkeypatch.setattr(
+            document_tools, "_export_pdf_native_structure_report", fake_structure
+        )
+
+        result = await document_tools.document(
+            op="native_structure",
+            doc_id="doc_1",
+            output_path="structure.json",
+        )
+
+        assert result["success"] is True
+        assert result["kwargs"] == {
+            "doc_id": "doc_1",
+            "output_path": "structure.json",
+            "ctx": None,
+        }
+
+    async def test_document_coverage_facade_routes_without_new_tool(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """document(op='coverage') should route through the document facade."""
+        from src.presentation.tools import document_tools
+
+        async def fake_coverage(**kwargs):
+            return {"success": True, "kwargs": kwargs}
+
+        monkeypatch.setattr(
+            document_tools, "_export_segmentation_coverage_report", fake_coverage
+        )
+
+        result = await document_tools.document(
+            op="coverage",
+            doc_id="doc_1",
+            output_path="coverage.json",
+        )
+
+        assert result["success"] is True
+        assert result["kwargs"] == {
+            "doc_id": "doc_1",
+            "output_path": "coverage.json",
+            "ctx": None,
+        }
+
+    async def test_document_accessibility_facade_routes_without_new_tool(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """document(op='accessibility') should write the accessibility report."""
+        from src.presentation.tools import document_tools
+
+        async def fake_accessibility(**kwargs):
+            return {"success": True, "kwargs": kwargs}
+
+        monkeypatch.setattr(
+            document_tools, "_export_pdf_accessibility_report", fake_accessibility
+        )
+
+        result = await document_tools.document(
+            op="accessibility",
+            doc_id="doc_1",
+            output_path="accessibility.json",
+        )
+
+        assert result["success"] is True
+        assert result["kwargs"] == {
+            "doc_id": "doc_1",
+            "output_path": "accessibility.json",
+            "ctx": None,
+        }
+
+    async def test_document_pointer_index_facade_routes_without_new_tool(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """document(op='pointer_index') should build a structural pointer artifact."""
+        from src.presentation.tools import document_tools
+
+        async def fake_pointer(**kwargs):
+            return {"success": True, "kwargs": kwargs}
+
+        monkeypatch.setattr(
+            document_tools, "_build_structural_pointer_index", fake_pointer
+        )
+
+        result = await document_tools.document(
+            op="pointer_index",
+            doc_id="doc_1",
+            output_path="section_pointer_index.jsonl",
+        )
+
+        assert result["success"] is True
+        assert result["kwargs"] == {
+            "doc_id": "doc_1",
+            "output_path": "section_pointer_index.jsonl",
+            "ctx": None,
+        }
+
+    async def test_document_structural_retrieve_facade_routes_without_new_tool(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """document(op='structural_retrieve') should query section pointers."""
+        from src.presentation.tools import document_tools
+
+        async def fake_retrieve(**kwargs):
+            return {"success": True, "kwargs": kwargs}
+
+        monkeypatch.setattr(document_tools, "_structural_retrieve", fake_retrieve)
+
+        result = await document_tools.document(
+            op="structural_retrieve",
+            doc_id="doc_1",
+            query="methods",
+            limit=3,
+            refresh=True,
+        )
+
+        assert result["success"] is True
+        assert result["kwargs"] == {
+            "doc_id": "doc_1",
+            "query": "methods",
+            "limit": 3,
+            "refresh": True,
+            "ctx": None,
+        }
+
+    async def test_document_compare_facade_requires_second_doc(
+        self,
+    ) -> None:
+        """document(op='compare') should fail closed without doc_b_id."""
+        from src.presentation.tools import document_tools
+
+        result = await document_tools.document(
+            op="compare",
+            doc_id="doc_a",
+            criteria="sedation",
+        )
+
+        assert "doc_b_id" in result
+
+    async def test_document_structural_retrieve_facade_fails_closed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """document(op='structural_retrieve') should return errors as text."""
+        from src.presentation.tools import document_tools
+
+        mock_service = MagicMock()
+        mock_service.retrieve = AsyncMock(side_effect=RuntimeError("boom"))
+        monkeypatch.setattr(document_tools, "structural_pointer_service", mock_service)
+
+        result = await document_tools.document(
+            op="structural_retrieve",
+            doc_id="doc_1",
+            query="sedation",
+        )
+
+        assert "boom" in result
+
+    async def test_document_audit_facade_runs_all_pdf_readiness_reports(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """document(op='audit', refresh=True) rebuilds readiness reports."""
+        from src.presentation.tools import document_tools
+
+        calls: list[tuple[str, dict[str, object]]] = []
+
+        async def fake_safety(**kwargs):
+            calls.append(("safety", kwargs))
+            return "# PDF AI Safety Audit\n\n**output:** `safe.json`"
+
+        async def fake_structure(**kwargs):
+            calls.append(("structure", kwargs))
+            return "# Native PDF Structure\n\n**output:** `structure.json`"
+
+        async def fake_coverage(**kwargs):
+            calls.append(("coverage", kwargs))
+            return "# Segmentation Coverage Audit\n\n**output:** `coverage.json`"
+
+        async def fake_accessibility(**kwargs):
+            calls.append(("accessibility", kwargs))
+            return "# PDF Accessibility Readiness\n\n**output:** `accessibility.json`"
+
+        monkeypatch.setattr(document_tools, "_export_pdf_ai_safety_report", fake_safety)
+        monkeypatch.setattr(
+            document_tools, "_export_pdf_native_structure_report", fake_structure
+        )
+        monkeypatch.setattr(
+            document_tools, "_export_segmentation_coverage_report", fake_coverage
+        )
+        monkeypatch.setattr(
+            document_tools, "_export_pdf_accessibility_report", fake_accessibility
+        )
+
+        result = await document_tools.document(op="audit", doc_id="doc_1", refresh=True)
+
+        assert "# Document AI Readiness Audit" in result
+        assert "PDF AI Safety Audit" in result
+        assert "Native PDF Structure" in result
+        assert "Segmentation Coverage Audit" in result
+        assert "PDF Accessibility Readiness" in result
+        assert [name for name, _kwargs in calls] == [
+            "safety",
+            "structure",
+            "coverage",
+            "accessibility",
+        ]
+        assert all(kwargs["doc_id"] == "doc_1" for _name, kwargs in calls)
+        assert all(kwargs["output_path"] is None for _name, kwargs in calls)
+
+    async def test_document_audit_skips_existing_artifacts_by_default(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """document(op='audit') should reuse current audit artifacts unless refreshed."""
+        from src.domain.entities import DocumentManifest
+        from src.presentation.tools import document_tools
+
+        doc_dir = tmp_path / "doc_1"
+        doc_dir.mkdir()
+        (doc_dir / "doc_1_manifest.json").write_text("{}", encoding="utf-8")
+        (doc_dir / "segmentation.json").write_text(
+            '{"source_revision_id":"rev-1","locator_source_sha256":"loc-1"}',
+            encoding="utf-8",
+        )
+        for name in ("ai_safety_report", "native_structure"):
+            (doc_dir / f"{name}.json").write_text(
+                '{"status":"ok","doc_id":"doc_1"}',
+                encoding="utf-8",
+            )
+        for name in ("segmentation_coverage", "accessibility_report"):
+            (doc_dir / f"{name}.json").write_text(
+                '{"status":"ok","doc_id":"doc_1",'
+                '"source_revision_id":"rev-1","locator_source_sha256":"loc-1"}',
+                encoding="utf-8",
+            )
+        manifest = DocumentManifest(
+            doc_id="doc_1",
+            filename="paper.pdf",
+            title="Paper",
+            page_count=3,
+            manifest_path=str(doc_dir / "doc_1_manifest.json"),
+        )
+        mock_repo = MagicMock()
+        mock_repo.load_manifest.return_value = manifest
+        mock_repo.get_doc_dir.side_effect = AssertionError(
+            "readiness discovery must not create document directories"
+        )
+        mock_safety = AsyncMock(return_value="# PDF AI Safety Audit")
+        mock_structure = AsyncMock(return_value="# Native PDF Structure")
+        mock_coverage = AsyncMock(return_value="# Segmentation Coverage")
+        mock_accessibility = AsyncMock(return_value="# Accessibility")
+        monkeypatch.setattr(document_tools, "repository", mock_repo)
+        monkeypatch.setattr(document_tools, "_export_pdf_ai_safety_report", mock_safety)
+        monkeypatch.setattr(
+            document_tools, "_export_pdf_native_structure_report", mock_structure
+        )
+        monkeypatch.setattr(
+            document_tools, "_export_segmentation_coverage_report", mock_coverage
+        )
+        monkeypatch.setattr(
+            document_tools, "_export_pdf_accessibility_report", mock_accessibility
+        )
+
+        result = await document_tools.document(op="audit", doc_id="doc_1")
+
+        assert "**status:** cached" in result
+        assert "ai_safety_report: cached" in result
+        mock_safety.assert_not_awaited()
+        mock_structure.assert_not_awaited()
+        mock_coverage.assert_not_awaited()
+        mock_accessibility.assert_not_awaited()
+
+    async def test_document_audit_reruns_invalid_cached_artifact(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Invalid cached audit reports should be refreshed by default."""
+        from src.domain.entities import DocumentManifest
+        from src.presentation.tools import document_tools
+
+        doc_dir = tmp_path / "doc_1"
+        doc_dir.mkdir()
+        for name in ("doc_1_manifest.json", "doc_1_full.md", "blocks.json"):
+            (doc_dir / name).write_text("{}", encoding="utf-8")
+        (doc_dir / "segmentation.json").write_text(
+            '{"source_revision_id":"rev-1","locator_source_sha256":"loc-1"}',
+            encoding="utf-8",
+        )
+        (doc_dir / "native_structure.json").write_text(
+            '{"status":"ok","doc_id":"doc_1"}',
+            encoding="utf-8",
+        )
+        for name in ("segmentation_coverage", "accessibility_report"):
+            (doc_dir / f"{name}.json").write_text(
+                '{"status":"ok","doc_id":"doc_1",'
+                '"source_revision_id":"rev-1","locator_source_sha256":"loc-1"}',
+                encoding="utf-8",
+            )
+        (doc_dir / "ai_safety_report.json").write_text(
+            '{"status":"skipped"}',
+            encoding="utf-8",
+        )
+        manifest = DocumentManifest(
+            doc_id="doc_1",
+            filename="paper.pdf",
+            title="Paper",
+            page_count=3,
+            manifest_path=str(doc_dir / "doc_1_manifest.json"),
+            markdown_path=str(doc_dir / "doc_1_full.md"),
+        )
+        mock_repo = MagicMock()
+        mock_repo.load_manifest.return_value = manifest
+        mock_repo.get_doc_dir.side_effect = AssertionError(
+            "readiness discovery must not create document directories"
+        )
+        mock_safety = AsyncMock(return_value="# PDF AI Safety Audit")
+        mock_structure = AsyncMock(return_value="# Native PDF Structure")
+        mock_coverage = AsyncMock(return_value="# Segmentation Coverage")
+        mock_accessibility = AsyncMock(return_value="# Accessibility")
+        monkeypatch.setattr(document_tools, "repository", mock_repo)
+        monkeypatch.setattr(document_tools, "_export_pdf_ai_safety_report", mock_safety)
+        monkeypatch.setattr(
+            document_tools, "_export_pdf_native_structure_report", mock_structure
+        )
+        monkeypatch.setattr(
+            document_tools, "_export_segmentation_coverage_report", mock_coverage
+        )
+        monkeypatch.setattr(
+            document_tools, "_export_pdf_accessibility_report", mock_accessibility
+        )
+
+        result = await document_tools.document(op="audit", doc_id="doc_1")
+
+        assert "**status:** ok" in result
+        mock_safety.assert_awaited_once()
+        mock_structure.assert_not_awaited()
+        mock_coverage.assert_not_awaited()
+        mock_accessibility.assert_not_awaited()
+
+    async def test_document_audit_reports_partial_failure_status(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """document(op='audit') should not hide failed child reports."""
+        from src.presentation.tools import document_tools
+
+        async def fake_safety(**_kwargs):
+            return "# PDF AI Safety Audit\n\n**output:** `safe.json`"
+
+        async def fake_structure(**_kwargs):
+            return "??native structure failed"
+
+        async def fake_coverage(**_kwargs):
+            return "# Segmentation Coverage Audit\n\n**output:** `coverage.json`"
+
+        async def fake_accessibility(**_kwargs):
+            return "# PDF Accessibility Readiness\n\n**status:** unavailable"
+
+        monkeypatch.setattr(document_tools, "_export_pdf_ai_safety_report", fake_safety)
+        monkeypatch.setattr(
+            document_tools, "_export_pdf_native_structure_report", fake_structure
+        )
+        monkeypatch.setattr(
+            document_tools, "_export_segmentation_coverage_report", fake_coverage
+        )
+        monkeypatch.setattr(
+            document_tools, "_export_pdf_accessibility_report", fake_accessibility
+        )
+
+        result = await document_tools.document(op="audit", doc_id="doc_1")
+
+        assert "**status:** warning" in result
+        assert "failed_reports" in result
+        assert "native_structure" in result
+        assert "accessibility_report" in result
+
+    async def test_json_artifact_summary_bounds_preview_items(
+        self, tmp_path: Path
+    ) -> None:
+        """Large native report previews should not be inlined unbounded."""
+        from src.presentation.tools import document_tools
+
+        result = document_tools._format_json_artifact_summary(
+            title="Native PDF Structure",
+            doc_id="doc_1",
+            target=tmp_path / "native_structure.json",
+            report={
+                "status": "ok",
+                "schema_version": "pdf-native-structure-v1",
+                "metrics": {"outline": ["A" * 5_000]},
+                "preview": [{"text": "B" * 5_000}],
+            },
+            preview_key="preview",
+        )
+
+        assert "text_truncated" in result
+        assert "sha256:" in result
+        assert "A" * 2_000 not in result
+        assert "B" * 2_000 not in result
+
+    async def test_document_prepare_ai_reports_artifacts_and_next_actions(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """document(op='prepare_ai') returns bounded readiness state for agents."""
+        from src.domain.entities import DocumentManifest
+        from src.presentation.tools import document_tools
+
+        doc_dir = tmp_path / "doc_1"
+        doc_dir.mkdir()
+        for name in (
+            "doc_1_manifest.json",
+            "doc_1_full.md",
+            "blocks.json",
+            "segmentation.json",
+            "citation_index.jsonl",
+            "ai_safety_report.json",
+        ):
+            (doc_dir / name).write_text("{}", encoding="utf-8")
+        manifest = DocumentManifest(
+            doc_id="doc_1",
+            filename="paper.pdf",
+            title="Paper",
+            page_count=3,
+            text_quality_status="ok",
+            manifest_path=str(doc_dir / "doc_1_manifest.json"),
+            markdown_path=str(doc_dir / "doc_1_full.md"),
+        )
+
+        mock_service = MagicMock()
+        mock_service.get_manifest = AsyncMock(return_value=manifest)
+        mock_repo = MagicMock()
+        mock_repo.get_doc_dir.return_value = doc_dir
+        mock_repo.load_manifest.return_value = manifest
+        monkeypatch.setattr(document_tools, "document_service", mock_service)
+        monkeypatch.setattr(document_tools, "repository", mock_repo)
+
+        result = await document_tools.document(op="prepare_ai", doc_id="doc_1")
+
+        assert "# Document AI Readiness" in result
+        assert "**status:** needs_attention" in result
+        assert "has_ai_safety_report: yes" in result
+        assert "has_native_structure: no" in result
+        assert "has_coverage_report: no" in result
+        assert "ai_safety_report: `" in result
+        assert 'document(op="audit", doc_id="doc_1")' in result
+        assert 'evidence(op="find", doc_id="doc_1", query="...")' in result
+        match = re.search(r"```json\n(.*?)\n```", result, flags=re.DOTALL)
+        assert match is not None
+        payload = json.loads(match.group(1))
+        assert payload["schema_version"] == "document-readiness-v2"
+        assert payload["doc_id"] == "doc_1"
+        assert payload["status"] == "needs_attention"
+        assert payload["capabilities"]["has_ai_safety_report"] is True
+        assert "missing_native_structure" in payload["blockers"]
+        assert 'document(op="audit", doc_id="doc_1")' in payload["next_actions"]
+
+    async def test_document_prepare_ai_json_reports_multiple_blockers(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """JSON readiness should expose blockers without requiring Markdown parsing."""
+        from src.domain.entities import DocumentManifest
+        from src.presentation.tools import document_tools
+
+        doc_dir = tmp_path / "doc_1"
+        doc_dir.mkdir()
+        for name in ("doc_1_manifest.json", "doc_1_full.md", "blocks.json"):
+            (doc_dir / name).write_text("{}", encoding="utf-8")
+        manifest = DocumentManifest(
+            doc_id="doc_1",
+            filename="paper.pdf",
+            title="Paper",
+            page_count=3,
+            text_quality_status="low_text",
+            ocr_recommended=True,
+            manifest_path=str(doc_dir / "doc_1_manifest.json"),
+            markdown_path=str(doc_dir / "doc_1_full.md"),
+        )
+        mock_repo = MagicMock()
+        mock_repo.load_manifest.return_value = manifest
+        mock_repo.get_doc_dir.side_effect = AssertionError(
+            "prepare_ai JSON must inspect artifacts read-only"
+        )
+        monkeypatch.setattr(document_tools, "repository", mock_repo)
+
+        payload = await document_tools.document(
+            op="prepare_ai",
+            doc_id="doc_1",
+            output_format="json",
+        )
+
+        assert isinstance(payload, dict)
+        assert payload["schema_version"] == "document-readiness-v2"
+        assert payload["status"] == "needs_attention"
+        assert "ocr_recommended" in payload["blockers"]
+        assert "missing_ai_safety_report" in payload["blockers"]
+        assert "missing_native_structure" in payload["blockers"]
+        assert "missing_segmentation_coverage" in payload["blockers"]
+        assert "missing_citation_index" in payload["warnings"]
+
+    async def test_document_prepare_ai_json_blocks_invalid_cached_audit(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """prepare_ai JSON should expose invalid cached audit artifacts directly."""
+        from src.domain.entities import DocumentManifest
+        from src.presentation.tools import document_tools
+
+        doc_dir = tmp_path / "doc_1"
+        doc_dir.mkdir()
+        for name in (
+            "doc_1_manifest.json",
+            "doc_1_full.md",
+            "blocks.json",
+            "citation_index.jsonl",
+            "citation_index.status.json",
+        ):
+            (doc_dir / name).write_text("{}", encoding="utf-8")
+        (doc_dir / "segmentation.json").write_text(
+            '{"source_revision_id":"rev-1","locator_source_sha256":"loc-1"}',
+            encoding="utf-8",
+        )
+        (doc_dir / "native_structure.json").write_text(
+            '{"status":"ok","doc_id":"doc_1"}',
+            encoding="utf-8",
+        )
+        for name in ("segmentation_coverage", "accessibility_report"):
+            (doc_dir / f"{name}.json").write_text(
+                '{"status":"ok","doc_id":"doc_1",'
+                '"source_revision_id":"rev-1","locator_source_sha256":"loc-1"}',
+                encoding="utf-8",
+            )
+        (doc_dir / "ai_safety_report.json").write_text(
+            '{"status":"unavailable"}',
+            encoding="utf-8",
+        )
+        manifest = DocumentManifest(
+            doc_id="doc_1",
+            filename="paper.pdf",
+            title="Paper",
+            page_count=3,
+            manifest_path=str(doc_dir / "doc_1_manifest.json"),
+            markdown_path=str(doc_dir / "doc_1_full.md"),
+        )
+        mock_repo = MagicMock()
+        mock_repo.load_manifest.return_value = manifest
+        mock_repo.get_doc_dir.side_effect = AssertionError(
+            "prepare_ai JSON must inspect artifacts read-only"
+        )
+        monkeypatch.setattr(document_tools, "repository", mock_repo)
+
+        payload = await document_tools.document(
+            op="prepare_ai",
+            doc_id="doc_1",
+            output_format="json",
+        )
+
+        assert payload["status"] == "needs_attention"
+        assert payload["invalid_audits"] == ["ai_safety_report"]
+        assert "invalid_ai_safety_report" in payload["blockers"]
+        assert 'document(op="audit", doc_id="doc_1")' in payload["next_actions"]
+
+    async def test_document_auto_routes_doc_id_to_prepare_ai(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """document(op='auto', doc_id=...) should choose the readiness path."""
+        from src.presentation.tools import document_tools
+
+        async def fake_prepare_ai(**kwargs):
+            return {"success": True, "kwargs": kwargs}
+
+        monkeypatch.setattr(document_tools, "_prepare_document_for_ai", fake_prepare_ai)
+
+        result = await document_tools.document(op="auto", doc_id="doc_1")
+
+        assert result["success"] is True
+        assert result["kwargs"] == {
+            "doc_id": "doc_1",
+            "ctx": None,
+            "output_format": "markdown",
+        }
+
+    async def test_document_auto_routes_file_paths_to_ingest(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """document(op='auto', file_paths=...) should keep ingest job semantics."""
+        from src.presentation.tools import document_tools
+
+        pdf_path = tmp_path / "paper.pdf"
+        pdf_path.write_bytes(b"%PDF-1.4 test")
+        mock_ingest = AsyncMock(return_value="job created")
+        monkeypatch.setattr(document_tools, "ingest_documents", mock_ingest)
+
+        result = await document_tools.document(
+            op="auto",
+            file_paths=[str(pdf_path)],
+            async_mode=True,
+            use_marker=False,
+        )
+
+        assert result == "job created"
+        mock_ingest.assert_awaited_once()
+        args, kwargs = mock_ingest.await_args
+        assert args[0] == [str(pdf_path)]
+        assert kwargs["async_mode"] is True
+
+    async def test_document_auto_rejects_conflicting_inputs(self) -> None:
+        """document(op='auto') should not guess when doc_id and file_paths conflict."""
+        from src.presentation.tools.document_tools import document
+
+        result = await document("auto", doc_id="doc_1", file_paths=["paper.pdf"])
+
+        assert "Choose either doc_id or file_paths" in result
 
     async def test_fetch_document_asset_large_full_text_returns_preview(
         self,

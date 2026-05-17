@@ -1,7 +1,8 @@
 # LLM Wiki Build Workflow
 
-Build or refresh a Foam-compatible LLM wiki from Asset-Aware document evidence.
-Use with `.clinerules/35-foam-llm-wiki.md`.
+Build or refresh a Foam-compatible LLM wiki from Asset-Aware documents,
+citation bundles, tables, figures, sections, optional KG exports, and local
+Markdown evidence. Use with `.clinerules/35-foam-llm-wiki.md`.
 
 ## 1. Locate The Wiki
 
@@ -17,7 +18,7 @@ Use with `.clinerules/35-foam-llm-wiki.md`.
 - Create a short map before writing files:
   - hub note
   - topic notes
-  - literature/source notes
+  - source/evidence notes
   - method or protocol notes
   - unresolved TODO notes
 - Prefer a few well-linked notes over one large dump.
@@ -25,10 +26,12 @@ Use with `.clinerules/35-foam-llm-wiki.md`.
 
 ## 3. Gather Evidence With Tools
 
-- Use document or asset-aware tools when the user provides PDFs, DOCX, DFM,
-  tables, figures, or span-level citation requirements.
-- Use citation bundle, evidence health, manifest, and asset-resource tools to
-  gather traceable source spans and reviewable claim payloads.
+- Use Asset-Aware tools for ingested PDFs, DOCX/DFM sessions, tables, figures,
+  section navigation, and span-level citation requirements.
+- Use citation bundles and evidence health checks when claims need verified
+  source markers.
+- Use optional `knowledge(op=...)` outputs as discovery or synthesis material,
+  not as the sole citation source.
 - Record provenance as you gather it; do not reconstruct citations from memory.
 
 ## 4. Write Foam-Compatible Notes
@@ -52,5 +55,5 @@ Use with `.clinerules/35-foam-llm-wiki.md`.
 
 - Summarize created, updated, preserved, and skipped notes.
 - List unresolved TODOs separately from completed links.
-- Mention any evidence gaps, missing source documents, unresolved assets, or
-  uncertain preprint/peer-review status.
+- Mention any evidence gaps, missing source documents, skipped large artifacts,
+  unresolved AssetRefs, or claims that still need verification.

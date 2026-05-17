@@ -1271,6 +1271,60 @@ async def test_pymupdf_ingest_persists_searchable_blocks_json(
 
 
 @pytest.mark.asyncio
+async def test_pymupdf_ingest_persists_pdf_audit_artifacts(
+    monkeypatch, tmp_path: Path
+) -> None:
+    pdf_path = tmp_path / "audit.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4 audit")
+    repository = FileStorage(tmp_path / "data")
+
+    extractor = MagicMock()
+    extractor.extract_text.return_value = "<!-- Page 1 -->\n# Safety\n\nVisible text."
+    extractor.get_page_count.return_value = 1
+    extractor.get_toc.return_value = []
+    extractor.get_title.return_value = "Safety"
+    extractor.audit_ai_safety.return_value = {
+        "schema_version": "pdf-ai-safety-v1",
+        "status": "ok",
+        "summary": {"issue_count": 0},
+        "issues": [],
+    }
+    extractor.extract_native_structure.return_value = {
+        "schema_version": "pdf-native-structure-v1",
+        "backend": "pymupdf",
+        "outline": [],
+        "pages": [{"page": 1, "width": 300.0, "height": 220.0}],
+        "capabilities": {"outline": False},
+    }
+
+    service = DocumentService(repository=repository, pdf_extractor=extractor)
+    service._extract_and_save_images = AsyncMock(return_value=[])
+    service._extract_tables = AsyncMock(return_value=[])
+
+    monkeypatch.setattr(
+        "src.application.document_service.DocId.generate",
+        lambda *_args: SimpleNamespace(value="doc_pdf_audit"),
+    )
+
+    results = await service.ingest([str(pdf_path)])
+    doc_dir = repository.get_doc_dir("doc_pdf_audit")
+
+    assert results[0].success is True
+    assert (doc_dir / "ai_safety_report.json").exists()
+    assert (doc_dir / "native_structure.json").exists()
+    assert (doc_dir / "segmentation_coverage.json").exists()
+    safety = json.loads((doc_dir / "ai_safety_report.json").read_text("utf-8"))
+    coverage = json.loads((doc_dir / "segmentation_coverage.json").read_text("utf-8"))
+    assert safety["doc_id"] == "doc_pdf_audit"
+    assert safety["source_pdf_sha256"] == sha256(b"%PDF-1.4 audit").hexdigest()
+    assert safety["analyzed_pdf_sha256"] == sha256(b"%PDF-1.4 audit").hexdigest()
+    assert coverage["schema_version"] == "segmentation-coverage-v1"
+    assert coverage["metrics"]["segment_count"] > 0
+    extractor.audit_ai_safety.assert_called_once_with(doc_dir / "original.pdf")
+    extractor.extract_native_structure.assert_called_once_with(doc_dir / "original.pdf")
+
+
+@pytest.mark.asyncio
 async def test_marker_ingest_reports_manifest_counts_and_saves_segmentation(
     monkeypatch, tmp_path: Path
 ) -> None:

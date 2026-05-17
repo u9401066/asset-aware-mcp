@@ -24,6 +24,9 @@ from src.presentation import (
 
 # Import mcp instance
 from src.presentation.mcp_app import mcp
+from src.presentation.tool_surface import apply_tool_surface_policy
+
+apply_tool_surface_policy(mcp)
 
 logger = logging.getLogger(__name__)
 

@@ -4,13 +4,13 @@
  * Provides Medical RAG capabilities with precise document asset retrieval.
  * Integrates with Ollama (local) or OpenAI for LLM backend.
  *
- * Auto-installs uv if not present, then uses uvx to run from PyPI.
+ * Auto-installs uv if not present, then uses uv tool run to run from PyPI.
  */
 
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { exec, execFile } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { AssetAwareMcpProvider, LAST_SERVER_VERSION_KEY } from './mcpProvider';
 import { StatusBarManager } from './statusBar';
@@ -31,7 +31,12 @@ import { installAssistantAssets } from './assistantAssets';
 import { installClineMcpServer } from './clineMcpConfig';
 import { installCodexMcpServer } from './codexMcpConfig';
 import { installCopilotMcpConfig } from './copilotMcpConfig';
-import { findLocalAssetAwareSource } from './mcpConfigCommon';
+import {
+    ASSET_AWARE_SERVER_KEY,
+    buildAssetAwareLaunchSpec,
+    findLocalAssetAwareSource,
+    getRuntimePythonVersion,
+} from './mcpConfigCommon';
 import {
     checkOllamaModels,
     formatOllamaPullCommands,
@@ -41,14 +46,16 @@ import {
 import {
     DEFAULT_TORCH_BACKEND,
     findUvPath,
+    formatTerminalCommand,
     getAssetAwareRuntimeProbeArgs,
+    getUvInstallCommand,
     getUvVersion,
-    getUvxLaunch,
     MARKER_BACKEND_SECURITY_HOLD_MESSAGE,
     PREFERRED_RUNTIME_PYTHON,
+    RUNTIME_PYTHON_CANDIDATES,
+    RUNTIME_PYTHON_VERSION_KEY,
 } from './uv';
 
-const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 
 // Module-level variables
@@ -76,6 +83,15 @@ const CONTEXT_OLLAMA_CONNECTED = 'assetAwareMcp.ollamaConnected';
 const FIRST_ACTIVATION_KEY = 'assetAwareMcp.firstActivation';
 const RUNTIME_PREPARED_VERSION_KEY = 'assetAwareMcp.runtimePreparedVersion';
 const RUNTIME_PREPARE_TIMEOUT_MS = 10 * 60 * 1000;
+const RUNTIME_PREPARE_MAX_BUFFER = 50 * 1024 * 1024;
+
+interface RuntimePrepareSpec {
+    command: string;
+    args: string[];
+    env: NodeJS.ProcessEnv;
+    mode: 'local' | 'package';
+    pythonVersion: string;
+}
 
 /**
  * Log message to output channel
@@ -144,21 +160,9 @@ async function installUv(): Promise<string | null> {
             try {
                 progress.report({ message: 'Downloading uv...' });
 
-                if (platform === 'win32') {
-                    // Windows: Use PowerShell
-                    log('Using PowerShell installer for Windows');
-                    await execAsync(
-                        'powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"',
-                        { timeout: 120000 }
-                    );
-                } else {
-                    // Linux/macOS: Use curl
-                    log('Using curl installer for Unix');
-                    await execAsync(
-                        'curl -LsSf https://astral.sh/uv/install.sh | sh',
-                        { timeout: 120000 }
-                    );
-                }
+                const install = getUvInstallCommand(platform);
+                log(`Using uv installer: ${install.command} ${install.args.join(' ')}`);
+                await execFileAsync(install.command, install.args, { timeout: 120000 });
 
                 progress.report({ message: 'Verifying installation...' });
 
@@ -448,61 +452,69 @@ async function prepareMcpServerRuntime(
     const extensionVersion = extensionContext.extension.packageJSON.version as string;
     const enableMarkerBackend = config.get('enableMarkerBackend', false);
     const torchBackend = config.get('torchBackend', DEFAULT_TORCH_BACKEND);
-    const launch = getUvxLaunch(
-        uvPath,
-        PREFERRED_RUNTIME_PYTHON,
-        enableMarkerBackend,
-        torchBackend,
-        extensionVersion,
-        needsUpgrade,
-    );
-    const args = getAssetAwareRuntimeProbeArgs(launch.args);
-    const uvCacheDir = path.join(getStorageRoot(), '.uv-cache');
-    fs.mkdirSync(uvCacheDir, { recursive: true });
-    const runtimeEnv = {
-        ...process.env,
-        UV_CACHE_DIR: uvCacheDir,
-    };
+    const runtimeSpecs = buildRuntimePrepareSpecs(extensionContext, uvPath, needsUpgrade);
 
-    try {
-        progress?.report({ message: `Preparing asset-aware-mcp ${extensionVersion} runtime...` });
-        log(`Preparing MCP runtime: ${launch.command} ${args.join(' ')}`);
+    for (const runtimeSpec of runtimeSpecs) {
+        const runtimeEnv = runtimeSpec.env;
+        if (runtimeEnv.DATA_DIR) {
+            fs.mkdirSync(runtimeEnv.DATA_DIR, { recursive: true });
+        }
+        if (runtimeEnv.UV_CACHE_DIR) {
+            fs.mkdirSync(runtimeEnv.UV_CACHE_DIR, { recursive: true });
+        }
+
+        try {
+            progress?.report({
+                message: `Preparing asset-aware-mcp ${extensionVersion} runtime (Python ${runtimeSpec.pythonVersion})...`,
+            });
+        log(`Preparing MCP runtime: ${runtimeSpec.command} ${runtimeSpec.args.join(' ')}`);
         log(
             `Preparing MCP runtime details: version=${extensionVersion}; ` +
-            `mode=package; marker_backend=${String(enableMarkerBackend)}; ` +
+            `mode=${runtimeSpec.mode}; marker_backend=${String(enableMarkerBackend)}; ` +
+            `python=${runtimeSpec.pythonVersion}; ` +
             `torch_backend=${torchBackend}; timeout_ms=${RUNTIME_PREPARE_TIMEOUT_MS}`,
         );
-        if (enableMarkerBackend) {
-            log(MARKER_BACKEND_SECURITY_HOLD_MESSAGE);
+            if (enableMarkerBackend) {
+                log(MARKER_BACKEND_SECURITY_HOLD_MESSAGE);
+            }
+            log(`Preparing MCP runtime DATA_DIR: ${runtimeEnv.DATA_DIR ?? '(unset)'}`);
+            log(`Preparing MCP runtime UV cache: ${runtimeEnv.UV_CACHE_DIR ?? '(unset)'}`);
+            const { stdout, stderr } = await execFileAsync(runtimeSpec.command, runtimeSpec.args, {
+                timeout: RUNTIME_PREPARE_TIMEOUT_MS,
+                maxBuffer: RUNTIME_PREPARE_MAX_BUFFER,
+                env: runtimeEnv,
+            });
+            const trimmedStdout = stdout.trim();
+            const trimmedStderr = stderr.trim();
+            if (trimmedStdout) {
+                log('MCP runtime preparation stdout: ' + trimmedStdout);
+            }
+            if (trimmedStderr) {
+                log('MCP runtime preparation stderr: ' + trimmedStderr);
+            }
+            await extensionContext.globalState.update(RUNTIME_PYTHON_VERSION_KEY, runtimeSpec.pythonVersion);
+            await extensionContext.globalState.update(RUNTIME_PREPARED_VERSION_KEY, extensionVersion);
+            mcpProvider?.refresh();
+            log(
+                `MCP runtime prepared for asset-aware-mcp ${extensionVersion} ` +
+                `with Python ${runtimeSpec.pythonVersion}`,
+            );
+            return true;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            log(`MCP runtime preparation failed with Python ${runtimeSpec.pythonVersion}: ${message}`);
+            const output = error as { stdout?: string; stderr?: string };
+            if (output.stdout?.trim()) {
+                log('MCP runtime preparation stdout: ' + output.stdout.trim());
+            }
+            if (output.stderr?.trim()) {
+                log('MCP runtime preparation stderr: ' + output.stderr.trim());
+            }
         }
-        log(`Preparing MCP runtime UV cache: ${uvCacheDir}`);
-        const { stdout, stderr } = await execFileAsync(launch.command, args, {
-            timeout: RUNTIME_PREPARE_TIMEOUT_MS,
-            env: runtimeEnv,
-        });
-        const trimmedStdout = stdout.trim();
-        const trimmedStderr = stderr.trim();
-        if (trimmedStdout) {
-            log('MCP runtime preparation stdout: ' + trimmedStdout);
-        }
-        if (trimmedStderr) {
-            log('MCP runtime preparation stderr: ' + trimmedStderr);
-        }
-        await extensionContext.globalState.update(RUNTIME_PREPARED_VERSION_KEY, extensionVersion);
-        log(`MCP runtime prepared for asset-aware-mcp ${extensionVersion}`);
-        return true;
-    } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        log(`MCP runtime preparation failed: ${message}`);
-        const output = error as { stdout?: string; stderr?: string };
-        if (output.stdout?.trim()) {
-            log('MCP runtime preparation stdout: ' + output.stdout.trim());
-        }
-        if (output.stderr?.trim()) {
-            log('MCP runtime preparation stderr: ' + output.stderr.trim());
-        }
-        return false;
     }
+
+    log(`MCP runtime preparation failed for all Python candidates: ${runtimeSpecs.map((spec) => spec.pythonVersion).join(', ')}`);
+    return false;
 }
 
 async function prepareRuntimeWithProgress(uvPath: string, needsUpgrade: boolean = false): Promise<boolean> {
@@ -514,6 +526,111 @@ async function prepareRuntimeWithProgress(uvPath: string, needsUpgrade: boolean 
         },
         async (progress) => prepareMcpServerRuntime(uvPath, needsUpgrade, progress),
     );
+}
+
+function buildRuntimePrepareEnv(context: vscode.ExtensionContext): NodeJS.ProcessEnv {
+    return buildRuntimePrepareSpec(context, 'uv', false).env;
+}
+
+export function __buildRuntimePrepareEnvForTests(
+    context: vscode.ExtensionContext,
+): NodeJS.ProcessEnv {
+    return buildRuntimePrepareEnv(context);
+}
+
+export function __runtimePrepareMaxBufferForTests(): number {
+    return RUNTIME_PREPARE_MAX_BUFFER;
+}
+
+function buildRuntimePrepareSpec(
+    context: vscode.ExtensionContext,
+    uvPath: string,
+    needsUpgrade: boolean = false,
+    pythonVersion: string = PREFERRED_RUNTIME_PYTHON,
+): RuntimePrepareSpec {
+    const launch = buildAssetAwareLaunchSpec(context, uvPath, {
+        workspaceRoot: getPrimaryWorkspaceRoot(),
+        needsUpgrade,
+        pythonVersion,
+    });
+    const env: NodeJS.ProcessEnv = {
+        ...process.env,
+        ...launch.env,
+    };
+
+    let launchArgs = launch.args;
+    if (launch.mode === 'local') {
+        const localServerTail = ['python', '-m', 'src.server'];
+        const tail = launchArgs.slice(-localServerTail.length);
+        if (tail.every((value, index) => value === localServerTail[index])) {
+            launchArgs = launchArgs.slice(0, -localServerTail.length);
+        }
+    } else if (launchArgs[launchArgs.length - 1] === ASSET_AWARE_SERVER_KEY) {
+        launchArgs = launchArgs.slice(0, -1);
+    }
+
+    return {
+        command: launch.command,
+        args: getAssetAwareRuntimeProbeArgs(launchArgs),
+        env,
+        mode: launch.mode,
+        pythonVersion,
+    };
+}
+
+function getRuntimePreparePythonCandidates(context: vscode.ExtensionContext): string[] {
+    const stored = context.globalState?.get<string>(RUNTIME_PYTHON_VERSION_KEY);
+    return Array.from(new Set([stored, ...RUNTIME_PYTHON_CANDIDATES].filter(Boolean) as string[]));
+}
+
+function buildRuntimePrepareSpecs(
+    context: vscode.ExtensionContext,
+    uvPath: string,
+    needsUpgrade: boolean = false,
+): RuntimePrepareSpec[] {
+    return getRuntimePreparePythonCandidates(context).map(
+        (pythonVersion) => buildRuntimePrepareSpec(context, uvPath, needsUpgrade, pythonVersion),
+    );
+}
+
+export function __buildRuntimePrepareSpecForTests(
+    context: vscode.ExtensionContext,
+    uvPath: string,
+    needsUpgrade: boolean,
+): RuntimePrepareSpec {
+    return buildRuntimePrepareSpec(context, uvPath, needsUpgrade);
+}
+
+export function __buildRuntimePrepareSpecsForTests(
+    context: vscode.ExtensionContext,
+    uvPath: string,
+    needsUpgrade: boolean,
+): RuntimePrepareSpec[] {
+    return buildRuntimePrepareSpecs(context, uvPath, needsUpgrade);
+}
+
+function buildInstallTerminalOptions(
+    name: string,
+    cwd: string | undefined,
+    platform: NodeJS.Platform = process.platform,
+): vscode.TerminalOptions {
+    const options: vscode.TerminalOptions = { name };
+    if (cwd) {
+        options.cwd = cwd;
+    }
+    if (platform === 'win32') {
+        options.shellPath = 'powershell.exe';
+        options.shellArgs = ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass'];
+    }
+    return options;
+}
+
+export function __buildInstallTerminalOptionsForTests(
+    name: string,
+    cwd: string | undefined,
+    platform: NodeJS.Platform,
+): vscode.TerminalOptions {
+    return buildInstallTerminalOptions(name, cwd, platform);
 }
 
 async function installOptionalExtra(extraName: string, description: string): Promise<void> {
@@ -534,19 +651,25 @@ async function installOptionalExtra(extraName: string, description: string): Pro
     // against the source root instead.
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     const localSource = findLocalAssetAwareSource(workspaceRoot, workspaceRoot);
+    const runtimePythonVersion = getRuntimePythonVersion(extensionContext);
 
-    const uvForShell = resolvedUvPath === 'uv' ? 'uv' : `"${resolvedUvPath}"`;
     let installCommand: string;
     let modeLabel: string;
     let terminalCwd: string | undefined;
     if (localSource) {
-        installCommand = `${uvForShell} sync --extra ${extraName}`;
+        installCommand = formatTerminalCommand(
+            resolvedUvPath,
+            ['sync', '--extra', extraName],
+        );
         modeLabel = `local source checkout at ${localSource}`;
         terminalCwd = localSource;
     } else {
         const extensionVersion = extensionContext.extension.packageJSON.version as string;
         const spec = `asset-aware-mcp[${extraName}]==${extensionVersion}`;
-        installCommand = `${uvForShell} tool install --upgrade --python ${PREFERRED_RUNTIME_PYTHON} "${spec}"`;
+        installCommand = formatTerminalCommand(
+            resolvedUvPath,
+            ['tool', 'install', '--upgrade', '--python', runtimePythonVersion, spec],
+        );
         modeLabel = `uv tool install (published wheel pinned to ${extensionVersion})`;
     }
 
@@ -563,10 +686,9 @@ async function installOptionalExtra(extraName: string, description: string): Pro
         return;
     }
 
-    const terminal = vscode.window.createTerminal({
-        name: `Asset-Aware MCP: Install ${extraName}`,
-        cwd: terminalCwd,
-    });
+    const terminal = vscode.window.createTerminal(
+        buildInstallTerminalOptions(`Asset-Aware MCP: Install ${extraName}`, terminalCwd),
+    );
     terminal.sendText(installCommand);
     terminal.show();
 
@@ -869,7 +991,7 @@ async function checkSystemDependencies(): Promise<void> {
         allOk = false;
     }
 
-    // Check uvx can find asset-aware-mcp
+    // Check uv tool run can find asset-aware-mcp
     depChannel.appendLine('');
     depChannel.appendLine('=== Checking MCP Server ===');
 
@@ -881,23 +1003,23 @@ async function checkSystemDependencies(): Promise<void> {
 
         const config = vscode.workspace.getConfiguration('assetAwareMcp');
         const enableMarkerBackend = config.get('enableMarkerBackend', false);
-        const torchBackend = config.get('torchBackend', DEFAULT_TORCH_BACKEND);
         const extensionVersion = extensionContext.extension.packageJSON.version as string;
         const lastVersion = extensionContext.globalState.get<string>(LAST_SERVER_VERSION_KEY);
-        const launch = getUvxLaunch(
+        const launch = buildAssetAwareLaunchSpec(
+            extensionContext,
             uvPath,
-            PREFERRED_RUNTIME_PYTHON,
-            enableMarkerBackend,
-            torchBackend,
-            extensionVersion,
-            lastVersion !== extensionVersion,
+            {
+                workspaceRoot: getPrimaryWorkspaceRoot(),
+                needsUpgrade: lastVersion !== extensionVersion,
+            },
         );
         const preparedVersion = extensionContext.globalState.get<string>(RUNTIME_PREPARED_VERSION_KEY);
+        const runtimePythonVersion = getRuntimePythonVersion(extensionContext);
         depChannel.appendLine('✅ MCP launcher: available');
 
-        // Check if asset-aware-mcp is accessible via uvx
-        depChannel.appendLine('   Will use: ' + launch.command + ' ' + [...launch.args, 'asset-aware-mcp'].join(' '));
-        depChannel.appendLine('   Preferred Python runtime: ' + PREFERRED_RUNTIME_PYTHON);
+        // Check if asset-aware-mcp is accessible via uv tool run
+        depChannel.appendLine('   Will use: ' + launch.command + ' ' + launch.args.join(' '));
+        depChannel.appendLine('   Runtime Python: ' + runtimePythonVersion);
         depChannel.appendLine('   Server version pin: ' + extensionVersion);
         depChannel.appendLine('   Cached version: ' + (lastVersion ?? '(first install)'));
         depChannel.appendLine('   Marker backend enabled: ' + String(enableMarkerBackend));

@@ -22,6 +22,8 @@ import {
     getUvRunArgs,
     getUvxLaunch,
     PREFERRED_RUNTIME_PYTHON,
+    RUNTIME_PYTHON_CANDIDATES,
+    RUNTIME_PYTHON_VERSION_KEY,
 } from './uv';
 
 export const ASSET_AWARE_SERVER_KEY = 'asset-aware-mcp';
@@ -74,6 +76,14 @@ export function normalizeEmbeddingEnv(envVars: Record<string, string>): void {
     if (canonical && !legacy) {
         envVars['OPENAI_EMBEDDING_MODEL'] = canonical;
     }
+}
+
+export function getRuntimePythonVersion(context: vscode.ExtensionContext): string {
+    const stored = context.globalState?.get<string>(RUNTIME_PYTHON_VERSION_KEY);
+    if (stored && RUNTIME_PYTHON_CANDIDATES.includes(stored)) {
+        return stored;
+    }
+    return PREFERRED_RUNTIME_PYTHON;
 }
 
 function clampSafetyLimitEnv(envVars: Record<string, string>, key: string, value: string): void {
@@ -220,20 +230,21 @@ export function buildAssetAwareEnv(
 export function buildAssetAwareLaunchSpec(
     context: vscode.ExtensionContext,
     uvPath: string,
-    options: { workspaceRoot?: string; needsUpgrade?: boolean } = {},
+    options: { workspaceRoot?: string; needsUpgrade?: boolean; pythonVersion?: string } = {},
 ): AssetAwareLaunchSpec {
     const workspaceRoot = options.workspaceRoot ?? getPrimaryWorkspaceRoot();
     const localSource = findLocalAssetAwareSource(workspaceRoot, workspaceRoot);
     const envRoot = localSource ?? workspaceRoot;
     const env = buildAssetAwareEnv(context, envRoot);
     const config = vscode.workspace.getConfiguration('assetAwareMcp');
+    const pythonVersion = options.pythonVersion ?? getRuntimePythonVersion(context);
 
     if (localSource) {
         return {
             command: uvPath,
             args: [
                 ...getUvRunArgs(
-                    PREFERRED_RUNTIME_PYTHON,
+                    pythonVersion,
                     config.get('enableMarkerBackend', false),
                 ),
                 '--directory',
@@ -250,7 +261,7 @@ export function buildAssetAwareLaunchSpec(
     const serverVersion = context.extension?.packageJSON?.version as string | undefined;
     const launch = getUvxLaunch(
         uvPath,
-        PREFERRED_RUNTIME_PYTHON,
+        pythonVersion,
         config.get('enableMarkerBackend', false),
         config.get('torchBackend', DEFAULT_TORCH_BACKEND),
         serverVersion,

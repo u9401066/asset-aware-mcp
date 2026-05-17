@@ -11,8 +11,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.application.document_readiness_service import (
+    AI_READINESS_ARTIFACTS,
+    DocumentReadinessService,
+)
 from src.domain.job import JobStatus
-from src.presentation.dependencies import job_service
+from src.presentation.dependencies import job_service, repository
 from src.presentation.mcp_app import mcp
 from src.presentation.response_limits import format_limited_text_response
 
@@ -32,11 +36,31 @@ def _missing_job_param(name: str) -> str:
 
 def _format_artifact_lines(artifacts: dict[str, Any]) -> list[str]:
     lines: list[str] = []
-    for name in ("manifest", "markdown", "blocks", "segmentation"):
+    for name in _DOCUMENT_ARTIFACT_NAMES:
         path = artifacts.get(name)
         if path:
             lines.append(f"    - {name}: `{path}`")
     return lines
+
+
+_DOCUMENT_ARTIFACT_NAMES: tuple[str, ...] = tuple(
+    name for name, _template in AI_READINESS_ARTIFACTS
+)
+
+
+def _refresh_document_artifacts(doc_id: str, artifacts: Any) -> dict[str, str]:
+    return DocumentReadinessService(repository).discover_artifacts(
+        doc_id,
+        artifacts=artifacts,
+    )
+
+
+def _format_document_next_lines(doc_id: str) -> list[str]:
+    return [
+        f'    - next: `document(op="prepare_ai", doc_id="{doc_id}")`',
+        f'    - next: `document(op="inspect", doc_id="{doc_id}")`',
+        f'    - next: `document(op="audit", doc_id="{doc_id}")`',
+    ]
 
 
 @mcp.tool()
@@ -120,8 +144,8 @@ async def get_job_status(job_id: str) -> str:
                 lines.append(
                     "    - degraded: Marker requested but PyMuPDF fallback was used"
                 )
-            artifacts = item.get("artifacts")
-            if isinstance(artifacts, dict) and artifacts:
+            artifacts = _refresh_document_artifacts(doc_id, item.get("artifacts"))
+            if artifacts:
                 lines.append("    - artifacts:")
                 lines.extend(_format_artifact_lines(artifacts))
             warnings = item.get("warnings")
@@ -130,15 +154,12 @@ async def get_job_status(job_id: str) -> str:
                 for warning in warnings:
                     lines.append(f"      - {warning}")
             if doc_id:
-                lines.append(f'    - next: `inspect_document_manifest("{doc_id}")`')
-                if item.get("blocks_available"):
-                    lines.append(
-                        f'    - next: `export_document_segmentation("{doc_id}")`'
-                    )
+                lines.extend(_format_document_next_lines(doc_id))
     elif job.output_doc_ids:
         lines.append(f"**Output Documents:** {len(job.output_doc_ids)}")
         for doc_id in job.output_doc_ids:
             lines.append(f"  - `{doc_id}`")
+            lines.extend(_format_document_next_lines(doc_id))
 
     if job.result and isinstance(job.result.get("conversion"), dict):
         conversion = job.result["conversion"]
@@ -196,7 +217,9 @@ async def get_job_status(job_id: str) -> str:
         elif job.result and isinstance(job.result.get("conversion"), dict):
             lines.append("Open the converted artifact path above to review output.")
         else:
-            lines.append("Use `inspect_document_manifest(<doc_id>)` to view details.")
+            lines.append(
+                'Use `document(op="prepare_ai", doc_id=<doc_id>)` to view details.'
+            )
 
     return format_limited_text_response(
         title=f"Job Status: {job_id}",

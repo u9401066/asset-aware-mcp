@@ -30,6 +30,8 @@ logger = logging.getLogger(__name__)
 TABLE_STARTUP_LOAD_MAX_BYTES_ENV = "ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES"
 DEFAULT_TABLE_STARTUP_LOAD_MAX_BYTES = 20 * 1024 * 1024
 TABLE_PREVIEW_CELL_MAX_CHARS = 500
+TABLE_RENDER_INLINE_ROW_LIMIT = 1000
+TABLE_COVERAGE_MAX_ROWS = 500
 
 
 def _startup_load_max_bytes() -> int:
@@ -47,6 +49,16 @@ def _preview_cell(value: object) -> str:
     if len(text) > TABLE_PREVIEW_CELL_MAX_CHARS:
         text = f"{text[:TABLE_PREVIEW_CELL_MAX_CHARS]}... [truncated chars={len(text)}]"
     return text.replace("|", "\\|").replace("\n", "<br>")
+
+
+def _sha256_path(path: Path) -> str:
+    import hashlib
+
+    hasher = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(1024 * 1024):
+            hasher.update(chunk)
+    return hasher.hexdigest()
 
 
 class TableService:
@@ -70,6 +82,7 @@ class TableService:
         self.draft_dir.mkdir(parents=True, exist_ok=True)
         # In-memory cache
         self._tables: dict[str, TableContext] = {}
+        self._skipped_tables: dict[str, dict[str, Any]] = {}
         self._drafts: dict[str, TableDraft] = {}
         self._table_renderer = table_renderer
         self._load_existing_tables()
@@ -80,7 +93,12 @@ class TableService:
         max_bytes = _startup_load_max_bytes()
         for json_file in self.storage_dir.glob("*.json"):
             try:
+                if json_file.name.endswith(".manifest.json"):
+                    continue
                 if max_bytes and json_file.stat().st_size > max_bytes:
+                    self._skipped_tables[json_file.stem] = self._skipped_table_info(
+                        json_file
+                    )
                     logger.warning(
                         "Skipping large table file during startup: %s (%s bytes)",
                         json_file,
@@ -101,10 +119,13 @@ class TableService:
                         change_log = TableChangeLog.from_dict(data["change_log"])
                     context = TableContext(
                         id=data["id"],
+                        schema_version=data.get("schema_version", "a2t-table-v2"),
                         intent=data["intent"],
                         title=data["title"],
                         columns=col_defs,
                         rows=data["rows"],
+                        row_ids=data.get("row_ids", []),
+                        row_provenance=data.get("row_provenance", {}),
                         source_description=data.get("source_description", ""),
                         source_doc_id=data.get("source_doc_id", ""),
                         source_block_id=data.get("source_block_id", ""),
@@ -115,6 +136,7 @@ class TableService:
                         change_log=change_log,
                     )
                     self._tables[context.id] = context
+                    self._skipped_tables.pop(context.id, None)
             except Exception:
                 logger.debug("Skipping corrupted table file: %s", json_file)
                 continue
@@ -125,6 +147,7 @@ class TableService:
         json_path = self.storage_dir / f"{context.id}.json"
         state: dict[str, Any] = {
             "id": context.id,
+            "schema_version": context.schema_version,
             "intent": context.intent,
             "title": context.title,
             "columns": [
@@ -137,6 +160,8 @@ class TableService:
                 for c in context.columns
             ],
             "rows": context.rows,
+            "row_ids": context.row_ids,
+            "row_provenance": context.row_provenance,
             "source_description": context.source_description,
             "source_doc_id": context.source_doc_id,
             "source_block_id": context.source_block_id,
@@ -156,7 +181,9 @@ class TableService:
             state["change_log"] = context.change_log.to_dict()
 
         md_path = self.storage_dir / f"{context.id}.md"
+        manifest_path = self.storage_dir / f"{context.id}.manifest.json"
         md_preview = self.preview_table(context.id, limit=1000)
+        table_manifest = self._table_manifest(context, json_path, md_path)
 
         tmp_paths: list[Path] = []
         try:
@@ -164,10 +191,13 @@ class TableService:
             tmp_paths.append(json_tmp)
             md_tmp = self._write_text_temp(md_path, md_preview)
             tmp_paths.append(md_tmp)
+            manifest_tmp = self._write_json_temp(manifest_path, table_manifest)
+            tmp_paths.append(manifest_tmp)
             self._replace_prepared_files(
                 [
                     (json_path, json_tmp),
                     (md_path, md_tmp),
+                    (manifest_path, manifest_tmp),
                 ]
             )
         finally:
@@ -223,7 +253,7 @@ class TableService:
             if row_errors:
                 errors.append({"row_index": i, "errors": row_errors})
             else:
-                context.rows.append(row)
+                context.append_row(row)
                 added_count += 1
 
         if added_count > 0:
@@ -240,10 +270,11 @@ class TableService:
         }
 
     def update_row(
-        self, table_id: str, index: int, row: dict[str, Any]
+        self, table_id: str, index: int, row: dict[str, Any], row_id: str = ""
     ) -> dict[str, Any]:
         """Update an existing row by index."""
         context = self._get_context(table_id)
+        index = self._resolve_row_index(context, index, row_id)
         if index < 0 or index >= len(context.rows):
             raise ValueError(f"Invalid row index: {index}")
 
@@ -257,24 +288,37 @@ class TableService:
         self._record_change(
             context,
             "update_row",
-            f"row:{index}",
+            self._row_history_target(context, index),
             old_value=old_row,
             new_value=row,
         )
         self._save_table(context)
         return {"success": True, "citations_removed": removed_citations}
 
-    def delete_row(self, table_id: str, index: int) -> dict[str, Any]:
+    def delete_row(self, table_id: str, index: int, row_id: str = "") -> dict[str, Any]:
         """Delete a row by index."""
         context = self._get_context(table_id)
+        index = self._resolve_row_index(context, index, row_id)
         if index < 0 or index >= len(context.rows):
             raise ValueError(f"Invalid row index: {index}")
 
         old_row = dict(context.rows[index])
+        deleted_row_id = context.row_id_for_index(index)
+        deleted_target = self._row_history_target(context, index)
         context.rows.pop(index)
-        # Shift citation keys for rows after deleted row
+        if 0 <= index < len(context.row_ids):
+            context.row_ids.pop(index)
+        if deleted_row_id:
+            context.row_provenance.pop(deleted_row_id, None)
+            for key in [
+                key
+                for key in context.citations
+                if key.startswith(f"rid:{deleted_row_id}:")
+            ]:
+                del context.citations[key]
+        # Shift legacy citation keys for rows after deleted row.
         self._shift_citation_keys(context, index)
-        self._record_change(context, "delete_row", f"row:{index}", old_value=old_row)
+        self._record_change(context, "delete_row", deleted_target, old_value=old_row)
         self._save_table(context)
         return {"success": True, "total_rows": context.row_count}
 
@@ -288,6 +332,9 @@ class TableService:
         # Shift keys for rows after deleted index
         new_citations: dict[str, CellCitation] = {}
         for k, v in context.citations.items():
+            if k.startswith("rid:"):
+                new_citations[k] = v
+                continue
             row_str, col = k.split(":", 1)
             row_idx = int(row_str)
             if row_idx > deleted_index:
@@ -298,37 +345,72 @@ class TableService:
 
     def delete_table(self, table_id: str) -> bool:
         """Delete a table and its files."""
-        if table_id in self._tables:
-            del self._tables[table_id]
-            # Delete files
-            for ext in [".json", ".md", ".xlsx"]:
-                path = self.storage_dir / f"{table_id}{ext}"
-                if path.exists():
-                    path.unlink()
-            return True
+        found = table_id in self._tables or table_id in self._skipped_tables
+        if not found:
+            return False
+        self._tables.pop(table_id, None)
+        self._skipped_tables.pop(table_id, None)
+        for suffix in (
+            ".json",
+            ".manifest.json",
+            ".md",
+            ".render.md",
+            ".html",
+            ".render.html",
+            ".xlsx",
+        ):
+            path = self.storage_dir / f"{table_id}{suffix}"
+            if path.exists():
+                path.unlink()
+        return True
         return False
 
     def list_tables(self) -> list[dict[str, Any]]:
         """List all available tables."""
-        return [
+        loaded = [
             {
                 "id": t.id,
                 "title": t.title,
                 "intent": t.intent,
                 "rows": t.row_count,
+                "row_identity": "stable",
                 "columns": t.column_names,
                 "citations": len(t.citations),
                 "created_at": str(t.created_at),
             }
             for t in self._tables.values()
         ]
+        skipped = [
+            {
+                "id": table_id,
+                "title": info.get("title", table_id),
+                "intent": info.get("intent", "unknown"),
+                "rows": info.get("rows", 0),
+                "row_identity": "unknown",
+                "columns": info.get("columns", []),
+                "citations": info.get("citations", 0),
+                "created_at": info.get("created_at", ""),
+                "load_status": "skipped_large",
+                "artifact_path": info.get("path", ""),
+                "artifact_bytes": info.get("bytes", 0),
+            }
+            for table_id, info in self._skipped_tables.items()
+        ]
+        return [*loaded, *skipped]
 
     def update_cell(
-        self, table_id: str, row_index: int, column_name: str, value: Any
+        self,
+        table_id: str,
+        row_index: int,
+        column_name: str,
+        value: Any,
+        row_id: str = "",
     ) -> dict[str, Any]:
         """Update a single cell in the table."""
         context = self._get_context(table_id)
+        row_index = self._resolve_row_index(context, row_index, row_id)
         self._validate_cell_address(context, row_index, column_name)
+        self._validate_cell_value(context, column_name, value)
 
         # Update the cell
         old_value = context.rows[row_index].get(column_name)
@@ -343,7 +425,7 @@ class TableService:
         self._record_change(
             context,
             "update_cell",
-            f"row:{row_index}/col:{column_name}",
+            self._cell_history_target(context, row_index, column_name),
             old_value=old_value,
             new_value=value,
         )
@@ -368,6 +450,8 @@ class TableService:
             "title": context.title,
             "intent": context.intent,
             "columns": col_names,
+            "schema_version": context.schema_version,
+            "row_identity": "stable",
             "row_count": context.row_count,
             "citation_count": len(context.citations),
             "source_description": context.source_description,
@@ -375,7 +459,17 @@ class TableService:
             "source_block_id": context.source_block_id,
             "created_at": str(context.created_at),
             # Compact: only show last 2 rows to save tokens
-            "last_rows": context.rows[-2:] if context.rows else [],
+            "last_rows": [
+                {
+                    "row_id": context.row_id_for_index(
+                        context.row_count - len(context.rows[-2:]) + offset
+                    ),
+                    "data": row,
+                }
+                for offset, row in enumerate(context.rows[-2:])
+            ]
+            if context.rows
+            else [],
         }
 
     def preview_table(self, table_id: str, limit: int = 10) -> str:
@@ -415,6 +509,7 @@ class TableService:
         table_id: str,
         format: Literal["excel", "markdown", "html"] = "excel",
         filename: str = "output",
+        artifact_only: bool = False,
     ) -> dict[str, Any]:
         """Render the table to the specified format."""
         context = self._get_context(table_id)
@@ -425,6 +520,14 @@ class TableService:
 
         if format == "excel":
             file_path = self._table_renderer.render(context, filename)
+            if artifact_only:
+                return {
+                    "success": True,
+                    "format": "excel",
+                    "file_path": str(file_path),
+                    "artifact_only": True,
+                    "row_count": context.row_count,
+                }
             return {
                 "success": True,
                 "format": "excel",
@@ -432,6 +535,18 @@ class TableService:
                 "row_count": context.row_count,
             }
         elif format == "markdown":
+            if artifact_only or context.row_count > TABLE_RENDER_INLINE_ROW_LIMIT:
+                md_path = self.storage_dir / f"{context.id}.render.md"
+                self._write_markdown_table_artifact(context, md_path)
+                return {
+                    "success": True,
+                    "format": "markdown",
+                    "file_path": str(md_path),
+                    "artifact_only": True,
+                    "row_count": context.row_count,
+                    "sha256": _sha256_path(md_path),
+                    "preview": self.preview_table(table_id, limit=25),
+                }
             preview = self.preview_table(table_id, limit=context.row_count)
             return {
                 "success": True,
@@ -440,6 +555,18 @@ class TableService:
                 "row_count": context.row_count,
             }
         elif format == "html":
+            if artifact_only or context.row_count > TABLE_RENDER_INLINE_ROW_LIMIT:
+                html_path = self.storage_dir / f"{context.id}.render.html"
+                self._write_html_table_artifact(context, html_path)
+                return {
+                    "success": True,
+                    "format": "html",
+                    "file_path": str(html_path),
+                    "artifact_only": True,
+                    "row_count": context.row_count,
+                    "sha256": _sha256_path(html_path),
+                    "preview": self.preview_table(table_id, limit=25),
+                }
             content = self._render_html_table(context)
             return {
                 "success": True,
@@ -449,6 +576,70 @@ class TableService:
             }
         else:
             raise NotImplementedError(f"Format '{format}' is not yet supported.")
+
+    def query_rows(
+        self,
+        table_id: str,
+        *,
+        offset: int = 0,
+        limit: int = 50,
+        search: str = "",
+        filters: dict[str, Any] | None = None,
+        columns: list[str] | None = None,
+        include_coverage: bool = False,
+    ) -> dict[str, Any]:
+        """Return a bounded row page with stable row IDs and optional coverage."""
+        context = self._get_context(table_id)
+        context.ensure_row_ids()
+        selected_columns = columns or context.column_names
+        filter_values = filters or {}
+        self._validate_columns(context, selected_columns, purpose="selected_columns")
+        self._validate_columns(context, list(filter_values.keys()), purpose="filters")
+        search_lower = search.lower().strip()
+        safe_offset = max(0, offset)
+        safe_limit = max(1, min(limit, 500))
+        matched_count = 0
+        page_items: list[tuple[int, dict[str, Any]]] = []
+        for index, row in enumerate(context.rows):
+            if (
+                search_lower
+                and search_lower
+                not in json.dumps(row, ensure_ascii=False, default=str).lower()
+            ):
+                continue
+            if any(row.get(key) != value for key, value in filter_values.items()):
+                continue
+            if safe_offset <= matched_count < safe_offset + safe_limit:
+                page_items.append((index, row))
+            matched_count += 1
+
+        rows = []
+        for index, row in page_items:
+            row_id = context.row_id_for_index(index)
+            row_payload = {
+                "row_id": row_id,
+                "row_index": index,
+                "data": {column: row.get(column) for column in selected_columns},
+            }
+            provenance = context.row_provenance.get(row_id)
+            if provenance:
+                row_payload["provenance"] = provenance
+            if include_coverage:
+                row_payload["coverage"] = self._row_coverage(context, index)
+            rows.append(row_payload)
+        next_offset = safe_offset + safe_limit
+        return {
+            "table_id": table_id,
+            "schema_version": context.schema_version,
+            "row_count": context.row_count,
+            "matched_count": matched_count,
+            "page": {
+                "offset": safe_offset,
+                "limit": safe_limit,
+                "next_offset": next_offset if next_offset < matched_count else None,
+            },
+            "rows": rows,
+        }
 
     def _remove_changed_row_citations(
         self,
@@ -465,7 +656,12 @@ class TableService:
             if context.get_citation(row_index, column_name) is None:
                 continue
             context.remove_citation(row_index, column_name)
-            removed.append(f"{row_index}:{column_name}")
+            row_id = context.row_id_for_index(row_index)
+            removed.append(
+                f"rid:{row_id}:{column_name}"
+                if row_id
+                else f"{row_index}:{column_name}"
+            )
         return removed
 
     @staticmethod
@@ -503,6 +699,46 @@ class TableService:
             "</table>"
         )
 
+    @classmethod
+    def _write_markdown_table_artifact(cls, context: TableContext, path: Path) -> None:
+        headers = context.column_names
+        tmp_path = cls._tmp_path_for(path)
+        try:
+            with tmp_path.open("w", encoding="utf-8", newline="\n") as handle:
+                handle.write(f"### {context.title}\n\n")
+                handle.write("| " + " | ".join(headers) + " |\n")
+                handle.write("| " + " | ".join(["---"] * len(headers)) + " |\n")
+                for row in context.rows:
+                    values = [_preview_cell(row.get(header, "-")) for header in headers]
+                    handle.write("| " + " | ".join(values) + " |\n")
+            tmp_path.replace(path)
+        except Exception:
+            tmp_path.unlink(missing_ok=True)
+            raise
+
+    @classmethod
+    def _write_html_table_artifact(cls, context: TableContext, path: Path) -> None:
+        headers = context.column_names
+        tmp_path = cls._tmp_path_for(path)
+        try:
+            with tmp_path.open("w", encoding="utf-8", newline="\n") as handle:
+                header_html = "".join(
+                    f"<th>{escape(header)}</th>" for header in headers
+                )
+                handle.write("<table>")
+                handle.write(f"<caption>{escape(context.title)}</caption>")
+                handle.write(f"<thead><tr>{header_html}</tr></thead><tbody>")
+                for row in context.rows:
+                    handle.write("<tr>")
+                    for header in headers:
+                        handle.write(f"<td>{escape(str(row.get(header, '')))}</td>")
+                    handle.write("</tr>")
+                handle.write("</tbody></table>")
+            tmp_path.replace(path)
+        except Exception:
+            tmp_path.unlink(missing_ok=True)
+            raise
+
     # =========================================================================
     # Audit Trail Recording
     # =========================================================================
@@ -539,14 +775,24 @@ class TableService:
         return [e.to_dict() for e in context.change_log.get_recent(limit)]
 
     def get_cell_history(
-        self, table_id: str, row_index: int, column_name: str
+        self,
+        table_id: str,
+        row_index: int,
+        column_name: str,
+        row_id: str = "",
     ) -> list[dict[str, Any]]:
         """Get change history for a specific cell."""
         context = self._get_context(table_id)
+        row_index = self._resolve_row_index(context, row_index, row_id)
         if context.change_log is None:
             return []
         return [
-            e.to_dict() for e in context.change_log.get_by_cell(row_index, column_name)
+            e.to_dict()
+            for e in context.change_log.get_by_cell(
+                row_index,
+                column_name,
+                context.row_id_for_index(row_index),
+            )
         ]
 
     # =========================================================================
@@ -561,9 +807,11 @@ class TableService:
         refs: list[dict[str, Any]],
         confidence: float | None = None,
         notes: str = "",
+        row_id: str = "",
     ) -> dict[str, Any]:
         """Add or update citation for a specific cell."""
         context = self._get_context(table_id)
+        row_index = self._resolve_row_index(context, row_index, row_id)
         self._validate_cell_address(context, row_index, column_name)
 
         asset_refs = [AssetRef.from_dict(r) for r in refs]
@@ -586,7 +834,7 @@ class TableService:
         self._record_change(
             context,
             "add_citation",
-            f"row:{row_index}/col:{column_name}",
+            self._cell_history_target(context, row_index, column_name),
             new_value={"refs_count": len(asset_refs)},
             citations=asset_refs,
         )
@@ -594,6 +842,7 @@ class TableService:
 
         return {
             "success": True,
+            "row_id": context.row_id_for_index(row_index),
             "cell": f"row:{row_index}/col:{column_name}",
             "total_refs": len(
                 context.get_citation(row_index, column_name).refs  # type: ignore[union-attr]
@@ -605,22 +854,34 @@ class TableService:
         table_id: str,
         row_index: int | None = None,
         column_name: str | None = None,
+        row_id: str = "",
     ) -> dict[str, Any]:
         """Get citations for a cell, row, or entire table."""
         context = self._get_context(table_id)
+        if row_id:
+            resolved_index = context.row_index_for_id(row_id)
+            if resolved_index < 0:
+                raise ValueError(f"Unknown row_id: {row_id}")
+            row_index = resolved_index
 
         if row_index is not None and column_name is not None:
             cite = context.get_citation(row_index, column_name)
             if cite:
                 return {
+                    "row_id": context.row_id_for_index(row_index),
                     "cell": f"row:{row_index}/col:{column_name}",
                     "citation": cite.to_dict(),
                 }
-            return {"cell": f"row:{row_index}/col:{column_name}", "citation": None}
+            return {
+                "row_id": context.row_id_for_index(row_index),
+                "cell": f"row:{row_index}/col:{column_name}",
+                "citation": None,
+            }
 
         if row_index is not None:
             row_cites = context.get_row_citations(row_index)
             return {
+                "row_id": context.row_id_for_index(row_index),
                 "row": row_index,
                 "citations": {k: v.to_dict() for k, v in row_cites.items()},
             }
@@ -638,9 +899,11 @@ class TableService:
         row_index: int,
         column_name: str,
         ref_index: int | None = None,
+        row_id: str = "",
     ) -> dict[str, Any]:
         """Remove a citation or a specific ref from a cell."""
         context = self._get_context(table_id)
+        row_index = self._resolve_row_index(context, row_index, row_id)
         self._validate_cell_address(context, row_index, column_name)
 
         cite = context.get_citation(row_index, column_name)
@@ -651,10 +914,12 @@ class TableService:
             removed = cite.remove_ref(ref_index)
             if removed is None:
                 return {"success": False, "error": f"Invalid ref index: {ref_index}"}
+            if not cite.refs:
+                context.remove_citation(row_index, column_name)
             self._record_change(
                 context,
                 "remove_citation_ref",
-                f"row:{row_index}/col:{column_name}",
+                self._cell_history_target(context, row_index, column_name),
                 old_value=removed.to_dict(),
             )
         else:
@@ -662,7 +927,7 @@ class TableService:
             self._record_change(
                 context,
                 "remove_citation",
-                f"row:{row_index}/col:{column_name}",
+                self._cell_history_target(context, row_index, column_name),
                 old_value=cite.to_dict(),
             )
 
@@ -723,6 +988,9 @@ class TableService:
         """Rename a column."""
         context = self._get_context(table_id)
 
+        if old_name != new_name and any(c.name == new_name for c in context.columns):
+            return {"success": False, "error": f"Column '{new_name}' already exists"}
+
         if not context.rename_column(old_name, new_name):
             return {"success": False, "error": f"Column '{old_name}' not found"}
 
@@ -740,33 +1008,41 @@ class TableService:
     # Cell-level Operations
     # =========================================================================
 
-    def get_row(self, table_id: str, row_index: int) -> dict[str, Any]:
+    def get_row(
+        self, table_id: str, row_index: int, row_id: str = ""
+    ) -> dict[str, Any]:
         """Get a single row with its citations."""
         context = self._get_context(table_id)
+        row_index = self._resolve_row_index(context, row_index, row_id)
         row = context.get_row(row_index)
         if row is None:
             raise ValueError(f"Invalid row index: {row_index}")
 
         row_cites = context.get_row_citations(row_index)
+        row_id = context.row_id_for_index(row_index)
         return {
+            "row_id": row_id,
             "row_index": row_index,
             "data": row,
+            "provenance": context.row_provenance.get(row_id) or None,
             "citations": {k: v.to_dict() for k, v in row_cites.items()}
             if row_cites
             else None,
         }
 
     def get_cell(
-        self, table_id: str, row_index: int, column_name: str
+        self, table_id: str, row_index: int, column_name: str, row_id: str = ""
     ) -> dict[str, Any]:
         """Get a single cell value with its citation."""
         context = self._get_context(table_id)
+        row_index = self._resolve_row_index(context, row_index, row_id)
         self._validate_cell_address(context, row_index, column_name)
 
         value = context.get_cell(row_index, column_name)
         cite = context.get_citation(row_index, column_name)
 
         return {
+            "row_id": context.row_id_for_index(row_index),
             "row_index": row_index,
             "column": column_name,
             "value": value,
@@ -774,10 +1050,15 @@ class TableService:
         }
 
     def clear_cell(
-        self, table_id: str, row_index: int, column_name: str
+        self,
+        table_id: str,
+        row_index: int,
+        column_name: str,
+        row_id: str = "",
     ) -> dict[str, Any]:
         """Clear a cell value (set to None) and remove its citation."""
         context = self._get_context(table_id)
+        row_index = self._resolve_row_index(context, row_index, row_id)
         self._validate_cell_address(context, row_index, column_name)
 
         old_value = context.rows[row_index].get(column_name)
@@ -787,11 +1068,90 @@ class TableService:
         self._record_change(
             context,
             "clear_cell",
-            f"row:{row_index}/col:{column_name}",
+            self._cell_history_target(context, row_index, column_name),
             old_value=old_value,
         )
         self._save_table(context)
         return {"success": True, "old_value": old_value}
+
+    def citation_coverage(
+        self,
+        table_id: str,
+        *,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        context = self._get_context(table_id)
+        cited_cells = set()
+        stale_citation_count = 0
+        valid_columns = set(context.column_names)
+        for key in context.citations:
+            if key.startswith("rid:"):
+                parts = key.split(":", 2)
+                if len(parts) != 3:
+                    stale_citation_count += 1
+                    continue
+                _prefix, row_id, column_name = parts
+                row_index = context.row_index_for_id(row_id)
+                if row_index >= 0 and column_name in valid_columns:
+                    cited_cells.add((row_index, column_name))
+                else:
+                    stale_citation_count += 1
+                continue
+            parts = key.split(":", 1)
+            if len(parts) != 2:
+                stale_citation_count += 1
+                continue
+            row_str, column_name = parts
+            try:
+                row_index = int(row_str)
+            except ValueError:
+                stale_citation_count += 1
+                continue
+            if 0 <= row_index < context.row_count and column_name in valid_columns:
+                cited_cells.add((row_index, column_name))
+            else:
+                stale_citation_count += 1
+        total_cells = context.row_count * len(context.column_names)
+        cited_by_row: dict[int, int] = {}
+        for row_index, _column_name in cited_cells:
+            cited_by_row[row_index] = cited_by_row.get(row_index, 0) + 1
+        safe_offset = max(0, offset)
+        safe_limit = max(1, min(limit, TABLE_COVERAGE_MAX_ROWS))
+        page_end = min(context.row_count, safe_offset + safe_limit)
+        row_coverages = [
+            {
+                "row_id": context.row_id_for_index(index),
+                "row_index": index,
+                "cited_cells": cited_by_row.get(index, 0),
+                "total_cells": len(context.column_names),
+                "coverage_ratio": round(
+                    cited_by_row.get(index, 0) / len(context.column_names),
+                    4,
+                )
+                if context.column_names
+                else 0.0,
+            }
+            for index in range(safe_offset, page_end)
+        ]
+        return {
+            "table_id": table_id,
+            "schema_version": context.schema_version,
+            "row_count": context.row_count,
+            "column_count": len(context.column_names),
+            "total_cells": total_cells,
+            "cited_cells": len(cited_cells),
+            "stale_citation_count": stale_citation_count,
+            "coverage_ratio": round(len(cited_cells) / total_cells, 4)
+            if total_cells
+            else 0.0,
+            "page": {
+                "offset": safe_offset,
+                "limit": safe_limit,
+                "next_offset": page_end if page_end < context.row_count else None,
+            },
+            "rows": row_coverages,
+        }
 
     # =========================================================================
     # Template Management
@@ -885,8 +1245,60 @@ class TableService:
     def _get_context(self, table_id: str) -> TableContext:
         """Get table context or raise ValueError."""
         if table_id not in self._tables:
+            if table_id in self._skipped_tables:
+                info = self._skipped_tables[table_id]
+                raise ValueError(
+                    "Table was skipped during startup because the persisted JSON is "
+                    f"too large to load safely: {table_id}. "
+                    f"load_status=skipped_large; artifact_path={info.get('path', '')}; "
+                    f"artifact_bytes={info.get('bytes', 0)}; "
+                    f"{TABLE_STARTUP_LOAD_MAX_BYTES_ENV}={_startup_load_max_bytes()}. "
+                    "Use artifact-only render outputs, raise the startup load cap, "
+                    "or delete the table if it is no longer needed."
+                )
             raise ValueError(f"Table not found: {table_id}")
         return self._tables[table_id]
+
+    @staticmethod
+    def _resolve_row_index(
+        context: TableContext,
+        row_index: int,
+        row_id: str = "",
+    ) -> int:
+        if not row_id:
+            return row_index
+        resolved = context.row_index_for_id(row_id)
+        if resolved < 0:
+            raise ValueError(f"Unknown row_id: {row_id}")
+        return resolved
+
+    @staticmethod
+    def _row_history_target(context: TableContext, row_index: int) -> str:
+        row_id = context.row_id_for_index(row_index)
+        return f"rid:{row_id}" if row_id else f"row:{row_index}"
+
+    @classmethod
+    def _cell_history_target(
+        cls,
+        context: TableContext,
+        row_index: int,
+        column_name: str,
+    ) -> str:
+        return f"{cls._row_history_target(context, row_index)}/col:{column_name}"
+
+    @staticmethod
+    def _validate_columns(
+        context: TableContext,
+        columns: list[str],
+        *,
+        purpose: str,
+    ) -> None:
+        known = set(context.column_names)
+        unknown = [column for column in columns if column not in known]
+        if unknown:
+            raise ValueError(
+                f"Unknown column(s) in {purpose}: {', '.join(sorted(unknown))}"
+            )
 
     def _validate_cell_address(
         self, context: TableContext, row_index: int, column_name: str
@@ -897,6 +1309,94 @@ class TableService:
         col_names = {col.name for col in context.columns}
         if column_name not in col_names:
             raise ValueError(f"Unknown column: '{column_name}'")
+
+    @staticmethod
+    def _validate_cell_value(
+        context: TableContext, column_name: str, value: Any
+    ) -> None:
+        """Validate a single cell without blocking on legacy dirty row values."""
+        column = next(c for c in context.columns if c.name == column_name)
+        if value is None:
+            return
+        if column.type == "number" and not isinstance(value, int | float):
+            raise ValueError(
+                f"Column '{column.name}' must be a number, got {type(value).__name__}"
+            )
+        if (
+            column.type == "enum"
+            and column.enum_values
+            and value not in column.enum_values
+        ):
+            raise ValueError(
+                f"Invalid value for enum column '{column.name}': '{value}'. "
+                f"Allowed: {column.enum_values}"
+            )
+
+    @staticmethod
+    def _row_coverage(context: TableContext, row_index: int) -> dict[str, Any]:
+        valid_columns = set(context.column_names)
+        citations = {
+            column: citation
+            for column, citation in context.get_row_citations(row_index).items()
+            if column in valid_columns
+        }
+        total_cells = len(context.column_names)
+        cited_cells = len(citations)
+        return {
+            "cited_cells": cited_cells,
+            "total_cells": total_cells,
+            "coverage_ratio": round(cited_cells / total_cells, 4)
+            if total_cells
+            else 0.0,
+        }
+
+    @staticmethod
+    def _table_manifest(
+        context: TableContext, json_path: Path, md_path: Path
+    ) -> dict[str, Any]:
+        return {
+            "table_id": context.id,
+            "schema_version": context.schema_version,
+            "title": context.title,
+            "intent": context.intent,
+            "row_count": context.row_count,
+            "columns": context.column_names,
+            "citation_count": len(context.citations),
+            "created_at": str(context.created_at),
+            "artifacts": {
+                "json": str(json_path),
+                "markdown_preview": str(md_path),
+            },
+        }
+
+    @staticmethod
+    def _skipped_table_info(json_file: Path) -> dict[str, Any]:
+        info: dict[str, Any] = {
+            "path": str(json_file),
+            "bytes": json_file.stat().st_size,
+            "title": json_file.stem,
+            "intent": "unknown",
+            "rows": 0,
+            "columns": [],
+            "citations": 0,
+        }
+        manifest_path = json_file.with_name(f"{json_file.stem}.manifest.json")
+        if manifest_path.exists():
+            try:
+                data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            except Exception:
+                return info
+            info.update(
+                {
+                    "title": data.get("title", info["title"]),
+                    "intent": data.get("intent", info["intent"]),
+                    "rows": data.get("row_count", 0),
+                    "columns": data.get("columns", []),
+                    "citations": data.get("citation_count", 0),
+                    "created_at": data.get("created_at", ""),
+                }
+            )
+        return info
 
     # =========================================================================
     # Draft Management (for token-efficient workflows)
@@ -926,6 +1426,7 @@ class TableService:
                         source_sections=data.get("source_sections", []),
                         pending_rows=data.get("pending_rows", []),
                         notes=data.get("notes", ""),
+                        last_updated=data.get("last_updated", ""),
                     )
                     draft_id = json_file.stem  # draft_xxx
                     self._drafts[draft_id] = draft

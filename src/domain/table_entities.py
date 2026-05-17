@@ -10,12 +10,17 @@ matching the pattern in entities.py.
 
 from __future__ import annotations
 
+import hashlib
+import json
+import re
 from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
 from .value_objects import AssetRef
+
+ROW_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
 
 # ============================================================================
 # Column & Schema
@@ -145,15 +150,28 @@ class TableChangeLog(BaseModel):
         """取得最近 N 筆變更。"""
         return self.entries[-limit:]
 
-    def get_by_cell(self, row_index: int, column_name: str) -> list[ChangeEntry]:
+    def get_by_cell(
+        self,
+        row_index: int,
+        column_name: str,
+        row_id: str = "",
+    ) -> list[ChangeEntry]:
         """取得特定 cell 的所有變更歷史。"""
-        target = f"row:{row_index}/col:{column_name}"
-        return [e for e in self.entries if e.target == target]
+        targets = {f"row:{row_index}/col:{column_name}"}
+        if row_id:
+            targets.add(f"rid:{row_id}/col:{column_name}")
+        return [e for e in self.entries if e.target in targets]
 
-    def get_by_row(self, row_index: int) -> list[ChangeEntry]:
+    def get_by_row(self, row_index: int, row_id: str = "") -> list[ChangeEntry]:
         """取得特定 row 的所有變更歷史。"""
-        prefix = f"row:{row_index}"
-        return [e for e in self.entries if e.target.startswith(prefix)]
+        prefixes = [f"row:{row_index}"]
+        if row_id:
+            prefixes.insert(0, f"rid:{row_id}")
+        return [
+            e
+            for e in self.entries
+            if any(e.target.startswith(prefix) for prefix in prefixes)
+        ]
 
     def to_dict(self) -> dict[str, Any]:
         """序列化為 dict（保持 JSON 格式向後相容）。"""
@@ -251,6 +269,16 @@ class TableDraft(BaseModel):
     notes: str = ""  # Agent's working notes
     last_updated: datetime = Field(default_factory=datetime.now)
 
+    @field_validator("last_updated", mode="before")
+    @classmethod
+    def _parse_last_updated(cls, v: Any) -> datetime:
+        """Handle ISO strings and empty strings from persisted draft JSON."""
+        if isinstance(v, datetime):
+            return v
+        if isinstance(v, str):
+            return datetime.fromisoformat(v) if v else datetime.now()
+        return datetime.now()
+
     def estimate_tokens(self) -> int:
         """Estimate token count for this draft."""
         import json
@@ -294,6 +322,10 @@ class TableSchema(BaseModel):
         }
 
 
+def _is_safe_row_id(row_id: str) -> bool:
+    return bool(row_id and ROW_ID_PATTERN.fullmatch(row_id))
+
+
 class TableContext(BaseModel):
     """
     Context for a table being constructed.
@@ -304,10 +336,13 @@ class TableContext(BaseModel):
     """
 
     id: str
+    schema_version: str = "a2t-table-v2"
     intent: Literal["comparison", "citation", "summary"]
     title: str
     columns: list[ColumnDef]
     rows: list[dict[str, Any]] = Field(default_factory=list)
+    row_ids: list[str] = Field(default_factory=list)
+    row_provenance: dict[str, dict[str, Any]] = Field(default_factory=dict)
     source_description: str = ""
     source_doc_id: str = ""
     source_block_id: str = ""
@@ -330,41 +365,139 @@ class TableContext(BaseModel):
         return datetime.now()
 
     def model_post_init(self, __context: Any) -> None:
-        """Ensure change_log is initialized."""
+        """Ensure change_log and stable row IDs are initialized."""
         if self.change_log is None:
             self.change_log = TableChangeLog(table_id=self.id)
+        self.ensure_row_ids()
 
     @staticmethod
     def _cite_key(row_index: int, column_name: str) -> str:
         """產生引用 key。"""
         return f"{row_index}:{column_name}"
 
+    @staticmethod
+    def _row_cite_key(row_id: str, column_name: str) -> str:
+        return f"rid:{row_id}:{column_name}"
+
+    def ensure_row_ids(self) -> None:
+        """Backfill stable row IDs for legacy tables without changing row data."""
+        normalized: list[str] = []
+        used: set[str] = set()
+        for index, row in enumerate(self.rows):
+            existing = self.row_ids[index] if index < len(self.row_ids) else ""
+            row_id = (
+                existing
+                if _is_safe_row_id(existing)
+                else self._generated_row_id(row, index)
+            )
+            salt = 0
+            while row_id in used:
+                salt += 1
+                row_id = self._generated_row_id(row, index, salt=str(salt))
+            normalized.append(row_id)
+            used.add(row_id)
+        self.row_ids = normalized
+        allowed = set(self.row_ids)
+        self.row_provenance = {
+            row_id: dict(value)
+            for row_id, value in self.row_provenance.items()
+            if row_id in allowed and isinstance(value, dict)
+        }
+
+    def append_row(
+        self,
+        row: dict[str, Any],
+        *,
+        row_id: str = "",
+        provenance: dict[str, Any] | None = None,
+    ) -> str:
+        """Append a user row and return its stable row ID."""
+        self.rows.append(row)
+        if row_id and not _is_safe_row_id(row_id):
+            raise ValueError(
+                "row_id must use 1-128 ASCII letters, numbers, '.', '_' or '-'"
+            )
+        resolved = row_id or self._generated_row_id(row, len(self.rows) - 1)
+        salt = 0
+        while resolved in self.row_ids:
+            salt += 1
+            resolved = self._generated_row_id(row, len(self.rows) - 1, salt=str(salt))
+        self.row_ids.append(resolved)
+        if provenance:
+            self.row_provenance[resolved] = dict(provenance)
+        return resolved
+
+    def row_id_for_index(self, row_index: int) -> str:
+        self.ensure_row_ids()
+        if 0 <= row_index < len(self.row_ids):
+            return self.row_ids[row_index]
+        return ""
+
+    def row_index_for_id(self, row_id: str) -> int:
+        self.ensure_row_ids()
+        try:
+            return self.row_ids.index(row_id)
+        except ValueError:
+            return -1
+
+    def _generated_row_id(
+        self,
+        row: dict[str, Any],
+        index: int,
+        *,
+        salt: str = "",
+    ) -> str:
+        payload = json.dumps(row, ensure_ascii=False, sort_keys=True, default=str)
+        seed = f"{self.id}|{index}|{payload}|{salt}"
+        return f"row_{hashlib.sha256(seed.encode('utf-8')).hexdigest()[:16]}"
+
     def get_citation(self, row_index: int, column_name: str) -> CellCitation | None:
         """取得特定儲存格的引用。"""
+        row_id = self.row_id_for_index(row_index)
+        if row_id:
+            cite = self.citations.get(self._row_cite_key(row_id, column_name))
+            if cite is not None:
+                return cite
         return self.citations.get(self._cite_key(row_index, column_name))
 
     def set_citation(
         self, row_index: int, column_name: str, citation: CellCitation
     ) -> None:
         """設定特定儲存格的引用。"""
-        self.citations[self._cite_key(row_index, column_name)] = citation
+        row_id = self.row_id_for_index(row_index)
+        if row_id:
+            self.citations[self._row_cite_key(row_id, column_name)] = citation
+            self.citations.pop(self._cite_key(row_index, column_name), None)
+        else:
+            self.citations[self._cite_key(row_index, column_name)] = citation
 
     def remove_citation(self, row_index: int, column_name: str) -> bool:
         """移除特定儲存格的引用，返回是否成功。"""
-        key = self._cite_key(row_index, column_name)
-        if key in self.citations:
-            del self.citations[key]
-            return True
-        return False
+        row_id = self.row_id_for_index(row_index)
+        keys = [self._cite_key(row_index, column_name)]
+        if row_id:
+            keys.insert(0, self._row_cite_key(row_id, column_name))
+        removed = False
+        for key in keys:
+            if key in self.citations:
+                del self.citations[key]
+                removed = True
+        return removed
 
     def get_row_citations(self, row_index: int) -> dict[str, CellCitation]:
         """取得某一行所有欄位的引用。"""
+        citations: dict[str, CellCitation] = {}
         prefix = f"{row_index}:"
-        return {
-            k.split(":", 1)[1]: v
-            for k, v in self.citations.items()
-            if k.startswith(prefix)
-        }
+        for key, value in self.citations.items():
+            if key.startswith(prefix):
+                citations[key.split(":", 1)[1]] = value
+        row_id = self.row_id_for_index(row_index)
+        if row_id:
+            row_prefix = f"rid:{row_id}:"
+            for key, value in self.citations.items():
+                if key.startswith(row_prefix):
+                    citations[key.removeprefix(row_prefix)] = value
+        return citations
 
     @property
     def column_names(self) -> list[str]:
@@ -415,6 +548,8 @@ class TableContext(BaseModel):
         """重新命名欄位。"""
         col = next((c for c in self.columns if c.name == old_name), None)
         if col is None:
+            return False
+        if old_name != new_name and any(c.name == new_name for c in self.columns):
             return False
         col.name = new_name
         for row in self.rows:

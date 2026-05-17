@@ -2,115 +2,108 @@
 
 ![MCP endpoint distribution](assets/mcp-endpoint-map.jpg)
 
-Tool consolidation is planned but not yet applied to the default public surface.
-See [MCP Tool Consolidation Plan](MCP-Tool-Consolidation) for the 17-tool
-target and legacy direct-tool mapping.
+預設 runtime surface 是 **balanced**：30 個公開 tools。這是 Cline、Codex、
+Copilot 的一般建議模式，保留完整 facade 入口，也保留少數高頻、直覺且安全的
+shortcut direct tools。若只想讓 agent 面對最小入口，可設定
+`ASSET_AWARE_MCP_TOOL_SURFACE=compact` 使用 17 個 facade tools；若舊 client 仍依賴
+direct tool 名稱，可設定 `ASSET_AWARE_MCP_TOOL_SURFACE=legacy` 或
+`ASSET_AWARE_MCP_ENABLE_LEGACY_TOOLS=true` 暫時公開完整 legacy inventory。
 
-如果你不是在查完整參數，先從 [Tool Chooser](Tool-Chooser) 依任務選入口，再回到本頁查
-精確 tool contract。
+工具數量請以 runtime 為準：
 
-工具數量由 `./scripts/count_tools.sh` 產生：62 tools in 7 modules。下列為目前公開 MCP tool surface，來源為 `src/presentation/tools/**`。
+```bash
+uv run asset-aware-mcp list-tools --json
+./scripts/count_tools.sh
+```
 
-## `document_tools.py` - 19 tools
+`list-tools` 會顯示預設 public surface；count script 會同時列出預設 public tools
+與 decorator inventory，避免把 legacy 庫存誤認為 agent 實際可見的工具數。
 
-| Tool | 主要參數 | 功能 |
-|---|---|---|
-| `parse_pdf_structure` | `pdf_path`, `output_dir`, `async_mode`, OCR/Marker/page options | 建立 background Marker parse job；目前 Marker security hold 時會 fail closed 並給出診斷 |
-| `search_source_location` | `doc_id`, `query`, `block_types` | 搜尋文件來源位置，回傳 page/bbox/block context |
-| `find_evidence_spans` | `doc_id`, `query`, `span_id`, `span_kinds`, `limit` | 搜尋 citation-ready evidence spans |
-| `verify_citation_ref` | `ref` | 驗證 AssetRef 是否仍符合 citation index 與 locator/hash |
-| `citation_bundle` | `doc_id`, query/span filters, `include_verification`, `output_format`, `citation_key`, Foam write options | 匯出 verified evidence bundle，包含 AssetRef、quote/hash、locator、context、CRAAP 與 verification；`output_format="foam"` 產生 Foam evidence pack，可用 `wiki_root` 寫檔並更新 index |
-| `ingest_documents` | `file_paths`, `async_mode`, `use_marker`, OCR/Marker/page options | 攝入 PDF，建立 manifest、markdown、blocks、assets、citation artifacts |
-| `list_documents` | 無 | 列出已處理文件摘要 |
-| `delete_document` | `doc_id` | 刪除 PDF 文件 artifacts |
-| `convert_pdf_to_docx` | `doc_id`, `output_path`, `mode`, `async_mode` | 建立 background conversion job，將已攝入 PDF 轉 DOCX；`async_mode=false` 可同步執行 |
-| `convert_pdf_to_pptx` | `doc_id`, `output_path`, `mode`, `async_mode` | 建立 background conversion job，將已攝入 PDF 轉 PPTX；`async_mode=false` 可同步執行 |
-| `inspect_document_manifest` | `doc_id` | 檢視 manifest 詳細資訊 |
-| `export_document_segmentation` | `doc_id`, `page`, `limit`, `output_path` | 匯出 segmentation schema |
-| `visualize_document_layout` | `doc_id`, `page`, label/order/output options | 產生 PDF layout overlay |
-| `ocr_pdf_document` | `pdf_path`, `output_path`, OCR options | 建立 background OCR ingest job |
-| `fetch_document_asset` | `doc_id`, `asset_type`, `asset_id`, `max_size` | 依 asset identity 擷取 table/figure/section/full_text |
-| `document` | `op`, PDF ingest/parse/list/delete/inspect parameters | Consolidated PDF document entrypoint；conversion 請用 `convert_document` |
-| `document_asset` | `op`, `doc_id`, asset/section parameters, Foam note options | Consolidated asset and section entrypoint；section search 是章節導覽，source locator 請用 `search_source_location` 或 `evidence(op="locate")`；`op="foam_notes"` 可將 table/figure 寫成 Foam notes |
-| `evidence` | `op`, `doc_id`, query/span/ref parameters, `output_format`, `citation_key`, `wiki_root` | Consolidated citation evidence entrypoint，支援 `find` / `verify` / `bundle` / `claim_promotion` / `health` / `locate`；bundle 可輸出/寫入 Foam evidence pack，claim promotion 會強制 verify 後才允許寫 Foam，health 可掃 wiki citation drift |
-| `convert_document` | `source`, `target_format`, `source_format`, `output_path`, `mode`, `md_text`, `async_mode` | Consolidated conversion entrypoint；預設建立 background conversion job |
-
-Operation notes:
-
-- `document` accepts `ingest` / `import`, `parse`, `list`, `delete`, and `inspect`; PDF/DOCX/Markdown conversions live behind `convert_document`.
-- `document_asset` accepts asset fetch plus section tree/detail/blocks/search operations; `foam_notes` writes table/figure asset notes and updates the managed asset index block. Source locator search stays in `search_source_location` / `evidence(op="locate")`.
-- `evidence` accepts `find`, `verify`, `bundle`, `health`, and `locate` / `search_location`; the old `search` wording is avoided because the code routes citation lookup through `find`.
-- PDF ingest、Marker parse、OCR 與 conversion requests 都可 job-backed；conversion tools 預設 `async_mode=true`，大型 LibreOffice/PDF conversion 不會卡住 MCP request path。`parse_pdf_structure(output_dir=...)` and `ocr_pdf_document(output_path=...)` still accept compatibility parameters, but background job mode owns the final artifact paths.
-
-## `docx_tools.py` - 17 tools
+## `document_tools.py` - 11 public tools
 
 | Tool | 主要參數 | 功能 |
 |---|---|---|
-| `ingest_docx` | `file_path` | 攝入 `.docx` / `.docm`，或透過 LibreOffice 轉換 `.doc` / `.odt` / `.ods` 後轉為 DocxIR + DFM |
-| `get_docx_content` | `doc_id`, `block_id` | 讀取完整 DFM 或單一 block；單一 block payload 會包含 DOCX locator metadata |
-| `save_docx` | `doc_id`, `dfm_content`, `output_path`, `from_md`, `force`, `track_changes`, `revision_author` | 將 DFM/Markdown 寫回 DOCX |
-| `list_docx_blocks` | `doc_id` | 列出 DOCX block 摘要與 compact DOCX locator |
-| `list_docx_documents` | 無 | 列出已攝入 DOCX/DFM 文件 |
-| `delete_docx` | `doc_id` | 刪除 DOCX/DFM artifacts |
-| `convert_docx_to_doc` | `doc_id`, `output_path`, `mode`, `async_mode` | 建立 background conversion job，轉為 legacy DOC |
-| `convert_docx_to_pdf` | `doc_id`, `output_path`, `mode`, `async_mode` | 建立 background conversion job，轉為 PDF |
-| `convert_docx_to_odt` | `doc_id`, `output_path`, `mode`, `async_mode` | 建立 background conversion job，轉為 ODT |
-| `docx_validate_roundtrip` | `doc_id`, `output_path`, `strict` | 驗證 DOCX -> DFM -> DOCX round trip |
-| `docx` | `op`, DOCX/DFM parameters | Consolidated DOCX/DFM entrypoint |
-| `docx_table_to_context` | `doc_id`, `block_id`, `register` | 將 DOCX 表格轉為 A2T TableContext |
-| `docx_table_from_context` | `doc_id`, `block_id`, `table_id`, `save_dfm` | 將 TableContext 寫回 DFM 表格 |
-| `docx_chart_data` | `doc_id`, `block_id`, `register` | 擷取 DOCX 圖表底層資料 |
-| `docx_table_edit_plan` | `doc_id`, `block_id`, `table_id`, `target_columns`, `target_rows` | 預覽 table write-back 的 cell/row/column/header 變更與結構風險 |
-| `docx_table` | `op`, table bridge parameters | Consolidated DOCX table bridge entrypoint，支援 `edit_plan` |
-| `export_markdown` | `md_text`, `md_path`, `output_path`, `output_format`, `async_mode` | Markdown 直接匯出 DOCX/PDF/DOC/ODT；預設建立 conversion job |
+| `parse_pdf_structure` | `pdf_path`, `output_dir`, `async_mode`, OCR/Marker/page options | Marker-required PDF structure parse shortcut；backend unavailable 時 fail closed 並給診斷。 |
+| `find_evidence_spans` | `doc_id`, `query`, `span_id`, `span_kinds`, `limit` | 搜尋 citation-ready evidence spans。 |
+| `verify_citation_ref` | `ref` | 驗證 AssetRef 是否仍符合 citation index 與 locator/hash。 |
+| `citation_bundle` | `doc_id`, query/span filters, `output_format`, Foam write options | 匯出 verified evidence bundle，可產生 Markdown/JSON/Foam evidence pack。 |
+| `ingest_documents` | `file_paths`, `async_mode`, `use_marker`, OCR/Marker/page options | 攝入 PDF，建立 manifest、markdown、blocks、assets、citation artifacts。 |
+| `list_documents` | 無 | 列出已處理 PDF 文件摘要。 |
+| `fetch_document_asset` | `doc_id`, `asset_type`, `asset_id`, `max_size`, `max_chars` | 依 asset identity 讀取 table/figure/section/full text。 |
+| `document` | `op`, PDF ingest/parse/list/delete/inspect/OCR/layout/segmentation/audit/readiness/retrieval/compare parameters | PDF document facade；支援 `auto`, `prepare_ai`, `audit`, `ingest`, `parse`, `list`, `delete`, `inspect`, `ocr`, `export_segmentation`, `visualize_layout`, `safety_audit`, `native_structure`, `coverage`, `accessibility`, `pointer_index`, `structural_retrieve`, `compare`。 |
+| `document_asset` | `op`, `doc_id`, asset/section/Foam note parameters | Asset facade；支援 asset fetch、section forwarding、asset Foam notes。 |
+| `evidence` | `op`, `doc_id`, query/span/ref parameters, Foam options | Evidence facade；支援 `find`, `verify`, `bundle`, `locate`, `claim_promotion`, `health`。 |
+| `convert_document` | `source`, `target_format`, `source_format`, `output_path`, `mode`, `async_mode` | PDF/DOCX/Markdown conversion facade；大型 conversion 預設 job-backed。 |
 
-## `job_tools.py` - 4 tools
+## `docx_tools.py` - 6 public tools
 
-| Tool | 功能 |
-|---|---|
-| `get_job_status` | 查詢 ETL/background job 狀態、進度、warnings、artifacts |
-| `list_jobs` | 列出 active/all jobs |
-| `cancel_job` | 取消 running job |
-| `job` | Consolidated get/list/cancel entrypoint |
+| Tool | 主要參數 | 功能 |
+|---|---|---|
+| `ingest_docx` | `file_path` | 攝入 `.docx` / `.docm`，也可經 LibreOffice 轉入 `.doc` / `.odt` / `.ods`。 |
+| `get_docx_content` | `doc_id`, `block_id` | 讀取 DFM/DOCX 內容或單一 block，保留 locator metadata。 |
+| `save_docx` | `doc_id`, `dfm_content`, `output_path`, `force`, Track Changes options | 將 DFM/Markdown 寫回 DOCX，保留 stale source 與 validation guard。 |
+| `docx` | `op`, DOCX/DFM parameters | DOCX facade；支援 ingest/read/save/list/delete/list_blocks/validate。 |
+| `docx_table_edit_plan` | `doc_id`, `block_id`, `table_id`, target shape options | 先產生 table write-back 風險計畫，再進行 A2T/DOCX table 操作。 |
+| `docx_table` | `op`, DOCX table/chart bridge parameters | DOCX table facade；支援 `to_context`, `from_context`, `chart_data`, `edit_plan`。 |
 
-## `knowledge_tools.py` - 3 tools
+## `job_tools.py` - 3 public tools
 
-| Tool | 功能 |
-|---|---|
-| `consult_knowledge_graph` | 查詢 LightRAG knowledge graph；可用 `verify_references=true` 附上 verified citation bundle |
-| `export_knowledge_graph` | 匯出 graph 給視覺化或外部分析 |
-| `knowledge` | Consolidated knowledge graph entrypoint |
+| Tool | 主要參數 | 功能 |
+|---|---|---|
+| `get_job_status` | `job_id` | 查詢 background job 狀態、progress、warnings、artifacts。 |
+| `list_jobs` | `active_only` | 列出 active 或全部 jobs。 |
+| `job` | `op`, `job_id`, `active_only` | Job facade；支援 `get/status`, `list`, `cancel`。 |
 
-## `profile_tools.py` - 7 tools
+## `knowledge_tools.py` - 1 public tool
 
-| Tool | 功能 |
-|---|---|
-| `list_etl_profiles` | 列出內建與已載入 ETL profiles |
-| `get_etl_profile` | 取得指定 profile 詳細設定 |
-| `get_current_etl_profile` | 查詢目前 active profile |
-| `set_etl_profile` | 切換 active profile |
-| `load_etl_profile_from_json` | 從 JSON 載入自訂 profile |
-| `detect_etl_profile` | 從 PDF / doc_id / sample_text 偵測建議 profile，可選 `activate=true` |
-| `etl_profile` | Consolidated profile entrypoint，支援 `detect` / `auto_detect` |
+| Tool | 主要參數 | 功能 |
+|---|---|---|
+| `knowledge` | `op`, query/export parameters | Knowledge graph facade；支援 `consult/query` 與 `export`。KG 是 opt-in discovery layer，citation-ready 結論仍回到 evidence bundle。 |
 
-## `section_tools.py` - 5 tools
+## `profile_tools.py` - 1 public tool
 
-| Tool | 功能 |
-|---|---|
-| `list_section_tree` | 列出動態 section tree |
-| `get_section_detail` | 取得 section metadata |
-| `get_section_blocks` | 取得 section 內 blocks，支援 children/filter/limit |
-| `search_sections` | 搜尋 section name |
-| `get_section_content` | 讀取 section-level 快取內容 |
+| Tool | 主要參數 | 功能 |
+|---|---|---|
+| `etl_profile` | `op`, profile parameters | ETL profile facade；支援 list/get/current/set/load/detect。 |
 
-## `table_tools.py` - 7 tools
+## `section_tools.py` - 1 public tool
 
-| Tool | 功能 |
-|---|---|
-| `plan_table` | Schema 設計、模板查詢、模板建表 |
-| `table_manage` | 建立、刪除、列表、預覽、渲染、schema 演進 |
-| `table_data` | 新增/讀取/更新/刪除 rows 和 cells |
-| `table_cite` | cell-level citation refs 管理 |
-| `table_history` | 變更紀錄、token 估算 |
-| `table_draft` | draft 建立、更新、加資料、恢復、提交；operation 名稱為 `resume` |
-| `discover_sources` | 跨文件搜尋可用於表格的來源 |
+| Tool | 主要參數 | 功能 |
+|---|---|---|
+| `section` | `op`, `doc_id`, `path`, `section_id`, `query`, filters | Section facade；支援 `tree/list`, `detail`, `blocks/list_blocks`, `search`, `content`。 |
+
+## `table_tools.py` - 7 public tools
+
+| Tool | 主要參數 | 功能 |
+|---|---|---|
+| `plan_table` | schema/template/source planning parameters | A2T schema 與 table template planning。 |
+| `table_manage` | `op`, table/schema/render parameters | 建立、刪除、列出、preview、resume、render、schema 操作。 |
+| `table_data` | `op`, row/cell/filter parameters | A2T row/cell read-write operations。 |
+| `table_cite` | table/cell citation parameters | 維護 cell-level citation refs。 |
+| `table_history` | table/history/token parameters | 讀取 audit trail、history 與 token usage。 |
+| `table_draft` | `op`, draft/table parameters | Draft create/update/resume/commit/list/delete。 |
+| `discover_sources` | document/source discovery parameters | 探索可轉成 A2T 表格的文件來源。 |
+
+## Compatibility Notes
+
+- `compact` surface 只公開 17 個 operation-based facade tools。
+- `balanced` surface 在 `compact` 之外多保留 13 個高頻 shortcuts，總數 30。
+- `legacy` surface 會公開完整 decorator inventory，目前為 63 tools；這是相容模式，不是建議給 agent 的預設工具面。
+- Facade 轉接不得改變 citation locator、AssetRef、hash、line/page/bbox metadata、DOCX stale source guard 或 background job semantics。
+
+### Document Audit Ops
+
+The OpenDataloader-inspired PDF audit features stay inside the existing `document` facade, so the balanced public tool count remains 30:
+
+- `document(op="auto", file_paths=[...])` starts the normal ingest/background job flow. `document(op="auto", doc_id="...")` returns the AI readiness state for an existing document.
+- `document(op="prepare_ai", doc_id="...", output_format="json")` returns the v2 readiness contract with `status`, `blockers`, `warnings`, `capabilities`, `artifacts`, `missing_audits`, `invalid_audits`, `audit_artifacts`, and `next_actions`. The default Markdown response embeds the same JSON for humans.
+- `document(op="audit", doc_id="...")` reuses current safety/native/coverage/accessibility artifacts by default and reports them as cached only when they are present and valid. Pass `refresh=true` to rebuild all four diagnostics.
+- `document(op="safety_audit", doc_id="...", output_path=...)` writes `ai_safety_report.json`.
+- `document(op="native_structure", doc_id="...", output_path=...)` writes `native_structure.json`.
+- `document(op="coverage", doc_id="...", output_path=...)` writes `segmentation_coverage.json`.
+- `document(op="accessibility", doc_id="...", output_path=...)` writes `accessibility_report.json`, focused on captions, sectioning, line spans, asset links, and reading-order readiness rather than PDF/UA certification.
+- `document(op="pointer_index", doc_id="...")` writes `section_pointer_index.jsonl`, a deterministic section proxy index with breadcrumbs, page/line/char/byte locators, source hashes, asset ids, and evidence-span ids.
+- `document(op="structural_retrieve", doc_id="...", query="...")` searches an existing valid pointer index and materializes bounded section previews. Use `document(op="pointer_index")` or `refresh=true` when the index is missing or stale.
+- `document(op="compare", doc_id="...", doc_b_id="...", criteria="...")` writes a deterministic structural comparison bundle for review before claims are promoted.
+
+These ops are artifact-only diagnostics and retrieval helpers. They report findings, coverage, and structural pointers without changing source text, citation spans, AssetRefs, or table/document write-back behavior. Readiness and job-status artifact discovery are read-only and do not create document directories. `list_documents`, `inspect_document_manifest`, and `get_job_status` now surface `document(op="prepare_ai", ...)` / `document(op="audit", ...)` next actions so agents do not have to memorize the individual audit ops.

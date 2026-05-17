@@ -39,7 +39,7 @@ async def _smoke(command: list[str], *, timeout: float) -> dict[str, object]:
             timeout=timeout,
         )
 
-    required = {"list_documents", "consult_knowledge_graph"}
+    required = {"list_documents", "knowledge"}
     missing = sorted(required - set(tool_names))
     if missing:
         raise RuntimeError(f"MCP stdio server missing required tools: {missing}")

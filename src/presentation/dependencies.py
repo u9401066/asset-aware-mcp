@@ -16,8 +16,10 @@ from src.application.document_service import DocumentService
 from src.application.docx_service import DocxService
 from src.application.job_service import JobService
 from src.application.knowledge_service import KnowledgeService
+from src.application.pdf_report_service import PdfArtifactReportService
 from src.application.section_service import SectionService
 from src.application.segmentation_service import SegmentationService
+from src.application.structural_pointer_service import StructuralPointerService
 from src.application.table_service import TableService
 from src.domain.etl_profile import ETLProfile
 from src.domain.marker_errors import MarkerBackendUnavailable
@@ -100,8 +102,16 @@ job_service = JobService(
     document_service=document_service,
     ingest_worker_runner=ingest_worker_runner,
 )
+pdf_report_service = PdfArtifactReportService(
+    repository=repository,
+    pdf_extractor=pdf_extractor,
+)
 segmentation_service = SegmentationService(repository=repository)
 section_service = SectionService(repository=repository)
+structural_pointer_service = StructuralPointerService(
+    repository=repository,
+    segmentation_service=segmentation_service,
+)
 table_service = TableService(
     table_output_dir=settings.table_output_dir,
     table_renderer=excel_renderer,
@@ -164,7 +174,7 @@ def rebuild_for_profile(profile_name: str) -> ETLProfile:
     Raises:
         KeyError: If profile not found
     """
-    global etl_profile, pdf_extractor, document_service, job_service
+    global etl_profile, pdf_extractor, document_service, job_service, pdf_report_service
 
     new_profile = ETLProfileRegistry.get(profile_name)
 
@@ -182,5 +192,9 @@ def rebuild_for_profile(profile_name: str) -> ETLProfile:
         ocr_processor=ocr_processor,
     )
     job_service.set_document_service(document_service)
+    pdf_report_service = PdfArtifactReportService(
+        repository=repository,
+        pdf_extractor=pdf_extractor,
+    )
 
     return new_profile

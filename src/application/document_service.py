@@ -348,9 +348,9 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                 path.stem,
                 build_doc_id_unique_suffix(path, normalized_page_ranges),
             )
-            self._save_original_pdf_copy(doc_id.value, path)
+            original_pdf_path = self._save_original_pdf_copy(doc_id.value, path)
 
-            active_pdf_path = path
+            active_pdf_path = original_pdf_path
             if normalized_page_ranges:
                 active_pdf_path = materialize_pdf_page_subset(
                     path,
@@ -531,6 +531,11 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                     doc_id.value,
                     segmentation_warnings,
                 )
+            await self._save_pdf_analysis_artifacts(
+                doc_id.value,
+                active_pdf_path,
+                segmentation_warnings,
+            )
             await _invoke_progress_callback(
                 progress_callback,
                 total_steps,
@@ -637,9 +642,9 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                 path.stem,
                 build_doc_id_unique_suffix(path, normalized_page_ranges),
             )
-            self._save_original_pdf_copy(doc_id.value, path)
+            original_pdf_path = self._save_original_pdf_copy(doc_id.value, path)
 
-            active_pdf_path = path
+            active_pdf_path = original_pdf_path
             if normalized_page_ranges:
                 active_pdf_path = materialize_pdf_page_subset(
                     path,
@@ -858,6 +863,11 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                 source_backend=citation_backend,
             )
             await self._save_segmentation_artifact(doc_id.value, warnings)
+            await self._save_pdf_analysis_artifacts(
+                doc_id.value,
+                active_pdf_path,
+                warnings,
+            )
             await _invoke_progress_callback(
                 progress_callback,
                 total_steps,
@@ -1026,12 +1036,64 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
             )
             warnings.append(f"Segmentation export skipped: {exc}")
 
-    def _save_original_pdf_copy(self, doc_id: str, source_path: Path) -> None:
+    async def _save_pdf_analysis_artifacts(
+        self,
+        doc_id: str,
+        source_pdf_path: Path,
+        warnings: list[str],
+    ) -> None:
+        from src.application.pdf_report_service import PdfArtifactReportService
+        from src.application.segmentation_service import SegmentationService
+
+        report_service = PdfArtifactReportService(self.repository, self.pdf_extractor)
+        reports: list[tuple[str, Any]] = [
+            (
+                "AI safety audit",
+                lambda: report_service.build_and_save_ai_safety_report(
+                    doc_id,
+                    source_pdf_path=source_pdf_path,
+                ),
+            ),
+            (
+                "native structure audit",
+                lambda: report_service.build_and_save_native_structure_report(
+                    doc_id,
+                    source_pdf_path=source_pdf_path,
+                ),
+            ),
+        ]
+        for label, builder in reports:
+            try:
+                builder()
+            except Exception as exc:
+                logger.warning(
+                    "Failed to save %s artifact for %s",
+                    label,
+                    doc_id,
+                    exc_info=True,
+                )
+                warnings.append(f"{label} skipped: {exc}")
+
+        try:
+            await report_service.build_and_save_segmentation_coverage_report(
+                doc_id,
+                SegmentationService(self.repository),
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to save segmentation coverage artifact for %s",
+                doc_id,
+                exc_info=True,
+            )
+            warnings.append(f"Segmentation coverage skipped: {exc}")
+
+    def _save_original_pdf_copy(self, doc_id: str, source_path: Path) -> Path:
         """Persist the original PDF for overlay inspection and downstream tooling."""
         doc_dir = self.repository.get_doc_dir(doc_id)
         doc_dir.mkdir(parents=True, exist_ok=True)
         target = doc_dir / "original.pdf"
         shutil.copy2(source_path, target)
+        return target
 
     def _preprocess_pdf_with_ocr(
         self,

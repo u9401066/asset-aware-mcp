@@ -7,6 +7,7 @@ error handling, input validation, and response formatting.
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 # ============================================================================
@@ -104,8 +105,12 @@ class TestJobTools:
                             "manifest": "data/doc_123/doc_123_manifest.json",
                             "markdown": "data/doc_123/doc_123_full.md",
                             "blocks": "data/doc_123/blocks.json",
+                            "ai_safety_report": "data/doc_123/ai_safety_report.json",
+                            "native_structure": "data/doc_123/native_structure.json",
+                            "segmentation_coverage": "data/doc_123/segmentation_coverage.json",
                         },
                         "blocks_available": True,
+                        "audit_artifacts_available": True,
                     }
                 ],
                 "warnings": ["Marker was unavailable"],
@@ -121,7 +126,129 @@ class TestJobTools:
         assert "pymupdf_fallback" in result
         assert "Marker was unavailable" in result
         assert "data/doc_123/blocks.json" in result
-        assert 'export_document_segmentation("doc_123")' in result
+        assert "data/doc_123/ai_safety_report.json" in result
+        assert 'document(op="prepare_ai", doc_id="doc_123")' in result
+        assert 'document(op="audit", doc_id="doc_123")' in result
+        assert 'export_document_segmentation("doc_123")' not in result
+
+    async def test_get_job_status_refreshes_artifacts_created_after_ingest(
+        self, tmp_path: Path
+    ) -> None:
+        """Job status should discover audit artifacts created after the job finished."""
+        from src.domain.entities import DocumentManifest
+        from src.domain.job import Job, JobProgress, JobStatus, JobType
+
+        doc_dir = tmp_path / "doc_123"
+        doc_dir.mkdir()
+        (doc_dir / "doc_123_manifest.json").write_text("{}", encoding="utf-8")
+        (doc_dir / "ai_safety_report.json").write_text("{}", encoding="utf-8")
+        (doc_dir / "native_structure.json").write_text("{}", encoding="utf-8")
+        (doc_dir / "segmentation_coverage.json").write_text("{}", encoding="utf-8")
+        manifest = DocumentManifest(
+            doc_id="doc_123",
+            filename="paper.pdf",
+            page_count=1,
+            manifest_path=str(doc_dir / "doc_123_manifest.json"),
+        )
+        job = Job(
+            job_id="job_stale_artifacts",
+            job_type=JobType.INGEST_PDF,
+            status=JobStatus.COMPLETED,
+            input_files=["paper.pdf"],
+            output_doc_ids=["doc_123"],
+            progress=JobProgress(total_steps=8, current_step=8, percentage=100),
+            result={
+                "documents": [
+                    {
+                        "file": "paper.pdf",
+                        "doc_id": "doc_123",
+                        "backend": "pymupdf",
+                        "artifacts": {},
+                    }
+                ]
+            },
+        )
+
+        with (
+            patch("src.presentation.tools.job_tools.job_service") as mock_svc,
+            patch("src.presentation.tools.job_tools.repository", create=True) as repo,
+        ):
+            mock_svc.get_job = AsyncMock(return_value=job)
+            repo.load_manifest.return_value = manifest
+            repo.get_doc_dir.side_effect = AssertionError(
+                "job status artifact discovery must be read-only"
+            )
+            from src.presentation.tools.job_tools import get_job_status
+
+            result = await get_job_status("job_stale_artifacts")
+
+        assert str(doc_dir / "ai_safety_report.json") in result
+        assert str(doc_dir / "native_structure.json") in result
+        assert str(doc_dir / "segmentation_coverage.json") in result
+
+    async def test_get_job_status_does_not_create_doc_dir_when_refreshing_artifacts(
+        self, tmp_path: Path
+    ) -> None:
+        """Read-only job status must not create storage directories for old doc IDs."""
+        from src.domain.job import Job, JobProgress, JobStatus, JobType
+        from src.infrastructure.file_storage import FileStorage
+
+        storage = FileStorage(tmp_path)
+        job = Job(
+            job_id="job_no_side_effects",
+            job_type=JobType.INGEST_PDF,
+            status=JobStatus.COMPLETED,
+            input_files=["paper.pdf"],
+            output_doc_ids=["doc_missing"],
+            progress=JobProgress(total_steps=8, current_step=8, percentage=100),
+            result={
+                "documents": [
+                    {
+                        "file": "paper.pdf",
+                        "doc_id": "doc_missing",
+                        "backend": "pymupdf",
+                        "artifacts": {},
+                    }
+                ]
+            },
+        )
+
+        with (
+            patch("src.presentation.tools.job_tools.job_service") as mock_svc,
+            patch("src.presentation.tools.job_tools.repository", storage),
+        ):
+            mock_svc.get_job = AsyncMock(return_value=job)
+            from src.presentation.tools.job_tools import get_job_status
+
+            result = await get_job_status("job_no_side_effects")
+
+        assert "doc_missing" in result
+        assert not (tmp_path / "doc_missing").exists()
+
+    async def test_get_job_status_output_doc_ids_only_shows_facade_next_actions(
+        self,
+    ) -> None:
+        """Old persisted jobs with only output_doc_ids still guide agents forward."""
+        from src.domain.job import Job, JobProgress, JobStatus, JobType
+
+        job = Job(
+            job_id="job_old_schema",
+            job_type=JobType.INGEST_PDF,
+            status=JobStatus.COMPLETED,
+            input_files=["paper.pdf"],
+            output_doc_ids=["doc_old"],
+            progress=JobProgress(total_steps=8, current_step=8, percentage=100),
+            result={},
+        )
+
+        with patch("src.presentation.tools.job_tools.job_service") as mock_svc:
+            mock_svc.get_job = AsyncMock(return_value=job)
+            from src.presentation.tools.job_tools import get_job_status
+
+            result = await get_job_status("job_old_schema")
+
+        assert 'document(op="prepare_ai", doc_id="doc_old")' in result
+        assert 'document(op="audit", doc_id="doc_old")' in result
 
     async def test_get_job_status_shows_stale_recovery_context(self) -> None:
         """Interrupted active jobs keep enough context to resume after restart."""

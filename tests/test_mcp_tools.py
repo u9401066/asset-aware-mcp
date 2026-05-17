@@ -31,17 +31,27 @@ def test_tool_registration() -> None:
         "job",
         "etl_profile",
         "knowledge",
+        "section",
+        "plan_table",
+        "table_manage",
+        "table_data",
+        "table_cite",
+        "table_history",
+        "table_draft",
+        "discover_sources",
         "citation_bundle",
-        "detect_etl_profile",
         "docx_table_edit_plan",
         "ingest_documents",
         "get_job_status",
         "list_jobs",
-        "cancel_job",
         "list_documents",
-        "inspect_document_manifest",
+        "parse_pdf_structure",
         "fetch_document_asset",
-        "consult_knowledge_graph",
+        "find_evidence_spans",
+        "verify_citation_ref",
+        "ingest_docx",
+        "get_docx_content",
+        "save_docx",
     }
 
     registered_tools = {tool.name for tool in mcp._tool_manager._tools.values()}
@@ -102,7 +112,7 @@ async def test_stdio_server_lists_tools_and_calls_list_documents() -> None:
             timeout=10,
         )
 
-    assert {"list_documents", "consult_knowledge_graph"} <= tool_names
+    assert {"list_documents", "knowledge"} <= tool_names
     assert not result.isError
     assert result.content
 

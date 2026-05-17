@@ -16,6 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from src.application.document_readiness_service import AI_READINESS_ARTIFACTS
 from src.application.worker_runner import IngestWorkerRequest, IngestWorkerRunner
 from src.domain.job import Job, JobProgress, JobStatus, JobSummary, JobType
 
@@ -713,10 +714,8 @@ class JobService:
             return payload
 
         artifact_candidates = {
-            "manifest": doc_dir / f"{result.doc_id}_manifest.json",
-            "markdown": doc_dir / f"{result.doc_id}_full.md",
-            "blocks": doc_dir / "blocks.json",
-            "segmentation": doc_dir / "segmentation.json",
+            name: doc_dir / template.format(doc_id=result.doc_id)
+            for name, template in AI_READINESS_ARTIFACTS
         }
         artifacts = {
             name: str(path)
@@ -726,6 +725,15 @@ class JobService:
         payload["artifacts"] = artifacts
         payload["blocks_available"] = "blocks" in artifacts
         payload["segmentation_available"] = "segmentation" in artifacts
+        payload["audit_artifacts_available"] = all(
+            name in artifacts
+            for name in (
+                "ai_safety_report",
+                "native_structure",
+                "segmentation_coverage",
+                "accessibility_report",
+            )
+        )
         return payload
 
 

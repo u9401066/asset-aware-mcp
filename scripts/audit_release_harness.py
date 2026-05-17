@@ -265,8 +265,8 @@ def main() -> int:
         require_text(
             "vscode-extension/README.md",
             [
-                "MCP Tools (62 total)",
-                "Document ETL (19)",
+                "MCP Tools (30 public tools)",
+                "The default surface is `balanced`",
                 "find_evidence_spans",
                 "verify_citation_ref",
             ],
@@ -287,6 +287,15 @@ def main() -> int:
             [
                 "[tool.hatch.build.targets.sdist]",
                 "blob/master/CHANGELOG.md",
+            ],
+        )
+    )
+    errors.extend(
+        require_text(
+            "Dockerfile",
+            [
+                "uv export --quiet",
+                "requirements.txt",
             ],
         )
     )

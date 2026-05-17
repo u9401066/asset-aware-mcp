@@ -6,16 +6,20 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.6.35/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.7.0/resources/banner.png)
 
-## What's New in v0.6.35
+## What's New in v0.7.0
 
-- **Cline install hardening**: generated Cline settings now include readable Traditional Chinese `mcpRules` triggers for documents, citations, tables, figures, and knowledge graphs.
-- **Cline smoke coverage**: release checks now exercise the CLI installer, the exact generated launch command, and a real MCP stdio handshake.
-- **Asset-Aware wiki harness**: bundled Cline/Codex LLM wiki instructions stay scoped to document evidence, citation bundles, and optional KG exports.
-- **Docs refresh**: GitHub Pages navigation, getting started guidance, KG notes, and endpoint counts are aligned with the current code surface.
-- **Safe local RAG defaults**: Granite/Ollama remains the default path, while LightRAG/KG stays opt-in for CPU-only users.
-- **62 tools** across 7 modules, plus 13 MCP resources
+- **Balanced MCP tool surface**: default runtime now exposes 30 agent-friendly public tools, with compact 17-tool and legacy 63-tool compatibility modes available.
+- **Structural pointer workflows**: `document(op="pointer_index")`, `document(op="structural_retrieve")`, and `document(op="compare")` add section-level retrieval and comparison with locator/hash provenance without increasing the public tool count.
+- **A2T large-table hardening**: stable row IDs, row search/filter/paging, citation coverage, artifact-only Markdown/HTML render, and actionable skipped-large-table UX make big tables safer for Cline/Codex/Copilot.
+- **Accessibility readiness**: PDF audit/readiness now includes `accessibility_report.json` alongside safety, native structure, and segmentation coverage artifacts.
+- **Runtime prepare portability**: managed runtime preparation uses version-pinned `uv tool run`, handles Windows paths with spaces, and falls back across Python 3.11 / 3.10 for older machines.
+- **Better diagnostics**: dependency checks now report preferred Python, platform tags, and native import status for Pillow, lxml, pydantic-core, and the MCP SDK.
+- **A2T table hardening**: row/cell validation, citation cleanup, duplicate-column protection, draft timestamp loading, and table-history shortcut ergonomics are tightened.
+- **PDF audit artifacts**: the existing `document` facade can write AI safety, native structure, segmentation coverage, accessibility readiness, and structural pointer artifacts for ingested PDFs without adding public tools.
+- **Docs refresh**: README, GitHub Pages, wiki source, VSIX reference, and bundled assistant assets are aligned with the balanced surface.
+- **30 public tools** across 7 modules, plus 13 MCP resources
 
 ## 🧪 Current Main Branch
 
@@ -106,7 +110,7 @@ This extension provides a sophisticated **ETL (Extract, Transform, Load) Pipelin
 
 - **📄 PDF ETL**:
   - **PyMuPDF** (default) - Fast extraction (~50MB dependency)
-  - **Marker** (`use_marker=True`) - Temporarily unavailable in v0.6.35 until upstream `marker-pdf` supports patched Pillow
+  - **Marker** (`use_marker=True`) - Temporarily unavailable in v0.7.0 until upstream `marker-pdf` supports patched Pillow
 - **🧩 Unified Segmentation**: Export normalized `segmentation.json` with reading order and markdown line ranges
 - **🖼️ Layout Overlay**: Visual bbox/type/reading-order inspection from the original PDF
 - **🔤 OCR Preprocessing**: Optional scanned-PDF cleanup before ETL
@@ -114,7 +118,7 @@ This extension provides a sophisticated **ETL (Extract, Transform, Load) Pipelin
 - **🔄 Async Jobs**: Track progress for large document batches, OCR, Marker-required parse, and conversions with Job IDs.
 - **🗺️ Document Manifest**: A structured index that lets Agents "see" document structure before reading.
 - **🖼️ Visual Assets**: Extract figures as Base64 images for Vision-capable Agents.
-- **📊 A2T (Anything to Table)**: 7 operation-based tools for creating tables from any source with citations, audit trail, and Excel export
+- **📊 A2T (Anything to Table)**: 7 operation-based tools for creating tables from any source with stable row IDs, search/filter/paging, citation coverage, audit trail, artifact-only render, and Excel export
 - **🧠 Knowledge Graph**: Cross-document insights powered by LightRAG, with optional verified evidence bundles.
 - **🧾 Artifact / Citation Viewer**: Open generated artifacts and EvidenceSpan summaries from the Documents tree.
 - **🔌 MCP Native**: Seamless integration with VS Code Copilot Chat and Claude.
@@ -171,15 +175,15 @@ runtime and currently surfaces a security-hold notice (`marker-pdf` pins
 
 ### 1. Ingest a Document (ETL)
 In Copilot Chat, tell the agent to process a file:
-`@workspace Use ingest_documents to process ./papers/study_01.pdf`
+`@workspace Use document(op="auto", file_paths=["./papers/study_01.pdf"])`
 
 ### 2. Check Progress
 For large files, check the job status:
-`@workspace get_job_status("job_id_here")`
+`@workspace job(op="get", job_id="job_id_here")`
 
 ### 3. Inspect the Map
-The agent will first look at the manifest to see what's inside:
-`@workspace What tables are available in doc_study_01?`
+The agent can ask for AI-ready state and the next facade operation:
+`@workspace document(op="prepare_ai", doc_id="doc_study_01")`
 
 ### 4. Fetch Specific Assets
 The agent retrieves exactly what it needs:
@@ -202,14 +206,14 @@ The agent retrieves exactly what it needs:
 | `assetAwareMcp.torchBackend` | `cpu` | Reserved torch backend setting for Marker after its Pillow dependency supports the secure runtime |
 
 Runtime note:
-The extension prefers a managed Python 3.11 runtime when launching the MCP server via `uv`/`uvx`. This avoids package builds on machines without native toolchains, especially macOS systems missing Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
+The extension prefers a managed Python 3.11 runtime when launching the MCP server via `uv tool run`, with Python 3.10 fallback for older machines. This avoids package builds on machines without native toolchains, especially macOS systems missing Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
 
 Marker note:
-The extension does not install Marker or torch in v0.6.35. `assetAwareMcp.enableMarkerBackend` is retained for compatibility, but the launcher ignores it while upstream `marker-pdf` requires `Pillow<11` and the secure runtime requires `Pillow>=12.2.0`.
+The extension does not install Marker or torch in v0.7.0. `assetAwareMcp.enableMarkerBackend` is retained for compatibility, but the launcher ignores it while upstream `marker-pdf` requires `Pillow<11` and the secure runtime requires `Pillow>=12.2.0`.
 
 Installation scope & storage:
 - The VSIX installs as a user/global extension (standard VS Code behavior), so you do not need a separate install per workspace.
-- The MCP server is launched via `uvx asset-aware-mcp` and reused from your user-level uv cache; upgrades reuse the same cache.
+- The MCP server is launched via version-pinned `uv tool run asset-aware-mcp`; upgrades reuse the same user-level uv cache.
 - Runtime data stays in the workspace: `.env` and `assetAwareMcp.dataDir` default to `./data` beside your repo, keeping ingested assets scoped per project.
 
 ## 🔧 Commands
@@ -240,97 +244,18 @@ If the extension fails to start or the MCP server doesn't appear:
     *   Run `npm install`.
     *   Press `F5` to launch the **Extension Development Host**.
 
-## 📚 MCP Tools (62 total)
+## 📚 MCP Tools (30 public tools)
 
-### Document ETL (19)
-| Tool | Description |
-|------|-------------|
-| `ingest_documents` | Process PDF files into structured assets |
-| `list_documents` | List all ingested documents |
-| `delete_document` | Delete an ingested PDF and its local artifacts |
-| `convert_pdf_to_docx` | Reconstruct a readable DOCX from extracted PDF content; defaults to a conversion background job |
-| `convert_pdf_to_pptx` | Rebuild editable PPTX slides from extracted PDF markdown and figures; defaults to a conversion background job |
-| `inspect_document_manifest` | View document structure (Tables/Figures/Sections) |
-| `fetch_document_asset` | Get specific Table/Figure/Section content |
-| `parse_pdf_structure` | Parse PDF structure without full ingestion |
-| `search_source_location` | Search exact source locations with page numbers and bbox |
-| `export_document_segmentation` | Export normalized segmentation with reading order and line spans |
-| `visualize_document_layout` | Render page overlay images for layout debugging |
-| `ocr_pdf_document` | Run OCR preprocessing and output a cleaned PDF |
-| `find_evidence_spans` | Search citation-ready spans with revision, locator, hash, and CRAAP metadata |
-| `verify_citation_ref` | Verify span AssetRefs against the current citation index and locator metadata |
-| `citation_bundle` | Export verified evidence bundles with AssetRef, quote/hash, locator, context, CRAAP scaffold, and verification status |
-| `document` | Operation-based PDF document facade over ingest/list/delete/inspect/parse |
-| `document_asset` | Operation-based asset and section facade over fetch/tree/detail/blocks/search |
-| `evidence` | Operation-based citation facade over find/verify/locate/bundle |
-| `convert_document` | Operation-based conversion facade for PDF, DOCX/DFM, and Markdown exports; conversion paths default to background jobs |
+The default surface is `balanced`: 17 operation-based facade tools plus 13 common shortcuts. Use `ASSET_AWARE_MCP_TOOL_SURFACE=compact` for facade-only mode, or `ASSET_AWARE_MCP_TOOL_SURFACE=legacy` for the full direct-tool compatibility inventory.
 
-### Section Navigation (5)
-| Tool | Description |
-|------|-------------|
-| `list_section_tree` | Browse document section hierarchy |
-| `get_section_detail` | Get section metadata and stats |
-| `get_section_blocks` | Extract blocks from a section |
-| `search_sections` | Search sections by keyword |
-| `get_section_content` | Read section content via asset service |
+| Area | Public tools |
+|------|--------------|
+| Documents, assets, evidence, conversion | `document`, `document_asset`, `evidence`, `convert_document`, `ingest_documents`, `list_documents`, `parse_pdf_structure`, `fetch_document_asset`, `find_evidence_spans`, `verify_citation_ref`, `citation_bundle` |
+| DOCX / DFM | `docx`, `docx_table`, `ingest_docx`, `get_docx_content`, `save_docx`, `docx_table_edit_plan` |
+| Sections, jobs, KG, profiles | `section`, `job`, `get_job_status`, `list_jobs`, `knowledge`, `etl_profile` |
+| A2T tables | `plan_table`, `table_manage`, `table_data`, `table_cite`, `table_history`, `table_draft`, `discover_sources` |
 
-### Job Management (4)
-| Tool | Description |
-|------|-------------|
-| `get_job_status` | Track progress of ingestion and conversion jobs |
-| `list_jobs` | List all jobs |
-| `cancel_job` | Cancel a running job |
-| `job` | Operation-based job facade over get/list/cancel |
-
-### Knowledge Graph (3)
-| Tool | Description |
-|------|-------------|
-| `consult_knowledge_graph` | Cross-document RAG queries with `structured`, `data`, `text`, and optional verified evidence bundles |
-| `export_knowledge_graph` | Export knowledge graph data |
-| `knowledge` | Operation-based knowledge facade over consult/export |
-
-### Docx Editing — DFM (17)
-| Tool | Description |
-|------|-------------|
-| `ingest_docx` | Import .docx and decompose into DFM blocks |
-| `get_docx_content` | Read DFM content of specific blocks |
-| `save_docx` | Write DFM edits back to .docx |
-| `list_docx_blocks` | List document block structure |
-| `list_docx_documents` | List all ingested DOCX/DFM documents |
-| `delete_docx` | Delete an ingested DOCX/DFM document and its local artifacts |
-| `convert_docx_to_pdf` | Export the current DOCX/DFM state to PDF in fidelity mode; defaults to a conversion background job |
-| `convert_docx_to_doc` | Export the current DOCX/DFM state to DOC in fidelity mode; defaults to a conversion background job |
-| `docx_validate_roundtrip` | 6-dimension round-trip fidelity + file-level SHA-256/ZIP comparison with optional strict fail-closed mode |
-| `docx_table_to_context` | Bridge: Docx table → A2T context |
-| `docx_table_from_context` | Bridge: A2T table → Docx table |
-| `docx_chart_data` | Extract chart data from Docx |
-| `docx_table_edit_plan` | Preview table cell/row/column/header changes and structural risks before write-back |
-| `export_markdown` | Export Markdown to .docx/.pdf/.doc; defaults to a conversion background job |
-| `convert_docx_to_odt` | Export the current DOCX/DFM state to ODT; defaults to a conversion background job |
-| `docx` | Operation-based DOCX/DFM facade over ingest/get/save/list/delete/blocks/validate |
-| `docx_table` | Operation-based DOCX table facade over to_context/from_context/chart_data/edit_plan |
-
-### A2T — Anything to Table (7 operation-based)
-| Tool | Operations | Description |
-|------|-----------|-------------|
-| `plan_table` | `schema` / `templates` / `from_template` | Schema planning & template management |
-| `table_manage` | `create` / `delete` / `list` / `preview` / `resume` / `render` / `add_column` / `remove_column` / `rename_column` | Table lifecycle + schema evolution |
-| `table_data` | `add_rows` / `get_row` / `update_row` / `delete_row` / `get_cell` / `update_cell` / `clear_cell` | Row & cell CRUD |
-| `table_cite` | `add` / `get` / `remove` / `cell_history` | Citation management (AssetRef, 7 source types) |
-| `table_history` | `changes` / `tokens` | Audit trail & token estimation |
-| `table_draft` | `create` / `update` / `add_rows` / `resume` / `commit` / `list` / `delete` | Draft workflow with persistence |
-| `discover_sources` | — | Cross-document source discovery |
-
-### ETL Profile (7)
-| Tool | Description |
-|------|-------------|
-| `list_etl_profiles` | List available profiles |
-| `get_etl_profile` | Get profile configuration |
-| `get_current_etl_profile` | Show active profile |
-| `set_etl_profile` | Switch profile |
-| `load_etl_profile_from_json` | Load custom profile |
-| `detect_etl_profile` | Detect the best built-in profile from PDF path, doc_id, or sample text |
-| `etl_profile` | Operation-based profile facade over list/get/current/set/load/detect |
+For PDF agent handoff, prefer `document(op="auto", file_paths=[...])` for new files and `document(op="prepare_ai", doc_id="...")` for existing documents. Use `document(op="prepare_ai", output_format="json")` when an agent needs the v2 readiness contract directly, including `missing_audits`, `invalid_audits`, and `audit_artifacts`. `document(op="audit", doc_id="...")` skips current audit artifacts only when they are present and valid; use `refresh=true` to rebuild. Job status and document inspection responses include these facade-style next actions while the public tool count stays at 30, and their artifact discovery is read-only.
 
 ## 🔗 Links
 

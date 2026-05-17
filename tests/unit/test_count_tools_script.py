@@ -52,12 +52,13 @@ def test_count_tools_shell_skips_helper_modules() -> None:
     )
 
     assert "citation_support" not in result.stdout
+    assert "Default public tools: 30 tools (balanced surface)" in result.stdout
     assert (
-        f"Total tools:      {expected_tools} tools in {expected_tool_modules} modules"
+        f"Decorator inventory:        {expected_tools} tools in {expected_tool_modules} modules"
         in result.stdout
     )
     assert (
-        f"Total resources:  {expected_resources} resources in {expected_resource_modules} modules"
+        f"Total resources:            {expected_resources} resources in {expected_resource_modules} modules"
         in result.stdout
     )
 
@@ -84,7 +85,8 @@ def test_count_tools_powershell_skips_helper_modules_when_available() -> None:
     )
 
     assert "citation_support" not in result.stdout
+    assert "Default public tools: 30 tools (balanced surface)" in result.stdout
     assert (
-        f"Total tools:      {expected_tools} tools in {expected_tool_modules} modules"
+        f"Decorator inventory:        {expected_tools} tools in {expected_tool_modules} modules"
         in result.stdout
     )

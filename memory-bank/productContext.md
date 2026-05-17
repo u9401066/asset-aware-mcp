@@ -45,7 +45,7 @@ Local Storage
 - 🗺️ Document Manifest 生成 (Asset 清單)
 - 📊 A2T 表格系統 (7 operation-based tools)
 - 🧠 LightRAG 知識圖譜建立，可選 verified evidence bundle
-- 🔌 MCP Tools (62 tools in 7 modules, 13 resources) 暴露給 Agent
+- 🔌 MCP Tools：預設 balanced surface 暴露 30 個公開 tools（17 facade + 13 shortcuts）與 13 resources 給 Agent；legacy 63-tool direct inventory 保留給舊 client 相容
 - 🧩 Cline-safe Marker background jobs with isolated subprocess execution and
   explicit job status artifacts/warnings for long-running structure parsing
 
@@ -71,7 +71,7 @@ Local Storage
 - ruff, mypy
 
 ---
-*Last updated: 2026-05-11*
+*Last updated: 2026-05-17*
 
 
 ## Project Description

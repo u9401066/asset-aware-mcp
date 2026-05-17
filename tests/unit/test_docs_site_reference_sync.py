@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 
 from scripts import build_docs_site
+from src.presentation.tool_surface import BALANCED_TOOLS
 
 ROOT = Path(__file__).resolve().parents[2]
 TOOLS_DIR = ROOT / "src" / "presentation" / "tools"
@@ -28,7 +29,7 @@ def _is_mcp_decorator(decorator: ast.expr, name: str) -> bool:
     )
 
 
-def _tool_names_by_module() -> dict[str, list[str]]:
+def _tool_names_by_module(*, public_only: bool = False) -> dict[str, list[str]]:
     modules: dict[str, list[str]] = {}
     for path in sorted(TOOLS_DIR.glob("*.py")):
         if path.name == "__init__.py":
@@ -43,6 +44,8 @@ def _tool_names_by_module() -> dict[str, list[str]]:
                 for decorator in node.decorator_list
             )
         ]
+        if public_only:
+            names = [name for name in names if name in BALANCED_TOOLS]
         if names:
             modules[path.name] = names
     return modules
@@ -139,7 +142,7 @@ def test_mcp_tools_reference_matches_registered_tools() -> None:
         for module, body in sections.items()
     }
 
-    assert documented == _tool_names_by_module()
+    assert documented == _tool_names_by_module(public_only=True)
 
 
 def test_mcp_resources_reference_matches_registered_resources() -> None:
@@ -240,11 +243,12 @@ def test_docs_site_payload_exposes_current_endpoint_stats() -> None:
 
     assert stats == {
         "version": _project_version(),
-        "tools": sum(len(names) for names in _tool_names_by_module().values()),
+        "tools": len(BALANCED_TOOLS),
         "resources": sum(
             len(resources) for resources in _resource_uris_by_module().values()
         ),
-        "endpoints": 75,
+        "endpoints": len(BALANCED_TOOLS)
+        + sum(len(resources) for resources in _resource_uris_by_module().values()),
     }
 
     content_js = (ROOT / "docs" / "site-content.js").read_text(encoding="utf-8")
@@ -280,13 +284,13 @@ def test_docs_shell_uses_current_metrics_and_has_no_known_text_corruption() -> N
     index_html = (ROOT / "docs" / "index.html").read_text(encoding="utf-8")
     site_js = (ROOT / "docs" / "site.js").read_text(encoding="utf-8")
     site_css = (ROOT / "docs" / "site.css").read_text(encoding="utf-8")
-    assert '<dt id="tool-metric-value">62</dt>' in index_html
-    assert '<dt id="endpoint-metric-value">75</dt>' in index_html
+    assert '<dt id="tool-metric-value">30</dt>' in index_html
+    assert '<dt id="endpoint-metric-value">43</dt>' in index_html
     assert '<a class="skip-link" href="#doc-content">' in index_html
     assert 'id="nav-close"' in index_html
     assert 'id="sidebar-backdrop"' in index_html
     assert "<noscript>" in index_html
-    assert "20260515-docs-chapters" in index_html
+    assert "20260517-v070-release" in index_html
     assert "KG / RAG" in index_html
     assert f'version: "{version}"' in site_js
     assert "const markdownRenderer = window.marked" in site_js
@@ -334,10 +338,10 @@ def test_llm_wiki_guide_has_examples_and_guardrails() -> None:
         "document_asset(",
         "evidence(",
         'op="health"',
-        "consult_knowledge_graph(",
+        "knowledge(",
         "[[evidence/trial-2026-primary-outcome]]",
         "wiki_root",
-        "KG 是 discovery layer",
+        "KG 是 discovery",
     ]:
         assert required in guide
 
@@ -405,9 +409,9 @@ def test_workflow_chapters_do_not_document_nonexistent_public_ops() -> None:
     pdf_workflow = (WIKI_DIR / "PDF-Document-Workflow.md").read_text(encoding="utf-8")
     consolidation = (WIKI_DIR / "MCP-Tool-Consolidation.md").read_text(encoding="utf-8")
 
-    assert 'document(op="ocr")' not in workflow
-    assert 'section(op="tree")' not in workflow
-    assert "ocr_pdf_document" in workflow
+    assert 'document(op="ocr")' in workflow
+    assert 'section(op="tree")' in workflow
+    assert "ocr_pdf_document" not in workflow
     assert "公開工具沒有 `require_marker` 參數" in getting_started
     assert "公開工具沒有 `require_marker` 參數" in pdf_workflow
     assert "A2T create/delete/list/preview/resume/render/schema ops" in consolidation

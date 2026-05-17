@@ -12,11 +12,11 @@ PDF pipeline 將原始 PDF 轉成可檢索、可視覺化、可引用的文件 a
 
 主要工具：
 
-- `ingest_documents(...)`
-- `document(op="ingest", ...)`
+- `document(op="auto", file_paths=[...])`
+- `document(op="ingest", ...)` or `ingest_documents(...)` when a shortcut is preferred
 - `parse_pdf_structure(...)`，Marker 專用 high-precision parse job
 
-預設後端是 PyMuPDF。`0.6.35` 的 Marker extra 仍暫時為空，因為 `marker-pdf` 對 Pillow 的舊版 pin 會和安全 runtime 衝突。`parse_pdf_structure(...)` 是 Marker-required 入口；security hold 或 backend unavailable 會在建立 job 前回傳明確診斷。一般 `ingest_documents(use_marker=true)` 只代表偏好 Marker，公開工具沒有 `require_marker` 參數，Marker 不可用時會走 PyMuPDF 安全流程。
+預設後端是 PyMuPDF。`0.7.0` 的 Marker extra 仍暫時為空，因為 `marker-pdf` 對 Pillow 的舊版 pin 會和安全 runtime 衝突。`parse_pdf_structure(...)` 是 Marker-required 入口；security hold 或 backend unavailable 會在建立 job 前回傳明確診斷。一般 `ingest_documents(use_marker=true)` 只代表偏好 Marker，公開工具沒有 `require_marker` 參數，Marker 不可用時會走 PyMuPDF 安全流程。
 
 ## 產物
 
@@ -27,6 +27,11 @@ PDF pipeline 將原始 PDF 轉成可檢索、可視覺化、可引用的文件 a
 | `{doc_id}_manifest.json` | 文件 identity、pages、figures、tables、sections、metadata |
 | `blocks.json` | block-level layout/text/source backend metadata |
 | `segmentation.json` | reading order、line range、char/byte range、hash、source revision |
+| `ai_safety_report.json` | artifact-only PDF AI safety audit for tiny/white/off-page/prompt-injection text findings |
+| `native_structure.json` | lightweight native PDF structure report: metadata, outline, page geometry, links/forms, tag-tree signals |
+| `segmentation_coverage.json` | coverage audit for bbox, line/char/byte spans, asset links, reading-order gaps, and skipped-large-artifact status |
+| `accessibility_report.json` | accessibility/readability readiness report for captions, bbox/caption coverage, sectioning, line spans, asset links, and reading-order gaps |
+| `section_pointer_index.jsonl` | section-level structural pointer index with breadcrumbs, locators, hashes, assets, and evidence-span IDs |
 | `citation_index.jsonl` | citation-ready evidence spans |
 | `citation_index.status.json` | citation index build/rebuild status |
 | `images/` | 圖片與 page/region assets |
@@ -56,6 +61,23 @@ OCR 後的 PDF 可再進入正常 ingest。
 - `char_range` / `byte_range`：精準引用。
 - `source_revision` / `locator_version`：locator schema 版本。
 - `text_sha256` / `locator_source_sha256`：內容與 locator source hash。
+
+## Safety, Structure, And Coverage Audits
+
+OpenDataloader-PDF inspired audit artifacts are generated as document artifacts without adding new public MCP tools and without mutating extracted text. Ingest creates them best-effort after core citation artifacts are saved; failures become ingest warnings. The `document(op=...)` audit operations can rebuild them or write a non-reserved report path.
+
+- `document(op="auto", file_paths=[...])` chooses the normal ingest path. `document(op="auto", doc_id="...")` chooses the readiness path for an already-ingested document.
+- `document(op="prepare_ai", doc_id="...")` reports whether the document has markdown, blocks, segmentation, citation index, safety audit, native structure, coverage, accessibility, and section pointer artifacts. Use `output_format="json"` to get the v2 readiness contract directly: `status`, `blockers`, `warnings`, `capabilities`, `artifacts`, and `next_actions`.
+- `document(op="audit", doc_id="...")` runs safety, native structure, coverage, and accessibility diagnostics together without adding a public MCP tool. It skips current artifacts by default; pass `refresh=true` to rebuild all four reports.
+- `document(op="safety_audit", doc_id="...")` writes `ai_safety_report.json`. It flags suspicious PDF text spans such as tiny text, white or near-white text, off-page text, zero-area text, and prompt-injection-style instructions. Findings include page, bbox, severity, reason, preview, and span hash.
+- `document(op="native_structure", doc_id="...")` writes `native_structure.json`. It reports PyMuPDF-visible metadata, outline, page geometry, link/form counts, catalog keys, and best-effort tag-tree/language signals. It is not a PDF/UA compliance claim.
+- `document(op="coverage", doc_id="...")` writes `segmentation_coverage.json`. It summarizes bbox coverage, line/char/byte span coverage, asset link coverage, reading-order gaps, and whether large block artifacts were skipped by the safe loading cap.
+- `document(op="accessibility", doc_id="...")` writes `accessibility_report.json`. It is a conservative accessibility/readability readiness report, not a PDF/UA certification.
+- `document(op="pointer_index", doc_id="...")` writes `section_pointer_index.jsonl` for deterministic structural retrieval.
+- `document(op="structural_retrieve", doc_id="...", query="...")` searches existing valid section proxies and materializes bounded section previews while preserving locator/hash provenance. Use `document(op="pointer_index")` or `refresh=true` when the index is missing or stale.
+- `document(op="compare", doc_id="...", doc_b_id="...", criteria="...")` writes a deterministic structural comparison bundle for review.
+
+These reports are artifact-only diagnostics. They do not remove source content, loosen citation locator integrity, or change `segmentation.json` / `citation_index.jsonl` semantics. Readiness and job-status artifact discovery are read-only, so checking a job or document state does not create document directories. Completed ingest jobs include the audit artifacts when present and point the agent to `document(op="prepare_ai", doc_id="...")` for the next step.
 
 ## Layout Visualization
 

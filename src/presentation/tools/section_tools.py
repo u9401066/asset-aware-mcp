@@ -11,11 +11,68 @@ Section Tools - Section 動態層級導航 MCP 工具
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from src.presentation.dependencies import asset_service, section_service
 from src.presentation.mcp_app import mcp
 from src.presentation.response_limits import format_limited_text_response
+
+
+@mcp.tool()
+async def section(
+    op: str,
+    doc_id: str,
+    path: str = "",
+    section_id: str = "",
+    query: str = "",
+    max_depth: int | None = None,
+    format: Literal["tree", "flat", "json"] = "tree",
+    include_children: bool = True,
+    block_types: list[str] | None = None,
+    limit: int | None = None,
+    fuzzy: bool = True,
+    max_chars: int | None = None,
+) -> Any:
+    """Consolidated section navigation entrypoint."""
+    operation = op.strip().lower()
+    if operation in {"tree", "list"}:
+        return await list_section_tree(
+            doc_id=doc_id,
+            max_depth=max_depth,
+            format=format,
+        )
+    if operation == "detail":
+        return await get_section_detail(
+            doc_id=doc_id,
+            path=path,
+            max_chars=max_chars,
+        )
+    if operation in {"blocks", "list_blocks"}:
+        return await get_section_blocks(
+            doc_id=doc_id,
+            path=path,
+            include_children=include_children,
+            block_types=block_types,
+            limit=limit,
+        )
+    if operation == "search":
+        return await search_sections(
+            doc_id=doc_id,
+            query=query,
+            fuzzy=fuzzy,
+            max_chars=max_chars,
+        )
+    if operation == "content":
+        return await get_section_content(
+            doc_id=doc_id,
+            section_id=section_id,
+            max_chars=max_chars,
+        )
+    return {
+        "success": False,
+        "error": f"Unknown section op: {op}",
+        "supported_ops": ["blocks", "content", "detail", "search", "tree"],
+    }
 
 
 @mcp.tool()

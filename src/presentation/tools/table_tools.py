@@ -353,9 +353,11 @@ async def table_manage(
     table_id: str = "",
     # preview
     limit: int = 10,
+    offset: int = 0,
     # render
     format: Literal["excel", "markdown", "html"] = "excel",
     filename: str = "output",
+    artifact_only: bool = False,
     # add_column
     column_name: str = "",
     column_type: str = "text",
@@ -414,6 +416,17 @@ async def table_manage(
             return _table_list()
         elif operation == "preview":
             effective_limit = max(1, min(limit, 100))
+            if offset > 0:
+                payload = table_service.query_rows(
+                    table_id,
+                    offset=offset,
+                    limit=effective_limit,
+                )
+                return _limited_table_response(
+                    f"Table Preview: {table_id}",
+                    _query_rows_markdown(payload),
+                    "use offset/limit for another page or render artifact_only",
+                )
             return format_limited_text_response(
                 title=f"Table Preview: {table_id}",
                 text=table_service.preview_table(table_id, effective_limit),
@@ -423,7 +436,13 @@ async def table_manage(
         elif operation == "resume":
             return _table_resume(table_id)
         elif operation == "render":
-            return await _table_render(table_id, format, filename, ctx=ctx)
+            return await _table_render(
+                table_id,
+                format,
+                filename,
+                artifact_only=artifact_only,
+                ctx=ctx,
+            )
         elif operation == "add_column":
             return _schema_add_column(
                 table_id, column_name, column_type, required, default_value, enum_values
@@ -470,16 +489,22 @@ def _table_list() -> str:
         return "No tables found. Use `table_manage('create', ...)` to start."
 
     lines = ["# 📊 Tables\n"]
-    lines.append("| ID | Title | Intent | Rows | Cites | Created |")
-    lines.append("|----|-------|--------|------|-------|---------|")
+    lines.append("| ID | Title | Intent | Rows | Cites | Status | Created |")
+    lines.append("|----|-------|--------|------|-------|--------|---------|")
     visible_tables = tables[:TABLE_LIST_MAX_ROWS]
     for t in visible_tables:
         lines.append(
             f"| `{escape_table_cell(t['id'])}` | {escape_table_cell(t['title'])} | "
             f"{escape_table_cell(t['intent'])} | {escape_table_cell(t['rows'])} | "
             f"{escape_table_cell(t['citations'])} | "
+            f"{escape_table_cell(t.get('load_status', 'loaded'))} | "
             f"{escape_table_cell(t['created_at'])} |"
         )
+        if t.get("load_status") == "skipped_large":
+            lines.append(
+                f"  - skipped_large: `{t.get('artifact_path', '')}` "
+                f"({t.get('artifact_bytes', 0)} bytes)"
+            )
     if len(tables) > len(visible_tables):
         lines.append(
             f"\n_Showing first {len(visible_tables)} of {len(tables)} tables._"
@@ -520,21 +545,35 @@ async def _table_render(
     table_id: str,
     fmt: Literal["excel", "markdown", "html"],
     filename: str,
+    *,
+    artifact_only: bool = False,
     ctx: Context | None = None,
 ) -> str:
     if not table_id:
         return "❌ `table_id` is required."
     await log_message(ctx, "info", f"table_render start: {table_id} format={fmt}")
     await report_progress(ctx, 15, message=f"Rendering table {table_id}")
-    result = await table_service.render_table(table_id, fmt, filename)
+    result = await table_service.render_table(table_id, fmt, filename, artifact_only)
     await report_progress(ctx, 100, message=f"Rendered table {table_id}")
     await log_message(ctx, "info", f"table_render complete: {table_id}")
     if result.get("file_path"):
-        return (
-            f"✅ Rendered!\n"
-            f"- **Format:** {result['format']}\n"
-            f"- **Path:** `{result['file_path']}`\n"
-            f"- **Rows:** {result['row_count']}"
+        lines = [
+            "✅ Rendered!",
+            f"- **Artifact:** Table Render `{table_id}`",
+            f"- **Format:** {result['format']}",
+            f"- **Path:** `{result['file_path']}`",
+            f"- **Rows:** {result['row_count']}",
+        ]
+        if result.get("sha256"):
+            lines.append(f"- **SHA-256:** `{result['sha256']}`")
+        if result.get("artifact_only"):
+            lines.append("- **Artifact Only:** yes")
+        if result.get("preview"):
+            lines.extend(["", "## Preview", str(result["preview"])])
+        return _limited_table_response(
+            f"Table Render Artifact: {table_id}",
+            "\n".join(lines),
+            "open the artifact path for the full rendered table",
         )
     content = format_limited_text_response(
         title=f"Table Render: {table_id}",
@@ -595,6 +634,7 @@ def _schema_rename_column(table_id: str, old_name: str, new_name: str) -> str:
 async def table_data(
     operation: Literal[
         "add_rows",
+        "query_rows",
         "get_row",
         "update_row",
         "delete_row",
@@ -608,6 +648,13 @@ async def table_data(
     row: dict | None = None,
     # row operations
     row_index: int = -1,
+    row_id: str = "",
+    offset: int = 0,
+    limit: int = 50,
+    search: str = "",
+    filters: dict | None = None,
+    include_coverage: bool = False,
+    selected_columns: list[str] | None = None,
     # cell operations
     column_name: str = "",
     value: str | None = None,
@@ -641,18 +688,28 @@ async def table_data(
     try:
         if operation == "add_rows":
             return _data_add_rows(table_id, rows)
+        elif operation == "query_rows":
+            return _data_query_rows(
+                table_id,
+                offset=offset,
+                limit=limit,
+                search=search,
+                filters=filters,
+                columns=selected_columns,
+                include_coverage=include_coverage,
+            )
         elif operation == "get_row":
-            return _data_get_row(table_id, row_index)
+            return _data_get_row(table_id, row_index, row_id)
         elif operation == "update_row":
-            return _data_update_row(table_id, row_index, row)
+            return _data_update_row(table_id, row_index, row, row_id)
         elif operation == "delete_row":
-            return _data_delete_row(table_id, row_index)
+            return _data_delete_row(table_id, row_index, row_id)
         elif operation == "get_cell":
-            return _data_get_cell(table_id, row_index, column_name)
+            return _data_get_cell(table_id, row_index, column_name, row_id)
         elif operation == "update_cell":
-            return _data_update_cell(table_id, row_index, column_name, value)
+            return _data_update_cell(table_id, row_index, column_name, value, row_id)
         elif operation == "clear_cell":
-            return _data_clear_cell(table_id, row_index, column_name)
+            return _data_clear_cell(table_id, row_index, column_name, row_id)
         else:
             return f"❌ Unknown operation: {operation}"
     except ValueError as e:
@@ -672,12 +729,51 @@ def _data_add_rows(table_id: str, rows: list[dict] | None) -> str:
     return f"❌ Failed. Errors: {result.get('errors')}"
 
 
-def _data_get_row(table_id: str, row_index: int) -> str:
-    if row_index < 0:
-        return "❌ `row_index` is required (0-based)."
-    result = table_service.get_row(table_id, row_index)
+def _data_query_rows(
+    table_id: str,
+    *,
+    offset: int,
+    limit: int,
+    search: str,
+    filters: dict | None,
+    columns: list[str] | None,
+    include_coverage: bool,
+) -> str:
+    payload = table_service.query_rows(
+        table_id,
+        offset=offset,
+        limit=limit,
+        search=search,
+        filters=filters,
+        columns=columns,
+        include_coverage=include_coverage,
+    )
+    return _limited_table_response(
+        f"Table Rows: {table_id}",
+        _query_rows_markdown(payload),
+        "use offset/limit/search/filters for focused large-table paging",
+    )
+
+
+def _query_rows_markdown(payload: dict[str, Any]) -> str:
     lines = [
-        f"## Row {result['row_index']}",
+        f"# Table Rows: `{payload['table_id']}`",
+        "",
+        f"**Rows:** {payload['row_count']} | **Matched:** {payload['matched_count']}",
+        f"**Offset:** {payload['page']['offset']} | **Limit:** {payload['page']['limit']}",
+    ]
+    if payload["page"].get("next_offset") is not None:
+        lines.append(f"**Next Offset:** {payload['page']['next_offset']}")
+    lines.extend(["", "```json", _bounded_json_dumps(payload["rows"]), "```"])
+    return "\n".join(lines)
+
+
+def _data_get_row(table_id: str, row_index: int, row_id: str = "") -> str:
+    if row_index < 0 and not row_id:
+        return "❌ `row_index` is required (0-based)."
+    result = table_service.get_row(table_id, row_index, row_id=row_id)
+    lines = [
+        f"## Row {result['row_index']} (`{result.get('row_id', '')}`)",
         "```json",
         _bounded_json_dumps(result["data"]),
         "```",
@@ -695,28 +791,38 @@ def _data_get_row(table_id: str, row_index: int) -> str:
     )
 
 
-def _data_update_row(table_id: str, row_index: int, row: dict | None) -> str:
-    if row_index < 0 or not row:
+def _data_update_row(
+    table_id: str,
+    row_index: int,
+    row: dict | None,
+    row_id: str = "",
+) -> str:
+    if (row_index < 0 and not row_id) or not row:
         return "❌ `row_index` and `row` are required."
-    result = table_service.update_row(table_id, row_index, row)
+    result = table_service.update_row(table_id, row_index, row, row_id=row_id)
     if result["success"]:
         preview = table_service.preview_table(table_id)
         return f"✅ Row {row_index} updated.\n\n{preview}"
     return f"❌ {result.get('errors')}"
 
 
-def _data_delete_row(table_id: str, row_index: int) -> str:
-    if row_index < 0:
+def _data_delete_row(table_id: str, row_index: int, row_id: str = "") -> str:
+    if row_index < 0 and not row_id:
         return "❌ `row_index` is required (0-based)."
-    result = table_service.delete_row(table_id, row_index)
+    result = table_service.delete_row(table_id, row_index, row_id=row_id)
     preview = table_service.preview_table(table_id)
     return f"✅ Row {row_index} deleted. Total: {result['total_rows']}.\n\n{preview}"
 
 
-def _data_get_cell(table_id: str, row_index: int, column_name: str) -> str:
-    if row_index < 0 or not column_name:
+def _data_get_cell(
+    table_id: str,
+    row_index: int,
+    column_name: str,
+    row_id: str = "",
+) -> str:
+    if (row_index < 0 and not row_id) or not column_name:
         return "❌ `row_index` and `column_name` are required."
-    result = table_service.get_cell(table_id, row_index, column_name)
+    result = table_service.get_cell(table_id, row_index, column_name, row_id=row_id)
     lines = [
         f"**Cell [{row_index}:{column_name}]:** `{_inline_preview(result['value'])}`",
     ]
@@ -734,11 +840,21 @@ def _data_get_cell(table_id: str, row_index: int, column_name: str) -> str:
 
 
 def _data_update_cell(
-    table_id: str, row_index: int, column_name: str, value: Any
+    table_id: str,
+    row_index: int,
+    column_name: str,
+    value: Any,
+    row_id: str = "",
 ) -> str:
-    if row_index < 0 or not column_name:
+    if (row_index < 0 and not row_id) or not column_name:
         return "❌ `row_index` and `column_name` are required."
-    result = table_service.update_cell(table_id, row_index, column_name, value)
+    result = table_service.update_cell(
+        table_id,
+        row_index,
+        column_name,
+        value,
+        row_id=row_id,
+    )
     result["old_value"] = _inline_preview(result.get("old_value"))
     result["new_value"] = _inline_preview(result.get("new_value"))
     value_str = str(value) if value is not None else ""
@@ -760,10 +876,15 @@ def _data_update_cell(
     )
 
 
-def _data_clear_cell(table_id: str, row_index: int, column_name: str) -> str:
-    if row_index < 0 or not column_name:
+def _data_clear_cell(
+    table_id: str,
+    row_index: int,
+    column_name: str,
+    row_id: str = "",
+) -> str:
+    if (row_index < 0 and not row_id) or not column_name:
         return "❌ `row_index` and `column_name` are required."
-    result = table_service.clear_cell(table_id, row_index, column_name)
+    result = table_service.clear_cell(table_id, row_index, column_name, row_id=row_id)
     result["old_value"] = _inline_preview(result.get("old_value"))
     return f"✅ Cell [{row_index}:{column_name}] cleared. Old value: `{result['old_value']}`"
 
@@ -775,9 +896,12 @@ def _data_clear_cell(table_id: str, row_index: int, column_name: str) -> str:
 
 @mcp.tool()
 async def table_cite(
-    operation: Literal["add", "get", "remove", "cell_history"],
+    operation: Literal["add", "get", "remove", "cell_history", "coverage"],
     table_id: str,
     row_index: int = -1,
+    row_id: str = "",
+    offset: int = 0,
+    limit: int = 100,
     column_name: str = "",
     # add
     refs: list[dict] | None = None,
@@ -822,13 +946,29 @@ async def table_cite(
     """
     try:
         if operation == "add":
-            return _cite_add(table_id, row_index, column_name, refs, confidence, notes)
+            return _cite_add(
+                table_id,
+                row_index,
+                column_name,
+                refs,
+                confidence,
+                notes,
+                row_id=row_id,
+            )
         elif operation == "get":
-            return _cite_get(table_id, row_index, column_name)
+            return _cite_get(table_id, row_index, column_name, row_id=row_id)
         elif operation == "remove":
-            return _cite_remove(table_id, row_index, column_name, ref_index)
+            return _cite_remove(
+                table_id,
+                row_index,
+                column_name,
+                ref_index,
+                row_id=row_id,
+            )
         elif operation == "cell_history":
-            return _cite_cell_history(table_id, row_index, column_name)
+            return _cite_cell_history(table_id, row_index, column_name, row_id=row_id)
+        elif operation == "coverage":
+            return _cite_coverage(table_id, offset=offset, limit=limit)
         else:
             return f"❌ Unknown operation: {operation}"
     except ValueError as e:
@@ -842,11 +982,18 @@ def _cite_add(
     refs: list[dict] | None,
     confidence: float | None,
     notes: str,
+    row_id: str = "",
 ) -> str:
-    if row_index < 0 or not column_name or not refs:
+    if (row_index < 0 and not row_id) or not column_name or not refs:
         return "❌ `row_index`, `column_name`, and `refs` are required."
     result = table_service.add_citation(
-        table_id, row_index, column_name, refs, confidence, notes
+        table_id,
+        row_index,
+        column_name,
+        refs,
+        confidence,
+        notes,
+        row_id=row_id,
     )
     return f"✅ Citation added to {result['cell']}. Total refs: {result['total_refs']}"
 
@@ -855,10 +1002,11 @@ def _cite_get(
     table_id: str,
     row_index: int,
     column_name: str,
+    row_id: str = "",
 ) -> str:
     ri = row_index if row_index >= 0 else None
     cn = column_name if column_name else None
-    result = table_service.get_citations(table_id, ri, cn)
+    result = table_service.get_citations(table_id, ri, cn, row_id=row_id)
 
     if "citation" in result:
         # Single cell
@@ -929,23 +1077,51 @@ def _cite_remove(
     row_index: int,
     column_name: str,
     ref_index: int | None,
+    row_id: str = "",
 ) -> str:
-    if row_index < 0 or not column_name:
+    if (row_index < 0 and not row_id) or not column_name:
         return "❌ `row_index` and `column_name` are required."
-    result = table_service.remove_citation(table_id, row_index, column_name, ref_index)
+    result = table_service.remove_citation(
+        table_id,
+        row_index,
+        column_name,
+        ref_index,
+        row_id=row_id,
+    )
     if result["success"]:
         return f"✅ Citation removed from [{row_index}:{column_name}]."
     return f"❌ {result.get('error', 'Unknown error')}"
+
+
+def _cite_coverage(table_id: str, *, offset: int = 0, limit: int = 100) -> str:
+    if not table_id:
+        return "??`table_id` is required."
+    payload = table_service.citation_coverage(
+        table_id,
+        offset=offset,
+        limit=limit,
+    )
+    return _limited_table_response(
+        f"Table Citation Coverage: {table_id}",
+        "```json\n" + _bounded_json_dumps(payload) + "\n```",
+        "add citations to low-coverage rows or query rows with include_coverage=true",
+    )
 
 
 def _cite_cell_history(
     table_id: str,
     row_index: int,
     column_name: str,
+    row_id: str = "",
 ) -> str:
-    if row_index < 0 or not column_name:
+    if (row_index < 0 and not row_id) or not column_name:
         return "❌ `row_index` and `column_name` are required."
-    history = table_service.get_cell_history(table_id, row_index, column_name)
+    history = table_service.get_cell_history(
+        table_id,
+        row_index,
+        column_name,
+        row_id=row_id,
+    )
     if not history:
         return f"No history for [{row_index}:{column_name}]."
     lines = [f"## Cell History [{row_index}:{column_name}]\n"]
@@ -968,7 +1144,7 @@ def _cite_cell_history(
 @mcp.tool()
 async def table_history(
     operation: Literal["changes", "tokens"],
-    table_id: str,
+    table_id: str = "",
     # changes
     limit: int = 20,
     # tokens
@@ -1129,6 +1305,7 @@ async def table_draft(
                 intent,
                 proposed_columns,
                 extraction_plan,
+                source_doc_ids,
                 source_sections,
                 notes,
             )
@@ -1182,6 +1359,7 @@ def _draft_update(
     intent: Literal["comparison", "citation", "summary"] | None,
     proposed_columns: list[dict] | None,
     extraction_plan: list[str] | None,
+    source_doc_ids: list[str] | None,
     source_sections: list[str] | None,
     notes: str,
 ) -> str:
@@ -1196,6 +1374,8 @@ def _draft_update(
         updates["proposed_columns"] = proposed_columns
     if extraction_plan is not None:
         updates["extraction_plan"] = extraction_plan
+    if source_doc_ids is not None:
+        updates["source_doc_ids"] = source_doc_ids
     if source_sections is not None:
         updates["source_sections"] = source_sections
     if notes:

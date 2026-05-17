@@ -26,7 +26,7 @@ GitHub Pages 站台的資訊架構、頁面節奏、完整性規則與上線檢�
 5. `Reference`：Tool Chooser、完整 MCP tools/resources。
 6. `Maintainers`：架構、git harness hygiene、developer guide、tool consolidation、code map、docs IA/UX spec。
 
-這個排序刻意把「任務」、「證據」、「維運」放在「完整 API 表」之前，因為網站主要給人讀，不是讓人從 62 個 tool name 開始猜。LLM wiki 是 presentation/synthesis layer，應排在 evidence 之後、KG discovery 之前；KG 不應被描述成唯一引用來源。
+這個排序刻意把「任務」、「證據」、「維運」放在「完整 API 表」之前，因為網站主要給人讀，不是讓人從 balanced 30 個 tool name 開始猜。LLM wiki 是 presentation/synthesis layer，應排在 evidence 之後、KG discovery 之前；KG 不應被描述成唯一引用來源。
 
 ## 頁面節奏
 
@@ -67,7 +67,7 @@ Reference 頁可以 dense；workflow 頁不要一開始就把所有參數攤開�
 - 每條主要人類任務都有 workflow 頁。
 - 每個 workflow 都能連回 Tool Chooser、tool/resource reference、code map 或 release check。
 - Citation、LLM wiki、KG 的分工必須明確：verified evidence 先行，wiki 負責呈現，KG 只做 opt-in discovery。
-- tool/resource 數字由 `scripts/build_docs_site.py` 解析 `src/presentation/tools/**` 與 `src/presentation/resources/**` 的註冊 decorator 產生。
+- public tool 數字由 `src/presentation/tool_surface.py` 的 balanced surface 產生；resource 數字由 `scripts/build_docs_site.py` 解析 `src/presentation/resources/**` 的註冊 decorator 產生。
 - 網站 payload 由 `scripts/build_docs_site.py` 從 `docs/wiki/**` 生成，CI 用 `--check` 防止漂移。
 
 ## 品質檢查

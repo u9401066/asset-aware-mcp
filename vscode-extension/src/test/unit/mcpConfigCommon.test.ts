@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { buildAssetAwareEnv, buildAssetAwareLaunchSpec } from '../../mcpConfigCommon';
+import { RUNTIME_PYTHON_VERSION_KEY } from '../../uv';
 import { __resetConfiguration, __setConfigurationValue } from './mock-vscode';
 
 describe('mcpConfigCommon', () => {
@@ -178,5 +179,33 @@ describe('mcpConfigCommon', () => {
         assert.strictEqual(launch.env.ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS, '12000');
         assert.strictEqual(launch.env.ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS, '750000');
         assert.strictEqual(launch.env.ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES, '20971520');
+    });
+
+    it('uses the prepared runtime Python version in package launch specs', () => {
+        const context = {
+            globalStorageUri: { fsPath: path.join(tempDir, 'global') },
+            extension: { packageJSON: { version: '0.6.19' } },
+            globalState: { get: (key: string) => key === RUNTIME_PYTHON_VERSION_KEY ? '3.10' : undefined },
+        } as any;
+
+        const launch = buildAssetAwareLaunchSpec(context, 'uv', { workspaceRoot: tempDir });
+
+        assert.deepStrictEqual(launch.args.slice(0, 4), ['tool', 'run', '--python', '3.10']);
+    });
+
+    it('uses the prepared runtime Python version in local-source launch specs', () => {
+        const sourceRoot = path.join(tempDir, 'asset-aware-mcp');
+        fs.mkdirSync(path.join(sourceRoot, 'src'), { recursive: true });
+        fs.writeFileSync(path.join(sourceRoot, 'src', 'server.py'), 'def main():\n    pass\n');
+        fs.writeFileSync(path.join(sourceRoot, 'pyproject.toml'), '[project]\nname = "asset-aware-mcp"\n');
+        (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];
+        const context = {
+            globalStorageUri: { fsPath: path.join(tempDir, 'global') },
+            globalState: { get: (key: string) => key === RUNTIME_PYTHON_VERSION_KEY ? '3.10' : undefined },
+        } as any;
+
+        const launch = buildAssetAwareLaunchSpec(context, 'uv', { workspaceRoot: tempDir });
+
+        assert.deepStrictEqual(launch.args.slice(0, 5), ['run', '--python', '3.10', '--directory', sourceRoot]);
     });
 });

@@ -1,5 +1,61 @@
 # Active Context
 
+## 2026-05-17 - v0.7.0 structural readiness and A2T production hardening
+
+- Release scope: publish `0.7.0` as the larger production-hardening release
+  after multi-subagent review of A2T, document readiness, structural retrieval,
+  install/runtime portability, and release packaging.
+- Document facade scope: `document(op="safety_audit")`,
+  `document(op="native_structure")`, `document(op="coverage")`, and
+  `document(op="accessibility")` now stay inside the existing facade surface;
+  `document(op="pointer_index")`, `document(op="structural_retrieve")`, and
+  `document(op="compare")` add Proxy-Pointer-inspired retrieval/comparison
+  without increasing public tool count.
+- Readiness scope: `DocumentReadinessService` is the single read-only contract
+  for `prepare_ai`, including status/blockers/warnings/capabilities/artifacts,
+  `missing_audits`, `invalid_audits`, `audit_artifacts`, and next actions.
+  Cached audit artifacts with `skipped`/`unavailable` status or stale source
+  revision/locator hashes are blockers and are rebuilt by `document(op="audit")`
+  unless explicitly refreshed globally.
+- A2T scope: stable row IDs, row provenance, row-id citation targeting, large
+  table startup skip metadata, `query_rows` paging/search/filter/coverage,
+  `table_cite(op="coverage")`, and artifact-only render hashes/previews are in
+  the 0.7.0 surface.
+- Verification so far: focused 0.7.0 document/pointer/A2T regression suite
+  passed (`171 passed`), focused Ruff passed, and mypy passed on the touched
+  document readiness/pointer/tool files. Full release gates, Docker/OOM smoke,
+  VSIX package, push, and annotated tag remain pending.
+
+## 2026-05-17 - v0.6.36 balanced tool surface and runtime portability release prep
+
+- Release scope: publish the balanced MCP tool surface as the default runtime
+  contract: 30 public tools for Cline/Codex/Copilot, compact 17-facade mode for
+  strict allow-lists, and legacy 63-tool compatibility for older direct-tool
+  clients.
+- Runtime/install scope: VSIX prepare/launch paths now use version-pinned
+  `uv tool run`, quote paths safely for terminals, preserve workspace-scoped
+  `DATA_DIR`/`UV_CACHE_DIR`, and try Python 3.11 before Python 3.10 so older
+  Windows/macOS machines have a fallback.
+- A2T scope: table service behavior is tightened around cell validation,
+  duplicate column renames, citation cleanup, persisted draft timestamps, and
+  `table_history` shortcut ergonomics. Follow-up product design remains stable
+  row IDs, large-table paging/chunking, artifact-only mode, richer provenance,
+  and row search/filter/coverage tools.
+- Document readiness hardening scope: `DocumentReadinessService` now owns the
+  AI-readiness artifact registry and v2 payload contract. `document(op="prepare_ai",
+  output_format="json")` returns `status` / `blockers` / `warnings` /
+  `capabilities` / `artifacts` / `next_actions`; `document(op="audit")` skips
+  current safety/native/coverage artifacts unless `refresh=true`; job-status
+  artifact discovery is read-only and does not create document directories.
+- Documentation/release scope: README, README.zh-TW, VSIX README, wiki source,
+  generated docs site payload, count scripts, assistant harness assets,
+  CHANGELOG, and Memory Bank are being aligned to `0.6.36` and the balanced
+  30-tool / 13-resource / 43-public-endpoint story before segmented git
+  commits, push, and tag.
+- Verification target before tag: Python lint/format/mypy/full pytest, docs-site
+  check, runtime surface counts, VSIX `npm run test:ci`, asset sync check,
+  package/build smoke, artifact audit, and git diff hygiene.
+
 ## 2026-05-16 - v0.6.35 emergency OOM hotfix release prep
 
 - Emergency scope: Cline/stdio OOM prevention for simple document extraction,
@@ -184,11 +240,15 @@
 
 ## Current Goals
 
-- Complete the `0.6.29` DFM/citation-ready release with docs/wiki/site/MEM alignment, full local gates, exact-path segmented commits, push, GitHub Pages verification, and annotated tag publication while leaving real test data and generated artifacts uncommitted.
+- Complete the `0.7.0` production-hardening release with balanced 30-tool MCP
+  surface, document facade ops, readiness/pointer/A2T hardening,
+  docs/wiki/site/MEM/VSIX alignment, full local gates, exact-path staging,
+  push, and annotated `v0.7.0` tag publication while leaving generated outputs
+  uncommitted.
 
 ## 🎯 當前焦點
 
-- **版本真相為 0.6.29**：本次 release 是 `v0.6.28` 之後的 DFM real-corpus / citation-ready Foam promotion patch，不重用既有 tag。
+- **版本真相為 0.7.0**：本次 release 是 0.6.x 之後的大型 production-hardening refactor，不重用既有 tag。
 - **DFM 主線結論**：支援範圍內可正確進行 DFM 拆解與重組；文件與 release notes 必須保留 `.doc` conversion drift、結構性表格變更、header/footer/footnote locator 測試深度等邊界。
 - **Citation-ready 主線結論**：EvidenceSpan / AssetRef / verify / bundle / Foam / health / claim promotion 已可用；CRAAP 仍是保守 scaffold，不可宣稱已完成 source quality 評分。
 - **Git policy**：只 stage tracked source/docs/test/version changes；`tmp/`、真實 IRB source folder、`dist/`、VSIX artifact、runtime cache、ignored data 皆不可提交。
@@ -292,7 +352,7 @@ src/
 ├── domain/          # 🔵 核心業務邏輯 (+docx_entities, docx_value_objects)
 ├── application/     # 🟢 使用案例 (+docx_service, dfm_table_bridge)
 ├── infrastructure/  # 🟠 外部依賴實作 (+docx_adapter, dfm_parser, dfm_renderer, docx_validator)
-└── presentation/    # 🔴 MCP Server (62 tools in 7 modules, 13 resources)
+└── presentation/    # 🔴 MCP Server (30 balanced public tools, 13 resources; 63 legacy tools)
     ├── tools/
     │   ├── document_tools.py   # ETL + document management (11)
     │   ├── docx_tools.py       # Docx DFM + conversion (16) — core + validator + bridge

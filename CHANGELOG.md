@@ -7,6 +7,82 @@
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-17
+
+### Added
+
+- Added structural document pointer artifacts through `document(op="pointer_index")`,
+  `document(op="structural_retrieve")`, and `document(op="compare")`, with
+  section breadcrumbs, line/char/byte locators, source hashes, asset IDs, and
+  evidence-span provenance.
+- Added `accessibility_report.json` readiness diagnostics inside the existing
+  `document` facade, keeping PDF safety, native structure, coverage, and
+  accessibility audits artifact-only without increasing the public tool count.
+- Added A2T row search/filter/coverage support through `table_data(op="query_rows")`
+  and citation coverage through `table_cite(op="coverage")`.
+
+### Changed
+
+- A2T tables now persist stable row IDs, row provenance, and manifest sidecars,
+  and cell history now follows stable row IDs instead of drifting after row
+  deletion.
+- Large A2T Markdown/HTML renders now use artifact-only streaming writers with
+  file hashes and bounded previews, preventing Cline/stdio OOM from inline
+  full-table strings.
+- Document readiness now exposes a single v2 contract with
+  `status`, `blockers`, `warnings`, `capabilities`, `artifacts`,
+  `missing_audits`, `invalid_audits`, `audit_artifacts`, and `next_actions`,
+  and read-only discovery avoids creating document directories.
+
+### Fixed
+
+- Fixed manifest path trust in readiness and structural retrieval so escaped
+  artifact paths cannot leak outside the canonical document directory.
+- Fixed structural pointer evidence matching so stale or fabricated
+  `citation_index.jsonl` spans are not promoted unless doc/revision/locator
+  identity matches the current segmentation.
+- Fixed cached audit readiness so `skipped` / `unavailable` or stale
+  source-revision/locator artifacts are blockers and are rebuilt by
+  `document(op="audit")` instead of being treated as ready.
+- Fixed skipped-large-table startup UX so skipped tables remain visible with
+  actionable metadata and can be deleted safely.
+- Fixed `row_id` citation lookups so unknown row IDs fail closed instead of
+  falling back to table-level citations.
+
+## [0.6.36] - 2026-05-17
+
+### Added
+
+- Added a runtime MCP tool-surface policy with `balanced` as the default
+  30-tool public surface, `compact` as the 17-facade surface, and
+  `legacy`/`ASSET_AWARE_MCP_ENABLE_LEGACY_TOOLS=true` for full direct-tool
+  compatibility.
+- Added the `section(...)` facade and expanded `document(...)` facade routing
+  for OCR, segmentation export, and layout visualization.
+- Added runtime diagnostics for preferred Python, platform tags, and native
+  dependency import status to help debug older Windows/macOS installation
+  failures.
+
+### Changed
+
+- VS Code runtime preparation now uses version-pinned `uv tool run`, handles
+  Windows paths with spaces safely, and tries Python 3.11 before Python 3.10 so
+  older machines have a fallback path.
+- README, VSIX README, wiki source, GitHub Pages payload, count scripts, and
+  assistant harness assets now report the balanced public surface instead of
+  conflating public tools with the legacy decorator inventory.
+- A2T table operations now validate updated cells directly, prevent duplicate
+  column renames, preserve persisted draft timestamps, clean up empty citation
+  refs, and make `table_history` friendlier for shortcut usage.
+
+### Fixed
+
+- Fixed stale smoke/doc references to retired direct KG and section tools by
+  routing examples through `knowledge(...)`, `section(...)`, and the balanced
+  shortcuts.
+- Fixed LLM wiki harness drift so bundled Cline/Codex assets stay scoped to
+  Asset-Aware document evidence, citation bundles, and optional KG/Foam flows.
+
 ## [0.6.35] - 2026-05-16
 
 ### Added

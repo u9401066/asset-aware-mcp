@@ -227,7 +227,7 @@ async function verifyRuntimeDiagnostics(): Promise<void> {
         extensionRoot,
         runtimeEnv,
     );
-    if (!toolsOutput.includes('list_documents') || !toolsOutput.includes('consult_knowledge_graph')) {
+    if (!toolsOutput.includes('list_documents') || !toolsOutput.includes('knowledge')) {
         throw new Error(`Runtime list-tools did not expose core MCP tools: ${toolsOutput}`);
     }
 }

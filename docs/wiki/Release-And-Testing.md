@@ -67,9 +67,11 @@ stdio handshake as first-class gates, not just import or `--help` checks.
 目前輸出：
 
 ```text
-Total tools:      62 tools in 7 modules
-Total resources:  13 resources in 2 modules
-Grand total:      75 MCP endpoints
+Default public tools:       30 tools (balanced surface)
+Decorator inventory:        63 tools in 7 modules
+Total resources:            13 resources in 2 modules
+Public MCP endpoints:       43 endpoints
+Legacy decorator endpoints: 76 endpoints
 ```
 
 ## Docker Smoke

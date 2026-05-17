@@ -7,8 +7,9 @@ paths:
 
 # Foam LLM Wiki Rules
 
-Use these rules when turning Asset-Aware PDF/DOCX/full-text or project evidence
-into a Foam-compatible Markdown wiki for LLM-assisted reading and synthesis.
+Use these rules when turning Asset-Aware documents, citation bundles, tables,
+figures, sections, DOCX/DFM edits, knowledge exports, or project evidence into
+a Foam-compatible Markdown wiki for LLM-assisted reading and synthesis.
 
 ## Asset Boundaries
 
@@ -16,8 +17,8 @@ into a Foam-compatible Markdown wiki for LLM-assisted reading and synthesis.
 - Detect the wiki root before writing. Prefer an existing Foam workspace layout
   such as `.foam/`, `.vscode/settings.json`, or an existing note graph.
 - Ask before bulk rewrites, renames, deletions, or moving an existing wiki root.
-- Keep raw exports, RIS, JSON, and tool responses out of final notes unless the
-  user explicitly asks for an appendix.
+- Keep raw exports, JSON, and tool responses out of final notes unless the user
+  explicitly asks for an appendix.
 
 ## Foam Rendering Invariants
 
@@ -33,15 +34,18 @@ into a Foam-compatible Markdown wiki for LLM-assisted reading and synthesis.
 
 ## Evidence And Citation Hygiene
 
-- Preserve DOI, PMCID, URL, title, journal, year, source document ID, and access
-  status whenever available.
-- Distinguish ingested documents, externally supplied references, and preprints.
+- Preserve AssetRef JSON, document IDs, citation span IDs, table IDs, figure IDs,
+  section paths, DOI, URL, title, source file, year, and access status whenever
+  available.
+- Distinguish verified Asset-Aware evidence, candidate local notes, optional KG
+  summaries, and unsupported claims.
 - Cite claims at paragraph or bullet level using compact source markers such as
-  `DOI:...`, `doc_id:...`, `span_id:...`, or `AssetRef:...`.
-- Prefer exact text spans, section names, page numbers, or quote hashes when a
-  full-text or asset-aware tool provides them.
+  `AssetRef:...`, `doc_id:...`, `table_id:...`, `DOI:...`, or `URL:...`.
+- Prefer exact text spans, section names, page numbers, line/char/byte offsets,
+  context snippets, or quote hashes when Asset-Aware tools provide them.
 - Do not claim that a note is citation-ready unless its source markers can be
-  traced back to a concrete article, item, or document span.
+  traced back to a concrete document span, table cell, figure asset, or verified
+  citation bundle entry.
 
 ## Workflow And Skill Split
 
@@ -49,5 +53,5 @@ into a Foam-compatible Markdown wiki for LLM-assisted reading and synthesis.
 - Workflows define the complete user-facing sequence for making or refreshing
   an LLM wiki.
 - Skills orchestrate multiple tools: filesystem search, Asset-Aware document
-  inspection, citation bundle creation, full-text/asset extraction when
-  available, Markdown writes, and link validation.
+  inspection, citation bundle export, optional KG/Foam synthesis, Markdown
+  writes, and link validation.

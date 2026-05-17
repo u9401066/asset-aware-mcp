@@ -4,13 +4,13 @@ Presentation Layer - MCP Tools
 拆分自 server.py，按領域分模組：
 - document_tools: ETL + document management tools (19)
 - docx_tools: DOCX/DFM editing, validation, conversion, bridge tools (17)
-- section_tools: section navigation tools (5)
+- section_tools: section navigation tools (6)
 - job_tools: async job management tools (4)
 - knowledge_tools: knowledge graph tools (3)
 - table_tools: A2T operation-based table tools (7)
 - profile_tools: ETL profile tools (7)
 
-Total: 62 tools
+Decorator inventory: 63 tools; balanced runtime surface: 30 tools
 """
 
 # Import all tools to register them with mcp
@@ -80,6 +80,7 @@ from src.presentation.tools.section_tools import (
     get_section_detail,
     list_section_tree,
     search_sections,
+    section,
 )
 from src.presentation.tools.table_tools import (
     discover_sources,
@@ -146,6 +147,7 @@ __all__ = [
     "save_docx",
     "search_sections",
     "search_source_location",
+    "section",
     "set_etl_profile",
     "table_cite",
     "table_data",

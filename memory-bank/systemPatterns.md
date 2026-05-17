@@ -53,7 +53,7 @@ CONSTITUTION.md (最高原則)
 - 每維度 0–100 分 + 加權總分
 - 產出 Agent 可讀 Markdown 報告（emoji 等級）
 
-## � 業務流程模式
+## 業務流程模式
 
 ### A2T 2.0 (Anything to Table) 工作流
 1. **Plan**: `plan_table_schema` - AI 驅動的結構發想。
@@ -67,7 +67,7 @@ CONSTITUTION.md (最高原則)
 3. **Manifest**: 生成結構化清單供 Agent 導航。
 4. **Index**: 注入 LightRAG 建立知識圖譜。
 
-## �📝 命名慣例
+## 命名慣例
 
 | 類型 | 慣例 | 範例 |
 |------|------|------|

@@ -77,7 +77,8 @@
 | `src/presentation/mcp_context.py` | Progress/log helpers |
 | `src/presentation/markdown_utils.py` | Presentation markdown formatting helpers |
 | `src/presentation/ingest_worker_main.py` | Isolated worker entrypoint |
-| `src/presentation/tools/{document,docx,job,knowledge,profile,section,table}_tools.py` | 62 public MCP tools；`citation_support.py` 與 `conversion_job_support.py` 為 shared helper |
+| `src/presentation/tools/{document,docx,job,knowledge,profile,section,table}_tools.py` | 30 balanced public MCP tools；63 legacy decorator tools；`citation_support.py` 與 `conversion_job_support.py` 為 shared helper |
+| `src/presentation/tool_surface.py` | balanced / compact / legacy runtime tool surface policy |
 | `src/presentation/resources/*.py` | 13 MCP resources |
 
 ## VS Code Extension

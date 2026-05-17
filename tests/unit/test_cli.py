@@ -64,8 +64,17 @@ def test_doctor_outputs_runtime_status_json(
     assert payload["package"]["name"] == "asset-aware-mcp"
     assert "version" in payload["package"]
     assert payload["runtime"]["python"]
+    assert payload["runtime"]["preferred_python"] == "3.11"
+    assert isinstance(payload["runtime"]["preferred_python_active"], bool)
+    assert payload["runtime"]["platform_tags"]["sysconfig_platform"]
     assert payload["backends"]["pymupdf"]["available"] is True
     assert isinstance(payload["backends"]["marker"]["available"], bool)
+    assert isinstance(payload["native_dependencies"]["pillow"]["available"], bool)
+    assert isinstance(payload["native_dependencies"]["lxml"]["available"], bool)
+    assert isinstance(
+        payload["native_dependencies"]["pydantic_core"]["available"], bool
+    )
+    assert isinstance(payload["native_dependencies"]["mcp"]["available"], bool)
     assert payload["paths"]["data_dir"]["path"] == str(tmp_path / "data")
     assert payload["features"]["lightrag"]["enabled"] is False
 
@@ -135,6 +144,9 @@ def test_health_outputs_human_readable_runtime_status(
     assert "Asset-Aware MCP" in output
     assert "PyMuPDF:" in output
     assert "Marker:" in output
+    assert "Pillow:" in output
+    assert "lxml:" in output
+    assert "MCP SDK:" in output
     assert "DATA_DIR:" in output
     assert "LightRAG:" in output
     assert "LLM model:" in output

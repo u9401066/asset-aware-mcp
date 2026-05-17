@@ -14,7 +14,7 @@ uv run asset-aware-mcp doctor --json
 uv run asset-aware-mcp list-tools --json
 ```
 
-目前 `0.6.35` 的安全預設是：
+目前 `0.7.0` 的安全預設是：
 
 | 設定 | 預設 | 原因 |
 |---|---|---|
@@ -24,19 +24,21 @@ uv run asset-aware-mcp list-tools --json
 | `OLLAMA_EMBEDDING_MODEL` | `nomic-embed-text` | 只有啟用 LightRAG/KG 時才需要 embedding model |
 | `ENABLE_LIGHTRAG` | `false` | CPU-only 或文件處理情境不會因 KG 沒裝好而失敗 |
 
-`0.6.35` 的預設安裝仍不會安裝 Marker，因為 upstream `marker-pdf` 1.10.2 仍要求 `Pillow<11`，而此版本安全 runtime 需要 `Pillow>=12.2.0`。目前請使用預設 PyMuPDF 後端。`parse_pdf_structure` 是 Marker-required 入口，Marker backend unavailable 或 security hold 會在建立 job 前回傳明確診斷；`ingest_documents(use_marker=true)` 只代表偏好 Marker，公開工具沒有 `require_marker` 參數，Marker 不可用時會回到 PyMuPDF 的安全流程。
+`0.7.0` 的預設安裝仍不會安裝 Marker，因為 upstream `marker-pdf` 1.10.2 仍要求 `Pillow<11`，而此版本安全 runtime 需要 `Pillow>=12.2.0`。目前請使用預設 PyMuPDF 後端。`parse_pdf_structure` 是 Marker-required 入口，Marker backend unavailable 或 security hold 會在建立 job 前回傳明確診斷；`ingest_documents(use_marker=true)` 只代表偏好 Marker，公開工具沒有 `require_marker` 參數，Marker 不可用時會回到 PyMuPDF 的安全流程。
 
 來源：`pyproject.toml`、`README.md`、`CHANGELOG.md`。
 
 ## 最短 PDF 流程
 
 ```text
-ingest_documents(file_paths=["/path/paper.pdf"], async_mode=true)
-get_job_status(job_id="...")
-inspect_document_manifest(doc_id="...")
-export_document_segmentation(doc_id="...")
-find_evidence_spans(doc_id="...", query="outcome")
-citation_bundle(doc_id="...", query="outcome", output_format="json")
+document(op="auto", file_paths=["/path/paper.pdf"], async_mode=true)
+job(op="get", job_id="...")
+document(op="prepare_ai", doc_id="...")
+document(op="audit", doc_id="...")
+document(op="pointer_index", doc_id="...")
+document(op="structural_retrieve", doc_id="...", query="outcome")
+evidence(op="find", doc_id="...", query="outcome")
+evidence(op="bundle", doc_id="...", query="outcome", output_format="json")
 citation_bundle(doc_id="...", query="outcome", output_format="foam", citation_key="paper-key")
 citation_bundle(
   doc_id="...",

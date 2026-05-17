@@ -15,6 +15,7 @@ import shutil
 import signal
 import subprocess
 import threading
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -34,10 +35,33 @@ DEFAULT_IMAGE_DOCUMENT_TIMEOUT_SECONDS = 25.0
 DEFAULT_FAST_IMAGE_DOCUMENT_TIMEOUT_SECONDS = 90.0
 DEFAULT_CAPTION_DOCUMENT_TIMEOUT_SECONDS = 20.0
 DEFAULT_IMAGE_STRATEGY_TIMEOUT_SECONDS = 3.0
+DEFAULT_SAFETY_AUDIT_DOCUMENT_TIMEOUT_SECONDS = 20.0
+DEFAULT_NATIVE_STRUCTURE_DOCUMENT_TIMEOUT_SECONDS = 10.0
 DEFAULT_FIGURE_CROP_X_PADDING = 12.0
 DEFAULT_FIGURE_CROP_TOP_PADDING = 18.0
 DEFAULT_FIGURE_CROP_BOTTOM_PADDING = 72.0
 DEFAULT_FIGURE_CROP_ZOOM = 2.0
+PDF_AI_SAFETY_REPORT_VERSION = "pdf-ai-safety-v1"
+PDF_NATIVE_STRUCTURE_REPORT_VERSION = "pdf-native-structure-v1"
+PDF_AUDIT_MAX_ISSUES_ENV = "ASSET_AWARE_PDF_AUDIT_MAX_ISSUES"
+PDF_AUDIT_MAX_PAGES_ENV = "ASSET_AWARE_PDF_AUDIT_MAX_PAGES"
+PDF_STRUCTURE_MAX_PAGES_ENV = "ASSET_AWARE_PDF_STRUCTURE_MAX_PAGES"
+DEFAULT_PDF_AUDIT_MAX_ISSUES = 200
+DEFAULT_PDF_AUDIT_MAX_PAGES = 200
+DEFAULT_PDF_STRUCTURE_MAX_PAGES = 500
+_SUSPICIOUS_AI_INSTRUCTION_RE = re.compile(
+    r"("
+    r"ignore\s+(all\s+)?(previous|prior|above)\s+instructions"
+    r"|disregard\s+(all\s+)?(previous|prior|above)\s+instructions"
+    r"|reveal\s+(the\s+)?system\s+prompt"
+    r"|system\s+prompt"
+    r"|prompt\s+injection"
+    r"|developer\s+message"
+    r"|忽略(以上|先前|前面).{0,8}(指令|指示)"
+    r"|透露.{0,8}系統提示"
+    r")",
+    re.IGNORECASE,
+)
 
 
 def _extract_tables_worker(pdf_path_str: str, queue: Any) -> None:
@@ -90,6 +114,26 @@ def _extract_figure_captions_worker(pdf_path_str: str, queue: Any) -> None:
         queue.put(("error", str(exc)))
 
 
+def _audit_ai_safety_worker(pdf_path_str: str, queue: Any) -> None:
+    """Run PDF AI safety audit in a child process."""
+    try:
+        extractor = PyMuPDFExtractor()
+        report = extractor._audit_ai_safety_direct(Path(pdf_path_str))
+        queue.put(("ok", report))
+    except Exception as exc:  # pragma: no cover - worker isolation path
+        queue.put(("error", str(exc)))
+
+
+def _extract_native_structure_worker(pdf_path_str: str, queue: Any) -> None:
+    """Run native PDF structure extraction in a child process."""
+    try:
+        extractor = PyMuPDFExtractor()
+        report = extractor._extract_native_structure_direct(Path(pdf_path_str))
+        queue.put(("ok", report))
+    except Exception as exc:  # pragma: no cover - worker isolation path
+        queue.put(("error", str(exc)))
+
+
 def _env_flag(name: str, default: bool) -> bool:
     raw_value = os.environ.get(name)
     if raw_value is None:
@@ -103,6 +147,16 @@ def _env_float(name: str, default: float) -> float:
         return default
     try:
         return float(raw_value)
+    except ValueError:
+        return default
+
+
+def _env_int(name: str, default: int) -> int:
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    try:
+        return max(0, int(raw_value))
     except ValueError:
         return default
 
@@ -1192,6 +1246,341 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         meta = self.get_metadata(pdf_path)
         return (meta.get("title") or "").strip()
 
+    def audit_ai_safety(self, pdf_path: Path) -> dict[str, Any]:
+        """Best-effort PDF AI safety audit with document-level isolation."""
+        timeout_seconds = _env_float(
+            "PYMUPDF_SAFETY_AUDIT_DOCUMENT_TIMEOUT_SECONDS",
+            DEFAULT_SAFETY_AUDIT_DOCUMENT_TIMEOUT_SECONDS,
+        )
+        if timeout_seconds <= 0:
+            return self._audit_ai_safety_direct(pdf_path)
+
+        ctx = _get_pdf_worker_context()
+        queue = ctx.Queue()
+        process = ctx.Process(
+            target=_audit_ai_safety_worker,
+            args=(str(pdf_path), queue),
+            daemon=True,
+        )
+        process.start()
+        process.join(timeout_seconds)
+
+        if process.is_alive():
+            process.terminate()
+            process.join(5)
+            logger.warning(
+                "PDF AI safety audit timed out for %s after %.1fs",
+                pdf_path,
+                timeout_seconds,
+            )
+            return self._skipped_ai_safety_report(
+                f"timed out after {timeout_seconds:.1f}s"
+            )
+
+        try:
+            status, payload = queue.get_nowait()
+        except Exception:
+            return self._skipped_ai_safety_report("worker returned no result")
+
+        if status == "ok" and isinstance(payload, dict):
+            return payload
+
+        logger.warning(
+            "PDF AI safety audit worker failed for %s: %s", pdf_path, payload
+        )
+        return self._skipped_ai_safety_report(str(payload))
+
+    def _audit_ai_safety_direct(self, pdf_path: Path) -> dict[str, Any]:
+        """Best-effort PDF AI safety audit without mutating extracted text."""
+        doc = fitz.open(str(pdf_path))
+        issues: list[dict[str, Any]] = []
+        span_count = 0
+        issue_count = 0
+        issues_by_reason: Counter[str] = Counter()
+        issues_by_severity: Counter[str] = Counter()
+        max_issues = _env_int(PDF_AUDIT_MAX_ISSUES_ENV, DEFAULT_PDF_AUDIT_MAX_ISSUES)
+        max_pages = _env_int(PDF_AUDIT_MAX_PAGES_ENV, DEFAULT_PDF_AUDIT_MAX_PAGES)
+        pages_scanned = 0
+
+        try:
+            page_total = len(doc)
+            for page_index, page in enumerate(doc):
+                if max_pages > 0 and page_index >= max_pages:
+                    break
+                pages_scanned += 1
+                page_number = page_index + 1
+                page_rect = page.rect
+                try:
+                    text_dict = page.get_text("dict")
+                except Exception:
+                    logger.debug(
+                        "Failed to read text dictionary for %s page %d",
+                        pdf_path,
+                        page_number,
+                        exc_info=True,
+                    )
+                    continue
+
+                for block in text_dict.get("blocks", []):
+                    if not isinstance(block, dict):
+                        continue
+                    for line in block.get("lines", []):
+                        if not isinstance(line, dict):
+                            continue
+                        for span in line.get("spans", []):
+                            if not isinstance(span, dict):
+                                continue
+                            text = str(span.get("text") or "")
+                            if not text.strip():
+                                continue
+                            span_count += 1
+                            bbox = self._coerce_bbox(span.get("bbox"))
+                            font_size = self._coerce_float(span.get("size"))
+                            color = self._coerce_int_or_none(span.get("color"))
+
+                            reasons: list[tuple[str, str]] = []
+                            if font_size is not None and font_size <= 3.0:
+                                reasons.append(("tiny_font_text", "warning"))
+                            if color is not None and self._is_near_white_color(color):
+                                reasons.append(("white_or_near_white_text", "warning"))
+                            if bbox and self._bbox_is_off_page(bbox, page_rect):
+                                reasons.append(("off_page_text", "warning"))
+                            if bbox and self._bbox_has_no_area(bbox):
+                                reasons.append(("zero_area_text", "warning"))
+                            if _SUSPICIOUS_AI_INSTRUCTION_RE.search(text):
+                                reasons.append(("prompt_injection_text", "high"))
+
+                            for reason, severity in reasons:
+                                issue_count += 1
+                                issues_by_reason[reason] += 1
+                                issues_by_severity[severity] += 1
+                                if len(issues) < max_issues:
+                                    issues.append(
+                                        {
+                                            "issue_id": f"pdf_safety_{issue_count}",
+                                            "page": page_number,
+                                            "severity": severity,
+                                            "reason": reason,
+                                            "bbox": bbox or [],
+                                            "font_size": font_size,
+                                            "color": color,
+                                            "text_preview": " ".join(text.split())[
+                                                :200
+                                            ],
+                                            "text_sha256": self._sha256_text(text),
+                                        }
+                                    )
+        finally:
+            doc.close()
+
+        pages_omitted = max(0, page_total - pages_scanned)
+        issues_omitted = max(0, issue_count - len(issues))
+        return {
+            "schema_version": PDF_AI_SAFETY_REPORT_VERSION,
+            "backend": "pymupdf",
+            "status": "warning" if issue_count else "ok",
+            "truncated": bool(pages_omitted or issues_omitted),
+            "summary": {
+                "pages": page_total,
+                "pages_scanned": pages_scanned,
+                "pages_omitted": pages_omitted,
+                "text_spans_scanned": span_count,
+                "issue_count": issue_count,
+                "issues_retained": len(issues),
+                "issues_omitted": issues_omitted,
+                "issues_by_reason": dict(sorted(issues_by_reason.items())),
+                "issues_by_severity": dict(sorted(issues_by_severity.items())),
+            },
+            "issues": issues,
+        }
+
+    def extract_native_structure(self, pdf_path: Path) -> dict[str, Any]:
+        """Extract lightweight native PDF structure with document-level isolation."""
+        timeout_seconds = _env_float(
+            "PYMUPDF_NATIVE_STRUCTURE_DOCUMENT_TIMEOUT_SECONDS",
+            DEFAULT_NATIVE_STRUCTURE_DOCUMENT_TIMEOUT_SECONDS,
+        )
+        if timeout_seconds <= 0:
+            return self._extract_native_structure_direct(pdf_path)
+
+        ctx = _get_pdf_worker_context()
+        queue = ctx.Queue()
+        process = ctx.Process(
+            target=_extract_native_structure_worker,
+            args=(str(pdf_path), queue),
+            daemon=True,
+        )
+        process.start()
+        process.join(timeout_seconds)
+
+        if process.is_alive():
+            process.terminate()
+            process.join(5)
+            logger.warning(
+                "Native PDF structure extraction timed out for %s after %.1fs",
+                pdf_path,
+                timeout_seconds,
+            )
+            return self._skipped_native_structure_report(
+                f"timed out after {timeout_seconds:.1f}s"
+            )
+
+        try:
+            status, payload = queue.get_nowait()
+        except Exception:
+            return self._skipped_native_structure_report("worker returned no result")
+
+        if status == "ok" and isinstance(payload, dict):
+            return payload
+
+        logger.warning(
+            "Native PDF structure extraction worker failed for %s: %s",
+            pdf_path,
+            payload,
+        )
+        return self._skipped_native_structure_report(str(payload))
+
+    def _extract_native_structure_direct(self, pdf_path: Path) -> dict[str, Any]:
+        """Extract lightweight native PDF structure metadata for audit artifacts."""
+        doc = fitz.open(str(pdf_path))
+        try:
+            metadata = doc.metadata or {}
+            try:
+                toc = [
+                    {"level": int(level), "title": str(title), "page": int(page)}
+                    for level, title, page in doc.get_toc()
+                ]
+            except Exception:
+                logger.debug("Failed to extract PDF outline", exc_info=True)
+                toc = []
+            pages: list[dict[str, Any]] = []
+            total_links = 0
+            total_widgets = 0
+            max_pages = _env_int(
+                PDF_STRUCTURE_MAX_PAGES_ENV,
+                DEFAULT_PDF_STRUCTURE_MAX_PAGES,
+            )
+            for page_index, page in enumerate(doc):
+                if max_pages > 0 and page_index >= max_pages:
+                    break
+                try:
+                    links = page.get_links() or []
+                except Exception:
+                    logger.debug(
+                        "Failed to extract PDF links on page %d",
+                        page_index + 1,
+                        exc_info=True,
+                    )
+                    links = []
+                try:
+                    widgets = list(page.widgets() or [])
+                except Exception:
+                    logger.debug(
+                        "Failed to extract PDF widgets on page %d",
+                        page_index + 1,
+                        exc_info=True,
+                    )
+                    widgets = []
+                total_links += len(links)
+                total_widgets += len(widgets)
+                pages.append(
+                    {
+                        "page": page_index + 1,
+                        "width": float(page.rect.width),
+                        "height": float(page.rect.height),
+                        "rotation": int(page.rotation or 0),
+                        "link_count": len(links),
+                        "widget_count": len(widgets),
+                    }
+                )
+
+            catalog = self._read_catalog_keys(doc)
+            struct_tree = str(catalog.get("StructTreeRoot") or "")
+            mark_info = str(catalog.get("MarkInfo") or "")
+            language = str(catalog.get("Lang") or "")
+            tag_tree_status = (
+                "detected"
+                if struct_tree and struct_tree.lower() not in {"null", "none"}
+                else "not_detected"
+            )
+
+            return {
+                "schema_version": PDF_NATIVE_STRUCTURE_REPORT_VERSION,
+                "backend": "pymupdf",
+                "metadata": metadata,
+                "capabilities": {
+                    "outline": bool(toc),
+                    "page_geometry": True,
+                    "links": total_links > 0,
+                    "forms": total_widgets > 0,
+                    "catalog_keys": bool(catalog),
+                    "tag_tree": tag_tree_status == "detected",
+                    "language": bool(language),
+                },
+                "outline": toc,
+                "pages": pages,
+                "catalog": catalog,
+                "truncated": max_pages > 0 and len(doc) > max_pages,
+                "tag_tree": {
+                    "status": tag_tree_status if catalog else "unavailable",
+                    "struct_tree_root": struct_tree,
+                    "mark_info": mark_info,
+                    "language": language,
+                    "note": (
+                        "PyMuPDF lightweight backend reports catalog-level tag "
+                        "signals; full PDF/UA validation is out of scope."
+                    ),
+                },
+                "summary": {
+                    "page_count": len(doc),
+                    "pages_reported": len(pages),
+                    "pages_omitted": max(0, len(doc) - len(pages)),
+                    "outline_items": len(toc),
+                    "link_count": total_links,
+                    "form_widget_count": total_widgets,
+                },
+            }
+        finally:
+            doc.close()
+
+    @staticmethod
+    def _skipped_ai_safety_report(reason: str) -> dict[str, Any]:
+        return {
+            "schema_version": PDF_AI_SAFETY_REPORT_VERSION,
+            "backend": "pymupdf",
+            "status": "skipped",
+            "summary": {
+                "pages": 0,
+                "text_spans_scanned": 0,
+                "issue_count": 0,
+                "issues_by_reason": {},
+                "issues_by_severity": {},
+            },
+            "issues": [],
+            "reason": reason,
+        }
+
+    @staticmethod
+    def _skipped_native_structure_report(reason: str) -> dict[str, Any]:
+        return {
+            "schema_version": PDF_NATIVE_STRUCTURE_REPORT_VERSION,
+            "backend": "pymupdf",
+            "status": "skipped",
+            "metadata": {},
+            "capabilities": {},
+            "outline": [],
+            "pages": [],
+            "catalog": {},
+            "tag_tree": {"status": "unavailable"},
+            "summary": {
+                "page_count": 0,
+                "outline_items": 0,
+                "link_count": 0,
+                "form_widget_count": 0,
+            },
+            "reason": reason,
+        }
+
     def extract_tables(self, pdf_path: Path) -> list[dict]:
         """
         Extract tables from PDF using a child process with a document timeout.
@@ -1333,6 +1722,96 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             doc.close()
 
         return tables
+
+    @staticmethod
+    def _sha256_text(text: str) -> str:
+        import hashlib
+
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _coerce_bbox(value: object) -> list[float]:
+        if not isinstance(value, (list, tuple)) or len(value) != 4:
+            return []
+        coords: list[float] = []
+        for item in value:
+            number = PyMuPDFExtractor._coerce_float(item)
+            if number is None:
+                return []
+            coords.append(number)
+        return coords
+
+    @staticmethod
+    def _coerce_float(value: object) -> float | None:
+        if isinstance(value, bool) or value is None:
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
+        if not isinstance(value, str):
+            return None
+        try:
+            return float(value)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _coerce_int_or_none(value: object) -> int | None:
+        if isinstance(value, bool) or value is None:
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            return int(value)
+        if not isinstance(value, str):
+            return None
+        try:
+            return int(value)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _is_near_white_color(color: int) -> bool:
+        red = (color >> 16) & 0xFF
+        green = (color >> 8) & 0xFF
+        blue = color & 0xFF
+        return red >= 240 and green >= 240 and blue >= 240
+
+    @staticmethod
+    def _bbox_is_off_page(bbox: list[float], page_rect: fitz.Rect) -> bool:
+        left, top, right, bottom = bbox
+        return (
+            right < 0
+            or bottom < 0
+            or left > float(page_rect.width)
+            or top > float(page_rect.height)
+        )
+
+    @staticmethod
+    def _bbox_has_no_area(bbox: list[float]) -> bool:
+        left, top, right, bottom = bbox
+        return right <= left or bottom <= top
+
+    @staticmethod
+    def _read_catalog_keys(doc: fitz.Document) -> dict[str, str]:
+        if not hasattr(doc, "pdf_catalog") or not hasattr(doc, "xref_get_key"):
+            return {}
+        try:
+            catalog_xref = doc.pdf_catalog()
+        except Exception:
+            return {}
+        if not catalog_xref:
+            return {}
+
+        values: dict[str, str] = {}
+        for key in ("StructTreeRoot", "MarkInfo", "Lang", "PageLabels"):
+            try:
+                _kind, value = doc.xref_get_key(catalog_xref, key)
+            except Exception:
+                logger.debug("Failed to read PDF catalog key %s", key, exc_info=True)
+                continue
+            if value not in {"", "null", "None", None}:
+                values[key] = str(value)
+        return values
 
     def _find_tables_with_timeout(self, page: fitz.Page) -> Any:
         """

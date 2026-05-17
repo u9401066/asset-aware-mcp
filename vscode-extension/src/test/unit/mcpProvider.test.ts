@@ -54,7 +54,7 @@ describe('AssetAwareMcpProvider', () => {
         const servers = provider.provideMcpServerDefinitions({} as any) as any[];
 
         assert.strictEqual(servers.length, 1);
-        assert.strictEqual(servers[0].command, 'uvx');
+        assert.strictEqual(servers[0].command, 'uv');
         assert.ok(servers[0].env.DATA_DIR);
         assert.ok(servers[0].env.UV_CACHE_DIR);
         assert.match(servers[0].env.ASSET_AWARE_MARKER_OUTPUT_LOG, /marker\.log$/);
@@ -151,6 +151,8 @@ describe('AssetAwareMcpProvider', () => {
         const logOutput = lines.join('\n');
 
         assert.deepStrictEqual(servers[0].args, [
+            'tool',
+            'run',
             '--python',
             '3.11',
             '--from',
@@ -158,7 +160,7 @@ describe('AssetAwareMcpProvider', () => {
             'asset-aware-mcp',
         ]);
         assert.match(logOutput, /Launch mode: package/);
-        assert.match(logOutput, /Command: uvx --python 3\.11 --from asset-aware-mcp==0\.6\.19 asset-aware-mcp/);
+        assert.match(logOutput, /Command: uv tool run --python 3\.11 --from asset-aware-mcp==0\.6\.19 asset-aware-mcp/);
         assert.match(logOutput, /DATA_DIR: /);
         assert.match(logOutput, /Server version pin: 0\.6\.19/);
         assert.match(logOutput, /Marker backend enabled: true/);

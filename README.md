@@ -39,18 +39,20 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 
 - 📄 **Asset-Aware ETL** - PDF → Markdown with a PyMuPDF-first parser and retained Marker code path:
   - **PyMuPDF** (default) - Fast extraction (~50MB)
-  - **Marker** (`use_marker=True`) - High-precision structured parsing code path retained, but packaged runtime remains on security hold in v0.6.35 until upstream `marker-pdf` supports patched Pillow
+  - **Marker** (`use_marker=True`) - High-precision structured parsing code path retained, but packaged runtime remains on security hold in v0.7.0 until upstream `marker-pdf` supports patched Pillow
 - 🧩 **Unified Segmentation Export** - Normalized `segmentation.json` merges manifest, blocks, reading order, and persisted markdown line spans for downstream tools and extensions.
+- 🛡️ **PDF Safety/Structure/Coverage/Accessibility Audits** - OpenDataloader-inspired artifact-only reports flag suspicious hidden/off-page/prompt-injection text, native structure signals, segmentation coverage gaps, and accessibility/readability readiness via the existing `document` facade. `document(op="prepare_ai")` and `document(op="auto")` expose agent-ready status and next actions without adding public tools.
+- 🧭 **Structural Pointer Retrieval** - Proxy-Pointer-inspired `document(op="pointer_index")`, `document(op="structural_retrieve")`, and `document(op="compare")` preserve section breadcrumbs, line/char/byte locators, source hashes, asset IDs, and evidence-span provenance without adding MCP tools.
 - 🖼️ **Layout Overlay Debugging** - Render page overlays from `original.pdf` to inspect bbox, segment type, and reading order visually.
 - 🔤 **On-Demand OCR Preprocessing** - Optional `ocrmypdf` preprocessing path for scanned PDFs before ETL.
-- 🧭 **Section Navigation** - Dynamic hierarchy section tree with 5 tools: browse, search, detail, content reading, and block extraction for any depth of headings.
+- 🧭 **Section Navigation** - Dynamic hierarchy section tree through the `section` facade: browse, search, detail, content reading, and block extraction for any depth of headings.
 - 🔄 **Async Job Pipeline** - Supports asynchronous ingest, Marker-required parse, OCR, and conversion jobs with progress tracking.
 - 🗺️ **Document Manifest** - Provides a structured "map" of the document for precise data access by Agents.
 - 🧠 **LightRAG Integration** - Knowledge Graph + Vector Index, supporting cross-document comparison and reasoning.
 - 🧾 **Verified Citation Bundles** - `citation_bundle`, Foam evidence packs, citation health checks, table/figure evidence notes, and claim promotion export citation-ready spans with locator, quote/hash, context, CRAAP scaffold, and verification status.
-- 📝 **Docx Editing (DFM)** - Edit .docx files in Markdown via **Docx-Flavored Markdown** format. Supports legacy `.doc`, `.odt`, and `.ods` ingest via LibreOffice auto-conversion. 17 tools: ingest, read, save, list, delete, export, strict round-trip validation, DOCX→PDF/DOC/ODT, table edit planning, and Docx ↔ A2T bridges.
+- 📝 **Docx Editing (DFM)** - Edit .docx files in Markdown via **Docx-Flavored Markdown** format. Supports legacy `.doc`, `.odt`, and `.ods` ingest via LibreOffice auto-conversion. The balanced surface keeps 6 DOCX/DFM public entrypoints for ingest, read, save, validation, conversion, table edit planning, and Docx ↔ A2T bridges.
 - 🛡️ **DFM Integrity Checker** - Automatic validation and auto-repair at every pipeline stage (post-ingest, pre-save, post-save). Catches orphan markers, column mismatches, and format inconsistencies.
-- 📊 **A2T (Anything to Table)** - 7 operation-based tools for building professional tables from **any source** (PDF assets, Knowledge Graph, URLs, user input). Features: **Citations** (AssetRef), **Audit Trail**, **Schema Evolution**, **Templates**, **Drafting**, and **Token-efficient resumption**.
+- 📊 **A2T (Anything to Table)** - 7 operation-based tools for building professional tables from **any source** (PDF assets, Knowledge Graph, URLs, user input). Features: stable row IDs, row search/filter/paging, citation coverage, artifact-only large-table render, skipped-large-table UX, **Citations** (AssetRef), **Audit Trail**, **Schema Evolution**, **Templates**, **Drafting**, and **Token-efficient resumption**.
 - 🖥️ **VS Code Management Extension** - Graphical interface for monitoring server status, ingested documents, document artifacts, citation spans, and **A2T tables/drafts** with one-click Excel export.
 - 🔌 **MCP Server** - Exposes tools and resources to Copilot/Claude via FastMCP.
 - 🏥 **Medical Research Focus** - Optimized for medical literature, supporting Base64 image transmission for Vision AI analysis.
@@ -69,9 +71,9 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 ┌─────────────────────▼───────────────────────────────────┐
 │            MCP Server (Modular Presentation)            │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │ tools/: 62 tools in 7 modules                   │   │
-│  │   document (19) │ docx (17) │ section (5)       │   │
-│  │   job (4) │ knowledge (3) │ table (7) │ profile (7) │
+│  │ tools/: 30 public tools (balanced surface)                   │   │
+│  │   17 facade tools + 13 high-frequency shortcuts       │   │
+│  │   compact=17 │ legacy/direct compatibility=63 │
 │  └─────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │ resources/: 13 resources in 2 modules           │   │
@@ -121,7 +123,7 @@ Visual overview for the project. All diagrams use consistent GitHub README style
 | Diagram | Description |
 |---------|-------------|
 | [01 — System Architecture](docs/diagrams/01-system-architecture.jpg) | Full stack: Telegram → Gateway → MCP Adapter → 3 MCP servers → Ollama |
-| [02 — Data Layout](docs/diagrams/02-data-layout.jpg) | 62 tools organized in 7 categories with asset-aware data tree |
+| [02 — Data Layout](docs/diagrams/02-data-layout.jpg) | 30 balanced public tools + 13 resources; legacy direct tool compatibility remains available |
 | [03 — PDF Ingestion Pipeline](docs/diagrams/03-pdf-ingestion-pipeline.jpg) | 7-stage flow from PDF upload to knowledge graph |
 | [04 — DOCX Bidirectional Edit](docs/diagrams/04-docx-edit-pipeline.jpg) | DOCX ingest → TableContext edit → round-trip save workflow |
 | [05 — Knowledge Graph Search](docs/diagrams/05-knowledge-graph-search.jpg) | Cross-document search with 3 parallel query paths |
@@ -138,7 +140,7 @@ Visual overview for the project. All diagrams use consistent GitHub README style
 # Install dependencies (using uv) — default install skips Marker/torch
 uv sync
 
-# v0.6.35: Marker extra is temporarily empty because marker-pdf pins
+# v0.7.0: Marker extra is temporarily empty because marker-pdf pins
 # Pillow<11 while the secure runtime requires Pillow>=12.2.0.
 # Use the default PyMuPDF backend until upstream marker-pdf supports patched Pillow.
 
@@ -149,7 +151,7 @@ uv run python -m src.presentation.server
 ```
 
 Runtime note:
-The VS Code extension prefers a managed Python 3.11 runtime when launching the MCP server via `uv` or `uvx`. This avoids native package builds on end-user machines, especially macOS systems without Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
+The VS Code extension prefers a managed Python 3.11 runtime when launching the MCP server via version-pinned `uv tool run`, with Python 3.10 fallback for older machines. This avoids native package builds on end-user machines, especially macOS systems without Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
 
 Installation scope note:
 - The VS Code extension installs once per user (global). MCP launch env defaults `DATA_DIR` to workspace `./data` and `UV_CACHE_DIR` to `DATA_DIR/.uv-cache`; Prepare Server Runtime warms a workspace `.uv-cache`, falling back to extension global storage only when no workspace is open.
@@ -160,113 +162,22 @@ Since v0.6.28 the packaged Marker extra has intentionally stayed on security hol
 
 ## 🔌 MCP Tools
 
-### Document & Asset Tools
+The default runtime surface is **balanced**: 30 public tools that keep the full document workflow available without overwhelming agents. It is made of 17 operation-based facade tools plus 13 high-frequency shortcuts. Set `ASSET_AWARE_MCP_TOOL_SURFACE=compact` for the 17 facade-only surface, or `ASSET_AWARE_MCP_TOOL_SURFACE=legacy` / `ASSET_AWARE_MCP_ENABLE_LEGACY_TOOLS=true` for the full 63-tool compatibility inventory.
 
-| Tool | Purpose |
-|------|---------|
-| `ingest_documents` | Process PDF files with PyMuPDF; `use_marker=True` currently falls back or fails closed while Marker is on security hold |
-| `list_documents` | List all ingested documents and their asset counts |
-| `delete_document` | Delete an ingested PDF, its local artifacts, and LightRAG index entries when enabled |
-| `convert_pdf_to_docx` | Reconstruct a readable DOCX from extracted PDF content; defaults to a conversion background job |
-| `convert_pdf_to_pptx` | Rebuild editable PPTX slides from extracted PDF markdown and figures; defaults to a conversion background job |
-| `inspect_document_manifest` | Inspect document structure before fetching specific assets |
-| `fetch_document_asset` | Precisely retrieve tables (MD) / figures (B64) / sections |
-| `parse_pdf_structure` | Queue structured parsing work; Marker output remains unavailable until upstream Marker supports patched Pillow |
-| `search_source_location` | Search exact source locations with page + bbox for verification |
-| `export_document_segmentation` | Export normalized `segmentation.json` with reading order + line ranges |
-| `visualize_document_layout` | Render page overlay images for bbox / type / reading-order inspection |
-| `ocr_pdf_document` | Run OCR preprocessing and generate a cleaned PDF for later ETL |
-| `find_evidence_spans` | Search citation-ready spans with source revision, locator, hash, and CRAAP scaffold |
-| `verify_citation_ref` | Verify span AssetRefs against the current citation index and locator metadata |
-| `citation_bundle` | Export verified evidence bundles with AssetRef, quote/hash, locator, context, CRAAP scaffold, and verification status |
-| `document` | Operation-based facade over PDF ingest/list/delete/inspect/parse |
-| `document_asset` | Operation-based facade over asset fetch and section tree/detail/blocks/search |
-| `evidence` | Operation-based facade over citation span find/verify/source-location search and bundle export |
-| `convert_document` | Operation-based facade for PDF, DOCX/DFM, and Markdown conversions; conversion paths default to background jobs |
+| Area | Balanced public tools |
+|------|------------------------|
+| Documents, assets, evidence, conversion | `document`, `document_asset`, `evidence`, `convert_document`, `ingest_documents`, `list_documents`, `parse_pdf_structure`, `fetch_document_asset`, `find_evidence_spans`, `verify_citation_ref`, `citation_bundle` |
+| DOCX / DFM | `docx`, `docx_table`, `ingest_docx`, `get_docx_content`, `save_docx`, `docx_table_edit_plan` |
+| Sections, jobs, KG, ETL profiles | `section`, `job`, `get_job_status`, `list_jobs`, `knowledge`, `etl_profile` |
+| A2T tables | `plan_table`, `table_manage`, `table_data`, `table_cite`, `table_history`, `table_draft`, `discover_sources` |
 
-### Job Management Tools
+See [MCP Tools](docs/wiki/MCP-Tools.md) and [Tool Consolidation](docs/wiki/MCP-Tool-Consolidation.md) for operation details, shortcut rationale, and legacy direct-tool mapping.
 
-| Tool | Purpose |
-|------|---------|
-| `get_job_status` | Get async ingestion/conversion job progress and final result |
-| `list_jobs` | List active or historical ETL jobs |
-| `cancel_job` | Cancel a running ETL job |
-| `job` | Operation-based facade over job get/list/cancel |
+Agent handoff note:
+Use `document(op="auto", file_paths=[...])` for new PDFs and `document(op="auto", doc_id="...")` or `document(op="prepare_ai", doc_id="...")` for existing documents. `document(op="prepare_ai", output_format="json")` returns the v2 readiness contract with `status`, `blockers`, `warnings`, `capabilities`, `artifacts`, `missing_audits`, `invalid_audits`, `audit_artifacts`, and `next_actions`. `document(op="audit", doc_id="...")` reuses current audit artifacts only when they are present and valid; pass `refresh=true` to rebuild safety, native-structure, coverage, and accessibility reports. Use `document(op="pointer_index")`, `document(op="structural_retrieve", query="...")`, and `document(op="compare", doc_b_id="...", criteria="...")` when an agent needs section-level structural retrieval or comparison without new public tools. Readiness and job-status artifact discovery are read-only, so status checks do not create document directories.
 
-### Knowledge Graph Tools
-
-| Tool | Purpose |
-|------|---------|
-| `consult_knowledge_graph` | Citation-aware knowledge graph query with `structured`, `data`, `text`, and optional verified evidence bundles |
-| `export_knowledge_graph` | Export graph summary / JSON / Mermaid for inspection |
-| `knowledge` | Operation-based facade over knowledge graph consult/export |
-
-Knowledge graph note:
-- `consult_knowledge_graph` defaults to `response_mode="structured"` and can return `answer`, `references`, `metadata`, `retrieval`, `counts`, and `verified_evidence` when `verify_references=true`.
-- Use `response_mode="data"` when you want retrieval payloads without final answer synthesis, or `response_mode="text"` for legacy plain-text behavior.
-
-### Section Navigation Tools (Dynamic Hierarchy)
-
-| Tool | Purpose |
-|------|---------|
-| `list_section_tree` | Display complete section hierarchy tree (supports any depth) |
-| `get_section_detail` | Get detailed info for a specific section |
-| `get_section_blocks` | Extract all blocks from a section with page + bbox |
-| `search_sections` | Search section titles |
-| `get_section_content` | Read section content via asset service |
-
-### Docx Editing Tools (DFM — Docx-Flavored Markdown)
-
-> Edit .docx files as Markdown. Preserves formatting, tables, media on round-trip.
-
-| Tool | Purpose |
-|------|---------|
-| `ingest_docx` | Import .docx and decompose into DFM blocks |
-| `get_docx_content` | Read DFM content of specific blocks |
-| `save_docx` | Write DFM edits back to .docx |
-| `list_docx_blocks` | List document block structure |
-| `list_docx_documents` | List all ingested DOCX/DFM documents |
-| `delete_docx` | Delete an ingested DOCX/DFM document and its local artifacts |
-| `convert_docx_to_pdf` | Export the current DOCX/DFM state to PDF in fidelity mode; defaults to a conversion background job |
-| `convert_docx_to_doc` | Export the current DOCX/DFM state to DOC in fidelity mode; defaults to a conversion background job |
-| `docx_validate_roundtrip` | 6-dimension round-trip fidelity validation + file-level comparison (SHA-256, ZIP diff) |
-| `docx_table_to_context` | Bridge: Docx table → A2T context |
-| `docx_table_from_context` | Bridge: A2T table → Docx table |
-| `docx_chart_data` | Extract chart data from Docx |
-| `docx_table_edit_plan` | Preview table cell/row/column/header changes and structural risks before write-back |
-| `export_markdown` | Export Markdown to .docx/.pdf/.doc; defaults to a conversion background job |
-| `convert_docx_to_odt` | Export the current DOCX/DFM state to ODT; defaults to a conversion background job |
-| `docx` | Operation-based facade over DOCX/DFM ingest/get/save/list/delete/blocks/validate |
-| `docx_table` | Operation-based facade over DOCX table to_context/from_context/chart_data/edit_plan |
-
-### A2T (Anything to Table) Tools — 7 Operation-Based Tools
-
-> Agent-friendly design: each tool handles multiple operations via `operation` parameter.
-> Tables accept **any source** — PDF assets, KG entities, external URLs, or user input.
-
-| Tool | Operations | Purpose |
-|------|-----------|----------|
-| `plan_table` | `schema` / `templates` / `from_template` | Schema planning, browse 4 built-in templates, create from template |
-| `table_manage` | `create` / `delete` / `list` / `preview` / `resume` / `render` / `add_column` / `remove_column` / `rename_column` | Table lifecycle + Schema evolution |
-| `table_data` | `add_rows` / `get_row` / `update_row` / `delete_row` / `get_cell` / `update_cell` / `clear_cell` | Row & cell CRUD |
-| `table_cite` | `add` / `get` / `remove` / `cell_history` | Citation management with AssetRef (7 source types) |
-| `table_history` | `changes` / `tokens` | Audit trail & token estimation |
-| `table_draft` | `create` / `update` / `add_rows` / `resume` / `commit` / `list` / `delete` | Draft workflow with persistence |
-| `discover_sources` | — | Cross-document source discovery (sections, tables, figures, KG) |
-
-### ETL Profile Tools
-
-Different journals/formats need different extraction settings. Use these tools to switch profiles.
-
-| Tool | Purpose |
-|------|---------|
-| `list_etl_profiles` | List all available profiles (default, arxiv, nature, ieee, elsevier) |
-| `get_etl_profile` | Get detailed configuration of a specific profile |
-| `get_current_etl_profile` | Show currently active profile |
-| `set_etl_profile` | Switch profile for subsequent document ingestion |
-| `load_etl_profile_from_json` | Load custom profile from JSON file |
-| `detect_etl_profile` | Detect the best built-in profile from PDF path, doc_id, or sample text |
-| `etl_profile` | Operation-based facade over profile list/get/current/set/load/detect |
+PDF audit caveat:
+The audit reports are inspired by OpenDataloader-style artifact workflows, but they are not a sanitizer, a PDF/UA certification, or an OpenDataloader compatibility layer. They preserve source artifacts and report conservative diagnostics for review.
 
 ## 🔧 Tech Stack
 
@@ -286,7 +197,7 @@ Installation guidance:
 - LightRAG / Knowledge Graph backend (optional, since v0.6.34): `uv tool install --upgrade --python 3.11 'asset-aware-mcp[lightrag]'` for uvx/published users, or `uv sync --extra lightrag` for local source checkouts. Required before setting `ENABLE_LIGHTRAG=true`.
 - VS Code extension: run the command `Asset-Aware MCP: Install LightRAG Backend` from the Command Palette; it auto-detects source vs published mode and emits the matching install command.
 - OpenRouter optional preset (since v0.6.35): set `LLM_BACKEND=openrouter`, `OPENROUTER_API_KEY=...`, and optionally `OPENROUTER_MODEL=liquid/lfm-2.5-1.2b-instruct:free` for fast low-cost summaries and draft RAG answers. LightRAG retrieval still uses the configured embedding backend.
-- Marker backend: temporarily disabled in v0.6.35 because `marker-pdf` pins vulnerable `Pillow<11`; the `marker` / `pdf` extras are compatibility placeholders until upstream supports patched Pillow.
+- Marker backend: temporarily disabled in v0.7.0 because `marker-pdf` pins vulnerable `Pillow<11`; the `marker` / `pdf` extras are compatibility placeholders until upstream supports patched Pillow.
 - VS Code extension: `assetAwareMcp.enableMarkerBackend` is retained as a setting, but the launcher will not install `marker-pdf` while the security hold is active.
 
 - [Technical Spec](docs/spec.md) - Detailed technical specification

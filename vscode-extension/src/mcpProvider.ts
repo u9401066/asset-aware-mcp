@@ -4,17 +4,16 @@
  * Provides the Asset-Aware MCP server definition to VS Code.
  *
  * Two modes:
- * 1. Production Mode (default): Uses `uvx asset-aware-mcp` to run from PyPI
+ * 1. Production Mode (default): Uses `uv tool run asset-aware-mcp` to run from PyPI
  * 2. Development Mode: Uses local source code if found in workspace
  */
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { buildAssetAwareLaunchSpec } from './mcpConfigCommon';
+import { buildAssetAwareLaunchSpec, getRuntimePythonVersion } from './mcpConfigCommon';
 import {
     getUvPaths,
     MARKER_BACKEND_SECURITY_HOLD_MESSAGE,
-    PREFERRED_RUNTIME_PYTHON,
 } from './uv';
 
 export const LAST_SERVER_VERSION_KEY = 'lastServerVersion';
@@ -42,7 +41,7 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
     }
 
     /**
-     * Get the uv/uvx command path
+     * Get the uv command path
      */
     private getUvCommand(): string {
         // Try to get stored path from context
@@ -98,12 +97,12 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
         if (spec.mode === 'local') {
             this.log('Development Mode: Using local source launch spec');
         } else {
-            this.log('Production Mode: Using uvx to run from PyPI');
+            this.log('Production Mode: Using uv tool run to run from PyPI');
         }
         this.log('Launch mode: ' + spec.mode);
         this.log('Command: ' + spec.command + ' ' + spec.args.join(' '));
         this.log('DATA_DIR: ' + spec.env['DATA_DIR']);
-        this.log('Preferred Python runtime: ' + PREFERRED_RUNTIME_PYTHON);
+        this.log('Runtime Python: ' + getRuntimePythonVersion(launchContext));
         if (launchContext.extension?.packageJSON?.version) {
             this.log('Server version pin: ' + launchContext.extension.packageJSON.version);
         }

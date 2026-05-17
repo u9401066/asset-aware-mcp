@@ -38,9 +38,9 @@ exact contracts.
 
 | Item | Current Status |
 |---|---|
-| Latest code version | `0.6.35` |
+| Latest code version | `0.7.0` |
 | Runtime | Python `>=3.10`, managed with `uv` |
-| MCP endpoints | 62 tools and 13 resources, 75 endpoints total |
+| MCP endpoints | 30 public tools and 13 resources, 43 endpoints total |
 | PDF backend | PyMuPDF by default; Marker has been on security hold since `0.6.28` |
 | DOCX | DOCX/DOC/DFM round trip, Track Changes, LibreOffice conversion, strict validation |
 | RAG default | CPU `granite4.1:3b`; GPU hint `granite4.1:8b` |
@@ -56,9 +56,9 @@ to keep future site changes consistent.
 
 ## Source Of Truth
 
-This site is generated from `docs/wiki/**`. Tool and resource counts come from
-`scripts/build_docs_site.py`, which parses the registered MCP decorators in
-`src/presentation/tools/**` and `src/presentation/resources/**`.
+This site is generated from `docs/wiki/**`. Public tool counts come from the
+balanced runtime surface in `src/presentation/tool_surface.py`; resource counts
+still come from the registered MCP resource decorators.
 
 ## Launch Readiness
 

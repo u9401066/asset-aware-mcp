@@ -81,12 +81,27 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if parsed.command == "list-tools":
         from src.presentation.diagnostics import registered_tool_names
+        from src.presentation.tool_surface import requested_tool_surface
 
         tool_names = registered_tool_names()
         if parsed.json:
-            _write(json.dumps({"tools": tool_names}, indent=2, sort_keys=True) + "\n")
+            _write(
+                json.dumps(
+                    {
+                        "count": len(tool_names),
+                        "surface": requested_tool_surface(),
+                        "tools": tool_names,
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
         else:
-            _write("# Asset-Aware MCP Tools\n")
+            _write(
+                f"# Asset-Aware MCP Tools ({requested_tool_surface()}, "
+                f"{len(tool_names)} tools)\n"
+            )
             _write("\n".join(tool_names) + "\n")
         return 0
 

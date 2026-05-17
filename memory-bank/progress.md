@@ -1,4 +1,65 @@
-# Progress (Updated: 2026-05-16)
+# Progress (Updated: 2026-05-17)
+
+## 2026-05-17 - v0.7.0 structural readiness and A2T production hardening
+
+- In progress: `0.7.0` release train after multi-subagent review of
+  OpenDataloader-style PDF audits, DocETL/OpenDataloader/Proxy-Pointer lessons,
+  A2T large-table behavior, and Windows/macOS runtime portability.
+- Implemented: document facade ops for `safety_audit`, `native_structure`,
+  `coverage`, `accessibility`, `pointer_index`, `structural_retrieve`, and
+  `compare` without increasing the balanced public tool count.
+- Implemented: read-only `DocumentReadinessService` contract with
+  `missing_audits`, `invalid_audits`, cached-audit status validation, and stale
+  segmentation/source hash detection; `document(op="audit")` now reruns invalid
+  cached reports instead of treating them as ready.
+- Implemented: structural pointer index/retrieval/comparison artifacts with
+  deterministic pointers, locator/source hashes, evidence-span links, stale
+  index auto-rebuild, and bounded artifact summaries.
+- Implemented: A2T stable row IDs, row provenance, row-id citation/history
+  targeting, row search/filter/paging/coverage helpers, skipped-large-table UX,
+  and artifact-only Markdown/HTML rendering with SHA-256 previews.
+- Verification so far: focused regression gates passed with
+  `uv run pytest tests/unit/test_table_service.py tests/unit/test_mcp_table_tools.py tests/unit/test_structural_pointer_service.py tests/unit/test_pdf_report_service.py tests/unit/test_mcp_document_tools.py tests/unit/test_job_service_artifacts.py -q`
+  (`171 passed`), focused Ruff passed, and mypy passed for touched document
+  readiness/pointer/tool files. Full release gates, Docker/OOM smoke, VSIX
+  package, artifact audit, push, and annotated `v0.7.0` tag are still pending.
+
+## 2026-05-17 - v0.6.36 balanced surface and install portability
+
+- Doing: release-aligning version metadata, README/README.zh-TW, VSIX README,
+  wiki source, generated docs site payload, CHANGELOG, Memory Bank, and bundled
+  assistant assets for `v0.6.36`.
+- Done: MCP public runtime defaults now expose 30 balanced tools while retaining
+  compact 17-tool and legacy 63-tool modes. `list-tools --json` reports
+  `surface`, `count`, and tool names so docs/tests can verify the contract.
+- Done: VSIX runtime preparation now handles Windows terminal commands with
+  spaces safely, uses version-pinned `uv tool run`, stores the prepared Python
+  version, and falls back from Python 3.11 to 3.10 on older Windows/macOS
+  machines.
+- Done: A2T table operations gained focused hardening for cell validation,
+  duplicate-column guards, citation-ref cleanup, persisted draft timestamps, and
+  `table_history` shortcut usage.
+- Done: document AI-readiness moved behind a single `DocumentReadinessService`
+  contract. `prepare_ai` supports direct JSON output, audit reports are cached
+  by default unless `refresh=true`, job-status artifact refresh is read-only,
+  and oversized PDF report output is prebounded before JSON serialization.
+- Verified after document-readiness hardening: Ruff, format check, MyPy, full
+  Python pytest (`966 passed, 23 skipped`), docs-site check, VSIX
+  `npm run test:ci` (`151 passing` plus package contents), balanced tool count
+  (`30`), PowerShell endpoint inventory, Docker build/import smoke, and Docker
+  list-tools smoke all passed. Docker did not reproduce the previous OOM on this
+  cached build path.
+- Verified: Ruff, format check, MyPy, docs-site check, full Python pytest
+  (`937 passed, 23 skipped`), VSIX `npm run test:ci` (`151 passing` plus
+  package contents), VSIX install/update smoke, `uv build`, VSIX package,
+  release harness audit, artifact audit, built-wheel runtime/MCP smoke, local
+  stdio MCP smoke, Docker build/import/doctor/list-tools, and Docker stdio MCP
+  smoke all passed for `v0.6.36`.
+- Fixed after OOM report: Docker build was not OOM-killed, but `uv export -o`
+  still printed the full hashed requirements file to Docker logs. Dockerfile now
+  uses `uv export --quiet`, and release harness audits for that guard. Rebuilt
+  Docker image and reran Docker list-tools + stdio MCP smoke successfully.
+- Pending: segmented git commits, push, and tag publication.
 
 ## 2026-05-16 - v0.6.35 emergency OOM hotfix
 

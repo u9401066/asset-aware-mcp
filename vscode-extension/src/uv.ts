@@ -6,17 +6,92 @@ import { promisify } from 'util';
 const execFileAsync = promisify(execFile);
 
 export const PREFERRED_RUNTIME_PYTHON = '3.11';
+export const FALLBACK_RUNTIME_PYTHONS = ['3.10'] as const;
+export const RUNTIME_PYTHON_CANDIDATES = [PREFERRED_RUNTIME_PYTHON, ...FALLBACK_RUNTIME_PYTHONS];
+export const RUNTIME_PYTHON_VERSION_KEY = 'assetAwareMcp.runtimePythonVersion';
 export const DEFAULT_TORCH_BACKEND = 'cpu';
 export const ASSET_AWARE_RUNTIME_PROBE = "import src.presentation.server; print('asset-aware-mcp runtime ready')";
 export const MARKER_BACKEND_SECURITY_HOLD_MESSAGE =
     'Marker backend requested but temporarily disabled: marker-pdf pins Pillow<11 while asset-aware-mcp requires Pillow>=12.2.0 for patched image-processing security. Using the secure PyMuPDF runtime until marker-pdf supports patched Pillow.';
+const UV_INSTALL_URL = 'https://astral.sh/uv/install.ps1';
+
+export interface UvInstallCommand {
+    command: string;
+    args: string[];
+}
+
+function quotePowerShell(value: string): string {
+    return `'${value.replace(/'/g, "''")}'`;
+}
+
+function quotePosixShell(value: string): string {
+    return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function shouldQuotePosix(value: string): boolean {
+    return value.length === 0 || /[^A-Za-z0-9_@%+=:,./-]/u.test(value);
+}
+
+export function formatTerminalCommand(
+    command: string,
+    args: string[],
+    platform: NodeJS.Platform = process.platform,
+): string {
+    if (platform === 'win32') {
+        const executable = `& ${quotePowerShell(command)}`;
+        const quotedArgs = args.map((arg) => quotePowerShell(arg));
+        return [executable, ...quotedArgs].join(' ');
+    }
+
+    const executable = shouldQuotePosix(command) ? quotePosixShell(command) : command;
+    const quotedArgs = args.map((arg) => shouldQuotePosix(arg) ? quotePosixShell(arg) : arg);
+    return [executable, ...quotedArgs].join(' ');
+}
+
+export function getUvInstallCommand(
+    platform: NodeJS.Platform = process.platform,
+): UvInstallCommand {
+    if (platform === 'win32') {
+        const script = [
+            "$ProgressPreference = 'SilentlyContinue'",
+            "try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor ([Net.SecurityProtocolType]3072) } catch {} }",
+            `$url = '${UV_INSTALL_URL}'`,
+            "$installer = $null",
+            "if (Get-Command Invoke-WebRequest -ErrorAction SilentlyContinue) {",
+            "  try { $installer = (Invoke-WebRequest -UseBasicParsing $url).Content } catch {}",
+            "}",
+            "if (-not $installer) {",
+            "  $installer = (New-Object Net.WebClient).DownloadString($url)",
+            "}",
+            "Invoke-Expression $installer",
+        ].join('; ');
+        return {
+            command: 'powershell.exe',
+            args: [
+                '-NoProfile',
+                '-NonInteractive',
+                '-ExecutionPolicy',
+                'Bypass',
+                '-Command',
+                script,
+            ],
+        };
+    }
+
+    return {
+        command: 'sh',
+        args: ['-c', 'curl -LsSf https://astral.sh/uv/install.sh | sh'],
+    };
+}
 
 export function getUvPaths(
     platform: NodeJS.Platform = process.platform,
     env: NodeJS.ProcessEnv = process.env,
 ): string[] {
     const pathApi = platform === 'win32' ? path.win32 : path.posix;
-    const homeDir = env.HOME || env.USERPROFILE || '';
+    const homeDir = platform === 'win32'
+        ? env.USERPROFILE || env.HOME || ''
+        : env.HOME || env.USERPROFILE || '';
     const cargoHome = env.CARGO_HOME || pathApi.join(homeDir, '.cargo');
     const localAppData = env.LOCALAPPDATA || pathApi.join(homeDir, 'AppData', 'Local');
     const candidates: string[] = [];
@@ -99,11 +174,11 @@ export function getUvxLaunch(
     const upgradeArgs = upgrade ? ['--upgrade'] : [];
     const fromArgs = serverVersion ? ['--from', `asset-aware-mcp==${serverVersion}`] : [];
 
-    if (uvPath === 'uv') {
-        return { command: 'uvx', args: ['--python', pythonVersion, ...upgradeArgs, ...fromArgs, ...markerArgs] };
-    }
-
-    return { command: uvPath, args: ['tool', 'run', '--python', pythonVersion, ...upgradeArgs, ...fromArgs, ...markerArgs] };
+    const command = uvPath === 'uv' ? 'uv' : uvPath;
+    return {
+        command,
+        args: ['tool', 'run', '--python', pythonVersion, ...upgradeArgs, ...fromArgs, ...markerArgs],
+    };
 }
 
 export function getAssetAwareRuntimeProbeArgs(launchArgs: string[]): string[] {

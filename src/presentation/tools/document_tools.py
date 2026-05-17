@@ -22,6 +22,11 @@ from typing import TYPE_CHECKING, Any
 
 from mcp.types import ImageContent, TextContent
 
+from src.application.document_readiness_service import (
+    AI_READINESS_ARTIFACTS,
+    AI_READINESS_REQUIRED_AUDITS,
+    DocumentReadinessService,
+)
 from src.application.document_service import normalize_page_ranges
 from src.application.output_paths import (
     resolve_document_output_path,
@@ -34,8 +39,10 @@ from src.presentation.dependencies import (
     job_service,
     layout_visualizer,
     pdf_extractor,
+    pdf_report_service,
     repository,
     segmentation_service,
+    structural_pointer_service,
 )
 from src.presentation.mcp_app import mcp
 from src.presentation.mcp_context import (
@@ -92,6 +99,7 @@ class MarkerPDFExtractor:
 
 
 JSON_TEXT_FIELD_MAX_CHARS = 1_000
+JSON_ARTIFACT_INLINE_MAX_CHARS = 1_200
 
 
 def _truncate_json_text_field(container: dict[str, Any], key: str) -> bool:
@@ -903,6 +911,7 @@ async def list_documents() -> str:
         if doc.ocr_recommended:
             output_lines.append("- **ocr_recommended:** yes")
         output_lines.append(f"- **ingested:** {doc.ingested_at}")
+        output_lines.extend(_format_next_actions(doc.doc_id))
         output_lines.append("")
 
     return format_limited_text_response(
@@ -1186,6 +1195,9 @@ async def inspect_document_manifest(doc_id: str) -> str:
         if len(manifest.lightrag_entities) > 20:
             output_lines.append(f"... and {len(manifest.lightrag_entities) - 20} more")
 
+    output_lines.extend(["", "## Next Actions"])
+    output_lines.extend(_format_next_actions(doc_id))
+
     return format_limited_text_response(
         title=f"Document Manifest: {doc_id}",
         text="\n".join(output_lines),
@@ -1328,6 +1340,527 @@ async def visualize_document_layout(
         TextContent(type="text", text="\n".join(summary)),
         ImageContent(type="image", data=overlay.image_base64, mimeType="image/png"),
     ]
+
+
+async def _export_pdf_ai_safety_report(
+    doc_id: str,
+    output_path: str | None = None,
+    ctx: Context | None = None,
+) -> str:
+    await log_message(ctx, "info", f"pdf ai safety audit start: {doc_id}")
+    await report_progress(ctx, 10, message=f"Auditing PDF safety for {doc_id}")
+    try:
+        target, report = pdf_report_service.build_and_save_ai_safety_report(
+            doc_id,
+            output_path=output_path,
+        )
+    except Exception as exc:
+        return f"??{exc!s}"
+    await report_progress(ctx, 100, message=f"PDF safety audit exported for {doc_id}")
+    return _format_json_artifact_summary(
+        title="PDF AI Safety Audit",
+        doc_id=doc_id,
+        target=target,
+        report=report,
+        preview_key="",
+    )
+
+
+async def _export_pdf_native_structure_report(
+    doc_id: str,
+    output_path: str | None = None,
+    ctx: Context | None = None,
+) -> str:
+    await log_message(ctx, "info", f"pdf native structure audit start: {doc_id}")
+    await report_progress(
+        ctx, 10, message=f"Extracting native PDF structure for {doc_id}"
+    )
+    try:
+        target, report = pdf_report_service.build_and_save_native_structure_report(
+            doc_id,
+            output_path=output_path,
+        )
+    except Exception as exc:
+        return f"??{exc!s}"
+    await report_progress(
+        ctx, 100, message=f"Native PDF structure exported for {doc_id}"
+    )
+    return _format_json_artifact_summary(
+        title="Native PDF Structure",
+        doc_id=doc_id,
+        target=target,
+        report=report,
+        preview_key="outline",
+    )
+
+
+async def _export_segmentation_coverage_report(
+    doc_id: str,
+    output_path: str | None = None,
+    ctx: Context | None = None,
+) -> str:
+    await log_message(ctx, "info", f"segmentation coverage audit start: {doc_id}")
+    await report_progress(
+        ctx, 10, message=f"Measuring segmentation coverage for {doc_id}"
+    )
+    try:
+        (
+            target,
+            report,
+        ) = await pdf_report_service.build_and_save_segmentation_coverage_report(
+            doc_id,
+            segmentation_service,
+            output_path=output_path,
+        )
+    except Exception as exc:
+        return f"??{exc!s}"
+    await report_progress(ctx, 100, message=f"Coverage audit exported for {doc_id}")
+    return _format_json_artifact_summary(
+        title="Segmentation Coverage Audit",
+        doc_id=doc_id,
+        target=target,
+        report=report,
+        preview_key="issues",
+    )
+
+
+async def _export_pdf_accessibility_report(
+    doc_id: str,
+    output_path: str | None = None,
+    ctx: Context | None = None,
+) -> str:
+    await log_message(ctx, "info", f"pdf accessibility audit start: {doc_id}")
+    await report_progress(
+        ctx, 10, message=f"Measuring accessibility readiness for {doc_id}"
+    )
+    try:
+        target, report = await pdf_report_service.build_and_save_accessibility_report(
+            doc_id,
+            segmentation_service,
+            output_path=output_path,
+        )
+    except Exception as exc:
+        return f"??{exc!s}"
+    await report_progress(
+        ctx, 100, message=f"Accessibility report exported for {doc_id}"
+    )
+    return _format_json_artifact_summary(
+        title="PDF Accessibility Readiness",
+        doc_id=doc_id,
+        target=target,
+        report=report,
+        preview_key="issues",
+    )
+
+
+async def _build_structural_pointer_index(
+    doc_id: str,
+    output_path: str | None = None,
+    ctx: Context | None = None,
+) -> str:
+    await log_message(ctx, "info", f"structural pointer index start: {doc_id}")
+    await report_progress(
+        ctx, 10, message=f"Building structural pointer index for {doc_id}"
+    )
+    try:
+        target, report = await structural_pointer_service.build_and_save_pointer_index(
+            doc_id,
+            output_path=output_path,
+        )
+    except Exception as exc:
+        return f"??{exc!s}"
+    await report_progress(
+        ctx, 100, message=f"Structural pointer index exported for {doc_id}"
+    )
+    return _format_json_artifact_summary(
+        title="Structural Pointer Index",
+        doc_id=doc_id,
+        target=target,
+        report=report,
+        preview_key="preview",
+    )
+
+
+async def _structural_retrieve(
+    doc_id: str,
+    query: str,
+    *,
+    limit: int | None = None,
+    refresh: bool = False,
+    ctx: Context | None = None,
+) -> Any:
+    if not query.strip():
+        return '??`query` is required for document(op="structural_retrieve").'
+    await log_message(ctx, "info", f"structural retrieve start: {doc_id}")
+    await report_progress(ctx, 10, message=f"Searching section pointers for {doc_id}")
+    try:
+        payload = await structural_pointer_service.retrieve(
+            doc_id,
+            query,
+            limit=limit or 5,
+            refresh=refresh,
+        )
+    except Exception as exc:
+        return f"??{exc!s}"
+    await report_progress(
+        ctx, 100, message=f"Structural retrieval complete for {doc_id}"
+    )
+    return format_limited_json_response(
+        title=f"Structural Retrieval: {doc_id}",
+        payload=payload,
+        guidance="use evidence(op='find') on returned evidence_span_ids for exact quotes",
+    )
+
+
+async def _compare_documents_structural(
+    doc_id: str,
+    doc_b_id: str,
+    *,
+    criteria: str,
+    output_path: str | None = None,
+    limit: int | None = None,
+    refresh: bool = False,
+    ctx: Context | None = None,
+) -> str:
+    await log_message(ctx, "info", f"document comparison start: {doc_id} vs {doc_b_id}")
+    await report_progress(
+        ctx, 10, message=f"Comparing structural pointers: {doc_id} vs {doc_b_id}"
+    )
+    try:
+        (
+            target,
+            bundle,
+        ) = await structural_pointer_service.build_and_save_comparison_bundle(
+            doc_id,
+            doc_b_id,
+            criteria=criteria,
+            output_path=output_path,
+            max_sections=limit or 10,
+            refresh=refresh,
+        )
+    except Exception as exc:
+        return f"??{exc!s}"
+    await report_progress(ctx, 100, message="Document comparison bundle exported")
+    return _format_json_artifact_summary(
+        title="Document Structural Comparison",
+        doc_id=doc_id,
+        target=target,
+        report=bundle,
+        preview_key="pairs",
+    )
+
+
+def _format_json_artifact_summary(
+    *,
+    title: str,
+    doc_id: str,
+    target: Path,
+    report: dict[str, Any],
+    preview_key: str,
+) -> str:
+    lines = [
+        f"# {title}",
+        "",
+        f"**doc_id:** `{doc_id}`",
+        f"**status:** {report.get('status', 'ok')}",
+        f"**schema:** {report.get('schema_version', '')}",
+        f"**output:** `{target}`",
+    ]
+    summary = report.get("summary")
+    if isinstance(summary, dict):
+        lines.extend(["", "## Summary"])
+        for key, value in summary.items():
+            if isinstance(value, (dict, list)):
+                value = _bounded_inline_json(value)
+            lines.append(f"- **{key}:** {value}")
+    metrics = report.get("metrics")
+    if isinstance(metrics, dict):
+        lines.extend(["", "## Metrics"])
+        for key, value in metrics.items():
+            if isinstance(value, (dict, list)):
+                value = _bounded_inline_json(value)
+            lines.append(f"- **{key}:** {value}")
+    preview = report.get(preview_key)
+    if isinstance(preview, list) and preview:
+        lines.extend(["", "## Preview"])
+        for item in preview[:5]:
+            lines.append(f"- `{_bounded_inline_json(item)}`")
+        if len(preview) > 5:
+            lines.append(f"- ... {len(preview) - 5} more")
+    return "\n".join(lines)
+
+
+def _bounded_inline_json(
+    value: Any,
+    *,
+    max_chars: int = JSON_ARTIFACT_INLINE_MAX_CHARS,
+) -> str:
+    bounded = _bound_inline_json_value(value)
+    raw = json.dumps(bounded, ensure_ascii=False, default=str)
+    if len(raw) <= max_chars:
+        return raw
+    summary = {
+        "response_truncated": True,
+        "content_chars": len(raw),
+        "sha256": text_sha256(raw),
+        "preview": raw[:max_chars],
+    }
+    return json.dumps(summary, ensure_ascii=False, default=str)
+
+
+def _bound_inline_json_value(
+    value: Any,
+    *,
+    depth: int = 0,
+    max_depth: int = 4,
+    max_items: int = 25,
+    max_string_chars: int = 1_000,
+) -> Any:
+    if isinstance(value, str):
+        if len(value) <= max_string_chars:
+            return value
+        return {
+            "text_truncated": True,
+            "chars": len(value),
+            "sha256": text_sha256(value),
+            "preview": value[:max_string_chars],
+        }
+    if depth >= max_depth:
+        return str(type(value).__name__)
+    if isinstance(value, dict):
+        items = list(value.items())
+        bounded = {
+            str(key): _bound_inline_json_value(
+                item,
+                depth=depth + 1,
+                max_depth=max_depth,
+                max_items=max_items,
+                max_string_chars=max_string_chars,
+            )
+            for key, item in items[:max_items]
+        }
+        if len(items) > max_items:
+            bounded["_omitted_items"] = len(items) - max_items
+        return bounded
+    if isinstance(value, list | tuple):
+        bounded_items = [
+            _bound_inline_json_value(
+                item,
+                depth=depth + 1,
+                max_depth=max_depth,
+                max_items=max_items,
+                max_string_chars=max_string_chars,
+            )
+            for item in list(value)[:max_items]
+        ]
+        if len(value) > max_items:
+            bounded_items.append({"_omitted_items": len(value) - max_items})
+        return bounded_items
+    return value
+
+
+def _readiness_service() -> DocumentReadinessService:
+    return DocumentReadinessService(repository)
+
+
+def _facade_next_actions(
+    doc_id: str,
+    *,
+    capabilities: dict[str, bool] | None = None,
+    ocr_recommended: bool = False,
+) -> list[str]:
+    actions = [f'document(op="inspect", doc_id="{doc_id}")']
+    if capabilities is None or not all(
+        capabilities.get(name, False)
+        for name in (
+            "has_ai_safety_report",
+            "has_native_structure",
+            "has_coverage_report",
+            "has_accessibility_report",
+        )
+    ):
+        actions.append(f'document(op="audit", doc_id="{doc_id}")')
+    actions.append(f'document(op="prepare_ai", doc_id="{doc_id}")')
+    if capabilities is None or not capabilities.get("has_section_pointer_index", False):
+        actions.append(f'document(op="pointer_index", doc_id="{doc_id}")')
+    if capabilities is None or not capabilities.get("has_segmentation", False):
+        actions.append(f'document(op="export_segmentation", doc_id="{doc_id}")')
+    actions.append(f'document_asset(op="tree", doc_id="{doc_id}")')
+    actions.append(f'evidence(op="find", doc_id="{doc_id}", query="...")')
+    if ocr_recommended:
+        actions.append('document(op="ocr", pdf_path="...")')
+    return actions
+
+
+def _format_next_actions(doc_id: str) -> list[str]:
+    return [f"- **next:** `{action}`" for action in _facade_next_actions(doc_id)]
+
+
+def _audit_report_failed(report_text: str) -> bool:
+    stripped = report_text.lstrip()
+    lowered = stripped.lower()
+    if stripped.startswith("??") or lowered.startswith("error:"):
+        return True
+    failed_statuses = ("unavailable", "skipped", "failed", "error")
+    return any(f"**status:** {status}" in lowered for status in failed_statuses)
+
+
+async def _run_document_readiness_audit(
+    doc_id: str,
+    output_path: str | None = None,
+    ctx: Context | None = None,
+    refresh: bool = False,
+) -> str:
+    if output_path:
+        return (
+            'document(op="audit") writes multiple reports; omit output_path or '
+            "run a specific audit op with output_path."
+        )
+
+    readiness = _readiness_service().build_payload(doc_id)
+    missing_audits = set(readiness.get("missing_audits", []))
+    invalid_audits = set(readiness.get("invalid_audits", []))
+    audits_to_run = (
+        set(AI_READINESS_REQUIRED_AUDITS)
+        if refresh
+        else set(missing_audits).union(invalid_audits)
+    )
+    artifacts = {
+        str(name): str(path)
+        for name, path in readiness.get("artifacts", {}).items()
+        if path
+    }
+    audit_steps = [
+        ("ai_safety_report", "PDF AI Safety Audit", _export_pdf_ai_safety_report),
+        (
+            "native_structure",
+            "Native PDF Structure",
+            _export_pdf_native_structure_report,
+        ),
+        (
+            "segmentation_coverage",
+            "Segmentation Coverage Audit",
+            _export_segmentation_coverage_report,
+        ),
+        (
+            "accessibility_report",
+            "PDF Accessibility Readiness",
+            _export_pdf_accessibility_report,
+        ),
+    ]
+    report_sections: list[tuple[str, str]] = []
+    for name, title, runner in audit_steps:
+        if name not in audits_to_run:
+            cached_path = artifacts.get(name, "")
+            cached_line = f"- {name}: cached"
+            if cached_path:
+                cached_line = f"{cached_line} `{cached_path}`"
+            report_sections.append((name, f"## {title}\n\n{cached_line}"))
+            continue
+        report_sections.append(
+            (
+                name,
+                await runner(
+                    doc_id=doc_id,
+                    output_path=None,
+                    ctx=ctx,
+                ),
+            )
+        )
+    failed_reports = [
+        name
+        for name, report_text in report_sections
+        if _audit_report_failed(report_text)
+    ]
+    status = "cached" if not audits_to_run else "warning" if failed_reports else "ok"
+    sections = [
+        "# Document AI Readiness Audit",
+        "",
+        f"**doc_id:** `{doc_id}`",
+        f"**status:** {status}",
+    ]
+    if failed_reports:
+        sections.extend(
+            [
+                "",
+                "## Failed Reports",
+                f"- failed_reports: {', '.join(failed_reports)}",
+            ]
+        )
+    sections.extend(report_text for _name, report_text in report_sections)
+    sections.extend(["", "## Next Actions"])
+    sections.extend(f"- `{action}`" for action in _facade_next_actions(doc_id))
+    return format_limited_text_response(
+        title=f"Document AI Readiness Audit: {doc_id}",
+        text="\n\n".join(sections),
+        language="markdown",
+        guidance='use document(op="prepare_ai", doc_id=...) for a compact readiness state',
+    )
+
+
+async def _prepare_document_for_ai(
+    doc_id: str,
+    ctx: Context | None = None,
+    output_format: str = "markdown",
+) -> Any:
+    del ctx
+    readiness_payload = _readiness_service().build_payload(doc_id)
+    if _normalize_op(output_format) == "json":
+        return readiness_payload
+
+    capabilities = readiness_payload["capabilities"]
+    artifacts = readiness_payload["artifacts"]
+    blockers = readiness_payload["blockers"]
+    warnings = readiness_payload["warnings"]
+    lines = [
+        "# Document AI Readiness",
+        "",
+        f"**doc_id:** `{doc_id}`",
+        f"**status:** {readiness_payload['status']}",
+        f"**text_quality:** {readiness_payload['text_quality']}",
+        f"**ocr_recommended:** {'yes' if readiness_payload['ocr_recommended'] else 'no'}",
+        "",
+        "## Capabilities",
+    ]
+    for name, enabled in capabilities.items():
+        lines.append(f"- {name}: {'yes' if enabled else 'no'}")
+
+    lines.extend(["", "## Artifacts"])
+    for name, _template in AI_READINESS_ARTIFACTS:
+        path = artifacts.get(name)
+        if path:
+            lines.append(f"- {name}: `{path}`")
+        else:
+            lines.append(f"- {name}: missing")
+
+    if blockers:
+        lines.extend(["", "## Blockers"])
+        lines.extend(f"- {blocker}" for blocker in blockers)
+
+    if warnings:
+        lines.extend(["", "## Warnings"])
+        lines.extend(f"- {warning}" for warning in warnings)
+
+    lines.extend(["", "## Next Actions"])
+    next_actions = readiness_payload["next_actions"]
+    lines.extend(f"- `{action}`" for action in next_actions)
+    lines.extend(
+        [
+            "",
+            "## Readiness JSON",
+            "```json",
+            json.dumps(readiness_payload, ensure_ascii=False, indent=2),
+            "```",
+        ]
+    )
+    source_path = artifacts.get("manifest")
+    return format_limited_text_response(
+        title=f"Document AI Readiness: {doc_id}",
+        text="\n".join(lines),
+        source_path=source_path,
+        language="markdown",
+        guidance='run document(op="audit", doc_id=...) to generate missing readiness artifacts',
+    )
 
 
 @mcp.tool()
@@ -1520,16 +2053,26 @@ async def document(
     pdf_path: str | None = None,
     doc_id: str | None = None,
     output_dir: str | None = None,
+    output_path: str | None = None,
     async_mode: bool = True,
     use_marker: bool = False,
     ocr_enabled: bool = False,
     ocr_language: str = "eng",
     rotate_pages: bool = False,
     deskew: bool = False,
+    page: int | None = None,
+    limit: int | None = None,
+    show_labels: bool = True,
+    include_reading_order: bool = True,
     marker_max_pages_per_chunk: int = 0,
     extract_figures: bool = True,
     index_knowledge_graph: bool = False,
     page_ranges: list[str] | None = None,
+    output_format: str = "markdown",
+    refresh: bool = False,
+    query: str = "",
+    criteria: str = "",
+    doc_b_id: str | None = None,
     ctx: Context | None = None,
 ) -> Any:
     """
@@ -1538,6 +2081,33 @@ async def document(
     Existing document tools stay registered and keep their original contracts.
     """
     operation = _normalize_op(op)
+    if operation == "auto":
+        if doc_id and file_paths:
+            return (
+                'Choose either doc_id or file_paths for document(op="auto"), not both.'
+            )
+        if doc_id:
+            return await _prepare_document_for_ai(
+                doc_id=doc_id,
+                ctx=ctx,
+                output_format=output_format,
+            )
+        if file_paths:
+            return await ingest_documents(
+                file_paths,
+                async_mode=async_mode,
+                use_marker=use_marker,
+                ocr_enabled=ocr_enabled,
+                ocr_language=ocr_language,
+                rotate_pages=rotate_pages,
+                deskew=deskew,
+                marker_max_pages_per_chunk=marker_max_pages_per_chunk,
+                extract_figures=extract_figures,
+                index_knowledge_graph=index_knowledge_graph,
+                page_ranges=page_ranges,
+                ctx=ctx,
+            )
+        return _missing_document_param("doc_id or file_paths")
     if operation in {"ingest", "import"}:
         if not file_paths:
             return _missing_document_param("file_paths")
@@ -1582,11 +2152,153 @@ async def document(
         if not doc_id:
             return _missing_document_param("doc_id")
         return await inspect_document_manifest(doc_id)
+    if operation in {"prepare_ai", "readiness", "ai_ready"}:
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        return await _prepare_document_for_ai(
+            doc_id=doc_id,
+            ctx=ctx,
+            output_format=output_format,
+        )
+    if operation == "ocr":
+        source_pdf = pdf_path or (file_paths[0] if file_paths else None)
+        if not source_pdf:
+            return _missing_document_param("pdf_path")
+        return await ocr_pdf_document(
+            pdf_path=source_pdf,
+            output_path=output_path,
+            language=ocr_language,
+            rotate_pages=rotate_pages,
+            deskew=deskew,
+            ctx=ctx,
+        )
+    if operation in {"export_segmentation", "segmentation"}:
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        return await export_document_segmentation(
+            doc_id=doc_id,
+            page=page,
+            limit=limit,
+            output_path=output_path,
+            ctx=ctx,
+        )
+    if operation in {"layout", "visualize_layout"}:
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        return await visualize_document_layout(
+            doc_id=doc_id,
+            page=1 if page is None else page,
+            show_labels=show_labels,
+            include_reading_order=include_reading_order,
+            output_path=output_path,
+            ctx=ctx,
+        )
+    if operation in {"safety", "safety_audit", "ai_safety"}:
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        return await _export_pdf_ai_safety_report(
+            doc_id=doc_id,
+            output_path=output_path,
+            ctx=ctx,
+        )
+    if operation in {"structure", "native_structure"}:
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        return await _export_pdf_native_structure_report(
+            doc_id=doc_id,
+            output_path=output_path,
+            ctx=ctx,
+        )
+    if operation in {"coverage", "segmentation_coverage"}:
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        return await _export_segmentation_coverage_report(
+            doc_id=doc_id,
+            output_path=output_path,
+            ctx=ctx,
+        )
+    if operation in {"accessibility", "accessibility_report"}:
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        return await _export_pdf_accessibility_report(
+            doc_id=doc_id,
+            output_path=output_path,
+            ctx=ctx,
+        )
+    if operation in {"pointer_index", "section_pointer_index", "proxy_pointer"}:
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        return await _build_structural_pointer_index(
+            doc_id=doc_id,
+            output_path=output_path,
+            ctx=ctx,
+        )
+    if operation in {"structural_retrieve", "retrieve", "search"}:
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        return await _structural_retrieve(
+            doc_id=doc_id,
+            query=query,
+            limit=limit,
+            refresh=refresh,
+            ctx=ctx,
+        )
+    if operation in {"compare", "comparison"}:
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        if not doc_b_id:
+            return _missing_document_param("doc_b_id")
+        return await _compare_documents_structural(
+            doc_id=doc_id,
+            doc_b_id=doc_b_id,
+            criteria=criteria or query,
+            output_path=output_path,
+            limit=limit,
+            refresh=refresh,
+            ctx=ctx,
+        )
+    if operation in {"audit", "readiness_audit"}:
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        return await _run_document_readiness_audit(
+            doc_id=doc_id,
+            output_path=output_path,
+            ctx=ctx,
+            refresh=refresh,
+        )
 
     return _unsupported_document_op(
         "document",
         op,
-        {"delete", "ingest", "inspect", "list", "parse"},
+        {
+            "accessibility",
+            "ai_safety",
+            "audit",
+            "auto",
+            "coverage",
+            "delete",
+            "export_segmentation",
+            "ingest",
+            "inspect",
+            "layout",
+            "list",
+            "ocr",
+            "parse",
+            "pointer_index",
+            "prepare_ai",
+            "proxy_pointer",
+            "safety",
+            "safety_audit",
+            "search",
+            "segmentation",
+            "segmentation_coverage",
+            "structure",
+            "structural_retrieve",
+            "native_structure",
+            "visualize_layout",
+            "compare",
+            "comparison",
+        },
     )
 
 

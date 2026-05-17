@@ -7,7 +7,18 @@ PDF、DOCX/DFM、表格、圖片、section、citation index、Foam evidence pack
 KG/RAG 串成可驗證的文件流程。
 
 這個網站改成章節式導覽：先選你正在做的任務，再進入對應的詳細頁或 reference。
-目前內容對齊 `0.6.35` 正式文件。
+目前內容對齊 `0.7.0` 正式文件。
+
+## 0.7.0 highlights
+
+- `document(op="pointer_index")`, `document(op="structural_retrieve")`, and
+  `document(op="compare")` add section-level structural retrieval and
+  comparison without increasing the balanced public tool count.
+- `document(op="audit")` now covers safety, native structure, segmentation
+  coverage, and accessibility readiness artifacts.
+- A2T tables now use stable row IDs, row search/filter/paging, citation
+  coverage, artifact-only large-table render, and explicit skipped-large-table
+  UX.
 
 <div class="path-grid">
   <section class="path-card">
