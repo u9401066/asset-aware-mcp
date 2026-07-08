@@ -131,6 +131,18 @@ class Settings(BaseSettings):
             "parsing is requested."
         ),
     )
+    docling_python_path: str = Field(
+        default="",
+        description=(
+            "Optional path to an isolated Python interpreter that has 'docling' "
+            "installed (e.g. .venv-docling/bin/python on POSIX or "
+            ".venv-docling\\Scripts\\python.exe on Windows). Lets the Docling engine "
+            "run in a subprocess when it cannot be installed in the main environment "
+            "(e.g. pre-release Python without torch wheels). When empty, the adapter "
+            "auto-detects the DOCLING_PYTHON_PATH env var or ./.venv-docling. "
+            "Install via: python scripts/setup_docling.py"
+        ),
+    )
 
     # OpenAI settings (optional, if using OpenAI backend)
     openai_api_key: str = Field(
