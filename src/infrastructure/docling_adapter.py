@@ -22,7 +22,10 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import logging
+import os
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -31,10 +34,16 @@ from src.infrastructure.marker_adapter import MarkerBlock, MarkerParseResult
 logger = logging.getLogger(__name__)
 
 DOCLING_INSTALL_HINT = (
-    "Docling backend not installed. Install the optional extra via "
-    "`uv tool install --upgrade 'asset-aware-mcp[docling]'` "
-    "(or `uv pip install docling`), or set ETL_ENGINE=pymupdf."
+    "Docling backend not available. Install the isolated engine with "
+    "`python scripts/setup_docling.py` (cross-platform; see docs/docling-setup.md), "
+    "or `uv pip install docling` into the main env, or set ETL_ENGINE=pymupdf. "
+    "On pre-release Python without torch wheels, the isolated .venv-docling is required."
 )
+
+# Environment variables for the isolated-subprocess Docling bridge.
+_DOCLING_PYTHON_ENV = "DOCLING_PYTHON_PATH"
+_DOCLING_TIMEOUT_ENV = "DOCLING_TIMEOUT_SECONDS"
+_DEFAULT_DOCLING_TIMEOUT = 900.0
 
 # Docling ``DocItemLabel`` -> Marker block_type convention consumed downstream
 # (annotate_marker_blocks / manifest generation). Unknown labels fall back to
@@ -63,6 +72,89 @@ class DoclingBackendUnavailable(RuntimeError):
     """Raised when the optional ``docling`` backend cannot be imported."""
 
 
+class DoclingParseError(RuntimeError):
+    """Raised when the Docling worker subprocess fails to parse a document."""
+
+
+def _block_to_dict(block: MarkerBlock) -> dict[str, Any]:
+    """Serialise a MarkerBlock (recursively) to a JSON-safe dict."""
+    return {
+        "block_id": block.block_id,
+        "block_type": block.block_type,
+        "page": block.page,
+        "text": block.text,
+        "bbox": block.bbox,
+        "polygon": block.polygon,
+        "section_hierarchy": {str(k): v for k, v in block.section_hierarchy.items()},
+        "children": [_block_to_dict(child) for child in block.children],
+        "metadata": block.metadata,
+    }
+
+
+def _block_from_dict(data: dict[str, Any]) -> MarkerBlock:
+    """Rebuild a MarkerBlock (recursively) from a serialised dict."""
+    return MarkerBlock(
+        block_id=str(data.get("block_id", "")),
+        block_type=str(data.get("block_type", "Text")),
+        page=int(data.get("page", 1) or 1),
+        text=str(data.get("text", "") or ""),
+        bbox=list(data.get("bbox", []) or []),
+        polygon=list(data.get("polygon", []) or []),
+        section_hierarchy={
+            int(k): v for k, v in (data.get("section_hierarchy", {}) or {}).items()
+        },
+        children=[
+            _block_from_dict(child) for child in (data.get("children", []) or [])
+        ],
+        metadata=dict(data.get("metadata", {}) or {}),
+    )
+
+
+def _serialize_result_to_dir(result: MarkerParseResult, out_dir: Path) -> None:
+    """Serialise a MarkerParseResult to ``<out_dir>/result.json`` (+ images/).
+
+    Image bytes are spilled to ``<out_dir>/images/`` and referenced by a
+    manifest so the payload stays JSON-serialisable across the process boundary.
+    """
+    image_manifest: list[dict[str, str]] = []
+    if result.images:
+        image_dir = out_dir / "images"
+        image_dir.mkdir(parents=True, exist_ok=True)
+        for index, (key, data) in enumerate(result.images.items()):
+            filename = f"img_{index}.bin"
+            (image_dir / filename).write_bytes(data)
+            image_manifest.append({"key": key, "file": filename})
+    payload = {
+        "markdown": result.markdown,
+        "blocks": [_block_to_dict(block) for block in result.blocks],
+        "toc": result.toc,
+        "metadata": result.metadata,
+        "page_count": result.page_count,
+        "images": image_manifest,
+    }
+    (out_dir / "result.json").write_text(
+        json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+    )
+
+
+def _deserialize_result_from_dir(out_dir: Path) -> MarkerParseResult:
+    """Rebuild a MarkerParseResult from ``<out_dir>/result.json`` (+ images/)."""
+    payload = json.loads((out_dir / "result.json").read_text(encoding="utf-8"))
+    images: dict[str, bytes] = {}
+    for item in payload.get("images", []) or []:
+        image_path = out_dir / "images" / item.get("file", "")
+        if image_path.exists():
+            images[str(item.get("key", ""))] = image_path.read_bytes()
+    return MarkerParseResult(
+        markdown=str(payload.get("markdown", "")),
+        blocks=[_block_from_dict(b) for b in payload.get("blocks", []) or []],
+        toc=list(payload.get("toc", []) or []),
+        images=images,
+        metadata=dict(payload.get("metadata", {}) or {}),
+        page_count=int(payload.get("page_count", 0) or 0),
+    )
+
+
 class DoclingExtractor:
     """Docling structured parser emitting Marker-compatible results.
 
@@ -89,13 +181,139 @@ class DoclingExtractor:
 
     @staticmethod
     def require_backend_available() -> None:
-        """Preflight the docling import without loading heavy models."""
+        """Preflight docling availability (in-process import OR isolated venv)."""
         try:
             from docling.document_converter import (  # type: ignore # noqa: F401
                 DocumentConverter,
             )
-        except (ImportError, OSError) as exc:
-            raise DoclingBackendUnavailable(DOCLING_INSTALL_HINT) from exc
+
+            return
+        except (ImportError, OSError):
+            pass
+        if DoclingExtractor._docling_python() is not None:
+            return
+        raise DoclingBackendUnavailable(DOCLING_INSTALL_HINT)
+
+    @staticmethod
+    def _venv_python(venv_dir: Path) -> Path:
+        """Interpreter path inside a venv for the current OS (POSIX/Windows)."""
+        if os.name == "nt":
+            return venv_dir / "Scripts" / "python.exe"
+        return venv_dir / "bin" / "python"
+
+    @staticmethod
+    def _docling_python() -> str | None:
+        """Locate an isolated interpreter that has docling installed.
+
+        Resolution order (cross-platform):
+        1. ``DOCLING_PYTHON_PATH`` environment variable (explicit).
+        2. ``Settings.docling_python_path`` (from .env / config).
+        3. ``.venv-docling`` under the cwd or project root (``bin/python`` on
+           POSIX, ``Scripts/python.exe`` on Windows).
+        """
+        explicit = os.environ.get(_DOCLING_PYTHON_ENV)
+        if explicit and Path(explicit).exists():
+            return explicit
+        with contextlib.suppress(Exception):
+            from src.infrastructure.config import Settings
+
+            configured = Settings().docling_python_path
+            if configured and Path(configured).exists():
+                return configured
+        for base in (Path.cwd(), Path(__file__).resolve().parents[2]):
+            candidate = DoclingExtractor._venv_python(base / ".venv-docling")
+            if candidate.exists():
+                return str(candidate)
+        return None
+
+    @classmethod
+    def _resolve_backend_mode(cls) -> str:
+        """Return ``"direct"`` if docling is importable, else ``"subprocess"``.
+
+        Raises DoclingBackendUnavailable when neither path is available.
+        """
+        try:
+            import docling  # type: ignore # noqa: F401
+
+            return "direct"
+        except ImportError:
+            pass
+        if cls._docling_python() is not None:
+            return "subprocess"
+        raise DoclingBackendUnavailable(DOCLING_INSTALL_HINT)
+
+    @staticmethod
+    def _timeout_seconds() -> float:
+        """Resolve the subprocess timeout budget (seconds)."""
+        raw = os.environ.get(_DOCLING_TIMEOUT_ENV)
+        if raw:
+            with contextlib.suppress(ValueError, TypeError):
+                return float(raw)
+        return _DEFAULT_DOCLING_TIMEOUT
+
+    def _parse_subprocess(
+        self,
+        pdf_path: Path,
+        *,
+        extract_images: bool = True,
+        page_map: list[int] | None = None,
+        reported_page_count: int | None = None,
+    ) -> MarkerParseResult:
+        """Parse via an isolated Python that has docling installed.
+
+        Runs this module as a worker under the isolated interpreter, then
+        rebuilds the MarkerParseResult from the worker's on-disk payload. Keeps
+        heavy torch imports out of the MCP server process (OOM isolation).
+        """
+        import tempfile
+
+        python_path = self._docling_python()
+        if python_path is None:
+            raise DoclingBackendUnavailable(DOCLING_INSTALL_HINT)
+
+        with tempfile.TemporaryDirectory(prefix="docling_") as tmp:
+            out_dir = Path(tmp)
+            cmd = [
+                python_path,
+                "-m",
+                "src.infrastructure.docling_adapter",
+                str(pdf_path),
+                str(out_dir),
+            ]
+            if not extract_images:
+                cmd.append("--no-images")
+            env = dict(os.environ)
+            project_root = str(Path(__file__).resolve().parents[2])
+            env["PYTHONPATH"] = project_root + os.pathsep + env.get("PYTHONPATH", "")
+            try:
+                proc = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=self._timeout_seconds(),
+                    env=env,
+                    check=False,
+                )
+            except FileNotFoundError as exc:
+                raise DoclingBackendUnavailable(DOCLING_INSTALL_HINT) from exc
+            except subprocess.TimeoutExpired as exc:
+                raise DoclingParseError(
+                    f"Docling worker timed out after {self._timeout_seconds()}s"
+                ) from exc
+            if proc.returncode != 0:
+                raise DoclingParseError(
+                    f"Docling worker failed (exit {proc.returncode}): "
+                    f"{proc.stderr[:500]}"
+                )
+            result = _deserialize_result_from_dir(out_dir)
+
+        if page_map:
+            self._apply_page_map(result.blocks, page_map)
+        if reported_page_count:
+            result.page_count = reported_page_count
+        result.metadata.setdefault("backend", "docling")
+        result.metadata["docling_mode"] = "subprocess"
+        return result
 
     def _build_converter(self, *, extract_images: bool) -> Any:
         """Create a DocumentConverter with picture generation toggled."""
@@ -135,11 +353,38 @@ class DoclingExtractor:
     ) -> MarkerParseResult:
         """Parse a PDF into a Marker-compatible structured result.
 
-        Signature mirrors :meth:`MarkerPDFExtractor.parse` so the two are
-        interchangeable in the document service. ``max_pages_per_chunk`` is
-        accepted for parity; Docling manages memory internally and processes the
-        document in one pass.
+        Dispatches to in-process Docling (``direct`` mode) when importable, or to
+        an isolated Python via subprocess (``subprocess`` mode) when
+        ``DOCLING_PYTHON_PATH`` / ``.venv-docling`` is available. This keeps the
+        MCP server process free of heavy torch imports while still exposing a
+        production-grade Docling path on runtimes where docling cannot be
+        installed in-process (e.g. pre-release Python without torch wheels).
         """
+        if self._resolve_backend_mode() == "subprocess":
+            return self._parse_subprocess(
+                pdf_path,
+                extract_images=extract_images,
+                page_map=page_map,
+                reported_page_count=reported_page_count,
+            )
+        return self._parse_direct(
+            pdf_path,
+            extract_images=extract_images,
+            max_pages_per_chunk=max_pages_per_chunk,
+            page_map=page_map,
+            reported_page_count=reported_page_count,
+        )
+
+    def _parse_direct(
+        self,
+        pdf_path: Path,
+        *,
+        extract_images: bool = True,
+        max_pages_per_chunk: int | None = None,
+        page_map: list[int] | None = None,
+        reported_page_count: int | None = None,
+    ) -> MarkerParseResult:
+        """Parse in-process using an importable docling (heavy path)."""
         self.require_backend_available()
         converter = self._build_converter(extract_images=extract_images)
         result = converter.convert(str(pdf_path))
@@ -289,3 +534,36 @@ class DoclingExtractor:
             with contextlib.suppress(Exception):
                 return len(pages)
         return 0
+
+
+def _run_worker(argv: list[str]) -> int:
+    """Worker entry point: parse a PDF with in-process docling and serialise.
+
+    Invoked as ``python -m src.infrastructure.docling_adapter <pdf> <out_dir>
+    [--no-images]`` under an isolated interpreter that has docling installed.
+    The parent process (any Python) then rebuilds the result from the on-disk
+    payload via :func:`_deserialize_result_from_dir`.
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Docling isolated worker")
+    parser.add_argument("pdf_path")
+    parser.add_argument("output_dir")
+    parser.add_argument("--no-images", action="store_true")
+    args = parser.parse_args(argv)
+
+    extractor = DoclingExtractor()
+    result = extractor._parse_direct(
+        Path(args.pdf_path),
+        extract_images=not args.no_images,
+        page_map=None,
+        reported_page_count=None,
+    )
+    _serialize_result_to_dir(result, Path(args.output_dir))
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+
+    raise SystemExit(_run_worker(sys.argv[1:]))
