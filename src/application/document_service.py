@@ -66,8 +66,8 @@ if TYPE_CHECKING:
         KnowledgeGraphInterface,
         PDFExtractorInterface,
     )
-    from src.infrastructure.marker_adapter import MarkerPDFExtractor
     from src.infrastructure.ocr_processor import OCRProcessor
+    from src.infrastructure.structured_extractor import StructuredPDFExtractor
 
 
 ToolProgressCallback = Callable[[int, int, str, str], Awaitable[None] | None]
@@ -133,7 +133,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
         repository: DocumentRepository,
         pdf_extractor: PDFExtractorInterface,
         knowledge_graph: KnowledgeGraphInterface | None = None,
-        marker_extractor: MarkerPDFExtractor | None = None,
+        marker_extractor: StructuredPDFExtractor | None = None,
         profile: ETLProfile | None = None,
         ocr_processor: OCRProcessor | None = None,
     ):

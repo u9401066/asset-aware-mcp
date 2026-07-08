@@ -25,18 +25,21 @@ from src.domain.etl_profile import ETLProfile
 from src.domain.marker_errors import MarkerBackendUnavailable
 from src.infrastructure.config import settings
 from src.infrastructure.excel_renderer import ExcelRenderer
+from src.infrastructure.extractor_factory import (
+    build_base_extractor,
+    build_structured_extractor,
+)
 from src.infrastructure.file_storage import FileStorage
 from src.infrastructure.job_store import FileJobStore
 from src.infrastructure.layout_visualizer import LayoutVisualizer
 from src.infrastructure.ocr_processor import OCRProcessor
-from src.infrastructure.pdf_extractor import PyMuPDFExtractor
 from src.infrastructure.subprocess_ingest_worker_runner import (
     SubprocessIngestWorkerRunner,
 )
 
 if TYPE_CHECKING:
     from src.domain.repositories import KnowledgeGraphInterface
-    from src.infrastructure.marker_adapter import MarkerPDFExtractor
+    from src.infrastructure.structured_extractor import StructuredPDFExtractor
 
 
 def _build_knowledge_graph() -> KnowledgeGraphInterface | None:
@@ -75,8 +78,13 @@ except (FileNotFoundError, KeyError, json.JSONDecodeError):
     etl_profile = ETLProfile.default()
 
 repository = FileStorage(settings.data_dir)
-pdf_extractor = PyMuPDFExtractor(profile=etl_profile)  # Lightweight, always available
-marker_extractor: MarkerPDFExtractor | None = None  # Lazy-loaded
+# Engine selection (config-driven via ETL_ENGINE): the base extractor is always
+# available (PyMuPDF, or the layout-aware pymupdf4llm) and doubles as the fast
+# fallback; the structured extractor is the optional high-fidelity engine
+# (docling / mineru / marker) injected into the marker_extractor slot, or None
+# when base-only or the backend is not installed.
+pdf_extractor = build_base_extractor(settings.etl_engine, etl_profile)
+marker_extractor = build_structured_extractor(settings.etl_engine)
 knowledge_graph = _build_knowledge_graph()
 job_store = FileJobStore(settings.data_dir)
 excel_renderer = ExcelRenderer(settings.table_output_dir)
@@ -130,26 +138,28 @@ docx_validator = DocxValidator()
 # ============================================================================
 
 
-def get_marker_extractor() -> MarkerPDFExtractor:
-    """Lazy-load Marker extractor (heavy model initialization, ~1GB)."""
+def get_marker_extractor() -> StructuredPDFExtractor:
+    """Lazy-load the configured structured extractor (docling/mineru/marker).
+
+    Heavy backends (ML models or a CLI) initialise on first use. When no
+    structured engine is configured, falls back to the legacy Marker engine so
+    the historical ``use_marker`` behaviour (and its informative Pillow<11
+    error) is preserved.
+    """
     global marker_extractor
     if marker_extractor is None:
-        try:
-            from src.infrastructure.marker_adapter import MarkerPDFExtractor
-        except ModuleNotFoundError as exc:
-            raise RuntimeError(
-                "Marker backend is temporarily unavailable in the packaged runtime because "
-                "marker-pdf 1.10.2 pins Pillow<11 while asset-aware-mcp requires "
-                "Pillow>=12.2.0 for security. Use PyMuPDF mode until upstream Marker "
-                "supports patched Pillow."
-            ) from exc
+        engine = (settings.etl_engine or "").lower()
+        target = engine if engine in {"docling", "mineru", "marker"} else "marker"
+        marker_extractor = build_structured_extractor(target)
+    if marker_extractor is None:
+        # Selected/legacy backend unavailable; surface a clear, actionable error.
+        from src.infrastructure.marker_adapter import MarkerPDFExtractor
 
-        try:
-            MarkerPDFExtractor.require_backend_available()
-        except MarkerBackendUnavailable:
-            raise
-
-        marker_extractor = MarkerPDFExtractor()
+        MarkerPDFExtractor.require_backend_available()
+        raise MarkerBackendUnavailable(
+            "No structured PDF engine is available. Set ETL_ENGINE=docling or "
+            "ETL_ENGINE=mineru and install the matching optional extra."
+        )
     return marker_extractor
 
 
@@ -180,7 +190,7 @@ def rebuild_for_profile(profile_name: str) -> ETLProfile:
 
     # Update shared profile and recreate dependent services
     etl_profile = new_profile
-    pdf_extractor = PyMuPDFExtractor(profile=new_profile)
+    pdf_extractor = build_base_extractor(settings.etl_engine, new_profile)
 
     # Recreate document service with new extractor
     document_service = DocumentService(

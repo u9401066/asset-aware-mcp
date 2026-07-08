@@ -119,6 +119,19 @@ class Settings(BaseSettings):
         description="Optional JSON file path for a custom ETL extraction profile",
     )
 
+    # PDF -> asset extraction engine selection
+    etl_engine: str = Field(
+        default="pymupdf",
+        description=(
+            "High-fidelity PDF->asset engine: 'pymupdf' (default, fast, no models), "
+            "'pymupdf4llm' (layout-aware drop-in), 'docling' (MIT; layout+table+"
+            "formula+figure), 'mineru' (highest accuracy; formula->LaTeX, "
+            "table->HTML), or 'marker' (legacy, disabled while pinned to Pillow<11). "
+            "Structured engines are lazy-loaded and used when use_marker/structured "
+            "parsing is requested."
+        ),
+    )
+
     # OpenAI settings (optional, if using OpenAI backend)
     openai_api_key: str = Field(
         default="", description="OpenAI API key (only if llm_backend='openai')"

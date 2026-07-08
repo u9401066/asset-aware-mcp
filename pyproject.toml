@@ -66,6 +66,29 @@ dependencies = [
 lightrag = [
     "lightrag-hku>=1.4.11",
 ]
+# --- Modern high-fidelity PDF->asset engines ---
+# All three are verified compatible with the secure Pillow>=12.2.0 floor
+# (resolved pillow 12.3.0), unlike marker-pdf which pins Pillow<11. Adapters
+# lazy-import their backend, so the base package installs without them and
+# degrades gracefully when an engine is selected but not installed.
+#
+# Docling (IBM, MIT): page layout + reading order + table structure + formula +
+# figure classification + chart understanding. Ships the lightweight
+# GraniteDocling VLM, aligned with this project's granite Ollama backend.
+docling = [
+    "docling>=2.100.0",
+]
+# MinerU (OpenDataLab, Apache-2.0 derived): highest-accuracy structured parsing,
+# formula->LaTeX, table->HTML, cross-page table merge. The pipeline backend runs
+# on pure CPU (heavy: pulls torch/onnxruntime, opt-in only).
+mineru = [
+    "mineru[pipeline]>=2.5.0",
+]
+# PyMuPDF4LLM: lightweight drop-in upgrade inside the PyMuPDF ecosystem. Adds
+# layout-aware reading order + table->markdown, no GPU, no Pillow conflict.
+pdf-plus = [
+    "pymupdf4llm>=0.3.0",
+]
 # Reserved for the optional Marker PDF backend. Temporarily empty:
 # marker-pdf 1.10.2 pins Pillow<11 while the secure runtime requires
 # Pillow>=12.2.0. Re-populate when upstream marker-pdf supports a
@@ -156,7 +179,10 @@ module = [
     "mistralai.*",
     "fitz.*",
     "pymupdf.*",
+    "pymupdf4llm.*",
     "surya.*",
+    "docling.*",
+    "mineru.*",
 ]
 ignore_missing_imports = true
 follow_imports = "skip"

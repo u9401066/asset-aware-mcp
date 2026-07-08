@@ -34,13 +34,16 @@ def _build_worker_dependencies(profile_name: str = "") -> _WorkerDependencies:
     """Build only the dependencies needed by isolated PDF ingest workers."""
     from src.application.document_service import DocumentService
     from src.infrastructure.config import settings
+    from src.infrastructure.extractor_factory import (
+        build_base_extractor,
+        build_structured_extractor,
+    )
     from src.infrastructure.file_storage import FileStorage
     from src.infrastructure.ocr_processor import OCRProcessor
-    from src.infrastructure.pdf_extractor import PyMuPDFExtractor
 
     profile = _resolve_worker_profile(profile_name)
     repository = FileStorage(settings.data_dir)
-    pdf_extractor = PyMuPDFExtractor(profile=profile)
+    pdf_extractor = build_base_extractor(settings.etl_engine, profile)
     document_service = DocumentService(
         repository=repository,
         pdf_extractor=pdf_extractor,
@@ -50,8 +53,16 @@ def _build_worker_dependencies(profile_name: str = "") -> _WorkerDependencies:
     )
 
     def marker_extractor_factory() -> Any:
+        """Build the configured structured engine on demand inside the worker."""
+        engine = (settings.etl_engine or "").lower()
+        target = engine if engine in {"docling", "mineru", "marker"} else "marker"
+        built = build_structured_extractor(target)
+        if built is not None:
+            return built
+        # Surface an informative backend-unavailable error for the legacy path.
         from src.infrastructure.marker_adapter import MarkerPDFExtractor
 
+        MarkerPDFExtractor.require_backend_available()
         return MarkerPDFExtractor()
 
     return _WorkerDependencies(
