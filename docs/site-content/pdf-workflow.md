@@ -20,6 +20,10 @@ PDF pipeline 將原始 PDF 轉成可檢索、可視覺化、可引用的文件 a
 
 預設後端是 PyMuPDF；`ETL_ENGINE` 環境變數可切換為 `pymupdf4llm`（同生態 drop-in 版面感知升級）、`docling`（MIT 授權 layout+table+formula+chart，安裝說明見 `docs/docling-setup.md`）或 `mineru`（最高精度，公式→LaTeX、表格→HTML）。三者皆懶加載、未安裝對應 extra 時自動降級為 PyMuPDF，並共用 `StructuredPDFExtractor` protocol 輸出 Marker-compatible 結果。`marker` extra 仍暫時為空，因為 `marker-pdf` 對 Pillow 的舊版 pin 會和安全 runtime 衝突。`parse_pdf_structure(...)` 是 structured-parse 入口；security hold 或 backend unavailable 會在建立 job 前回傳明確診斷。一般 `ingest_documents(use_marker=true)` 只代表偏好結構化引擎，公開工具沒有 `require_marker` 參數，引擎不可用時會走 PyMuPDF 安全流程。
 
+### 混合格式批次攝入
+
+當 `file_paths` 混合 PDF 與 DOCX/DOC/ODT/ODS 時，`document(op="auto"/"ingest"/"import", file_paths=[...])` 會自動偵測並改走單一 background job（`mixed_ingest_support.py` + `create_conversion_job`），每個檔案仍使用其對應的正確引擎（PDF 走 `DocumentService`、DOCX 家族走 `DocxService`）。單一檔案失敗不會中斷整批次，`get_job_status(job_id)` 會顯示 `[i/N filename]` 逐檔進度；只要批次中有任何檔案失敗，整個 job 會標記為 `FAILED` 並附上失敗清單，但已成功的文件仍完整保留可用。這個能力不會增加公開工具數（仍是 30 個）。
+
 ## 產物
 
 | Artifact | 用途 |

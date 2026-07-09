@@ -56,6 +56,7 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 🔤 **按需 OCR 前處理** - 針對掃描型 PDF 提供可選 `ocrmypdf` 前處理流程，再進行 ETL。
 - 🧭 **章節導航** - 透過 `section` facade 提供動態層級章節樹：瀏覽、搜尋、詳情、內容讀取、區塊提取，支援任意深度的標題層級。
 - 🔄 **非同步任務流水線** - 支援大型 PDF ingest、Marker-required parse、OCR 與 conversion 的非同步處理與進度追蹤。
+- 🔀 **混合格式批次攝入** - `document(op="auto", file_paths=[...])` 會自動偵測 PDF 與 DOCX/DOC/ODT/ODS 混合的批次，於單一 background job 內以各自正確的引擎攝入每個檔案，隔離單檔失敗不中斷其餘檔案，並回報逐檔進度——不需新增公開工具。
 - 🗺️ **文件清單 (Manifest)** - 為 Agent 提供結構化的文件「地圖」，實現精確數據存取。
 - 🧠 **LightRAG 整合** - 知識圖譜 + 向量索引，支援跨文件對比與推理。
 - 🧾 **Verified Citation Bundles** - `citation_bundle`、Foam evidence pack、citation health check、table/figure evidence notes 與 claim promotion 可輸出含 locator、quote/hash、context、CRAAP scaffold 與 verification 的 evidence bundle。

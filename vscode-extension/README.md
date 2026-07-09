@@ -6,7 +6,13 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.8.0/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.9.0/resources/banner.png)
+
+## What's New in v0.9.0
+
+- **Automatic mixed-format batch ingestion**: `document(op="auto"/"ingest"/"import", file_paths=[...])` now auto-detects a batch mixing PDF with DOCX/DOC/ODT/ODS, ingests every file through its correct existing engine in one background job, isolates per-file failures so one bad file cannot abort the rest, and reports `[i/N filename]` progress through the existing `get_job_status` tool. No new public MCP tool was added (still 30).
+- **Multi-engine output provenance unified**: `source_engine` / `IngestResult.backend` now always reflect the real engine that parsed a document (`pymupdf`, `pymupdf4llm`, `docling`, `mineru[:pipeline]`) instead of being hardcoded, so figures/tables, segmentation `source_backend`, and citation-index attribution are consistent regardless of which ETL engine ran. `inspect_document_manifest` now prints the resolved `source_engine` for already-ingested documents.
+- **Docling coordinate normalization**: Docling bbox output is now normalised to top-left origin like PyMuPDF/Marker/MinerU, so downstream layout overlays, segmentation spans, and citation locators no longer need to special-case Docling's coordinate system.
 
 ## What's New in v0.8.0
 

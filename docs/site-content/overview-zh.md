@@ -7,10 +7,19 @@ PDF、DOCX/DFM、表格、圖片、section、citation index、Foam evidence pack
 KG/RAG 串成可驗證的文件流程。
 
 這個網站改成章節式導覽：先選你正在做的任務，再進入對應的詳細頁或 reference。
-目前內容對齊 `0.8.0` 正式文件。
+目前內容對齊 `0.9.0` 正式文件。
 
-## 0.8.0 highlights
+## 0.9.0 highlights
 
+- Automatic mixed-format batch ingestion: `document(op="auto", file_paths=[...])`
+  auto-detects a batch mixing PDF with DOCX/DOC/ODT/ODS, ingests each file
+  through its correct existing engine in one background job, isolates
+  per-file failures, and reports per-file progress — no new public tool
+  added (still 30 tools / 43 endpoints).
+- Multi-engine output provenance is unified: `source_engine` /
+  `IngestResult.backend` always reflect the real parsing engine, so
+  figures/tables, segmentation `source_backend`, and citation-index
+  attribution stay consistent regardless of which `ETL_ENGINE` ran.
 - Pluggable multi-engine PDF -> asset ETL: `ETL_ENGINE` selects `pymupdf`
   (default), `pymupdf4llm`, `docling`, or `mineru`, all verified compatible
   with the `Pillow>=12.2.0` security floor that keeps `marker` disabled.

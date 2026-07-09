@@ -7,6 +7,46 @@
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-07-09
+
+### Added
+
+- Added automatic mixed-format batch ingestion: `document(op="auto"/"ingest"/"import", file_paths=[...])`
+  now detects a batch mixing PDF with DOCX/DOC/ODT/ODS and routes it through a
+  single background job (`mixed_ingest_support.py` + `create_conversion_job`)
+  that ingests each file with its correct existing engine, isolates per-file
+  failures without aborting the batch, and reports `[i/N filename]` progress
+  via the existing `get_job_status` tool. No new public MCP tool was added
+  (still 30 tools / 43 endpoints).
+- Added `source_engine` visibility to `inspect_document_manifest` so agents
+  can tell which backend (`pymupdf`/`pymupdf4llm`/`docling`/`mineru[:pipeline]`)
+  parsed an already-ingested document without re-reading the ingest response.
+
+### Fixed
+
+- Fixed multi-engine output provenance so `DocumentManifest.source_engine`
+  and `IngestResult.backend` always carry the real engine identity instead of
+  being hardcoded to `marker` for every structured-engine path (Docling,
+  MinerU) or silently defaulting to `pymupdf` with no per-extractor
+  distinction. Figure/table `.source`, `segmentation.json`'s
+  `source_backend`, and citation-index attribution now derive from the same
+  authoritative field.
+- Fixed Docling bbox coordinates to normalise to top-left origin (matching
+  PyMuPDF/Marker/MinerU) instead of passing through Docling's native
+  coordinate system, which can use bottom-left origin depending on the
+  source PDF.
+- Fixed mixed-batch job result shape so `documents`/`failed_files`/`warnings`
+  reach the top level of `job.result` where `get_job_status` reads them,
+  instead of being nested under an inner `conversion` key.
+- Fixed mixed-batch job failure semantics so a job is marked `FAILED` (with a
+  clear per-file error summary) whenever any file in the batch fails,
+  matching the existing PDF-only batch convention, while still preserving
+  every successfully ingested document.
+- Fixed `get_job_status` next-step suggestions to be format-aware: DOCX
+  documents now suggest `docx(op="get"/"blocks"/"validate")` instead of the
+  PDF-only `document(op=...)` facade, which would 404 against a DOCX
+  `doc_id`.
+
 ## [0.8.0] - 2026-07-09
 
 ### Added

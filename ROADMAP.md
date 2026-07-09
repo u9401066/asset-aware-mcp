@@ -6,6 +6,7 @@
 
 ## 最近完成 ✅
 
+- **v0.9.0** (2026-07-09) — 混合 PDF/DOCX/DOC/ODT/ODS 批次自動攝入（單一 job + 逐檔進度回報 + 單檔故障隔離，公開工具數不變）、多引擎輸出來源溯源統一（`source_engine` 貫穿 manifest/figure-table/segmentation/citation-index）、Docling bbox 座標系正規化
 - **v0.8.0** (2026-07-09) — 可插拔多引擎 PDF→資產 ETL（PyMuPDF4LLM / Docling / MinerU），`StructuredPDFExtractor` 共通 protocol、跨平台 Docling subprocess 橋接與零腦安裝腳本
 - **main branch / Unreleased** (2026-03-23) — LightRAG 結構化 citation-aware MCP 輸出、KG deletion sync、extension env key 對齊 `LIGHTRAG_WORKING_DIR`
 - **v0.6.2** (2026-03-19) — 分段發布策略落地、agent asset gap 分析、GitHub CLI 維運文件與腳本

@@ -38,7 +38,7 @@ exact contracts.
 
 | Item | Current Status |
 |---|---|
-| Latest code version | `0.8.0` |
+| Latest code version | `0.9.0` |
 | Runtime | Python `>=3.10`, managed with `uv` |
 | MCP endpoints | 30 public tools and 13 resources, 43 endpoints total |
 | PDF backend | Pluggable `ETL_ENGINE`: PyMuPDF by default, plus optional PyMuPDF4LLM/Docling/MinerU; Marker has been on security hold since `0.6.28` |

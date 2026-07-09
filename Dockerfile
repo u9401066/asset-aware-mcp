@@ -57,7 +57,7 @@ USER mcp
 
 # Health metadata
 LABEL maintainer="u9401066@gap.kmu.edu.tw" \
-      version="0.8.0" \
+      version="0.9.0" \
       description="Asset-Aware Medical RAG MCP Server"
 
 ENTRYPOINT ["asset-aware-mcp"]

@@ -50,6 +50,7 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 - 🔤 **On-Demand OCR Preprocessing** - Optional `ocrmypdf` preprocessing path for scanned PDFs before ETL.
 - 🧭 **Section Navigation** - Dynamic hierarchy section tree through the `section` facade: browse, search, detail, content reading, and block extraction for any depth of headings.
 - 🔄 **Async Job Pipeline** - Supports asynchronous ingest, Marker-required parse, OCR, and conversion jobs with progress tracking.
+- 🔀 **Mixed-Format Batch Ingestion** - `document(op="auto", file_paths=[...])` auto-detects a batch mixing PDF with DOCX/DOC/ODT/ODS, ingests each file through its correct existing engine in one background job, isolates per-file failures so one bad file cannot abort the rest, and reports per-file progress — no new public tool required.
 - 🗺️ **Document Manifest** - Provides a structured "map" of the document for precise data access by Agents.
 - 🧠 **LightRAG Integration** - Knowledge Graph + Vector Index, supporting cross-document comparison and reasoning.
 - 🧾 **Verified Citation Bundles** - `citation_bundle`, Foam evidence packs, citation health checks, table/figure evidence notes, and claim promotion export citation-ready spans with locator, quote/hash, context, CRAAP scaffold, and verification status.
