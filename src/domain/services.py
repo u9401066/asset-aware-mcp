@@ -79,6 +79,7 @@ class ManifestGenerator:
         sections: list[SectionAsset] | None = None,
         source_pdf_sha256: str = "",
         selected_page_map: list[int] | None = None,
+        source_engine: str = "pymupdf",
     ) -> DocumentManifest:
         """
         Generate a complete document manifest.
@@ -96,6 +97,9 @@ class ManifestGenerator:
             pdf_title: Optional title from PDF metadata
             source_pdf_sha256: SHA-256 of the original source PDF bytes
             selected_page_map: Original 1-based page numbers for subset ingests
+            source_engine: PDF->asset engine that produced this document
+                (e.g. "pymupdf", "pymupdf4llm", "docling", "mineru:pipeline",
+                "marker"), persisted onto the manifest for durable provenance.
 
         Returns:
             Complete DocumentManifest
@@ -124,6 +128,7 @@ class ManifestGenerator:
             doc_id=doc_id,
             filename=filename,
             title=title,
+            source_engine=source_engine,
             source_pdf_sha256=source_pdf_sha256,
             selected_page_map=selected_page_map or [],
             toc=toc,

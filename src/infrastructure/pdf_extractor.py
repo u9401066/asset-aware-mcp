@@ -192,6 +192,12 @@ class PyMuPDFExtractor(PDFExtractorInterface):
     - Configurable via ETLProfile (font thresholds, noise filters, etc.)
     """
 
+    #: Engine identity persisted to DocumentManifest.source_engine and
+    #: IngestResult.backend so ingested-document provenance survives the
+    #: ephemeral ingest call. Subclasses (e.g. PyMuPDF4LLMExtractor) override
+    #: this to their own engine name.
+    ENGINE_NAME: str = "pymupdf"
+
     def __init__(
         self,
         profile: ETLProfile | None = None,

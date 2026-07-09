@@ -46,6 +46,8 @@ class PyMuPDF4LLMExtractor(PyMuPDFExtractor):
     the layout-aware Markdown reconstruction.
     """
 
+    ENGINE_NAME: str = "pymupdf4llm"
+
     @staticmethod
     def require_backend_available() -> None:
         """Preflight the pymupdf4llm import without processing a document."""

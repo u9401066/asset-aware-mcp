@@ -442,7 +442,7 @@ class DoclingExtractor:
             label = str(getattr(item, "label", "") or "").lower()
             block_type = _DOCLING_LABEL_MAP.get(label, "Text")
             text = str(getattr(item, "text", "") or "")
-            page, bbox = self._first_provenance(item)
+            page, bbox = self._first_provenance(item, document)
             blocks.append(
                 MarkerBlock(
                     block_id=f"docling_{counter}",
@@ -456,8 +456,38 @@ class DoclingExtractor:
         return blocks
 
     @staticmethod
-    def _first_provenance(item: Any) -> tuple[int, list[float]]:
-        """Extract (1-indexed page, [x0,y0,x1,y1] bbox) from a Docling item."""
+    def _page_height(document: Any, page_no: int) -> float | None:
+        """Best-effort page height lookup for bbox coordinate conversion."""
+        pages = getattr(document, "pages", None)
+        if not pages:
+            return None
+        page_obj = None
+        with contextlib.suppress(Exception):
+            page_obj = pages.get(page_no) if hasattr(pages, "get") else None
+        if (
+            page_obj is None
+            and isinstance(pages, (list, tuple))
+            and 0 <= page_no - 1 < len(pages)
+        ):
+            page_obj = pages[page_no - 1]
+        size = getattr(page_obj, "size", None)
+        height = getattr(size, "height", None)
+        return float(height) if isinstance(height, (int, float)) and height > 0 else None
+
+    @staticmethod
+    def _first_provenance(
+        item: Any, document: Any = None
+    ) -> tuple[int, list[float]]:
+        """Extract (1-indexed page, [x0,y0,x1,y1] bbox) from a Docling item.
+
+        Normalises the bbox to top-left origin (y grows downward toward the
+        page bottom), matching the convention PyMuPDF/Marker/MinerU already
+        use, so downstream consumers (layout overlays, segmentation spans,
+        citation locators) never need to special-case Docling's coordinate
+        system. Docling's ``BoundingBox`` defaults to ``TOPLEFT`` already; this
+        only converts the rarer ``BOTTOMLEFT`` case, and degrades gracefully to
+        the raw values if the page height can't be resolved.
+        """
         prov = getattr(item, "prov", None) or []
         if not prov:
             return 1, []
@@ -467,6 +497,13 @@ class DoclingExtractor:
         bb = getattr(first, "bbox", None)
         if bb is not None:
             try:
+                if (
+                    str(getattr(bb, "coord_origin", "TOPLEFT")) == "BOTTOMLEFT"
+                    and document is not None
+                ):
+                    page_height = DoclingExtractor._page_height(document, page)
+                    if page_height and hasattr(bb, "to_top_left_origin"):
+                        bb = bb.to_top_left_origin(page_height)
                 bbox = [float(bb.l), float(bb.t), float(bb.r), float(bb.b)]
             except Exception:
                 bbox = []
@@ -477,7 +514,7 @@ class DoclingExtractor:
         images: dict[str, bytes] = {}
         pictures = getattr(document, "pictures", None) or []
         for idx, picture in enumerate(pictures):
-            page, _bbox = self._first_provenance(picture)
+            page, _bbox = self._first_provenance(picture, document)
             pil_image = self._picture_pil(picture, document)
             if pil_image is None:
                 continue

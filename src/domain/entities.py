@@ -223,6 +223,15 @@ class DocumentManifest(BaseModel):
     doc_id: str = Field(..., description="Unique document identifier")
     filename: str = Field(..., description="Original PDF filename")
     title: str = Field("", description="Document title if detected")
+    source_engine: str = Field(
+        "pymupdf",
+        description=(
+            "PDF->asset engine that produced this document: 'pymupdf', "
+            "'pymupdf4llm', 'docling', 'mineru' (optionally suffixed, e.g. "
+            "'mineru:pipeline'), or 'marker'. Persisted so provenance survives "
+            "after the ephemeral ingest call returns."
+        ),
+    )
     source_pdf_sha256: str = Field(
         "",
         description=(
@@ -314,7 +323,9 @@ class IngestResult(BaseModel):
     processing_time_seconds: float = 0.0
 
     # Backend info
-    backend: str = "pymupdf"  # "pymupdf" or "marker"
+    backend: str = (
+        "pymupdf"  # 'pymupdf'/'pymupdf4llm'/'docling'/'mineru[:sub]'/'marker'
+    )
 
 
 class FetchResult(BaseModel):

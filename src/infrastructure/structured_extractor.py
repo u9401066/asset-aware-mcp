@@ -37,3 +37,20 @@ class StructuredPDFExtractor(Protocol):
     ) -> MarkerParseResult:
         """Parse a PDF into a structured MarkerParseResult."""
         ...
+
+
+# Prefixes carried by IngestResult.backend / DocumentManifest.source_engine
+# whenever a structured engine (rather than the fast PyMuPDF/PyMuPDF4LLM path)
+# produced a document. MinerU appends its sub-backend (e.g. "mineru:pipeline"),
+# hence a prefix check rather than an exact-match set.
+STRUCTURED_ENGINE_PREFIXES: tuple[str, ...] = ("marker", "docling", "mineru")
+
+
+def is_structured_engine(engine_name: str) -> bool:
+    """True when ``engine_name`` came from a StructuredPDFExtractor.
+
+    Use this instead of ``== "marker"`` so Docling/MinerU results are treated
+    the same as Marker's for "was a high-fidelity engine used" checks (e.g.
+    ``require_marker`` enforcement, "blocks.json has real bbox" reporting).
+    """
+    return engine_name.startswith(STRUCTURED_ENGINE_PREFIXES)

@@ -32,6 +32,7 @@ from src.application.output_paths import (
     resolve_document_output_path,
 )
 from src.domain.marker_errors import MarkerBackendUnavailable
+from src.infrastructure.structured_extractor import is_structured_engine
 from src.presentation.dependencies import (
     asset_service,
     document_service,
@@ -874,7 +875,7 @@ async def ingest_documents(
                 output_lines.append(
                     f"- **time:** {result.processing_time_seconds:.2f}s"
                 )
-                if result.backend == "marker":
+                if is_structured_engine(result.backend):
                     output_lines.append("- **blocks.json:** ✅ Created")
                 for warning in result.warnings:
                     output_lines.append(f"- **warning:** {warning}")

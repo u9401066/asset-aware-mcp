@@ -84,6 +84,22 @@ def _sha256_file(path: Path) -> str:
     return hasher.hexdigest()
 
 
+def _resolve_engine_name(extractor: Any, default: str = "pymupdf") -> str:
+    """Read ``ENGINE_NAME`` off a PDF extractor, defensively.
+
+    ``getattr(obj, "ENGINE_NAME", default)`` is not a safe default lookup when
+    ``obj`` can be a ``unittest.mock.MagicMock``: mocks auto-vivify attribute
+    access instead of raising ``AttributeError``, so the 3-arg ``getattr``
+    default is silently skipped and a ``Mock`` instance leaks into
+    ``DocumentManifest.source_engine`` / ``IngestResult.backend`` (both typed
+    ``str``), failing pydantic validation. Only accept real, non-empty
+    strings; anything else (missing attribute, mock, wrong type) falls back
+    to ``default``.
+    """
+    engine_name = getattr(extractor, "ENGINE_NAME", None)
+    return engine_name if isinstance(engine_name, str) and engine_name else default
+
+
 __all__ = [
     "DocumentService",
     "PageRange",
@@ -500,6 +516,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                 "Generating Manifest",
                 f"Generating manifest for {path.name}",
             )
+            engine_name = _resolve_engine_name(self.pdf_extractor)
             manifest = self.manifest_generator.generate(
                 doc_id=doc_id.value,
                 filename=path.name,
@@ -513,6 +530,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                 pdf_title=pdf_title,
                 source_pdf_sha256=source_pdf_sha256,
                 selected_page_map=page_map,
+                source_engine=engine_name,
             )
 
             # Step 7: Save manifest
@@ -525,7 +543,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                     doc_id.value,
                     markdown,
                     blocks_data,
-                    source_backend="pymupdf",
+                    source_backend=engine_name,
                 )
                 await self._save_segmentation_artifact(
                     doc_id.value,
@@ -700,7 +718,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                         "Marker returned empty markdown; retry with OCR enabled "
                         "or use the PyMuPDF backend."
                     ),
-                    backend="marker",
+                    backend=str(parse_result.metadata.get("backend", "marker")),
                     warnings=[
                         "Marker returned empty markdown before citation artifacts "
                         "could be created."
@@ -827,6 +845,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
 
             # Step 9: Generate manifest (with richer data)
             # Note: sections are parsed from markdown by ManifestGenerator
+            engine_name = str(parse_result.metadata.get("backend", "marker"))
             manifest = self.manifest_generator.generate(
                 doc_id=doc_id.value,
                 filename=path.name,
@@ -839,10 +858,11 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                 sections=sections,
                 source_pdf_sha256=source_pdf_sha256,
                 selected_page_map=page_map,
+                source_engine=engine_name,
             )
 
             # Step 10: Save manifest
-            citation_backend = "marker"
+            citation_backend = engine_name
             if self._marker_blocks_need_markdown_fallback(blocks_data, manifest):
                 citation_backend = "marker_markdown_fallback"
                 blocks_data = build_markdown_blocks(
@@ -889,7 +909,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                 figures_found=len(manifest.assets.figures),
                 sections_found=len(manifest.assets.sections),
                 processing_time_seconds=processing_time,
-                backend="marker",  # Indicate which backend was used
+                backend=engine_name,  # Actual structured engine used (marker/docling/mineru)
                 warnings=warnings,
             )
 

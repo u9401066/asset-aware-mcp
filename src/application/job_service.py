@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 from src.application.document_readiness_service import AI_READINESS_ARTIFACTS
 from src.application.worker_runner import IngestWorkerRequest, IngestWorkerRunner
 from src.domain.job import Job, JobProgress, JobStatus, JobSummary, JobType
+from src.infrastructure.structured_extractor import is_structured_engine
 
 if TYPE_CHECKING:
     from src.application.document_service import DocumentService
@@ -396,7 +397,7 @@ class JobService:
                     if result is not None and result.success:
                         if (
                             job.parameters.get("require_marker")
-                            and result.backend != "marker"
+                            and not is_structured_engine(result.backend)
                         ):
                             error_msg = (
                                 "Marker structure parse was required, but ingestion "
