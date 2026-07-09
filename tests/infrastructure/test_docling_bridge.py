@@ -35,7 +35,7 @@ class TestBlockSerialization:
             text="Figure 1: caption",
             bbox=[1.0, 2.0, 3.0, 4.0],
             polygon=[[1.0, 2.0], [3.0, 4.0]],
-            section_hierarchy={1: "Introduction"},
+            section_hierarchy={"1": "Introduction"},
             metadata={"docling_label": "picture"},
         )
         restored = _block_from_dict(_block_to_dict(block))
@@ -45,7 +45,7 @@ class TestBlockSerialization:
         assert restored.text == "Figure 1: caption"
         assert restored.bbox == [1.0, 2.0, 3.0, 4.0]
         assert restored.polygon == [[1.0, 2.0], [3.0, 4.0]]
-        assert restored.section_hierarchy == {1: "Introduction"}
+        assert restored.section_hierarchy == {"1": "Introduction"}
         assert restored.metadata == {"docling_label": "picture"}
 
     def test_round_trip_nested_children(self) -> None:
@@ -58,12 +58,12 @@ class TestBlockSerialization:
         assert restored.children[0].block_id == "c1"
         assert restored.children[0].text == "cell"
 
-    def test_section_hierarchy_int_keys_survive_json(self) -> None:
+    def test_section_hierarchy_string_keys_survive_json(self) -> None:
         block = MarkerBlock(
-            block_id="b", block_type="Text", page=1, section_hierarchy={2: "S"}
+            block_id="b", block_type="Text", page=1, section_hierarchy={"2": "S"}
         )
         restored = _block_from_dict(_block_to_dict(block))
-        assert restored.section_hierarchy == {2: "S"}
+        assert restored.section_hierarchy == {"2": "S"}
 
 
 class TestResultSerialization:

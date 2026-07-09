@@ -101,7 +101,7 @@ def _block_from_dict(data: dict[str, Any]) -> MarkerBlock:
         bbox=list(data.get("bbox", []) or []),
         polygon=list(data.get("polygon", []) or []),
         section_hierarchy={
-            int(k): v for k, v in (data.get("section_hierarchy", {}) or {}).items()
+            str(k): str(v) for k, v in (data.get("section_hierarchy", {}) or {}).items()
         },
         children=[
             _block_from_dict(child) for child in (data.get("children", []) or [])
