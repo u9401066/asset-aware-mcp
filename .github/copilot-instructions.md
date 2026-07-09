@@ -11,12 +11,14 @@
 | 項目 | 說明 |
 |------|------|
 | 語言 | Python 3.10+ |
-| 框架 | FastMCP, LightRAG, PyMuPDF; Marker is temporarily on security hold |
-| 策略 | 雙引擎 PDF 解析（PyMuPDF 快速 + Marker 高精度） |
+| 框架 | FastMCP, LightRAG, PyMuPDF；可插拔高精度引擎 Docling / MinerU / PyMuPDF4LLM（Marker 因 Pillow<11 暫停） |
+| 策略 | 多引擎 PDF→資產：`ETL_ENGINE` 可選 pymupdf（快速預設）/ pymupdf4llm（版面感知）/ docling / mineru（高精度） |
+
+> 🎯 **核心目標**：完整、快速地把文件轉換成「圖、文、表」等 **agent 友善的資產**，並保留精確來源定位（page / bbox / line span）供引用。
 
 ### 核心功能
 
-- 📄 **PDF ETL** — 雙引擎文件拆解（圖片、表格、章節）
+- 📄 **PDF ETL** — 多引擎文件拆解成 agent 資產（圖片、表格、章節、公式），`ETL_ENGINE` 可插拔
 - 🧩 **Segmentation Export** — 統一 segmentation schema（reading order + line span）
 - 📊 **A2T** — Anything to Table 表格建立
 - 🧭 **Section Navigation** — 動態層級章節導航（5 Tools）
@@ -28,6 +30,22 @@
 
 - **預設**: Ollama (本地) — CPU `granite4.1:3b`；GPU hint `granite4.1:8b`；`nomic-embed-text` 僅在啟用 LightRAG/KG 時需要
 - **備選**: OpenAI (需 API Key)
+
+### PDF → 資產引擎選擇 🚦
+
+透過環境變數 `ETL_ENGINE` 選擇拆解引擎；結構化引擎懶加載，未安裝時自動降級為 PyMuPDF。
+
+| 引擎 | 安裝 extra | 何時使用 | 授權 |
+|------|-----------|----------|------|
+| `pymupdf`（預設） | 內建 | 快速、數位 PDF、無模型 | AGPL |
+| `pymupdf4llm` | `[pdf-plus]` | 低風險升級：版面感知 reading order + 表格 markdown | AGPL |
+| `docling` | `[docling]` | 高精度：layout+表格+公式+圖表理解，附輕量 GraniteDocling VLM | MIT |
+| `mineru` | `[mineru]` | 最高精度：公式→LaTeX、表格→HTML、跨頁表格合併（重、可純 CPU） | Apache-2.0 衍生 |
+| `marker` | 停用 | marker-pdf pin Pillow<11 與安全基線衝突 | — |
+
+- 三大引擎皆已驗證相容 `Pillow>=12.2.0`（解析 pillow 12.3.0）。
+- 結構化引擎（docling/mineru/marker）實作共通 `StructuredPDFExtractor` Protocol，輸出 `MarkerParseResult`，共用 `_ingest_single_with_marker` 資產管線（零侵入切換）。
+- 對應 adapter：`src/infrastructure/{pymupdf4llm,docling,mineru}_adapter.py`；工廠：`extractor_factory.py`。
 
 ---
 
@@ -70,8 +88,13 @@
 ```bash
 # 初始化環境
 uv venv
-uv sync                    # 基本安裝
-# v0.6.27: Marker extra is temporarily disabled because marker-pdf pins Pillow<11.
+uv sync                    # 基本安裝（PyMuPDF 快速引擎）
+
+# 高精度 PDF→資產引擎（可選，皆相容 Pillow>=12.2.0）
+uv sync --extra pdf-plus   # pymupdf4llm（輕量版面感知，drop-in）
+uv sync --extra docling    # Docling（MIT：layout+表格+公式+圖表）
+uv sync --extra mineru     # MinerU（最高精度，重）
+# Marker extra 仍停用：marker-pdf 1.10.2 pin Pillow<11 與安全基線衝突。
 
 # 安裝依賴
 uv add package-name
@@ -214,8 +237,13 @@ src/
 │   └── job_service.py       # 非同步工作管理
 ├── infrastructure/   # 基礎設施（DAL、外部服務）
 │   ├── file_storage.py      # 檔案儲存 Repository 實作
-│   ├── pdf_extractor.py     # PyMuPDF 快速提取
-│   ├── marker_adapter.py    # Marker 高精度提取
+│   ├── pdf_extractor.py     # PyMuPDF 快速提取（base + fallback）
+│   ├── pymupdf4llm_adapter.py # PyMuPDF4LLM 版面感知（drop-in 升級）
+│   ├── docling_adapter.py   # Docling 高精度（MIT：layout+表格+公式+圖表）
+│   ├── mineru_adapter.py    # MinerU 最高精度（公式→LaTeX、跨頁表格）
+│   ├── marker_adapter.py    # Marker 高精度提取（停用：Pillow<11）
+│   ├── structured_extractor.py # StructuredPDFExtractor Protocol（引擎共通契約）
+│   ├── extractor_factory.py # ETL_ENGINE 引擎選擇工廠
 │   ├── excel_renderer.py    # Excel 渲染
 │   ├── lightrag_adapter.py  # LightRAG 知識圖譜
 │   └── config.py            # 配置管理
