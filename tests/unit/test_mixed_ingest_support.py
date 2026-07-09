@@ -79,9 +79,9 @@ class TestBuildMixedIngestHandler:
         result = await handler(reporter)
 
         assert result["success"] is True
-        assert result["conversion"]["total"] == 2
-        assert result["conversion"]["succeeded"] == 2
-        assert result["conversion"]["failed"] == 0
+        assert result["total"] == 2
+        assert result["succeeded"] == 2
+        assert result["failed"] == 0
         assert not result["failed_files"]
         docs_by_format = {doc["format"]: doc for doc in result["documents"]}
         assert docs_by_format["pdf"]["doc_id"] == "doc_pdf_1"
@@ -120,7 +120,10 @@ class TestBuildMixedIngestHandler:
         )
         result = await handler(reporter)
 
-        # The batch job itself always completes; failures are per-file.
+        # The batch job itself always completes; failures are per-file. The
+        # caller (JobService._process_conversion_job) decides whether
+        # `failed_files` should mark the whole job FAILED; this handler's
+        # own contract is just "never raise, always report every outcome".
         assert result["success"] is True
         assert len(result["documents"]) == 1
         assert result["documents"][0]["doc_id"] == "doc_pdf_1"

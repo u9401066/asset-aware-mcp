@@ -55,7 +55,15 @@ def _refresh_document_artifacts(doc_id: str, artifacts: Any) -> dict[str, str]:
     )
 
 
-def _format_document_next_lines(doc_id: str) -> list[str]:
+def _format_document_next_lines(
+    doc_id: str, doc_format: str | None = None
+) -> list[str]:
+    if doc_format == "docx":
+        return [
+            f'    - next: `docx(op="get", doc_id="{doc_id}")`',
+            f'    - next: `docx(op="blocks", doc_id="{doc_id}")`',
+            f'    - next: `docx(op="validate", doc_id="{doc_id}")`',
+        ]
     return [
         f'    - next: `document(op="prepare_ai", doc_id="{doc_id}")`',
         f'    - next: `document(op="inspect", doc_id="{doc_id}")`',
@@ -137,6 +145,7 @@ async def get_job_status(job_id: str) -> str:
         lines.append(f"**Output Documents:** {len(result_documents)}")
         for item in result_documents:
             doc_id = item.get("doc_id", "")
+            doc_format = item.get("format")
             backend = item.get("backend", "unknown")
             lines.append(f"  - `{doc_id}`")
             lines.append(f"    - backend: `{backend}`")
@@ -154,7 +163,7 @@ async def get_job_status(job_id: str) -> str:
                 for warning in warnings:
                     lines.append(f"      - {warning}")
             if doc_id:
-                lines.extend(_format_document_next_lines(doc_id))
+                lines.extend(_format_document_next_lines(doc_id, doc_format))
     elif job.output_doc_ids:
         lines.append(f"**Output Documents:** {len(job.output_doc_ids)}")
         for doc_id in job.output_doc_ids:

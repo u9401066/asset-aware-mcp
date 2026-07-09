@@ -395,10 +395,9 @@ class JobService:
                     )
 
                     if result is not None and result.success:
-                        if (
-                            job.parameters.get("require_marker")
-                            and not is_structured_engine(result.backend)
-                        ):
+                        if job.parameters.get(
+                            "require_marker"
+                        ) and not is_structured_engine(result.backend):
                             error_msg = (
                                 "Marker structure parse was required, but ingestion "
                                 f"completed with backend={result.backend!r}."
@@ -549,10 +548,42 @@ class JobService:
 
             latest = await self.job_store.get(job_id)
             job = latest or job
-            result_payload = {"conversion": result}
+            result_payload: dict[str, Any] = {"conversion": result}
+            # Hoist batch-style fields (present when a handler processes a
+            # list of independent items, e.g. the mixed PDF/DOCX ingest
+            # batch) to the top level of the job result. This mirrors the
+            # PDF-only ingest job's result shape exactly, so get_job_status
+            # renders `documents` / `failed_files` / `warnings` identically
+            # regardless of which job-processing path produced them.
+            for batch_key in ("documents", "failed_files", "warnings"):
+                if batch_key in result:
+                    result_payload[batch_key] = result[batch_key]
+
+            batch_failed_files_raw = result.get("failed_files")
+            batch_failed_files: list[Any] = (
+                batch_failed_files_raw
+                if isinstance(batch_failed_files_raw, list)
+                else []
+            )
+            has_batch_failures = len(batch_failed_files) > 0
 
             if not result.get("success", True):
                 error_msg = str(result.get("error") or "Conversion failed")
+                job.fail(error_msg)
+                job.result = result_payload
+                job.update_progress(
+                    step=total_steps,
+                    total=total_steps,
+                    phase="Failed",
+                    message=error_msg,
+                )
+            elif has_batch_failures:
+                total = result.get("total")
+                error_msg = (
+                    f"{len(batch_failed_files)}/{total} file(s) failed during ingestion"
+                    if total
+                    else f"{len(batch_failed_files)} file(s) failed during ingestion"
+                )
                 job.fail(error_msg)
                 job.result = result_payload
                 job.update_progress(

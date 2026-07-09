@@ -131,6 +131,54 @@ class TestJobTools:
         assert 'document(op="audit", doc_id="doc_123")' in result
         assert 'export_document_segmentation("doc_123")' not in result
 
+    async def test_get_job_status_docx_document_gets_docx_next_commands(self) -> None:
+        """A DOCX entry in a mixed-batch job must not suggest PDF-only ops.
+
+        Regression coverage: `document(op=...)` is the PDF facade; a DOCX
+        doc_id has no manifest.json and would 404 there. Mixed-batch
+        documents carry a `format` field precisely so this render can pick
+        the correct facade (`docx(...)`) per entry.
+        """
+        from src.domain.job import Job, JobProgress, JobStatus, JobType
+
+        job = Job(
+            job_id="job_mixed_batch",
+            job_type=JobType.CONVERSION,
+            status=JobStatus.COMPLETED,
+            input_files=["paper.pdf", "summary.docx"],
+            progress=JobProgress(total_steps=2, current_step=2, percentage=100),
+            result={
+                "conversion": {"operation": "ingest_mixed_batch"},
+                "documents": [
+                    {
+                        "file": "paper.pdf",
+                        "doc_id": "doc_pdf_1",
+                        "backend": "pymupdf",
+                        "format": "pdf",
+                    },
+                    {
+                        "file": "summary.docx",
+                        "doc_id": "docx_summary_1",
+                        "backend": "docx",
+                        "format": "docx",
+                    },
+                ],
+                "failed_files": [],
+            },
+        )
+
+        with patch("src.presentation.tools.job_tools.job_service") as mock_svc:
+            mock_svc.get_job = AsyncMock(return_value=job)
+            from src.presentation.tools.job_tools import get_job_status
+
+            result = await get_job_status("job_mixed_batch")
+
+        assert 'document(op="prepare_ai", doc_id="doc_pdf_1")' in result
+        assert 'docx(op="get", doc_id="docx_summary_1")' in result
+        assert 'docx(op="blocks", doc_id="docx_summary_1")' in result
+        assert 'docx(op="validate", doc_id="docx_summary_1")' in result
+        assert 'document(op="inspect", doc_id="docx_summary_1")' not in result
+
     async def test_get_job_status_refreshes_artifacts_created_after_ingest(
         self, tmp_path: Path
     ) -> None:

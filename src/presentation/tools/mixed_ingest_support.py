@@ -172,12 +172,10 @@ def build_mixed_ingest_handler(
 
         return {
             "success": True,
-            "conversion": {
-                "operation": "ingest_mixed_batch",
-                "total": total,
-                "succeeded": len(documents),
-                "failed": len(failed_files),
-            },
+            "operation": "ingest_mixed_batch",
+            "total": total,
+            "succeeded": len(documents),
+            "failed": len(failed_files),
             "documents": documents,
             "failed_files": failed_files,
             "warnings": all_warnings,
