@@ -6,7 +6,13 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.7.0/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.8.0/resources/banner.png)
+
+## What's New in v0.8.0
+
+- **Multi-engine PDF -> asset ETL**: `ETL_ENGINE` now selects `pymupdf` (default), `pymupdf4llm` (drop-in layout-aware upgrade), `docling` (MIT-licensed layout+table+formula+chart engine), or `mineru` (highest-accuracy formula/table engine) — all verified compatible with the `Pillow>=12.2.0` security floor that keeps `marker` disabled.
+- **Zero-configuration Docling install**: a cross-platform installer (`scripts/setup_docling.py` / `.sh` / `.ps1`) provisions an isolated `.venv-docling` interpreter and bridges it via subprocess, so the main runtime never needs a direct, version-sensitive Docling install.
+- **Engine-agnostic structured parsing**: Marker, Docling, and MinerU now share a `StructuredPDFExtractor` protocol and emit Marker-compatible results, reusing the existing ingestion pipeline with no service-layer changes.
 
 ## What's New in v0.7.0
 
@@ -109,8 +115,9 @@ This extension provides a sophisticated **ETL (Extract, Transform, Load) Pipelin
 ## ✨ Features
 
 - **📄 PDF ETL**:
-  - **PyMuPDF** (default) - Fast extraction (~50MB dependency)
-  - **Marker** (`use_marker=True`) - Temporarily unavailable in v0.7.0 until upstream `marker-pdf` supports patched Pillow
+  - **PyMuPDF** (default) - Fast extraction (~50MB dependency), no models required
+  - **PyMuPDF4LLM** / **Docling** / **MinerU** - Optional higher-fidelity engines selected via `ETL_ENGINE`; Docling ships a cross-platform installer for an isolated interpreter
+  - **Marker** (`use_marker=True`) - Temporarily unavailable until upstream `marker-pdf` supports patched Pillow
 - **🧩 Unified Segmentation**: Export normalized `segmentation.json` with reading order and markdown line ranges
 - **🖼️ Layout Overlay**: Visual bbox/type/reading-order inspection from the original PDF
 - **🔤 OCR Preprocessing**: Optional scanned-PDF cleanup before ETL
@@ -209,7 +216,7 @@ Runtime note:
 The extension prefers a managed Python 3.11 runtime when launching the MCP server via `uv tool run`, with Python 3.10 fallback for older machines. This avoids package builds on machines without native toolchains, especially macOS systems missing Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
 
 Marker note:
-The extension does not install Marker or torch in v0.7.0. `assetAwareMcp.enableMarkerBackend` is retained for compatibility, but the launcher ignores it while upstream `marker-pdf` requires `Pillow<11` and the secure runtime requires `Pillow>=12.2.0`.
+The extension does not install Marker or torch by default. `assetAwareMcp.enableMarkerBackend` is retained for compatibility, but the launcher ignores it while upstream `marker-pdf` requires `Pillow<11` and the secure runtime requires `Pillow>=12.2.0`. Use the `ETL_ENGINE` setting (`pymupdf4llm`, `docling`, or `mineru`) for a maintained high-fidelity alternative.
 
 Installation scope & storage:
 - The VSIX installs as a user/global extension (standard VS Code behavior), so you do not need a separate install per workspace.

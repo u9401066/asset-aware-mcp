@@ -204,7 +204,7 @@ Installation guidance:
 - VS Code extension: run the command `Asset-Aware MCP: Install LightRAG Backend` from the Command Palette; it auto-detects source vs published mode and emits the matching install command.
 - OpenRouter optional preset (since v0.6.35): set `LLM_BACKEND=openrouter`, `OPENROUTER_API_KEY=...`, and optionally `OPENROUTER_MODEL=liquid/lfm-2.5-1.2b-instruct:free` for fast low-cost summaries and draft RAG answers. LightRAG retrieval still uses the configured embedding backend.
 - High-fidelity PDF engines (since v0.8.0): `uv sync --extra pdf-plus` (PyMuPDF4LLM), `--extra docling` (Docling), or `--extra mineru` (MinerU), then set `ETL_ENGINE` accordingly. Docling ships a cross-platform installer (`scripts/setup_docling.py` / `.sh` / `.ps1`) that provisions an isolated `.venv-docling` interpreter — see [docs/docling-setup.md](docs/docling-setup.md).
-- Marker backend: temporarily disabled in v0.7.0 because `marker-pdf` pins vulnerable `Pillow<11`; the `marker` / `pdf` extras are compatibility placeholders until upstream supports patched Pillow.
+- Marker backend: still on security hold because `marker-pdf` pins vulnerable `Pillow<11`; the `marker` / `pdf` extras are compatibility placeholders until upstream supports patched Pillow.
 - VS Code extension: `assetAwareMcp.enableMarkerBackend` is retained as a setting, but the launcher will not install `marker-pdf` while the security hold is active.
 
 - [Technical Spec](docs/spec.md) - Detailed technical specification
