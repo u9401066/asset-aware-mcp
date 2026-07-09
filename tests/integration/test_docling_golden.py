@@ -40,6 +40,18 @@ def attention_result() -> MarkerParseResult:
 
 
 class TestDoclingGoldenAttention:
+    def test_reports_docling_as_source_engine(
+        self, attention_result: MarkerParseResult
+    ) -> None:
+        """The real adapter must stamp its own name, not a generic default.
+
+        Regression coverage for the multi-engine provenance work: this is
+        the one point in the (otherwise fully mocked) provenance chain that
+        exercises the real ``DoclingExtractor``, so it catches drift if a
+        future refactor reintroduces a hardcoded "marker"/"pymupdf" default.
+        """
+        assert attention_result.metadata.get("backend") == "docling"
+
     def test_extracts_semantic_figures(
         self, attention_result: MarkerParseResult
     ) -> None:

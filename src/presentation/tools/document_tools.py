@@ -1153,6 +1153,7 @@ async def inspect_document_manifest(doc_id: str) -> str:
     )
     if manifest.text_quality_reason:
         output_lines.append(f"**text_quality_reason:** {manifest.text_quality_reason}")
+    output_lines.append(f"**source_engine:** {manifest.source_engine}")
     output_lines.append(f"**ingested:** {manifest.ingested_at}")
 
     # Tables section

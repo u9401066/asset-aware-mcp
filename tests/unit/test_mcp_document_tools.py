@@ -714,6 +714,33 @@ class TestDocumentTools:
         mock_coverage.assert_not_awaited()
         mock_accessibility.assert_not_awaited()
 
+    async def test_inspect_document_manifest_shows_source_engine(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """inspect_document_manifest must surface which engine parsed the doc.
+
+        Regression coverage for the multi-engine provenance work: agents
+        need to see source_engine (pymupdf/pymupdf4llm/docling/mineru[:sub])
+        when inspecting an already-ingested document, not just at ingest time.
+        """
+        from src.domain.entities import DocumentManifest
+        from src.presentation.tools import document_tools
+
+        manifest = DocumentManifest(
+            doc_id="doc_1",
+            filename="paper.pdf",
+            title="Paper",
+            page_count=3,
+            source_engine="docling",
+        )
+        mock_service = MagicMock()
+        mock_service.get_manifest = AsyncMock(return_value=manifest)
+        monkeypatch.setattr(document_tools, "document_service", mock_service)
+
+        result = await document_tools.inspect_document_manifest("doc_1")
+
+        assert "**source_engine:** docling" in result
+
     async def test_document_audit_reports_partial_failure_status(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
