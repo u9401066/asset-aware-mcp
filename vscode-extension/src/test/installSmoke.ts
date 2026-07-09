@@ -121,7 +121,14 @@ function findAvailableCli(quality: VSCodeQuality): string | null {
 }
 
 function createIsolatedDirs(prefix: string): { baseDir: string; userDataDir: string; extensionsDir: string; workspaceDir: string } {
-    const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), `${prefix}-`));
+    // Prefer a short, well-known temp root over os.tmpdir() on macOS/Linux:
+    // GitHub Actions sets $TMPDIR to a long per-job path on macOS runners
+    // (e.g. /private/var/folders/.../T/), which combined with a mkdtemp
+    // prefix and a VS Code IPC socket filename can exceed macOS's ~104-char
+    // Unix domain socket path limit ("listen EINVAL"). '/tmp' is short,
+    // always present, and writable on GitHub-hosted Linux/macOS runners.
+    const shortTmpRoot = process.platform !== 'win32' && fs.existsSync('/tmp') ? '/tmp' : os.tmpdir();
+    const baseDir = fs.mkdtempSync(path.join(shortTmpRoot, `${prefix}-`));
     const userDataDir = path.join(baseDir, 'user-data');
     const extensionsDir = path.join(baseDir, 'extensions');
     const workspaceDir = path.join(baseDir, 'workspace');
@@ -283,7 +290,13 @@ async function verifyActivation(
                 ASSET_AWARE_MCP_EXPECT_INSTALLED_EXTENSION: '1',
                 ASSET_AWARE_MCP_EXPECT_EXTENSION_DIR: installedExtensionDir,
             },
-            launchArgs: [],
+            // Explicitly pass the short, isolated user-data-dir (under
+            // os.tmpdir()) instead of letting @vscode/test-electron default to
+            // '<cwd>/.vscode-test/user-data'. Under the nested GitHub Actions
+            // checkout path (.../work/<repo>/<repo>/vscode-extension/...) that
+            // default path is long enough to exceed macOS's ~104-char Unix
+            // domain socket path limit, failing with "listen EINVAL".
+            launchArgs: ['--user-data-dir', isolatedDirs.userDataDir],
         });
     } finally {
         if (previousElectronRunAsNode === undefined) {
