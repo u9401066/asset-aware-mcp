@@ -8,7 +8,7 @@
 
 PDF pipeline 將原始 PDF 轉成可檢索、可視覺化、可引用的文件 artifacts。它不是單純抽文字，而是同時保存 document identity、assets、section structure、layout locator、reading order、line/char/byte spans 與 citation hash。
 
-來源：`src/application/document_service.py`、`src/infrastructure/pdf_extractor.py`、`src/infrastructure/marker_adapter.py`、`src/application/segmentation_service.py`、`src/presentation/tools/document_tools.py`。
+來源：`src/application/document_service.py`、`src/infrastructure/pdf_extractor.py`、`src/infrastructure/{marker,docling,mineru,pymupdf4llm}_adapter.py`、`src/infrastructure/extractor_factory.py`、`src/application/segmentation_service.py`、`src/presentation/tools/document_tools.py`。
 
 ## Ingest
 
@@ -18,7 +18,7 @@ PDF pipeline 將原始 PDF 轉成可檢索、可視覺化、可引用的文件 a
 - `document(op="ingest", ...)` or `ingest_documents(...)` when a shortcut is preferred
 - `parse_pdf_structure(...)`，Marker 專用 high-precision parse job
 
-預設後端是 PyMuPDF。`0.7.0` 的 Marker extra 仍暫時為空，因為 `marker-pdf` 對 Pillow 的舊版 pin 會和安全 runtime 衝突。`parse_pdf_structure(...)` 是 Marker-required 入口；security hold 或 backend unavailable 會在建立 job 前回傳明確診斷。一般 `ingest_documents(use_marker=true)` 只代表偏好 Marker，公開工具沒有 `require_marker` 參數，Marker 不可用時會走 PyMuPDF 安全流程。
+預設後端是 PyMuPDF；`ETL_ENGINE` 環境變數可切換為 `pymupdf4llm`（同生態 drop-in 版面感知升級）、`docling`（MIT 授權 layout+table+formula+chart，安裝說明見 `docs/docling-setup.md`）或 `mineru`（最高精度，公式→LaTeX、表格→HTML）。三者皆懶加載、未安裝對應 extra 時自動降級為 PyMuPDF，並共用 `StructuredPDFExtractor` protocol 輸出 Marker-compatible 結果。`marker` extra 仍暫時為空，因為 `marker-pdf` 對 Pillow 的舊版 pin 會和安全 runtime 衝突。`parse_pdf_structure(...)` 是 structured-parse 入口；security hold 或 backend unavailable 會在建立 job 前回傳明確診斷。一般 `ingest_documents(use_marker=true)` 只代表偏好結構化引擎，公開工具沒有 `require_marker` 參數，引擎不可用時會走 PyMuPDF 安全流程。
 
 ## 產物
 

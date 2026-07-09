@@ -7,6 +7,32 @@
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-07-09
+
+### Added
+
+- Added a pluggable multi-engine PDF -> asset extraction architecture selected
+  via `ETL_ENGINE`: `pymupdf` (default, fast, no models), `pymupdf4llm`
+  (`[pdf-plus]`, drop-in layout-aware upgrade), `docling` (`[docling]`,
+  MIT-licensed layout+table+formula+chart engine), and `mineru` (`[mineru]`,
+  highest-accuracy formula-to-LaTeX/table-to-HTML engine). All three resolve
+  `Pillow>=12.2.0` cleanly, unlike the still-disabled `marker` backend.
+- Added a cross-platform Docling installer (`scripts/setup_docling.py` plus
+  `.sh`/`.ps1` wrappers) that provisions an isolated `.venv-docling`
+  interpreter and a subprocess bridge so the main environment never needs a
+  direct, version-sensitive Docling install. See `docs/docling-setup.md` for
+  the zero-configuration install path for CLI, VS Code, and MCP agents.
+- Added `StructuredPDFExtractor`, a shared protocol implemented by
+  Marker/Docling/MinerU so structured engines are interchangeable behind
+  `src/infrastructure/extractor_factory.py` and emit a Marker-compatible
+  result, reusing the existing ingestion pipeline without touching its logic.
+
+### Changed
+
+- `DocumentService`'s structured-parser slot is now engine-agnostic
+  (`StructuredPDFExtractor` protocol) while keeping its existing parameter
+  name and behavior for backward compatibility with existing callers/tests.
+
 ## [0.7.0] - 2026-05-17
 
 ### Added

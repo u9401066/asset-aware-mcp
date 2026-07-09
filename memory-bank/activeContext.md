@@ -240,11 +240,7 @@
 
 ## Current Goals
 
-- Complete the `0.7.0` production-hardening release with balanced 30-tool MCP
-  surface, document facade ops, readiness/pointer/A2T hardening,
-  docs/wiki/site/MEM/VSIX alignment, full local gates, exact-path staging,
-  push, and annotated `v0.7.0` tag publication while leaving generated outputs
-  uncommitted.
+- 多引擎 PDF→資產 ETL 導入完成（PyMuPDF4LLM / Docling / MinerU），取代因 marker-pdf pin Pillow<11 與安全基線（Pillow>=12.2.0）衝突而停用的 Marker。透過 ETL_ENGINE 環境變數選擇引擎（預設 pymupdf）；結構化引擎懶加載、未安裝自動降級為 PyMuPDF。設計亮點：Docling/MinerU 輸出 Marker-compatible MarkerParseResult，零侵入復用現有 _ingest_single_with_marker 資產管線；document_service 的 marker_extractor slot 僅泛化型別為 StructuredPDFExtractor Protocol、保留名稱以維持 API/測試相容。全部驗證通過（1018 測試 / 0 失敗、ruff + mypy 乾淨、引擎選擇與降級冒煙測試 OK）。變更尚未 commit。
 
 ## 🎯 當前焦點
 

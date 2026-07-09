@@ -2,7 +2,7 @@
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
     "description": "Citation-ready PDF/DOCX/A2T MCP workflows with balanced public tools, precise evidence assets, and VS Code runtime setup",
-    "version": "0.7.0",
+    "version": "0.8.0",
     "publisher": "u9401066",
     "engines": {
         "vscode": "^1.96.0"

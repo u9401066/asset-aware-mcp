@@ -37,9 +37,12 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 
 ## ✨ Features
 
-- 📄 **Asset-Aware ETL** - PDF → Markdown with a PyMuPDF-first parser and retained Marker code path:
-  - **PyMuPDF** (default) - Fast extraction (~50MB)
-  - **Marker** (`use_marker=True`) - High-precision structured parsing code path retained, but packaged runtime remains on security hold in v0.7.0 until upstream `marker-pdf` supports patched Pillow
+- 📄 **Asset-Aware ETL** - PDF → Markdown with a pluggable multi-engine parser (`ETL_ENGINE`):
+  - **PyMuPDF** (default) - Fast extraction (~50MB), no models required
+  - **PyMuPDF4LLM** (`[pdf-plus]`) - Drop-in layout-aware upgrade, no GPU
+  - **Docling** (`[docling]`) - MIT-licensed layout+table+formula+chart engine; bridges through an isolated `.venv-docling` interpreter when the main environment can't install it directly (see [docs/docling-setup.md](docs/docling-setup.md))
+  - **MinerU** (`[mineru]`) - Highest-accuracy engine: formula→LaTeX, table→HTML, cross-page table merge; CPU-capable
+  - **Marker** (`use_marker=True`) - High-precision structured parsing code path retained, but packaged runtime remains on security hold until upstream `marker-pdf` supports patched Pillow
 - 🧩 **Unified Segmentation Export** - Normalized `segmentation.json` merges manifest, blocks, reading order, and persisted markdown line spans for downstream tools and extensions.
 - 🛡️ **PDF Safety/Structure/Coverage/Accessibility Audits** - OpenDataloader-inspired artifact-only reports flag suspicious hidden/off-page/prompt-injection text, native structure signals, segmentation coverage gaps, and accessibility/readability readiness via the existing `document` facade. `document(op="prepare_ai")` and `document(op="auto")` expose agent-ready status and next actions without adding public tools.
 - 🧭 **Structural Pointer Retrieval** - Proxy-Pointer-inspired `document(op="pointer_index")`, `document(op="structural_retrieve")`, and `document(op="compare")` preserve section breadcrumbs, line/char/byte locators, source hashes, asset IDs, and evidence-span provenance without adding MCP tools.
@@ -137,12 +140,15 @@ Visual overview for the project. All diagrams use consistent GitHub README style
 ## 🚀 Quick Start
 
 ```bash
-# Install dependencies (using uv) — default install skips Marker/torch
+# Install dependencies (using uv) — default install stays on the fast PyMuPDF backend
 uv sync
 
-# v0.7.0: Marker extra is temporarily empty because marker-pdf pins
-# Pillow<11 while the secure runtime requires Pillow>=12.2.0.
-# Use the default PyMuPDF backend until upstream marker-pdf supports patched Pillow.
+# Optional high-fidelity PDF->asset engines (all verified Pillow>=12.2.0-safe):
+# uv sync --extra pdf-plus   # PyMuPDF4LLM: drop-in layout-aware upgrade
+# uv sync --extra docling    # Docling: MIT layout+table+formula+chart engine
+# uv sync --extra mineru     # MinerU: highest-accuracy formula/table engine
+# Then set ETL_ENGINE=pymupdf4llm|docling|mineru. Marker remains on security
+# hold because marker-pdf pins Pillow<11 vs. the Pillow>=12.2.0 security floor.
 
 # Run MCP Server
 uv run python -m src.presentation.server
@@ -157,8 +163,8 @@ Installation scope note:
 - The VS Code extension installs once per user (global). MCP launch env defaults `DATA_DIR` to workspace `./data` and `UV_CACHE_DIR` to `DATA_DIR/.uv-cache`; Prepare Server Runtime warms a workspace `.uv-cache`, falling back to extension global storage only when no workspace is open.
 - Runtime data stays with your repo: `.env` and `assetAwareMcp.dataDir` default to `./data`, so ingested assets and the uv cache used by the launched server remain scoped to the current workspace.
 
-Marker note:
-Since v0.6.28 the packaged Marker extra has intentionally stayed on security hold: upstream `marker-pdf` 1.10.2 requires `Pillow<11`, while this release pins `Pillow>=12.2.0` for patched image-processing security. Default installs use the PyMuPDF backend only. `use_marker=True` / `parse_pdf_structure` will report that Marker is unavailable until upstream Marker supports a patched Pillow range.
+Engine selection note:
+`ETL_ENGINE` picks the extraction backend (default `pymupdf`). Structured engines (`pymupdf4llm`, `docling`, `mineru`) lazy-load and gracefully fall back to PyMuPDF when their extra isn't installed. Since v0.6.28 the packaged Marker extra has intentionally stayed on security hold: upstream `marker-pdf` 1.10.2 requires `Pillow<11`, while this release pins `Pillow>=12.2.0` for patched image-processing security. `use_marker=True` / `parse_pdf_structure` will report that Marker is unavailable until upstream Marker supports a patched Pillow range — use `docling` or `mineru` for a maintained high-fidelity alternative today.
 
 ## 🔌 MCP Tools
 
@@ -185,7 +191,7 @@ The audit reports are inspired by OpenDataloader-style artifact workflows, but t
 |----------|------------|
 | Language | Python 3.10+ |
 | Package Manager | **uv** (all pip/setup-python removed) |
-| ETL | **PyMuPDF** (fitz); **Marker** is temporarily on security hold |
+| ETL | **PyMuPDF** (fitz, default) + optional **PyMuPDF4LLM** / **Docling** / **MinerU** structured engines; **Marker** is temporarily on security hold |
 | RAG | LightRAG (lightrag-hku) |
 | MCP | FastMCP |
 | Storage | Local filesystem (JSON/Markdown/PNG) |
@@ -197,6 +203,7 @@ Installation guidance:
 - LightRAG / Knowledge Graph backend (optional, since v0.6.34): `uv tool install --upgrade --python 3.11 'asset-aware-mcp[lightrag]'` for uvx/published users, or `uv sync --extra lightrag` for local source checkouts. Required before setting `ENABLE_LIGHTRAG=true`.
 - VS Code extension: run the command `Asset-Aware MCP: Install LightRAG Backend` from the Command Palette; it auto-detects source vs published mode and emits the matching install command.
 - OpenRouter optional preset (since v0.6.35): set `LLM_BACKEND=openrouter`, `OPENROUTER_API_KEY=...`, and optionally `OPENROUTER_MODEL=liquid/lfm-2.5-1.2b-instruct:free` for fast low-cost summaries and draft RAG answers. LightRAG retrieval still uses the configured embedding backend.
+- High-fidelity PDF engines (since v0.8.0): `uv sync --extra pdf-plus` (PyMuPDF4LLM), `--extra docling` (Docling), or `--extra mineru` (MinerU), then set `ETL_ENGINE` accordingly. Docling ships a cross-platform installer (`scripts/setup_docling.py` / `.sh` / `.ps1`) that provisions an isolated `.venv-docling` interpreter — see [docs/docling-setup.md](docs/docling-setup.md).
 - Marker backend: temporarily disabled in v0.7.0 because `marker-pdf` pins vulnerable `Pillow<11`; the `marker` / `pdf` extras are compatibility placeholders until upstream supports patched Pillow.
 - VS Code extension: `assetAwareMcp.enableMarkerBackend` is retained as a setting, but the launcher will not install `marker-pdf` while the security hold is active.
 
