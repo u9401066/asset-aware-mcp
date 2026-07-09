@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import hashlib
+from unittest.mock import MagicMock
 
+from src.application.citation_index_service import CitationIndexService
 from src.domain.citation import build_evidence_spans
+from src.domain.entities import DocumentAssets, DocumentManifest
 from src.domain.value_objects import AssetRef
 from src.presentation.tools.citation_support import asset_ref_from_span
 
@@ -100,3 +103,66 @@ def test_asset_ref_from_evidence_span_preserves_locator_source_hash() -> None:
     restored = AssetRef.from_dict(ref_data).to_dict()
 
     assert restored["locator_source_sha256"] == span.locator_source_sha256
+
+
+def test_load_or_rebuild_attributes_spans_to_the_real_source_engine() -> None:
+    """Regression: rebuilding a citation index must not hardcode "unknown"
+
+    when the manifest already records which engine produced the document.
+    """
+    manifest = DocumentManifest(
+        doc_id="doc_mineru",
+        filename="paper.pdf",
+        title="Paper",
+        page_count=1,
+        markdown_path="workspace/doc_mineru_full.md",
+        source_engine="mineru:pipeline",
+        assets=DocumentAssets(figures=[], tables=[], sections=[]),
+    )
+    blocks = [
+        {
+            "block_id": "blk_1",
+            "block_type": "Text",
+            "page": 1,
+            "text": "Alpha finding is clinically important.",
+            "metadata": {"line_start": 0, "line_end": 1},
+        }
+    ]
+
+    repository = MagicMock()
+    repository.load_citation_index.return_value = []
+    repository.load_markdown.return_value = "Alpha finding is clinically important.\n"
+    repository.load_blocks.return_value = blocks
+    repository.load_manifest.return_value = manifest
+
+    spans = CitationIndexService(repository).load_or_rebuild("doc_mineru")
+
+    assert spans
+    assert all(span.extraction_backend == "mineru:pipeline" for span in spans)
+    repository.save_citation_index.assert_called_once()
+
+
+def test_load_or_rebuild_falls_back_to_unknown_without_a_manifest() -> None:
+    """A missing/mock-only manifest must degrade to "unknown", not leak a
+
+    non-string (e.g. MagicMock) value into the pydantic-typed
+    EvidenceSpan.extraction_backend field.
+    """
+    repository = MagicMock()
+    repository.load_citation_index.return_value = []
+    repository.load_markdown.return_value = "Alpha finding is clinically important.\n"
+    repository.load_blocks.return_value = [
+        {
+            "block_id": "blk_1",
+            "block_type": "Text",
+            "page": 1,
+            "text": "Alpha finding is clinically important.",
+            "metadata": {"line_start": 0, "line_end": 1},
+        }
+    ]
+    repository.load_manifest.return_value = None
+
+    spans = CitationIndexService(repository).load_or_rebuild("doc_unknown")
+
+    assert spans
+    assert all(span.extraction_backend == "unknown" for span in spans)

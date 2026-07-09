@@ -1405,6 +1405,69 @@ async def test_marker_ingest_reports_manifest_counts_and_saves_segmentation(
 
 
 @pytest.mark.asyncio
+async def test_structured_engine_ingest_reports_real_engine_provenance(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Docling/MinerU results must be attributed to the real engine, not 'marker'.
+
+    Regression test: ``_ingest_single_with_marker`` used to hardcode
+    ``source="marker"`` on every FigureAsset/TableAsset and
+    ``backend="marker"`` on IngestResult regardless of which structured
+    engine actually produced the parse result. Both should now reflect
+    ``parse_result.metadata["backend"]``.
+    """
+    pdf_path = tmp_path / "paper.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4 docling")
+    repository = FileStorage(tmp_path / "data")
+
+    pdf_extractor = MagicMock()
+    pdf_extractor.get_page_count.return_value = 1
+
+    marker_extractor = MagicMock()
+    marker_extractor.parse.return_value = MarkerParseResult(
+        markdown=(
+            "# Abstract\n\n"
+            "Docling produced this document.\n\n"
+            "| Metric | Value |\n"
+            "| --- | --- |\n"
+            "| Accuracy | 0.97 |\n"
+        ),
+        blocks=[
+            MarkerBlock(
+                block_id="dl_1",
+                block_type="Table",
+                page=1,
+                text="| Metric | Value |\n| --- | --- |\n| Accuracy | 0.97 |",
+                metadata={"source_order": 1},
+            )
+        ],
+        toc=[],
+        images={},
+        metadata={"backend": "docling", "title": "Paper"},
+        page_count=1,
+    )
+
+    monkeypatch.setattr(
+        "src.application.document_service.DocId.generate",
+        lambda *_args: SimpleNamespace(value="doc_docling"),
+    )
+
+    service = DocumentService(
+        repository=repository,
+        pdf_extractor=pdf_extractor,
+        marker_extractor=marker_extractor,
+    )
+
+    result = await service._ingest_single_with_marker(str(pdf_path))
+
+    assert result.success is True
+    assert result.backend == "docling"
+    assert result.manifest.source_engine == "docling"
+    assert result.manifest.assets.tables
+    assert all(table.source == "docling" for table in result.manifest.assets.tables)
+
+
+@pytest.mark.asyncio
 async def test_marker_ingest_fails_on_empty_markdown(
     monkeypatch, tmp_path: Path
 ) -> None:

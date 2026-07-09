@@ -175,6 +175,57 @@ class TestSegmentationServiceReadingOrder:
         assert segmentation.segments[1].char_start is not None
         assert segmentation.segments[1].byte_start is not None
 
+    async def test_export_document_segmentation_backend_prefers_source_engine(
+        self, temp_dir
+    ) -> None:
+        """Regression: source_backend must reflect the real engine (e.g.
+
+        "docling"), not just "marker"/"pymupdf" inferred from legacy
+        per-asset ``.source`` heuristics, when there is no blocks.json to
+        derive it from (manifest-only segmentation path).
+        """
+        manifest = DocumentManifest(
+            doc_id="doc_docling",
+            filename="test.pdf",
+            title="Test",
+            page_count=1,
+            markdown_path="workspace/test.md",
+            source_engine="docling",
+            assets=DocumentAssets(
+                figures=[
+                    FigureAsset(
+                        id="fig_1",
+                        page=1,
+                        path="workspace/fig.png",
+                        ext="png",
+                        caption="Figure 1",
+                        width=100,
+                        height=100,
+                        source="docling",
+                    )
+                ],
+                tables=[],
+                sections=[],
+            ),
+        )
+
+        (temp_dir / "doc_docling_full.md").write_text(
+            "Some intro\n\nFigure 1. A caption\n",
+            encoding="utf-8",
+        )
+
+        repository = MagicMock()
+        repository.load_manifest.return_value = manifest
+        repository.get_doc_dir.return_value = temp_dir
+        repository.load_markdown.return_value = (
+            temp_dir / "doc_docling_full.md"
+        ).read_text(encoding="utf-8")
+
+        service = SegmentationService(repository=repository)
+        segmentation = await service.export_document_segmentation("doc_docling")
+
+        assert segmentation.source_backend == "docling"
+
     async def test_blocks_metadata_can_identify_pymupdf_source_backend(
         self, temp_dir
     ) -> None:

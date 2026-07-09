@@ -48,26 +48,41 @@ class CitationIndexService:
         if not markdown or blocks is None:
             return []
 
+        source_backend = self._resolve_source_backend(doc_id)
         spans = build_evidence_spans(
             doc_id=doc_id,
             markdown=markdown,
             blocks=blocks,
-            source_backend="unknown",
+            source_backend=source_backend,
         )
         if spans:
             self.repository.save_citation_index(doc_id, spans)
             save_citation_status(
                 self.repository,
                 doc_id,
-                source_backend="unknown",
+                source_backend=source_backend,
                 found=len(spans),
             )
         else:
             save_citation_status(
                 self.repository,
                 doc_id,
-                source_backend="unknown",
+                source_backend=source_backend,
                 found=0,
                 reason=empty_citation_reason(blocks),
             )
         return spans
+
+    def _resolve_source_backend(self, doc_id: str) -> str:
+        """Best-effort lookup of the real engine that produced this document.
+
+        Falls back to "unknown" when the manifest is missing, hasn't recorded
+        a source engine (e.g. documents ingested before that field existed),
+        or the repository is a test double whose attributes auto-vivify to
+        non-string mocks instead of raising/returning ``None``.
+        """
+        manifest = self.repository.load_manifest(doc_id)
+        source_engine = getattr(manifest, "source_engine", None)
+        if isinstance(source_engine, str) and source_engine:
+            return source_engine
+        return "unknown"

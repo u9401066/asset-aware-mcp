@@ -708,6 +708,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                 reported_page_count=reported_page_count if page_map else None,
             )
             current_step += 1
+            engine_name = str(parse_result.metadata.get("backend", "marker"))
             warnings: list[str] = []
             if not str(parse_result.markdown or "").strip():
                 return IngestResult(
@@ -718,7 +719,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                         "Marker returned empty markdown; retry with OCR enabled "
                         "or use the PyMuPDF backend."
                     ),
-                    backend=str(parse_result.metadata.get("backend", "marker")),
+                    backend=engine_name,
                     warnings=[
                         "Marker returned empty markdown before citation artifacts "
                         "could be created."
@@ -765,6 +766,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                 doc_id.value,
                 parse_result,
                 pdf_path=path,
+                engine_name=engine_name,
             )
             current_step += 1
 
@@ -776,7 +778,9 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                 "Extracting Tables",
                 f"Extracting tables from {path.name}",
             )
-            tables = self._extract_tables_from_blocks(parse_result.blocks)
+            tables = self._extract_tables_from_blocks(
+                parse_result.blocks, engine_name=engine_name
+            )
             current_step += 1
 
             # Step 6: Convert TOC to SectionAsset
@@ -845,7 +849,6 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
 
             # Step 9: Generate manifest (with richer data)
             # Note: sections are parsed from markdown by ManifestGenerator
-            engine_name = str(parse_result.metadata.get("backend", "marker"))
             manifest = self.manifest_generator.generate(
                 doc_id=doc_id.value,
                 filename=path.name,
@@ -1231,9 +1234,14 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
             return None
 
     async def _save_marker_images(
-        self, doc_id: str, parse_result: Any, *, pdf_path: Path | None = None
+        self,
+        doc_id: str,
+        parse_result: Any,
+        *,
+        pdf_path: Path | None = None,
+        engine_name: str = "marker",
     ) -> list[FigureAsset]:
-        """Save images from Marker parse result."""
+        """Save images from a structured (Marker/Docling/MinerU) parse result."""
         figures: list[FigureAsset] = []
 
         image_blocks = self._get_marker_image_blocks(parse_result.blocks)
@@ -1296,7 +1304,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                     height=height,
                     caption=str(matched_block.metadata.get("caption") or ""),
                     figure_type="",
-                    source="marker",
+                    source=engine_name,
                     source_block_id=matched_block.block_id,
                     source_order=int(matched_block.metadata.get("source_order") or 0),
                     line_start=int(matched_block.metadata.get("line_start"))
@@ -1340,8 +1348,10 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                 col_count = 0
         return (row_count, col_count)
 
-    def _extract_tables_from_blocks(self, blocks: list) -> list[TableAsset]:
-        """Extract tables from Marker blocks."""
+    def _extract_tables_from_blocks(
+        self, blocks: list, *, engine_name: str = "marker"
+    ) -> list[TableAsset]:
+        """Extract tables from structured (Marker/Docling/MinerU) blocks."""
         tables = []
         table_idx = 0
 
@@ -1359,7 +1369,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                         row_count=row_count,
                         col_count=col_count,
                         has_header=True,
-                        source="marker",
+                        source=engine_name,
                         source_block_id=block.block_id,
                         source_order=int(block.metadata.get("source_order") or 0),
                         line_start=int(block.metadata.get("line_start"))

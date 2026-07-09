@@ -619,11 +619,17 @@ class SegmentationService:
 
     @staticmethod
     def _infer_backend(manifest: DocumentManifest) -> str:
+        # Prefer the authoritative, persisted engine identity. Only fall back
+        # to the legacy per-asset-source heuristic for manifests written
+        # before ``source_engine`` existed (where it defaults to "pymupdf"
+        # but assets may still carry a real structured-engine ``source``).
+        if manifest.source_engine and manifest.source_engine != "pymupdf":
+            return manifest.source_engine
         if any(figure.source == "marker" for figure in manifest.assets.figures):
             return "marker"
         if any(table.source == "marker" for table in manifest.assets.tables):
             return "marker"
-        return "pymupdf"
+        return manifest.source_engine or "pymupdf"
 
     @staticmethod
     def _infer_backend_from_blocks(
