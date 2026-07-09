@@ -472,12 +472,12 @@ class DoclingExtractor:
             page_obj = pages[page_no - 1]
         size = getattr(page_obj, "size", None)
         height = getattr(size, "height", None)
-        return float(height) if isinstance(height, (int, float)) and height > 0 else None
+        return (
+            float(height) if isinstance(height, (int, float)) and height > 0 else None
+        )
 
     @staticmethod
-    def _first_provenance(
-        item: Any, document: Any = None
-    ) -> tuple[int, list[float]]:
+    def _first_provenance(item: Any, document: Any = None) -> tuple[int, list[float]]:
         """Extract (1-indexed page, [x0,y0,x1,y1] bbox) from a Docling item.
 
         Normalises the bbox to top-left origin (y grows downward toward the
