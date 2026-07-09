@@ -48,6 +48,7 @@ IS_WINDOWS = os.name == "nt"
 
 # --- Pretty output (no color when not a TTY) ---------------------------------
 
+
 def _supports_color() -> bool:
     return sys.stdout.isatty() and not IS_WINDOWS
 
@@ -87,6 +88,7 @@ def err(m: str) -> None:
 
 # --- Path helpers (cross-platform venv layout) -------------------------------
 
+
 def venv_python(venv_dir: Path) -> Path:
     """Return the interpreter path inside a venv for the current OS."""
     if IS_WINDOWS:
@@ -97,12 +99,11 @@ def venv_python(venv_dir: Path) -> Path:
 def _run(cmd: list[str], *, quiet: bool = False) -> subprocess.CompletedProcess[str]:
     if not quiet:
         info("$ " + " ".join(cmd))
-    return subprocess.run(  # noqa: S603
-        cmd, capture_output=True, text=True, check=False
-    )
+    return subprocess.run(cmd, capture_output=True, text=True, check=False)
 
 
 # --- Interpreter discovery ---------------------------------------------------
+
 
 def _uv_path() -> str | None:
     return shutil.which("uv")
@@ -170,6 +171,7 @@ def find_stable_python() -> str | None:
 
 # --- Install steps -----------------------------------------------------------
 
+
 def create_venv(base_python: str, venv_dir: Path, *, use_uv: bool) -> bool:
     if use_uv and _uv_path():
         proc = _run([_uv_path(), "venv", "--python", base_python, str(venv_dir)])
@@ -187,8 +189,16 @@ def install_docling(venv_dir: Path, *, use_uv: bool) -> bool:
     if use_uv and _uv_path():
         info("Installing docling with CPU torch via uv (--torch-backend cpu)...")
         proc = _run(
-            [_uv_path(), "pip", "install", "--python", py, "docling",
-             "--torch-backend", "cpu"]
+            [
+                _uv_path(),
+                "pip",
+                "install",
+                "--python",
+                py,
+                "docling",
+                "--torch-backend",
+                "cpu",
+            ]
         )
         if proc.returncode == 0:
             ok("docling installed (uv, CPU torch)")
@@ -200,8 +210,16 @@ def install_docling(venv_dir: Path, *, use_uv: bool) -> bool:
     _run([py, "-m", "pip", "install", "--upgrade", "pip"], quiet=True)
     info("Installing CPU torch from pytorch.org...")
     proc = _run(
-        [py, "-m", "pip", "install", "torch", "torchvision",
-         "--index-url", CPU_TORCH_INDEX]
+        [
+            py,
+            "-m",
+            "pip",
+            "install",
+            "torch",
+            "torchvision",
+            "--index-url",
+            CPU_TORCH_INDEX,
+        ]
     )
     if proc.returncode != 0:
         err(f"CPU torch install failed:\n{proc.stderr[:800]}")
@@ -221,9 +239,12 @@ def verify(venv_dir: Path) -> bool:
         err(f"Interpreter missing: {py}")
         return False
     proc = _run(
-        [str(py), "-c",
-         "import docling;from docling.document_converter import DocumentConverter;"
-         "print(getattr(docling,'__version__','?'))"],
+        [
+            str(py),
+            "-c",
+            "import docling;from docling.document_converter import DocumentConverter;"
+            "print(getattr(docling,'__version__','?'))",
+        ],
         quiet=True,
     )
     if proc.returncode != 0:
@@ -234,6 +255,7 @@ def verify(venv_dir: Path) -> bool:
 
 
 # --- Orchestration -----------------------------------------------------------
+
 
 def check_only(venv_dir: Path) -> int:
     info(f"OS: {platform.system()} ({platform.machine()})")
@@ -253,9 +275,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--check", action="store_true", help="diagnostics only")
     parser.add_argument("--force", action="store_true", help="recreate venv")
-    parser.add_argument(
-        "--venv", default=str(DEFAULT_VENV), help="target venv path"
-    )
+    parser.add_argument("--venv", default=str(DEFAULT_VENV), help="target venv path")
     parser.add_argument(
         "--no-uv", action="store_true", help="force stdlib venv + pip path"
     )

@@ -165,9 +165,7 @@ class TestBackendModeDetection:
 
 
 class TestSubprocessParse:
-    def test_success_rebuilds_result(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_success_rebuilds_result(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
             DoclingExtractor, "_docling_python", staticmethod(lambda: "/fake/python")
         )
@@ -238,8 +236,11 @@ class TestSubprocessParse:
         monkeypatch.setattr(
             DoclingExtractor, "_docling_python", staticmethod(lambda: "/fake/python")
         )
-        with patch(
-            "subprocess.run",
-            side_effect=subprocess.TimeoutExpired(cmd="docling", timeout=1),
-        ), pytest.raises(DoclingParseError, match="timed out"):
+        with (
+            patch(
+                "subprocess.run",
+                side_effect=subprocess.TimeoutExpired(cmd="docling", timeout=1),
+            ),
+            pytest.raises(DoclingParseError, match="timed out"),
+        ):
             DoclingExtractor().parse(Path("dummy.pdf"))
