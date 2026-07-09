@@ -30,6 +30,30 @@ and LightRAG knowledge graph outputs.
 6. Re-run the focused tests for changed code, then the full release harness
    before publishing.
 
+## PDF -> Asset Engine Selection
+
+The core goal is turning documents into complete, agent-friendly figure/table/
+text assets, fast. `ETL_ENGINE` selects the extraction backend; structured
+engines lazy-load and gracefully fall back to PyMuPDF when unavailable:
+
+- `pymupdf` (default) - fast, no models, always available.
+- `pymupdf4llm` (`[pdf-plus]`) - drop-in layout-aware upgrade, no GPU.
+- `docling` (`[docling]`) - MIT-licensed layout+table+formula+chart engine;
+  bridges through an isolated `.venv-docling` interpreter via subprocess when
+  the main environment cannot install it directly (see
+  `docs/docling-setup.md` for cross-platform install).
+- `mineru` (`[mineru]`) - highest-accuracy engine (formula->LaTeX,
+  table->HTML, cross-page table merge); CPU-capable but heavier.
+- `marker` - disabled; marker-pdf pins `Pillow<11`, incompatible with the
+  `Pillow>=12.2.0` security floor.
+
+All three active engines were verified to resolve `Pillow>=12.2.0` cleanly.
+Structured engines share the `StructuredPDFExtractor` protocol and emit a
+Marker-compatible result so they plug into the existing ingestion pipeline
+without touching its logic. Adapters live in
+`src/infrastructure/{pymupdf4llm,docling,mineru}_adapter.py`; engine selection
+is in `src/infrastructure/extractor_factory.py`.
+
 ## Repository Work
 
 - Treat `.codex/skills`, `.cline/skills`, `.clinerules`, `.github/agents`, and
