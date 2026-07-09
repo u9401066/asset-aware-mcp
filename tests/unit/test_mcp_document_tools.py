@@ -1005,6 +1005,37 @@ class TestDocumentTools:
         assert args[0] == [str(pdf_path)]
         assert kwargs["async_mode"] is True
 
+    async def test_document_auto_routes_mixed_batch_to_mixed_ingest(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A batch containing a non-PDF file must route to the mixed handler.
+
+        Regression coverage: `ingest_documents` only understands PDFs, so a
+        mixed PDF+DOCX file_paths list must not be silently mis-ingested as
+        if every path were a PDF.
+        """
+        from src.presentation.tools import document_tools
+
+        mock_ingest_documents = AsyncMock(
+            side_effect=AssertionError("mixed batches must not use ingest_documents")
+        )
+        mock_mixed_batch = AsyncMock(return_value="mixed job created")
+        monkeypatch.setattr(document_tools, "ingest_documents", mock_ingest_documents)
+        monkeypatch.setattr(
+            document_tools, "_ingest_mixed_document_batch", mock_mixed_batch
+        )
+
+        result = await document_tools.document(
+            op="auto",
+            file_paths=["/papers/study.pdf", "/reports/summary.docx"],
+        )
+
+        assert result == "mixed job created"
+        mock_mixed_batch.assert_awaited_once()
+        mock_ingest_documents.assert_not_awaited()
+        args, _kwargs = mock_mixed_batch.await_args
+        assert args[0] == ["/papers/study.pdf", "/reports/summary.docx"]
+
     async def test_document_auto_rejects_conflicting_inputs(self) -> None:
         """document(op='auto') should not guess when doc_id and file_paths conflict."""
         from src.presentation.tools.document_tools import document

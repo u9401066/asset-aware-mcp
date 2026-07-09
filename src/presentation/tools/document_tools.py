@@ -36,6 +36,7 @@ from src.infrastructure.structured_extractor import is_structured_engine
 from src.presentation.dependencies import (
     asset_service,
     document_service,
+    docx_service,
     get_marker_extractor,
     job_service,
     layout_visualizer,
@@ -86,6 +87,11 @@ from src.presentation.tools.document_evidence_support import (
     _write_foam_asset_notes,
     _write_foam_claim_promotion_pack,
     _write_foam_evidence_pack,
+)
+from src.presentation.tools.mixed_ingest_support import (
+    build_mixed_ingest_handler,
+    format_counts,
+    is_mixed_or_non_pdf_batch,
 )
 
 
@@ -716,6 +722,87 @@ async def citation_bundle(
             guidance="pass wiki_root/output_path to write the full evidence pack",
         )
     return _format_citation_bundle(payload)
+
+
+async def _ingest_mixed_document_batch(
+    file_paths: list[str],
+    *,
+    use_marker: bool = False,
+    ocr_enabled: bool = False,
+    ocr_language: str = "eng",
+    rotate_pages: bool = False,
+    deskew: bool = False,
+    marker_max_pages_per_chunk: int = 0,
+    extract_figures: bool = True,
+    index_knowledge_graph: bool = False,
+    page_ranges: list[str] | None = None,
+    ctx: Context | None = None,
+) -> str:
+    """Ingest a mixed PDF + DOCX/DOC/ODT/ODS batch as one background job.
+
+    Not a public MCP tool: `document(op="auto"/"ingest"/"import")` calls this
+    automatically when `file_paths` contains anything other than PDFs, so
+    agents get one job_id and one `get_job_status` progress stream for a
+    heterogeneous batch without needing a separate tool name to remember.
+    """
+    await log_message(
+        ctx,
+        "info",
+        f"ingest_mixed_document_batch start: files={len(file_paths)}",
+    )
+    await report_progress(ctx, 5, message="Queueing mixed-format ingest batch")
+
+    handler = build_mixed_ingest_handler(
+        file_paths,
+        document_service=document_service,
+        docx_service=docx_service,
+        use_marker=use_marker,
+        ocr_enabled=ocr_enabled,
+        ocr_language=ocr_language,
+        rotate_pages=rotate_pages,
+        deskew=deskew,
+        marker_max_pages_per_chunk=marker_max_pages_per_chunk,
+        extract_figures=extract_figures,
+        index_knowledge_graph=index_knowledge_graph,
+        page_ranges=page_ranges,
+    )
+
+    try:
+        job = await job_service.create_conversion_job(
+            operation="ingest_mixed_batch",
+            input_files=file_paths,
+            parameters={"use_marker": use_marker, "ocr_enabled": ocr_enabled},
+            handler=handler,
+            total_steps=max(len(file_paths), 1),
+            estimated_duration_seconds=len(file_paths) * 10,
+        )
+    except RuntimeError as e:
+        await log_message(ctx, "error", f"ingest_mixed_document_batch rejected: {e}")
+        return (
+            "# ❌ Could Not Create Mixed-Format Ingest Job\n\n"
+            f"{e!s}\n\n"
+            "Use `list_jobs(active_only=True)` to inspect running work, then retry."
+        )
+
+    await report_progress(ctx, 100, message=f"Queued mixed ingest job {job.job_id}")
+    await log_message(
+        ctx, "info", f"ingest_mixed_document_batch job created: {job.job_id}"
+    )
+
+    counts = format_counts(file_paths)
+    breakdown = ", ".join(f"{count} {fmt}" for fmt, count in sorted(counts.items()))
+    return "\n".join(
+        [
+            "# Mixed-Format Ingest Job Created",
+            "",
+            "✅ Ingestion is running in the background.",
+            f"- **job_id:** `{job.job_id}`",
+            f"- **files:** {len(file_paths)} ({breakdown})",
+            f"- **estimated_duration_seconds:** {job.estimated_duration_seconds}",
+            "",
+            f'Check progress with `get_job_status("{job.job_id}")`.',
+        ]
+    )
 
 
 @mcp.tool()
@@ -2095,6 +2182,20 @@ async def document(
                 output_format=output_format,
             )
         if file_paths:
+            if is_mixed_or_non_pdf_batch(file_paths):
+                return await _ingest_mixed_document_batch(
+                    file_paths,
+                    use_marker=use_marker,
+                    ocr_enabled=ocr_enabled,
+                    ocr_language=ocr_language,
+                    rotate_pages=rotate_pages,
+                    deskew=deskew,
+                    marker_max_pages_per_chunk=marker_max_pages_per_chunk,
+                    extract_figures=extract_figures,
+                    index_knowledge_graph=index_knowledge_graph,
+                    page_ranges=page_ranges,
+                    ctx=ctx,
+                )
             return await ingest_documents(
                 file_paths,
                 async_mode=async_mode,
@@ -2113,6 +2214,20 @@ async def document(
     if operation in {"ingest", "import"}:
         if not file_paths:
             return _missing_document_param("file_paths")
+        if is_mixed_or_non_pdf_batch(file_paths):
+            return await _ingest_mixed_document_batch(
+                file_paths,
+                use_marker=use_marker,
+                ocr_enabled=ocr_enabled,
+                ocr_language=ocr_language,
+                rotate_pages=rotate_pages,
+                deskew=deskew,
+                marker_max_pages_per_chunk=marker_max_pages_per_chunk,
+                extract_figures=extract_figures,
+                index_knowledge_graph=index_knowledge_graph,
+                page_ranges=page_ranges,
+                ctx=ctx,
+            )
         return await ingest_documents(
             file_paths,
             async_mode=async_mode,
