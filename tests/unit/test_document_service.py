@@ -456,6 +456,50 @@ async def test_required_marker_oom_does_not_write_fallback_artifacts(
 
 
 @pytest.mark.asyncio
+async def test_docling_parse_failure_reports_actual_engine(
+    tmp_path: Path,
+) -> None:
+    pdf_path = tmp_path / "paper.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4 test")
+
+    class FailingDocling:
+        ENGINE_NAME = "docling"
+
+        def parse(self, *_args, **_kwargs):
+            raise RuntimeError("worker exited with status 7")
+
+    repository = MagicMock()
+    repository.get_doc_dir.return_value = tmp_path / "doc_123"
+    pdf_extractor = MagicMock()
+    pdf_extractor.get_page_count.return_value = 1
+    service = DocumentService(
+        repository=repository,
+        pdf_extractor=pdf_extractor,
+        marker_extractor=FailingDocling(),
+        structured_engine_name="docling",
+    )
+    progress_messages: list[str] = []
+
+    async def progress_callback(
+        _step: int, _total: int, _phase: str, message: str
+    ) -> None:
+        progress_messages.append(message)
+
+    result = await service._ingest_single_with_marker(
+        str(pdf_path),
+        progress_callback=progress_callback,
+        require_marker=True,
+    )
+
+    assert result.success is False
+    assert result.error == (
+        "Docling structured parsing failed: worker exited with status 7"
+    )
+    assert "Marker" not in (result.error or "")
+    assert any("Loading Docling" in message for message in progress_messages)
+
+
+@pytest.mark.asyncio
 async def test_extract_and_save_images_prefers_page_crop_and_spatial_caption(
     tmp_path: Path,
 ) -> None:
@@ -614,11 +658,8 @@ async def test_extract_and_save_images_does_not_fifo_assign_unmatched_caption(
     tmp_path: Path,
 ) -> None:
     repository = MagicMock()
-    repository.save_image.side_effect = (
-        lambda doc_id, image_id, data, ext: tmp_path
-        / doc_id
-        / "images"
-        / f"{image_id}.{ext}"
+    repository.save_image.side_effect = lambda doc_id, image_id, data, ext: (
+        tmp_path / doc_id / "images" / f"{image_id}.{ext}"
     )
     crop = _test_png_bytes("crop-label", size=(288, 272))
 
@@ -746,11 +787,8 @@ async def test_extract_and_save_images_groups_multiple_xobjects_under_caption(
     tmp_path: Path,
 ) -> None:
     repository = MagicMock()
-    repository.save_image.side_effect = (
-        lambda doc_id, image_id, data, ext: tmp_path
-        / doc_id
-        / "images"
-        / f"{image_id}.{ext}"
+    repository.save_image.side_effect = lambda doc_id, image_id, data, ext: (
+        tmp_path / doc_id / "images" / f"{image_id}.{ext}"
     )
     component_a = _test_png_bytes("panel-a")
     component_b = _test_png_bytes("panel-b")

@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from mcp import ClientSession, StdioServerParameters
+from mcp import Client, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from src.domain.job import Job, JobProgress, JobStatus, JobType
@@ -19,7 +19,7 @@ from src.presentation.tools.document_tools import ingest_documents, list_documen
 from src.presentation.tools.job_tools import cancel_job, get_job_status, list_jobs
 
 
-def test_tool_registration() -> None:
+async def test_tool_registration() -> None:
     """Core MCP tools must be registered."""
     expected_tools = {
         "document",
@@ -54,9 +54,39 @@ def test_tool_registration() -> None:
         "save_docx",
     }
 
-    registered_tools = {tool.name for tool in mcp._tool_manager._tools.values()}
+    registered_tools = {tool.name for tool in await mcp.list_tools()}
 
     assert expected_tools <= registered_tools
+    assert registered_tools == mcp.registered_tool_names
+
+
+async def test_context_parameters_are_runtime_injected() -> None:
+    """MCP Context parameters must never leak into public tool input schemas."""
+    registered_tools = await mcp.list_tools()
+    tools_exposing_context = [
+        tool.name
+        for tool in registered_tools
+        if "ctx" in tool.input_schema.get("properties", {})
+    ]
+
+    assert tools_exposing_context == []
+
+
+async def test_document_facade_schema_explains_operation_requirements() -> None:
+    """The consolidated facade must remain discoverable to MCP SDK 2 clients."""
+    document_tool = next(
+        tool for tool in await mcp.list_tools() if tool.name == "document"
+    )
+
+    description = (document_tool.description or "").casefold()
+    assert "preflight" in description
+    assert "export_assets" in description
+
+    properties = document_tool.input_schema["properties"]
+    for parameter in ("op", "file_paths", "pdf_path", "doc_id"):
+        assert properties[parameter]["description"].strip()
+    assert "ctx" not in properties
+    assert document_tool.input_schema["required"] == ["op"]
 
 
 def test_cli_help_exits_without_starting_stdio_server() -> None:
@@ -77,13 +107,12 @@ def test_cli_help_exits_without_starting_stdio_server() -> None:
 
 
 async def test_registered_mcp_tool_runs_list_documents() -> None:
-    """Smoke the FastMCP registered tool path, not only direct function calls."""
-    tool = mcp._tool_manager._tools["list_documents"]
+    """Smoke the MCPServer registered tool path, not only direct function calls."""
+    async with Client(mcp) as client:
+        result = await client.call_tool("list_documents", {})
 
-    result = await tool.run({})
-
-    assert isinstance(result, str)
-    assert "Documents" in result or "No documents found" in result
+    assert not result.is_error
+    assert result.content
 
 
 async def test_stdio_server_lists_tools_and_calls_list_documents() -> None:
@@ -99,21 +128,17 @@ async def test_stdio_server_lists_tools_and_calls_list_documents() -> None:
         env=env,
     )
 
-    async with (
-        stdio_client(params) as (read_stream, write_stream),
-        ClientSession(read_stream, write_stream) as session,
-    ):
-        await asyncio.wait_for(session.initialize(), timeout=10)
-        tools = await asyncio.wait_for(session.list_tools(), timeout=10)
+    async with Client(stdio_client(params)) as client:
+        tools = await asyncio.wait_for(client.list_tools(), timeout=10)
         tool_names = {tool.name for tool in tools.tools}
 
         result = await asyncio.wait_for(
-            session.call_tool("list_documents", {}),
+            client.call_tool("list_documents", {}),
             timeout=10,
         )
 
     assert {"list_documents", "knowledge"} <= tool_names
-    assert not result.isError
+    assert not result.is_error
     assert result.content
 
 

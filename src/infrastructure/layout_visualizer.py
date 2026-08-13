@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import fitz  # type: ignore
+import pymupdf as fitz  # type: ignore[import-untyped]
 from PIL import Image, ImageDraw, ImageFont
 
 if TYPE_CHECKING:

@@ -1,13 +1,16 @@
 """Runtime MCP tool surface policy.
 
-The codebase keeps legacy direct tools registered for compatibility, then filters
-the public FastMCP surface at server startup so agents see an easier default set.
+The codebase keeps legacy direct tools registered for explicit legacy mode, then
+filters the public MCP v2 surface so agents see an easier default set.
 """
 
 from __future__ import annotations
 
 import os
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Literal
+
+if TYPE_CHECKING:
+    from src.presentation.mcp_app import AssetAwareMCPServer
 
 TOOL_SURFACE_ENV = "ASSET_AWARE_MCP_TOOL_SURFACE"
 LEGACY_TOOLS_ENV = "ASSET_AWARE_MCP_ENABLE_LEGACY_TOOLS"
@@ -78,13 +81,11 @@ def public_tool_names_for_surface(
     return set(BALANCED_TOOLS)
 
 
-def apply_tool_surface_policy(mcp: Any) -> None:
-    """Filter FastMCP registered tools according to the configured policy."""
+def apply_tool_surface_policy(mcp: AssetAwareMCPServer) -> None:
+    """Filter registered tools through MCPServer's public removal API."""
     allowed = public_tool_names_for_surface()
     if allowed is None:
         return
 
-    tools = mcp._tool_manager._tools
-    for key, tool in list(tools.items()):
-        if tool.name not in allowed:
-            del tools[key]
+    for tool_name in set(mcp.registered_tool_names) - allowed:
+        mcp.remove_tool(tool_name)

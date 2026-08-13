@@ -2,7 +2,7 @@
 Document Tools - ETL + 文件管理 MCP 工具
 
 包含：
-- parse_pdf_structure: Marker 結構化解析
+- parse_pdf_structure: 已設定的 structured extractor 結構化解析
 - search_source_location: 來源位置搜尋
 - ingest_documents: PDF 文件攝入
 - list_documents: 列出所有文件
@@ -18,10 +18,13 @@ from __future__ import annotations
 import json
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Annotated, Any, Literal
 
+from mcp.server.mcpserver import Context  # noqa: TC002 - runtime injection marker
 from mcp.types import ImageContent, TextContent
+from pydantic import Field
 
+from src.application.agent_asset_bundle_service import AgentAssetBundleService
 from src.application.document_readiness_service import (
     AI_READINESS_ARTIFACTS,
     AI_READINESS_REQUIRED_AUDITS,
@@ -32,6 +35,7 @@ from src.application.output_paths import (
     resolve_document_output_path,
 )
 from src.domain.marker_errors import MarkerBackendUnavailable
+from src.domain.pdf_preflight import PDFPreflightError
 from src.infrastructure.structured_extractor import is_structured_engine
 from src.presentation.dependencies import (
     asset_service,
@@ -41,6 +45,7 @@ from src.presentation.dependencies import (
     job_service,
     layout_visualizer,
     pdf_extractor,
+    pdf_preflight_service,
     pdf_report_service,
     repository,
     segmentation_service,
@@ -72,6 +77,7 @@ from src.presentation.tools.conversion_job_support import (
     create_conversion_job_response,
 )
 from src.presentation.tools.document_evidence_support import (
+    _asset_ref_from_manifest_asset,
     _audit_foam_wiki_health,
     _citation_bundle_entry,
     _claim_promotion_payload,
@@ -94,19 +100,42 @@ from src.presentation.tools.mixed_ingest_support import (
     is_mixed_or_non_pdf_batch,
 )
 
-
-class MarkerPDFExtractor:
-    """Lazy proxy for Marker availability checks used by MCP tools/tests."""
-
-    @staticmethod
-    def require_backend_available() -> None:
-        from src.infrastructure.marker_adapter import MarkerPDFExtractor as _Marker
-
-        _Marker.require_backend_available()
-
-
 JSON_TEXT_FIELD_MAX_CHARS = 1_000
 JSON_ARTIFACT_INLINE_MAX_CHARS = 1_200
+
+
+def _configured_structured_engine_name() -> str:
+    """Return the structured engine selected by the current runtime policy.
+
+    ``use_marker`` is retained as a backwards-compatible payload key, but it
+    now means "request the configured structured extractor". When the runtime
+    is still configured for a base engine, the legacy route targets Marker and
+    must be described as held rather than enabled.
+    """
+    from src.presentation import dependencies
+
+    engine = str(dependencies.settings.etl_engine or "").strip().casefold()
+    return engine if engine in {"docling", "mineru", "marker"} else "marker"
+
+
+def _structured_engine_label(engine: str) -> str:
+    display_name = {
+        "docling": "Docling",
+        "mineru": "MinerU",
+        "marker": "Marker",
+    }.get(engine.casefold(), engine)
+    if engine.casefold() in {"mineru", "marker"}:
+        return f"{display_name} (security hold)"
+    return display_name
+
+
+def _actual_structured_engine_name(extractor: object) -> str:
+    """Infer the configured extractor's concrete engine without loading models."""
+    identity = f"{type(extractor).__module__}.{type(extractor).__name__}".casefold()
+    for engine in ("docling", "mineru", "marker"):
+        if engine in identity:
+            return engine
+    return _configured_structured_engine_name()
 
 
 def _truncate_json_text_field(container: dict[str, Any], key: str) -> bool:
@@ -184,12 +213,6 @@ def _bounded_evidence_payload(payload: dict[str, Any]) -> dict[str, Any]:
             bounded.setdefault("content_chars", len(original_json))
             bounded.setdefault("sha256", text_sha256(original_json))
     return bounded
-
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import Context
-else:
-    Context = Any
 
 
 def _should_force_background_ingest(
@@ -287,13 +310,17 @@ async def _create_ingest_job_response(
     await report_progress(ctx, 100, message=f"Created job {job.job_id}")
     await log_message(ctx, "info", f"ingest_documents job created: {job.job_id}")
 
-    backend_note = " (Marker)" if use_marker else ""
+    requested_engine = (
+        _structured_engine_label(_configured_structured_engine_name())
+        if use_marker
+        else "PyMuPDF"
+    )
     lines = [
-        f"# ?? {title}{backend_note}",
+        f"# ?? {title}",
         "",
         f"**Job ID:** `{job.job_id}`",
         f"**Files:** {len(file_paths)}",
-        f"**Backend:** {'Marker (structured)' if use_marker else 'PyMuPDF (fast)'}",
+        f"**Requested engine:** {requested_engine}",
         f"**Estimated Time:** ~{job.estimated_duration_seconds or 10}s",
         "**Status:** accepted_async",
         f"**Reason:** {forced_reason or 'async_mode=true'}",
@@ -305,6 +332,7 @@ async def _create_ingest_job_response(
                 "status": "accepted_async",
                 "reason": forced_reason or "async_mode=true",
                 "job_id": job.job_id,
+                "requested_engine": requested_engine,
                 "next": f'get_job_status("{job.job_id}")',
             },
             ensure_ascii=False,
@@ -339,7 +367,7 @@ async def parse_pdf_structure(
     page_ranges: list[str] | None = None,
     ctx: Context | None = None,
 ) -> str:
-    """Create a background Marker parse job for a PDF."""
+    """Create a background job using the configured structured PDF extractor."""
     pdf_file = Path(pdf_path)
 
     await log_message(ctx, "info", f"parse_pdf_structure start: {pdf_path}")
@@ -357,16 +385,23 @@ async def parse_pdf_structure(
         return f"❌ Invalid PDF or page range: {e!s}"
 
     try:
-        MarkerPDFExtractor.require_backend_available()
+        structured_extractor = get_marker_extractor()
     except MarkerBackendUnavailable as e:
-        await log_message(ctx, "error", f"parse_pdf_structure marker unavailable: {e}")
+        await log_message(
+            ctx,
+            "error",
+            f"parse_pdf_structure structured extractor unavailable: {e}",
+        )
         return (
-            "# Marker Backend Not Available\n\n"
+            "# Structured PDF Backend Not Available\n\n"
             f"{e!s}\n\n"
             "Use `ingest_documents(..., use_marker=False)` for the secure "
-            "PyMuPDF backend, or install a compatible Marker runtime before "
-            "requesting structure parsing."
+            "PyMuPDF backend. For maintained high-fidelity parsing, configure "
+            "Docling; MinerU and Marker remain dependency security holds."
         )
+
+    structured_engine = _actual_structured_engine_name(structured_extractor)
+    structured_label = _structured_engine_label(structured_engine)
 
     if not async_mode:
         await log_message(
@@ -388,8 +423,9 @@ async def parse_pdf_structure(
         page_ranges=page_ranges,
         ctx=ctx,
         forced_reason=(
-            "parse_pdf_structure uses Marker and is always routed through the "
-            "background job system to avoid MCP stdio request timeouts"
+            f"parse_pdf_structure uses the configured {structured_label} extractor "
+            "and is always routed through the background job system to avoid MCP "
+            "stdio request timeouts"
         ),
         title="PDF Structure Parse Job Created",
         operation="parse_pdf_structure",
@@ -401,6 +437,23 @@ async def parse_pdf_structure(
             "are written under the configured data directory."
         )
     return response
+
+
+def _build_query_excerpt(text: str, query: str, *, max_chars: int = 220) -> str:
+    """Return a compact excerpt centered on a case-insensitive match."""
+    compact = " ".join(text.split())
+    match_index = compact.casefold().find(query.casefold())
+    if match_index < 0:
+        return compact[:max_chars]
+
+    start = max(0, match_index - 80)
+    end = min(len(compact), match_index + len(query) + 80)
+    excerpt = compact[start:end]
+    if start:
+        excerpt = f"…{excerpt}"
+    if end < len(compact):
+        excerpt = f"{excerpt}…"
+    return excerpt[:max_chars]
 
 
 @mcp.tool()
@@ -430,7 +483,8 @@ async def search_source_location(
     if blocks_data is None:
         return (
             f"❌ Blocks not found for doc_id: {doc_id}. "
-            "Run `ingest_documents` with `use_marker=True` first."
+            "Run `ingest_documents(..., use_marker=True)` with a configured "
+            "structured extractor first."
         )
 
     try:
@@ -440,8 +494,10 @@ async def search_source_location(
         query_lower = query.lower()
         matches = []
         for block in blocks_data:
-            text = block.get("text", "").lower()
-            if query_lower in text:
+            original_text = str(block.get("text") or "")
+            if query_lower in original_text.lower():
+                raw_metadata = block.get("metadata")
+                metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
                 matches.append(
                     {
                         "block_id": block.get("block_id"),
@@ -449,7 +505,10 @@ async def search_source_location(
                         "page": block.get("page"),
                         "bbox": block.get("bbox"),
                         "section": block.get("section_hierarchy"),
-                        "snippet": block.get("text", "")[:150] + "...",
+                        "line_start": metadata.get("line_start"),
+                        "line_end": metadata.get("line_end"),
+                        "line_match_strategy": metadata.get("line_match_strategy"),
+                        "snippet": _build_query_excerpt(original_text, query),
                     }
                 )
 
@@ -467,6 +526,16 @@ async def search_source_location(
             lines.append(f"## Match {i}")
             lines.append(f"- **Block:** `{m['block_id']}` ({m['block_type']})")
             lines.append(f"- **Page:** {m['page']}")
+            raw_line_start = m.get("line_start")
+            raw_line_end = m.get("line_end")
+            line_range = format_line_range(
+                raw_line_start if isinstance(raw_line_start, int) else None,
+                raw_line_end if isinstance(raw_line_end, int) else None,
+            )
+            if line_range:
+                lines.append(f"- **Lines:** {line_range}")
+            if m.get("line_match_strategy"):
+                lines.append(f"- **Line Match:** {m['line_match_strategy']}")
             if m.get("bbox"):
                 lines.append(f"- **BBox:** {m['bbox']}")
             if m.get("section"):
@@ -833,13 +902,16 @@ async def ingest_documents(
         async_mode: Kept for backwards compatibility. PDF ingestion is routed
                    to a background job from the MCP tool layer to keep stdio
                    clients responsive.
-        use_marker: If True, use Marker for structured parsing (slower but more accurate).
-                   Produces blocks.json with bbox/coordinates for precise source tracking.
-                   Default False uses PyMuPDF (faster but less structured).
-        marker_max_pages_per_chunk: When using Marker, split PDFs into fixed-size page chunks.
-                                    Set 0 to use the safe automatic strategy.
-        extract_figures: When using Marker, control whether image crops are extracted and saved.
-                         Disable this first for image-heavy textbooks to reduce memory pressure.
+        use_marker: Backwards-compatible flag that requests the configured
+                    structured extractor. The active packaged structured route
+                    is Docling; MinerU and Marker are dependency security holds.
+                    Default False uses PyMuPDF (faster and always available).
+        marker_max_pages_per_chunk: When using a configured structured extractor,
+                                    split PDFs into fixed-size page chunks. Set 0
+                                    to use the safe automatic strategy.
+        extract_figures: When using a configured structured extractor, control
+                         whether image crops are extracted and saved. Disable
+                         this first for image-heavy textbooks to reduce memory pressure.
         page_ranges: 1-indexed inclusive page ranges applied to every input file, e.g. ["1-50", "120-160"].
 
     Returns:
@@ -851,7 +923,7 @@ async def ingest_documents(
         # Then check status:
         get_job_status("job_xxx")
 
-        # With Marker for precise source tracking:
+        # With the configured structured extractor for precise source tracking:
         ingest_documents(["/papers/textbook.pdf"], use_marker=True)
     """
     await log_message(
@@ -903,15 +975,17 @@ async def ingest_documents(
                 forced_reason=reason,
             )
 
-        # Lazy-load Marker only for explicitly allowed synchronous Marker work.
+        # Lazy-load only the configured structured extractor for explicitly
+        # allowed synchronous work.
         if use_marker and document_service.marker_extractor is None:
             try:
                 document_service.marker_extractor = get_marker_extractor()
             except RuntimeError as e:
                 return (
-                    "# ❌ Marker Backend Not Available\n\n"
+                    "# ❌ Structured PDF Backend Not Available\n\n"
                     f"{e!s}\n\n"
-                    "Use default PyMuPDF mode, or install the optional Marker dependency first."
+                    "Use default PyMuPDF mode, or configure the maintained "
+                    "Docling backend. MinerU and Marker remain security holds."
                 )
 
         await report_progress(ctx, 15, message="Starting synchronous ingestion")
@@ -931,8 +1005,13 @@ async def ingest_documents(
         await report_progress(ctx, 100, message="Synchronous ingestion finished")
         await log_message(ctx, "info", "ingest_documents sync completed")
 
-        backend_label = "Marker" if use_marker else "PyMuPDF"
-        output_lines = [f"# Ingestion Results ({backend_label})\n"]
+        requested_engine = (
+            _structured_engine_label(_configured_structured_engine_name())
+            if use_marker
+            else "PyMuPDF"
+        )
+        output_lines = ["# Ingestion Results\n"]
+        output_lines.append(f"**Requested engine:** {requested_engine}\n")
         success_count = sum(1 for r in results if r.success)
         output_lines.append(f"**Processed:** {success_count}/{len(results)} files\n")
         if ocr_enabled:
@@ -941,7 +1020,7 @@ async def ingest_documents(
             )
         if use_marker:
             output_lines.append(
-                f"**Marker chunk size:** {marker_max_pages_per_chunk or 'auto'}\n"
+                f"**Structured chunk size:** {marker_max_pages_per_chunk or 'auto'}\n"
             )
             output_lines.append(
                 f"**Extract figures:** {'yes' if extract_figures else 'no'}\n"
@@ -1427,7 +1506,7 @@ async def visualize_document_layout(
 
     return [
         TextContent(type="text", text="\n".join(summary)),
-        ImageContent(type="image", data=overlay.image_base64, mimeType="image/png"),
+        ImageContent(type="image", data=overlay.image_base64, mime_type="image/png"),
     ]
 
 
@@ -2099,7 +2178,7 @@ async def fetch_document_asset(
             ImageContent(
                 type="image",
                 data=result.image_base64,
-                mimeType=result.image_media_type or "image/png",
+                mime_type=result.image_media_type or "image/png",
             ),
         ]
     else:
@@ -2137,11 +2216,51 @@ async def fetch_document_asset(
 
 @mcp.tool()
 async def document(
-    op: str,
-    file_paths: list[str] | None = None,
-    pdf_path: str | None = None,
-    doc_id: str | None = None,
-    output_dir: str | None = None,
+    op: Annotated[
+        str,
+        Field(
+            description=(
+                "Facade operation name. preflight requires pdf_path; auto/ingest/import "
+                "use file_paths; export_assets/agent_assets require doc_id."
+            )
+        ),
+    ],
+    file_paths: Annotated[
+        list[str] | None,
+        Field(
+            description=(
+                "Source document paths for auto, ingest, or import. This batch field is "
+                "not accepted by preflight; pass exactly one PDF through pdf_path."
+            )
+        ),
+    ] = None,
+    pdf_path: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Single PDF path required by preflight and used by PDF-specific facade "
+                "operations. preflight never consumes file_paths."
+            )
+        ),
+    ] = None,
+    doc_id: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Identifier of an already ingested document; required by inspect, "
+                "prepare_ai, audit, retrieval, and export_assets operations."
+            )
+        ),
+    ] = None,
+    output_dir: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Managed child output directory. For export_assets it is resolved inside "
+                "the document directory and defaults to agent-assets."
+            )
+        ),
+    ] = None,
     output_path: str | None = None,
     async_mode: bool = True,
     use_marker: bool = False,
@@ -2164,10 +2283,18 @@ async def document(
     doc_b_id: str | None = None,
     ctx: Context | None = None,
 ) -> Any:
-    """
-    Consolidated PDF document entrypoint.
+    """Consolidated PDF document entrypoint with explicit operation contracts.
 
-    Existing document tools stay registered and keep their original contracts.
+    Operation -> required parameters:
+    - ``auto``: exactly one of ``file_paths`` (ingest) or ``doc_id`` (readiness).
+    - ``ingest`` / ``import``: ``file_paths``.
+    - ``preflight``: ``pdf_path`` only; ``file_paths`` is rejected.
+    - ``inspect`` / ``prepare_ai`` / audit and retrieval operations: ``doc_id``.
+    - ``export_assets`` / ``agent_assets``: ``doc_id``; ``output_dir`` is optional.
+
+    Existing direct document tools stay registered and keep their original
+    contracts. The facade descriptions make op-specific requirements visible
+    even though the shared JSON schema can require only ``op`` globally.
     """
     operation = _normalize_op(op)
     if operation == "auto":
@@ -2259,6 +2386,22 @@ async def document(
             page_ranges=page_ranges,
             ctx=ctx,
         )
+    if operation == "preflight":
+        if file_paths is not None:
+            return (
+                'document(op="preflight") accepts only pdf_path; '
+                "file_paths is a batch-ingest parameter."
+            )
+        if not pdf_path:
+            return _missing_document_param("pdf_path")
+        await report_progress(ctx, 10, message="Running safe PDF preflight")
+        try:
+            report = await pdf_preflight_service.inspect(pdf_path)
+        except PDFPreflightError as exc:
+            await log_message(ctx, "error", f"PDF preflight failed: {exc}")
+            return exc.as_failure().model_dump(mode="json")
+        await report_progress(ctx, 100, message="PDF preflight complete")
+        return report.model_dump(mode="json")
     if operation == "list":
         return await list_documents()
     if operation == "delete":
@@ -2299,6 +2442,19 @@ async def document(
             output_path=output_path,
             ctx=ctx,
         )
+    if operation in {"export_assets", "agent_assets"}:
+        if not doc_id:
+            return _missing_document_param("doc_id")
+        exporter = AgentAssetBundleService(repository, segmentation_service)
+        try:
+            return await exporter.export(
+                doc_id,
+                output_dir=output_dir,
+                span_ref_factory=asset_ref_from_span,
+                asset_ref_factory=_asset_ref_from_manifest_asset,
+            )
+        except (OSError, ValueError) as exc:
+            return {"success": False, "doc_id": doc_id, "error": str(exc)}
     if operation in {"layout", "visualize_layout"}:
         if not doc_id:
             return _missing_document_param("doc_id")
@@ -2389,11 +2545,13 @@ async def document(
         op,
         {
             "accessibility",
+            "agent_assets",
             "ai_safety",
             "audit",
             "auto",
             "coverage",
             "delete",
+            "export_assets",
             "export_segmentation",
             "ingest",
             "inspect",
@@ -2402,6 +2560,7 @@ async def document(
             "ocr",
             "parse",
             "pointer_index",
+            "preflight",
             "prepare_ai",
             "proxy_pointer",
             "safety",
@@ -2430,7 +2589,7 @@ async def document_asset(
     path: str | None = None,
     query: str | None = None,
     max_depth: int | None = None,
-    response_format: str = "tree",
+    response_format: Literal["tree", "flat", "json"] = "tree",
     include_children: bool = True,
     block_types: list[str] | None = None,
     limit: int | None = None,

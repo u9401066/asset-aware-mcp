@@ -163,6 +163,8 @@ class DoclingExtractor:
     structured extractor is expected.
     """
 
+    ENGINE_NAME = "docling"
+
     def __init__(
         self,
         output_dir: Path | None = None,

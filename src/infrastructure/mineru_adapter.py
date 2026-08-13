@@ -15,6 +15,10 @@ Design choices:
 - The ``pipeline`` backend runs on pure CPU by default.
 
 The backend is heavy and optional; every MinerU touchpoint is lazy and guarded.
+The packaged ``[mineru]`` extra is intentionally empty while MinerU's
+``transformers<5`` cap excludes currently patched releases. The adapter remains
+available for isolated upstream evaluation, but production installs should use
+PyMuPDF4LLM or Docling.
 """
 
 from __future__ import annotations
@@ -28,15 +32,10 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from src.domain.marker_errors import MINERU_INSTALL_HINT
 from src.infrastructure.marker_adapter import MarkerBlock, MarkerParseResult
 
 logger = logging.getLogger(__name__)
-
-MINERU_INSTALL_HINT = (
-    "MinerU backend not installed. Install the optional extra via "
-    "`uv tool install --upgrade 'asset-aware-mcp[mineru]'` "
-    "(or `uv pip install 'mineru[pipeline]'`), or set ETL_ENGINE=pymupdf."
-)
 
 DEFAULT_MINERU_TIMEOUT_SECONDS = 900.0
 
@@ -61,6 +60,8 @@ class MinerUExtractor:
     Mirrors :class:`MarkerPDFExtractor`'s public surface
     (``require_backend_available`` + ``parse``).
     """
+
+    ENGINE_NAME = "mineru"
 
     def __init__(
         self,

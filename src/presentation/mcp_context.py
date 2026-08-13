@@ -4,12 +4,9 @@ import asyncio
 import inspect
 import logging
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import Context
-else:
-    Context = Any
+from mcp.server.mcpserver import Context  # noqa: TC002 - runtime injection marker
 
 logger = logging.getLogger(__name__)
 

@@ -48,6 +48,7 @@ def resolve_document_output_dir(
     output_dir: str | None,
     *,
     default_name: str,
+    create: bool = True,
 ) -> Path:
     """Resolve an output directory while keeping writes inside a safe base dir."""
     root = base_dir.resolve()
@@ -61,5 +62,6 @@ def resolve_document_output_dir(
     except ValueError as exc:
         raise ValueError(f"Output directory must stay within: {root}") from exc
 
-    resolved.mkdir(parents=True, exist_ok=True)
+    if create:
+        resolved.mkdir(parents=True, exist_ok=True)
     return resolved

@@ -68,7 +68,8 @@ def test_doctor_outputs_runtime_status_json(
     assert isinstance(payload["runtime"]["preferred_python_active"], bool)
     assert payload["runtime"]["platform_tags"]["sysconfig_platform"]
     assert payload["backends"]["pymupdf"]["available"] is True
-    assert isinstance(payload["backends"]["marker"]["available"], bool)
+    assert payload["backends"]["marker"]["available"] is False
+    assert payload["backends"]["marker"]["security_hold"] is True
     assert isinstance(payload["native_dependencies"]["pillow"]["available"], bool)
     assert isinstance(payload["native_dependencies"]["lxml"]["available"], bool)
     assert isinstance(
@@ -143,13 +144,15 @@ def test_health_outputs_human_readable_runtime_status(
     output = capsys.readouterr().out
     assert "Asset-Aware MCP" in output
     assert "PyMuPDF:" in output
-    assert "Marker:" in output
+    assert "Marker: SECURITY HOLD" in output
     assert "Pillow:" in output
     assert "lxml:" in output
     assert "MCP SDK:" in output
     assert "DATA_DIR:" in output
     assert "LightRAG:" in output
     assert "LLM model:" in output
+    assert "do not install the held Marker dependency graph" in output
+    assert "install a compatible Marker extra" not in output
 
 
 def test_list_tools_reflects_registered_core_tools(capsys) -> None:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import fitz
+import pymupdf as fitz
 
 import src.infrastructure.pdf_extractor as pdf_extractor
 from src.domain.etl_profile import ETLProfile, ETLProfileRegistry

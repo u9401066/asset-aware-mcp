@@ -68,12 +68,12 @@ class TestDocumentTools:
         result = await parse_pdf_structure("/nonexistent/file.pdf")
         assert "❌" in result
 
-    async def test_parse_pdf_structure_reports_missing_marker_backend(
+    async def test_parse_pdf_structure_reports_missing_structured_backend(
         self,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """parse_pdf_structure reports a missing Marker backend before queuing."""
+        """parse_pdf_structure reports a missing configured backend before queuing."""
         pdf_path = tmp_path / "paper.pdf"
         pdf_path.write_bytes(b"%PDF-1.4 test")
 
@@ -86,8 +86,8 @@ class TestDocumentTools:
         )
         monkeypatch.setattr(document_tools, "job_service", mock_jobs)
         monkeypatch.setattr(
-            document_tools.MarkerPDFExtractor,
-            "require_backend_available",
+            document_tools,
+            "get_marker_extractor",
             MagicMock(side_effect=MarkerBackendUnavailable("marker missing")),
         )
 
@@ -96,8 +96,9 @@ class TestDocumentTools:
             async_mode=False,
         )
 
-        assert "Marker Backend Not Available" in result
+        assert "Structured PDF Backend Not Available" in result
         assert "use_marker=False" in result
+        assert "install a compatible Marker" not in result
         mock_jobs.create_ingest_job.assert_not_awaited()
 
     async def test_parse_pdf_structure_sync_mode_still_returns_background_job(
@@ -105,7 +106,7 @@ class TestDocumentTools:
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """parse_pdf_structure async_mode=False returns a job after Marker preflight."""
+        """parse_pdf_structure returns a job after structured-backend preflight."""
         pdf_path = tmp_path / "paper.pdf"
         pdf_path.write_bytes(b"%PDF-1.4 test")
 
@@ -119,9 +120,10 @@ class TestDocumentTools:
         )
         monkeypatch.setattr(document_tools, "job_service", mock_jobs)
         monkeypatch.setattr(
-            document_tools.MarkerPDFExtractor,
-            "require_backend_available",
-            MagicMock(),
+            document_tools, "get_marker_extractor", MagicMock(return_value=object())
+        )
+        monkeypatch.setattr(
+            document_tools, "_configured_structured_engine_name", lambda: "docling"
         )
 
         result = await document_tools.parse_pdf_structure(
@@ -130,6 +132,7 @@ class TestDocumentTools:
         )
 
         assert "job_sync_parse" in result
+        assert "Requested engine:** Docling" in result
         mock_jobs.create_ingest_job.assert_awaited_once()
         _, kwargs = mock_jobs.create_ingest_job.await_args
         assert kwargs["parameters"]["operation"] == "parse_pdf_structure"
@@ -154,9 +157,7 @@ class TestDocumentTools:
         )
         monkeypatch.setattr(document_tools, "job_service", mock_jobs)
         monkeypatch.setattr(
-            document_tools.MarkerPDFExtractor,
-            "require_backend_available",
-            MagicMock(),
+            document_tools, "get_marker_extractor", MagicMock(return_value=object())
         )
 
         result = await document_tools.parse_pdf_structure(
@@ -187,12 +188,12 @@ class TestDocumentTools:
 
         assert "Invalid PDF or page range" in result
 
-    async def test_parse_pdf_structure_defaults_to_background_marker_job(
+    async def test_parse_pdf_structure_preflights_then_creates_background_job(
         self,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """parse_pdf_structure must return quickly instead of loading Marker inline."""
+        """parse_pdf_structure preflights config without running extraction inline."""
         pdf_path = tmp_path / "paper.pdf"
         pdf_path.write_bytes(b"%PDF-1.4 test")
 
@@ -201,19 +202,13 @@ class TestDocumentTools:
         monkeypatch.setattr(
             document_tools,
             "get_marker_extractor",
-            MagicMock(side_effect=AssertionError("Marker should load in the job")),
+            MagicMock(return_value=object()),
         )
         mock_jobs = MagicMock()
         mock_jobs.create_ingest_job = AsyncMock(
             return_value=MagicMock(job_id="job_parse", estimated_duration_seconds=10)
         )
         monkeypatch.setattr(document_tools, "job_service", mock_jobs)
-        monkeypatch.setattr(
-            document_tools.MarkerPDFExtractor,
-            "require_backend_available",
-            MagicMock(),
-        )
-
         result = await document_tools.parse_pdf_structure(str(pdf_path))
 
         assert "job_parse" in result
@@ -1133,6 +1128,39 @@ class TestDocumentTools:
 
             result = await search_source_location("doc_123", "test query")
             assert "❌" in result
+
+    async def test_search_source_location_centers_excerpt_and_keeps_line_locator(
+        self,
+    ) -> None:
+        """Source search keeps persisted line provenance and nearby context."""
+        prefix = "Unrelated preface. " * 20
+        text = prefix + "Rapid perfusion recovery guides shock therapy." + prefix
+        blocks = [
+            {
+                "block_id": "blk_1",
+                "block_type": "Text",
+                "page": 6,
+                "bbox": [72, 144, 420, 182],
+                "text": text,
+                "section_hierarchy": {"1": "Therapy"},
+                "metadata": {
+                    "line_start": 9,
+                    "line_end": 11,
+                    "line_match_strategy": "exact",
+                },
+            }
+        ]
+
+        with patch("src.presentation.tools.document_tools.repository") as mock_repo:
+            mock_repo.load_blocks.return_value = blocks
+            from src.presentation.tools.document_tools import search_source_location
+
+            result = await search_source_location("doc_123", "perfusion recovery")
+
+        assert "**Lines:** L10-11" in result
+        assert "**Line Match:** exact" in result
+        assert "Rapid perfusion recovery guides shock therapy" in result
+        assert len(result) < 1_000
 
     async def test_find_evidence_spans_returns_span_asset_ref(self) -> None:
         """find_evidence_spans returns citation-ready span refs."""
@@ -2096,6 +2124,8 @@ class TestDocumentTools:
         )
 
         assert "job_async_marker" in result
+        assert "Marker (security hold)" in result
+        assert "Marker backend enabled" not in result
         mock_jobs.create_ingest_job.assert_awaited_once()
 
     async def test_ingest_documents_sync_pdf_skips_page_count_before_background_job(

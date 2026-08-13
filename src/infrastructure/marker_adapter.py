@@ -181,6 +181,8 @@ class MarkerPDFExtractor:
     - TOC extraction
     """
 
+    ENGINE_NAME = "marker"
+
     def __init__(self, output_dir: Path | None = None):
         """
         初始化 Marker 提取器。
@@ -338,7 +340,7 @@ class MarkerPDFExtractor:
     @staticmethod
     def _count_pdf_pages(pdf_path: Path) -> int:
         """快速取得 PDF 頁數。"""
-        import fitz  # type: ignore
+        import pymupdf as fitz  # type: ignore[import-untyped]
 
         with fitz.open(str(pdf_path)) as pdf:
             return int(pdf.page_count)
@@ -346,7 +348,7 @@ class MarkerPDFExtractor:
     @staticmethod
     def _count_embedded_image_refs(pdf_path: Path) -> int:
         """估算 PDF 內嵌圖片數量，用於大檔自動策略。"""
-        import fitz  # type: ignore
+        import pymupdf as fitz  # type: ignore[import-untyped]
 
         image_count = 0
         with fitz.open(str(pdf_path)) as pdf:
@@ -464,7 +466,7 @@ class MarkerPDFExtractor:
         max_pages_per_chunk: int,
     ) -> tuple[int, list[tuple[int, int]]]:
         """根據頁數上限建立連續 page chunks。"""
-        import fitz  # type: ignore
+        import pymupdf as fitz  # type: ignore[import-untyped]
 
         with fitz.open(str(pdf_path)) as pdf:
             total_pages = pdf.page_count
@@ -485,7 +487,7 @@ class MarkerPDFExtractor:
         temp_dir: Path,
     ) -> list[tuple[Path, int]]:
         """將大型 PDF 拆成暫存 chunk PDFs，供 Marker 逐段解析。"""
-        import fitz  # type: ignore
+        import pymupdf as fitz  # type: ignore[import-untyped]
 
         chunk_paths: list[tuple[Path, int]] = []
         with fitz.open(str(pdf_path)) as pdf:

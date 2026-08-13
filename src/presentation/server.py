@@ -1,10 +1,10 @@
 """
 Presentation Layer - MCP Server
 
-FastMCP server entry point. All tools and resources are defined in submodules.
+MCP v2 server entry point. All tools and resources are defined in submodules.
 
 Structure:
-- mcp_app.py: FastMCP instance
+- mcp_app.py: MCPServer instance
 - dependencies.py: DI container (Composition Root)
 - tools/: MCP tools by domain
 - resources/: MCP resources by domain

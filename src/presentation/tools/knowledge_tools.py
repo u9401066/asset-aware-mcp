@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import asyncio
 import re
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
+
+from mcp.server.mcpserver import Context  # noqa: TC002 - runtime injection marker
 
 from src.presentation.dependencies import knowledge_graph, knowledge_service
 from src.presentation.mcp_app import mcp
@@ -19,11 +21,6 @@ from src.presentation.response_limits import (
     format_limited_json_response,
     format_limited_text_response,
 )
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import Context
-else:
-    Context = Any
 
 KNOWLEDGE_TOOL_TIMEOUT_SECONDS = 45.0
 KNOWLEDGE_VERIFY_DOC_LIMIT = 5

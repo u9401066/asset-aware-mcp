@@ -83,7 +83,7 @@ def sample_pdf_text(
 ) -> tuple[str, dict[str, Any]]:
     """Extract a small text/layout sample from a PDF using PyMuPDF."""
     try:
-        import fitz  # type: ignore[import-untyped]
+        import pymupdf as fitz  # type: ignore[import-untyped]
     except Exception as e:  # pragma: no cover - depends on optional runtime import
         raise RuntimeError(f"PyMuPDF is required for PDF profile detection: {e}") from e
 

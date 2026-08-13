@@ -38,7 +38,7 @@ class TestDocId:
     def test_generate_from_filename(self):
         """Test generating DocId from filename."""
         doc_id = DocId.generate("Study_Report.pdf", "unique_path")
-        assert doc_id.value.startswith("doc_study_report_pdf")
+        assert doc_id.value == "doc_study_report_pdf_669f3e4cf849"
 
     def test_equality(self):
         """Test DocId equality comparison."""

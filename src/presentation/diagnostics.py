@@ -76,12 +76,12 @@ def _platform_tag_summary() -> dict[str, Any]:
 
 def _pymupdf_status() -> dict[str, Any]:
     status: dict[str, Any] = {"available": False, "version": None, "detail": ""}
-    if not _module_available("fitz"):
-        status["detail"] = "PyMuPDF import module `fitz` was not found."
+    if not _module_available("pymupdf"):
+        status["detail"] = "PyMuPDF import module `pymupdf` was not found."
         return status
 
     try:
-        import fitz  # type: ignore[import-untyped]
+        import pymupdf as fitz  # type: ignore[import-untyped]
     except Exception as exc:  # pragma: no cover - defensive runtime diagnostic
         status["detail"] = f"PyMuPDF import failed: {exc}"
         return status
@@ -93,23 +93,22 @@ def _pymupdf_status() -> dict[str, Any]:
 
 
 def _marker_status() -> dict[str, Any]:
-    status: dict[str, Any] = {"available": False, "version": None, "detail": ""}
-    if not _module_available("marker"):
-        status["detail"] = "Marker backend is not installed in this Python environment."
-        return status
+    """Report the packaged Marker route as held even if manually installed.
 
-    try:
-        from src.infrastructure.marker_adapter import MarkerPDFExtractor
-
-        MarkerPDFExtractor.require_backend_available()
-    except Exception as exc:
-        status["detail"] = f"Marker backend preflight failed: {exc}"
-        return status
-
-    status["available"] = True
-    status["version"] = _package_version("marker-pdf")
-    status["detail"] = "Marker backend preflight passed."
-    return status
+    A local ``marker`` import is not enough to make the backend supported: the
+    packaged dependency graph stays empty until marker-pdf accepts a patched
+    Pillow range. Diagnostics must not turn an unsupported import into an
+    apparent green light.
+    """
+    return {
+        "available": False,
+        "version": _package_version("marker-pdf"),
+        "security_hold": True,
+        "detail": (
+            "Marker is on a packaging security hold: marker-pdf 1.10.2 pins "
+            "Pillow<11 while asset-aware-mcp requires Pillow>=12.2.0."
+        ),
+    }
 
 
 def _path_status(path: Path) -> dict[str, Any]:
@@ -180,7 +179,11 @@ def format_runtime_status(status: dict[str, Any]) -> str:
     lightrag = status["features"]["lightrag"]
     ollama = status["features"]["ollama"]
 
-    marker_label = "OK" if marker["available"] else "MISSING"
+    marker_label = (
+        "SECURITY HOLD"
+        if marker.get("security_hold")
+        else ("OK" if marker["available"] else "MISSING")
+    )
     pymupdf_label = "OK" if pymupdf["available"] else "MISSING"
     pillow_label = "OK" if native["pillow"]["available"] else "MISSING"
     lxml_label = "OK" if native["lxml"]["available"] else "MISSING"
@@ -209,15 +212,16 @@ def format_runtime_status(status: dict[str, Any]) -> str:
         f"LLM model: {ollama['model']}",
         f"Embedding model: {ollama['embedding_model']}",
     ]
-    if not marker["available"]:
+    if marker.get("security_hold"):
         lines.append(
-            "Recommended action: install a compatible Marker extra or use PyMuPDF mode."
+            "Recommended action: use PyMuPDF, PyMuPDF4LLM, or Docling; do not "
+            "install the held Marker dependency graph."
         )
     return "\n".join(lines) + "\n"
 
 
 def registered_tool_names() -> list[str]:
-    """Return FastMCP tool names registered by the presentation layer."""
+    """Return MCP v2 tool names registered by the presentation layer."""
     from src.presentation.server import mcp
 
-    return sorted(tool.name for tool in mcp._tool_manager._tools.values())
+    return sorted(mcp.registered_tool_names)

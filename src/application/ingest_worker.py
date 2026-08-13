@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
 from src.domain.entities import IngestResult
-from src.domain.marker_errors import format_marker_failure
+from src.domain.marker_errors import format_structured_failure
 
 
 def _parse_page_ranges(raw_value: str) -> list[str]:
@@ -69,6 +69,7 @@ async def run_worker(
     document_service: Any,
     rebuild_for_profile: Callable[[str], Any] | None = None,
     marker_extractor_factory: Callable[[], Any] | None = None,
+    structured_engine_name: str = "marker",
 ) -> int:
     result_path = Path(args.result_json)
     progress_callback = (
@@ -87,7 +88,9 @@ async def run_worker(
                 document_service.marker_extractor = marker_extractor_factory()
             except Exception as exc:
                 if args.require_marker:
-                    raise RuntimeError(format_marker_failure(exc)) from exc
+                    raise RuntimeError(
+                        format_structured_failure(exc, structured_engine_name)
+                    ) from exc
 
         results = await document_service.ingest(
             [args.file],

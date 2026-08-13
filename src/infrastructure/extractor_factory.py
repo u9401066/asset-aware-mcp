@@ -20,6 +20,11 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from src.domain.marker_errors import (
+    MARKER_INSTALL_HINT,
+    MINERU_INSTALL_HINT,
+    MarkerBackendUnavailable,
+)
 from src.infrastructure.pdf_extractor import PyMuPDFExtractor
 
 if TYPE_CHECKING:
@@ -30,7 +35,16 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 BASE_ENGINES = frozenset({"pymupdf", "pymupdf4llm"})
-STRUCTURED_ENGINES = frozenset({"docling", "mineru", "marker"})
+ACTIVE_STRUCTURED_ENGINES = frozenset({"docling"})
+HELD_STRUCTURED_ENGINES = frozenset({"mineru", "marker"})
+STRUCTURED_ENGINES = ACTIVE_STRUCTURED_ENGINES | HELD_STRUCTURED_ENGINES
+
+
+def held_structured_backend_error(engine: str) -> MarkerBackendUnavailable:
+    """Return the canonical fail-closed error for a held production backend."""
+    if engine == "mineru":
+        return MarkerBackendUnavailable(MINERU_INSTALL_HINT)
+    return MarkerBackendUnavailable(MARKER_INSTALL_HINT)
 
 
 def build_base_extractor(
@@ -61,28 +75,19 @@ def build_structured_extractor(engine: str | None) -> StructuredPDFExtractor | N
     """Build the optional high-fidelity structured extractor, or ``None``.
 
     Returns ``None`` when the engine is base-only (``pymupdf``/``pymupdf4llm``)
-    or the chosen engine's optional backend is unavailable. Backend preflight is
-    non-fatal: a missing engine degrades to the PyMuPDF pipeline.
+    or the active Docling backend is unavailable. Marker and MinerU adapters are
+    retained for isolated upstream evaluation only: production composition
+    rejects them before importing or probing locally installed packages.
     """
     normalized = (engine or "").lower()
+
+    if normalized in HELD_STRUCTURED_ENGINES:
+        raise held_structured_backend_error(normalized)
 
     if normalized == "docling":
         from src.infrastructure.docling_adapter import DoclingExtractor
 
         return _preflight_or_none(DoclingExtractor(), "docling")
-
-    if normalized == "mineru":
-        from src.infrastructure.mineru_adapter import MinerUExtractor
-
-        return _preflight_or_none(MinerUExtractor(), "mineru")
-
-    if normalized == "marker":
-        try:
-            from src.infrastructure.marker_adapter import MarkerPDFExtractor
-        except ImportError:
-            logger.info("Marker backend module unavailable")
-            return None
-        return _preflight_or_none(MarkerPDFExtractor(), "marker")
 
     return None
 

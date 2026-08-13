@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-import fitz
+import pymupdf as fitz
 import pytest
 
 from src.application.document_service import DocumentService

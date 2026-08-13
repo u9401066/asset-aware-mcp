@@ -23,7 +23,7 @@ def _module_available(module_name: str) -> bool:
 
 _HAS_LIGHTRAG = _module_available("lightrag")
 _HAS_MARKER = _module_available("marker")
-_HAS_PYMUPDF = _module_available("fitz")
+_HAS_PYMUPDF = _module_available("pymupdf")
 
 
 def __getattr__(name: str) -> Any:

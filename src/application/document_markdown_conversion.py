@@ -160,9 +160,7 @@ class MarkdownConversionMixin:
 
             slide = presentation.slides.add_slide(figure_layout)
             if slide.shapes.title:
-                slide.shapes.title.text = (
-                    figure.caption or f"Figure {figure_index}" or title_or_fallback
-                )
+                slide.shapes.title.text = figure.caption or f"Figure {figure_index}"
 
             left = Inches(0.75)
             top = Inches(1.5)
@@ -174,9 +172,7 @@ class MarkdownConversionMixin:
             except Exception:
                 slide = presentation.slides.add_slide(blank_layout)
                 if slide.shapes.title:
-                    slide.shapes.title.text = (
-                        figure.caption or f"Figure {figure_index}" or title_or_fallback
-                    )
+                    slide.shapes.title.text = figure.caption or f"Figure {figure_index}"
                 slide.shapes.add_picture(
                     str(figure_path), left=left, top=top, width=max_width
                 )

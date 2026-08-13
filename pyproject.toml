@@ -1,7 +1,7 @@
 [project]
 name = "asset-aware-mcp"
-version = "0.9.0"
-description = "Medical RAG with Asset-Aware MCP - Precise PDF asset retrieval (tables, figures, sections) for AI Agents"
+version = "1.0.0"
+description = "Citation-ready PDF and DOCX workflows that export reusable agent assets and Foam/LightRAG wikis over MCP"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
@@ -11,9 +11,9 @@ authors = [
 maintainers = [
     { name = "u9401066", email = "u9401066@gap.kmu.edu.tw" }
 ]
-keywords = ["mcp", "rag", "medical", "pdf", "lightrag", "fastmcp", "ai", "llm", "document-processing"]
+keywords = ["mcp", "rag", "pdf", "docx", "lightrag", "foam", "citations", "agent-assets", "ai", "llm", "document-processing"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Healthcare Industry",
     "Intended Audience :: Science/Research",
@@ -30,7 +30,7 @@ classifiers = [
 ]
 dependencies = [
     # --- Core runtime (always imported in src/) ---
-    "mcp>=1.0.0",
+    "mcp>=2,<3",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.12.0",
     "httpx>=0.28.1",
@@ -64,13 +64,13 @@ dependencies = [
 # `uv tool install --upgrade asset-aware-mcp[lightrag]` or the
 # "Asset-Aware MCP: Install LightRAG Backend" VS Code command.
 lightrag = [
-    "lightrag-hku>=1.4.11",
+    "lightrag-hku>=1.5.6",
 ]
 # --- Modern high-fidelity PDF->asset engines ---
-# All three are verified compatible with the secure Pillow>=12.2.0 floor
-# (resolved pillow 12.3.0), unlike marker-pdf which pins Pillow<11. Adapters
-# lazy-import their backend, so the base package installs without them and
-# degrades gracefully when an engine is selected but not installed.
+# The active Docling and PyMuPDF4LLM extras resolve with the secure
+# Pillow>=12.2.0 floor. MinerU and Marker remain adapter-only security holds.
+# All adapters lazy-import their backend, so the base package installs without
+# them and degrades gracefully when an unavailable engine is selected.
 #
 # Docling (IBM, MIT): page layout + reading order + table structure + formula +
 # figure classification + chart understanding. Ships the lightweight
@@ -78,12 +78,11 @@ lightrag = [
 docling = [
     "docling>=2.100.0",
 ]
-# MinerU (OpenDataLab, Apache-2.0 derived): highest-accuracy structured parsing,
-# formula->LaTeX, table->HTML, cross-page table merge. The pipeline backend runs
-# on pure CPU (heavy: pulls torch/onnxruntime, opt-in only).
-mineru = [
-    "mineru[pipeline]>=2.5.0",
-]
+# Reserved for the MinerU structured parsing backend. Temporarily empty:
+# MinerU 3.4.4 pins transformers<5 while the current security fixes require
+# transformers>=5.5. Keep the adapter available, but do not install a known
+# vulnerable dependency chain. Re-enable after upstream removes that cap.
+mineru = []
 # PyMuPDF4LLM: lightweight drop-in upgrade inside the PyMuPDF ecosystem. Adds
 # layout-aware reading order + table->markdown, no GPU, no Pillow conflict.
 pdf-plus = [
@@ -101,7 +100,7 @@ Homepage = "https://github.com/u9401066/asset-aware-mcp"
 Documentation = "https://u9401066.github.io/asset-aware-mcp/#/overview-zh"
 Repository = "https://github.com/u9401066/asset-aware-mcp.git"
 Issues = "https://github.com/u9401066/asset-aware-mcp/issues"
-Changelog = "https://github.com/u9401066/asset-aware-mcp/blob/master/CHANGELOG.md"
+Changelog = "https://github.com/u9401066/asset-aware-mcp/blob/main/CHANGELOG.md"
 
 [project.scripts]
 asset-aware-mcp = "src.server:main"
@@ -126,6 +125,7 @@ include = [
 [tool.ruff]
 target-version = "py310"
 line-length = 88
+extend-exclude = ["*.md"]
 
 [tool.ruff.lint]
 select = [
@@ -222,4 +222,5 @@ dev = [
     "bandit>=1.7.0",
     "pre-commit>=4.0.0",
     "types-pyyaml>=6.0.12.20250915",
+    "zizmor==1.29.0",
 ]

@@ -17,7 +17,9 @@ pytest.importorskip("lightrag")
 
 import src.infrastructure.lightrag_adapter as lightrag_adapter  # noqa: E402
 from src.infrastructure.lightrag_adapter import (  # noqa: E402
+    _OLLAMA_EMBEDDING_DIMENSION_CACHE,
     LightRAGAdapter,
+    _resolve_ollama_embedding_dimension,
     ollama_embedding,
     ollama_model_complete,
 )
@@ -315,6 +317,46 @@ async def test_ollama_embedding_falls_back_to_legacy_embeddings_endpoint(
             {"model": "nomic-test", "prompt": "beta"},
         ),
     ]
+
+
+@pytest.mark.asyncio
+async def test_ollama_embedding_dimension_is_probed_and_cached(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = 0
+
+    async def fake_embedding(texts: list[str], **_kwargs: str | int | float) -> Any:
+        nonlocal calls
+        calls += 1
+        assert texts == ["asset-aware embedding dimension probe"]
+        return np.array([[0.0, 0.1, 0.2, 0.3]])
+
+    _OLLAMA_EMBEDDING_DIMENSION_CACHE.clear()
+    monkeypatch.setattr(lightrag_adapter, "ollama_embedding", fake_embedding)
+
+    first = await _resolve_ollama_embedding_dimension(
+        "http://ollama.test", "custom-embed"
+    )
+    second = await _resolve_ollama_embedding_dimension(
+        "http://ollama.test", "custom-embed"
+    )
+
+    assert first == second == 4
+    assert calls == 1
+
+
+@pytest.mark.asyncio
+async def test_ollama_embedding_dimension_rejects_invalid_vectors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_embedding(_texts: list[str], **_kwargs: str | int | float) -> Any:
+        return np.array([])
+
+    _OLLAMA_EMBEDDING_DIMENSION_CACHE.clear()
+    monkeypatch.setattr(lightrag_adapter, "ollama_embedding", fake_embedding)
+
+    with pytest.raises(RuntimeError, match="invalid embedding shape"):
+        await _resolve_ollama_embedding_dimension("http://ollama.test", "broken-embed")
 
 
 @pytest.mark.asyncio

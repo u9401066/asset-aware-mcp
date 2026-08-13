@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 MARKER_INSTALL_HINT = (
-    "Marker backend is temporarily unavailable in the packaged asset-aware-mcp "
-    "runtime because marker-pdf 1.10.2 pins Pillow<11 while the secure runtime "
+    "Marker backend is on a production security hold in packaged asset-aware-mcp "
+    "because marker-pdf 1.10.2 pins Pillow<11 while the secure runtime "
     "requires Pillow>=12.2.0. Use the default PyMuPDF path with `use_marker=False` "
     "until upstream marker-pdf supports patched Pillow."
+)
+MINERU_INSTALL_HINT = (
+    "MinerU backend is unavailable and the packaged [mineru] extra is on a "
+    "security hold: MinerU 3.4.4 requires transformers<5 while current fixes "
+    "require transformers>=5.5. Use ETL_ENGINE=docling, pymupdf4llm, or "
+    "pymupdf. The adapter is retained only for isolated upstream evaluation."
 )
 MARKER_RESOURCE_HINT = (
     "Marker ran out of memory or was interrupted by the runtime. Retry with "
@@ -58,3 +64,45 @@ def format_marker_failure(error: BaseException) -> str:
     if is_marker_resource_error(error):
         return f"{MARKER_RESOURCE_HINT} Original error: {error!s}"
     return f"Marker parsing failed: {error!s}"
+
+
+def structured_engine_label(engine_name: str) -> str:
+    """Return a stable user-facing label for a structured PDF engine."""
+    normalized = engine_name.strip().lower().split(":", 1)[0]
+    return {
+        "docling": "Docling",
+        "mineru": "MinerU",
+        "marker": "Marker",
+    }.get(normalized, normalized.replace("_", " ").title() or "Structured PDF")
+
+
+def format_structured_failure(error: BaseException, engine_name: str) -> str:
+    """Format a structured failure without misidentifying its engine."""
+    normalized = engine_name.strip().lower().split(":", 1)[0]
+    if normalized == "marker":
+        return format_marker_failure(error)
+
+    label = structured_engine_label(normalized)
+    if isinstance(error, MarkerBackendUnavailable) or type(error).__name__.endswith(
+        "BackendUnavailable"
+    ):
+        return f"{label} backend is unavailable: {error!s}"
+    if is_marker_resource_error(error):
+        return (
+            f"{label} structured parsing exceeded available memory or was interrupted. "
+            "Retry with fewer pages or figures disabled, or use the PyMuPDF backend. "
+            f"Original error: {error!s}"
+        )
+    return f"{label} structured parsing failed: {error!s}"
+
+
+def is_structured_backend_unavailable(error: BaseException) -> bool:
+    """Recognize backend-unavailable errors across structured adapters."""
+    current: BaseException | None = error
+    while current is not None:
+        if is_marker_backend_unavailable(current) or type(current).__name__.endswith(
+            "BackendUnavailable"
+        ):
+            return True
+        current = current.__cause__ or current.__context__
+    return False

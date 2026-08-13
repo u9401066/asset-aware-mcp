@@ -17,6 +17,8 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any, Literal
 
+from mcp.server.mcpserver import Context  # noqa: TC002 - runtime injection marker
+
 from src.presentation.dependencies import (
     document_service,
     repository,
@@ -28,11 +30,7 @@ from src.presentation.mcp_context import log_message, report_progress
 from src.presentation.response_limits import format_limited_text_response, text_sha256
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import Context
-
     from src.domain.citation import EvidenceSpan
-else:
-    Context = Any
 
 logger = logging.getLogger(__name__)
 ASSET_REF_QUOTE_MAX_CHARS = 1_000

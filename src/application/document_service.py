@@ -53,9 +53,10 @@ from src.domain.line_spans import (
     apply_asset_line_spans,
 )
 from src.domain.marker_errors import (
-    format_marker_failure,
-    is_marker_backend_unavailable,
+    format_structured_failure,
     is_marker_resource_error,
+    is_structured_backend_unavailable,
+    structured_engine_label,
 )
 from src.domain.services import ManifestGenerator
 from src.domain.value_objects import DocId
@@ -152,6 +153,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
         marker_extractor: StructuredPDFExtractor | None = None,
         profile: ETLProfile | None = None,
         ocr_processor: OCRProcessor | None = None,
+        structured_engine_name: str | None = None,
     ):
         """
         Initialize document service with dependencies.
@@ -160,13 +162,21 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
             repository: Document storage repository
             pdf_extractor: PDF extraction implementation (PyMuPDF)
             knowledge_graph: Optional knowledge graph for indexing
-            marker_extractor: Optional Marker PDF extractor for structured parsing
+            marker_extractor: Optional high-fidelity structured PDF extractor
+            structured_engine_name: Configured structured engine identity. Legacy
+                ``use_marker`` callers default to Marker when this is omitted.
             profile: Optional ETL profile (auto-detected from pdf_extractor if not provided)
         """
         self.repository = repository
         self.pdf_extractor = pdf_extractor
         self.knowledge_graph = knowledge_graph
         self.marker_extractor = marker_extractor
+        configured_engine = (structured_engine_name or "").strip().lower()
+        self.structured_engine_name = (
+            configured_engine
+            if configured_engine in {"docling", "mineru", "marker"}
+            else _resolve_engine_name(marker_extractor, "marker")
+        )
         self.ocr_processor = ocr_processor
 
         # Resolve profile: explicit > from extractor > default
@@ -202,10 +212,10 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
 
         Args:
             file_paths: List of paths to PDF files
-            use_marker: If True, use Marker for structured parsing (slower but richer)
+            use_marker: If True, use the configured structured parser
                         - Produces blocks.json with bbox and section_hierarchy
                         - Better TOC and figure caption extraction
-                        - Requires Marker models (~1GB first run)
+                        - May require an optional structured backend/runtime
 
         Returns:
             List of IngestResult for each file
@@ -254,16 +264,15 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
             else:
                 if use_marker and require_marker:
                     path = Path(file_path)
+                    engine_label = structured_engine_label(self.structured_engine_name)
                     results.append(
                         IngestResult(
                             doc_id="",
                             filename=path.name,
                             success=False,
                             error=(
-                                "Marker structure parse was required, but the "
-                                "Marker extractor is temporarily unavailable because "
-                                "marker-pdf 1.10.2 pins Pillow<11 while the secure "
-                                "runtime requires Pillow>=12.2.0."
+                                f"{engine_label} structured parsing was required, "
+                                "but its extractor is unavailable."
                             ),
                         )
                     )
@@ -279,11 +288,11 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                     page_ranges=page_ranges,
                 )
                 if use_marker and result.success:
+                    engine_label = structured_engine_label(self.structured_engine_name)
                     result.backend = "pymupdf_fallback"
                     result.warnings.append(
-                        "Marker was requested but the extractor was not configured; "
-                        "used PyMuPDF fallback while marker-pdf depends on vulnerable "
-                        "Pillow<11."
+                        f"{engine_label} structured parsing was requested but the "
+                        "extractor was not configured; used PyMuPDF fallback."
                     )
             results.append(result)
 
@@ -602,7 +611,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
         require_marker: bool = False,
     ) -> IngestResult:
         """
-        Ingest a single PDF file using Marker for structured parsing.
+        Ingest a single PDF file using the configured structured parser.
 
         This provides richer structure than PyMuPDF:
         - blocks.json with bbox and section_hierarchy
@@ -635,7 +644,10 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                 doc_id="",
                 filename=path.name,
                 success=False,
-                error="Marker extractor not available",
+                error=(
+                    f"{structured_engine_label(self.structured_engine_name)} "
+                    "structured extractor not available"
+                ),
             )
 
         try:
@@ -688,13 +700,14 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                 )
                 current_step += 1
 
-            # Step 1: Parse PDF with Marker (rich structure)
+            # Step 1: Parse PDF with the configured structured engine.
+            configured_label = structured_engine_label(self.structured_engine_name)
             await _invoke_progress_callback(
                 progress_callback,
                 current_step,
                 total_steps,
                 "Parsing Structure",
-                f"Loading Marker models and parsing structure from {path.name}",
+                f"Loading {configured_label} and parsing structure from {path.name}",
             )
             parse_result = self.marker_extractor.parse(
                 active_pdf_path,
@@ -708,7 +721,10 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                 reported_page_count=reported_page_count if page_map else None,
             )
             current_step += 1
-            engine_name = str(parse_result.metadata.get("backend", "marker"))
+            engine_name = str(
+                parse_result.metadata.get("backend", self.structured_engine_name)
+            )
+            engine_label = structured_engine_label(engine_name)
             warnings: list[str] = []
             if not str(parse_result.markdown or "").strip():
                 return IngestResult(
@@ -716,12 +732,12 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                     filename=path.name,
                     success=False,
                     error=(
-                        "Marker returned empty markdown; retry with OCR enabled "
+                        f"{engine_label} returned empty markdown; retry with OCR enabled "
                         "or use the PyMuPDF backend."
                     ),
                     backend=engine_name,
                     warnings=[
-                        "Marker returned empty markdown before citation artifacts "
+                        f"{engine_label} returned empty markdown before citation artifacts "
                         "could be created."
                     ],
                 )
@@ -874,7 +890,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                     source_backend=citation_backend,
                 )
                 warnings.append(
-                    "Marker emitted non-citeable layout blocks; synthesized "
+                    f"{engine_label} emitted non-citeable layout blocks; synthesized "
                     "markdown-based blocks for citation and segmentation."
                 )
             self.repository.save_manifest(manifest)
@@ -917,14 +933,17 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
             )
 
         except Exception as e:
-            marker_message = format_marker_failure(e)
-            if is_marker_backend_unavailable(e) or is_marker_resource_error(e):
+            engine_label = structured_engine_label(self.structured_engine_name)
+            structured_message = format_structured_failure(
+                e, self.structured_engine_name
+            )
+            if is_structured_backend_unavailable(e) or is_marker_resource_error(e):
                 if require_marker:
                     return IngestResult(
                         doc_id="",
                         filename=path.name,
                         success=False,
-                        error=marker_message,
+                        error=structured_message,
                     )
                 fallback_result = await self._ingest_single(
                     file_path,
@@ -938,7 +957,8 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                 if fallback_result.success:
                     fallback_result.backend = "pymupdf_fallback"
                     fallback_result.warnings.append(
-                        f"Marker parse failed and PyMuPDF fallback was used. {marker_message}"
+                        f"{engine_label} parse failed and PyMuPDF fallback was used. "
+                        f"{structured_message}"
                     )
                     return fallback_result
 
@@ -947,7 +967,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                     filename=path.name,
                     success=False,
                     error=(
-                        f"{marker_message}\n"
+                        f"{structured_message}\n"
                         f"PyMuPDF fallback also failed: {fallback_result.error}"
                     ),
                 )
@@ -956,7 +976,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
                 doc_id="",
                 filename=path.name,
                 success=False,
-                error=marker_message,
+                error=structured_message,
             )
 
     def _convert_blocks_to_json(self, blocks: list) -> list[dict]:
@@ -1203,7 +1223,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
             return None
 
         try:
-            import fitz
+            import pymupdf as fitz  # type: ignore[import-untyped]
         except Exception:
             return None
 
@@ -1811,7 +1831,7 @@ class DocumentService(DocumentRepositoryOperationsMixin, MarkdownConversionMixin
             return None
 
         try:
-            import fitz
+            import pymupdf as fitz  # type: ignore[import-untyped]
         except Exception:
             return None
 

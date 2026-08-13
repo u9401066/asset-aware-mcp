@@ -7,6 +7,7 @@ Supports both Ollama (local) and OpenAI backends.
 
 from __future__ import annotations
 
+import asyncio
 import re
 from importlib.metadata import PackageNotFoundError, version
 from typing import TYPE_CHECKING, Any, cast
@@ -30,6 +31,7 @@ ENTITY_PARSE_STOPWORDS = {
     "top",
     "terms",
 }
+_OLLAMA_EMBEDDING_DIMENSION_CACHE: dict[tuple[str, str], int] = {}
 
 
 def _parse_version_tuple(raw_version: str) -> tuple[int, int, int]:
@@ -326,6 +328,29 @@ async def ollama_embedding(
     return np.array(embeddings)
 
 
+async def _resolve_ollama_embedding_dimension(host: str, model: str) -> int:
+    """Probe and cache the real vector size exposed by an Ollama model."""
+    cache_key = (host, model)
+    cached = _OLLAMA_EMBEDDING_DIMENSION_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    vectors = await ollama_embedding(
+        ["asset-aware embedding dimension probe"],
+        host=host,
+        model=model,
+    )
+    shape: tuple[Any, ...] = tuple(getattr(vectors, "shape", ()))
+    if len(shape) != 2 or shape[0] != 1 or shape[1] <= 0:
+        raise RuntimeError(
+            f"Ollama returned an invalid embedding shape for model {model!r}: {shape!r}"
+        )
+
+    dimension = int(shape[1])
+    _OLLAMA_EMBEDDING_DIMENSION_CACHE[cache_key] = dimension
+    return dimension
+
+
 class LightRAGAdapter(KnowledgeGraphInterface):
     """
     Adapter for LightRAG knowledge graph.
@@ -350,6 +375,7 @@ class LightRAGAdapter(KnowledgeGraphInterface):
             )
         self._rag = rag
         self._initialized = rag is not None
+        self._initialization_lock = asyncio.Lock()
 
     @staticmethod
     def _build_query_param(
@@ -409,92 +435,114 @@ class LightRAGAdapter(KnowledgeGraphInterface):
 
     async def _ensure_initialized(self) -> LightRAG:
         """Lazy initialization of LightRAG with Ollama or OpenAI backend."""
-        if self._rag is not None:
+        if self._rag is not None and self._initialized:
             return self._rag
 
-        if not settings.enable_lightrag:
-            raise RuntimeError("LightRAG is disabled in settings")
+        async with self._initialization_lock:
+            if self._rag is not None and self._initialized:
+                return self._rag
 
-        try:
-            _validate_lightrag_hku_distribution()
-            from lightrag import LightRAG  # type: ignore
-            from lightrag.base import EmbeddingFunc  # type: ignore
+            if not settings.enable_lightrag:
+                raise RuntimeError("LightRAG is disabled in settings")
 
-            # Ensure working directory exists
-            working_dir = settings.lightrag_working_dir
-            working_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                _validate_lightrag_hku_distribution()
+                from lightrag import LightRAG  # type: ignore
+                from lightrag.base import EmbeddingFunc  # type: ignore
 
-            # Choose backend based on settings. The OpenRouter preset uses
-            # OpenRouter for generation and local Ollama embeddings for KG retrieval.
-            backend = settings.llm_backend.strip().lower()
-            if backend == "ollama":
-                # Use Ollama (local LLM)
-                self._rag = LightRAG(
-                    working_dir=str(working_dir),
-                    llm_model_func=ollama_model_complete,
-                    llm_model_name=settings.ollama_model,
-                    llm_model_kwargs={
-                        "host": settings.ollama_host,
-                        "model": settings.ollama_model,
-                    },
-                    embedding_func=EmbeddingFunc(
-                        embedding_dim=768,  # nomic-embed-text dimension
-                        max_token_size=8192,
-                        func=ollama_embedding,
-                    ),
-                    # Tuning for smaller local models
-                    entity_extract_max_gleaning=0,  # Reduce extraction passes
-                    max_parallel_insert=1,  # Sequential processing for stability
-                    llm_model_max_async=1,  # One LLM call at a time
-                    chunk_token_size=800,  # Smaller chunks for better extraction
-                )
-            elif backend == "openrouter":
-                self._rag = LightRAG(
-                    working_dir=str(working_dir),
-                    llm_model_func=openrouter_model_complete,
-                    llm_model_name=settings.openrouter_model,
-                    llm_model_kwargs={
-                        "api_key": settings.openrouter_api_key
-                        or settings.openai_api_key,
-                        "base_url": settings.openrouter_base_url,
-                        "model": settings.openrouter_model,
-                    },
-                    embedding_func=EmbeddingFunc(
-                        embedding_dim=768,  # nomic-embed-text dimension
-                        max_token_size=8192,
-                        func=ollama_embedding,
-                    ),
-                    entity_extract_max_gleaning=0,
-                    max_parallel_insert=1,
-                    llm_model_max_async=1,
-                    chunk_token_size=800,
-                )
-            else:
-                # Use OpenAI
-                from lightrag.llm import (  # type: ignore
-                    openai_complete_if_cache,
-                    openai_embedding,
-                )
+                # Ensure working directory exists
+                working_dir = settings.lightrag_working_dir
+                working_dir.mkdir(parents=True, exist_ok=True)
 
-                self._rag = LightRAG(
-                    working_dir=str(working_dir),
-                    llm_model_func=openai_complete_if_cache,
-                    embedding_func=openai_embedding,
-                )
+                # Build into a local variable. Publishing ``self._rag`` before
+                # initialize_storages() completes lets a concurrent caller use
+                # an unready instance against the same on-disk stores.
+                backend = settings.llm_backend.strip().lower()
+                if backend == "ollama":
+                    embedding_dimension = await _resolve_ollama_embedding_dimension(
+                        settings.ollama_host,
+                        settings.ollama_embedding_model,
+                    )
+                    rag = LightRAG(
+                        working_dir=str(working_dir),
+                        llm_model_func=ollama_model_complete,
+                        llm_model_name=settings.ollama_model,
+                        llm_model_kwargs={
+                            "host": settings.ollama_host,
+                            "model": settings.ollama_model,
+                        },
+                        embedding_func=EmbeddingFunc(
+                            embedding_dim=embedding_dimension,
+                            max_token_size=8192,
+                            func=ollama_embedding,
+                        ),
+                        # Tuning for smaller local models
+                        entity_extract_max_gleaning=0,  # Reduce extraction passes
+                        max_parallel_insert=1,  # Sequential processing for stability
+                        llm_model_max_async=1,  # One LLM call at a time
+                        chunk_token_size=800,  # Smaller chunks for better extraction
+                    )
+                elif backend == "openrouter":
+                    embedding_dimension = await _resolve_ollama_embedding_dimension(
+                        settings.ollama_host,
+                        settings.ollama_embedding_model,
+                    )
+                    rag = LightRAG(
+                        working_dir=str(working_dir),
+                        llm_model_func=openrouter_model_complete,
+                        llm_model_name=settings.openrouter_model,
+                        llm_model_kwargs={
+                            "api_key": settings.openrouter_api_key
+                            or settings.openai_api_key,
+                            "base_url": settings.openrouter_base_url,
+                            "model": settings.openrouter_model,
+                        },
+                        embedding_func=EmbeddingFunc(
+                            embedding_dim=embedding_dimension,
+                            max_token_size=8192,
+                            func=ollama_embedding,
+                        ),
+                        entity_extract_max_gleaning=0,
+                        max_parallel_insert=1,
+                        llm_model_max_async=1,
+                        chunk_token_size=800,
+                    )
+                else:
+                    # Use OpenAI
+                    from lightrag.llm import (  # type: ignore
+                        openai_complete_if_cache,
+                        openai_embedding,
+                    )
 
-            # IMPORTANT: Initialize storages (required by LightRAG)
-            await self._rag.initialize_storages()
+                    rag = LightRAG(
+                        working_dir=str(working_dir),
+                        llm_model_func=openai_complete_if_cache,
+                        embedding_func=openai_embedding,
+                    )
 
+                # IMPORTANT: Initialize storages (required by LightRAG) before
+                # making the instance visible to any other MCP request.
+                await rag.initialize_storages()
+
+            except ImportError as e:
+                self._rag = None
+                self._initialized = False
+                raise RuntimeError(
+                    "LightRAG backend is not available. Install the optional extra: "
+                    "`uv tool install --upgrade 'asset-aware-mcp[lightrag]'` "
+                    "(or `uv sync --extra lightrag` for source checkouts). "
+                    "Do not install the unrelated `lightrag` package from PyPI."
+                ) from e
+            except Exception:
+                # Do not cache a partial instance; the next request may retry
+                # after a transient Ollama or storage failure is resolved.
+                self._rag = None
+                self._initialized = False
+                raise
+
+            self._rag = rag
             self._initialized = True
-            return self._rag
-
-        except ImportError as e:
-            raise RuntimeError(
-                "LightRAG backend is not available. Install the optional extra: "
-                "`uv tool install --upgrade 'asset-aware-mcp[lightrag]'` "
-                "(or `uv sync --extra lightrag` for source checkouts). "
-                "Do not install the unrelated `lightrag` package from PyPI."
-            ) from e
+            return rag
 
     async def insert(self, doc_id: str, text: str) -> None:
         """

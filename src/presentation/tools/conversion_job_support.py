@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, Any
+from typing import Any
+
+from mcp.server.mcpserver import Context  # noqa: TC002 - runtime injection marker
 
 from src.application.job_service import JobProgressReporter
 from src.presentation.mcp_context import log_message, report_progress
-
-if TYPE_CHECKING:
-    from mcp.server.fastmcp import Context
-else:
-    Context = Any
 
 ConversionHandler = Callable[[JobProgressReporter], Awaitable[dict[str, Any]]]
 

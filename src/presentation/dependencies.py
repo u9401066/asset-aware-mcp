@@ -8,6 +8,7 @@ Presentation Layer - Dependency Container (Composition Root)
 from __future__ import annotations
 
 import json
+import logging
 from typing import TYPE_CHECKING
 
 from src.application.asset_service import AssetService
@@ -16,23 +17,27 @@ from src.application.document_service import DocumentService
 from src.application.docx_service import DocxService
 from src.application.job_service import JobService
 from src.application.knowledge_service import KnowledgeService
+from src.application.pdf_preflight_service import PDFPreflightService
 from src.application.pdf_report_service import PdfArtifactReportService
 from src.application.section_service import SectionService
 from src.application.segmentation_service import SegmentationService
 from src.application.structural_pointer_service import StructuralPointerService
 from src.application.table_service import TableService
 from src.domain.etl_profile import ETLProfile
-from src.domain.marker_errors import MarkerBackendUnavailable
+from src.domain.marker_errors import MARKER_INSTALL_HINT, MarkerBackendUnavailable
 from src.infrastructure.config import settings
 from src.infrastructure.excel_renderer import ExcelRenderer
 from src.infrastructure.extractor_factory import (
+    HELD_STRUCTURED_ENGINES,
     build_base_extractor,
     build_structured_extractor,
+    held_structured_backend_error,
 )
 from src.infrastructure.file_storage import FileStorage
 from src.infrastructure.job_store import FileJobStore
 from src.infrastructure.layout_visualizer import LayoutVisualizer
 from src.infrastructure.ocr_processor import OCRProcessor
+from src.infrastructure.pymupdf_preflight import PyMuPDFPreflightInspector
 from src.infrastructure.subprocess_ingest_worker_runner import (
     SubprocessIngestWorkerRunner,
 )
@@ -40,6 +45,8 @@ from src.infrastructure.subprocess_ingest_worker_runner import (
 if TYPE_CHECKING:
     from src.domain.repositories import KnowledgeGraphInterface
     from src.infrastructure.structured_extractor import StructuredPDFExtractor
+
+logger = logging.getLogger(__name__)
 
 
 def _build_knowledge_graph() -> KnowledgeGraphInterface | None:
@@ -61,6 +68,26 @@ def _build_knowledge_graph() -> KnowledgeGraphInterface | None:
     return LightRAGAdapter()
 
 
+def _build_startup_structured_extractor(
+    engine: str | None,
+) -> StructuredPDFExtractor | None:
+    """Compose an active backend without making held config break startup.
+
+    Diagnostics and the base PyMuPDF pipeline must remain available when an old
+    environment still selects Marker or MinerU. A real structured request is
+    rejected later by :func:`get_marker_extractor` with the canonical hold error.
+    """
+    normalized = (engine or "").lower()
+    if normalized in HELD_STRUCTURED_ENGINES:
+        logger.warning(
+            "ETL_ENGINE=%s is on a production security hold; starting with the "
+            "base PDF extractor only",
+            normalized,
+        )
+        return None
+    return build_structured_extractor(normalized)
+
+
 # ============================================================================
 # Infrastructure
 # ============================================================================
@@ -80,11 +107,11 @@ except (FileNotFoundError, KeyError, json.JSONDecodeError):
 repository = FileStorage(settings.data_dir)
 # Engine selection (config-driven via ETL_ENGINE): the base extractor is always
 # available (PyMuPDF, or the layout-aware pymupdf4llm) and doubles as the fast
-# fallback; the structured extractor is the optional high-fidelity engine
-# (docling / mineru / marker) injected into the marker_extractor slot, or None
-# when base-only or the backend is not installed.
+# fallback. Docling is the only active structured engine. Held Marker/MinerU
+# configuration starts with no structured extractor so diagnostics and the base
+# server remain available; an actual structured request fails closed later.
 pdf_extractor = build_base_extractor(settings.etl_engine, etl_profile)
-marker_extractor = build_structured_extractor(settings.etl_engine)
+marker_extractor = _build_startup_structured_extractor(settings.etl_engine)
 knowledge_graph = _build_knowledge_graph()
 job_store = FileJobStore(settings.data_dir)
 excel_renderer = ExcelRenderer(settings.table_output_dir)
@@ -101,6 +128,7 @@ document_service = DocumentService(
     pdf_extractor=pdf_extractor,
     knowledge_graph=knowledge_graph,
     marker_extractor=marker_extractor,
+    structured_engine_name=settings.etl_engine,
     ocr_processor=ocr_processor,
 )
 asset_service = AssetService(repository=repository)
@@ -113,6 +141,9 @@ job_service = JobService(
 pdf_report_service = PdfArtifactReportService(
     repository=repository,
     pdf_extractor=pdf_extractor,
+)
+pdf_preflight_service = PDFPreflightService(
+    inspector=PyMuPDFPreflightInspector(),
 )
 segmentation_service = SegmentationService(repository=repository)
 section_service = SectionService(repository=repository)
@@ -139,26 +170,26 @@ docx_validator = DocxValidator()
 
 
 def get_marker_extractor() -> StructuredPDFExtractor:
-    """Lazy-load the configured structured extractor (docling/mineru/marker).
+    """Lazy-load the configured active structured extractor (Docling only).
 
-    Heavy backends (ML models or a CLI) initialise on first use. When no
-    structured engine is configured, falls back to the legacy Marker engine so
-    the historical ``use_marker`` behaviour (and its informative Pillow<11
-    error) is preserved.
+    Marker and MinerU are production security holds even when manually installed.
+    A legacy ``use_marker`` request on a base engine therefore reports the hold
+    instead of probing or constructing ``MarkerPDFExtractor``.
     """
     global marker_extractor
     if marker_extractor is None:
         engine = (settings.etl_engine or "").lower()
-        target = engine if engine in {"docling", "mineru", "marker"} else "marker"
-        marker_extractor = build_structured_extractor(target)
+        if engine in HELD_STRUCTURED_ENGINES:
+            raise held_structured_backend_error(engine)
+        if engine != "docling":
+            raise MarkerBackendUnavailable(MARKER_INSTALL_HINT)
+        marker_extractor = build_structured_extractor(engine)
     if marker_extractor is None:
-        # Selected/legacy backend unavailable; surface a clear, actionable error.
-        from src.infrastructure.marker_adapter import MarkerPDFExtractor
-
-        MarkerPDFExtractor.require_backend_available()
+        # Active backend unavailable; do not disguise it as the Marker hold.
         raise MarkerBackendUnavailable(
-            "No structured PDF engine is available. Set ETL_ENGINE=docling or "
-            "ETL_ENGINE=mineru and install the matching optional extra."
+            "Docling is selected but unavailable. Install the maintained "
+            "[docling] extra or isolated .venv-docling runtime, or set "
+            "ETL_ENGINE=pymupdf4llm/pymupdf."
         )
     return marker_extractor
 
@@ -198,6 +229,7 @@ def rebuild_for_profile(profile_name: str) -> ETLProfile:
         pdf_extractor=pdf_extractor,
         knowledge_graph=knowledge_graph,
         marker_extractor=marker_extractor,
+        structured_engine_name=settings.etl_engine,
         profile=new_profile,
         ocr_processor=ocr_processor,
     )

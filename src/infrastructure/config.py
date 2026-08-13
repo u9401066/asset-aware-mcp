@@ -8,7 +8,7 @@ import os
 from collections.abc import Mapping
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
 
 DEFAULT_OLLAMA_CPU_MODEL = "granite4.1:3b"
@@ -125,8 +125,9 @@ class Settings(BaseSettings):
         description=(
             "High-fidelity PDF->asset engine: 'pymupdf' (default, fast, no models), "
             "'pymupdf4llm' (layout-aware drop-in), 'docling' (MIT; layout+table+"
-            "formula+figure), 'mineru' (highest accuracy; formula->LaTeX, "
-            "table->HTML), or 'marker' (legacy, disabled while pinned to Pillow<11). "
+            "formula+figure), 'mineru' (adapter-only security hold while its "
+            "transformers cap excludes patched releases), or 'marker' (adapter-only "
+            "security hold while pinned to Pillow<11). "
             "Structured engines are lazy-loaded and used when use_marker/structured "
             "parsing is requested."
         ),
@@ -191,6 +192,21 @@ class Settings(BaseSettings):
         "env_file_encoding": "utf-8",
         "extra": "ignore",
     }
+
+    @model_validator(mode="after")
+    def _align_default_asset_directories(self) -> "Settings":
+        """Keep default-derived stores inside the configured data plane.
+
+        ``DATA_DIR`` is commonly relocated by the VS Code extension and by
+        subprocess workers. Explicit output paths remain authoritative; only
+        omitted defaults follow the relocated root.
+        """
+        configured_fields = self.model_fields_set
+        if "table_output_dir" not in configured_fields:
+            self.table_output_dir = self.data_dir / "tables"
+        if "lightrag_working_dir" not in configured_fields:
+            self.lightrag_working_dir = self.data_dir / "lightrag_db"
+        return self
 
     def ensure_directories(self) -> None:
         """Create necessary directories if they don't exist."""

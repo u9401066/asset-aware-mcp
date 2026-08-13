@@ -105,7 +105,7 @@ def materialize_pdf_page_subset(
     page_ranges: list[PageRange] | tuple[PageRange, ...],
 ) -> Path:
     """Persist a subset PDF containing only the requested inclusive page ranges."""
-    import fitz  # type: ignore
+    import pymupdf as fitz  # type: ignore[import-untyped]
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     subset_pdf = fitz.open()

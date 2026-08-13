@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import fitz  # type: ignore # PyMuPDF
+import pymupdf as fitz  # type: ignore[import-untyped]
 
 from src.domain.etl_profile import ETLProfile
 from src.domain.repositories import PDFExtractorInterface

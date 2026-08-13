@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from .citation import EvidenceSpan
     from .entities import DocumentManifest, DocumentSummary
     from .job import Job, JobSummary
+    from .pdf_preflight import PDFPreflightReport
     from .table_entities import TableContext
 
 
@@ -132,6 +133,15 @@ class PDFExtractorInterface(ABC):
     @abstractmethod
     def get_page_count(self, pdf_path: Path) -> int:
         """Get total page count."""
+        ...
+
+
+class PDFPreflightInterface(ABC):
+    """Inspect a PDF and return normalized page-level routing signals."""
+
+    @abstractmethod
+    def inspect(self, pdf_path: Path) -> PDFPreflightReport:
+        """Inspect an immutable source PDF without extracting derived assets."""
         ...
 
 

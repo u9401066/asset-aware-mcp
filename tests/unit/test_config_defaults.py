@@ -80,6 +80,31 @@ def test_explicit_ollama_model_overrides_gpu_hint(
     assert settings.ollama_model == "custom-model:latest"
 
 
+def test_relocated_data_dir_keeps_default_asset_stores_together(tmp_path) -> None:
+    data_dir = tmp_path / "asset-data"
+
+    settings = Settings(data_dir=data_dir, _env_file=None)
+
+    assert settings.table_output_dir == data_dir / "tables"
+    assert settings.lightrag_working_dir == data_dir / "lightrag_db"
+
+
+def test_explicit_asset_store_paths_are_preserved(tmp_path) -> None:
+    data_dir = tmp_path / "asset-data"
+    table_dir = tmp_path / "custom-tables"
+    graph_dir = tmp_path / "custom-graph"
+
+    settings = Settings(
+        data_dir=data_dir,
+        table_output_dir=table_dir,
+        lightrag_working_dir=graph_dir,
+        _env_file=None,
+    )
+
+    assert settings.table_output_dir == table_dir
+    assert settings.lightrag_working_dir == graph_dir
+
+
 def test_config_import_does_not_import_optional_adapters() -> None:
     """Importing settings must not pull optional heavy backends into Cline startup."""
     script = r"""

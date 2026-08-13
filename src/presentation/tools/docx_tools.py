@@ -23,6 +23,8 @@ import logging
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, cast
 
+from mcp.server.mcpserver import Context  # noqa: TC002 - runtime injection marker
+
 from src.application.output_paths import resolve_document_output_path
 from src.infrastructure.encoding_guard import read_text_file, write_utf8_text
 from src.presentation.dependencies import (
@@ -47,11 +49,7 @@ from src.presentation.tools.conversion_job_support import (
 )
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import Context
-
     from src.domain.table_entities import TableContext
-else:
-    Context = Any
 
 logger = logging.getLogger(__name__)
 
