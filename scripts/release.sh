@@ -132,6 +132,7 @@ echo -e "${GREEN}✓ Static analysis passed${NC}"
 echo -e "\n${YELLOW}🧪 Step 2: Running Tests${NC}"
 
 uv run pytest
+python3 scripts/build_docs_site.py --check
 
 echo -e "${GREEN}✓ Tests passed${NC}"
 

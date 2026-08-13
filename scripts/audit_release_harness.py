@@ -51,6 +51,16 @@ def require_count(path: str, needle: str, minimum: int) -> str | None:
     return None
 
 
+def require_exact_count(path: str, needle: str, expected: int) -> str | None:
+    count = Path(path).read_text(encoding="utf-8").count(needle)
+    if count != expected:
+        return (
+            f"{path}: expected exactly {expected} occurrence(s) of "
+            f"{needle!r}, got {count}"
+        )
+    return None
+
+
 def require_guard_per_occurrence(path: str, subject: str, guard: str) -> str | None:
     """Require every security-sensitive action occurrence to carry its guard."""
     text = Path(path).read_text(encoding="utf-8")
@@ -148,6 +158,7 @@ def main() -> int:
             ".github/workflows/release.yml",
             [
                 "uv run pytest",
+                "python3 scripts/build_docs_site.py --check",
                 "uv run bandit -q -r src -x tests --severity-level medium",
                 'NODE_VERSION: "24"',
                 "permissions:",
@@ -218,6 +229,8 @@ def main() -> int:
                 "python310-mcp-smoke",
                 "uv sync --frozen --python 3.10",
                 "uv run --python 3.10 pytest tests/test_mcp_tools.py",
+                "tests/integration/test_pdf_asset_stdio_e2e.py",
+                "-v --timeout=180 --junitxml=junit-integration.xml",
                 "npm-security",
                 "npm audit --package-lock-only --audit-level=low",
                 "uv run zizmor --persona=regular --min-severity high .github/workflows",
@@ -229,6 +242,19 @@ def main() -> int:
     ci_count_error = require_count(".github/workflows/ci.yml", "npm run test:ci", 3)
     if ci_count_error:
         errors.append(ci_count_error)
+    for guarded_path, guarded_text in [
+        (
+            ".github/workflows/ci.yml",
+            "tests/integration/test_pdf_asset_stdio_e2e.py",
+        ),
+        (
+            "tests/integration/test_pdf_asset_stdio_e2e.py",
+            "@pytest.mark.timeout(180)",
+        ),
+    ]:
+        exact_guard_error = require_exact_count(guarded_path, guarded_text, 1)
+        if exact_guard_error:
+            errors.append(exact_guard_error)
 
     for workflow_path in [
         ".github/workflows/ci.yml",
@@ -271,6 +297,7 @@ def main() -> int:
             "scripts/release.sh",
             [
                 "uv run pytest",
+                "python3 scripts/build_docs_site.py --check",
                 "python3 scripts/check_cline_skills.py",
                 "python3 scripts/audit_release_harness.py",
                 "python3 scripts/audit_release_artifacts.py",
@@ -288,6 +315,7 @@ def main() -> int:
         require_text(
             ".clinerules/workflows/full-check.md",
             [
+                "python3 scripts/build_docs_site.py --check",
                 "python3 scripts/audit_release_harness.py",
                 "python3 scripts/audit_release_artifacts.py",
                 "python3 scripts/smoke_built_wheel.py",
@@ -304,6 +332,7 @@ def main() -> int:
             ".clinerules/workflows/release-publish.md",
             [
                 "VSIX install/activation smoke is required",
+                "python3 scripts/build_docs_site.py --check",
                 "python3 scripts/audit_release_harness.py",
                 "python3 scripts/audit_release_artifacts.py",
                 'git tag -a "v$(python3 scripts/get_version.py --strict-semver)"',

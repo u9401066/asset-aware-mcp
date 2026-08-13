@@ -42,6 +42,10 @@ VSIX install/activation smoke is required for release. On Linux, prefer:
 
 Validate release harness parity and built artifacts:
 <execute_command>
+<command>python3 scripts/build_docs_site.py --check</command>
+</execute_command>
+
+<execute_command>
 <command>python3 scripts/audit_release_harness.py</command>
 </execute_command>
 

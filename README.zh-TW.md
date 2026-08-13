@@ -7,14 +7,38 @@
 
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+## v1.0.1 可靠性翻新
+
+- 大型 PDF 文字、表格與圖片結果改用 private、atomic、具大小上限的
+  MessagePack 檔案交接，不再透過 multiprocessing pipe，也不反序列化可執行的
+  pickle。多 MB raster 不會再因 pipe backpressure 卡死；partial、oversized、
+  malformed 或 worker crash 一律 fail closed。
+  Worker timeout 環境值必須是有限數；`NaN`／無限值會回退到安全預設值。
+  有限的 `<=0` 值僅保留為歷史 direct mode 相容開關，managed production
+  launcher 不應使用。
+- Codex managed MCP 設定現在用真實 TOML parser 驗證，會保留 custom 與 unrelated
+  tables，設定 180／900 秒啟動與工具 timeout，且不把 credential value 寫入檔案。
+  隔離的 working directory 加上 `ASSET_AWARE_DISABLE_DOTENV=true`，也避免 server
+  在啟動後又偷偷讀取無關 workspace 的 `.env`。
+- Codex／Cline／Copilot 的全域設定寫入現在受 workspace trust 保護，且只使用
+  extension 精確版本與隔離的 global storage；偽造同名 repository 不能把本地
+  Python 或 `.env` 值持久化進全域 agent launcher。
+- MCP SDK 2 operational log 固定走 stderr；空白或空 ingest request 會在建立 job
+  前拒絕。true-stdio 回歸則實際驗證大型圖片、表格、citation-ready evidence、
+  完整 bundle hash、Foam notes、deterministic re-export，以及來源 PDF 完全不變。
+- GitHub Pages 已換成雙語 responsive Evidence Rail、精確 30-tool explorer、安裝／
+  開發注意事項、生成式文件 reader 與 GitHub／Release／Issue 入口，不再公開過時的
+  raster 架構截圖。
+
 ## 🎯 為什麼需要資產感知 MCP？
 
-**AI 無法直接讀取你電腦裡的圖片檔案。** 這是一個常見的誤解。
+**只有 server-local 圖片路徑，並不是可攜式的 multimodal payload。** Agent 能否解析該路徑，
+取決於 client、sandbox 與檔案權限，不能假設兩端共用同一個檔案系統。
 
 | 方法 | AI 能分析圖片內容嗎？ | 說明 |
 |------|:-------------------:|------|
-| ❌ 提供 PNG 路徑 | 否 | AI 無法存取本地檔案系統 |
-| ✅ **資產感知 MCP** | **是** | 透過 MCP 傳輸 Base64，讓 AI 視覺模型直接理解 |
+| ⚠️ 只提供 PNG 路徑 | 視 client 而定 | client 可能在遠端或 sandbox 內，不能安全假設 server 路徑存在於本地 |
+| ✅ **資產感知 MCP** | **相容 multimodal client 可用** | 透過 MCP 擷取具大小上限的實際圖片 bytes，再交給 vision model |
 
 ### 實際效果
 
@@ -43,7 +67,7 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
   - **PyMuPDF4LLM**（`[pdf-plus]`）- 同生態 drop-in 升級，具版面感知，免 GPU
   - **Docling**（`[docling]`）- MIT 授權，layout+table+formula+chart 引擎；主環境無法直接安裝時會透過獨立 `.venv-docling` 直譯器橋接（見 [docs/docling-setup.md](docs/docling-setup.md)）
   - **MinerU** - adapter 保留；因上游仍鎖住有漏洞的 `transformers<5` 鏈，套件 extra 暫停安裝
-  - **Marker**（`use_marker=True`）- 高精度結構化解析 code path 保留；packaged runtime 仍因 upstream `marker-pdf` 尚未支援 patched Pillow 而暫時 security hold
+  - **Marker** - adapter 僅保留供評估；upstream `marker-pdf` 與 patched Pillow 安全底線衝突期間，production selection 一律 fail closed。歷史參數 `use_marker` 現在只代表「偏好目前設定的 structured extractor」，不能繞過 security hold。
 - 🧩 **統一 Segmentation 匯出** - 產生正規化 `segmentation.json`，整合 manifest、blocks、reading order 與持久化 line span。
 - 🩺 **安全 PDF Preflight Router** - `document(op="preflight")` 逐頁分類 native、sparse、image、scanned、hybrid，輸出 1-based/top-left locator、來源 SHA-256、OCR 理由與引擎建議；檢查在具 timeout／資源上限的隔離 process 執行。
 - 📦 **可重用 Agent Asset Bundle** - `document(op="export_assets")` 產生 deterministic `manifest.json`、`assets.jsonl`、媒體副本，以及可攜式 Foam `index.md`／`notes/**` 子樹，完整保留 stable ID、hash、locator 與 citation ref。
@@ -60,7 +84,7 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 📊 **A2T (Anything to Table)** - 7 個 operation-based 工具，從**任意來源**（PDF 資產、知識圖譜、URL、使用者輸入）建立專業表格。支援：穩定 row ID、row search/filter/paging、citation coverage、artifact-only 大表輸出、跳過大型表格時的可操作 UX、**引用管理** (AssetRef)、**變更審計**、**Schema 演進**、**模板**、**草稿機制**與**節省 Token 的續作模式**。
 - 🖥️ **VS Code 管理擴充功能** - 提供圖形化介面監控伺服器狀態、已匯入文件、document artifacts、citation spans，以及 **A2T 表格與草稿**，支援一鍵開啟 Excel。
 - 🔌 **MCP SDK 2 伺服器** - 使用官方 Python SDK `MCPServer`、runtime context injection 與 v2 client；刻意不支援 MCP SDK v1。
-- 🏥 **醫療研究優化** - 針對醫療文獻優化，支援 Base64 圖片傳輸供 Vision AI 分析。
+- 🔬 **研究級、領域中立資產** - 可處理學術、技術、政策與營運文件；具大小上限的圖片 bytes 能讓相容的 multimodal client 分析圖像，而不是依賴 server-local 路徑。
 
 ## 🏗️ 架構
 
@@ -117,23 +141,12 @@ asset-aware-mcp/
 └── pyproject.toml           # uv 專案配置
 ```
 
-## 📐 架構圖
+## 📐 架構與流程
 
-專案視覺圖表。所有圖片套用一致的 GitHub README 風格。
-
-| 圖表 | 說明 |
-|-----|------|
-| [01 — 系統架構](docs/diagrams/01-system-architecture.jpg) | 完整架構：Telegram → Gateway → MCP Adapter → Ollama |
-| [02 — 資料結構](docs/diagrams/02-data-layout.jpg) | 30 個 balanced 公開工具 + 13 resources；legacy direct tool 相容模式仍保留 |
-| [03 — PDF 解讀流程](docs/diagrams/03-pdf-ingestion-pipeline.jpg) | 7 階段流程：PDF 上傳 → 知識圖譜 |
-| [04 — DOCX 雙向編輯](docs/diagrams/04-docx-edit-pipeline.jpg) | DOCX 吃入 → TableContext 編輯 → 往返存檔 |
-| [05 — 知識圖譜搜尋](docs/diagrams/05-knowledge-graph-search.jpg) | 跨文件搜尋的三條平行路徑 |
-| [06 — 安裝步驟](docs/diagrams/06-installation-steps.jpg) | 7 步驟從 clone 到驗證 |
-| [07 — PDF ETL 流程](docs/diagrams/07-pdf-etl-pipeline.jpg) | PyMuPDF 預設路徑 + Marker security-hold diagnostics |
-| [08 — KG 架構](docs/diagrams/08-knowledge-graph-architecture.jpg) | lightrag-hku 三層知識圖譜架構 |
-| [09 — Agent Harness 概念](docs/diagrams/09-agent-harness-concept.jpg) | 給無狀態代理使用的 assistant harness 模型 |
-
-> 💡 所有生成 prompt 保存在 [docs/diagrams/ALL-PROMPTS.md](docs/diagrams/ALL-PROMPTS.md)，方便再生成時維持風格一致。
+持續維護且會跟實作一起驗證的入口是[文件網站](https://u9401066.github.io/asset-aware-mcp/)、
+[架構說明](docs/wiki/Architecture.md)、[PDF 流程](docs/wiki/PDF-Document-Workflow.md)、
+[MCP 工具目錄](docs/wiki/MCP-Tools.md)與[發布檢核](docs/wiki/Release-And-Testing.md)。
+這些文字與網站資料會由 gate 檢查，避免工具數、引擎 security hold 或發布流程藏在已過時的截圖裡。
 
 ## 🚀 快速開始
 
@@ -157,9 +170,13 @@ Runtime 說明：
 VS Code 擴充套件在透過 version-pinned `uv tool run` 啟動 MCP server 時，會優先使用受管理的 Python 3.11 runtime，並在舊機器上 fallback 到 Python 3.10。這可避免終端使用者機器上發生原生套件編譯，特別是未安裝 Xcode Command Line Tools 的 macOS；但專案本身仍保留對較新 Python 版本的相容性。
 
 安裝範圍說明：
-- VSIX 以使用者（全域）範圍安裝，不需要為每個 workspace 重複安裝。
-- MCP launch env 預設將 `DATA_DIR` 指向 workspace `./data`，並將 `UV_CACHE_DIR` 指向 `DATA_DIR/.uv-cache`；Prepare Server Runtime 會預熱 workspace `.uv-cache`，只有在沒有 workspace 時才 fallback 到 extension global storage。
-- 執行時資料留在 workspace：`.env` 與 `assetAwareMcp.dataDir` 預設指向 `./data`，讓攝入結果與 launched server 使用的 uv cache 跟著專案存放，避免佔用全域資源。
+- VSIX 以使用者範圍安裝。trusted workspace 中的 VS Code 原生 MCP provider 可使用
+  workspace-scoped `DATA_DIR`、cache、settings 與 `.env`；local source 只在 extension
+  Development/Test mode（或未來明示 opt-in）使用。
+- Codex 與 Cline 的全域 entry 永遠從 extension global storage 啟動
+  `asset-aware-mcp==<extension-version>`，不繼承 workspace local source、workspace
+  setting 或 repository `.env`。Restricted Mode 完全跳過 external config 寫入與
+  assistant asset sync。
 
 引擎選擇說明：
 `ETL_ENGINE` 選擇拆解後端（預設 `pymupdf`）。目前 packaged structured engines 是 `pymupdf4llm` 與 `docling`，皆採懶加載，extra 未安裝時安全降級至 PyMuPDF。Marker 因 `marker-pdf` 仍要求 `Pillow<11` 而暫停；MinerU 3.4.4 又鎖定 `transformers<5`，但安全修補需要 `transformers>=5.5`，因此兩者 adapter 留在程式庫中、packaged extra 則不安裝已知有漏洞的 dependency chain。攝入前可先用 `document(op="preflight", pdf_path="...")` 決定走原生快速抽取、OCR 或 Docling。

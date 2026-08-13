@@ -160,7 +160,8 @@ Balanced surface = compact 17 + 下列 13 個高頻 shortcut direct tools：
 - Surface switching is import-time and filters MCPServer's public registry, so
   tests for different surfaces must run in subprocesses.
 - MCP SDK 2 `Context` parameters are runtime-injected. They may drive bounded
-  progress/log calls but must never appear in public tool input schemas.
+  progress calls but must never appear in public tool input schemas;
+  operational logs use Python logging on stderr instead of protocol logging.
 - `asset-aware-mcp list-tools --json` reports `surface`, `count`, and `tools`.
 
 ## Compatibility Rules

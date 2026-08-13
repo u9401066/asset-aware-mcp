@@ -1,7 +1,5 @@
 # ETL Profiles
 
-![ETL profiles overview](assets/etl-profiles.jpg)
-
 ## 目的
 
 ETL profile 控制 heading detection、caption/table/figure filters、section keyword、numbered section pattern 與出版格式差異。它讓同一套 PDF ingest pipeline 可以適應 arXiv、Nature、IEEE、Elsevier 等格式。

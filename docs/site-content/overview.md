@@ -2,8 +2,6 @@
 
 # Asset-Aware MCP Docs
 
-![Asset-Aware MCP architecture overview](wiki/assets/overview-architecture.jpg)
-
 Asset-Aware MCP is a citation-ready document workflow server for AI agents. The
 site is organized as chapters: start the runtime, choose a document workflow,
 anchor claims to evidence, then use reference and release gates when you need
@@ -38,7 +36,7 @@ exact contracts.
 
 | Item | Current Status |
 |---|---|
-| Latest code version | `1.0.0` |
+| Latest code version | `1.0.1` |
 | Runtime | Python `>=3.10`, managed with `uv` |
 | MCP endpoints | 30 public tools and 13 resources, 43 endpoints total |
 | MCP runtime | Official Python SDK `>=2,<3` with `MCPServer`; SDK v1 is unsupported |
@@ -67,4 +65,4 @@ still come from the registered MCP resource decorators.
 The GitHub Pages payload is treated as a release artifact. Before publishing,
 run `scripts/build_docs_site.py --check` and
 `tests/unit/test_docs_site_reference_sync.py` so the version, endpoint counts,
-navigation metadata, image assets, and shell copy stay aligned with code.
+navigation metadata, code-native diagrams, and shell copy stay aligned with code.

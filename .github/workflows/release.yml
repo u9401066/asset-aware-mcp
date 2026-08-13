@@ -127,6 +127,7 @@ jobs:
           uv run mypy src/ --ignore-missing-imports
           uv run bandit -q -r src -x tests --severity-level medium
           uv run pytest
+          python3 scripts/build_docs_site.py --check
 
       - name: Audit release harness
         run: python3 scripts/audit_release_harness.py

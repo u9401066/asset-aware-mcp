@@ -472,9 +472,7 @@ def endpoint_stats() -> dict[str, int | str]:
     }
 
 
-EN_OVERVIEW = """# Asset-Aware MCP Docs
-
-![Asset-Aware MCP architecture overview](wiki/assets/overview-architecture.jpg)
+EN_OVERVIEW_TEMPLATE = """# Asset-Aware MCP Docs
 
 Asset-Aware MCP is a citation-ready document workflow server for AI agents. The
 site is organized as chapters: start the runtime, choose a document workflow,
@@ -510,9 +508,9 @@ exact contracts.
 
 | Item | Current Status |
 |---|---|
-| Latest code version | `1.0.0` |
+| Latest code version | `{version}` |
 | Runtime | Python `>=3.10`, managed with `uv` |
-| MCP endpoints | 30 public tools and 13 resources, 43 endpoints total |
+| MCP endpoints | {tools} public tools and {resources} resources, {endpoints} endpoints total |
 | MCP runtime | Official Python SDK `>=2,<3` with `MCPServer`; SDK v1 is unsupported |
 | PDF backend | PyMuPDF by default, secure optional PyMuPDF4LLM/Docling, and isolated `document(op="preflight")` routing; MinerU/Marker are dependency security holds |
 | Agent assets | Deterministic `manifest.json`, `assets.jsonl`, citation locators, and portable Foam notes from `document(op="export_assets")` |
@@ -539,8 +537,15 @@ still come from the registered MCP resource decorators.
 The GitHub Pages payload is treated as a release artifact. Before publishing,
 run `scripts/build_docs_site.py --check` and
 `tests/unit/test_docs_site_reference_sync.py` so the version, endpoint counts,
-navigation metadata, image assets, and shell copy stay aligned with code.
+navigation metadata, code-native diagrams, and shell copy stay aligned with code.
 """
+
+
+def english_overview() -> str:
+    return EN_OVERVIEW_TEMPLATE.format(**endpoint_stats())
+
+
+EN_OVERVIEW = english_overview()
 
 
 def transform_markdown(markdown: str) -> str:

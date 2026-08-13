@@ -141,8 +141,10 @@ Already aligned:
   locator ranges, bbox, and CRAAP data.
 - `TableAsset` and `FigureAsset` preserve `source_block_id`, `source_order`,
   line spans, section id/title, and extraction source for MedPaper graph notes.
-- `find_evidence_spans` and `verify_citation_ref` expose re-verifiable
-  span-level AssetRef payloads.
+- `find_evidence_spans` exposes a canonical, re-verifiable AssetRef only when
+  the exact quote fits the inline response policy. Spans over 1,000 characters
+  return an explicit noncanonical preview; their complete AssetRef remains in
+  the persisted citation/agent-asset bundle for `verify_citation_ref`.
 - `citation_bundle(output_format="foam", citation_key="...")` emits a
   promotion-ready Foam evidence pack while keeping AssetRef verification data
   embedded beside each `^spn-...` block anchor.
@@ -206,11 +208,14 @@ Foam/wiki-ready:
 - Verify the export target is inside the document data directory, every hub
   wikilink resolves to an emitted note/anchor, relative media links exist, and
   manifest artifact hashes match the copied files.
-- Call `find_evidence_spans` for a representative claim and confirm the
-  returned AssetRef includes `doc_id`, `span_id`, `source_revision_id`,
-  `quote_sha256`, `line_range` or `char_range`, and page/bbox when available.
-- Call `verify_citation_ref` with the returned AssetRef and require a success
-  result before using the quote in a table or wiki note.
+- Call `find_evidence_spans` for a representative claim. If it returns a
+  canonical AssetRef, confirm it includes `doc_id`, `span_id`,
+  `source_revision_id`, `quote_sha256`, `line_range` or `char_range`, and
+  page/bbox when available. If it returns `asset-ref-preview-v1`, write a
+  persisted citation or agent-asset bundle and retrieve the complete ref there.
+- Call `verify_citation_ref` with the complete canonical AssetRef and require a
+  success result before using the quote in a table or wiki note; previews must
+  fail closed as unsupported.
 - Confirm table/figure assets have a stable source block or section mapping
   (`source_block_id`/`source_order` or section id/title).
 - If the source is edited through DFM, use `save_docx(track_changes=True)` for

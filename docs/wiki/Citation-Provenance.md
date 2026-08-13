@@ -1,7 +1,5 @@
 # Citation Provenance
 
-![Citation provenance model](assets/citation-provenance.jpg)
-
 ## 目標
 
 Citation-ready 在此專案中表示：每個引用都能追溯到具體文件、block/span、locator、hash 與周邊 context。不能只保存一段文字，因為文件轉換、OCR、DFM 編輯或 table persistence 都可能讓 locator 漂移。
@@ -55,7 +53,17 @@ A2T table cell 可掛 citation refs。當 cited cell 或 row 被更新時，舊 
 - `citation_bundle`
 - `evidence(op="find" | "verify" | "bundle" | "locate")`
 
-實務上，PDF 引用優先使用 `find_evidence_spans` 回傳的 AssetRef；若要給人類文件、KG answer 或外部審查使用，建議用 `citation_bundle(output_format="json")` 或 `evidence(op="bundle")` 取得一整包可驗證 evidence；若要 promotion 到 Foam note，使用 `citation_bundle(output_format="foam", citation_key="paper-key")` 或 `evidence(op="bundle", output_format="foam", citation_key="paper-key")`。若提供 `wiki_root`，bundle 會安全寫入 Foam wiki 內的 evidence note，並可更新 index note。`discover_sources` 適合先找表格可抽取來源，但它的 span ref 目前較偏 discovery payload，正式引用仍建議再走 `find_evidence_spans` / `citation_bundle` / `verify_citation_ref`。
+實務上可先用 `find_evidence_spans` 尋找候選。短 quote 會 inline 完整、可交給
+`verify_citation_ref` 的 canonical AssetRef；超過 1,000 字元的 span 為了守住 MCP
+response cap，只回 `asset-ref-preview-v1`（`canonical_asset_ref=false`），沒有 canonical
+locator／range，也不能拿去 verify。長 span 的完整 exact quote、hash 與 locator 只保存於
+寫入磁碟的 citation／agent-asset bundle。若要給人類文件、KG answer 或外部審查使用，
+建議用 `citation_bundle(output_format="json")` 或 `evidence(op="bundle")` 取得有界回應，
+需要完整引用則指定 `wiki_root`／`output_path` 寫入 persisted bundle 後再驗證其中 AssetRef。
+若要 promotion 到 Foam note，使用 `citation_bundle(output_format="foam", citation_key="paper-key")`
+或 `evidence(op="bundle", output_format="foam", citation_key="paper-key")`。`discover_sources`
+適合先找表格可抽取來源，但它的 span ref 較偏 discovery payload，正式引用仍應回到
+persisted bundle 與 `verify_citation_ref`。
 
 ## Foam Evidence Pack
 

@@ -19,6 +19,10 @@ Run the full local verification gates for this repo.
 <command>uv run pytest</command>
 </execute_command>
 
+<execute_command>
+<command>python3 scripts/build_docs_site.py --check</command>
+</execute_command>
+
 If any step fails, stop and report the failures.
 
 ## Step 1.1: Release harness audit

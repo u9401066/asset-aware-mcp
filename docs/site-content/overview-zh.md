@@ -7,7 +7,19 @@ PDF、DOCX/DFM、表格、圖片、section、citation index、Foam evidence pack
 KG/RAG 串成可驗證的文件流程。
 
 這個網站改成章節式導覽：先選你正在做的任務，再進入對應的詳細頁或 reference。
-目前內容對齊 `1.0.0` 正式文件。
+目前內容對齊 `1.0.1` 正式文件。
+
+## 1.0.1 highlights
+
+- process-isolated PDF worker 改以 private、atomic、bounded MessagePack 結果檔
+  交接，移除大型圖片塞滿 multiprocessing pipe 的 deadlock，也不再使用可執行
+  pickle；partial、oversized、malformed 與 crash 都 fail closed。
+- Codex managed config 會以真實 TOML 語意驗證並保留 custom／unrelated table，
+  套用 180／900 秒 timeout、隔離 cwd 與 dotenv opt-out；credential value 不會
+  落入 `config.toml`。
+- 真實 MCP SDK 2 stdio 測試會拆出 text、table、超過 512 KiB 的 figure，驗證
+  citation-ready evidence、每個 hash/locator、Foam notes、deterministic re-export
+  與來源 PDF hash/mtime 不變。
 
 ## 1.0.0 highlights
 

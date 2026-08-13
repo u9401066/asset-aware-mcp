@@ -3,163 +3,506 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Asset-Aware MCP Docs</title>
+    <title>Asset-Aware MCP — 文件到可重用 Agent Assets</title>
     <meta
       name="description"
-      content="Asset-Aware MCP documentation for PDF, DOCX, DFM, citation provenance, A2T tables, knowledge graphs, MCP tools, resources, and VS Code extension setup."
+      content="把 PDF、DOCX 與表格拆成 citation-ready spans、figures、tables、agent assets 與 Foam wiki；以 MCP SDK 2、stable locators 與 SHA-256 保持來源可驗證。"
     />
-    <meta name="theme-color" content="#087669" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="color-scheme" content="light" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%230c7779'/%3E%3Cpath d='M8 7h10l6 6v12H8z' fill='none' stroke='white' stroke-width='2'/%3E%3Cpath d='M18 7v6h6M12 17h8M12 21h8' stroke='white' stroke-width='2'/%3E%3C/svg%3E" />
     <link rel="canonical" href="https://u9401066.github.io/asset-aware-mcp/" />
-    <meta property="og:title" content="Asset-Aware MCP Docs" />
+    <meta property="og:title" content="Asset-Aware MCP" />
     <meta
       property="og:description"
-      content="Production documentation for citation-ready PDF, DOCX, DFM, table, knowledge graph, and MCP workflows."
+      content="Citation-ready document workflows that turn source files into reusable agent assets and Foam wikis."
     />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="wiki/assets/overview-architecture.jpg" />
-    <link rel="stylesheet" href="site.css?v=20260517-v070-release" />
+    <meta property="og:url" content="https://u9401066.github.io/asset-aware-mcp/" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800;900&amp;display=swap"
+    />
+    <link rel="stylesheet" href="site.css?v=20260813-v101-redesign" />
   </head>
-  <body>
-    <a class="skip-link" href="#doc-content">Skip to documentation</a>
-    <div class="layout-shell">
-      <aside class="sidebar" id="sidebar">
-        <button
-          id="nav-close"
-          class="sidebar-close"
-          type="button"
-          aria-label="Close navigation"
-        >
-          關閉
-        </button>
-        <div class="brand-block">
-          <p id="site-eyebrow" class="eyebrow">文件網站</p>
-          <h1>Asset-Aware MCP</h1>
-          <p id="site-tagline" class="tagline">
-            Citation-ready document workflows for AI agents.
-          </p>
-        </div>
+  <body class="landing-page">
+    <a class="skip-link" href="#main-content">跳到主要內容</a>
 
+    <svg class="svg-defs" aria-hidden="true" focusable="false">
+      <symbol id="icon-arrow" viewBox="0 0 24 24">
+        <path d="M5 12h13M13 6l6 6-6 6" />
+      </symbol>
+      <symbol id="icon-copy" viewBox="0 0 24 24">
+        <rect x="8" y="8" width="11" height="11" rx="1.5" />
+        <path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" />
+      </symbol>
+      <symbol id="icon-doc" viewBox="0 0 24 24">
+        <path d="M6 2.75h8l4 4V21.25H6z" />
+        <path d="M14 2.75v4h4M9 11h6M9 15h6" />
+      </symbol>
+      <symbol id="icon-grid" viewBox="0 0 24 24">
+        <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />
+      </symbol>
+      <symbol id="icon-github" viewBox="0 0 24 24">
+        <path
+          fill="currentColor"
+          stroke="none"
+          d="M12 .9a11.1 11.1 0 0 0-3.51 21.63c.56.1.76-.24.76-.54v-2.12c-3.11.68-3.77-1.32-3.77-1.32-.51-1.29-1.24-1.63-1.24-1.63-1.01-.69.08-.68.08-.68 1.12.08 1.71 1.15 1.71 1.15 1 1.7 2.61 1.21 3.25.93.1-.72.39-1.21.71-1.49-2.48-.28-5.09-1.24-5.09-5.49 0-1.21.43-2.2 1.15-2.98-.12-.28-.5-1.41.11-2.94 0 0 .94-.3 3.05 1.14a10.62 10.62 0 0 1 5.56 0c2.12-1.44 3.05-1.14 3.05-1.14.61 1.53.23 2.66.11 2.94.72.78 1.15 1.77 1.15 2.98 0 4.26-2.62 5.2-5.11 5.48.4.35.76 1.03.76 2.08v3.09c0 .3.2.65.77.54A11.1 11.1 0 0 0 12 .9Z"
+        />
+      </symbol>
+      <symbol id="icon-search" viewBox="0 0 24 24">
+        <circle cx="10.5" cy="10.5" r="6.5" />
+        <path d="m15.5 15.5 4 4" />
+      </symbol>
+      <symbol id="icon-box" viewBox="0 0 24 24">
+        <path d="m12 2.8 8 4.4v9.6l-8 4.4-8-4.4V7.2zM4.2 7.4 12 12l7.8-4.6M12 12v9" />
+      </symbol>
+      <symbol id="icon-quote" viewBox="0 0 24 24">
+        <path d="M5 6h6v6H7.5c0 2 1 3.3 3 4.2M14 6h6v6h-3.5c0 2 1 3.3 3 4.2" />
+      </symbol>
+      <symbol id="icon-lock" viewBox="0 0 24 24">
+        <rect x="5" y="10" width="14" height="11" rx="1.5" />
+        <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
+      </symbol>
+      <symbol id="icon-menu" viewBox="0 0 24 24">
+        <path d="M4 7h16M4 12h16M4 17h16" />
+      </symbol>
+      <symbol id="icon-close" viewBox="0 0 24 24">
+        <path d="m6 6 12 12M18 6 6 18" />
+      </symbol>
+    </svg>
+
+    <header class="site-header" id="site-header">
+      <a class="wordmark" href="#" aria-label="Asset-Aware MCP 首頁">
+        Asset-Aware MCP
+      </a>
+      <button
+        class="mobile-menu-button"
+        id="site-menu-toggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="site-navigation"
+      >
+        <svg aria-hidden="true"><use href="#icon-menu"></use></svg>
+        <span data-ui="menu">選單</span>
+      </button>
+      <nav class="site-navigation" id="site-navigation" aria-label="主要導覽">
+        <a href="#product" data-ui="navProduct">產品</a>
+        <a href="#workflow" data-ui="navWorkflow">流程</a>
+        <a href="#capabilities" data-ui="navCapabilities">功能</a>
+        <a href="#tool-explorer" data-ui="navTools">工具</a>
+        <a href="#development" data-ui="navDevelopment">開發</a>
+        <a href="#/getting-started" data-ui="navDocs">文件</a>
+      </nav>
+      <div class="header-actions">
         <div class="lang-switch" role="group" aria-label="Language">
-          <button class="lang-option" type="button" data-lang="en" aria-pressed="false">
-            EN
-          </button>
           <button class="lang-option active" type="button" data-lang="zh" aria-pressed="true">
             繁中
           </button>
-        </div>
-
-        <label id="filter-label" class="search-label" for="nav-filter">篩選頁面</label>
-        <input
-          id="nav-filter"
-          class="nav-filter"
-          type="search"
-          placeholder="PDF、DOCX、citation、VSIX..."
-        />
-
-        <nav id="page-nav" class="page-nav" aria-label="Documentation pages"></nav>
-
-        <div class="sidebar-note">
-          <p id="sidebar-note-text">
-            文件內容由 docs/wiki 生成；GitHub Wiki 與 Pages site 共用同一份功能說明來源。
-          </p>
-        </div>
-      </aside>
-      <div class="sidebar-backdrop" id="sidebar-backdrop" hidden></div>
-
-      <main class="content-shell">
-        <header class="topbar">
-          <button
-            id="nav-toggle"
-            class="nav-toggle"
-            type="button"
-            aria-expanded="false"
-            aria-controls="sidebar"
-          >
-            選單
+          <span aria-hidden="true">/</span>
+          <button class="lang-option" type="button" data-lang="en" aria-pressed="false">
+            EN
           </button>
-          <div>
-            <p id="page-kicker" class="page-kicker">產品總覽、章節導覽與目前 code surface。</p>
-            <h2 id="page-title" class="page-title">總覽</h2>
-          </div>
-        </header>
-
-        <section class="summary-band" aria-label="Site summary">
-          <div>
-            <p id="hero-kicker" class="hero-kicker">v1.0.0 正式文件</p>
-            <p id="hero-copy">
-              章節式整理 Asset-Aware MCP：先安裝，再選 PDF、DOCX、citation、A2T 或 KG 流程；
-              reference 與 release gate 保留給查 contract 和準備上線時使用。
-            </p>
-            <div class="hero-actions" aria-label="Quick documentation paths">
-              <a href="#/getting-started" data-quick-action="start">開始安裝</a>
-              <a href="#/workflow-chapters" data-quick-action="workflow">流程章節</a>
-              <a href="#/knowledge-graph" data-quick-action="kg">KG / RAG</a>
-              <a href="#/release-testing" data-quick-action="release">上線檢查</a>
-            </div>
-          </div>
-          <dl class="hero-metrics">
-            <div>
-              <dt id="tool-metric-value">30</dt>
-              <dd id="tool-metric-label">MCP tools</dd>
-            </div>
-            <div>
-              <dt id="resource-metric-value">13</dt>
-              <dd id="resource-metric-label">MCP resources</dd>
-            </div>
-            <div>
-              <dt id="endpoint-metric-value">43</dt>
-              <dd id="endpoint-metric-label">endpoints</dd>
-            </div>
-          </dl>
-        </section>
-
-        <section class="status-strip" aria-label="Runtime defaults">
-          <div>
-            <span id="status-version">v1.0.0</span>
-            <strong id="status-pdf">PyMuPDF default</strong>
-          </div>
-          <div>
-            <span id="status-rag-label">RAG default</span>
-            <strong id="status-rag">Ollama granite4.1:3b</strong>
-          </div>
-          <div>
-            <span id="status-kg-label">KG safety</span>
-            <strong id="status-kg">LightRAG opt-in</strong>
-          </div>
-          <div>
-            <span id="status-release-label">Release gates</span>
-            <strong id="status-release">CI + VSIX smoke</strong>
-          </div>
-        </section>
-
-        <div class="doc-layout">
-          <article id="doc-content" class="doc-content" aria-live="polite">
-            <h1>Asset-Aware MCP Docs</h1>
-            <p>
-              Asset-Aware MCP 文件站提供 PDF、DOCX/DFM、citation provenance、A2T
-              tables、LLM wiki、KG/RAG、VS Code extension 與上線檢查的章節式導覽。
-            </p>
-            <p>
-              若完整互動文件尚未載入，請確認瀏覽器允許執行本頁 JavaScript，或直接閱讀
-              <a href="site-content/overview-zh.md">site-content/overview-zh.md</a>。
-            </p>
-          </article>
-          <aside id="page-outline" class="page-outline" aria-label="On this page" hidden></aside>
         </div>
-      </main>
-    </div>
+        <a
+          class="github-link"
+          href="https://github.com/u9401066/asset-aware-mcp"
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          <svg aria-hidden="true"><use href="#icon-github"></use></svg>
+          GitHub
+        </a>
+      </div>
+    </header>
 
+    <main id="main-content" tabindex="-1">
+      <div id="landing" class="landing" aria-label="Asset-Aware MCP product overview">
+        <section class="hero-section" id="product">
+          <div class="hero-copy-block">
+            <h1 data-ui="heroTitle">把文件變成<br />Agent 可重用的資產</h1>
+            <p class="hero-lead" data-ui="heroLead">
+              從 PDF、DOCX 到 citation-ready spans、表格、圖像與 Foam wiki。MCP SDK 2
+              讓來源、locator 與 hash 一路可驗證。
+            </p>
+            <div class="hero-cta-row">
+              <a class="button button-primary" href="#/getting-started">
+                <span data-ui="start">開始使用</span>
+                <svg aria-hidden="true"><use href="#icon-arrow"></use></svg>
+              </a>
+              <a
+                class="button button-secondary"
+                href="https://github.com/u9401066/asset-aware-mcp"
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                <span data-ui="viewGithub">檢視 GitHub</span>
+                <svg aria-hidden="true"><use href="#icon-github"></use></svg>
+              </a>
+            </div>
+            <dl class="proof-rail" aria-label="Runtime facts">
+              <div>
+                <dt><svg aria-hidden="true"><use href="#icon-grid"></use></svg></dt>
+                <dd>MCP SDK 2</dd>
+              </div>
+              <div>
+                <dt><strong id="hero-tool-count">30</strong></dt>
+                <dd data-ui="toolsLabel">tools</dd>
+              </div>
+              <div>
+                <dt><svg aria-hidden="true"><use href="#icon-doc"></use></svg></dt>
+                <dd>PyMuPDF default</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="evidence-board" aria-label="文件來源到 Foam wiki 的證據軌">
+            <p class="demo-label" data-ui="demoLabel">示意流程 · PDF preflight / DOCX DFM ingest</p>
+            <ol class="board-flow" aria-label="Evidence pipeline">
+              <li class="done"><span>PDF / DOCX</span><i aria-hidden="true"></i></li>
+              <li class="done"><span>Route</span><small>PDF preflight<br />DOCX DFM</small><i aria-hidden="true"></i></li>
+              <li class="done"><span>Extract</span><i aria-hidden="true"></i></li>
+              <li class="verify"><span>Verify</span><i aria-hidden="true"></i></li>
+              <li class="done"><span>Agent Assets</span><i aria-hidden="true"></i></li>
+              <li class="done"><span>Foam Wiki</span><i aria-hidden="true"></i></li>
+            </ol>
+            <div class="board-columns">
+              <div class="paper-preview" aria-label="Source document preview">
+                <p>Sample Paper</p>
+                <small>1 Introduction</small>
+                <span class="paper-line long"></span>
+                <span class="paper-line"></span>
+                <span class="paper-line short"></span>
+                <div class="paper-figure"></div>
+                <div class="paper-table"></div>
+              </div>
+              <div class="board-panel checklist-panel">
+                <span>✓ <b data-ui="formatCheck">格式檢查</b></span>
+                <span>✓ <b data-ui="readable">可讀性</b></span>
+                <span>✓ <b data-ui="pageStructure">頁面結構</b></span>
+                <span>✓ <b data-ui="assetIntegrity">資源完整</b></span>
+              </div>
+              <div class="board-panel asset-counts">
+                <span><b data-ui="textSpans">文字 spans</b><em>128</em></span>
+                <span><b data-ui="tables">表格</b><em>24</em></span>
+                <span><b data-ui="figures">圖像</b><em>16</em></span>
+                <span><b>sections</b><em>6</em></span>
+              </div>
+              <div class="board-panel locator-panel">
+                <p>locator</p>
+                <code>page=12</code>
+                <code>bbox=[72,144,540,188]</code>
+                <code>block=3 · line=2 · span=1</code>
+                <strong>SHA-256 ✓</strong>
+              </div>
+              <div class="board-panel file-panel">
+                <span>span_0001.json</span>
+                <span>table_0003.json</span>
+                <span>image_0007.png</span>
+                <span>manifest.json</span>
+              </div>
+              <div class="foam-preview" aria-label="Foam graph preview">
+                <span class="foam-node root">Sample Paper</span>
+                <span class="foam-node method" data-ui="method">方法</span>
+                <span class="foam-node table">Table 1</span>
+                <span class="foam-node conclusion" data-ui="conclusion">結論</span>
+                <i class="foam-link l1"></i><i class="foam-link l2"></i><i class="foam-link l3"></i>
+              </div>
+            </div>
+            <dl class="locator-console">
+              <div><dt>source</dt><dd>sample_paper.pdf</dd></div>
+              <div><dt>locator</dt><dd>page=12&amp;bbox=72,144,540,188&amp;block=3&amp;line=2&amp;span=1</dd></div>
+              <div><dt>sha256</dt><dd>8f3c2b6e7a3d2c1b9e7f6d4c2a9b8e3f1a2d3c4b5e6f70f8192a3b4c5d6e7f809</dd></div>
+            </dl>
+          </div>
+        </section>
+
+        <section class="workflow-section ruled-section" id="workflow">
+          <div class="section-heading">
+            <h2 data-ui="workflowTitle">一條可驗證的文件工作流</h2>
+            <p data-ui="workflowLead">先檢查來源，再拆解、驗證與匯出；每一步都有清楚的責任邊界。</p>
+          </div>
+          <ol class="workflow-line">
+            <li><b>01</b><strong data-ui="wfPreflight">預檢</strong><span data-ui="wfPreflightDesc">分類頁面與 OCR 需求</span></li>
+            <li><b>02</b><strong data-ui="wfIngest">攝入</strong><span data-ui="wfIngestDesc">背景 job 保持 stdio 回應</span></li>
+            <li><b>03</b><strong data-ui="wfExtract">拆解</strong><span data-ui="wfExtractDesc">文字、表格、圖像與 sections</span></li>
+            <li><b>04</b><strong data-ui="wfVerify">驗證</strong><span data-ui="wfVerifyDesc">locator、quote 與 SHA-256</span></li>
+            <li><b>05</b><strong data-ui="wfExport">匯出</strong><span data-ui="wfExportDesc">deterministic agent asset bundle</span></li>
+            <li><b>06</b><strong data-ui="wfWiki">建庫</strong><span data-ui="wfWikiDesc">Foam notes 與可選 LightRAG</span></li>
+          </ol>
+          <div class="workflow-call" aria-label="Minimal MCP workflow example">
+            <div class="code-window-bar"><span data-ui="minimalFlow">最小工作流（MCP 呼叫示例）</span><small>mcp</small></div>
+                <pre tabindex="0" aria-label="可水平捲動的 MCP 流程範例"><code><span>1</span> document(op=<b>"preflight"</b>, pdf_path=<i>"/path/paper.pdf"</i>)
+<span>2</span> document(op=<b>"ingest"</b>, file_paths=[<i>"/path/paper.pdf"</i>])
+<span>3</span> document(op=<b>"export_assets"</b>, doc_id=<i>"doc_..."</i>, output_dir=<i>"agent-assets"</i>)</code></pre>
+          </div>
+        </section>
+
+        <section class="capabilities-section ruled-section" id="capabilities">
+          <div class="section-heading split-heading">
+            <div>
+              <h2 data-ui="capabilitiesTitle">功能不是清單，是可組合的證據層</h2>
+              <p data-ui="capabilitiesLead">同一份來源被拆成 agent 能讀、能查、能驗證、能重新組合的資產。</p>
+            </div>
+            <a class="text-link" href="#/workflow-chapters">
+              <span data-ui="readFlows">閱讀完整流程</span>
+              <svg aria-hidden="true"><use href="#icon-arrow"></use></svg>
+            </a>
+          </div>
+          <div class="capability-layout">
+            <div class="capability-list">
+              <article>
+                <svg aria-hidden="true"><use href="#icon-doc"></use></svg>
+                <div><h3 data-ui="documentEntry">文件入口</h3><p>PDF · DOCX · DOC · ODT · ODS</p></div>
+              </article>
+              <article>
+                <svg aria-hidden="true"><use href="#icon-grid"></use></svg>
+                <div><h3 data-ui="structuredExtraction">結構拆解</h3><p>text · table · figure · section</p></div>
+              </article>
+              <article>
+                <svg aria-hidden="true"><use href="#icon-quote"></use></svg>
+                <div><h3>Citation</h3><p>exact quote · line/char/byte · hash</p></div>
+              </article>
+            </div>
+            <figure class="asset-diagram">
+              <figcaption data-ui="sourceToEvidence">文件 → 證據層</figcaption>
+              <div class="diagram-paper">
+                <span class="paper-line long"></span><span class="paper-line"></span>
+                <div class="diagram-figure"></div><div class="diagram-table"></div>
+              </div>
+              <div class="diagram-routes" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+              <div class="evidence-stack">
+                <span><b>A</b><em data-ui="text">文字</em><code>loc:p.12:L3–5</code></span>
+                <span><b>▦</b><em data-ui="table">表格</em><code>loc:p.12:T1</code></span>
+                <span><b>▧</b><em data-ui="figure">圖像</em><code>loc:p.12:F1</code></span>
+                <span><b>§</b><em data-ui="section">章節</em><code>loc:p.12:S2</code></span>
+              </div>
+            </figure>
+            <div class="capability-list">
+              <article>
+                <svg aria-hidden="true"><use href="#icon-box"></use></svg>
+                <div><h3>Agent Assets</h3><p>manifest · JSONL · media · Foam</p></div>
+              </article>
+              <article>
+                <svg aria-hidden="true"><use href="#icon-doc"></use></svg>
+                <div><h3>DOCX / DFM</h3><p data-ui="reversibleEdit">可逆編輯與 stale-write 防護</p></div>
+              </article>
+              <article>
+                <svg aria-hidden="true"><use href="#icon-grid"></use></svg>
+                <div><h3>Knowledge</h3><p>Foam-first · LightRAG opt-in</p></div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="tool-section ruled-section" id="tool-explorer">
+          <div class="section-heading split-heading tool-heading">
+            <div>
+              <h2><span id="explorer-tool-count">30</span> <span data-ui="toolExplorerTitle">個 MCP tools，按任務分組</span></h2>
+              <p data-ui="toolExplorerLead">先選任務，再看 operation；不用背 30 個名字。</p>
+            </div>
+            <div class="reference-links">
+              <a class="text-link" href="#/mcp-tools"><span data-ui="fullReference">完整 MCP reference</span><svg aria-hidden="true"><use href="#icon-arrow"></use></svg></a>
+              <a class="text-link" href="#/tool-chooser"><span data-ui="toolChooser">工具選擇器</span><svg aria-hidden="true"><use href="#icon-arrow"></use></svg></a>
+            </div>
+          </div>
+          <div class="tool-explorer-shell">
+            <aside class="tool-browser" aria-label="MCP tool filters">
+              <label class="tool-search" for="tool-search-input">
+                <svg aria-hidden="true"><use href="#icon-search"></use></svg>
+                <span class="visually-hidden" data-ui="searchTools">搜尋 MCP tools</span>
+                <input id="tool-search-input" type="search" placeholder="搜尋 tool、operation 或輸出…" autocomplete="off" />
+              </label>
+              <p class="tool-result-status" id="tool-result-status" role="status" aria-live="polite">30 個 tools</p>
+              <div class="tool-category-list" id="tool-category-list" role="group" aria-label="Tool categories"></div>
+              <div class="tool-list" id="tool-list" role="listbox" aria-label="Tools"></div>
+            </aside>
+            <article class="tool-detail" id="tool-detail" aria-live="polite">
+              <div class="tool-detail-heading">
+                <div>
+                  <p id="tool-detail-category">文件核心</p>
+                  <h3 id="tool-detail-name">document</h3>
+                </div>
+                <span class="surface-label">balanced</span>
+              </div>
+              <p class="tool-summary" id="tool-detail-summary">PDF 文件生命週期的主要 facade：預檢、攝入、稽核、檢索與資產匯出。</p>
+              <dl class="tool-contract">
+                <div><dt data-ui="module">Module</dt><dd><code id="tool-detail-module">document_tools.py</code></dd></div>
+                <div><dt data-ui="mainInputs">主要輸入</dt><dd id="tool-detail-inputs">op, pdf_path, doc_id, file_paths, output_dir</dd></div>
+                <div><dt data-ui="outcome">Outcome</dt><dd id="tool-detail-outcome">read-only preflight、background ingest、citation-ready agent asset bundle</dd></div>
+              </dl>
+              <div class="tool-example-block">
+                <div><strong data-ui="callExample">呼叫範例</strong><button class="icon-copy-button" type="button" data-copy-target="tool-detail-example" aria-label="複製工具範例"><svg aria-hidden="true"><use href="#icon-copy"></use></svg></button></div>
+                <pre tabindex="0" aria-label="可水平捲動的工具範例"><code id="tool-detail-example">document(op="export_assets", doc_id="doc_...", output_dir="agent-assets")</code></pre>
+              </div>
+              <a class="text-link" href="#/mcp-tools"><span data-ui="readToolContract">閱讀完整工具 contract</span><svg aria-hidden="true"><use href="#icon-arrow"></use></svg></a>
+            </article>
+          </div>
+        </section>
+
+        <section class="install-section ruled-section" id="install">
+          <div class="section-heading split-heading">
+            <div>
+              <h2 data-ui="installTitle">從安裝到第一份 asset export</h2>
+              <p data-ui="installLead">選擇一條啟動路徑；完整 client 設定與驗證步驟保留在安裝指南。</p>
+            </div>
+            <a class="text-link" href="#/getting-started"><span data-ui="installGuide">完整安裝指南</span><svg aria-hidden="true"><use href="#icon-arrow"></use></svg></a>
+          </div>
+          <ol class="install-steps">
+            <li>
+              <span class="step-number">1</span><strong>Codex</strong>
+              <code id="install-codex">codex mcp add asset-aware-mcp -- uv tool run --python 3.11 --from asset-aware-mcp==VERSION asset-aware-mcp</code>
+              <button class="icon-copy-button" type="button" data-copy-target="install-codex" aria-label="複製 Codex 安裝命令"><svg aria-hidden="true"><use href="#icon-copy"></use></svg></button>
+            </li>
+            <li>
+              <span class="step-number">2</span><strong>VS Code</strong>
+              <span data-ui="installVsCode">從 Marketplace 安裝 VSIX，使用原生 MCP provider</span>
+              <a class="small-action" href="https://marketplace.visualstudio.com/items?itemName=u9401066.asset-aware-mcp" target="_blank" rel="noreferrer noopener"><span data-ui="openMarketplace">開啟 Marketplace</span><svg aria-hidden="true"><use href="#icon-arrow"></use></svg></a>
+            </li>
+            <li>
+              <span class="step-number">3</span><strong>Local source</strong>
+              <code id="install-local">uv sync &amp;&amp; uv run asset-aware-mcp</code>
+              <button class="icon-copy-button" type="button" data-copy-target="install-local" aria-label="複製本機啟動命令"><svg aria-hidden="true"><use href="#icon-copy"></use></svg></button>
+            </li>
+          </ol>
+        </section>
+
+        <section class="engineering-section ruled-section" id="development">
+          <div class="section-heading">
+            <h2 data-ui="engineeringTitle">開發與發布，先守住證據契約</h2>
+            <p data-ui="engineeringLead">功能、依賴與網站更新都進同一套 focused regression 與 release gates。</p>
+          </div>
+          <div class="engineering-grid">
+            <div class="engineering-principles">
+              <article><b>1</b><svg aria-hidden="true"><use href="#icon-grid"></use></svg><div><h3>MCP SDK 2 only</h3><p>Context <span data-ui="progressOnly">只處理 progress；operational logs 走 stderr。</span></p></div></article>
+              <article><b>2</b><svg aria-hidden="true"><use href="#icon-lock"></use></svg><div><h3 data-ui="immutableSource">來源不可變</h3><p data-ui="sourceContract">保留 source SHA、mtime、locator 與 citation hash。</p></div></article>
+              <article><b>3</b><svg aria-hidden="true"><use href="#icon-search"></use></svg><div><h3 data-ui="regressionFirst">回歸先行</h3><p data-ui="regressionDesc">每個行為修正都附 focused regression。</p></div></article>
+              <article><b>4</b><svg aria-hidden="true"><use href="#icon-box"></use></svg><div><h3 data-ui="releaseChain">可稽核發布鏈</h3><p>CI → 3 OS smoke → artifacts → PyPI → Marketplace → GitHub Release</p></div></article>
+            </div>
+            <div class="release-console" aria-label="Release gate sequence">
+              <div class="console-title"><span data-ui="releaseSequence">發布序列（證據導向）</span><em>required</em></div>
+              <ol>
+                <li><span>01</span><code>focused regression + full pytest</code><b>GATE</b></li>
+                <li><span>02</span><code>ruff · mypy · bandit · audits</code><b>GATE</b></li>
+                <li><span>03</span><code>docs builder --check</code><b>GATE</b></li>
+                <li><span>04</span><code>CI smoke: Linux / Windows / macOS</code><b>GATE</b></li>
+                <li><span>05</span><code>build wheel · sdist · VSIX</code><b>GATE</b></li>
+                <li><span>06</span><code>artifact + install smoke</code><b>GATE</b></li>
+                <li><span>07</span><code>tag → PyPI → Marketplace → Release</code><b>SHIP</b></li>
+              </ol>
+            </div>
+          </div>
+          <div class="security-strip" aria-label="Current security posture">
+            <strong data-ui="securityPosture">目前安全策略</strong>
+            <span>△ Marker / MinerU security hold</span>
+            <span>△ LightRAG opt-in</span>
+            <span>△ PDF worker bounded MessagePack IPC</span>
+            <span>△ MCP text hard cap</span>
+          </div>
+          <div class="preview-contract">
+            <svg aria-hidden="true"><use href="#icon-quote"></use></svg>
+            <p>
+              <strong data-ui="largeSpanTitle">Large-span transport contract</strong>
+              <span data-ui="largeSpanCopy">大型 span 的 MCP 回應只提供明確標示的 <code>asset-ref-preview-v1</code>，且 <code>canonical_asset_ref=false</code>；完整 exact quote 與可自我驗證 AssetRef 留在持久化 citation / agent-asset bundle，不把截斷內容偽裝成 canonical reference。</span>
+            </p>
+          </div>
+        </section>
+
+        <section class="github-band" aria-label="GitHub project links">
+          <div>
+            <svg aria-hidden="true"><use href="#icon-github"></use></svg>
+            <h2 data-ui="githubBand">程式碼、issue 與 release 都在 GitHub</h2>
+          </div>
+          <nav aria-label="GitHub actions">
+            <a class="button button-primary" href="https://github.com/u9401066/asset-aware-mcp" target="_blank" rel="noreferrer noopener"><span data-ui="openGithub">開啟 GitHub</span><svg aria-hidden="true"><use href="#icon-arrow"></use></svg></a>
+            <a class="button button-secondary" href="https://github.com/u9401066/asset-aware-mcp/releases" target="_blank" rel="noreferrer noopener"><span data-ui="viewReleases">查看 Releases</span></a>
+            <a class="button button-secondary" href="https://github.com/u9401066/asset-aware-mcp/issues" target="_blank" rel="noreferrer noopener"><span data-ui="reportIssue">回報 Issue</span></a>
+            <a class="button button-secondary" href="#/developer-guide"><span data-ui="developerGuide">開發指南</span></a>
+          </nav>
+        </section>
+
+        <footer class="site-footer">
+          <strong>Asset-Aware MCP</strong>
+          <nav aria-label="Project links">
+            <a href="#/getting-started">Docs</a>
+            <a href="https://github.com/u9401066/asset-aware-mcp" target="_blank" rel="noreferrer noopener">GitHub</a>
+            <a href="https://github.com/u9401066/asset-aware-mcp/releases" target="_blank" rel="noreferrer noopener">Releases</a>
+            <a href="https://github.com/u9401066/asset-aware-mcp/issues" target="_blank" rel="noreferrer noopener">Issues</a>
+            <a href="https://pypi.org/project/asset-aware-mcp/" target="_blank" rel="noreferrer noopener">PyPI</a>
+            <a href="https://marketplace.visualstudio.com/items?itemName=u9401066.asset-aware-mcp" target="_blank" rel="noreferrer noopener">VS Marketplace</a>
+          </nav>
+          <p>Apache-2.0 · <span data-ui="footerCopy">Built for citation-ready document workflows.</span></p>
+        </footer>
+      </div>
+
+      <div id="docs-reader" class="docs-reader" hidden>
+        <aside class="reader-sidebar" id="sidebar">
+          <div class="reader-sidebar-header">
+            <strong data-ui="documentation">文件導覽</strong>
+            <button id="nav-close" class="sidebar-close" type="button" aria-label="關閉文件導覽">
+              <svg aria-hidden="true"><use href="#icon-close"></use></svg>
+            </button>
+          </div>
+          <p id="site-tagline" class="reader-tagline">Citation-ready document workflows for AI agents.</p>
+          <label id="filter-label" class="search-label" for="nav-filter">篩選頁面</label>
+          <div class="reader-search">
+            <svg aria-hidden="true"><use href="#icon-search"></use></svg>
+            <input id="nav-filter" class="nav-filter" type="search" placeholder="PDF、DOCX、citation、VSIX..." />
+          </div>
+          <nav id="page-nav" class="page-nav" aria-label="Documentation pages"></nav>
+          <p id="sidebar-note-text" class="sidebar-note">內容由 docs/wiki 生成，並在 release gate 中對齊程式碼。</p>
+        </aside>
+        <div class="sidebar-backdrop" id="sidebar-backdrop" hidden></div>
+        <section class="reader-main">
+          <header class="reader-topbar">
+            <button id="nav-toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar">
+              <svg aria-hidden="true"><use href="#icon-menu"></use></svg>
+              <span data-ui="menu">選單</span>
+            </button>
+            <div>
+              <p id="page-kicker" class="page-kicker">目前頁面</p>
+              <h1 id="page-title" class="page-title">文件</h1>
+            </div>
+            <a class="reader-github" href="https://github.com/u9401066/asset-aware-mcp" target="_blank" rel="noreferrer noopener">
+              <svg aria-hidden="true"><use href="#icon-github"></use></svg><span>GitHub</span>
+            </a>
+          </header>
+          <div class="doc-layout">
+            <article id="doc-content" class="doc-content" aria-live="polite">
+              <h1>Asset-Aware MCP Docs</h1>
+              <p>正在載入由 <code>docs/wiki/**</code> 生成的文件內容。</p>
+            </article>
+            <aside id="page-outline" class="page-outline" aria-label="On this page" hidden></aside>
+          </div>
+          <footer class="reader-footer">
+            <a href="#" data-ui="backHome">返回產品首頁</a>
+            <a href="https://github.com/u9401066/asset-aware-mcp/issues" target="_blank" rel="noreferrer noopener" data-ui="docsIssue">文件有問題？回報 Issue</a>
+          </footer>
+        </section>
+      </div>
+    </main>
+
+    <div class="copy-status" id="copy-status" role="status" aria-live="polite"></div>
     <noscript>
       <section class="noscript-note">
-        本文件站需要 JavaScript 來載入章節導覽；無法執行時可直接開啟
-        <a href="site-content/overview-zh.md">site-content/overview-zh.md</a>。
+        本站需要 JavaScript 載入 wiki reader 與工具選擇器；也可直接閱讀
+        <a href="site-content/getting-started.md">Getting Started Markdown</a>。
       </section>
     </noscript>
 
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-    <script src="site-content.js?v=20260517-v070-release"></script>
-    <script src="site.js?v=20260517-v070-release"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"
+      integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/mermaid@11.16.1/dist/mermaid.min.js"
+      integrity="sha384-aBQXj4hK6Jm05i7aQAsUV3bLdSUrHX1BGYfMB0166TtWt/RRaw+h0Eelme9OCOvy"
+      crossorigin="anonymous"
+    ></script>
+    <script src="site-content.js?v=20260813-v101-redesign"></script>
+    <script src="site.js?v=20260813-v101-redesign"></script>
   </body>
 </html>

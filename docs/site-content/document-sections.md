@@ -84,10 +84,12 @@ evidence(
 ```text
 document://{doc_id}/sections
 document://{doc_id}/manifest
-document://{doc_id}/blocks
+document://{doc_id}/segmentation
 ```
 
-Resource 適合瀏覽與快取；tool 適合篩選、限制深度、控制輸出格式，以及寫入 Foam/LLM wiki。
+`segmentation` resource 提供含 blocks、reading order 與 locator 的統一 schema；目前沒有
+獨立的 blocks resource。Resource 適合瀏覽與快取；tool 適合篩選、
+限制深度、控制輸出格式，以及寫入 Foam/LLM wiki。
 
 ## 上線檢查
 

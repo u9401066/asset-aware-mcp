@@ -71,14 +71,14 @@ ingest_documents(index_knowledge_graph=true)
 |---|---|
 | 文件 manifest | `document://{doc_id}/manifest` |
 | 章節列表 | `document://{doc_id}/sections` |
-| 文件 blocks | `document://{doc_id}/blocks` |
+| 文件 segmentation／blocks | `document://{doc_id}/segmentation` |
 | 表格狀態 | `table://{table_id}/status` |
-| 表格 preview | `table://{table_id}/preview` |
+| 表格內容 | `table://{table_id}/content` |
 
 ## 注意
 
 - `section(...)` 是章節導覽；真正要驗證 claim 時回到 `evidence(...)`。
 - KG answer 是 discovery layer，不是最終引用來源。
 - `parse_pdf_structure` 使用目前設定的 structured extractor；Docling 可用，Marker／MinerU hold 或 backend 不可用時會 fail closed。
-- `ingest_documents(use_marker=true)` 只是偏好 Marker；目前公開參數沒有 `require_marker`。
+- `ingest_documents(use_marker=true)` 是歷史參數名稱，只代表偏好目前設定的 structured extractor；Docling 可用，Marker／MinerU 仍受 security hold，且公開參數沒有 `require_marker`。
 - `table_manage` 不直接寫 row/cell；row/cell 讀寫使用 `table_data`。

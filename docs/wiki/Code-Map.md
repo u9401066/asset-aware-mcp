@@ -40,7 +40,7 @@
 | `src/application/table_service.py` | A2T table CRUD、citations、drafts、rendering |
 | `src/application/section_service.py` | Section tree/detail/blocks/search/content services |
 | `src/application/knowledge_service.py` | LightRAG query/export use cases |
-| `src/application/job_service.py` | Background job lifecycle、quota、cancel、worker coordination |
+| `src/application/job_service.py` | Background job lifecycle、quota、cancel、worker coordination；ingest 拒絕空清單與空白 path |
 | `src/application/etl_profile_detector.py` | Heuristic ETL profile detection from file name, sample text, and layout hints |
 | `src/application/ingest_worker.py` | Worker-side ingest execution |
 | `src/application/worker_runner.py` | Worker runner port |
@@ -57,7 +57,7 @@
 |---|---|
 | `src/infrastructure/file_storage.py` | Document/table artifacts persistence |
 | `src/infrastructure/job_store.py` | Atomic persisted job store |
-| `src/infrastructure/pdf_extractor.py` | PyMuPDF extraction |
+| `src/infrastructure/pdf_extractor.py` | PyMuPDF extraction；process-isolated worker 以 bounded 原子結果交接避開大型 payload pipe deadlock，且不改動 embedding process 的 signal timer |
 | `src/infrastructure/pymupdf_preflight.py` | Process-isolated, bounded, read-only PDF page inspection and route recommendation |
 | `src/infrastructure/pymupdf4llm_adapter.py` | Layout-aware base extraction；backend unavailable 時自動降級 PyMuPDF |
 | `src/infrastructure/docling_adapter.py` | Active structured layout/table/formula/figure backend |
@@ -89,7 +89,7 @@ remain tool-surface UX policies on the same SDK 2 server。
 | `src/presentation/mcp_app.py` | `AssetAwareMCPServer(MCPServer)` singleton；tracks tools through public SDK registry APIs |
 | `src/presentation/server.py` | MCP server entrypoint |
 | `src/presentation/dependencies.py` | Composition root |
-| `src/presentation/mcp_context.py` | SDK 2 runtime `Context` progress/log helpers with timeout/error isolation |
+| `src/presentation/mcp_context.py` | SDK 2 runtime `Context` progress helper；deprecated protocol logging 改為 stderr Python logging |
 | `src/presentation/markdown_utils.py` | Presentation markdown formatting helpers |
 | `src/presentation/ingest_worker_main.py` | Isolated worker entrypoint |
 | `src/presentation/tools/document_tools.py` | PDF/citation facades；含 read-only `preflight` 與 portable `export_assets`/`agent_assets` |
@@ -105,7 +105,7 @@ remain tool-surface UX policies on the same SDK 2 server。
 | `vscode-extension/src/mcpProvider.ts` | Native MCP provider |
 | `vscode-extension/src/copilotMcpConfig.ts` | Copilot MCP config merge |
 | `vscode-extension/src/clineMcpConfig.ts` | Cline MCP config merge |
-| `vscode-extension/src/codexMcpConfig.ts` | Codex MCP config merge |
+| `vscode-extension/src/codexMcpConfig.ts` | Codex MCP config merge；managed 180s/900s timeout、secret-name-only `env_vars`、machine-scoped opt-out |
 | `vscode-extension/src/mcpConfigCommon.ts` | Shared MCP config helpers |
 | `vscode-extension/src/assistantAssets.ts` | Assistant harness sync |
 | `vscode-extension/src/uv.ts` | uv discovery/runtime prep |

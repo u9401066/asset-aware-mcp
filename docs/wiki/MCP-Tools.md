@@ -1,7 +1,5 @@
 # MCP Tools
 
-![MCP endpoint distribution](assets/mcp-endpoint-map.jpg)
-
 預設 runtime surface 是 **balanced**：30 個公開 tools。這是 Cline、Codex、
 Copilot 的一般建議模式，保留完整 facade 入口，也保留少數高頻、直覺且安全的
 shortcut direct tools。若只想讓 agent 面對最小入口，可設定
@@ -29,7 +27,7 @@ uv run asset-aware-mcp list-tools --json
 | Tool | 主要參數 | 功能 |
 |---|---|---|
 | `parse_pdf_structure` | `pdf_path`, `output_dir`, `async_mode`, OCR/structured/page options | Configured structured PDF parse shortcut；Docling 可用，held／缺少 backend 時 fail closed 並給診斷。 |
-| `find_evidence_spans` | `doc_id`, `query`, `span_id`, `span_kinds`, `limit` | 搜尋 citation-ready evidence spans。 |
+| `find_evidence_spans` | `doc_id`, `query`, `span_id`, `span_kinds`, `limit` | 搜尋 evidence spans；短 quote 可 inline canonical AssetRef，超過 1,000 字元時只回不可驗證的 bounded preview，完整 ref 請匯出 persisted bundle。 |
 | `verify_citation_ref` | `ref` | 驗證 AssetRef 是否仍符合 citation index 與 locator/hash。 |
 | `citation_bundle` | `doc_id`, query/span filters, `output_format`, Foam write options | 匯出 verified evidence bundle，可產生 Markdown/JSON/Foam evidence pack。 |
 | `ingest_documents` | `file_paths`, `async_mode`, `use_marker`, OCR/Marker/page options | 攝入 PDF，建立 manifest、markdown、blocks、assets、citation artifacts。 |

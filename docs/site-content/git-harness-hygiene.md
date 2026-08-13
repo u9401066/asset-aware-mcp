@@ -2,8 +2,6 @@
 
 # Git Harness Hygiene
 
-![Git harness hygiene workflow](wiki/assets/git-harness-hygiene.jpg)
-
 ## 問題
 
 VSIX 會自動同步 assistant harness 檔案。這些檔案對使用者工作區很有用，但在開發工作樹中，若 extension 先投放較舊版本或重新寫入 managed copy，Git status 會出現不必要的 untracked/modified noise，甚至阻擋 `git pull --ff-only`。

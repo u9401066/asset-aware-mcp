@@ -2,8 +2,6 @@
 
 # MCP Resources
 
-![MCP endpoint map with tool and resource counts](wiki/assets/mcp-endpoint-map.jpg)
-
 資源數量由 `./scripts/count_tools.sh` 產生：13 resources in 2 modules。來源為 `src/presentation/resources/**`。
 
 ## `document_resources.py` - 8 resources

@@ -2,8 +2,6 @@
 
 # Architecture
 
-![Asset-Aware MCP architecture](wiki/assets/overview-architecture.jpg)
-
 ## 分層結構
 
 Asset-Aware MCP 以 DDD 方向維持邊界：
@@ -13,7 +11,7 @@ Asset-Aware MCP 以 DDD 方向維持邊界：
 | Domain | `src/domain` | 實體、value objects、citation、section tree、reading order、segmentation、PDF preflight schema、ETL profile、table model |
 | Application | `src/application` | use case 編排：document/docx/table/job/knowledge/section services、PDF preflight、agent asset bundle、citation artifact、DFM integrity、ETL profile detect |
 | Infrastructure | `src/infrastructure` | 外部 adapter：PyMuPDF/PyMuPDF4LLM/Docling、process-isolated PDF preflight、DOCX XML、LibreOffice、LightRAG、OCR、file/job store、layout visualizer；MinerU/Marker adapter 保留但依賴處於 security hold |
-| Presentation | `src/presentation` | 官方 MCP Python SDK 2 `MCPServer`、tools/resources、dependency composition、runtime Context progress/log、worker entrypoint |
+| Presentation | `src/presentation` | 官方 MCP Python SDK 2 `MCPServer`、tools/resources、dependency composition、runtime Context progress、stderr Python logging、worker entrypoint |
 | VSIX | `vscode-extension/src` | VS Code provider、settings panel、tree views、MCP config merge、assistant assets sync |
 
 主要 import 規則：`Presentation -> Application -> Domain <- Infrastructure`。Infrastructure 只可透過明確 application port 反向接入，例如 `src.application.worker_runner`。
@@ -26,9 +24,10 @@ Asset-Aware MCP 以 DDD 方向維持邊界：
   不受支援，也沒有 `mcp.server.fastmcp` fallback。
 - `AssetAwareMCPServer` 只透過 SDK 公開的 `add_tool`、`remove_tool`、
   `list_tools` API 追蹤與裁切 registry，不依賴 private tool-manager internals。
-- Tool 的 `Context` 參數由 MCPServer 在 request runtime 注入，用於 bounded
-  progress/log；它不是 client input。回歸測試會檢查所有公開 input schema 都沒有
-  `ctx`，避免 framework-only 欄位洩漏給 agent。
+- Tool 的 `Context` 參數由 MCPServer 在 request runtime 注入，只用於 bounded
+  progress；它不是 client input。Operational logs 使用 Python logging 寫到
+  stderr，不呼叫 deprecated MCP protocol logging API。回歸測試會檢查所有公開
+  input schema 都沒有 `ctx`，避免 framework-only 欄位洩漏給 agent。
 - `balanced`、`compact`、`legacy` 是同一個 SDK 2 server 上的 tool UX policy。
   `legacy` 只保留舊 direct tool 名稱與 allow-list，不代表 SDK v1 protocol 相容。
 

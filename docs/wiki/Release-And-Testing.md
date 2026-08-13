@@ -25,6 +25,7 @@ uv run ruff format --check .
 uv run mypy src --ignore-missing-imports
 uv run bandit -q -r src -x tests --severity-level medium
 uv run pytest
+python3 scripts/build_docs_site.py --check
 uv lock --check
 uvx --from uv==0.12.3 uv audit --preview-features audit-command --frozen --python-version 3.10
 ```
@@ -50,6 +51,7 @@ Before PyPI publish, runtime is verified from the built wheel with
 ```bash
 python scripts/audit_release_artifacts.py
 python scripts/smoke_built_wheel.py
+python scripts/build_docs_site.py --check
 python scripts/audit_release_harness.py
 ./scripts/release.sh
 ```
@@ -57,6 +59,7 @@ python scripts/audit_release_harness.py
 Release workflow 會檢查：
 
 - Python package version consistency。
+- generated docs site 與 canonical wiki source exact sync。
 - wheel/sdist required runtime files。
 - VSIX package contents。
 - retired external harness 是否被誤打包。

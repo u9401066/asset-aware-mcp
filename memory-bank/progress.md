@@ -1,5 +1,38 @@
 # Progress (Updated: 2026-08-13)
 
+## v1.0.1 validation in progress
+
+- Implemented the bounded streaming MessagePack PDF worker result channel and
+  comprehensive fork/spawn, large-binary, timeout, crash, malformed-envelope,
+  permission and cleanup regressions. Focused PDF/document tests, Ruff, MyPy,
+  Bandit, frozen lock and universal dependency audit are green.
+- Implemented MCP stderr logging, empty/blank ingest rejection and the managed
+  dotenv-disable switch. The integrated Python run reached 1,138 passed and 30
+  intentional optional-backend skips; its sole generated-docs version drift was
+  rebuilt and the 16-file docs contract then passed.
+- Added a true-stdio PDF asset regression with source/citation/media/Foam/hash
+  integrity and deterministic repeat export. The final 15-page Attention paper
+  run completed in 3.286 seconds: 27 text, six table and six figure assets,
+  435 verified spans, 39 deterministic bundle records and 39 Foam notes; source
+  bytes/mtime and protocol cleanliness were preserved.
+- Codex CLI 0.147.0 is installed for parser/runtime verification. The VSIX
+  semantic TOML parser bundle passed packaged activation smoke; final version
+  alignment, local Codex config migration and `v1.0.1` release remain pending.
+- Independent VSIX review found and fixed destructive Codex policy merging:
+  extension-owned launch/env fields are rebuilt, while primary approval/future
+  keys and nested `tools.*` tables are byte-preserved through update, opt-out
+  and re-enable. Opt-out uses a non-executable `enabled=false` transport shell
+  only when policy remains. Focused tests, all 185 VSIX tests, real Codex CLI
+  parsing in all three states, npm audit, package audit and release harness pass.
+- Closed the remaining global-config trust boundary: untrusted/lookalike
+  workspaces cannot write Codex, Cline or Copilot settings, and production
+  external-consumer launches are pinned to the extension version with isolated
+  globalStorage data/cache instead of local source or workspace `.env`.
+- Rebuilt the website and docs reader around the Evidence Rail contract,
+  exact 30-tool explorer, install and development/release guidance, and GitHub
+  navigation. Desktop and 390px Playwright screenshots, route/search/language/
+  copy/mobile-menu/sidebar interactions and console/overflow assertions pass.
+
 ## Done
 
 - 將 stale local checkout 快進至已發布 `v0.9.0` 基線；原始 dirty

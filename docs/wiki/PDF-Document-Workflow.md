@@ -1,7 +1,5 @@
 # PDF Document Workflow
 
-![PDF document workflow](assets/pdf-document-workflow.jpg)
-
 ## 目的
 
 PDF pipeline 將原始 PDF 轉成可檢索、可視覺化、可引用的文件 artifacts。它不是單純抽文字，而是同時保存 document identity、assets、section structure、layout locator、reading order、line/char/byte spans 與 citation hash。

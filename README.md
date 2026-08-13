@@ -7,14 +7,42 @@
 
 🌐 [繁體中文](README.zh-TW.md) · [Docs Site](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+## v1.0.1 reliability refresh
+
+- Large PDF text/table/figure results use a private, atomic, size-bounded
+  MessagePack handoff instead of a multiprocessing pipe or executable pickle.
+  This keeps multi-megabyte raster assets moving without pipe backpressure and
+  fails closed on partial, oversized, malformed, or crashed worker output.
+  Worker timeout environment values must be finite; `NaN`/infinities fall back
+  to safe defaults. Finite values `<=0` retain the historical explicit direct
+  mode for compatibility and should not be used by managed production launchers.
+- Codex-managed MCP configuration is validated as real TOML, preserves custom
+  and unrelated tables, uses 180/900-second startup/tool timeouts, and never
+  writes credential values. Its isolated working directory plus
+  `ASSET_AWARE_DISABLE_DOTENV=true` prevents a managed server from silently
+  reloading an unrelated workspace `.env`.
+- Global Codex/Cline/Copilot config writes are workspace-trust gated and always
+  use the exact published extension version plus isolated global storage. A
+  lookalike repository cannot persist its local Python or `.env` values into a
+  global agent launcher.
+- MCP SDK 2 operational logs stay on stderr, empty/blank ingest requests are
+  rejected before job persistence, and a true-stdio regression now verifies a
+  large figure, a table, citation-ready evidence, complete bundle hashes, Foam
+  notes, deterministic re-export, and an unchanged source PDF.
+- GitHub Pages now provides a bilingual responsive Evidence Rail workflow,
+  exact 30-tool explorer, install/development guidance, generated docs reader,
+  and direct GitHub/Release/Issue links instead of stale raster architecture
+  screenshots.
+
 ## 🎯 Why Asset-Aware MCP?
 
-**AI cannot directly read image files on your computer.** This is a common misconception.
+**A server-local image path is not a portable multimodal payload.** Whether an agent can
+dereference that path depends on its client, sandbox, and filesystem permissions.
 
 | Method | Can AI analyze image content? | Description |
 |------|:-------------------:|------|
-| ❌ Provide PNG path | No | AI cannot access the local file system |
-| ✅ **Asset-Aware MCP** | **Yes** | Retrieves Base64 via MCP, allowing AI vision to understand directly |
+| ⚠️ Provide only a PNG path | Client-dependent | The client may be remote or sandboxed and cannot safely assume the server path exists locally |
+| ✅ **Asset-Aware MCP** | **Yes, for compatible multimodal clients** | Fetches bounded image bytes through MCP so the client can pass real image content to its vision model |
 
 ### Real-world Effect
 
@@ -43,7 +71,7 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
   - **PyMuPDF4LLM** (`[pdf-plus]`) - Drop-in layout-aware upgrade, no GPU
   - **Docling** (`[docling]`) - MIT-licensed layout+table+formula+chart engine; bridges through an isolated `.venv-docling` interpreter when the main environment can't install it directly (see [docs/docling-setup.md](docs/docling-setup.md))
   - **MinerU** - Adapter retained, but the packaged extra is on security hold while MinerU pins a vulnerable `transformers<5` chain
-  - **Marker** (`use_marker=True`) - High-precision structured parsing code path retained, but packaged runtime remains on security hold until upstream `marker-pdf` supports patched Pillow
+  - **Marker** - Adapter retained for evaluation, but production selection fails closed while upstream `marker-pdf` conflicts with the patched Pillow floor. The legacy `use_marker` parameter now means “prefer the configured structured extractor”; it does not bypass this hold.
 - 🧩 **Unified Segmentation Export** - Normalized `segmentation.json` merges manifest, blocks, reading order, and persisted markdown line spans for downstream tools and extensions.
 - 🩺 **Safe PDF Preflight Router** - `document(op="preflight")` classifies each page as native, sparse, image, scanned, or hybrid; returns 1-based top-left locators, source SHA-256, OCR reasons, and a bounded extraction-engine recommendation from a process-isolated inspector.
 - 📦 **Reusable Agent Asset Bundles** - `document(op="export_assets")` writes deterministic `manifest.json`, `assets.jsonl`, copied media, and a portable Foam `index.md`/`notes/**` subtree while preserving stable IDs, hashes, locators, and citation refs.
@@ -62,13 +90,9 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 - 📊 **A2T (Anything to Table)** - 7 operation-based tools for building professional tables from **any source** (PDF assets, Knowledge Graph, URLs, user input). Features: stable row IDs, row search/filter/paging, citation coverage, artifact-only large-table render, skipped-large-table UX, **Citations** (AssetRef), **Audit Trail**, **Schema Evolution**, **Templates**, **Drafting**, and **Token-efficient resumption**.
 - 🖥️ **VS Code Management Extension** - Graphical interface for monitoring server status, ingested documents, document artifacts, citation spans, and **A2T tables/drafts** with one-click Excel export.
 - 🔌 **MCP SDK 2 Server** - Uses the official Python SDK `MCPServer` API, runtime-injected context, and v2 clients. MCP SDK v1 is intentionally unsupported.
-- 🏥 **Medical Research Focus** - Optimized for medical literature, supporting Base64 image transmission for Vision AI analysis.
+- 🔬 **Research-ready, domain-neutral assets** - Works with scholarly, technical, policy, and operational documents; bounded image bytes let compatible multimodal clients analyze figures instead of relying on server-local paths.
 
 ## 🏗️ Architecture
-
-<p align="center">
-  <img src="docs/images/architecture-overview.jpg" alt="Asset-Aware MCP Architecture" width="700">
-</p>
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -123,23 +147,12 @@ asset-aware-mcp/
 └── pyproject.toml           # uv Project Config
 ```
 
-## 📐 Architecture Diagrams
+## 📐 Architecture and workflows
 
-Visual overview for the project. All diagrams use consistent GitHub README style.
-
-| Diagram | Description |
-|---------|-------------|
-| [01 — System Architecture](docs/diagrams/01-system-architecture.jpg) | Full stack: Telegram → Gateway → MCP Adapter → 3 MCP servers → Ollama |
-| [02 — Data Layout](docs/diagrams/02-data-layout.jpg) | 30 balanced public tools + 13 resources; legacy direct tool compatibility remains available |
-| [03 — PDF Ingestion Pipeline](docs/diagrams/03-pdf-ingestion-pipeline.jpg) | 7-stage flow from PDF upload to knowledge graph |
-| [04 — DOCX Bidirectional Edit](docs/diagrams/04-docx-edit-pipeline.jpg) | DOCX ingest → TableContext edit → round-trip save workflow |
-| [05 — Knowledge Graph Search](docs/diagrams/05-knowledge-graph-search.jpg) | Cross-document search with 3 parallel query paths |
-| [06 — Installation Steps](docs/diagrams/06-installation-steps.jpg) | 7-step installation from clone to verification |
-| [07 — PDF ETL Pipeline](docs/diagrams/07-pdf-etl-pipeline.jpg) | PyMuPDF default path + Marker security-hold diagnostics |
-| [08 — KG Architecture](docs/diagrams/08-knowledge-graph-architecture.jpg) | lightrag-hku 3-layer KG architecture |
-| [09 — Agent Harness Concept](docs/diagrams/09-agent-harness-concept.jpg) | Assistant harness model for stateless agents |
-
-> 💡 All generation prompts are saved in [docs/diagrams/ALL-PROMPTS.md](docs/diagrams/ALL-PROMPTS.md) for style consistency and regeneration.
+The maintained, versioned references are the [documentation site](https://u9401066.github.io/asset-aware-mcp/),
+[architecture guide](docs/wiki/Architecture.md), [PDF workflow](docs/wiki/PDF-Document-Workflow.md),
+[MCP tool catalog](docs/wiki/MCP-Tools.md), and [release checklist](docs/wiki/Release-And-Testing.md).
+They are generated and checked with the implementation so tool counts, engine holds, and release behavior do not drift inside obsolete screenshots.
 
 ## 🚀 Quick Start
 
@@ -163,8 +176,8 @@ Runtime note:
 The VS Code extension prefers a managed Python 3.11 runtime when launching the MCP server via version-pinned `uv tool run`, with Python 3.10 fallback for older machines. This avoids native package builds on end-user machines, especially macOS systems without Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
 
 Installation scope note:
-- The VS Code extension installs once per user (global). MCP launch env defaults `DATA_DIR` to workspace `./data` and `UV_CACHE_DIR` to `DATA_DIR/.uv-cache`; Prepare Server Runtime warms a workspace `.uv-cache`, falling back to extension global storage only when no workspace is open.
-- Runtime data stays with your repo: `.env` and `assetAwareMcp.dataDir` default to `./data`, so ingested assets and the uv cache used by the launched server remain scoped to the current workspace.
+- The VS Code extension installs once per user. In a trusted workspace, the native VS Code MCP provider may use workspace-scoped `DATA_DIR`, cache, settings, and `.env`; local source is accepted only in Extension Development/Test mode (or a future explicit opt-in).
+- Global Codex and Cline entries always launch `asset-aware-mcp==<extension-version>` from extension global storage. They do not inherit workspace-local source, workspace-scoped settings, or repository `.env` values. Restricted Mode skips external config writes and assistant-asset sync entirely.
 
 Engine selection note:
 `ETL_ENGINE` picks the extraction backend (default `pymupdf`). The active packaged structured engines (`pymupdf4llm`, `docling`) lazy-load and gracefully fall back to PyMuPDF when their extra is not installed. Marker remains on hold because `marker-pdf` requires `Pillow<11`; MinerU is also on hold because MinerU 3.4.4 pins `transformers<5` while current security fixes require `transformers>=5.5`. Both adapters remain in-tree, but this package will not install a known-vulnerable dependency chain. Use `document(op="preflight", pdf_path="...")` to choose between fast native extraction, OCR, and Docling before ingest.

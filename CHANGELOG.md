@@ -7,6 +7,96 @@
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-13
+
+### Changed
+
+- Rebuilt the GitHub Pages product site as a bilingual, responsive Evidence
+  Rail experience with a PDF/DOCX workflow map, reusable-asset capabilities,
+  a searchable explorer for the exact 30-tool balanced surface, install paths,
+  release/developer guardrails, and a generated documentation reader. Runtime
+  version/tool/resource metrics come from one generated contract, every major
+  section links back to GitHub, and retired raster diagrams containing stale
+  metrics or private development topology are no longer published.
+- Website routing and keyboard behavior now have real Chromium regressions:
+  internal reader links stay in the same tab, outline links retain the reader
+  route, hidden mobile navigation is inert, focus is trapped/restored in the
+  reader drawer, and English reader payloads are genuinely English. Automated
+  desktop/mobile landing and reader scans report zero WCAG A/AA violations.
+- Codex extension-managed MCP entries now set `enabled = true`, a 180-second
+  startup timeout, and a 900-second tool timeout. The machine-scoped
+  `assetAwareMcp.manageCodexConfig` setting defaults to enabled; disabling it
+  removes only extension-owned launch/env fields and prevents recreation. A
+  user-owned same-name entry is untouched; policy fields and nested `tools.*`
+  tables attached to the managed server are byte-preserved in a valid,
+  `enabled=false` dormant entry so opt-out cannot corrupt Codex startup or
+  discard approval policy.
+- Actual updates to an existing Codex config now retain the prior inode as a
+  uniquely named, mode-`0600` `config.toml.concurrent-backup.*` recovery
+  snapshot. This preserves late writes through file descriptors opened before
+  the atomic replacement; fresh creation and idempotent syncs do not create a
+  snapshot. Inspect and reconcile it before manual removal.
+- MCP SDK 2 operational messages now use standard Python logging on stderr
+  instead of the deprecated protocol logging API, while MCP-native progress
+  notifications continue to use the request `Context`.
+- Public MCP evidence responses now distinguish bounded
+  `asset-ref-preview-v1` payloads from canonical persisted AssetRefs. Long
+  quotes remain exact in citation/agent-asset bundles, while inline find,
+  claim, citation and table-discovery responses stay within the configured
+  SDK `TextContent` budget and cannot masquerade as verifiable references.
+
+### Security
+
+- Opening an untrusted or lookalike workspace can no longer rewrite global
+  Codex, Cline or Copilot launch settings. External-consumer entries always use
+  the exact published extension version plus global-storage cwd/data/cache and
+  never import workspace `.env` values; local-source execution is limited to a
+  trusted Development/Test extension context or an explicit future opt-in.
+- Copilot workspace MCP settings now reject array/null roots and malformed
+  nested server metadata without rewriting the file. The original bytes receive
+  an `.invalid.*.bak` recovery copy, while valid custom remote-server metadata
+  remains untouched.
+- The VS Code extension no longer serializes credential, token, password,
+  proxy, certificate, or other secret-like values from repository `.env` files
+  into `~/.codex/config.toml`. Managed entries may list only the required names
+  in `env_vars`; Codex forwards a value only when that variable was exported to
+  the Codex client process before launch. The extension does not copy a
+  workspace `.env` or VS Code secret value into Codex's environment. Only
+  explicitly allowlisted non-secret operational metadata may remain inline.
+
+### Fixed
+
+- Canonical citation verification now rejects missing/truncated quotes and
+  boolean-for-integer locator aliases; page, bbox, line, char and byte values
+  must retain their exact JSON types and values. Long `discover_sources`
+  results use the same preview contract as other public evidence tools instead
+  of constructing a huge canonical ref and truncating it into invalid JSON.
+- Table and figure AssetRefs now fail closed when source revision, locator
+  version/hash, page, block/line locator, document identity, or asset identity
+  is absent or type-confused; noncanonical previews can never verify.
+- The redesigned documentation reader wraps wide Markdown tables in a
+  keyboard-focusable horizontal scroller, and its mobile header no longer lets
+  the language/GitHub controls intercept the navigation-menu button.
+- PDF text extraction now enforces one absolute deadline across rich extraction
+  and its lightweight fallback. A timed-out rich worker fails closed; an early
+  rich error may use only the remaining budget in a second isolated worker, so
+  neither `pdftotext` nor direct PyMuPDF can outlive the advertised timeout.
+- Process-isolated PyMuPDF workers now publish large results through a bounded,
+  streaming MessagePack envelope in a private atomic file. This avoids OS-pipe
+  backpressure and executable deserialization; text, table, image, caption,
+  safety-audit, and native-structure transfers fail closed on partial,
+  oversized, malformed, or crashed-worker output without replacing a caller's
+  process-global timer.
+- PDF worker timeout environment values now use one finite-safe parser:
+  `NaN`/infinities fall back to finite defaults instead of disabling the
+  deadline. Finite values `<=0` retain the historical explicit direct-mode
+  compatibility opt-out and remain unsuitable for managed production launchers.
+- The real MCP SDK 2 PDF-to-asset stdio regression now runs in ordinary CI as
+  well as release tests, with an explicit 180-second pytest timeout and a
+  release-harness guard that prevents the gate from drifting out of CI.
+- Empty ingest batches and blank input paths now fail validation before a job
+  is persisted, instead of reporting a misleading completed `0/0` job.
+
 ## [1.0.0] - 2026-08-13
 
 ### Added

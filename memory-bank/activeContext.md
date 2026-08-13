@@ -1,5 +1,45 @@
 # Active Context
 
+## 2026-08-13 - v1.0.1 large-PDF and Codex hardening
+
+- Release scope is a non-breaking `1.0.1` reliability/security patch on top of
+  the public `1.0.0` MCP SDK 2 release. It is driven by production Codex install
+  and real-PDF asset-decomposition testing rather than a new public tool surface.
+- Process-isolated PyMuPDF workers no longer send multi-megabyte results through
+  a multiprocessing pipe or deserialize pickle. A private 0700 directory and
+  0600 atomic file carry a bounded streaming MessagePack envelope; malformed,
+  partial, oversized, crashed-worker and source-change cases fail closed.
+  Text extraction uses one absolute deadline: a rich-worker timeout fails
+  closed, while an early worker error may run the fast fallback only in a
+  second isolated process with the remaining budget.
+- MCP SDK 2 request progress still uses injected `Context`, while operational
+  logs use Python logging on stderr. Empty/blank ingest inputs are rejected
+  before any job is persisted, and managed launches can disable implicit cwd
+  `.env` loading with `ASSET_AWARE_DISABLE_DOTENV=true`.
+- Codex config work is hardened around semantic TOML validation, marker-only
+  field-level ownership, custom/unrelated table preservation, user primary
+  policy and nested `tools.*` byte preservation, 180/900-second timeouts,
+  isolated `cwd`, least-privilege environment forwarding, parser-valid opt-out
+  independent of uv readiness, and fail-closed symlink handling.
+- A true MCP SDK 2 stdio regression creates a real PDF with text, table and a
+  raster larger than 512 KiB, then validates preflight, async ingest,
+  citation-ready records, media/artifact hashes, Foam notes, deterministic
+  re-export, clean protocol output, and unchanged source bytes/mtime.
+- A real 15-page paper exposed long evidence previews whose hash/ranges still
+  described the full span. Persisted AssetRefs now retain exact quote/hash/range,
+  while public MCP surfaces return bounded non-canonical previews. The fresh
+  SDK 2 stdio rerun completed in 3.286 seconds with 39 asset records, 47
+  artifacts, 39 Foam notes, six media files and all 435 evidence refs verified;
+  the source hash, size and mtime stayed unchanged.
+- Global Codex/Cline/Copilot configuration is now workspace-trust gated.
+  Production entries use the exact extension package version and globalStorage
+  only; a lookalike workspace and its `.env` cannot inject local Python or
+  launch metadata into global agent settings.
+- GitHub Pages is being replaced with a bilingual responsive product landing,
+  an exact 30-tool explorer and a generated docs reader. Retired JPGs containing
+  v0.6-era metrics, Marker claims, private IPs or local paths were removed;
+  Playwright desktop/mobile visual and interaction QA is green before release.
+
 ## 2026-08-13 - MCP v2 / agent asset / Foam wiki major refresh
 
 - Goal: converge all safe branches and PRs into the default branch, migrate to

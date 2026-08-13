@@ -231,7 +231,6 @@ def test_overview_docs_show_current_project_version() -> None:
         WIKI_DIR / "Home.md",
         SITE_CONTENT_DIR / "overview.md",
         SITE_CONTENT_DIR / "overview-zh.md",
-        ROOT / "scripts" / "build_docs_site.py",
     ]
 
     for path in paths:
@@ -256,6 +255,153 @@ def test_docs_site_payload_exposes_current_endpoint_stats() -> None:
     assert f'"tools": {stats["tools"]}' in content_js
     assert f'"resources": {stats["resources"]}' in content_js
     assert f'"endpoints": {stats["endpoints"]}' in content_js
+
+
+def test_landing_tool_explorer_matches_balanced_surface() -> None:
+    site_js = (ROOT / "docs" / "site.js").read_text(encoding="utf-8")
+    explorer_tools = re.findall(r'defineTool\("([a-z_]+)"', site_js)
+
+    assert len(explorer_tools) == len(set(explorer_tools))
+    assert set(explorer_tools) == BALANCED_TOOLS
+
+
+def test_landing_tool_explorer_inputs_and_examples_match_real_signatures() -> None:
+    site_js = (ROOT / "docs" / "site.js").read_text(encoding="utf-8")
+    definitions = re.findall(
+        r'defineTool\("(?P<name>[a-z_]+)",\s*"[^"]+",\s*"[^"]*",'
+        r'\s*"(?P<inputs>[^"]*)",\s*"[^"]*",\s*(?P<quote>[\'\"])(?P<example>.*?)'
+        r'(?P=quote),\s*"[^"]+"\)',
+        site_js,
+    )
+    signatures = _tool_argument_names_by_name()
+    ignored_input_tokens = {"none"}
+
+    assert {name for name, *_ in definitions} == BALANCED_TOOLS
+    for name, inputs, _quote, example in definitions:
+        input_names = {
+            token.strip()
+            for token in inputs.split(",")
+            if token.strip() and token.strip() not in ignored_input_tokens
+        }
+        assert input_names <= signatures[name], (
+            name,
+            sorted(input_names - signatures[name]),
+        )
+        example_kwargs = set(re.findall(r"\b([a-z_][a-z0-9_]*)\s*=", example))
+        assert example_kwargs <= signatures[name], (
+            name,
+            sorted(example_kwargs - signatures[name]),
+        )
+    assert (
+        'table_draft(operation="create", title="Outcome review", intent="comparison")'
+        in site_js
+    )
+    assert 'intent="Compare outcomes"' not in site_js
+
+
+def test_reader_language_payload_and_focus_contracts_are_explicit() -> None:
+    index_html = (ROOT / "docs" / "index.html").read_text(encoding="utf-8")
+    site_js = (ROOT / "docs" / "site.js").read_text(encoding="utf-8")
+    site_css = (ROOT / "docs" / "site.css").read_text(encoding="utf-8")
+    reader_slugs = {
+        page.slug
+        for page in build_docs_site.PAGES
+        if page.slug not in {"overview", "overview-zh"}
+    }
+    english_slugs_match = re.search(
+        r"const ENGLISH_PAGE_CONTENT = Object\.freeze\(\{(?P<body>.*?)\n\}\);",
+        site_js,
+        re.S,
+    )
+
+    assert english_slugs_match is not None
+    english_slugs = set(
+        re.findall(
+            r'^\s*(?:"([a-z0-9-]+)"|([a-z0-9-]+)):',
+            english_slugs_match.group("body"),
+            re.M,
+        )
+    )
+    assert {left or right for left, right in english_slugs} == reader_slugs
+    assert 'activeLang === "en"' in site_js
+    assert 'ENGLISH_PAGE_CONTENT[page.slug] || ""' in site_js
+    assert 'id="main-content" tabindex="-1"' in index_html
+    assert 'skipLink?.addEventListener("click"' in site_js
+    assert "event.preventDefault()" in site_js
+    assert "mainContent?.focus({ preventScroll: true })" in site_js
+    assert (
+        'toolCategories.querySelector(`[data-category="${category}"]`)?.focus()'
+        in site_js
+    )
+    assert 'sidebar?.toggleAttribute("inert", hidden)' in site_js
+    assert "navClose?.focus()" in site_js
+    assert "closeSidebar(true)" in site_js
+    assert 'mobileReaderSidebar.addEventListener("change"' in site_js
+    assert (
+        'const mobileReaderSidebar = window.matchMedia("(max-width: 920px)")' in site_js
+    )
+    assert 'className = "outline-panel"' in site_js
+    assert 'className = "outline-nav"' in site_js
+    assert '"outline-link h3"' in site_js
+    assert "if (firstHeading)" in site_js
+    assert ".outline-link.h3" in site_css
+
+
+def test_reader_outline_preserves_the_hash_route() -> None:
+    site_js = (ROOT / "docs" / "site.js").read_text(encoding="utf-8")
+    outline_body = re.search(
+        r"function renderOutline\(\) \{(?P<body>.*?)\n\}",
+        site_js,
+        re.S,
+    )
+
+    assert outline_body is not None
+    body = outline_body.group("body")
+    assert 'link.href = "#" + heading.id' in body
+    assert 'link.addEventListener("click"' in body
+    assert "event.preventDefault()" in body
+    assert 'heading.scrollIntoView({ block: "start" })' in body
+    assert "heading.focus({ preventScroll: true })" in body
+
+
+def test_landing_fragments_do_not_enter_the_css_selector_parser() -> None:
+    site_js = (ROOT / "docs" / "site.js").read_text(encoding="utf-8")
+    landing_body = re.search(
+        r"function renderLanding\(\) \{(?P<body>.*?)\n\}",
+        site_js,
+        re.S,
+    )
+
+    assert landing_body is not None
+    body = landing_body.group("body")
+    assert "decodeURIComponent(hash.slice(1))" in body
+    assert "document.getElementById" in body
+    assert "document.querySelector(hash)" not in body
+    assert "try {" in body
+    assert "catch (_error)" in body
+
+
+def test_reader_internal_links_stay_in_the_current_tab() -> None:
+    site_js = (ROOT / "docs" / "site.js").read_text(encoding="utf-8")
+
+    assert 'const sourceHref = link.getAttribute("href") || ""' in site_js
+    assert "/^https?:\\/\\//i.test(sourceHref)" in site_js
+    assert "/^https?:/i.test(link.href)" not in site_js
+
+
+def test_closed_mobile_product_menu_is_not_keyboard_reachable() -> None:
+    site_js = (ROOT / "docs" / "site.js").read_text(encoding="utf-8")
+    site_css = (ROOT / "docs" / "site.css").read_text(encoding="utf-8")
+
+    assert 'window.matchMedia("(max-width: 920px)")' in site_js
+    assert 'siteNavigation?.toggleAttribute("inert", hidden)' in site_js
+    assert 'siteNavigation?.setAttribute("aria-hidden", "true")' in site_js
+    assert 'mobileSiteMenu.addEventListener("change"' in site_js
+    assert "visibility: hidden" in site_css
+    assert "pointer-events: none" in site_css
+    assert "body.site-menu-open .site-navigation" in site_css
+    assert "visibility: visible" in site_css
+    assert "pointer-events: auto" in site_css
 
 
 def test_docs_shell_uses_current_metrics_and_has_no_known_text_corruption() -> None:
@@ -284,27 +430,59 @@ def test_docs_shell_uses_current_metrics_and_has_no_known_text_corruption() -> N
     index_html = (ROOT / "docs" / "index.html").read_text(encoding="utf-8")
     site_js = (ROOT / "docs" / "site.js").read_text(encoding="utf-8")
     site_css = (ROOT / "docs" / "site.css").read_text(encoding="utf-8")
-    assert '<dt id="tool-metric-value">30</dt>' in index_html
-    assert '<dt id="endpoint-metric-value">43</dt>' in index_html
-    assert '<a class="skip-link" href="#doc-content">' in index_html
+    assert 'id="hero-tool-count">30<' in index_html
+    assert 'id="explorer-tool-count">30<' in index_html
+    assert '<a class="skip-link" href="#main-content">' in index_html
+    assert 'id="landing"' in index_html
+    assert 'id="docs-reader"' in index_html
+    assert 'id="tool-explorer"' in index_html
+    assert 'id="tool-category-list"' in index_html
+    assert 'id="tool-list"' in index_html
+    assert 'id="tool-detail"' in index_html
     assert 'id="nav-close"' in index_html
     assert 'id="sidebar-backdrop"' in index_html
     assert "<noscript>" in index_html
-    assert "20260517-v070-release" in index_html
-    assert "KG / RAG" in index_html
-    assert f'version: "{version}"' in site_js
+    assert "20260813-v101-redesign" in index_html
+    for external in [
+        "https://github.com/u9401066/asset-aware-mcp",
+        "https://github.com/u9401066/asset-aware-mcp/releases",
+        "https://github.com/u9401066/asset-aware-mcp/issues",
+        "https://pypi.org/project/asset-aware-mcp/",
+        "https://marketplace.visualstudio.com/items?itemName=u9401066.asset-aware-mcp",
+    ]:
+        assert external in index_html
+    assert version in (ROOT / "docs" / "site-content.js").read_text(encoding="utf-8")
+    assert "DOC_STATS.version" in site_js
+    assert "DOC_STATS.tools" in site_js
+    assert _project_version() not in index_html
     assert "const markdownRenderer = window.marked" in site_js
     assert 'return "zh";' in site_js
-    assert "removeRedundantPageHeading(isOverview)" in site_js
+    assert "renderTool" in site_js
+    assert "renderDocumentation" in site_js
+    assert "function sanitizeRenderedHtml(html)" in site_js
+    assert "sanitizeRenderedHtml(markdownRenderer.parse(markdown))" in site_js
+    assert 'name.startsWith("on")' in site_js
+    assert "/^(?:javascript|vbscript|data):/i" in site_js
+    assert 'docContent.querySelectorAll("table")' in site_js
+    assert 'wrapper.className = "table-scroll"' in site_js
     assert "sidebarBackdrop?.addEventListener" in site_js
-    assert 'classList.toggle("overview-doc-page", isOverview)' in site_js
-    assert 'summaryBand.setAttribute("aria-hidden"' in site_js
-    assert "body.nav-open" in site_css
-    assert ".sidebar-close" in site_css
-    assert ".nav-result-count" in site_css
-    assert "max-height: min(58vh, 520px)" in site_css
-    assert "body.overview-doc-page .summary-band:not([hidden])" in site_css
-    assert "body.overview-doc-page .status-strip:not([hidden])" in site_css
+    assert 'id="development"' in index_html
+    assert "asset-ref-preview-v1" in index_html
+    assert "marked@15.0.12/marked.min.js" in index_html
+    assert "mermaid@11.16.1/dist/mermaid.min.js" in index_html
+    assert index_html.count('integrity="sha384-') == 2
+    assert "body.nav-open" in site_css or "body.reader-nav-open" in site_css
+    for selector in [
+        ".site-header",
+        ".hero-section",
+        ".evidence-board",
+        ".tool-explorer-shell",
+        ".docs-reader",
+        ".reader-sidebar",
+    ]:
+        assert selector in site_css
+    assert "gradient" not in site_css
+    assert "family=Noto+Sans+TC" in index_html
 
 
 def test_homepage_is_chapter_oriented_and_kept_short() -> None:

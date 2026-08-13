@@ -2,8 +2,6 @@
 
 # Background Jobs
 
-![Background job runtime](wiki/assets/background-jobs.jpg)
-
 ## 為什麼需要 jobs
 
 PDF ingest、configured structured parse、OCR、LightRAG indexing 與文件格式 conversion 都可能超過 MCP client 的 request budget。Asset-Aware MCP 會把這些長任務放入 background job，讓 stdio client 仍能查詢狀態或取消任務。`convert_pdf_to_docx`、`convert_pdf_to_pptx`、DOCX/PDF/DOC/ODT conversion 與 Markdown export 現在預設 `async_mode=true`，會建立 conversion job；需要舊式同步回傳時可明確設 `async_mode=false`。

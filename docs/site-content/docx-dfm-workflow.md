@@ -2,8 +2,6 @@
 
 # DOCX DFM Workflow
 
-![DOCX and DFM round-trip workflow](wiki/assets/docx-dfm-workflow.jpg)
-
 ## 核心概念
 
 DFM 是 Docx-Flavored Markdown，用於讓 LLM 或 agent 編輯 Word 文件時仍能保留 block identity、格式 metadata、表格結構與保真寫回能力。

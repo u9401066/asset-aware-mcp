@@ -1,7 +1,5 @@
 # A2T Tables
 
-![A2T table workflow](assets/a2t-table-workflow.jpg)
-
 ## 核心模型
 
 A2T 是 Anything to Table。它用 `TableContext` 表示可由文件、DOCX 表格、圖表或 LLM extraction 建立的結構化表格，並讓每個 cell 可以帶來源引用。
