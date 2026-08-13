@@ -31,7 +31,7 @@
   focused gate：`32 passed`。Ruff、format、MyPy、Bandit、uv/npm audits、workflow
   security、docs/harness、git diff gates 全部通過。
 - 重建 wheel/sdist/VSIX 並完成 clean Python 3.10 wheel smoke、MCP 2.0 stdio、
-  153 VSIX tests、artifact audit、VS Code 1.133.0 fresh/update activation smoke。
+  154 VSIX tests、artifact audit、VS Code 1.133.0 fresh/update activation smoke。
 - Docker `1.0.0` image 重建成功；容器內 doctor/list-tools/SDK 2 schema/stdio
   全綠，30 tools 且 `ctx` leakage 為零。
 - 已建立並推送三個分段提交（core、release、docs），將 GitHub default branch、
@@ -39,15 +39,28 @@
   僅保留單一 `main` branch，沒有 open PR。
 - 第一輪 `main` Actions 除 Windows VSIX smoke 外全綠；其根因是 npm script
   內單引號 glob 被 Windows 視為字面檔名，現已改為跨平台雙引號並加入契約測試。
+- Replacement `main@183bbeb` CI、Windows、fail-closed `📋 Test Summary` 與
+  `main:/docs` Pages build/deployment 全綠；線上網站已實測回傳 1.0.0、MCP 2、
+  `export_assets` 與 Foam 內容。
+- `main` 現受 strict aggregate check、至少 1 個 approval、stale review dismissal、
+  conversation resolution、linear history、禁止 force-push/deletion 等 branch
+  protection 保護。
+- Annotated `v1.0.0` 已由 tag-first harness 建立並推送；Release workflow 的 tests、
+  三平台 VSIX smoke、artifact/Docker preflight、PyPI、Marketplace、GitHub Release
+  共 8 jobs 全綠。PyPI wheel/sdist 與公開下載 hashes 符合本機 build，Marketplace
+  CDN 與 GitHub Release VSIX bytes/hash 一致。
+- GitHub Wiki 已從舊 0.6.28 同步至 v1（19 files changed、5 new、0 deleted），
+  並先建立 `pre-v1.0.0-sync-790a337` recovery tag；Home、LLM Wiki 與圖片 URL
+  均回 HTTP 200。歷史 `v0.2.0` draft 因仍有對應 tag 與唯一 VSIX 而保留。
 
 ## Doing
 
-- [ ] Monitor the replacement `main` CI plus the first Pages build from `main`.
+- [x] v1.0.0 refresh、convergence、publication 與 post-release verification 完成。
 
 
 ## Next
 
-- Publish the annotated `v1.0.0` tag only after the replacement `main` CI is green.
-- Verify the GitHub release, PyPI package and Marketplace VSIX from their
-  published artifacts; add branch protection/rules after the first green main
-  run establishes valid required-check names.
+- Let the scheduled uv/npm/Actions dependency workflows and Dependabot maintain
+  the refreshed security floors; fail closed if held MinerU/Marker chains regress.
+- Extend the reusable asset bundle through explicit DOCX/general-document
+  repository adapters while preserving the v1 hashes, locators and Foam contract.

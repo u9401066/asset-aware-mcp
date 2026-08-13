@@ -37,7 +37,7 @@
   are zero; MinerU and Marker packaged extras remain empty security holds.
 - Final local gates are green: 1,096 Python tests passed (30 intentional optional
   skips), Python 3.10 MCP/preflight/bundle tests passed, Ruff/format/MyPy/Bandit,
-  uv/npm audits, docs/harness checks, wheel clean-venv smoke, 153 VSIX tests,
+  uv/npm audits, docs/harness checks, wheel clean-venv smoke, 154 VSIX tests,
   package audit, and VS Code 1.133 fresh/update activation smoke all passed.
 - Independent review additionally fixed LightRAG first-use initialization,
   figure copy/hash TOCTOU, quadratic evidence joins, bounded bundle resources,
@@ -45,13 +45,24 @@
 - The refresh is pushed as three segmented commits. GitHub's default branch,
   Pages source and local tracking now use `main`; remote `master` and every
   obsolete topic branch are removed, and no PR remains open.
-- The first `main` CI proved all gates except Windows VSIX smoke. Its only root
-  cause was a single-quoted Mocha glob being treated as a literal Windows path;
-  the script now uses portable double quotes and has a regression contract.
-- Remaining release work: obtain a green replacement `main` CI and Pages build,
-  enable required-branch gates, push the annotated `v1.0.0` tag, then verify
-  GitHub Release, PyPI and Marketplace publication. The final Docker image and
-  container doctor/list-tools/SDK 2 schema/stdio smoke passed.
+- The first `main` CI isolated a Windows-only single-quoted Mocha glob; the
+  portable command and regression then passed replacement CI, all three OS
+  smoke jobs, the fail-closed aggregate gate, and the first `main:/docs` Pages
+  deployment.
+- `main` now requires the strict `📋 Test Summary`, one approval, resolved review
+  conversations and linear history, and rejects force-push/deletion. The
+  annotated `v1.0.0` tag resolves exactly to green `main@183bbeb`.
+- The tag-triggered Release workflow passed all eight jobs. PyPI 1.0.0,
+  Marketplace 1.0.0, GitHub Release/VSIX and Pages are public and were verified
+  from their actual bytes/endpoints; final wheel/sdist/VSIX hashes match their
+  independently built or cross-registry counterparts.
+- The standalone GitHub Wiki now mirrors v1 `docs/wiki` (5 new pages, 14 updated,
+  no deletions), with a recovery tag on its prior SHA. The old v0.2.0 draft was
+  deliberately retained after exact inspection found a valid historical tag and
+  unique VSIX asset; provenance took priority over cosmetic cleanup.
+- The v1 goal is complete. Future work is maintenance and adding explicit
+  DOCX/general repository adapters to the reusable-asset contract, not reopening
+  MCP SDK v1 or the held MinerU/Marker dependency chains.
 
 ## 2026-05-17 - v0.7.0 structural readiness and A2T production hardening
 
