@@ -75,6 +75,10 @@
 
 ### Fixed
 
+- Made the VSIX Mocha unit-test glob portable across POSIX shells and Windows
+  runners; a packaging regression test now locks the command contract.
+- Excluded generated root-level screenshots from VSIX archives and made both
+  package-content and release-artifact audits reject accidental root media.
 - Source-location lookup now preserves persisted line ranges and match strategy
   and returns query-centered excerpts instead of unrelated block prefixes.
 - New document IDs use a 12-hex SHA-256 suffix instead of a 6-hex MD5 suffix,

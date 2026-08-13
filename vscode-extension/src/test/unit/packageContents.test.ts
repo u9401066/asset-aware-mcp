@@ -26,4 +26,15 @@ describe('package contents guard', () => {
         assert.match(vscodeIgnore, /^\*\.png$/m);
         assert.match(vscodeIgnore, /^!resources\/\*\*\/\*\.png$/m);
     });
+
+    it('uses a cross-platform Mocha glob for unit tests', () => {
+        const packageJson = JSON.parse(
+            fs.readFileSync(path.join(extensionRoot, 'package.json'), 'utf8')
+        ) as { scripts: Record<string, string> };
+
+        assert.strictEqual(
+            packageJson.scripts['test:unit'],
+            'npm run compile && mocha --require out/test/unit/setup.js "out/test/unit/**/*.test.js" --timeout 5000'
+        );
+    });
 });

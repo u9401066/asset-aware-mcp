@@ -42,11 +42,16 @@
 - Independent review additionally fixed LightRAG first-use initialization,
   figure copy/hash TOCTOU, quadratic evidence joins, bounded bundle resources,
   and production factory/worker enforcement of Marker/MinerU security holds.
-- Remaining release work: create segmented commits, atomically rename the
-  default branch `master` to `main`, push, monitor CI, tag and verify registry
-  publication. The final Docker image rebuilt successfully after one
-  environment-level Docker Hub frontend DNS retry; container doctor,
-  list-tools, SDK 2 schema and stdio smoke all passed.
+- The refresh is pushed as three segmented commits. GitHub's default branch,
+  Pages source and local tracking now use `main`; remote `master` and every
+  obsolete topic branch are removed, and no PR remains open.
+- The first `main` CI proved all gates except Windows VSIX smoke. Its only root
+  cause was a single-quoted Mocha glob being treated as a literal Windows path;
+  the script now uses portable double quotes and has a regression contract.
+- Remaining release work: obtain a green replacement `main` CI and Pages build,
+  enable required-branch gates, push the annotated `v1.0.0` tag, then verify
+  GitHub Release, PyPI and Marketplace publication. The final Docker image and
+  container doctor/list-tools/SDK 2 schema/stdio smoke passed.
 
 ## 2026-05-17 - v0.7.0 structural readiness and A2T production hardening
 

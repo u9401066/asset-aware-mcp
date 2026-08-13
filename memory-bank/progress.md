@@ -34,16 +34,20 @@
   153 VSIX tests、artifact audit、VS Code 1.133.0 fresh/update activation smoke。
 - Docker `1.0.0` image 重建成功；容器內 doctor/list-tools/SDK 2 schema/stdio
   全綠，30 tools 且 `ctx` leakage 為零。
+- 已建立並推送三個分段提交（core、release、docs），將 GitHub default branch、
+  Pages source 與本機 tracking 原子遷移為 `main`，刪除遠端 `master`；目前遠端
+  僅保留單一 `main` branch，沒有 open PR。
+- 第一輪 `main` Actions 除 Windows VSIX smoke 外全綠；其根因是 npm script
+  內單引號 glob 被 Windows 視為字面檔名，現已改為跨平台雙引號並加入契約測試。
 
 ## Doing
 
-- [ ] Create segmented commits, migrate `master` atomically to `main`,
-  push and monitor GitHub Actions.
+- [ ] Monitor the replacement `main` CI plus the first Pages build from `main`.
 
 
 ## Next
 
-- Publish the annotated `v1.0.0` tag only after the new `main` CI is green.
+- Publish the annotated `v1.0.0` tag only after the replacement `main` CI is green.
 - Verify the GitHub release, PyPI package and Marketplace VSIX from their
   published artifacts; add branch protection/rules after the first green main
   run establishes valid required-check names.
