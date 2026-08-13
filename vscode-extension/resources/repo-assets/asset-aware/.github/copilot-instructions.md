@@ -6,7 +6,7 @@
 
 ## 專案概述
 
-**MCP Server — Asset-Aware Medical RAG**
+**MCP Server — Asset-Aware MCP**
 
 | 項目 | 說明 |
 |------|------|
@@ -87,8 +87,10 @@
   `mcp.server.mcpserver.MCPServer`。SDK v1 不受支援；禁止新增
   `mcp.server.fastmcp` 或其他 v1 fallback。
 - Tool `Context` 只能由 MCPServer 在 request runtime 注入，用於 bounded
-  progress/log。它不得成為 client input，也不得出現在公開 JSON schema；修改
-  decorators/signatures 時必須保留 schema-leak regression guard。
+  progress。Operational logs 必須使用 Python logging 寫到 stderr，不得再呼叫
+  deprecated MCP protocol logging API。`Context` 不得成為 client input，也不得
+  出現在公開 JSON schema；修改 decorators/signatures 時必須保留 schema-leak
+  regression guard。
 - Tool registry 只能使用 SDK 公開 `add_tool`、`remove_tool`、`list_tools` API；
   不得依賴 private tool-manager internals。
 - `balanced`（30）、`compact`（17）、`legacy`（完整 direct inventory）是 SDK 2
@@ -297,7 +299,7 @@ src/
 └── presentation/     # 呈現層（MCP Server, 模組化）
     ├── server.py            # Thin entry point (31 行)
     ├── mcp_app.py           # Official SDK 2 MCPServer 單一實例 + public registry tracking
-    ├── mcp_context.py       # Runtime Context progress/log helpers
+    ├── mcp_context.py       # Runtime Context progress + stderr logging helpers
     ├── tool_surface.py      # balanced / compact / legacy public-API filtering
     ├── dependencies.py      # Composition Root
     ├── tools/               # 30 balanced public / 17 compact / 63 legacy tools

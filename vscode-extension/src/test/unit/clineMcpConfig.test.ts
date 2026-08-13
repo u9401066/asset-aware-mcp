@@ -21,12 +21,14 @@ describe('clineMcpConfig', () => {
         };
         settingsPath = path.join(tempDir, 'globalStorage', 'saoudrizwan.claude-dev', 'settings', 'cline_mcp_settings.json');
         (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];
+        (vscode.workspace as any).isTrusted = true;
         __resetConfiguration();
     });
 
     afterEach(() => {
         fs.rmSync(tempDir, { recursive: true, force: true });
         (vscode.workspace as any).workspaceFolders = undefined;
+        (vscode.workspace as any).isTrusted = true;
         __resetConfiguration();
     });
 
@@ -44,6 +46,14 @@ describe('clineMcpConfig', () => {
     });
 
     it('creates Cline MCP settings without touching unrelated servers', () => {
+        fs.mkdirSync(path.join(tempDir, 'src'), { recursive: true });
+        fs.writeFileSync(path.join(tempDir, 'src', 'server.py'), 'raise SystemExit("untrusted")\n');
+        fs.writeFileSync(path.join(tempDir, 'pyproject.toml'), '[project]\nname = "asset-aware-mcp"\n');
+        fs.writeFileSync(path.join(tempDir, '.env'), [
+            'DATA_DIR=/tmp/untrusted-data',
+            'DOCLING_PYTHON_PATH=/tmp/untrusted-python',
+            '',
+        ].join('\n'));
         fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
         fs.writeFileSync(settingsPath, JSON.stringify({
             mcpServers: {
@@ -56,7 +66,13 @@ describe('clineMcpConfig', () => {
         assert.strictEqual(updated, true);
         const settings = readSettings();
         assert.ok(settings.mcpServers.other);
-        assert.ok(settings.mcpServers['asset-aware-mcp']);
+        const entry = settings.mcpServers['asset-aware-mcp'];
+        assert.ok(entry);
+        assert.ok(entry.args.includes('asset-aware-mcp==0.6.19'));
+        assert.ok(!entry.args.includes('--directory'));
+        assert.strictEqual(entry.cwd, context.globalStorageUri.fsPath);
+        assert.strictEqual(entry.env.DATA_DIR, path.join(context.globalStorageUri.fsPath, 'data'));
+        assert.strictEqual(entry.env.DOCLING_PYTHON_PATH, undefined);
         assert.ok(settings.mcpRules.assetAwareDocs.servers.includes('asset-aware-mcp'));
         for (const trigger of ['文件', '引用', '表格', '圖表', '知識圖譜', '知識圖', '證據']) {
             assert.ok(settings.mcpRules.assetAwareDocs.triggers.includes(trigger));
@@ -108,8 +124,9 @@ describe('clineMcpConfig', () => {
         assert.strictEqual(updated, true);
         const entry = readSettings().mcpServers['asset-aware-mcp'];
         assert.strictEqual(entry.env.HTTP_PROXY, 'http://proxy.local:8080');
-        assert.strictEqual(entry.env.OLLAMA_MODEL, 'from-env');
-        assert.strictEqual(entry.env.DATA_DIR, path.join(tempDir, 'next-data'));
+        assert.strictEqual(entry.env.OLLAMA_MODEL, 'granite4.1:3b');
+        assert.strictEqual(entry.env.DATA_DIR, path.join(context.globalStorageUri.fsPath, 'data'));
+        assert.strictEqual(entry.cwd, context.globalStorageUri.fsPath);
         assert.strictEqual(entry.env.ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS, '12000');
         assert.strictEqual(entry.env.ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS, '750000');
         assert.strictEqual(entry.env.ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES, '20971520');
@@ -141,7 +158,7 @@ describe('clineMcpConfig', () => {
         assert.strictEqual(entry.env.ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES, '20971520');
     });
 
-    it('auto-tracks the current workspace DATA_DIR even if a previous workspace was installed', () => {
+    it('moves a prior workspace DATA_DIR into extension global storage', () => {
         const otherWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), 'asset-aware-other-workspace-'));
         fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
         fs.writeFileSync(settingsPath, JSON.stringify({
@@ -163,14 +180,14 @@ describe('clineMcpConfig', () => {
             assert.strictEqual(updated, true);
             const entry = readSettings().mcpServers['asset-aware-mcp'];
             assert.strictEqual(entry.command, '/usr/bin/uv');
-            assert.strictEqual(entry.env.DATA_DIR, path.join(tempDir, 'data'));
+            assert.strictEqual(entry.env.DATA_DIR, path.join(context.globalStorageUri.fsPath, 'data'));
             assert.deepStrictEqual(entry.alwaysAllow, ['ingest_pdf']);
         } finally {
             fs.rmSync(otherWorkspace, { recursive: true, force: true });
         }
     });
 
-    it('auto-upgrades DATA_DIR from the globalStorage fallback to the current workspace', () => {
+    it('keeps DATA_DIR in extension global storage across repeated syncs', () => {
         fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
         const fallbackDataDir = path.join(context.globalStorageUri.fsPath, 'data');
         fs.writeFileSync(settingsPath, JSON.stringify({
@@ -190,11 +207,11 @@ describe('clineMcpConfig', () => {
 
         assert.strictEqual(updated, true);
         const entry = readSettings().mcpServers['asset-aware-mcp'];
-        assert.strictEqual(entry.env.DATA_DIR, path.join(tempDir, 'data'));
+        assert.strictEqual(entry.env.DATA_DIR, fallbackDataDir);
         assert.deepStrictEqual(entry.alwaysAllow, ['ingest_pdf']);
     });
 
-    it('allows manual Cline workspace takeover for a managed cross-workspace DATA_DIR', () => {
+    it('does not let forceWorkspace move global Cline execution into the workspace', () => {
         const otherWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), 'asset-aware-other-workspace-'));
         fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
         fs.writeFileSync(settingsPath, JSON.stringify({
@@ -216,7 +233,7 @@ describe('clineMcpConfig', () => {
             assert.strictEqual(updated, true);
             const entry = readSettings().mcpServers['asset-aware-mcp'];
             assert.strictEqual(entry.command, '/usr/bin/uv');
-            assert.strictEqual(entry.env.DATA_DIR, path.join(tempDir, 'data'));
+            assert.strictEqual(entry.env.DATA_DIR, path.join(context.globalStorageUri.fsPath, 'data'));
             assert.deepStrictEqual(entry.alwaysAllow, ['ingest_pdf']);
         } finally {
             fs.rmSync(otherWorkspace, { recursive: true, force: true });
@@ -231,6 +248,14 @@ describe('clineMcpConfig', () => {
         assert.strictEqual(updated, true);
         const entry = readSettings().mcpServers['asset-aware-mcp'];
         assert.ok(entry.args.includes('--upgrade'));
+    });
+
+    it('does not write Cline settings from an untrusted workspace', () => {
+        __setExtensionInstalled('saoudrizwan.claude-dev', true);
+        (vscode.workspace as any).isTrusted = false;
+
+        assert.strictEqual(installClineMcpServer(context, '/usr/bin/uv'), false);
+        assert.strictEqual(fs.existsSync(settingsPath), false);
     });
 
     it('does not overwrite a custom same-key server', () => {

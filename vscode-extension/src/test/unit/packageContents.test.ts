@@ -21,6 +21,8 @@ describe('package contents guard', () => {
         assert.match(packageContentsSource, /forbiddenRootGeneratedMediaPattern/);
         assert.match(packageContentsSource, /node_modules/);
         assert.match(packageContentsSource, /__pycache__/);
+        assert.match(packageContentsSource, /node_modules\/smol-toml\/dist\/index\.cjs/);
+        assert.match(packageContentsSource, /unpackaged smol-toml module/);
         assert.match(vscodeIgnore, /^dist\/\*\*/m);
         assert.match(vscodeIgnore, /^tmp\/\*\*/m);
         assert.match(vscodeIgnore, /^\*\.png$/m);

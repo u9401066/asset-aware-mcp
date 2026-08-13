@@ -7,6 +7,7 @@ import {
     entriesEqual,
     getPrimaryWorkspaceRoot,
     isAssetAwareLaunch,
+    isWorkspaceTrusted,
     mergeManagedEnv,
 } from './mcpConfigCommon';
 
@@ -17,6 +18,7 @@ const CLINE_MCP_SETTINGS_FILE = 'cline_mcp_settings.json';
 interface ClineMcpServerEntry {
     command: string;
     args: string[];
+    cwd?: string;
     env?: Record<string, string>;
     alwaysAllow?: string[];
     disabled?: boolean;
@@ -64,6 +66,9 @@ function isValidServerEntry(value: unknown): boolean {
         return false;
     }
     if (value.args !== undefined && !isStringArray(value.args)) {
+        return false;
+    }
+    if (value.cwd !== undefined && typeof value.cwd !== 'string') {
         return false;
     }
     if (value.env !== undefined && !isStringRecord(value.env)) {
@@ -285,6 +290,9 @@ export function installClineMcpServer(
     needsUpgrade: boolean = false,
     options: InstallClineOptions = {},
 ): boolean {
+    if (!isWorkspaceTrusted()) {
+        return false;
+    }
     if (!isClineInstalled(context)) {
         return false;
     }
@@ -294,10 +302,16 @@ export function installClineMcpServer(
     if (!settings) {
         return false;
     }
-    const launch = buildAssetAwareLaunchSpec(context, uvPath, { needsUpgrade });
+    fs.mkdirSync(context.globalStorageUri.fsPath, { recursive: true });
+    const launch = buildAssetAwareLaunchSpec(context, uvPath, {
+        needsUpgrade,
+        allowLocalSource: false,
+        includeWorkspaceEnv: false,
+    });
     const nextEntry: ClineMcpServerEntry = {
         command: launch.command,
         args: launch.args,
+        cwd: context.globalStorageUri.fsPath,
         env: launch.env,
         disabled: false,
     };
@@ -326,6 +340,9 @@ export function installClineMcpServer(
 }
 
 export function removeClineMcpServer(context: vscode.ExtensionContext): boolean {
+    if (!isWorkspaceTrusted()) {
+        return false;
+    }
     const settingsPath = getClineMcpSettingsPath(context);
     if (!fs.existsSync(settingsPath)) {
         return false;

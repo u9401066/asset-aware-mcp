@@ -5,7 +5,11 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { buildAssetAwareEnv, buildAssetAwareLaunchSpec } from '../../mcpConfigCommon';
 import { RUNTIME_PYTHON_VERSION_KEY } from '../../uv';
-import { __resetConfiguration, __setConfigurationValue } from './mock-vscode';
+import {
+    __resetConfiguration,
+    __setConfigurationValue,
+    __setWorkspaceConfigurationValue,
+} from './mock-vscode';
 
 describe('mcpConfigCommon', () => {
     let tempDir: string;
@@ -51,13 +55,17 @@ describe('mcpConfigCommon', () => {
     }
 
     it('defaults to CPU Granite RAG without enabling LightRAG', () => {
-        const context = { globalStorageUri: { fsPath: path.join(tempDir, 'global') } } as any;
+        const context = {
+            globalStorageUri: { fsPath: path.join(tempDir, 'global') },
+            extensionMode: vscode.ExtensionMode.Development,
+        } as any;
 
         const env = buildAssetAwareEnv(context, tempDir);
 
         assert.strictEqual(env.OLLAMA_MODEL, 'granite4.1:3b');
         assert.strictEqual(env.OLLAMA_EMBEDDING_MODEL, 'nomic-embed-text');
         assert.strictEqual(env.ENABLE_LIGHTRAG, 'false');
+        assert.strictEqual(env.ASSET_AWARE_DISABLE_DOTENV, 'true');
         assert.strictEqual(env.ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS, '12000');
         assert.strictEqual(env.ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS, '750000');
         assert.strictEqual(env.ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES, '20971520');
@@ -84,6 +92,19 @@ describe('mcpConfigCommon', () => {
 
         assert.strictEqual(env.OLLAMA_MODEL, 'operator-model');
         assert.strictEqual(env.DATA_DIR, path.resolve(tempDir, 'operator-data'));
+    });
+
+    it('forces managed launchers to disable a second implicit dotenv load', () => {
+        fs.writeFileSync(
+            path.join(tempDir, '.env'),
+            'ASSET_AWARE_DISABLE_DOTENV=false\nOLLAMA_MODEL=operator-model\n',
+        );
+        const context = { globalStorageUri: { fsPath: path.join(tempDir, 'global') } } as any;
+
+        const env = buildAssetAwareEnv(context, tempDir);
+
+        assert.strictEqual(env.OLLAMA_MODEL, 'operator-model');
+        assert.strictEqual(env.ASSET_AWARE_DISABLE_DOTENV, 'true');
     });
 
     it('loads OpenRouter preset settings from workspace .env', () => {
@@ -156,7 +177,10 @@ describe('mcpConfigCommon', () => {
         fs.writeFileSync(path.join(sourceRoot, '.env'), 'DATA_DIR=child-data\nOLLAMA_MODEL=from-child\n');
         fs.writeFileSync(path.join(tempDir, '.env'), 'DATA_DIR=parent-data\nOLLAMA_MODEL=from-parent\n');
         (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];
-        const context = { globalStorageUri: { fsPath: path.join(tempDir, 'global') } } as any;
+        const context = {
+            globalStorageUri: { fsPath: path.join(tempDir, 'global') },
+            extensionMode: vscode.ExtensionMode.Development,
+        } as any;
 
         const launch = buildAssetAwareLaunchSpec(context, 'uv', { workspaceRoot: tempDir });
 
@@ -202,10 +226,79 @@ describe('mcpConfigCommon', () => {
         const context = {
             globalStorageUri: { fsPath: path.join(tempDir, 'global') },
             globalState: { get: (key: string) => key === RUNTIME_PYTHON_VERSION_KEY ? '3.10' : undefined },
+            extensionMode: vscode.ExtensionMode.Development,
         } as any;
 
         const launch = buildAssetAwareLaunchSpec(context, 'uv', { workspaceRoot: tempDir });
 
         assert.deepStrictEqual(launch.args.slice(0, 5), ['run', '--python', '3.10', '--directory', sourceRoot]);
+    });
+
+    it('ignores a production lookalike checkout and its workspace env', () => {
+        const sourceRoot = path.join(tempDir, 'lookalike');
+        fs.mkdirSync(path.join(sourceRoot, 'src'), { recursive: true });
+        fs.writeFileSync(path.join(sourceRoot, 'src', 'server.py'), 'raise SystemExit("untrusted")\n');
+        fs.writeFileSync(path.join(sourceRoot, 'pyproject.toml'), '[project]\nname = "asset-aware-mcp"\n');
+        fs.writeFileSync(path.join(sourceRoot, '.env'), [
+            'DATA_DIR=/tmp/untrusted-data',
+            'ETL_ENGINE=docling',
+            'DOCLING_PYTHON_PATH=/tmp/untrusted-python',
+            '',
+        ].join('\n'));
+        const globalStorage = path.join(tempDir, 'global');
+        const context = {
+            globalStorageUri: { fsPath: globalStorage },
+            extension: { packageJSON: { version: '1.0.1' } },
+            extensionMode: vscode.ExtensionMode.Production,
+        } as any;
+        __setWorkspaceConfigurationValue('assetAwareMcp.dataDir', '/tmp/workspace-setting-data');
+        __setWorkspaceConfigurationValue('assetAwareMcp.llmBackend', 'openrouter');
+        __setWorkspaceConfigurationValue(
+            'assetAwareMcp.openrouterBaseUrl',
+            'https://workspace-setting.invalid/api/v1',
+        );
+
+        const launch = buildAssetAwareLaunchSpec(context, 'uv', {
+            workspaceRoot: sourceRoot,
+            includeWorkspaceEnv: false,
+        });
+
+        assert.strictEqual(launch.mode, 'package');
+        assert.ok(launch.args.includes('asset-aware-mcp==1.0.1'));
+        assert.ok(!launch.args.includes('--directory'));
+        assert.strictEqual(launch.env.DATA_DIR, path.join(globalStorage, 'data'));
+        assert.strictEqual(launch.env.LLM_BACKEND, 'ollama');
+        assert.strictEqual(launch.env.OPENROUTER_BASE_URL, undefined);
+        assert.strictEqual(launch.env.ETL_ENGINE, undefined);
+        assert.strictEqual(launch.env.DOCLING_PYTHON_PATH, undefined);
+    });
+
+    it('never uses local source or workspace env from an untrusted workspace', () => {
+        const sourceRoot = path.join(tempDir, 'lookalike');
+        fs.mkdirSync(path.join(sourceRoot, 'src'), { recursive: true });
+        fs.writeFileSync(path.join(sourceRoot, 'src', 'server.py'), 'raise SystemExit("untrusted")\n');
+        fs.writeFileSync(path.join(sourceRoot, 'pyproject.toml'), '[project]\nname = "asset-aware-mcp"\n');
+        fs.writeFileSync(path.join(sourceRoot, '.env'), 'DATA_DIR=/tmp/untrusted-data\n');
+        const globalStorage = path.join(tempDir, 'global');
+        const context = {
+            globalStorageUri: { fsPath: globalStorage },
+            extension: { packageJSON: { version: '1.0.1' } },
+            extensionMode: vscode.ExtensionMode.Development,
+        } as any;
+        (vscode.workspace as any).isTrusted = false;
+        try {
+            const launch = buildAssetAwareLaunchSpec(context, 'uv', {
+                workspaceRoot: sourceRoot,
+                allowLocalSource: true,
+                includeWorkspaceEnv: true,
+            });
+
+            assert.strictEqual(launch.mode, 'package');
+            assert.ok(launch.args.includes('asset-aware-mcp==1.0.1'));
+            assert.ok(!launch.args.includes('--directory'));
+            assert.strictEqual(launch.env.DATA_DIR, path.join(globalStorage, 'data'));
+        } finally {
+            (vscode.workspace as any).isTrusted = true;
+        }
     });
 });

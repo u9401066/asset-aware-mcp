@@ -125,10 +125,15 @@ export const window = {
 
 // Workspace mock
 const configurationValues = new Map<string, unknown>();
+const workspaceConfigurationValues = new Map<string, unknown>();
 const installedExtensions = new Set<string>();
 
 export function __setConfigurationValue(key: string, value: unknown): void {
     configurationValues.set(key, value);
+}
+
+export function __setWorkspaceConfigurationValue(key: string, value: unknown): void {
+    workspaceConfigurationValues.set(key, value);
 }
 
 export function __setExtensionInstalled(id: string, installed: boolean): void {
@@ -141,25 +146,37 @@ export function __setExtensionInstalled(id: string, installed: boolean): void {
 
 export function __resetConfiguration(): void {
     configurationValues.clear();
+    workspaceConfigurationValues.clear();
     installedExtensions.clear();
 }
 
 export const workspace = {
+    isTrusted: true,
     onDidChangeTextDocument: () => ({ dispose() { /* no-op */ } }),
     onDidCloseTextDocument: () => ({ dispose() { /* no-op */ } }),
     onDidChangeConfiguration: () => ({ dispose() { /* no-op */ } }),
     onDidChangeWorkspaceFolders: () => ({ dispose() { /* no-op */ } }),
     openTextDocument: async (path: string) => ({ uri: Uri.file(path), getText: () => '' }),
     getConfiguration: () => ({
-        get: (key: string, defaultValue?: any) => configurationValues.has(`assetAwareMcp.${key}`)
-            ? configurationValues.get(`assetAwareMcp.${key}`)
-            : defaultValue,
+        get: (key: string, defaultValue?: any) => {
+            const fullKey = `assetAwareMcp.${key}`;
+            if (workspaceConfigurationValues.has(fullKey)) {
+                return workspaceConfigurationValues.get(fullKey);
+            }
+            return configurationValues.has(fullKey)
+                ? configurationValues.get(fullKey)
+                : defaultValue;
+        },
         inspect: (key: string) => {
             const fullKey = `assetAwareMcp.${key}`;
-            const value = configurationValues.get(fullKey);
-            return configurationValues.has(fullKey)
-                ? { globalValue: value }
-                : {};
+            const inspected: Record<string, unknown> = {};
+            if (configurationValues.has(fullKey)) {
+                inspected.globalValue = configurationValues.get(fullKey);
+            }
+            if (workspaceConfigurationValues.has(fullKey)) {
+                inspected.workspaceValue = workspaceConfigurationValues.get(fullKey);
+            }
+            return inspected;
         },
     }),
     workspaceFolders: undefined as any,
@@ -183,6 +200,12 @@ export enum ProgressLocation {
     SourceControl = 1,
     Window = 10,
     Notification = 15,
+}
+
+export enum ExtensionMode {
+    Production = 1,
+    Development = 2,
+    Test = 3,
 }
 
 // Extensions mock

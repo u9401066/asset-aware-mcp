@@ -6,7 +6,29 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v1.0.0/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v1.0.1/resources/banner.png)
+
+## What's New in v1.0.1
+
+- **Large-PDF worker reliability**: process-isolated extractors publish bounded,
+  atomic MessagePack results instead of blocking on a full multiprocessing
+  pipe; partial, oversized, malformed, and crashed results fail closed.
+- **Conservative Codex config merge**: real TOML validation preserves quoted,
+  commented, multiline, custom, and unrelated entries. Managed config uses
+  180/900-second timeouts, a safe working directory, and an explicit opt-out.
+  User policy fields and nested `tools.*` approval tables survive updates
+  byte-for-byte and remain in a disabled dormant entry during opt-out.
+  Every actual update of an existing config keeps its prior inode as a private
+  `config.toml.concurrent-backup.*` recovery snapshot; inspect it before manual
+  removal. Fresh creation and idempotent syncs do not create these snapshots.
+- **Credential minimization**: repository secret values are never persisted to
+  Codex config. Required `env_vars` names receive values only from the OS
+  environment that launched the Codex client—not from a workspace `.env` or VS
+  Code secret setting. Unsafe OpenRouter HTTP endpoints are rejected, and
+  managed launches cannot silently reload workspace `.env` files.
+- **True MCP SDK 2 regression**: production stdio now proves large figure/table
+  extraction, citation/Foam bundle integrity and deterministic re-export while
+  keeping protocol stdout clean.
 
 ## What's New in v1.0.0
 

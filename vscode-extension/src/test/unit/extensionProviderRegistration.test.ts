@@ -8,17 +8,20 @@ import {
     __buildRuntimePrepareEnvForTests,
     __buildRuntimePrepareSpecForTests,
     __buildRuntimePrepareSpecsForTests,
+    __handleExternalMcpConfigurationChangeForTests,
+    __initializeExternalMcpConfigurationForTests,
     __runtimePrepareMaxBufferForTests,
     __registerMcpServerProviderForTests,
     __resetMcpServerProviderRegistrationForTests,
 } from '../../extension';
-import { __resetConfiguration } from './mock-vscode';
+import { __resetConfiguration, __setConfigurationValue } from './mock-vscode';
 
 describe('extension MCP provider registration', () => {
     afterEach(() => {
         __resetMcpServerProviderRegistrationForTests();
         __resetConfiguration();
         (vscode.workspace as any).workspaceFolders = undefined;
+        (vscode.workspace as any).isTrusted = true;
         delete (vscode.lm as any).registerMcpServerDefinitionProvider;
     });
 
@@ -55,6 +58,111 @@ describe('extension MCP provider registration', () => {
         assert.strictEqual(context.subscriptions.length, 2);
     });
 
+    it('removes opted-out managed Codex config on the activation path without a uv runtime', () => {
+        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'asset-aware-codex-activation-'));
+        const originalCodexHome = process.env.CODEX_HOME;
+        try {
+            process.env.CODEX_HOME = tempDir;
+            fs.writeFileSync(path.join(tempDir, 'config.toml'), [
+                '# user content',
+                '',
+                '# Managed by asset-aware-mcp VS Code extension. Remove this block to opt out.',
+                '[mcp_servers.asset-aware-mcp]',
+                'command = "/old/uv"',
+                'args = ["tool", "run", "asset-aware-mcp"]',
+                '',
+            ].join('\n'));
+            __setConfigurationValue('assetAwareMcp.manageCodexConfig', false);
+            const context = {
+                subscriptions: [],
+                extension: { packageJSON: { version: '1.0.0' } },
+                globalState: { get: () => undefined },
+            } as any;
+
+            assert.strictEqual(__initializeExternalMcpConfigurationForTests(context), true);
+
+            const content = fs.readFileSync(path.join(tempDir, 'config.toml'), 'utf-8');
+            assert.ok(content.includes('# user content'));
+            assert.ok(!content.includes('[mcp_servers.asset-aware-mcp]'));
+        } finally {
+            if (originalCodexHome === undefined) {
+                delete process.env.CODEX_HOME;
+            } else {
+                process.env.CODEX_HOME = originalCodexHome;
+            }
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        }
+    });
+
+    it('removes opted-out managed Codex config after runtime preparation fails', () => {
+        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'asset-aware-codex-setting-'));
+        const originalCodexHome = process.env.CODEX_HOME;
+        try {
+            process.env.CODEX_HOME = tempDir;
+            fs.writeFileSync(path.join(tempDir, 'config.toml'), [
+                '# Managed by asset-aware-mcp VS Code extension. Set assetAwareMcp.manageCodexConfig=false to opt out.',
+                '[mcp_servers.asset-aware-mcp]',
+                'command = "/old/uv"',
+                'args = ["tool", "run", "asset-aware-mcp"]',
+                '',
+            ].join('\n'));
+            __setConfigurationValue('assetAwareMcp.manageCodexConfig', false);
+            const context = {
+                extension: { packageJSON: { version: '1.0.0' } },
+                globalState: { get: () => undefined },
+            } as any;
+            const event = {
+                affectsConfiguration: (section: string) => section === 'assetAwareMcp',
+            } as vscode.ConfigurationChangeEvent;
+
+            assert.strictEqual(
+                __handleExternalMcpConfigurationChangeForTests(context, event, '/usr/bin/uv'),
+                true,
+            );
+            assert.ok(!fs.readFileSync(path.join(tempDir, 'config.toml'), 'utf-8').includes(
+                '[mcp_servers.asset-aware-mcp]',
+            ));
+        } finally {
+            if (originalCodexHome === undefined) {
+                delete process.env.CODEX_HOME;
+            } else {
+                process.env.CODEX_HOME = originalCodexHome;
+            }
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        }
+    });
+
+    it('does not reconcile external config on activation in an untrusted workspace', () => {
+        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'asset-aware-untrusted-activation-'));
+        const originalCodexHome = process.env.CODEX_HOME;
+        try {
+            process.env.CODEX_HOME = tempDir;
+            const configPath = path.join(tempDir, 'config.toml');
+            const original = [
+                '# Managed by asset-aware-mcp VS Code extension. Set assetAwareMcp.manageCodexConfig=false to opt out.',
+                '[mcp_servers.asset-aware-mcp]',
+                'command = "/old/uv"',
+                'args = ["tool", "run", "asset-aware-mcp"]',
+                '',
+            ].join('\n');
+            fs.writeFileSync(configPath, original);
+            __setConfigurationValue('assetAwareMcp.manageCodexConfig', false);
+            (vscode.workspace as any).isTrusted = false;
+            const context = { subscriptions: [] } as any;
+
+            assert.strictEqual(__initializeExternalMcpConfigurationForTests(context), false);
+            assert.strictEqual(fs.readFileSync(configPath, 'utf-8'), original);
+        } finally {
+            (vscode.workspace as any).isTrusted = true;
+            if (originalCodexHome === undefined) {
+                delete process.env.CODEX_HOME;
+            } else {
+                process.env.CODEX_HOME = originalCodexHome;
+            }
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        }
+    });
+
     it('builds runtime prepare env from the same workspace launch env as MCP clients', () => {
         const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'asset aware runtime-'));
         try {
@@ -71,6 +179,7 @@ describe('extension MCP provider registration', () => {
             const context = {
                 globalStorageUri: { fsPath: path.join(tempDir, 'global storage') },
                 extension: { packageJSON: { version: '0.6.19' } },
+                extensionMode: vscode.ExtensionMode.Development,
             } as any;
 
             const env = __buildRuntimePrepareEnvForTests(context);
@@ -78,6 +187,7 @@ describe('extension MCP provider registration', () => {
             assert.strictEqual(env.DATA_DIR, path.join(tempDir, 'workspace-data'));
             assert.strictEqual(env.UV_CACHE_DIR, path.join(tempDir, 'workspace-data', '.uv-cache'));
             assert.strictEqual(env.OLLAMA_MODEL, 'from-env');
+            assert.strictEqual(env.ASSET_AWARE_DISABLE_DOTENV, 'true');
             assert.strictEqual(env.ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS, '12000');
             assert.strictEqual(env.ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES, '20971520');
         } finally {
@@ -98,6 +208,7 @@ describe('extension MCP provider registration', () => {
             const context = {
                 globalStorageUri: { fsPath: path.join(tempDir, 'global storage') },
                 extension: { packageJSON: { version: '0.6.19' } },
+                extensionMode: vscode.ExtensionMode.Development,
             } as any;
 
             const spec = __buildRuntimePrepareSpecForTests(context, 'uv', false);
@@ -109,6 +220,7 @@ describe('extension MCP provider registration', () => {
             assert.ok(spec.args[7].includes('src.presentation.server'));
             assert.strictEqual(spec.env.OLLAMA_MODEL, 'child-model');
             assert.strictEqual(spec.env.DATA_DIR, path.resolve(sourceRoot, 'child-data'));
+            assert.strictEqual(spec.env.ASSET_AWARE_DISABLE_DOTENV, 'true');
         } finally {
             fs.rmSync(tempDir, { recursive: true, force: true });
         }

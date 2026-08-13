@@ -1,7 +1,7 @@
 /**
  * Asset-Aware MCP VS Code Extension
  *
- * Provides Medical RAG capabilities with precise document asset retrieval.
+ * Provides citation-ready document workflows with precise asset retrieval.
  * Integrates with Ollama (local) or OpenAI for LLM backend.
  *
  * Auto-installs uv if not present, then uses uv tool run to run from PyPI.
@@ -29,13 +29,14 @@ import { TableTreeProvider } from './tableTreeProvider';
 import { DfmEditorService, DfmLanguageFeatures } from './dfm';
 import { installAssistantAssets } from './assistantAssets';
 import { installClineMcpServer } from './clineMcpConfig';
-import { installCodexMcpServer } from './codexMcpConfig';
+import { installCodexMcpServer, isValidCodexToml, removeCodexMcpServer } from './codexMcpConfig';
 import { installCopilotMcpConfig } from './copilotMcpConfig';
 import {
     ASSET_AWARE_SERVER_KEY,
     buildAssetAwareLaunchSpec,
     findLocalAssetAwareSource,
     getRuntimePythonVersion,
+    isWorkspaceTrusted,
 } from './mcpConfigCommon';
 import {
     checkOllamaModels,
@@ -75,6 +76,7 @@ let mcpProviderDisposable: vscode.Disposable | undefined;
 
 export interface AssetAwareExtensionApi {
     getMcpProviderForTests(): AssetAwareMcpProvider | undefined;
+    validateCodexTomlForTests(content: string): boolean;
 }
 
 // Context keys
@@ -260,6 +262,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<AssetA
     log(`Extension path: ${installInfo.path}`);
 
     try {
+        // Codex opt-out is a configuration ownership decision, so it must not
+        // wait for uv discovery or runtime preparation.
+        initializeExternalMcpConfiguration(context);
+
         // Step 1: Initialize status bar
         log('Step 1: Initializing status bar...');
         statusBar = new StatusBarManager();
@@ -326,10 +332,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<AssetA
 
         // Step 6a: Configure external MCP consumers and assistant assets
         log('Step 6a: Synchronizing MCP consumers and assistant assets...');
-        if (uvPath) {
-            ensureExternalMcpRuntimeAndSync(context, uvPath, needsUpgrade, true);
+        if (!isWorkspaceTrusted()) {
+            log('Workspace is not trusted; skipped automatic MCP consumer and assistant-asset writes');
+        } else {
+            if (uvPath) {
+                ensureExternalMcpRuntimeAndSync(context, uvPath, needsUpgrade, true);
+            }
+            await installAssistantAssets(context);
         }
-        await installAssistantAssets(context);
 
         // Step 6b: Initialize DFM editor service
         log('Step 6b: Initializing DFM editor service...');
@@ -371,6 +381,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<AssetA
 
     return {
         getMcpProviderForTests: () => mcpProvider,
+        validateCodexTomlForTests: (content: string) => isValidCodexToml(content),
     };
 }
 
@@ -393,7 +404,7 @@ function getInstallInfo(context: vscode.ExtensionContext): InstallInfo {
 }
 
 function getStorageRoot(): string {
-    const workspaceRoot = getPrimaryWorkspaceRoot();
+    const workspaceRoot = isWorkspaceTrusted() ? getPrimaryWorkspaceRoot() : undefined;
     const root = workspaceRoot ?? extensionContext.globalStorageUri.fsPath;
     fs.mkdirSync(root, { recursive: true });
     log(`Storage root set to ${root} (${workspaceRoot ? 'workspace' : 'global storage fallback'})`);
@@ -407,6 +418,10 @@ function syncExternalMcpConsumers(
     notifyUser: boolean = false,
     forceClineWorkspace: boolean = false,
 ): void {
+    if (!isWorkspaceTrusted()) {
+        log('Workspace is not trusted; skipped external MCP consumer configuration');
+        return;
+    }
     const updatedConsumers: string[] = [];
 
     try {
@@ -441,6 +456,70 @@ function syncExternalMcpConsumers(
             `Asset-Aware MCP configured for ${updatedConsumers.join(', ')}. Reload the relevant client if it was already open.`,
         );
     }
+}
+
+function reconcileCodexManagementOptOut(): boolean {
+    if (!isWorkspaceTrusted()) {
+        log('Workspace is not trusted; skipped Codex config reconciliation');
+        return false;
+    }
+    const config = vscode.workspace.getConfiguration('assetAwareMcp');
+    if (config.get<boolean>('manageCodexConfig', true)) {
+        return false;
+    }
+
+    try {
+        const removed = removeCodexMcpServer();
+        if (removed) {
+            log('Removed extension-managed Codex MCP config after management opt-out');
+        }
+        return removed;
+    } catch (error) {
+        log('Failed to remove extension-managed Codex MCP config: ' + String(error));
+        return false;
+    }
+}
+
+function isExternalMcpRuntimeReady(context: vscode.ExtensionContext): boolean {
+    const currentVersion = context.extension.packageJSON.version as string;
+    return context.globalState.get<string>(RUNTIME_PREPARED_VERSION_KEY) === currentVersion;
+}
+
+function initializeExternalMcpConfiguration(context: vscode.ExtensionContext): boolean {
+    registerRuntimeSyncListeners(context);
+    return reconcileCodexManagementOptOut();
+}
+
+function handleExternalMcpConfigurationChange(
+    context: vscode.ExtensionContext,
+    event: vscode.ConfigurationChangeEvent,
+    uvPath: string | null,
+): boolean {
+    if (!event.affectsConfiguration('assetAwareMcp')) {
+        return false;
+    }
+
+    const removed = reconcileCodexManagementOptOut();
+    if (!uvPath || !isExternalMcpRuntimeReady(context)) {
+        return removed;
+    }
+
+    syncExternalMcpConsumers(context, uvPath);
+    return removed;
+}
+
+export function __initializeExternalMcpConfigurationForTests(
+    context: vscode.ExtensionContext,
+): boolean {
+    return initializeExternalMcpConfiguration(context);
+}
+
+export function __handleExternalMcpConfigurationChangeForTests(
+    context: vscode.ExtensionContext,
+    event: vscode.ConfigurationChangeEvent,
+    uvPath: string | null,
+): boolean {
+    return handleExternalMcpConfigurationChange(context, event, uvPath);
 }
 
 async function prepareMcpServerRuntime(
@@ -651,7 +730,9 @@ async function installOptionalExtra(extraName: string, description: string): Pro
     // succeed but have zero effect on the running server, so emit `uv sync --extra ...`
     // against the source root instead.
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    const localSource = findLocalAssetAwareSource(workspaceRoot, workspaceRoot);
+    const localSource = isWorkspaceTrusted()
+        ? findLocalAssetAwareSource(workspaceRoot, workspaceRoot)
+        : undefined;
     const runtimePythonVersion = getRuntimePythonVersion(extensionContext);
 
     let installCommand: string;
@@ -724,11 +805,15 @@ function ensureExternalMcpRuntimeAndSync(
     needsUpgrade: boolean,
     notifyUser: boolean,
 ): void {
+    registerRuntimeSyncListeners(context);
+    if (!isWorkspaceTrusted()) {
+        log('Workspace is not trusted; skipped automatic external MCP runtime/config sync');
+        return;
+    }
     const currentVersion = context.extension.packageJSON.version as string;
     const preparedVersion = context.globalState.get<string>(RUNTIME_PREPARED_VERSION_KEY);
     if (preparedVersion === currentVersion) {
         syncExternalMcpConsumers(context, uvPath, needsUpgrade, notifyUser);
-        registerRuntimeSyncListeners(context);
         return;
     }
 
@@ -741,7 +826,6 @@ function ensureExternalMcpRuntimeAndSync(
         }
 
         syncExternalMcpConsumers(context, uvPath, needsUpgrade, notifyUser);
-        registerRuntimeSyncListeners(context);
     });
 }
 
@@ -752,21 +836,21 @@ function registerRuntimeSyncListeners(context: vscode.ExtensionContext): void {
 
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration((event) => {
-            if (!event.affectsConfiguration('assetAwareMcp') || !resolvedUvPath) {
-                return;
-            }
-            syncExternalMcpConsumers(context, resolvedUvPath);
+            handleExternalMcpConfigurationChange(context, event, resolvedUvPath);
         }),
     );
 
     context.subscriptions.push(
         vscode.workspace.onDidChangeWorkspaceFolders(() => {
-            if (resolvedUvPath) {
+            reconcileCodexManagementOptOut();
+            if (resolvedUvPath && isExternalMcpRuntimeReady(context)) {
                 syncExternalMcpConsumers(context, resolvedUvPath);
             }
-            installAssistantAssets(context).catch((error) => {
-                log('Failed to sync assistant assets after workspace change: ' + String(error));
-            });
+            if (isWorkspaceTrusted()) {
+                installAssistantAssets(context).catch((error) => {
+                    log('Failed to sync assistant assets after workspace change: ' + String(error));
+                });
+            }
         }),
     );
 
@@ -791,12 +875,24 @@ function registerCommands(context: vscode.ExtensionContext): void {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.installAssistantAssets', async () => {
+            if (!isWorkspaceTrusted()) {
+                vscode.window.showWarningMessage(
+                    'Trust this workspace before installing Asset-Aware assistant assets.',
+                );
+                return;
+            }
             await installAssistantAssets(context, 'manual');
         })
     );
 
     context.subscriptions.push(
         vscode.commands.registerCommand('assetAwareMcp.configureExternalMcp', async () => {
+            if (!isWorkspaceTrusted()) {
+                vscode.window.showWarningMessage(
+                    'Trust this workspace before configuring external MCP clients.',
+                );
+                return;
+            }
             if (!resolvedUvPath) {
                 resolvedUvPath = await ensureUvInstalled();
             }

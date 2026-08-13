@@ -100,7 +100,8 @@ function saveManifest(workspaceRoot: string, manifest: ManagedAssetManifest): vo
 }
 
 function isAssetAwareCopilotInstructions(content: string): boolean {
-    return content.includes('MCP Server — Asset-Aware Medical RAG')
+    return content.includes('MCP Server — Asset-Aware MCP')
+        || content.includes('MCP Server — Asset-Aware Medical RAG')
         || content.includes('VSIX / MCP Harness 同步');
 }
 

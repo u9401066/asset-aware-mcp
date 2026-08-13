@@ -7,6 +7,7 @@ import {
     entriesEqual,
     getPrimaryWorkspaceRoot,
     isAssetAwareLaunch,
+    isWorkspaceTrusted,
     mergeManagedEnv,
 } from './mcpConfigCommon';
 
@@ -33,25 +34,74 @@ function warnSkippedConfigWrite(configPath: string): void {
     );
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+    return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+    return isRecord(value) && Object.values(value).every((item) => typeof item === 'string');
+}
+
+function isValidServerEntry(value: unknown): boolean {
+    if (!isRecord(value)) {
+        return false;
+    }
+    if (value.type !== undefined && typeof value.type !== 'string') {
+        return false;
+    }
+    if (value.command !== undefined && typeof value.command !== 'string') {
+        return false;
+    }
+    if (value.args !== undefined && !isStringArray(value.args)) {
+        return false;
+    }
+    if (value.env !== undefined && !isStringRecord(value.env)) {
+        return false;
+    }
+    return true;
+}
+
+function backupInvalidSettings(configPath: string): void {
+    const backupPath = `${configPath}.invalid.${Date.now()}.bak`;
+    try {
+        fs.copyFileSync(configPath, backupPath);
+    } catch {
+        // Best-effort backup only.
+    }
+    warnSkippedConfigWrite(configPath);
+}
+
 function readCopilotSettings(configPath: string): CopilotMcpSettings | undefined {
     if (!fs.existsSync(configPath)) {
         return { servers: {} };
     }
 
     try {
-        const parsed = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as CopilotMcpSettings;
-        if (!parsed.servers || typeof parsed.servers !== 'object') {
-            parsed.servers = {};
+        const parsed = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as unknown;
+        if (!isRecord(parsed)) {
+            backupInvalidSettings(configPath);
+            return undefined;
         }
-        return parsed;
+
+        const settings = parsed as CopilotMcpSettings;
+        if (settings.servers === undefined) {
+            settings.servers = {};
+        } else if (!isRecord(settings.servers)) {
+            backupInvalidSettings(configPath);
+            return undefined;
+        }
+        if (!Object.values(settings.servers).every(isValidServerEntry)) {
+            backupInvalidSettings(configPath);
+            return undefined;
+        }
+
+        return settings;
     } catch {
-        const backupPath = `${configPath}.invalid.${Date.now()}.bak`;
-        try {
-            fs.copyFileSync(configPath, backupPath);
-        } catch {
-            // Best-effort backup only.
-        }
-        warnSkippedConfigWrite(configPath);
+        backupInvalidSettings(configPath);
         return undefined;
     }
 }
@@ -84,6 +134,9 @@ export function installCopilotMcpConfig(
     uvPath: string,
     needsUpgrade: boolean = false,
 ): boolean {
+    if (!isWorkspaceTrusted()) {
+        return false;
+    }
     const config = vscode.workspace.getConfiguration('assetAwareMcp');
     if (!config.get<boolean>('installCopilotWorkspaceConfig', true)) {
         return false;
@@ -123,6 +176,9 @@ export function installCopilotMcpConfig(
 }
 
 export function removeCopilotMcpConfig(): boolean {
+    if (!isWorkspaceTrusted()) {
+        return false;
+    }
     const workspaceRoot = getPrimaryWorkspaceRoot();
     if (!workspaceRoot) {
         return false;

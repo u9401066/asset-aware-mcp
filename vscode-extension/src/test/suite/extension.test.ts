@@ -76,7 +76,22 @@ suite('Extension Test Suite', () => {
         }
         const api = await extension.activate() as {
             getMcpProviderForTests?: () => vscode.McpServerDefinitionProvider<vscode.McpStdioServerDefinition> | undefined;
+            validateCodexTomlForTests?: (content: string) => boolean;
         };
+
+        assert.strictEqual(api.validateCodexTomlForTests?.([
+            '[mcp_servers.smoke]',
+            'args = [',
+            '  "one",',
+            '  "two",',
+            ']',
+            '',
+        ].join('\n')), true, 'Installed activation should execute the bundled semantic TOML parser');
+        assert.strictEqual(
+            api.validateCodexTomlForTests?.('[mcp_servers.broken\n'),
+            false,
+            'Installed semantic TOML parser should reject malformed input',
+        );
 
         const provider = api.getMcpProviderForTests?.();
         assert.ok(provider, 'MCP provider should be initialized after activation');

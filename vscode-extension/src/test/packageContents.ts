@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as fs from 'fs';
 import { listFiles, PackageManager } from '@vscode/vsce';
 
 const extensionRoot = path.resolve(__dirname, '../..');
@@ -114,6 +115,14 @@ function assertPackageContents(files: string[]): void {
     );
     if (forbiddenGeneratedAssets.length > 0) {
         throw new Error(`VSIX package contains generated repo-assets: ${forbiddenGeneratedAssets.join(', ')}`);
+    }
+
+    const extensionBundle = fs.readFileSync(path.join(extensionRoot, 'out', 'extension.js'), 'utf8');
+    if (!extensionBundle.includes('node_modules/smol-toml/dist/index.cjs')) {
+        throw new Error('VSIX extension bundle does not contain the semantic TOML parser.');
+    }
+    if (/require\(["']smol-toml["']\)/u.test(extensionBundle)) {
+        throw new Error('VSIX extension bundle still requires an unpackaged smol-toml module.');
     }
 }
 

@@ -12,12 +12,14 @@ describe('copilotMcpConfig', () => {
     beforeEach(() => {
         tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'asset-aware-copilot-'));
         (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];
+        (vscode.workspace as any).isTrusted = true;
         __resetConfiguration();
     });
 
     afterEach(() => {
         fs.rmSync(tempDir, { recursive: true, force: true });
         (vscode.workspace as any).workspaceFolders = undefined;
+        (vscode.workspace as any).isTrusted = true;
         __resetConfiguration();
     });
 
@@ -128,5 +130,52 @@ describe('copilotMcpConfig', () => {
         assert.strictEqual(updated, false);
         assert.strictEqual(fs.readFileSync(configPath, 'utf-8'), '{ "servers": {');
         assert.ok(fs.readdirSync(path.dirname(configPath)).some((name) => name.includes('.invalid.')));
+    });
+
+    for (const [label, invalidSettings] of [
+        ['an array root', []],
+        ['an array servers value', { servers: [] }],
+        ['a null servers value', { servers: null }],
+        ['a non-object nested server', { servers: { broken: [] } }],
+        ['invalid nested server args', { servers: { broken: { command: 'node', args: 'server.js' } } }],
+        ['invalid nested server env', { servers: { broken: { command: 'node', env: { TOKEN: 42 } } } }],
+    ] as const) {
+        it(`fails closed for ${label}`, () => {
+            const configPath = path.join(tempDir, '.vscode', 'mcp.json');
+            fs.mkdirSync(path.dirname(configPath), { recursive: true });
+            const original = JSON.stringify(invalidSettings, null, 2) + '\n';
+            fs.writeFileSync(configPath, original);
+
+            const updated = installCopilotMcpConfig(makeContext(), '/usr/bin/uv');
+
+            assert.strictEqual(updated, false);
+            assert.strictEqual(fs.readFileSync(configPath, 'utf-8'), original);
+            assert.ok(fs.readdirSync(path.dirname(configPath)).some((name) => name.includes('.invalid.')));
+        });
+    }
+
+    it('preserves a valid custom remote server and its unknown metadata', () => {
+        const configPath = path.join(tempDir, '.vscode', 'mcp.json');
+        fs.mkdirSync(path.dirname(configPath), { recursive: true });
+        const custom = {
+            type: 'http',
+            url: 'https://example.test/mcp',
+            headers: { 'X-Custom': '${input:custom-header}' },
+            vendorMetadata: { owner: 'user' },
+        };
+        fs.writeFileSync(configPath, JSON.stringify({ servers: { custom } }, null, 2));
+
+        assert.strictEqual(installCopilotMcpConfig(makeContext(), '/usr/bin/uv'), true);
+
+        const settings = readMcpJson();
+        assert.deepStrictEqual(settings.servers.custom, custom);
+        assert.ok(settings.servers['asset-aware-mcp']);
+    });
+
+    it('does not write workspace MCP config before the workspace is trusted', () => {
+        (vscode.workspace as any).isTrusted = false;
+
+        assert.strictEqual(installCopilotMcpConfig(makeContext(), '/usr/bin/uv'), false);
+        assert.strictEqual(fs.existsSync(path.join(tempDir, '.vscode', 'mcp.json')), false);
     });
 });

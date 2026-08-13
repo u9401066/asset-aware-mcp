@@ -2,7 +2,7 @@
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
     "description": "MCP SDK 2 workflows that turn PDF/DOCX content into citation-ready agent assets and Foam/LightRAG wikis",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "publisher": "u9401066",
     "engines": {
         "vscode": "^1.96.0"
@@ -40,12 +40,18 @@
     "activationEvents": [
         "onStartupFinished"
     ],
+    "capabilities": {
+        "untrustedWorkspaces": {
+            "supported": "limited",
+            "description": "External MCP configuration, workspace assistant assets, and local-source execution are disabled until the workspace is trusted."
+        }
+    },
     "main": "./out/extension.js",
     "contributes": {
         "mcpServerDefinitionProviders": [
             {
                 "id": "asset-aware-mcp.servers",
-                "label": "Asset-Aware Medical RAG"
+                "label": "Asset-Aware MCP"
             }
         ],
         "commands": [
@@ -231,6 +237,12 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Force writing Codex MCP settings even if CODEX_HOME or ~/.codex does not already exist."
+                },
+                "assetAwareMcp.manageCodexConfig": {
+                    "type": "boolean",
+                    "default": true,
+                    "scope": "machine",
+                    "description": "Automatically maintain the Asset-Aware MCP launch fields in Codex config. Disable to stop the launch and prevent recreation; user-owned policy fields and nested tool tables are preserved in a disabled entry when present, and custom same-name entries are never removed."
                 }
             }
         },
@@ -294,7 +306,7 @@
             {
                 "id": "assetAwareMcp.welcome",
                 "title": "Get Started with Asset-Aware MCP",
-                "description": "Set up your Medical RAG MCP Server",
+                "description": "Set up citation-ready document asset workflows",
                 "steps": [
                     {
                         "id": "assetAwareMcp.setup",
@@ -328,7 +340,7 @@
         "sync-assets": "node ./scripts/sync-assistant-assets.mjs",
         "sync-assets:check": "node ./scripts/check-sync-assets.mjs",
         "vscode:prepublish": "npm run sync-assets && npm run compile",
-        "compile": "tsc -p ./",
+        "compile": "tsc -p ./ && node ./scripts/bundle-extension.mjs",
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile",
         "lint": "eslint .",
@@ -350,6 +362,7 @@
         "@typescript-eslint/parser": "^8.18.0",
         "@vscode/test-electron": "^3.1.0",
         "@vscode/vsce": "^3.2.1",
+        "esbuild": "^0.28.2",
         "eslint": "^10.8.1",
         "mocha": "11.3.0",
         "sinon": "^22.1.0",
@@ -367,5 +380,8 @@
         "url": "https://github.com/u9401066/asset-aware-mcp/issues"
     },
     "homepage": "https://github.com/u9401066/asset-aware-mcp#readme",
-    "license": "Apache-2.0"
+    "license": "Apache-2.0",
+    "dependencies": {
+        "smol-toml": "^1.8.0"
+    }
 }

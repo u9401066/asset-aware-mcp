@@ -12,12 +12,14 @@ describe('AssetAwareMcpProvider', () => {
     beforeEach(() => {
         tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'asset-aware-mcp-provider-'));
         (vscode.workspace as any).workspaceFolders = undefined;
+        (vscode.workspace as any).isTrusted = true;
         __resetConfiguration();
     });
 
     afterEach(() => {
         fs.rmSync(tempDir, { recursive: true, force: true });
         (vscode.workspace as any).workspaceFolders = undefined;
+        (vscode.workspace as any).isTrusted = true;
         __resetConfiguration();
     });
 
@@ -86,7 +88,11 @@ describe('AssetAwareMcpProvider', () => {
         fs.writeFileSync(path.join(tempDir, 'pyproject.toml'), '[project]\nname = "asset-aware-mcp"\n');
         (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];
 
-        const provider = new AssetAwareMcpProvider(tempDir, undefined, makeContext());
+        const provider = new AssetAwareMcpProvider(
+            tempDir,
+            undefined,
+            makeContext({ extensionMode: vscode.ExtensionMode.Development }),
+        );
 
         const servers = provider.provideMcpServerDefinitions({} as any) as any[];
 
@@ -102,7 +108,11 @@ describe('AssetAwareMcpProvider', () => {
         (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];
         __setConfigurationValue('assetAwareMcp.enableMarkerBackend', true);
 
-        const provider = new AssetAwareMcpProvider(tempDir, undefined, makeContext());
+        const provider = new AssetAwareMcpProvider(
+            tempDir,
+            undefined,
+            makeContext({ extensionMode: vscode.ExtensionMode.Development }),
+        );
 
         const servers = provider.provideMcpServerDefinitions({} as any) as any[];
 
@@ -121,7 +131,11 @@ describe('AssetAwareMcpProvider', () => {
         fs.writeFileSync(path.join(sourceRoot, '.env'), 'DATA_DIR=child-data\nOLLAMA_MODEL=child-model\n');
         (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: workspaceRoot } }];
 
-        const provider = new AssetAwareMcpProvider(workspaceRoot, undefined, makeContext());
+        const provider = new AssetAwareMcpProvider(
+            workspaceRoot,
+            undefined,
+            makeContext({ extensionMode: vscode.ExtensionMode.Development }),
+        );
 
         const servers = provider.provideMcpServerDefinitions({} as any) as any[];
 
