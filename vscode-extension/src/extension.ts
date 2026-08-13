@@ -450,7 +450,7 @@ async function prepareMcpServerRuntime(
 ): Promise<boolean> {
     const config = vscode.workspace.getConfiguration('assetAwareMcp');
     const extensionVersion = extensionContext.extension.packageJSON.version as string;
-    const enableMarkerBackend = config.get('enableMarkerBackend', false);
+    const markerBackendRequested = config.get('enableMarkerBackend', false);
     const torchBackend = config.get('torchBackend', DEFAULT_TORCH_BACKEND);
     const runtimeSpecs = buildRuntimePrepareSpecs(extensionContext, uvPath, needsUpgrade);
 
@@ -467,14 +467,15 @@ async function prepareMcpServerRuntime(
             progress?.report({
                 message: `Preparing asset-aware-mcp ${extensionVersion} runtime (Python ${runtimeSpec.pythonVersion})...`,
             });
-        log(`Preparing MCP runtime: ${runtimeSpec.command} ${runtimeSpec.args.join(' ')}`);
-        log(
-            `Preparing MCP runtime details: version=${extensionVersion}; ` +
-            `mode=${runtimeSpec.mode}; marker_backend=${String(enableMarkerBackend)}; ` +
-            `python=${runtimeSpec.pythonVersion}; ` +
-            `torch_backend=${torchBackend}; timeout_ms=${RUNTIME_PREPARE_TIMEOUT_MS}`,
-        );
-            if (enableMarkerBackend) {
+            log(`Preparing MCP runtime: ${runtimeSpec.command} ${runtimeSpec.args.join(' ')}`);
+            log(
+                `Preparing MCP runtime details: version=${extensionVersion}; ` +
+                `mode=${runtimeSpec.mode}; marker_requested=${String(markerBackendRequested)}; ` +
+                'marker_effective=false (security hold); ' +
+                `python=${runtimeSpec.pythonVersion}; ` +
+                `torch_backend=${torchBackend}; timeout_ms=${RUNTIME_PREPARE_TIMEOUT_MS}`,
+            );
+            if (markerBackendRequested) {
                 log(MARKER_BACKEND_SECURITY_HOLD_MESSAGE);
             }
             log(`Preparing MCP runtime DATA_DIR: ${runtimeEnv.DATA_DIR ?? '(unset)'}`);
@@ -1002,7 +1003,7 @@ async function checkSystemDependencies(): Promise<void> {
         }
 
         const config = vscode.workspace.getConfiguration('assetAwareMcp');
-        const enableMarkerBackend = config.get('enableMarkerBackend', false);
+        const markerBackendRequested = config.get('enableMarkerBackend', false);
         const extensionVersion = extensionContext.extension.packageJSON.version as string;
         const lastVersion = extensionContext.globalState.get<string>(LAST_SERVER_VERSION_KEY);
         const launch = buildAssetAwareLaunchSpec(
@@ -1022,8 +1023,11 @@ async function checkSystemDependencies(): Promise<void> {
         depChannel.appendLine('   Runtime Python: ' + runtimePythonVersion);
         depChannel.appendLine('   Server version pin: ' + extensionVersion);
         depChannel.appendLine('   Cached version: ' + (lastVersion ?? '(first install)'));
-        depChannel.appendLine('   Marker backend enabled: ' + String(enableMarkerBackend));
-        if (enableMarkerBackend) {
+        depChannel.appendLine(
+            '   Marker backend requested: ' + String(markerBackendRequested) +
+            '; effective: false (security hold)',
+        );
+        if (markerBackendRequested) {
             depChannel.appendLine('   ' + MARKER_BACKEND_SECURITY_HOLD_MESSAGE);
         }
         depChannel.appendLine('   Runtime prepared: ' + (preparedVersion === extensionVersion ? 'yes' : 'no'));

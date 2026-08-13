@@ -51,6 +51,19 @@ def require_count(path: str, needle: str, minimum: int) -> str | None:
     return None
 
 
+def require_guard_per_occurrence(path: str, subject: str, guard: str) -> str | None:
+    """Require every security-sensitive action occurrence to carry its guard."""
+    text = Path(path).read_text(encoding="utf-8")
+    subject_count = text.count(subject)
+    guard_count = text.count(guard)
+    if guard_count < subject_count:
+        return (
+            f"{path}: expected {guard!r} for all {subject_count} occurrence(s) of "
+            f"{subject!r}, got {guard_count}"
+        )
+    return None
+
+
 def main() -> int:
     errors: list[str] = []
 
@@ -135,18 +148,34 @@ def main() -> int:
             ".github/workflows/release.yml",
             [
                 "uv run pytest",
+                "uv run bandit -q -r src -x tests --severity-level medium",
                 'NODE_VERSION: "24"',
-                "actions/checkout@v6",
-                "astral-sh/setup-uv@v8.1.0",
-                "actions/setup-node@v6",
+                "permissions:",
+                "contents: read",
+                "concurrency:",
+                "cancel-in-progress: false",
+                "persist-credentials: false",
+                "enable-cache: false",
+                "package-manager-cache: false",
+                "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+                "astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d",
+                'version: "0.12.3"',
+                "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
                 "python3 scripts/audit_release_harness.py",
-                "python3 scripts/audit_release_artifacts.py",
+                "uv run zizmor --persona=regular --min-severity high .github/workflows",
+                "python3 scripts/audit_release_artifacts.py --require all",
+                "python3 scripts/audit_release_artifacts.py --require python",
                 "python3 scripts/smoke_built_wheel.py",
                 "npm run test:ci",
                 "xvfb-run -a npm run test:install-smoke -- --require-activation",
                 "cross-platform-smoke",
                 "release-preflight",
-                "Verify release secrets are configured before publishing",
+                "fetch-depth: 0",
+                "must be an annotated tag",
+                'git merge-base --is-ancestor "$TAG_COMMIT_SHA" origin/main',
+                "Verify Marketplace publish rights before publishing",
+                "npx --no-install vsce verify-pat u9401066",
+                "npm audit --package-lock-only --audit-level=low",
                 "Package VSIX before publishing PyPI",
                 "Smoke built wheel runtime before publishing",
                 "Docker smoke diagnostics",
@@ -160,8 +189,10 @@ def main() -> int:
                 "npx vsce package --no-dependencies --out",
                 "Audit packaged VSIX artifact",
                 "--packagePath",
-                "actions/upload-artifact@v7",
-                "actions/download-artifact@v8",
+                "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+                "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
+                "RELEASE_INPUT_VERSION: ${{ inputs.version }}",
+                "RELEASE_EVENT_NAME: ${{ github.event_name }}",
                 "tag_name:",
                 "target_commitish:",
             ],
@@ -173,18 +204,67 @@ def main() -> int:
             [
                 "sync-assets:check",
                 'NODE_VERSION: "24"',
-                "actions/checkout@v6",
-                "astral-sh/setup-uv@v8.1.0",
-                "actions/setup-node@v6",
-                "actions/upload-artifact@v7",
+                "concurrency:",
+                "cancel-in-progress: true",
+                "persist-credentials: false",
+                "enable-cache: false",
+                "package-manager-cache: false",
+                "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+                "astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d",
+                "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+                "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
                 "npm run test:ci",
                 "xvfb-run -a npm run test:install-smoke -- --require-activation",
+                "python310-mcp-smoke",
+                "uv sync --frozen --python 3.10",
+                "uv run --python 3.10 pytest tests/test_mcp_tools.py",
+                "npm-security",
+                "npm audit --package-lock-only --audit-level=low",
+                "uv run zizmor --persona=regular --min-severity high .github/workflows",
+                'if [ "$status" != "success" ]',
+                'exit "$failed"',
             ],
         )
     )
     ci_count_error = require_count(".github/workflows/ci.yml", "npm run test:ci", 3)
     if ci_count_error:
         errors.append(ci_count_error)
+
+    for workflow_path in [
+        ".github/workflows/ci.yml",
+        ".github/workflows/release.yml",
+        ".github/workflows/dependency-security.yml",
+    ]:
+        for subject, guard in [
+            ("uses: actions/checkout@", "persist-credentials: false"),
+            ("uses: astral-sh/setup-uv@", "enable-cache: false"),
+            ("uses: astral-sh/setup-uv@", 'version: "0.12.3"'),
+            ("uses: actions/setup-node@", "package-manager-cache: false"),
+        ]:
+            guard_error = require_guard_per_occurrence(workflow_path, subject, guard)
+            if guard_error:
+                errors.append(guard_error)
+
+    errors.extend(
+        require_text(
+            ".github/workflows/dependency-security.yml",
+            [
+                "permissions:",
+                "contents: read",
+                "persist-credentials: false",
+                "enable-cache: false",
+                "package-manager-cache: false",
+                "uv audit --preview-features audit-command --frozen",
+                "npm audit --package-lock-only --audit-level=low",
+            ],
+        )
+    )
+
+    release_contents_read_error = require_count(
+        ".github/workflows/release.yml", "contents: read", 2
+    )
+    if release_contents_read_error:
+        errors.append(release_contents_read_error)
 
     errors.extend(
         require_text(
@@ -286,7 +366,7 @@ def main() -> int:
             "pyproject.toml",
             [
                 "[tool.hatch.build.targets.sdist]",
-                "blob/master/CHANGELOG.md",
+                "blob/main/CHANGELOG.md",
             ],
         )
     )

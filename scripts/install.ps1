@@ -90,7 +90,7 @@ function Show-Help {
     Write-Host "Options:"
     Write-Host "  -Check      Run diagnostics only (no changes)"
     Write-Host "  -Diagnose   Alias for -Check"
-    Write-Host "  -WithMarker Install optional Marker backend (pulls torch / surya stack)"
+    Write-Host "  -WithMarker Deprecated: report the Marker security hold and exit non-zero"
     Write-Host "  -Help       Show this help message"
     Write-Host ""
 }
@@ -152,6 +152,13 @@ function Main {
     if ($Help) {
         Show-Help
         return
+    }
+
+    if ($WithMarker) {
+        Write-Err "Marker is on a packaging security hold and cannot be installed by this script."
+        Write-Err "marker-pdf 1.10.2 pins Pillow<11 while this runtime requires Pillow>=12.2.0."
+        Write-Err "Use the default PyMuPDF backend, or install the maintained pdf-plus/docling extra."
+        exit 2
     }
 
     if ($Check -or $Diagnose) {
@@ -281,14 +288,9 @@ function Main {
     }
 
     $syncArgs = @('sync', '--python', $PreferredRuntimePython)
-    if ($WithMarker) {
-        $syncArgs += @('--extra', 'marker')
-        Write-Info "Running uv $($syncArgs -join ' ') ..."
-        Write-Info "  Optional Marker backend enabled (this may install torch)"
-    } else {
-        Write-Info "Running uv $($syncArgs -join ' ') ..."
-        Write-Info "  Default install skips optional Marker backend to avoid torch version issues"
-    }
+    Write-Info "Running uv $($syncArgs -join ' ') ..."
+    Write-Info "  Active optional PDF extras: pdf-plus and docling"
+    Write-Info "  MinerU and Marker remain fail-closed dependency security holds"
     try {
         & $uvCmd @syncArgs
         Write-Ok "All dependencies installed/updated successfully"

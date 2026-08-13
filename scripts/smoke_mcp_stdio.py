@@ -10,7 +10,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from mcp import ClientSession, StdioServerParameters
+from mcp import Client, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 DEFAULT_TIMEOUT_SECONDS = 15
@@ -27,15 +27,11 @@ async def _smoke(command: list[str], *, timeout: float) -> dict[str, object]:
     }
     params = StdioServerParameters(command=command[0], args=command[1:], env=env)
 
-    async with (
-        stdio_client(params) as (read_stream, write_stream),
-        ClientSession(read_stream, write_stream) as session,
-    ):
-        await asyncio.wait_for(session.initialize(), timeout=timeout)
-        tools = await asyncio.wait_for(session.list_tools(), timeout=timeout)
+    async with Client(stdio_client(params)) as client:
+        tools = await asyncio.wait_for(client.list_tools(), timeout=timeout)
         tool_names = sorted(tool.name for tool in tools.tools)
         result = await asyncio.wait_for(
-            session.call_tool("list_documents", {}),
+            client.call_tool("list_documents", {}),
             timeout=timeout,
         )
 
@@ -43,7 +39,7 @@ async def _smoke(command: list[str], *, timeout: float) -> dict[str, object]:
     missing = sorted(required - set(tool_names))
     if missing:
         raise RuntimeError(f"MCP stdio server missing required tools: {missing}")
-    if result.isError:
+    if result.is_error:
         raise RuntimeError("MCP stdio list_documents returned an error result")
 
     return {

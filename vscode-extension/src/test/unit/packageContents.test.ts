@@ -18,9 +18,12 @@ describe('package contents guard', () => {
         assert.match(packageContentsSource, /'dist\/'/);
         assert.match(packageContentsSource, /'tmp\/'/);
         assert.match(packageContentsSource, /forbiddenRepoAssetGeneratedDirPattern/);
+        assert.match(packageContentsSource, /forbiddenRootGeneratedMediaPattern/);
         assert.match(packageContentsSource, /node_modules/);
         assert.match(packageContentsSource, /__pycache__/);
         assert.match(vscodeIgnore, /^dist\/\*\*/m);
         assert.match(vscodeIgnore, /^tmp\/\*\*/m);
+        assert.match(vscodeIgnore, /^\*\.png$/m);
+        assert.match(vscodeIgnore, /^!resources\/\*\*\/\*\.png$/m);
     });
 });

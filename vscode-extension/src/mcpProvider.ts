@@ -109,8 +109,12 @@ export class AssetAwareMcpProvider implements vscode.McpServerDefinitionProvider
         if (this.needsUpgrade) {
             this.log('Upgrade flag: enabled (version changed)');
         }
-        this.log('Marker backend enabled: ' + String(config.get('enableMarkerBackend', false)));
-        if (config.get('enableMarkerBackend', false)) {
+        const markerRequested = config.get('enableMarkerBackend', false);
+        this.log(
+            'Marker backend requested: ' + String(markerRequested) +
+            '; effective: false (security hold)',
+        );
+        if (markerRequested) {
             this.log(MARKER_BACKEND_SECURITY_HOLD_MESSAGE);
         }
 

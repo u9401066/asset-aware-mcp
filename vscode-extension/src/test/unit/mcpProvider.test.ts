@@ -30,6 +30,22 @@ describe('AssetAwareMcpProvider', () => {
         } as any;
     }
 
+    it('labels the legacy Marker command as status-only while held', () => {
+        const packageJson = JSON.parse(
+            fs.readFileSync(path.join(__dirname, '..', '..', '..', 'package.json'), 'utf8'),
+        );
+        const markerCommand = packageJson.contributes.commands.find(
+            (entry: { command: string }) =>
+                entry.command === 'assetAwareMcp.installMarkerBackend',
+        );
+
+        assert.strictEqual(
+            markerCommand.title,
+            'Asset-Aware MCP: Marker Backend Status (Security Hold)',
+        );
+        assert.doesNotMatch(markerCommand.title, /Install Marker Backend/);
+    });
+
     it('uses preferred python in production mode', () => {
         const provider = new AssetAwareMcpProvider(tempDir, undefined, makeContext());
 
@@ -163,7 +179,10 @@ describe('AssetAwareMcpProvider', () => {
         assert.match(logOutput, /Command: uv tool run --python 3\.11 --from asset-aware-mcp==0\.6\.19 asset-aware-mcp/);
         assert.match(logOutput, /DATA_DIR: /);
         assert.match(logOutput, /Server version pin: 0\.6\.19/);
-        assert.match(logOutput, /Marker backend enabled: true/);
+        assert.match(
+            logOutput,
+            /Marker backend requested: true; effective: false \(security hold\)/,
+        );
         assert.match(logOutput, /Marker backend requested but temporarily disabled/);
         assert.match(logOutput, /marker-pdf pins Pillow<11/);
         assert.doesNotMatch(logOutput, /Marker cold start may download/);

@@ -16,7 +16,6 @@ REQUIRED_PYTHON_MINOR=10
 PREFERRED_RUNTIME_PYTHON=3.11
 UV_INSTALL_URL="https://astral.sh/uv/install.sh"
 CHECK_MODE=false
-INSTALL_MARKER=false
 
 # --- Colors (disabled if not a terminal) ---
 if [ -t 1 ]; then
@@ -243,14 +242,20 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  --check    Run diagnostics only (no installations or changes)"
-    echo "  --with-marker  Install optional Marker backend (pulls torch / surya stack)"
+    echo "  --with-marker  Deprecated: report the Marker security hold and exit non-zero"
     echo "  --help     Show this help message"
     echo ""
     echo "Examples:"
-    echo "  bash scripts/install.sh            # Install / update (no Marker/torch)"
-    echo "  bash scripts/install.sh --with-marker  # Install with Marker backend"
+    echo "  bash scripts/install.sh            # Install / update secure runtime"
+    echo "  bash scripts/install.sh --with-marker  # Show Marker security-hold status"
     echo "  bash scripts/install.sh --check    # Check environment"
     echo ""
+}
+
+show_marker_security_hold() {
+    error "Marker is on a packaging security hold and cannot be installed by this script."
+    error "marker-pdf 1.10.2 pins Pillow<11 while this runtime requires Pillow>=12.2.0."
+    error "Use the default PyMuPDF backend, or install the maintained pdf-plus/docling extra."
 }
 
 # ============================================================================
@@ -564,14 +569,9 @@ main() {
     fi
 
     local sync_args=(sync --python "${PREFERRED_RUNTIME_PYTHON}")
-    if [ "$INSTALL_MARKER" = true ]; then
-        sync_args+=(--extra marker)
-        info "Running uv ${sync_args[*]} ..."
-        info "  Optional Marker backend enabled (this may install torch)"
-    else
-        info "Running uv ${sync_args[*]} ..."
-        info "  Default install skips optional Marker backend to avoid torch version issues"
-    fi
+    info "Running uv ${sync_args[*]} ..."
+    info "  Active optional PDF extras: pdf-plus and docling"
+    info "  MinerU and Marker remain fail-closed dependency security holds"
 
     if uv "${sync_args[@]}"; then
         ok "All dependencies installed/updated successfully"
@@ -655,8 +655,8 @@ case "${1:-}" in
         run_check
         ;;
     --with-marker)
-        INSTALL_MARKER=true
-        main
+        show_marker_security_hold
+        exit 2
         ;;
     --help|-h)
         show_help

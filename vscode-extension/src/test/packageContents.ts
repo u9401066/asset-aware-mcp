@@ -73,6 +73,7 @@ const forbiddenAssetFragments = [
 
 const forbiddenRepoAssetGeneratedDirPattern =
     /^resources\/repo-assets\/asset-aware\/(?:.*\/)?(?:dist|out|tmp|node_modules|\.pytest_cache|\.venv|__pycache__)\//;
+const forbiddenRootGeneratedMediaPattern = /^[^/]+\.(?:png|jpe?g|webp)$/i;
 
 async function listPackageFiles(): Promise<string[]> {
     return await listFiles({
@@ -91,6 +92,7 @@ function assertPackageContents(files: string[]): void {
     const forbidden = files.filter((file) =>
         forbiddenPrefixes.some((prefix) => file.startsWith(prefix)) ||
         forbiddenFiles.includes(file) ||
+        forbiddenRootGeneratedMediaPattern.test(file) ||
         file.endsWith('.vsix') ||
         file.endsWith('.map') ||
         file.endsWith('.ts')

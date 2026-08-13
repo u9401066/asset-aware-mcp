@@ -1,0 +1,57 @@
+version: 2
+
+updates:
+  # uv is the Dependabot ecosystem that updates both pyproject.toml and uv.lock.
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 8
+    commit-message:
+      prefix: "deps(python)"
+    groups:
+      python-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "npm"
+    directory: "/vscode-extension"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "04:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 6
+    commit-message:
+      prefix: "deps(npm)"
+    groups:
+      npm-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "04:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(actions)"
+    groups:
+      actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

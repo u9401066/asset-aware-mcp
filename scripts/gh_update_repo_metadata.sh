@@ -5,14 +5,18 @@ set -euo pipefail
 
 REPO="${GH_REPO:-u9401066/asset-aware-mcp}"
 
-DESCRIPTION="Asset-Aware MCP Server for AI agents: precise PDF/DOCX assets, A2T tables, structural pointers, 30 public tools / 13 resources, 63 legacy tools, segmentation, OCR, and LightRAG"
+DESCRIPTION="Turn PDF, DOCX, tables, and figures into citation-ready reusable agent assets and Foam/LightRAG wikis — MCP SDK 2 server plus VS Code extension"
+HOMEPAGE="https://u9401066.github.io/asset-aware-mcp/#/overview-zh"
 
 TOPICS=(
   ai
+  agent-assets
+  citations
   document-processing
+  document-ai
   docx
   etl
-  fastmcp
+  foam
   knowledge-graph
   layout-analysis
   lightrag
@@ -28,5 +32,6 @@ TOPICS=(
 )
 
 echo "Updating $REPO metadata"
-gh repo edit "$REPO" --description "$DESCRIPTION"
+gh repo edit "$REPO" --description "$DESCRIPTION" --homepage "$HOMEPAGE"
+gh repo edit "$REPO" --remove-topic fastmcp || true
 gh repo edit "$REPO" --add-topic "$(IFS=,; echo "${TOPICS[*]}")"

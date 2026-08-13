@@ -236,6 +236,21 @@ echo "=== Test: --help mode ==="
 help_output="$(bash "$INSTALL_SCRIPT" --help 2>&1)"
 assert_contains "--help shows usage" "$help_output" "Usage"
 assert_contains "--help mentions --check" "$help_output" "--check"
+assert_contains "--help marks Marker as held" "$help_output" "Marker security hold"
+
+# The backwards-compatible flag must fail closed instead of passing the empty
+# [marker] extra to uv and reporting a false-positive installation.
+set +e
+marker_output="$(bash "$INSTALL_SCRIPT" --with-marker 2>&1)"
+marker_exit=$?
+set -e
+assert_exit_code "--with-marker exits non-zero while held" "2" "$marker_exit"
+assert_contains "--with-marker explains the dependency hold" "$marker_output" "Pillow<11"
+if echo "$marker_output" | grep -qF -- "Optional Marker backend enabled"; then
+    fail "--with-marker never reports enabled" "reported a held backend as enabled"
+else
+    pass "--with-marker never reports enabled"
+fi
 
 # ============================================================================
 # Test: color disabled in non-terminal
@@ -308,6 +323,13 @@ if [ -f "$SCRIPT_DIR/scripts/install.ps1" ]; then
     pass "install.ps1 exists for Windows"
 else
     fail "install.ps1 exists for Windows" "file not found"
+fi
+
+if grep -qF -- "security hold and cannot be installed" "$SCRIPT_DIR/scripts/install.ps1" \
+    && ! grep -Eq -- "--extra.*marker" "$SCRIPT_DIR/scripts/install.ps1"; then
+    pass "install.ps1 fails closed for held Marker backend"
+else
+    fail "install.ps1 fails closed for held Marker backend" "stale Marker install path found"
 fi
 
 # ============================================================================

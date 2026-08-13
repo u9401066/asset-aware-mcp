@@ -13,4 +13,14 @@ eslint.config.mjs
 **/*.ts
 **/*.map
 *.vsix
+# Never package document-processing screenshots accidentally left at extension
+# root. Product artwork belongs under resources/** and is not matched here.
+*.png
+*.jpg
+*.jpeg
+*.webp
+!resources/**/*.png
+!resources/**/*.jpg
+!resources/**/*.jpeg
+!resources/**/*.webp
 .github/**

@@ -1,0 +1,75 @@
+name: Dependency and Security Gate
+
+on:
+  pull_request:
+    paths:
+      - "pyproject.toml"
+      - "uv.lock"
+      - "vscode-extension/package.json"
+      - "vscode-extension/package-lock.json"
+      - ".github/dependabot.yml"
+      - ".github/workflows/**"
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+# Scheduled and PR audits never mutate repository contents.
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-security-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.10"
+  NODE_VERSION: "24"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  python-lock-audit:
+    name: Python universal lock audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+        with:
+          version: "0.12.3"
+          enable-cache: false
+
+      - name: Verify lock is current
+        run: uv lock --check
+
+      - name: Audit all locked Python dependencies
+        # Includes runtime, development, and every resolvable optional extra.
+        # MinerU stays on security hold because 3.4.4 requires transformers<5,
+        # while the applicable fixes require transformers>=5.5.
+        run: >-
+          uv audit --preview-features audit-command --frozen
+          --python-version "$PYTHON_VERSION"
+
+  npm-lock-audit:
+    name: npm lock audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: vscode-extension
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Audit locked npm dependencies
+        run: npm audit --package-lock-only --audit-level=low
