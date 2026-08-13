@@ -90,6 +90,9 @@ class JobService:
         Returns:
             Created job with ID for tracking
         """
+        normalized_file_paths = self._normalize_job_input_files(file_paths)
+        if not normalized_file_paths:
+            raise ValueError("At least one input file is required")
         async with self._quota_lock:
             # Check concurrent job limit while holding the slot reservation lock.
             active_count = len(self._running_tasks)
@@ -104,8 +107,6 @@ class JobService:
             job_id = (
                 f"job_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
             )
-
-            normalized_file_paths = self._normalize_job_input_files(file_paths)
 
             # Estimate duration (rough: 10s per file)
             estimated_duration = len(normalized_file_paths) * 10
@@ -228,10 +229,12 @@ class JobService:
     @staticmethod
     def _normalize_job_input_files(file_paths: list[str]) -> list[str]:
         """Persist absolute paths so subprocess workers do not depend on cwd."""
-        return [
-            str(Path(file_path).expanduser().resolve(strict=False))
-            for file_path in file_paths
-        ]
+        normalized: list[str] = []
+        for file_path in file_paths:
+            if not isinstance(file_path, str) or not file_path.strip():
+                raise ValueError("Input file paths must be non-empty strings")
+            normalized.append(str(Path(file_path).expanduser().resolve(strict=False)))
+        return normalized
 
     async def get_job(self, job_id: str) -> Job | None:
         """Get job by ID."""

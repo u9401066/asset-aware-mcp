@@ -8,18 +8,25 @@ Key feature: Extracts images WITH page numbers for verification.
 from __future__ import annotations
 
 import logging
+import math
 import multiprocessing
 import os
 import re
 import shutil
 import signal
+import stat
+import struct
 import subprocess
+import tempfile
 import threading
+import time
 from collections import Counter
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import msgpack
 import pymupdf as fitz  # type: ignore[import-untyped]
 
 from src.domain.etl_profile import ETLProfile
@@ -49,6 +56,17 @@ PDF_STRUCTURE_MAX_PAGES_ENV = "ASSET_AWARE_PDF_STRUCTURE_MAX_PAGES"
 DEFAULT_PDF_AUDIT_MAX_ISSUES = 200
 DEFAULT_PDF_AUDIT_MAX_PAGES = 200
 DEFAULT_PDF_STRUCTURE_MAX_PAGES = 500
+PDF_WORKER_RESULT_POLL_SECONDS = 0.05
+PDF_WORKER_TERMINATE_GRACE_SECONDS = 1.0
+PDF_WORKER_KILL_GRACE_SECONDS = 1.0
+DEFAULT_PDF_WORKER_RESULT_MAX_MIB = 512.0
+MIN_PDF_WORKER_RESULT_MAX_MIB = 1.0
+MAX_PDF_WORKER_RESULT_MAX_MIB = 512.0
+MAX_PDF_WORKER_RESULT_CONTAINER_ITEMS = 1_000_000
+MAX_PDF_WORKER_RESULT_NESTING = 100
+PDF_WORKER_RESULT_ENVELOPE_VERSION = 1
+PDF_WORKER_RESULT_READ_MIB_PER_SECOND = 16.0
+PDF_WORKER_RESULT_MIN_READ_BUDGET_SECONDS = 0.01
 _SUSPICIOUS_AI_INSTRUCTION_RE = re.compile(
     r"("
     r"ignore\s+(all\s+)?(previous|prior|above)\s+instructions"
@@ -64,74 +82,84 @@ _SUSPICIOUS_AI_INSTRUCTION_RE = re.compile(
 )
 
 
-def _extract_tables_worker(pdf_path_str: str, queue: Any) -> None:
+def _extract_tables_worker(pdf_path_str: str, result_sink: Any) -> None:
     """Run PyMuPDF table extraction in a child process."""
     try:
         extractor = PyMuPDFExtractor()
         tables = extractor._extract_tables_direct(Path(pdf_path_str))
-        queue.put(("ok", tables))
+        result_sink.put(("ok", tables))
     except Exception as exc:  # pragma: no cover - worker isolation path
-        queue.put(("error", str(exc)))
+        result_sink.put(("error", str(exc)))
 
 
-def _extract_text_worker(pdf_path_str: str, queue: Any) -> None:
+def _extract_text_worker(pdf_path_str: str, result_sink: Any) -> None:
     """Run rich PyMuPDF text extraction in a child process."""
     try:
         extractor = PyMuPDFExtractor()
         markdown = extractor._extract_text_direct(Path(pdf_path_str))
-        queue.put(("ok", markdown))
+        result_sink.put(("ok", markdown))
     except Exception as exc:  # pragma: no cover - worker isolation path
-        queue.put(("error", str(exc)))
+        result_sink.put(("error", str(exc)))
 
 
-def _extract_images_worker(pdf_path_str: str, queue: Any) -> None:
+def _extract_text_fast_worker(pdf_path_str: str, result_sink: Any) -> None:
+    """Run the lightweight text fallback inside the same process boundary."""
+    try:
+        extractor = PyMuPDFExtractor()
+        markdown = extractor._extract_text_fast(Path(pdf_path_str))
+        result_sink.put(("ok", markdown))
+    except Exception as exc:  # pragma: no cover - worker isolation path
+        result_sink.put(("error", str(exc)))
+
+
+def _extract_images_worker(pdf_path_str: str, result_sink: Any) -> None:
     """Run PyMuPDF image extraction in a child process."""
     try:
         extractor = PyMuPDFExtractor()
         images = extractor._extract_images_direct(Path(pdf_path_str))
-        queue.put(("ok", images))
+        result_sink.put(("ok", images))
     except Exception as exc:  # pragma: no cover - worker isolation path
-        queue.put(("error", str(exc)))
+        result_sink.put(("error", str(exc)))
 
 
-def _extract_images_fast_worker(pdf_path_str: str, queue: Any) -> None:
+def _extract_images_fast_worker(pdf_path_str: str, result_sink: Any) -> None:
     """Run fast PyMuPDF image fallback in a child process."""
     try:
         extractor = PyMuPDFExtractor()
         images = extractor._extract_images_fast(Path(pdf_path_str))
-        queue.put(("ok", images))
+        result_sink.put(("ok", images))
     except Exception as exc:  # pragma: no cover - worker isolation path
-        queue.put(("error", str(exc)))
+        result_sink.put(("error", str(exc)))
 
 
-def _extract_figure_captions_worker(pdf_path_str: str, queue: Any) -> None:
+def _extract_figure_captions_worker(pdf_path_str: str, result_sink: Any) -> None:
     """Run PyMuPDF figure caption extraction in a child process."""
     try:
         extractor = PyMuPDFExtractor()
         captions = extractor._extract_figure_captions_direct(Path(pdf_path_str))
-        queue.put(("ok", captions))
+        result_sink.put(("ok", captions))
     except Exception as exc:  # pragma: no cover - worker isolation path
-        queue.put(("error", str(exc)))
+        result_sink.put(("error", str(exc)))
 
 
-def _audit_ai_safety_worker(pdf_path_str: str, queue: Any) -> None:
+def _audit_ai_safety_worker(pdf_path_str: str, result_sink: Any) -> None:
     """Run PDF AI safety audit in a child process."""
     try:
         extractor = PyMuPDFExtractor()
         report = extractor._audit_ai_safety_direct(Path(pdf_path_str))
-        queue.put(("ok", report))
+        result_sink.put(("ok", report))
     except Exception as exc:  # pragma: no cover - worker isolation path
-        queue.put(("error", str(exc)))
+        result_sink.put(("error", str(exc)))
 
 
-def _extract_native_structure_worker(pdf_path_str: str, queue: Any) -> None:
+def _extract_native_structure_worker(pdf_path_str: str, result_sink: Any) -> None:
     """Run native PDF structure extraction in a child process."""
     try:
         extractor = PyMuPDFExtractor()
         report = extractor._extract_native_structure_direct(Path(pdf_path_str))
-        queue.put(("ok", report))
+        result_sink.put(("ok", report))
     except Exception as exc:  # pragma: no cover - worker isolation path
-        queue.put(("error", str(exc)))
+        result_sink.put(("error", str(exc)))
 
 
 def _env_flag(name: str, default: bool) -> bool:
@@ -151,6 +179,31 @@ def _env_float(name: str, default: float) -> float:
         return default
 
 
+def _env_timeout_seconds(name: str, default: float) -> float:
+    """Read a finite PDF timeout while preserving the legacy direct-mode opt-out.
+
+    Non-numeric and non-finite values cannot provide a real wall-clock bound,
+    so they fail safely to the finite positive default. Existing finite values
+    less than or equal to zero remain an explicit compatibility opt-out; each
+    public extraction method handles that value before starting a worker.
+    """
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    try:
+        timeout_seconds = float(raw_value)
+    except ValueError:
+        return default
+    if not math.isfinite(timeout_seconds):
+        logger.warning(
+            "Ignoring non-finite PDF timeout in %s; using %.1fs",
+            name,
+            default,
+        )
+        return default
+    return timeout_seconds
+
+
 def _env_int(name: str, default: int) -> int:
     raw_value = os.environ.get(name)
     if raw_value is None:
@@ -167,6 +220,499 @@ def _get_pdf_worker_context() -> Any:
         return multiprocessing.get_context("fork")
     except (RuntimeError, ValueError):
         return multiprocessing.get_context("spawn")
+
+
+@dataclass(frozen=True)
+class _PDFWorkerResult:
+    """Outcome from a process-isolated PDF worker."""
+
+    status: str | None = None
+    payload: Any = None
+    timed_out: bool = False
+    failure: str | None = None
+
+
+class _SizeLimitedResultWriter:
+    """Binary writer that rejects oversized aggregate worker results."""
+
+    def __init__(self, raw_file: Any, max_bytes: int) -> None:
+        self._raw_file = raw_file
+        self._max_bytes = max_bytes
+        self._bytes_written = 0
+
+    def write(self, data: bytes | bytearray | memoryview) -> int:
+        next_size = self._bytes_written + len(data)
+        if next_size > self._max_bytes:
+            raise ValueError(
+                f"PDF worker result exceeds the configured {self._max_bytes}-byte limit"
+            )
+        written = int(self._raw_file.write(data))
+        if written != len(data):
+            raise OSError(
+                f"short PDF worker result write: expected {len(data)}, wrote {written}"
+            )
+        self._bytes_written += written
+        return written
+
+
+class _MessagePackResultEncoder:
+    """Stream supported PDF result values without building one giant frame."""
+
+    def __init__(self, writer: _SizeLimitedResultWriter) -> None:
+        self._writer = writer
+        self._packer = msgpack.Packer(use_bin_type=True, strict_types=True)
+        self._active_containers: set[int] = set()
+
+    def pack(self, value: Any) -> None:
+        """Encode JSON-like values plus binary blobs and integer map keys."""
+        self._pack_value(value, depth=0)
+
+    def _pack_value(self, value: Any, *, depth: int) -> None:
+        if depth > MAX_PDF_WORKER_RESULT_NESTING:
+            raise ValueError("PDF worker result exceeds the MessagePack nesting limit")
+
+        if value is None or type(value) in {bool, int, float, str}:
+            self._writer.write(self._packer.pack(value))
+            return
+
+        if isinstance(value, bytes):
+            self._write_binary(value)
+            return
+
+        if isinstance(value, (list, tuple)):
+            self._pack_container(value, depth=depth, is_map=False)
+            return
+
+        if isinstance(value, dict):
+            self._pack_container(value, depth=depth, is_map=True)
+            return
+
+        raise TypeError(
+            f"unsupported PDF worker MessagePack value: {type(value).__name__}"
+        )
+
+    def _pack_container(
+        self,
+        value: list[Any] | tuple[Any, ...] | dict[Any, Any],
+        *,
+        depth: int,
+        is_map: bool,
+    ) -> None:
+        container_id = id(value)
+        if container_id in self._active_containers:
+            raise ValueError("PDF worker result contains a recursive container")
+        if len(value) > MAX_PDF_WORKER_RESULT_CONTAINER_ITEMS:
+            raise ValueError(
+                "PDF worker result exceeds the MessagePack container item limit"
+            )
+
+        self._active_containers.add(container_id)
+        try:
+            if is_map:
+                assert isinstance(value, dict)
+                self._writer.write(self._packer.pack_map_header(len(value)))
+                for key, item in value.items():
+                    if type(key) not in {str, int}:
+                        raise TypeError(
+                            "PDF worker MessagePack map keys must be strings or integers"
+                        )
+                    self._pack_value(key, depth=depth + 1)
+                    self._pack_value(item, depth=depth + 1)
+            else:
+                assert isinstance(value, (list, tuple))
+                self._writer.write(self._packer.pack_array_header(len(value)))
+                for item in value:
+                    self._pack_value(item, depth=depth + 1)
+        finally:
+            self._active_containers.remove(container_id)
+
+    def _write_binary(self, value: bytes) -> None:
+        length = len(value)
+        if length <= 0xFF:
+            header = b"\xc4" + struct.pack(">B", length)
+        elif length <= 0xFFFF:
+            header = b"\xc5" + struct.pack(">H", length)
+        elif length <= 0xFFFFFFFF:
+            header = b"\xc6" + struct.pack(">I", length)
+        else:
+            raise ValueError("PDF worker binary value is too large for MessagePack")
+        self._writer.write(header)
+        self._writer.write(value)
+
+
+@dataclass(frozen=True)
+class _AtomicPDFWorkerResultSink:
+    """Publish one safely encoded child result in a private directory."""
+
+    result_path: str
+    max_bytes: int
+
+    def _partial_path(self) -> Path:
+        return Path(f"{self.result_path}.{os.getpid()}.partial")
+
+    def put(self, result: tuple[str, Any]) -> None:
+        """MessagePack one result to a partial file, then atomically publish it."""
+        if (
+            not isinstance(result, tuple)
+            or len(result) != 2
+            or result[0] not in {"ok", "error"}
+        ):
+            raise ValueError("PDF worker result has an invalid envelope")
+        envelope = {
+            "version": PDF_WORKER_RESULT_ENVELOPE_VERSION,
+            "status": result[0],
+            "payload": result[1],
+        }
+        partial_path = self._partial_path()
+        try:
+            descriptor = os.open(
+                partial_path,
+                os.O_WRONLY
+                | os.O_CREAT
+                | os.O_EXCL
+                | getattr(os, "O_NOFOLLOW", 0)
+                | getattr(os, "O_CLOEXEC", 0),
+                0o600,
+            )
+            with os.fdopen(descriptor, "wb") as raw_file:
+                writer = _SizeLimitedResultWriter(raw_file, self.max_bytes)
+                _MessagePackResultEncoder(writer).pack(envelope)
+                raw_file.flush()
+                os.fsync(raw_file.fileno())
+            partial_path.replace(self.result_path)
+        finally:
+            # The parent removes the entire private directory after reaping the
+            # child, including a partial file left by an OOM or kill.
+            with suppress(OSError):
+                partial_path.unlink(missing_ok=True)
+
+
+def _pdf_worker_result_max_bytes() -> int:
+    """Return a bounded file-result limit configured in MiB."""
+    raw_value = os.environ.get(
+        "PYMUPDF_WORKER_RESULT_MAX_MIB",
+        str(DEFAULT_PDF_WORKER_RESULT_MAX_MIB),
+    )
+    try:
+        configured_mib = float(raw_value)
+    except ValueError:
+        configured_mib = DEFAULT_PDF_WORKER_RESULT_MAX_MIB
+    if not math.isfinite(configured_mib) or configured_mib <= 0:
+        configured_mib = DEFAULT_PDF_WORKER_RESULT_MAX_MIB
+    bounded_mib = max(
+        MIN_PDF_WORKER_RESULT_MAX_MIB,
+        min(configured_mib, MAX_PDF_WORKER_RESULT_MAX_MIB),
+    )
+    return int(bounded_mib * 1024 * 1024)
+
+
+def _reject_pdf_worker_ext(code: int, data: bytes) -> Any:
+    """Reject extension values; PDF worker results need no custom types."""
+    raise ValueError(
+        f"PDF worker result contains unsupported MessagePack extension {code}"
+    )
+
+
+def _strict_pdf_worker_map(pairs: list[tuple[Any, Any]]) -> dict[Any, Any]:
+    """Build a map while rejecting duplicate and unsupported key types."""
+    result: dict[Any, Any] = {}
+    for key, value in pairs:
+        if type(key) not in {str, int}:
+            raise ValueError(
+                "PDF worker result contains an unsupported MessagePack map key"
+            )
+        if key in result:
+            raise ValueError("PDF worker result contains a duplicate map key")
+        result[key] = value
+    return result
+
+
+def _validate_pdf_worker_result_value(decoded: Any) -> None:
+    """Reject decoded types or nesting that the worker encoder cannot emit."""
+    pending: list[tuple[Any, int]] = [(decoded, 0)]
+    while pending:
+        value, depth = pending.pop()
+        if depth > MAX_PDF_WORKER_RESULT_NESTING:
+            raise ValueError("PDF worker result exceeds the MessagePack nesting limit")
+        if value is None or type(value) in {bool, int, float, str, bytes}:
+            continue
+        if isinstance(value, list):
+            pending.extend((item, depth + 1) for item in value)
+            continue
+        if isinstance(value, dict):
+            pending.extend((item, depth + 1) for item in value.values())
+            continue
+        raise ValueError(
+            f"PDF worker result contains unsupported decoded type: "
+            f"{type(value).__name__}"
+        )
+
+
+def _decode_pdf_worker_result_stream(
+    result_file: Any,
+    *,
+    max_bytes: int,
+    expected_size: int,
+) -> Any:
+    """Decode exactly one bounded MessagePack value from a file stream."""
+    max_container_items = min(max_bytes, MAX_PDF_WORKER_RESULT_CONTAINER_ITEMS)
+    unpacker = msgpack.Unpacker(
+        result_file,
+        raw=False,
+        use_list=True,
+        strict_map_key=False,
+        unicode_errors="strict",
+        max_buffer_size=max_bytes,
+        max_str_len=max_bytes,
+        max_bin_len=max_bytes,
+        max_array_len=max_container_items,
+        max_map_len=max_container_items,
+        max_ext_len=0,
+        ext_hook=_reject_pdf_worker_ext,
+        object_pairs_hook=_strict_pdf_worker_map,
+    )
+    decoded = unpacker.unpack()
+    if unpacker.tell() != expected_size:
+        raise ValueError(
+            "worker result contains trailing data or multiple MessagePack objects"
+        )
+    _validate_pdf_worker_result_value(decoded)
+    return decoded
+
+
+def _read_pdf_worker_result(
+    result_path: Path,
+    *,
+    max_bytes: int,
+    deadline: float | None = None,
+) -> _PDFWorkerResult:
+    """Read one bounded MessagePack result from an atomically published file."""
+    try:
+        result_stat = result_path.lstat()
+    except FileNotFoundError:
+        return _PDFWorkerResult(failure="worker exited without a result")
+    except OSError as exc:
+        return _PDFWorkerResult(failure=f"worker result could not be inspected: {exc}")
+
+    if not stat.S_ISREG(result_stat.st_mode):
+        return _PDFWorkerResult(failure="worker result is not a regular file")
+    if result_stat.st_size <= 0:
+        return _PDFWorkerResult(failure="worker result is empty")
+    if result_stat.st_size > max_bytes:
+        return _PDFWorkerResult(
+            failure=(f"worker result exceeds the configured {max_bytes}-byte limit")
+        )
+    if os.name != "nt" and result_stat.st_mode & 0o077:
+        return _PDFWorkerResult(failure="worker result permissions are not private")
+    getuid = getattr(os, "getuid", None)
+    if getuid is not None and result_stat.st_uid != getuid():
+        return _PDFWorkerResult(failure="worker result has an unexpected owner")
+
+    descriptor: int | None = None
+    try:
+        if deadline is not None and deadline <= time.monotonic():
+            return _PDFWorkerResult(
+                timed_out=True,
+                failure="timed out before decoding the worker result",
+            )
+
+        open_flags = (
+            os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+        )
+        descriptor = os.open(result_path, open_flags)
+        opened_stat = os.fstat(descriptor)
+        if (
+            opened_stat.st_dev != result_stat.st_dev
+            or opened_stat.st_ino != result_stat.st_ino
+            or opened_stat.st_size != result_stat.st_size
+            or not stat.S_ISREG(opened_stat.st_mode)
+        ):
+            return _PDFWorkerResult(
+                failure="worker result changed before it could be read"
+            )
+        with os.fdopen(descriptor, "rb") as result_file:
+            descriptor = None
+            decoded = _decode_pdf_worker_result_stream(
+                result_file,
+                max_bytes=max_bytes,
+                expected_size=opened_stat.st_size,
+            )
+    except (
+        OSError,
+        TypeError,
+        ValueError,
+        msgpack.BufferFull,
+        msgpack.ExtraData,
+        msgpack.FormatError,
+        msgpack.OutOfData,
+        msgpack.StackError,
+    ) as exc:
+        return _PDFWorkerResult(failure=f"worker result could not be read: {exc}")
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+    if deadline is not None and time.monotonic() > deadline:
+        return _PDFWorkerResult(
+            timed_out=True,
+            failure="timed out while decoding the worker result",
+        )
+
+    if (
+        not isinstance(decoded, dict)
+        or set(decoded) != {"version", "status", "payload"}
+        or type(decoded.get("version")) is not int
+        or decoded.get("version") != PDF_WORKER_RESULT_ENVELOPE_VERSION
+        or not isinstance(decoded.get("status"), str)
+        or decoded.get("status") not in {"ok", "error"}
+    ):
+        return _PDFWorkerResult(failure="worker result has an invalid envelope")
+    status = decoded["status"]
+    payload = decoded["payload"]
+    return _PDFWorkerResult(status=status, payload=payload)
+
+
+def _stop_pdf_worker(process: Any) -> None:
+    """Reap a PDF worker, escalating from terminate to kill when necessary."""
+    try:
+        if not process.is_alive():
+            process.join(0)
+        else:
+            process.terminate()
+            process.join(PDF_WORKER_TERMINATE_GRACE_SECONDS)
+            if process.is_alive():
+                kill = getattr(process, "kill", None)
+                if kill is not None:
+                    kill()
+                    process.join(PDF_WORKER_KILL_GRACE_SECONDS)
+    except Exception:
+        logger.debug("Failed to stop PDF worker cleanly", exc_info=True)
+    finally:
+        try:
+            if not process.is_alive():
+                close = getattr(process, "close", None)
+                if close is not None:
+                    close()
+        except Exception:
+            logger.debug("Failed to close PDF worker process", exc_info=True)
+
+
+def _run_isolated_pdf_worker(
+    *,
+    target: Any,
+    pdf_path: Path,
+    timeout_seconds: float,
+) -> _PDFWorkerResult:
+    """Run one PDF worker with file-backed, bounded, atomic result transport.
+
+    Large PDF assets never cross a multiprocessing pipe. The child streams a
+    size-limited, non-executable MessagePack envelope into a private partial
+    file and publishes it with ``os.replace`` only after the complete payload
+    is durable. The parent waits only for process exit, so a pipe frame can
+    never make ``Queue.get(timeout=...)`` block past the document deadline.
+    Timeout/OOM/crash paths have no published result and fail closed; the
+    private result directory is always removed after the process is reaped.
+
+    Worker execution and atomic result publication are bounded by
+    ``timeout_seconds``. Bounded parent decode starts only when a conservative
+    size-derived time budget remains, rejects extension/custom types, and is
+    rejected if it finishes after the deadline. It deliberately does not
+    install process-global signal handlers, so an embedding application's
+    existing timeout is never replaced or delayed. Forced termination and kill
+    add at most the two fixed cleanup grace periods.
+    """
+    if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
+        return _PDFWorkerResult(
+            failure="worker timeout must be finite and greater than zero"
+        )
+    deadline = time.monotonic() + max(0.0, timeout_seconds)
+    context = _get_pdf_worker_context()
+    result_directory: Path | None = None
+    process: Any | None = None
+
+    try:
+        result_directory = Path(tempfile.mkdtemp(prefix="asset-aware-pdf-worker-"))
+        result_directory.chmod(0o700)
+        result_path = result_directory / "result.msgpack"
+        max_result_bytes = _pdf_worker_result_max_bytes()
+        result_sink = _AtomicPDFWorkerResultSink(
+            result_path=str(result_path),
+            max_bytes=max_result_bytes,
+        )
+        process = context.Process(
+            target=target,
+            args=(str(pdf_path), result_sink),
+            daemon=True,
+        )
+
+        try:
+            process.start()
+        except Exception as exc:
+            return _PDFWorkerResult(failure=f"worker failed to start: {exc}")
+
+        while process.is_alive():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return _PDFWorkerResult(
+                    timed_out=True,
+                    failure=f"timed out after {timeout_seconds:.1f}s",
+                )
+            process.join(min(PDF_WORKER_RESULT_POLL_SECONDS, remaining))
+
+        process.join(0)
+        if time.monotonic() > deadline:
+            return _PDFWorkerResult(
+                timed_out=True,
+                failure=f"timed out after {timeout_seconds:.1f}s",
+            )
+
+        if not result_path.exists():
+            return _PDFWorkerResult(
+                failure=(
+                    "worker exited without a result "
+                    f"(exit code {getattr(process, 'exitcode', None)})"
+                )
+            )
+
+        try:
+            result_size = result_path.stat().st_size
+        except OSError as exc:
+            return _PDFWorkerResult(
+                failure=f"worker result could not be inspected: {exc}"
+            )
+        minimum_read_budget = max(
+            PDF_WORKER_RESULT_MIN_READ_BUDGET_SECONDS,
+            result_size / (PDF_WORKER_RESULT_READ_MIB_PER_SECOND * 1024 * 1024),
+        )
+        if deadline - time.monotonic() < minimum_read_budget:
+            return _PDFWorkerResult(
+                timed_out=True,
+                failure=(
+                    f"timed out after {timeout_seconds:.1f}s before safely "
+                    f"reading the {result_size}-byte worker result"
+                ),
+            )
+
+        result = _read_pdf_worker_result(
+            result_path,
+            max_bytes=max_result_bytes,
+            deadline=deadline,
+        )
+        if result.timed_out:
+            return result
+        if time.monotonic() > deadline:
+            return _PDFWorkerResult(
+                timed_out=True,
+                failure=f"timed out after {timeout_seconds:.1f}s",
+            )
+        return result
+    except Exception as exc:
+        return _PDFWorkerResult(failure=f"worker setup failed: {exc}")
+    finally:
+        if process is not None:
+            _stop_pdf_worker(process)
+        if result_directory is not None:
+            shutil.rmtree(result_directory, ignore_errors=True)
 
 
 @dataclass
@@ -232,52 +778,81 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         Returns:
             Markdown-formatted text with page markers
         """
-        raw_timeout = os.environ.get(
+        timeout_seconds = _env_timeout_seconds(
             "PYMUPDF_TEXT_DOCUMENT_TIMEOUT_SECONDS",
-            str(DEFAULT_TEXT_DOCUMENT_TIMEOUT_SECONDS),
+            DEFAULT_TEXT_DOCUMENT_TIMEOUT_SECONDS,
         )
-        try:
-            timeout_seconds = float(raw_timeout)
-        except ValueError:
-            timeout_seconds = DEFAULT_TEXT_DOCUMENT_TIMEOUT_SECONDS
 
         if timeout_seconds <= 0:
             return self._extract_text_direct(pdf_path)
 
-        ctx = _get_pdf_worker_context()
-        queue = ctx.Queue()
-        process = ctx.Process(
+        deadline = time.monotonic() + timeout_seconds
+        worker_result = _run_isolated_pdf_worker(
             target=_extract_text_worker,
-            args=(str(pdf_path), queue),
-            daemon=True,
+            pdf_path=pdf_path,
+            timeout_seconds=timeout_seconds,
         )
-        process.start()
-        process.join(timeout_seconds)
 
-        if process.is_alive():
-            process.terminate()
-            process.join(5)
-            logger.warning(
-                "PyMuPDF rich text extraction timed out for %s after %.1fs; using fast text fallback",
-                pdf_path,
-                timeout_seconds,
+        if worker_result.timed_out:
+            raise TimeoutError(
+                "PyMuPDF text extraction timed out for "
+                f"{pdf_path} after {timeout_seconds:.1f}s"
             )
-            return self._extract_text_fast(pdf_path)
 
-        try:
-            status, payload = queue.get_nowait()
-        except Exception:
-            return self._extract_text_fast(pdf_path)
+        rich_finished_at = time.monotonic()
+        if rich_finished_at >= deadline:
+            raise TimeoutError(
+                "PyMuPDF text extraction exhausted its "
+                f"{timeout_seconds:.1f}s hard deadline"
+            )
 
-        if status == "ok" and isinstance(payload, str):
-            return payload
+        if worker_result.status == "ok" and isinstance(worker_result.payload, str):
+            return worker_result.payload
+
+        rich_failure = (
+            worker_result.failure
+            if worker_result.status is None
+            else str(worker_result.payload)
+        )
+        remaining_seconds = deadline - rich_finished_at
+        if remaining_seconds <= 0:
+            raise TimeoutError(
+                "PyMuPDF text extraction exhausted its "
+                f"{timeout_seconds:.1f}s deadline before the fast fallback"
+            )
 
         logger.warning(
-            "PyMuPDF rich text extraction worker failed for %s: %s; using fast text fallback",
+            "PyMuPDF rich text extraction worker failed for %s: %s; using bounded fast text fallback",
             pdf_path,
-            payload,
+            rich_failure,
         )
-        return self._extract_text_fast(pdf_path)
+        fallback_result = _run_isolated_pdf_worker(
+            target=_extract_text_fast_worker,
+            pdf_path=pdf_path,
+            timeout_seconds=remaining_seconds,
+        )
+        if fallback_result.timed_out:
+            raise TimeoutError(
+                "PyMuPDF fast text fallback timed out within the shared "
+                f"{timeout_seconds:.1f}s text extraction deadline"
+            )
+        if time.monotonic() >= deadline:
+            raise TimeoutError(
+                "PyMuPDF fast text fallback exhausted the shared "
+                f"{timeout_seconds:.1f}s text extraction deadline"
+            )
+        if fallback_result.status == "ok" and isinstance(fallback_result.payload, str):
+            return fallback_result.payload
+
+        fallback_failure = (
+            fallback_result.failure
+            if fallback_result.status is None
+            else str(fallback_result.payload)
+        )
+        raise RuntimeError(
+            "PyMuPDF text extraction failed: "
+            f"rich worker: {rich_failure}; fast fallback: {fallback_failure}"
+        )
 
     def _extract_text_direct(self, pdf_path: Path) -> str:
         """Original rich text extraction with font-aware heading heuristics."""
@@ -527,31 +1102,21 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         ):
             return self._extract_images_fast(pdf_path)
 
-        raw_timeout = os.environ.get(
+        timeout_seconds = _env_timeout_seconds(
             "PYMUPDF_IMAGE_DOCUMENT_TIMEOUT_SECONDS",
-            str(DEFAULT_IMAGE_DOCUMENT_TIMEOUT_SECONDS),
+            DEFAULT_IMAGE_DOCUMENT_TIMEOUT_SECONDS,
         )
-        try:
-            timeout_seconds = float(raw_timeout)
-        except ValueError:
-            timeout_seconds = DEFAULT_IMAGE_DOCUMENT_TIMEOUT_SECONDS
 
         if timeout_seconds <= 0:
             return self._extract_images_direct(pdf_path)
 
-        ctx = _get_pdf_worker_context()
-        queue = ctx.Queue()
-        process = ctx.Process(
+        worker_result = _run_isolated_pdf_worker(
             target=_extract_images_worker,
-            args=(str(pdf_path), queue),
-            daemon=True,
+            pdf_path=pdf_path,
+            timeout_seconds=timeout_seconds,
         )
-        process.start()
-        process.join(timeout_seconds)
 
-        if process.is_alive():
-            process.terminate()
-            process.join(5)
+        if worker_result.timed_out:
             logger.warning(
                 "PyMuPDF image extraction timed out for %s after %.1fs; using isolated page-crop fallback",
                 pdf_path,
@@ -559,48 +1124,41 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             )
             return self._extract_images_fast_with_timeout(pdf_path)
 
-        try:
-            status, payload = queue.get_nowait()
-        except Exception:
-            return self._extract_images_fast_with_timeout(pdf_path)
+        if worker_result.status == "ok" and isinstance(worker_result.payload, list):
+            return worker_result.payload
 
-        if status == "ok" and isinstance(payload, list):
-            return payload
+        if worker_result.status is None:
+            logger.warning(
+                "PyMuPDF image extraction worker produced no result for %s: %s; using isolated page-crop fallback",
+                pdf_path,
+                worker_result.failure,
+            )
+            return self._extract_images_fast_with_timeout(pdf_path)
 
         logger.warning(
             "PyMuPDF image extraction worker failed for %s: %s; using isolated page-crop fallback",
             pdf_path,
-            payload,
+            worker_result.payload,
         )
         return self._extract_images_fast_with_timeout(pdf_path)
 
     def _extract_images_fast_with_timeout(self, pdf_path: Path) -> list[dict]:
         """Run fast fallback in a child process so fallback cannot hang ingestion."""
-        raw_timeout = os.environ.get(
+        timeout_seconds = _env_timeout_seconds(
             "PYMUPDF_FAST_IMAGE_DOCUMENT_TIMEOUT_SECONDS",
-            str(DEFAULT_FAST_IMAGE_DOCUMENT_TIMEOUT_SECONDS),
+            DEFAULT_FAST_IMAGE_DOCUMENT_TIMEOUT_SECONDS,
         )
-        try:
-            timeout_seconds = float(raw_timeout)
-        except ValueError:
-            timeout_seconds = DEFAULT_FAST_IMAGE_DOCUMENT_TIMEOUT_SECONDS
 
         if timeout_seconds <= 0:
             return self._extract_images_fast(pdf_path)
 
-        ctx = _get_pdf_worker_context()
-        queue = ctx.Queue()
-        process = ctx.Process(
+        worker_result = _run_isolated_pdf_worker(
             target=_extract_images_fast_worker,
-            args=(str(pdf_path), queue),
-            daemon=True,
+            pdf_path=pdf_path,
+            timeout_seconds=timeout_seconds,
         )
-        process.start()
-        process.join(timeout_seconds)
 
-        if process.is_alive():
-            process.terminate()
-            process.join(5)
+        if worker_result.timed_out:
             logger.warning(
                 "PyMuPDF fast image fallback timed out for %s after %.1fs; skipping images",
                 pdf_path,
@@ -608,18 +1166,21 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             )
             return []
 
-        try:
-            status, payload = queue.get_nowait()
-        except Exception:
-            return []
+        if worker_result.status == "ok" and isinstance(worker_result.payload, list):
+            return worker_result.payload
 
-        if status == "ok" and isinstance(payload, list):
-            return payload
+        if worker_result.status is None:
+            logger.warning(
+                "PyMuPDF fast image fallback produced no result for %s: %s; skipping images",
+                pdf_path,
+                worker_result.failure,
+            )
+            return []
 
         logger.warning(
             "PyMuPDF fast image fallback failed for %s: %s; skipping images",
             pdf_path,
-            payload,
+            worker_result.payload,
         )
         return []
 
@@ -1254,26 +1815,20 @@ class PyMuPDFExtractor(PDFExtractorInterface):
 
     def audit_ai_safety(self, pdf_path: Path) -> dict[str, Any]:
         """Best-effort PDF AI safety audit with document-level isolation."""
-        timeout_seconds = _env_float(
+        timeout_seconds = _env_timeout_seconds(
             "PYMUPDF_SAFETY_AUDIT_DOCUMENT_TIMEOUT_SECONDS",
             DEFAULT_SAFETY_AUDIT_DOCUMENT_TIMEOUT_SECONDS,
         )
         if timeout_seconds <= 0:
             return self._audit_ai_safety_direct(pdf_path)
 
-        ctx = _get_pdf_worker_context()
-        queue = ctx.Queue()
-        process = ctx.Process(
+        worker_result = _run_isolated_pdf_worker(
             target=_audit_ai_safety_worker,
-            args=(str(pdf_path), queue),
-            daemon=True,
+            pdf_path=pdf_path,
+            timeout_seconds=timeout_seconds,
         )
-        process.start()
-        process.join(timeout_seconds)
 
-        if process.is_alive():
-            process.terminate()
-            process.join(5)
+        if worker_result.timed_out:
             logger.warning(
                 "PDF AI safety audit timed out for %s after %.1fs",
                 pdf_path,
@@ -1283,18 +1838,20 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                 f"timed out after {timeout_seconds:.1f}s"
             )
 
-        try:
-            status, payload = queue.get_nowait()
-        except Exception:
-            return self._skipped_ai_safety_report("worker returned no result")
+        if worker_result.status == "ok" and isinstance(worker_result.payload, dict):
+            return worker_result.payload
 
-        if status == "ok" and isinstance(payload, dict):
-            return payload
+        if worker_result.status is None:
+            return self._skipped_ai_safety_report(
+                worker_result.failure or "worker returned no result"
+            )
 
         logger.warning(
-            "PDF AI safety audit worker failed for %s: %s", pdf_path, payload
+            "PDF AI safety audit worker failed for %s: %s",
+            pdf_path,
+            worker_result.payload,
         )
-        return self._skipped_ai_safety_report(str(payload))
+        return self._skipped_ai_safety_report(str(worker_result.payload))
 
     def _audit_ai_safety_direct(self, pdf_path: Path) -> dict[str, Any]:
         """Best-effort PDF AI safety audit without mutating extracted text."""
@@ -1402,26 +1959,20 @@ class PyMuPDFExtractor(PDFExtractorInterface):
 
     def extract_native_structure(self, pdf_path: Path) -> dict[str, Any]:
         """Extract lightweight native PDF structure with document-level isolation."""
-        timeout_seconds = _env_float(
+        timeout_seconds = _env_timeout_seconds(
             "PYMUPDF_NATIVE_STRUCTURE_DOCUMENT_TIMEOUT_SECONDS",
             DEFAULT_NATIVE_STRUCTURE_DOCUMENT_TIMEOUT_SECONDS,
         )
         if timeout_seconds <= 0:
             return self._extract_native_structure_direct(pdf_path)
 
-        ctx = _get_pdf_worker_context()
-        queue = ctx.Queue()
-        process = ctx.Process(
+        worker_result = _run_isolated_pdf_worker(
             target=_extract_native_structure_worker,
-            args=(str(pdf_path), queue),
-            daemon=True,
+            pdf_path=pdf_path,
+            timeout_seconds=timeout_seconds,
         )
-        process.start()
-        process.join(timeout_seconds)
 
-        if process.is_alive():
-            process.terminate()
-            process.join(5)
+        if worker_result.timed_out:
             logger.warning(
                 "Native PDF structure extraction timed out for %s after %.1fs",
                 pdf_path,
@@ -1431,20 +1982,20 @@ class PyMuPDFExtractor(PDFExtractorInterface):
                 f"timed out after {timeout_seconds:.1f}s"
             )
 
-        try:
-            status, payload = queue.get_nowait()
-        except Exception:
-            return self._skipped_native_structure_report("worker returned no result")
+        if worker_result.status == "ok" and isinstance(worker_result.payload, dict):
+            return worker_result.payload
 
-        if status == "ok" and isinstance(payload, dict):
-            return payload
+        if worker_result.status is None:
+            return self._skipped_native_structure_report(
+                worker_result.failure or "worker returned no result"
+            )
 
         logger.warning(
             "Native PDF structure extraction worker failed for %s: %s",
             pdf_path,
-            payload,
+            worker_result.payload,
         )
-        return self._skipped_native_structure_report(str(payload))
+        return self._skipped_native_structure_report(str(worker_result.payload))
 
     def _extract_native_structure_direct(self, pdf_path: Path) -> dict[str, Any]:
         """Extract lightweight native PDF structure metadata for audit artifacts."""
@@ -1596,31 +2147,21 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         safely dropping tables for the problematic document if it exceeds the
         configured timeout.
         """
-        raw_timeout = os.environ.get(
+        timeout_seconds = _env_timeout_seconds(
             "PYMUPDF_TABLE_DOCUMENT_TIMEOUT_SECONDS",
-            str(DEFAULT_TABLE_DOCUMENT_TIMEOUT_SECONDS),
+            DEFAULT_TABLE_DOCUMENT_TIMEOUT_SECONDS,
         )
-        try:
-            timeout_seconds = float(raw_timeout)
-        except ValueError:
-            timeout_seconds = DEFAULT_TABLE_DOCUMENT_TIMEOUT_SECONDS
 
         if timeout_seconds <= 0:
             return self._extract_tables_direct(pdf_path)
 
-        ctx = _get_pdf_worker_context()
-        queue = ctx.Queue()
-        process = ctx.Process(
+        worker_result = _run_isolated_pdf_worker(
             target=_extract_tables_worker,
-            args=(str(pdf_path), queue),
-            daemon=True,
+            pdf_path=pdf_path,
+            timeout_seconds=timeout_seconds,
         )
-        process.start()
-        process.join(timeout_seconds)
 
-        if process.is_alive():
-            process.terminate()
-            process.join(5)
+        if worker_result.timed_out:
             logger.warning(
                 "PyMuPDF table extraction timed out for %s after %.1fs; skipping tables for this document",
                 pdf_path,
@@ -1628,18 +2169,21 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             )
             return []
 
-        try:
-            status, payload = queue.get_nowait()
-        except Exception:
-            return []
+        if worker_result.status == "ok" and isinstance(worker_result.payload, list):
+            return worker_result.payload
 
-        if status == "ok" and isinstance(payload, list):
-            return payload
+        if worker_result.status is None:
+            logger.warning(
+                "PyMuPDF table extraction worker produced no result for %s: %s; skipping tables for this document",
+                pdf_path,
+                worker_result.failure,
+            )
+            return []
 
         logger.warning(
             "PyMuPDF table extraction worker failed for %s: %s",
             pdf_path,
-            payload,
+            worker_result.payload,
         )
         return []
 
@@ -1827,14 +2371,10 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         whole batch ingest. Timing out the problematic page is preferable to
         aborting the entire chapter/document.
         """
-        raw_timeout = os.environ.get(
+        timeout_seconds = _env_timeout_seconds(
             "PYMUPDF_TABLE_TIMEOUT_SECONDS",
-            str(DEFAULT_TABLE_TIMEOUT_SECONDS),
+            DEFAULT_TABLE_TIMEOUT_SECONDS,
         )
-        try:
-            timeout_seconds = float(raw_timeout)
-        except ValueError:
-            timeout_seconds = DEFAULT_TABLE_TIMEOUT_SECONDS
 
         return self._run_with_timeout(
             page.find_tables,
@@ -1855,14 +2395,13 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         Execute a callable with an optional wall-clock timeout.
 
         Timeout guards are best-effort and only active on Unix main-thread runs.
-        When unavailable, the callable executes normally.
+        When unavailable, the callable executes normally. An already-active
+        process timer is never replaced; its existing handler governs instead.
         """
         if timeout_seconds is None:
-            raw_timeout = os.environ.get(env_var or "", str(default_seconds))
-            try:
-                timeout_seconds = float(raw_timeout)
-            except ValueError:
-                timeout_seconds = default_seconds
+            timeout_seconds = _env_timeout_seconds(env_var or "", default_seconds)
+        elif not math.isfinite(timeout_seconds):
+            timeout_seconds = default_seconds
 
         if (
             timeout_seconds <= 0
@@ -1889,6 +2428,10 @@ class PyMuPDFExtractor(PDFExtractorInterface):
 
         previous_handler = signal.getsignal(sigalrm)
         previous_timer = getitimer(itimer_real)
+        if previous_timer != (0.0, 0.0):
+            # Never replace an embedding application's outer deadline. Its
+            # handler remains installed and governs this nested operation.
+            return func()
 
         try:
             signal.signal(sigalrm, _handle_timeout)
@@ -1897,12 +2440,6 @@ class PyMuPDFExtractor(PDFExtractorInterface):
         finally:
             setitimer(itimer_real, 0)
             signal.signal(sigalrm, previous_handler)
-            if previous_timer != (0.0, 0.0):
-                setitimer(
-                    itimer_real,
-                    previous_timer[0],
-                    previous_timer[1],
-                )
 
     def _detect_table_caption(
         self, page: fitz.Page, table: Any, table_index: int
@@ -1960,31 +2497,21 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             Dict mapping page number (1-indexed) to list of caption dicts:
             [{"number": "1", "caption": "Figure 1. Description..."}]
         """
-        raw_timeout = os.environ.get(
+        timeout_seconds = _env_timeout_seconds(
             "PYMUPDF_CAPTION_DOCUMENT_TIMEOUT_SECONDS",
-            str(DEFAULT_CAPTION_DOCUMENT_TIMEOUT_SECONDS),
+            DEFAULT_CAPTION_DOCUMENT_TIMEOUT_SECONDS,
         )
-        try:
-            timeout_seconds = float(raw_timeout)
-        except ValueError:
-            timeout_seconds = DEFAULT_CAPTION_DOCUMENT_TIMEOUT_SECONDS
 
         if timeout_seconds <= 0:
             return self._extract_figure_captions_direct(pdf_path)
 
-        ctx = _get_pdf_worker_context()
-        queue = ctx.Queue()
-        process = ctx.Process(
+        worker_result = _run_isolated_pdf_worker(
             target=_extract_figure_captions_worker,
-            args=(str(pdf_path), queue),
-            daemon=True,
+            pdf_path=pdf_path,
+            timeout_seconds=timeout_seconds,
         )
-        process.start()
-        process.join(timeout_seconds)
 
-        if process.is_alive():
-            process.terminate()
-            process.join(5)
+        if worker_result.timed_out:
             logger.warning(
                 "PyMuPDF figure caption extraction timed out for %s after %.1fs; skipping captions",
                 pdf_path,
@@ -1992,18 +2519,21 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             )
             return {}
 
-        try:
-            status, payload = queue.get_nowait()
-        except Exception:
-            return {}
+        if worker_result.status == "ok" and isinstance(worker_result.payload, dict):
+            return worker_result.payload
 
-        if status == "ok" and isinstance(payload, dict):
-            return payload
+        if worker_result.status is None:
+            logger.warning(
+                "PyMuPDF figure caption extraction worker produced no result for %s: %s; skipping captions",
+                pdf_path,
+                worker_result.failure,
+            )
+            return {}
 
         logger.warning(
             "PyMuPDF figure caption extraction worker failed for %s: %s; skipping captions",
             pdf_path,
-            payload,
+            worker_result.payload,
         )
         return {}
 

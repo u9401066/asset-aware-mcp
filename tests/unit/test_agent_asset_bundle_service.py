@@ -295,6 +295,60 @@ async def test_agent_asset_bundle_preserves_citation_and_hash_fields(
 
 
 @pytest.mark.asyncio
+async def test_agent_asset_bundle_long_evidence_ref_is_self_verifying(
+    tmp_path: Path,
+) -> None:
+    """Bundle refs must not pair a quote prefix with full-span hash/ranges."""
+    service, repository, doc_id = _fixture(tmp_path)
+    markdown = repository.load_markdown(doc_id)
+    blocks = repository.load_blocks(doc_id)
+    assert markdown is not None
+    assert blocks is not None
+    long_quote = ("Long citation evidence remains exactly verifiable. " * 55).strip()
+    prefix = f"{markdown}\n"
+    line_start = prefix.count("\n")
+    updated_markdown = f"{prefix}{long_quote}\n"
+    updated_blocks = [
+        *blocks,
+        {
+            "block_id": "blk_long_evidence",
+            "block_type": "Text",
+            "page": 1,
+            "text": long_quote,
+            "metadata": {"line_start": line_start, "line_end": line_start + 1},
+        },
+    ]
+    repository.save_markdown(doc_id, updated_markdown)
+    repository.save_blocks(doc_id, updated_blocks)
+    repository.save_citation_index(
+        doc_id,
+        build_evidence_spans(
+            doc_id=doc_id,
+            markdown=updated_markdown,
+            blocks=updated_blocks,
+            source_backend="docling",
+        ),
+    )
+
+    result = await _export(service, doc_id, "bundle")
+    root = Path(str(result["output_dir"]))
+    refs = [
+        ref
+        for record in _records(root)
+        for ref in record["citation"]["evidence_refs"]
+        if ref["block_id"] == "blk_long_evidence"
+    ]
+    ref = max(refs, key=lambda item: len(item["quote"]))
+
+    assert len(ref["quote"]) > 1_000
+    assert ref["quote"] == long_quote
+    assert ref["quote_chars"] == len(ref["quote"])
+    assert ref["quote_truncated"] is False
+    assert hashlib.sha256(ref["quote"].encode()).hexdigest() == ref["quote_sha256"]
+    assert updated_markdown[ref["char_range"][0] : ref["char_range"][1]] == ref["quote"]
+
+
+@pytest.mark.asyncio
 async def test_agent_asset_bundle_rebuilds_stale_citation_index(
     tmp_path: Path,
 ) -> None:

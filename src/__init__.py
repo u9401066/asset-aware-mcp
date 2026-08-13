@@ -1,8 +1,8 @@
 # Asset-Aware MCP - Source Package
 """
-Asset-Aware Medical RAG MCP Server
+Asset-Aware MCP Server
 
-A local-first MCP server for medical research with precise asset retrieval.
+A local-first MCP server for citation-ready document assets and precise retrieval.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"

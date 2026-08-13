@@ -9,14 +9,69 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from mcp.server.mcpserver.utilities.func_metadata import _convert_to_content
 
 from src.domain.entities import FetchResult
 from src.domain.value_objects import AssetType
+
+
+def _mcp_text_content(result: object) -> str:
+    """Return the SDK 2 TextContent text produced for a tool return value."""
+    blocks = _convert_to_content(result)
+    assert len(blocks) == 1
+    text = getattr(blocks[0], "text", None)
+    assert isinstance(text, str)
+    return text
+
+
+def _manifest_asset_ref_fixture(tmp_path: Path) -> tuple[MagicMock, list[dict]]:
+    """Build canonical table/figure refs and their backing manifest repository."""
+    from src.domain.entities import (
+        DocumentAssets,
+        DocumentManifest,
+        FigureAsset,
+        TableAsset,
+    )
+    from src.presentation.tools.document_evidence_support import (
+        _asset_ref_from_manifest_asset,
+    )
+
+    table = TableAsset(
+        id="tab_1",
+        page=2,
+        markdown="| A | B |\n| --- | --- |\n| x | y |",
+        source_block_id="blk_tab",
+        line_start=10,
+        line_end=13,
+    )
+    figure = FigureAsset(
+        id="fig_1",
+        page=3,
+        path=str(tmp_path / "figure.png"),
+        source_block_id="blk_fig",
+        line_start=20,
+        line_end=21,
+    )
+    manifest = DocumentManifest(
+        doc_id="doc_assets",
+        filename="paper.pdf",
+        source_pdf_sha256="f" * 64,
+        assets=DocumentAssets(tables=[table], figures=[figure]),
+    )
+    repository = MagicMock()
+    repository.load_manifest.return_value = manifest
+    refs = [
+        _asset_ref_from_manifest_asset(manifest, "table", table),
+        _asset_ref_from_manifest_asset(manifest, "figure", figure),
+    ]
+    return repository, refs
+
 
 # ============================================================================
 # Docx Tools
@@ -1031,6 +1086,48 @@ class TestDocumentTools:
         args, _kwargs = mock_mixed_batch.await_args
         assert args[0] == ["/papers/study.pdf", "/reports/summary.docx"]
 
+    async def test_mixed_batch_reports_blank_path_rejection(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Mixed ingest must return a useful response for invalid path values."""
+        from src.presentation.tools import document_tools
+
+        mock_jobs = MagicMock()
+        mock_jobs.create_conversion_job = AsyncMock(
+            side_effect=ValueError("Input file paths must be non-empty strings")
+        )
+        monkeypatch.setattr(document_tools, "job_service", mock_jobs)
+
+        result = await document_tools._ingest_mixed_document_batch([" "])
+
+        assert "Could Not Create Mixed-Format Ingest Job" in result
+        assert "non-empty strings" in result
+        mock_jobs.create_conversion_job.assert_awaited_once()
+
+    async def test_conversion_job_response_reports_blank_path_rejection(self) -> None:
+        """Conversion helper must normalize ValueError into an MCP response."""
+        from src.presentation.tools.conversion_job_support import (
+            create_conversion_job_response,
+        )
+
+        mock_jobs = MagicMock()
+        mock_jobs.create_conversion_job = AsyncMock(
+            side_effect=ValueError("Input file paths must be non-empty strings")
+        )
+
+        result = await create_conversion_job_response(
+            mock_jobs,
+            operation="test_conversion",
+            source=" ",
+            target_format="pdf",
+            parameters={},
+            handler=AsyncMock(),
+            input_files=[" "],
+        )
+
+        assert "Could Not Create Conversion Job" in result
+        assert "non-empty strings" in result
+
     async def test_document_auto_rejects_conflicting_inputs(self) -> None:
         """document(op='auto') should not guess when doc_id and file_paths conflict."""
         from src.presentation.tools.document_tools import document
@@ -1315,6 +1412,8 @@ class TestDocumentTools:
             "byte_range": [span.byte_start, span.byte_end],
             "quote": span.text,
             "quote_sha256": span.text_sha256,
+            "quote_chars": len(span.text),
+            "quote_truncated": False,
         }
         with patch("src.presentation.tools.document_tools.repository") as mock_repo:
             mock_repo.load_citation_index.return_value = [span]
@@ -1372,7 +1471,10 @@ class TestDocumentTools:
 
         assert "mismatch" in result.lower()
         assert "locator_source_sha256 missing" in result
-        assert "quote_sha256 or text_sha256 missing" in result
+        assert "quote missing" in result
+        assert "quote_sha256 missing" in result
+        assert "quote_chars missing" in result
+        assert "quote_truncated missing" in result
 
     async def test_verify_citation_ref_detects_locator_mismatch(self) -> None:
         """verify_citation_ref rejects stale or fabricated locator fields."""
@@ -1417,6 +1519,8 @@ class TestDocumentTools:
             "byte_range": [0, 4],
             "quote": span.text,
             "quote_sha256": span.text_sha256,
+            "quote_chars": len(span.text),
+            "quote_truncated": False,
         }
         with patch("src.presentation.tools.document_tools.repository") as mock_repo:
             mock_repo.load_citation_index.return_value = [span]
@@ -1466,20 +1570,32 @@ class TestDocumentTools:
             mock_repo.load_citation_index.return_value = [span]
             mock_repo.load_markdown.return_value = markdown
             mock_repo.load_blocks.return_value = blocks
-            from src.presentation.tools.document_tools import citation_bundle
+            from src.presentation.tools.document_tools import (
+                citation_bundle,
+                verify_citation_ref,
+            )
 
             result = await citation_bundle(
                 "doc_123",
                 query="bundle",
                 output_format="json",
             )
+            verification_result = await verify_citation_ref(
+                result["entries"][0]["asset_ref"]
+            )
 
         assert result["success"] is True
-        assert result["entries"][0]["asset_ref"]["span_id"] == span.span_id
+        asset_ref = result["entries"][0]["asset_ref"]
+        assert asset_ref["span_id"] == span.span_id
+        assert asset_ref["quote"] == markdown
+        assert asset_ref["quote_sha256"] == span.text_sha256
+        assert asset_ref["char_range"] == [0, len(markdown)]
+        assert asset_ref["quote_truncated"] is False
         assert result["entries"][0]["verification"]["valid"] is True
         assert result["entries"][0]["locator_source_sha256"]
         assert result["entries"][0]["foam"]["block_anchor"].startswith("^spn-")
         assert result["entries"][0]["foam"]["wikilink"].startswith("[[doc_123#^spn-")
+        assert "Citation ref verified" in verification_result
 
     async def test_citation_bundle_large_json_payload_returns_bounded_record(
         self,
@@ -1527,6 +1643,216 @@ class TestDocumentTools:
         assert result["sha256"].startswith("sha256:")
         assert len(json.dumps(result)) < 20_000
         assert "A" * 30_000 not in json.dumps(result)
+
+    async def test_multi_mib_public_evidence_responses_use_safe_previews(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Multi-MiB refs are bounded publicly and canonical when persisted."""
+        from src.domain.citation import EvidenceSpan
+        from src.presentation.tools import document_evidence_support, document_tools
+
+        markdown = "L" * (2 * 1024 * 1024)
+        span = EvidenceSpan.create(
+            doc_id="doc_multi_mib",
+            source_revision_id=hashlib.sha256(markdown.encode()).hexdigest(),
+            span_kind="block",
+            text=markdown,
+            block_id="blk_multi_mib",
+            page=7,
+            line_start=0,
+            line_end=20_000,
+            char_start=0,
+            char_end=len(markdown),
+            markdown=markdown,
+            locator_source_sha256=hashlib.sha256(b"stable blocks").hexdigest(),
+        )
+        mock_repo = MagicMock()
+        monkeypatch.setattr(document_tools, "repository", mock_repo)
+        monkeypatch.setattr(
+            document_tools,
+            "load_or_build_evidence_spans",
+            lambda _repository, _doc_id: [span],
+        )
+        monkeypatch.setattr(
+            document_evidence_support,
+            "load_or_build_evidence_spans",
+            lambda _repository, _doc_id: [span],
+        )
+        monkeypatch.setenv("ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS", "12000")
+
+        found = await document_tools.find_evidence_spans("doc_multi_mib", limit=1)
+        citation_markdown = await document_tools.citation_bundle(
+            "doc_multi_mib", limit=1
+        )
+        citation_json = await document_tools.citation_bundle(
+            "doc_multi_mib", limit=1, output_format="json"
+        )
+        citation_foam = await document_tools.citation_bundle(
+            "doc_multi_mib", limit=1, output_format="foam"
+        )
+        claim_markdown = await document_tools.evidence(
+            op="claim_promotion",
+            doc_id="doc_multi_mib",
+            limit=1,
+        )
+        claim_json = await document_tools.evidence(
+            op="claim_promotion",
+            doc_id="doc_multi_mib",
+            limit=1,
+            output_format="json",
+        )
+        claim_foam = await document_tools.evidence(
+            op="claim_promotion",
+            doc_id="doc_multi_mib",
+            limit=1,
+            output_format="foam",
+        )
+
+        assert isinstance(found, str)
+        assert len(found) <= 12_000
+        assert len(_mcp_text_content(found)) <= 12_000
+        assert '"canonical_asset_ref": false' in found
+        assert '"source_type": "span_preview"' in found
+        assert '"char_range"' not in found
+
+        assert isinstance(citation_markdown, str)
+        assert len(citation_markdown) <= 12_000
+        assert len(_mcp_text_content(citation_markdown)) <= 12_000
+        assert '"canonical_asset_ref": false' in citation_markdown
+        assert '"source_type": "span_preview"' in citation_markdown
+
+        assert isinstance(citation_json, dict)
+        assert len(_mcp_text_content(citation_json)) <= 12_000
+        citation_ref = citation_json["entries"][0]["asset_ref"]
+        assert citation_ref["canonical_asset_ref"] is False
+        assert citation_ref["source_type"] == "span_preview"
+        assert "quote" not in citation_ref
+        assert "char_range" not in citation_ref
+        assert citation_ref["quote_sha256"] == span.text_sha256
+        assert citation_json["entries"][0]["verification"]["valid"] is True
+        preview_verification = await document_tools.verify_citation_ref(citation_ref)
+        assert "Only span-level AssetRef" in preview_verification
+        assert isinstance(citation_foam, str)
+        assert len(_mcp_text_content(citation_foam)) <= 12_000
+        assert '"canonical_asset_ref": false' in citation_foam
+        assert '"source_type": "span_preview"' in citation_foam
+
+        assert isinstance(claim_markdown, str)
+        assert len(claim_markdown) <= 12_000
+        assert len(_mcp_text_content(claim_markdown)) <= 12_000
+        assert isinstance(claim_json, dict)
+        assert len(_mcp_text_content(claim_json)) <= 12_000
+        claim_ref = claim_json["entries"][0]["asset_ref"]
+        assert claim_ref["canonical_asset_ref"] is False
+        assert claim_ref["source_type"] == "span_preview"
+        assert "quote" not in claim_ref
+        assert claim_json["entries"][0]["verification"]["valid"] is True
+        assert isinstance(claim_foam, str)
+        assert len(_mcp_text_content(claim_foam)) <= 12_000
+        assert '"canonical_asset_ref": false' in claim_foam
+        assert '"source_type": "span_preview"' in claim_foam
+
+        persisted = await document_tools.citation_bundle(
+            "doc_multi_mib",
+            limit=1,
+            output_format="foam",
+            wiki_root=str(tmp_path),
+            output_path="evidence/multi-mib.md",
+            update_index=False,
+            overwrite=True,
+        )
+        assert persisted["success"] is True
+        note = (tmp_path / "evidence" / "multi-mib.md").read_text(encoding="utf-8")
+        assert note.count(markdown) >= 2
+        assert '"source_type": "span"' in note
+        assert '"quote_truncated": false' in note
+        assert '"canonical_asset_ref": false' not in note
+        persisted_ref = json.loads(
+            re.findall(r"```json\n(.*?)\n```", note, flags=re.DOTALL)[0]
+        )
+        assert persisted_ref["quote"] == markdown
+        assert persisted_ref["quote_sha256"] == span.text_sha256
+        assert persisted_ref["char_range"] == [0, len(markdown)]
+        assert persisted_ref["byte_range"] == [0, len(markdown)]
+        persisted_verification = await document_tools.verify_citation_ref(persisted_ref)
+        assert "Citation ref verified" in persisted_verification
+
+        persisted_claim = await document_tools.evidence(
+            op="claim_promotion",
+            doc_id="doc_multi_mib",
+            limit=1,
+            output_format="foam",
+            wiki_root=str(tmp_path),
+            output_path="evidence/multi-mib-claims.md",
+            update_index=False,
+            overwrite=True,
+        )
+        assert persisted_claim["success"] is True
+        claim_note = (tmp_path / "evidence" / "multi-mib-claims.md").read_text(
+            encoding="utf-8"
+        )
+        persisted_claim_ref = json.loads(
+            re.findall(r"```json\n(.*?)\n```", claim_note, flags=re.DOTALL)[0]
+        )
+        assert persisted_claim_ref == persisted_ref
+
+    @pytest.mark.parametrize("unit", ["A", "🧪"])
+    async def test_public_structured_evidence_responses_fit_sdk2_text_content(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        unit: str,
+    ) -> None:
+        """Public citation/claim JSON respects the SDK 2 TextContent cap."""
+        from src.domain.citation import EvidenceSpan
+        from src.presentation.tools import document_evidence_support, document_tools
+
+        markdown = unit * (2 * 1024 * 1024)
+        span = EvidenceSpan.create(
+            doc_id="doc_sdk2_cap",
+            source_revision_id=hashlib.sha256(markdown.encode()).hexdigest(),
+            span_kind="block",
+            text=markdown,
+            block_id="blk_sdk2_cap",
+            source_type="text",
+            page=7,
+            line_start=0,
+            line_end=20_000,
+            char_start=0,
+            char_end=len(markdown),
+            markdown=markdown,
+            locator_source_sha256=hashlib.sha256(b"stable blocks").hexdigest(),
+            # Enough nested values for SDK 2 pretty-print indentation to exceed
+            # a compact JSON estimate, which was the original regression.
+            section_hierarchy=["nested"] * 700,
+        )
+        mock_repo = MagicMock()
+        monkeypatch.setattr(document_tools, "repository", mock_repo)
+        monkeypatch.setattr(
+            document_tools,
+            "load_or_build_evidence_spans",
+            lambda _repository, _doc_id: [span],
+        )
+        monkeypatch.setattr(
+            document_evidence_support,
+            "load_or_build_evidence_spans",
+            lambda _repository, _doc_id: [span],
+        )
+        monkeypatch.setenv("ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS", "12000")
+
+        citation_json = await document_tools.citation_bundle(
+            "doc_sdk2_cap", limit=1, output_format="json"
+        )
+        claim_json = await document_tools.evidence(
+            op="claim_promotion",
+            doc_id="doc_sdk2_cap",
+            limit=1,
+            output_format="json",
+        )
+
+        assert len(_mcp_text_content(citation_json)) <= 12_000
+        assert len(_mcp_text_content(claim_json)) <= 12_000
 
     async def test_citation_bundle_exports_foam_evidence_pack(self) -> None:
         """citation_bundle(output_format='foam') returns Foam-ready anchors."""
@@ -1995,8 +2321,10 @@ class TestDocumentTools:
         self,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """A sync MCP PDF ingest request should not run ETL in the request."""
+        caplog.set_level(logging.INFO, logger="src.presentation.mcp_context")
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"%PDF-1.4 test")
         fake_ctx = MagicMock()
@@ -2029,7 +2357,8 @@ class TestDocumentTools:
         assert kwargs["parameters"]["page_ranges"] == []
         mock_service.ingest.assert_not_awaited()
         assert fake_ctx.report_progress.await_count >= 3
-        assert fake_ctx.log.await_count >= 2
+        fake_ctx.log.assert_not_awaited()
+        assert "ingest_documents job created: job_sync_pdf" in caplog.text
 
     async def test_ingest_documents_sync_pdf_with_figures_reports_async_acceptance(
         self,
@@ -2322,6 +2651,25 @@ class TestDocumentTools:
 
         assert "Could Not Create ETL Job" in result
         assert "Too many concurrent jobs" in result
+
+    async def test_ingest_documents_rejects_empty_batch_without_creating_job(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The direct MCP shortcut must not create a successful 0/0 job."""
+        from src.presentation.tools import document_tools
+
+        mock_jobs = MagicMock()
+        mock_jobs.create_ingest_job = AsyncMock(
+            side_effect=ValueError("At least one input file is required")
+        )
+        monkeypatch.setattr(document_tools, "job_service", mock_jobs)
+
+        result = await document_tools.ingest_documents([])
+
+        assert "Could Not Create ETL Job" in result
+        assert "At least one input file is required" in result
+        mock_jobs.create_ingest_job.assert_awaited_once()
 
     async def test_export_document_segmentation_success(self) -> None:
         """export_document_segmentation writes schema summary."""
@@ -2736,6 +3084,81 @@ class TestDocumentTools:
         assert result["valid_refs"] == 2
         assert result["invalid_refs"] == 0
         assert result["wikilink_issues"] == 0
+
+    def test_table_and_figure_asset_ref_verifier_requires_canonical_locators(
+        self, tmp_path: Path
+    ) -> None:
+        """Manifest refs fail closed when any canonical locator is omitted."""
+        from src.presentation.tools.document_evidence_support import (
+            _verify_asset_ref_payload,
+        )
+
+        repository, refs = _manifest_asset_ref_fixture(tmp_path)
+        required_fields = (
+            "source_revision_id",
+            "locator_version",
+            "locator_source_sha256",
+            "page",
+            "block_id",
+            "line_range",
+        )
+
+        for ref in refs:
+            valid = _verify_asset_ref_payload(ref, repository=repository)
+            assert valid["valid"] is True
+            assert valid["status"] == "verified"
+
+            for field in required_fields:
+                incomplete = dict(ref)
+                incomplete.pop(field)
+                result = _verify_asset_ref_payload(incomplete, repository=repository)
+                assert result["valid"] is False
+                assert f"{field} missing" in result["issues"]
+
+            for identifier in ("doc_id", "asset_id"):
+                incomplete = dict(ref)
+                incomplete.pop(identifier)
+                result = _verify_asset_ref_payload(incomplete, repository=repository)
+                assert result["valid"] is False
+                assert result["status"] == "invalid"
+
+    def test_table_and_figure_asset_ref_verifier_rejects_tampering_and_previews(
+        self, tmp_path: Path
+    ) -> None:
+        """Locator type confusion, drift, and transport previews never verify."""
+        from src.presentation.tools.document_evidence_support import (
+            _verify_asset_ref_payload,
+        )
+
+        repository, refs = _manifest_asset_ref_fixture(tmp_path)
+        tampered_values = {
+            "source_revision_id": True,
+            "locator_version": True,
+            "locator_source_sha256": True,
+            "page": True,
+            "block_id": 1,
+            "line_range": [True, 13],
+        }
+
+        for ref in refs:
+            for field, tampered_value in tampered_values.items():
+                tampered = dict(ref)
+                tampered[field] = tampered_value
+                result = _verify_asset_ref_payload(tampered, repository=repository)
+                assert result["valid"] is False
+                assert f"{field} mismatch" in result["issues"]
+
+            preview = dict(ref)
+            preview["canonical_asset_ref"] = False
+            result = _verify_asset_ref_payload(preview, repository=repository)
+            assert result["valid"] is False
+            assert result["status"] == "unsupported"
+
+            typed_preview = dict(preview)
+            typed_preview["source_type"] = f"{ref['source_type']}_preview"
+            result = _verify_asset_ref_payload(typed_preview, repository=repository)
+            assert result["valid"] is False
+            assert result["status"] == "unsupported"
 
     async def test_evidence_op_routes_find(self) -> None:
         """evidence(op='find') keeps citation span lookup behind one entrypoint."""

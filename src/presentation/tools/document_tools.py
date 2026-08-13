@@ -15,6 +15,7 @@ Document Tools - ETL + 文件管理 MCP 工具
 
 from __future__ import annotations
 
+import hashlib
 import json
 from copy import deepcopy
 from pathlib import Path
@@ -66,7 +67,9 @@ from src.presentation.response_limits import (
     text_sha256,
 )
 from src.presentation.tools.citation_support import (
+    asset_ref_for_mcp_response,
     asset_ref_from_span,
+    asset_ref_preview_from_span,
     display_line_range,
     format_line_range,
     load_citation_status,
@@ -149,31 +152,106 @@ def _truncate_json_text_field(container: dict[str, Any], key: str) -> bool:
     return True
 
 
-def _bounded_evidence_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    """Preserve JSON contract while bounding large quote/context fields."""
+def _json_payload_identity(payload: dict[str, Any]) -> tuple[int, str]:
+    """Hash JSON incrementally so multi-MiB evidence is not copied again."""
+    encoder = json.JSONEncoder(ensure_ascii=False, default=str)
+    hasher = hashlib.sha256()
+    content_chars = 0
+    for chunk in encoder.iterencode(payload):
+        content_chars += len(chunk)
+        hasher.update(chunk.encode("utf-8"))
+    return content_chars, "sha256:" + hasher.hexdigest()
+
+
+def _noncanonical_asset_ref_preview(ref: dict[str, Any]) -> dict[str, Any]:
+    """Convert a complete AssetRef to a verifier-safe transport preview."""
+    if ref.get("canonical_asset_ref") is False:
+        return deepcopy(ref)
+
+    quote = str(ref.get("quote") or "")
+    quote_preview = quote[:500]
+    source_type = str(ref.get("source_type") or "asset_ref")
+    preview: dict[str, Any] = {
+        "preview_version": "asset-ref-preview-v1",
+        "canonical_asset_ref": False,
+        "source_type": f"{source_type}_preview",
+        "doc_id": ref.get("doc_id"),
+        "quote_preview": quote_preview,
+        "quote_preview_chars": len(quote_preview),
+        "quote_chars": int(ref.get("quote_chars") or len(quote)),
+        "quote_sha256": ref.get("quote_sha256") or text_sha256(quote),
+        "quote_omitted_chars": max(
+            0, int(ref.get("quote_chars") or len(quote)) - len(quote_preview)
+        ),
+        "canonical_ref_available_in": (
+            "persisted citation/agent-asset bundles; export or write the bundle "
+            "to retrieve the complete self-verifying AssetRef"
+        ),
+    }
+    for key in ("span_id", "block_id", "asset_id", "page"):
+        if ref.get(key) is not None:
+            preview[key] = ref[key]
+    return preview
+
+
+def _bound_asset_ref(
+    container: dict[str, Any],
+    key: str,
+    *,
+    force_preview: bool,
+) -> bool:
+    ref = container.get(key)
+    if not isinstance(ref, dict):
+        return False
+    if ref.get("canonical_asset_ref") is False:
+        return True
+    quote = ref.get("quote")
+    if force_preview or (
+        isinstance(quote, str) and len(quote) > JSON_TEXT_FIELD_MAX_CHARS
+    ):
+        container[key] = _noncanonical_asset_ref_preview(ref)
+        return True
+    return False
+
+
+def _bounded_evidence_payload(
+    payload: dict[str, Any],
+    *,
+    force_asset_ref_previews: bool = False,
+) -> dict[str, Any]:
+    """Bound public JSON without corrupting or impersonating canonical refs."""
     bounded = deepcopy(payload)
-    original_json = json.dumps(payload, ensure_ascii=False, default=str)
+    content_chars, content_sha256 = _json_payload_identity(payload)
     truncated = False
     for entry in bounded.get("entries", []):
         if not isinstance(entry, dict):
             continue
         for key in ("quote", "context_before", "context_after", "claim_text"):
             truncated = _truncate_json_text_field(entry, key) or truncated
-        asset_ref = entry.get("asset_ref")
-        if isinstance(asset_ref, dict):
-            truncated = _truncate_json_text_field(asset_ref, "quote") or truncated
-            truncated = _truncate_json_text_field(asset_ref, "excerpt") or truncated
+        truncated = (
+            _bound_asset_ref(
+                entry,
+                "asset_ref",
+                force_preview=force_asset_ref_previews,
+            )
+            or truncated
+        )
         evidence = entry.get("evidence")
         if isinstance(evidence, dict):
             for key in ("quote", "context_before", "context_after"):
                 truncated = _truncate_json_text_field(evidence, key) or truncated
-            nested_ref = evidence.get("asset_ref")
-            if isinstance(nested_ref, dict):
-                truncated = _truncate_json_text_field(nested_ref, "quote") or truncated
+            truncated = (
+                _bound_asset_ref(
+                    evidence,
+                    "asset_ref",
+                    force_preview=force_asset_ref_previews,
+                )
+                or truncated
+            )
     if truncated:
         bounded["response_truncated"] = True
-        bounded["content_chars"] = len(original_json)
-        bounded["sha256"] = text_sha256(original_json)
+        bounded["content_chars"] = content_chars
+        bounded["sha256"] = content_sha256
     limit = max_text_response_chars()
     entries = bounded.get("entries")
     if limit > 0 and isinstance(entries, list):
@@ -188,8 +266,8 @@ def _bounded_evidence_payload(payload: dict[str, Any]) -> dict[str, Any]:
             bounded["entries"] = entries[:keep]
             bounded["entries_omitted"] = max(0, len(entries) - keep)
             bounded["response_truncated"] = True
-            bounded.setdefault("content_chars", len(original_json))
-            bounded.setdefault("sha256", text_sha256(original_json))
+            bounded.setdefault("content_chars", content_chars)
+            bounded.setdefault("sha256", content_sha256)
         bounded_json = json.dumps(bounded, ensure_ascii=False, indent=2, default=str)
         if len(bounded_json) > limit:
             for entry in bounded.get("entries", []):
@@ -210,8 +288,8 @@ def _bounded_evidence_payload(payload: dict[str, Any]) -> dict[str, Any]:
                         "issues": verification.get("issues") or [],
                     }
             bounded["response_truncated"] = True
-            bounded.setdefault("content_chars", len(original_json))
-            bounded.setdefault("sha256", text_sha256(original_json))
+            bounded.setdefault("content_chars", content_chars)
+            bounded.setdefault("sha256", content_sha256)
     return bounded
 
 
@@ -303,7 +381,7 @@ async def _create_ingest_job_response(
                 require_marker=require_marker,
             ),
         )
-    except RuntimeError as e:
+    except (RuntimeError, ValueError) as e:
         await log_message(ctx, "error", f"ingest_documents job creation failed: {e}")
         return f"# ??Could Not Create ETL Job\n\n{e!s}"
 
@@ -570,12 +648,18 @@ async def find_evidence_spans(
         status = load_citation_status(repository, doc_id) or {}
         reason = str(status.get("reason") or "").strip()
         if reason:
-            return (
+            error = (
                 f"No citation-ready evidence spans found for doc_id: {doc_id}. {reason}"
             )
-        return (
-            f"Citation index not found for doc_id: {doc_id}. "
-            "Run ingest_documents again or ensure blocks.json/full markdown exist."
+        else:
+            error = (
+                f"Citation index not found for doc_id: {doc_id}. "
+                "Run ingest_documents again or ensure blocks.json/full markdown exist."
+            )
+        return format_limited_text_response(
+            title=f"Evidence Spans: {doc_id}",
+            text=error,
+            language="markdown",
         )
 
     spans = _filter_evidence_spans(
@@ -587,54 +671,80 @@ async def find_evidence_spans(
 
     if not spans:
         target = span_id or query
-        return f"No evidence spans found for `{target}` in doc_id: {doc_id}"
-
-    lines = [
-        f"# Evidence Spans: {doc_id}",
-        "",
-        f"**Found:** {len(spans)}",
-        "",
-    ]
-    for index, span in enumerate(spans[: max(1, min(limit, 50))], 1):
-        line_range = format_line_range(span.line_start, span.line_end)
-        char_range = (
-            f"{span.char_start}-{span.char_end}"
-            if span.char_start is not None and span.char_end is not None
-            else "?"
-        )
-        quote = span.text[:500] + ("..." if len(span.text) > 500 else "")
-        lines.extend(
-            [
-                f"## Span {index}: `{span.span_id}`",
-                f"- **Kind:** {span.span_kind}",
-                f"- **Block:** `{span.block_id}`",
-                f"- **Page:** {span.page or '?'}",
-                f"- **Lines:** {line_range or '?'}",
-                f"- **Chars:** {char_range}",
-                f"- **SHA256:** `{span.text_sha256}`",
-                (
-                    "- **CRAAP:** "
-                    f"currency={span.craap.currency.status}, "
-                    f"relevance={span.craap.relevance.status}, "
-                    f"authority={span.craap.authority.status}, "
-                    f"accuracy={span.craap.accuracy.status}, "
-                    f"purpose={span.craap.purpose.status}"
-                ),
-                "",
-                f"> {quote}",
-                "",
-                "AssetRef:",
-                "```json",
-                json.dumps(asset_ref_from_span(span), ensure_ascii=False, indent=2),
-                "```",
-                "",
-            ]
+        return format_limited_text_response(
+            title=f"Evidence Spans: {doc_id}",
+            text=f"No evidence spans found for `{target}` in doc_id: {doc_id}",
+            language="markdown",
+            guidance="use a shorter query or a precise span_id",
         )
 
-    if len(spans) > limit:
-        lines.append(f"_...and {len(spans) - limit} more spans_")
+    bounded_limit = max(1, min(limit, 50))
 
-    return "\n".join(lines)
+    def render(*, force_previews: bool) -> str:
+        lines = [
+            f"# Evidence Spans: {doc_id}",
+            "",
+            f"**Found:** {len(spans)}",
+            "",
+        ]
+        for index, span in enumerate(spans[:bounded_limit], 1):
+            line_range = format_line_range(span.line_start, span.line_end)
+            char_range = (
+                f"{span.char_start}-{span.char_end}"
+                if span.char_start is not None and span.char_end is not None
+                else "?"
+            )
+            quote = span.text[:500] + ("..." if len(span.text) > 500 else "")
+            ref = (
+                asset_ref_preview_from_span(span)
+                if force_previews
+                else asset_ref_for_mcp_response(span)
+            )
+            lines.extend(
+                [
+                    f"## Span {index}: `{span.span_id}`",
+                    f"- **Kind:** {span.span_kind}",
+                    f"- **Block:** `{span.block_id}`",
+                    f"- **Page:** {span.page or '?'}",
+                    f"- **Lines:** {line_range or '?'}",
+                    f"- **Chars:** {char_range}",
+                    f"- **SHA256:** `{span.text_sha256}`",
+                    (
+                        "- **CRAAP:** "
+                        f"currency={span.craap.currency.status}, "
+                        f"relevance={span.craap.relevance.status}, "
+                        f"authority={span.craap.authority.status}, "
+                        f"accuracy={span.craap.accuracy.status}, "
+                        f"purpose={span.craap.purpose.status}"
+                    ),
+                    "",
+                    f"> {quote}",
+                    "",
+                    "AssetRef:",
+                    "```json",
+                    json.dumps(ref, ensure_ascii=False, indent=2),
+                    "```",
+                    "",
+                ]
+            )
+
+        if len(spans) > bounded_limit:
+            lines.append(f"_...and {len(spans) - bounded_limit} more spans_")
+        return "\n".join(lines)
+
+    response = render(force_previews=False)
+    response_limit = max_text_response_chars()
+    if response_limit > 0 and len(response) > response_limit:
+        response = render(force_previews=True)
+    return format_limited_text_response(
+        title=f"Evidence Spans: {doc_id}",
+        text=response,
+        language="markdown",
+        guidance=(
+            "narrow query/span_id or export a persisted bundle for complete "
+            "canonical AssetRef objects"
+        ),
+    )
 
 
 @mcp.tool()
@@ -713,8 +823,14 @@ async def citation_bundle(
             "error": error,
         }
         if output_format == "json":
-            return payload
-        return error
+            return format_limited_json_response(
+                title=f"Citation Bundle: {doc_id}", payload=payload
+            )
+        return format_limited_text_response(
+            title=f"Citation Bundle: {doc_id}",
+            text=error,
+            language="markdown",
+        )
 
     filtered = _filter_evidence_spans(
         spans,
@@ -731,16 +847,27 @@ async def citation_bundle(
             "error": f"No evidence spans found for `{target}` in doc_id: {doc_id}",
         }
         if output_format == "json":
-            return payload
-        return str(payload["error"])
+            return format_limited_json_response(
+                title=f"Citation Bundle: {doc_id}", payload=payload
+            )
+        return format_limited_text_response(
+            title=f"Citation Bundle: {doc_id}",
+            text=str(payload["error"]),
+            language="markdown",
+            guidance="use a shorter query or a precise span_id",
+        )
 
+    write_requested = bool(wiki_root or output_path)
+    asset_ref_factory = (
+        asset_ref_from_span if write_requested else asset_ref_for_mcp_response
+    )
     bounded_limit = max(1, min(limit, 50))
     entries = [
         _citation_bundle_entry(
             span,
             include_verification=include_verification,
             repository=repository,
-            asset_ref_factory=asset_ref_from_span,
+            asset_ref_factory=asset_ref_factory,
             citation_key=citation_key,
         )
         for span in filtered[:bounded_limit]
@@ -759,13 +886,16 @@ async def citation_bundle(
     }
     if wiki_root or output_path:
         if output_format != "foam":
-            return {
-                "success": False,
-                "doc_id": doc_id,
-                "error": "Foam file writes require output_format='foam'",
-            }
+            return format_limited_json_response(
+                title=f"Citation Bundle: {doc_id}",
+                payload={
+                    "success": False,
+                    "doc_id": doc_id,
+                    "error": "Foam file writes require output_format='foam'",
+                },
+            )
         try:
-            return _write_foam_evidence_pack(
+            write_result = _write_foam_evidence_pack(
                 payload,
                 wiki_root=wiki_root,
                 output_path=output_path,
@@ -774,23 +904,59 @@ async def citation_bundle(
                 update_index=update_index,
                 overwrite=overwrite,
             )
+            return format_limited_json_response(
+                title=f"Citation Bundle Write: {doc_id}", payload=write_result
+            )
         except (FileExistsError, ValueError) as exc:
-            return {"success": False, "doc_id": doc_id, "error": str(exc)}
+            return format_limited_json_response(
+                title=f"Citation Bundle Write: {doc_id}",
+                payload={"success": False, "doc_id": doc_id, "error": str(exc)},
+            )
     if output_format == "json":
         bounded_payload = _bounded_evidence_payload(payload)
+        response_limit = max_text_response_chars()
+        if (
+            response_limit > 0
+            and len(json.dumps(bounded_payload, ensure_ascii=True, default=str))
+            > response_limit
+        ):
+            bounded_payload = _bounded_evidence_payload(
+                payload, force_asset_ref_previews=True
+            )
         return format_limited_json_response(
             title=f"Citation Bundle: {doc_id}",
             payload=bounded_payload,
             guidance="write a Foam evidence pack to disk for full quotes",
         )
     if output_format == "foam":
+        # Bound full quotes before the formatter calls splitlines/join. This
+        # avoids constructing a second multi-MiB in-memory Markdown document
+        # merely to discover that the transport response exceeds its cap.
+        foam_payload = _bounded_evidence_payload(payload)
+        foam_text = _format_foam_evidence_pack(foam_payload)
+        response_limit = max_text_response_chars()
+        if response_limit > 0 and len(foam_text) > response_limit:
+            foam_text = _format_foam_evidence_pack(
+                _bounded_evidence_payload(payload, force_asset_ref_previews=True)
+            )
         return format_limited_text_response(
             title=f"Foam Evidence Pack: {doc_id}",
-            text=_format_foam_evidence_pack(payload),
+            text=foam_text,
             language="markdown",
             guidance="pass wiki_root/output_path to write the full evidence pack",
         )
-    return _format_citation_bundle(payload)
+    markdown = _format_citation_bundle(payload)
+    response_limit = max_text_response_chars()
+    if response_limit > 0 and len(markdown) > response_limit:
+        markdown = _format_citation_bundle(
+            _bounded_evidence_payload(payload, force_asset_ref_previews=True)
+        )
+    return format_limited_text_response(
+        title=f"Citation Bundle: {doc_id}",
+        text=markdown,
+        language="markdown",
+        guidance="write a Foam evidence pack to disk for full canonical AssetRef objects",
+    )
 
 
 async def _ingest_mixed_document_batch(
@@ -845,7 +1011,7 @@ async def _ingest_mixed_document_batch(
             total_steps=max(len(file_paths), 1),
             estimated_duration_seconds=len(file_paths) * 10,
         )
-    except RuntimeError as e:
+    except (RuntimeError, ValueError) as e:
         await log_message(ctx, "error", f"ingest_mixed_document_batch rejected: {e}")
         return (
             "# ❌ Could Not Create Mixed-Format Ingest Job\n\n"
@@ -2731,9 +2897,12 @@ async def evidence(
     if operation in {"claim_promotion", "claims", "promote_claims"}:
         if not doc_id:
             return _missing_document_param("doc_id")
+        write_requested = bool(wiki_root or output_path)
         payload = _claim_promotion_payload(
             repository=repository,
-            asset_ref_factory=asset_ref_from_span,
+            asset_ref_factory=(
+                asset_ref_from_span if write_requested else asset_ref_for_mcp_response
+            ),
             doc_id=doc_id,
             query=query,
             span_id=span_id,
@@ -2743,15 +2912,20 @@ async def evidence(
         )
         if wiki_root or output_path:
             if output_format != "foam":
-                return {
-                    "success": False,
-                    "doc_id": doc_id,
-                    "error": "Foam claim writes require output_format='foam'",
-                }
+                return format_limited_json_response(
+                    title=f"Claim Promotion: {doc_id}",
+                    payload={
+                        "success": False,
+                        "doc_id": doc_id,
+                        "error": "Foam claim writes require output_format='foam'",
+                    },
+                )
             if not payload.get("success"):
-                return payload
+                return format_limited_json_response(
+                    title=f"Claim Promotion: {doc_id}", payload=payload
+                )
             try:
-                return _write_foam_claim_promotion_pack(
+                write_result = _write_foam_claim_promotion_pack(
                     payload,
                     wiki_root=wiki_root,
                     output_path=output_path,
@@ -2760,23 +2934,54 @@ async def evidence(
                     update_index=update_index,
                     overwrite=overwrite,
                 )
+                return format_limited_json_response(
+                    title=f"Claim Promotion Write: {doc_id}", payload=write_result
+                )
             except (FileExistsError, ValueError) as exc:
-                return {"success": False, "doc_id": doc_id, "error": str(exc)}
+                return format_limited_json_response(
+                    title=f"Claim Promotion Write: {doc_id}",
+                    payload={
+                        "success": False,
+                        "doc_id": doc_id,
+                        "error": str(exc),
+                    },
+                )
         if output_format == "json":
             bounded_payload = _bounded_evidence_payload(payload)
+            response_limit = max_text_response_chars()
+            if (
+                response_limit > 0
+                and len(json.dumps(bounded_payload, ensure_ascii=True, default=str))
+                > response_limit
+            ):
+                bounded_payload = _bounded_evidence_payload(
+                    payload, force_asset_ref_previews=True
+                )
             return format_limited_json_response(
                 title=f"Claim Promotion: {doc_id}",
                 payload=bounded_payload,
                 guidance="write a Foam claim pack to disk for full verification payloads",
             )
         if output_format == "foam":
+            foam_payload = _bounded_evidence_payload(payload)
+            foam_text = _format_foam_claim_promotion_pack(foam_payload)
+            response_limit = max_text_response_chars()
+            if response_limit > 0 and len(foam_text) > response_limit:
+                foam_text = _format_foam_claim_promotion_pack(
+                    _bounded_evidence_payload(payload, force_asset_ref_previews=True)
+                )
             return format_limited_text_response(
                 title=f"Foam Claim Promotion Pack: {doc_id}",
-                text=_format_foam_claim_promotion_pack(payload),
+                text=foam_text,
                 language="markdown",
                 guidance="pass wiki_root/output_path to write the full claim pack",
             )
-        return _format_claim_promotion_markdown(payload)
+        return format_limited_text_response(
+            title=f"Claim Promotion: {doc_id}",
+            text=_format_claim_promotion_markdown(payload),
+            language="markdown",
+            guidance="narrow query/span_id when many claim candidates match",
+        )
     if operation in {"health", "foam_health", "wiki_health"}:
         result = _audit_foam_wiki_health(
             wiki_root,

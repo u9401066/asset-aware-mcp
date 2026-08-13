@@ -40,16 +40,19 @@ async def log_message(
     message: str,
     logger_name: str | None = None,
 ) -> None:
-    """Safely emit MCP log messages when a context is available."""
+    """Emit request-scoped operational logs without MCP protocol logging.
+
+    MCP protocol logging is deprecated by SEP-2577. The stdio server configures
+    Python logging on stderr, which keeps operational messages separate from
+    the JSON-RPC stream on stdout. Preserve the existing direct-call behavior:
+    without an MCP request context this helper remains a no-op.
+    """
     if ctx is None:
         return
 
     try:
-        result = ctx.log(level, message, logger_name=logger_name)
-        if inspect.isawaitable(result):
-            await asyncio.wait_for(result, timeout=MCP_CONTEXT_EMIT_TIMEOUT_SECONDS)
-    except TimeoutError:
-        logger.debug("Timed out emitting MCP log")
+        target_logger = logging.getLogger(logger_name) if logger_name else logger
+        target_logger.log(getattr(logging, level.upper()), message)
     except Exception:
         logger.debug("Failed to emit MCP log", exc_info=True)
 

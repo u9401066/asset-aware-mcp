@@ -13,7 +13,9 @@ if TYPE_CHECKING:
     from src.domain.citation import EvidenceSpan
 
 __all__ = [
+    "asset_ref_for_mcp_response",
     "asset_ref_from_span",
+    "asset_ref_preview_from_span",
     "coerce_range",
     "display_line_range",
     "format_line_range",
@@ -21,7 +23,8 @@ __all__ = [
     "load_or_build_evidence_spans",
 ]
 
-ASSET_REF_QUOTE_MAX_CHARS = 1_000
+MCP_CANONICAL_QUOTE_MAX_CHARS = 1_000
+MCP_QUOTE_PREVIEW_CHARS = 500
 
 
 def display_line_range(start_line: int, end_line: int) -> str:
@@ -48,7 +51,7 @@ def coerce_range(value: Any) -> list[int | None] | None:
     for item in value:
         if item is None:
             coerced.append(None)
-        elif isinstance(item, int):
+        elif type(item) is int:
             coerced.append(item)
         else:
             return None
@@ -56,8 +59,14 @@ def coerce_range(value: Any) -> list[int | None] | None:
 
 
 def asset_ref_from_span(span: EvidenceSpan) -> dict[str, Any]:
+    """Build a self-verifying reference to the complete indexed span.
+
+    ``quote``, its SHA-256 and the char/byte locator all describe the same
+    evidence. Presentation layers may bound a serialized response, but an
+    AssetRef must never silently replace the exact quote with a prefix while
+    retaining the full-span hash and ranges.
+    """
     quote = span.text
-    quote_truncated = len(quote) > ASSET_REF_QUOTE_MAX_CHARS
     ref: dict[str, Any] = {
         "source_type": "span",
         "doc_id": span.doc_id,
@@ -67,11 +76,11 @@ def asset_ref_from_span(span: EvidenceSpan) -> dict[str, Any]:
         "source_revision_id": span.source_revision_id,
         "locator_version": span.locator_version,
         "locator_source_sha256": span.locator_source_sha256,
-        "quote": quote[:ASSET_REF_QUOTE_MAX_CHARS],
+        "quote": quote,
         "quote_sha256": span.text_sha256,
         "excerpt": span.text[:200],
         "quote_chars": len(quote),
-        "quote_truncated": quote_truncated,
+        "quote_truncated": False,
         "craap": span.craap.model_dump(exclude_none=True),
     }
     if span.asset_id:
@@ -85,6 +94,41 @@ def asset_ref_from_span(span: EvidenceSpan) -> dict[str, Any]:
     if span.bbox:
         ref["bbox"] = span.bbox
     return ref
+
+
+def asset_ref_preview_from_span(span: EvidenceSpan) -> dict[str, Any]:
+    """Build an explicitly non-canonical transport preview for a large span.
+
+    The preview deliberately omits the canonical locator fields and uses a
+    distinct source type. It therefore cannot be mistaken for, or submitted as,
+    a complete self-verifying ``AssetRef``.
+    """
+    quote_preview = span.text[:MCP_QUOTE_PREVIEW_CHARS]
+    return {
+        "preview_version": "asset-ref-preview-v1",
+        "canonical_asset_ref": False,
+        "source_type": "span_preview",
+        "doc_id": span.doc_id,
+        "span_id": span.span_id,
+        "block_id": span.block_id,
+        "page": span.page,
+        "quote_preview": quote_preview,
+        "quote_preview_chars": len(quote_preview),
+        "quote_chars": len(span.text),
+        "quote_sha256": span.text_sha256,
+        "quote_omitted_chars": len(span.text) - len(quote_preview),
+        "canonical_ref_available_in": (
+            "persisted citation/agent-asset bundles; export or write the bundle "
+            "to retrieve the complete self-verifying AssetRef"
+        ),
+    }
+
+
+def asset_ref_for_mcp_response(span: EvidenceSpan) -> dict[str, Any]:
+    """Return a canonical small ref or a safe non-canonical large preview."""
+    if len(span.text) <= MCP_CANONICAL_QUOTE_MAX_CHARS:
+        return asset_ref_from_span(span)
+    return asset_ref_preview_from_span(span)
 
 
 def load_or_build_evidence_spans(repository: Any, doc_id: str) -> list[EvidenceSpan]:

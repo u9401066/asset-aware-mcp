@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 from pathlib import Path
 from typing import Any
+
+import pydantic_core
 
 TEXT_RESPONSE_LIMIT_ENV = "ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS"
 IMAGE_RESPONSE_LIMIT_ENV = "ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS"
@@ -72,19 +73,25 @@ def _limited_preview_response(
     content_chars: int,
     sha256: str,
     source_path: str | Path | None = None,
-    limit: int,
+    preview_chars: int,
     language: str,
     guidance: str | None,
 ) -> str:
     preview = _safe_fence_text(preview)
+    storage_message = (
+        "Full content is stored as an artifact and was not inlined because it "
+        "exceeds the MCP text response limit."
+        if source_path is not None
+        else "Full content was not inlined because it exceeds the MCP text "
+        "response limit."
+    )
     lines = [
         f"# {title}",
         "",
-        "Full content is stored as an artifact and was not inlined because it "
-        "exceeds the MCP text response limit.",
+        storage_message,
         f"- content_chars: {content_chars}",
-        f"- preview_chars: {len(preview)}",
-        f"- omitted_chars: {max(0, content_chars - limit)}",
+        f"- preview_chars: {preview_chars}",
+        f"- omitted_chars: {max(0, content_chars - preview_chars)}",
         f"- sha256: `{sha256}`",
     ]
     if source_path is not None:
@@ -103,6 +110,68 @@ def _limited_preview_response(
     return "\n".join(lines)
 
 
+def _fit_limited_text_response(
+    *,
+    title: str,
+    preview_source: str,
+    content_chars: int,
+    sha256: str,
+    source_path: str | Path | None,
+    limit: int,
+    language: str,
+    guidance: str | None,
+) -> str:
+    """Fit preview content and all metadata inside ``limit`` characters."""
+
+    def render(preview_chars: int) -> str:
+        return _limited_preview_response(
+            title=title,
+            preview=preview_source[:preview_chars],
+            content_chars=content_chars,
+            sha256=sha256,
+            source_path=source_path,
+            preview_chars=preview_chars,
+            language=language,
+            guidance=guidance,
+        )
+
+    empty_preview = render(0)
+    if len(empty_preview) > limit:
+        # Pathological operator limits can be smaller than the normal metadata
+        # envelope. Still honour the hard cap instead of silently overflowing.
+        minimal = f"truncated {sha256} ({content_chars} chars)"
+        return minimal[:limit]
+
+    low = 0
+    high = min(len(preview_source), limit)
+    best = empty_preview
+    while low <= high:
+        midpoint = (low + high) // 2
+        candidate = render(midpoint)
+        if len(candidate) <= limit:
+            best = candidate
+            low = midpoint + 1
+        else:
+            high = midpoint - 1
+    return best
+
+
+def _mcp_json_text(payload: Any) -> str:
+    """Serialize a value exactly like MCP SDK 2's dict-to-TextContent path.
+
+    ``MCPServer`` converts non-string tool results with
+    ``pydantic_core.to_json(..., fallback=str, indent=2)`` before placing them
+    in one ``TextContent`` block. The configured response cap applies to that
+    block's ``text`` value, not to the surrounding JSON-RPC frame.
+    """
+    return pydantic_core.to_json(payload, fallback=str, indent=2).decode("utf-8")
+
+
+def _json_response_chars(payload: Any) -> int:
+    """Measure the exact MCP SDK 2 ``TextContent.text`` serialization."""
+    return len(_mcp_json_text(payload))
+
+
 def format_limited_text_response(
     *,
     title: str,
@@ -114,16 +183,16 @@ def format_limited_text_response(
 ) -> str:
     """Return *text* unchanged unless it exceeds the response limit.
 
-    Large artifacts stay on disk; MCP clients receive a bounded preview plus
-    enough identity metadata to verify and fetch the source artifact directly.
+    MCP clients receive a bounded preview and content identity metadata. When
+    ``source_path`` is provided, the response also points to the full artifact.
     """
     limit = max_text_response_chars(max_chars)
     if limit == 0 or len(text) <= limit:
         return text
 
-    return _limited_preview_response(
+    return _fit_limited_text_response(
         title=title,
-        preview=text[:limit],
+        preview_source=text,
         content_chars=len(text),
         sha256=text_sha256(text),
         source_path=source_path,
@@ -164,9 +233,9 @@ def format_limited_file_response(
     if content_chars <= limit:
         return text
 
-    return _limited_preview_response(
+    return _fit_limited_text_response(
         title=title,
-        preview=text,
+        preview_source=text,
         content_chars=content_chars,
         sha256="sha256:" + hasher.hexdigest(),
         source_path=source_path,
@@ -185,7 +254,7 @@ def format_limited_json_response(
     guidance: str | None = None,
 ) -> Any:
     """Return payload unchanged unless its JSON representation is too large."""
-    text = json.dumps(payload, ensure_ascii=False, indent=2, default=str)
+    text = _mcp_json_text(payload)
     limit = max_text_response_chars(max_chars)
     if limit == 0 or len(text) <= limit:
         return payload
@@ -193,24 +262,20 @@ def format_limited_json_response(
     summary: dict[str, Any] = {}
     if isinstance(payload, dict):
         for key, value in payload.items():
-            if isinstance(value, str):
-                if len(value) <= 2_000:
-                    summary[key] = value
-                else:
-                    summary[f"{key}_chars"] = len(value)
-                    summary[f"{key}_sha256"] = text_sha256(value)
-                    summary[f"{key}_preview"] = _safe_fence_text(value[:2_000])
-            elif isinstance(value, int | float | bool) or value is None:
+            if len(summary) >= 12:
+                break
+            if (
+                (isinstance(value, str) and len(value) <= 256)
+                or isinstance(value, int | float | bool)
+                or value is None
+            ):
                 summary[key] = value
 
     summary.update(
         {
             "response_truncated": True,
             "content_chars": len(text),
-            "preview_chars": limit,
-            "omitted_chars": len(text) - limit,
             "sha256": text_sha256(text),
-            "preview_json": _safe_fence_text(text[:limit]),
         }
     )
     if source_path is not None:
@@ -220,7 +285,62 @@ def format_limited_json_response(
     if "success" not in summary and isinstance(payload, dict) and "success" in payload:
         summary["success"] = bool(payload.get("success"))
     summary.setdefault("title", title)
-    return summary
+
+    def render(preview_chars: int) -> dict[str, Any]:
+        candidate = dict(summary)
+        candidate.update(
+            {
+                "preview_chars": preview_chars,
+                "omitted_chars": max(0, len(text) - preview_chars),
+                "preview_json": _safe_fence_text(text[:preview_chars]),
+            }
+        )
+        return candidate
+
+    # Remove optional metadata until the fixed envelope fits. This mainly
+    # protects deliberately tiny test/operator caps while preserving rich
+    # metadata at production limits.
+    optional_keys = [
+        "next",
+        "artifact_path",
+        "title",
+        *[
+            key
+            for key in list(summary)
+            if key
+            not in {
+                "success",
+                "response_truncated",
+                "content_chars",
+                "sha256",
+            }
+        ],
+    ]
+    while _json_response_chars(render(0)) > limit and optional_keys:
+        summary.pop(optional_keys.pop(0), None)
+
+    if _json_response_chars(render(0)) > limit:
+        for minimal in (
+            {"response_truncated": True},
+            {},
+            0,
+        ):
+            if _json_response_chars(minimal) <= limit:
+                return minimal
+        return 0
+
+    low = 0
+    high = min(len(text), limit)
+    best = render(0)
+    while low <= high:
+        midpoint = (low + high) // 2
+        candidate = render(midpoint)
+        if _json_response_chars(candidate) <= limit:
+            best = candidate
+            low = midpoint + 1
+        else:
+            high = midpoint - 1
+    return best
 
 
 def format_omitted_image_response(
@@ -248,4 +368,8 @@ def format_omitted_image_response(
         lines.append(f"- artifact_path: `{source_path}`")
     if guidance:
         lines.append(f"- next: {guidance}")
-    return "\n".join(lines)
+    response = "\n".join(lines)
+    if limit > 0 and len(response) > limit:
+        minimal = f"image omitted {text_sha256(data)} ({len(data)} base64 chars)"
+        return minimal[:limit]
+    return response

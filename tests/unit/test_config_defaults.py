@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
+from pathlib import Path
 
-from src.infrastructure.config import Settings
+from src.infrastructure.config import Settings, settings_dotenv_file
 
 
 def _clear_ollama_model_env(monkeypatch) -> None:
@@ -103,6 +105,46 @@ def test_explicit_asset_store_paths_are_preserved(tmp_path) -> None:
 
     assert settings.table_output_dir == table_dir
     assert settings.lightrag_working_dir == graph_dir
+
+
+def test_managed_launch_can_disable_implicit_working_directory_dotenv(
+    monkeypatch,
+) -> None:
+    assert settings_dotenv_file({}) == ".env"
+    assert settings_dotenv_file({"ASSET_AWARE_DISABLE_DOTENV": "true"}) is None
+    assert settings_dotenv_file({"ASSET_AWARE_DISABLE_DOTENV": "1"}) is None
+    assert settings_dotenv_file({"ASSET_AWARE_DISABLE_DOTENV": "false"}) == ".env"
+
+
+def test_global_settings_do_not_reload_workspace_secrets_when_disabled(
+    tmp_path,
+) -> None:
+    (tmp_path / ".env").write_text(
+        "OPENAI_API_KEY=DOTENV_SENTINEL_MUST_NOT_LOAD\n",
+        encoding="utf-8",
+    )
+    script = (
+        "from src.infrastructure.config import settings; "
+        "print(bool(settings.openai_api_key))"
+    )
+    environment = {
+        "PATH": os.environ.get("PATH", ""),
+        "PYTHONPATH": str(Path(__file__).resolve().parents[2]),
+        "ASSET_AWARE_DISABLE_DOTENV": "true",
+    }
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=15,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "False"
 
 
 def test_config_import_does_not_import_optional_adapters() -> None:

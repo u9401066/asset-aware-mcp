@@ -33,7 +33,7 @@ async def create_conversion_job_response(
             parameters=parameters,
             handler=handler,
         )
-    except RuntimeError as e:
+    except (RuntimeError, ValueError) as e:
         await log_message(ctx, "error", f"conversion job rejected: {e}")
         return (
             "# ❌ Could Not Create Conversion Job\n\n"

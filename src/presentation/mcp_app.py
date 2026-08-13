@@ -52,4 +52,4 @@ class AssetAwareMCPServer(MCPServer):
 
 
 # MCPServer 應用實例（全域單例）
-mcp = AssetAwareMCPServer("Asset-Aware Medical RAG")
+mcp = AssetAwareMCPServer("Asset-Aware MCP")

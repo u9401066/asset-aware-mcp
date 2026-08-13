@@ -1,6 +1,6 @@
 [project]
 name = "asset-aware-mcp"
-version = "1.0.0"
+version = "1.0.1"
 description = "Citation-ready PDF and DOCX workflows that export reusable agent assets and Foam/LightRAG wikis over MCP"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -31,6 +31,7 @@ classifiers = [
 dependencies = [
     # --- Core runtime (always imported in src/) ---
     "mcp>=2,<3",
+    "msgpack>=1.2.1,<2",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.12.0",
     "httpx>=0.28.1",

@@ -7,8 +7,13 @@ error handling, input validation, and response formatting.
 
 from __future__ import annotations
 
+import hashlib
+import json
+import re
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 # ============================================================================
 # Docx Tools
@@ -400,6 +405,137 @@ class TestTableTools:
         assert "sha256:" in result
         assert "C" * 30_000 not in result
         assert "F" * 30_000 not in result
+
+    async def test_discover_sources_long_span_returns_bounded_noncanonical_preview(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Long evidence must not expose a truncated canonical AssetRef."""
+        from src.domain.citation import EvidenceSpan
+        from src.presentation.tools.table_tools import discover_sources
+
+        markdown = "needle " + ("L" * 64_000)
+        span = EvidenceSpan.create(
+            doc_id="doc_long",
+            source_revision_id=hashlib.sha256(markdown.encode()).hexdigest(),
+            span_kind="block",
+            text=markdown,
+            block_id="blk_long",
+            page=4,
+            bbox=[1.0, 2.0, 3.0, 4.0],
+            line_start=0,
+            line_end=1,
+            char_start=0,
+            char_end=len(markdown),
+            markdown=markdown,
+            locator_source_sha256=hashlib.sha256(b"stable blocks").hexdigest(),
+        )
+        manifest = SimpleNamespace(
+            title="Long evidence",
+            assets=SimpleNamespace(sections=[], tables=[]),
+        )
+        monkeypatch.setenv("ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS", "12000")
+
+        with (
+            patch("src.presentation.tools.table_tools.document_service") as mock_docs,
+            patch("src.presentation.tools.table_tools.repository") as mock_repo,
+        ):
+            mock_docs.get_manifest = AsyncMock(return_value=manifest)
+            mock_repo.load_citation_index.return_value = [span]
+            result = await discover_sources(
+                "needle",
+                doc_ids=["doc_long"],
+                include_kg=False,
+                limit=1,
+            )
+
+        match = re.search(r"```json\s*\n\s*(\{[^\n]*\})\s*\n\s*```", result)
+        assert match is not None
+        ref = json.loads(match.group(1))
+
+        assert len(result) <= 12_000
+        assert ref["canonical_asset_ref"] is False
+        assert ref["source_type"] == "span_preview"
+        assert ref["quote_sha256"] == span.text_sha256
+        assert ref["quote_chars"] == len(span.text)
+        assert not {
+            "source_revision_id",
+            "locator_version",
+            "locator_source_sha256",
+            "line_range",
+            "char_range",
+            "byte_range",
+            "bbox",
+            "quote",
+        }.intersection(ref)
+        assert "L" * 2_000 not in result
+        assert "persisted citation/agent-asset bundle" in result
+        assert "table_cite" not in result
+
+    async def test_discover_sources_short_span_remains_canonical_and_verifiable(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A small discovery ref keeps its complete locator verification contract."""
+        from src.domain.citation import EvidenceSpan
+        from src.presentation.tools import document_evidence_support, document_tools
+        from src.presentation.tools.table_tools import discover_sources
+
+        markdown = "needle exact citation quote."
+        span = EvidenceSpan.create(
+            doc_id="doc_short",
+            source_revision_id=hashlib.sha256(markdown.encode()).hexdigest(),
+            span_kind="sentence",
+            text=markdown,
+            block_id="blk_short",
+            page=2,
+            bbox=[1.0, 2.0, 3.0, 4.0],
+            line_start=0,
+            line_end=1,
+            char_start=0,
+            char_end=len(markdown),
+            markdown=markdown,
+            locator_source_sha256=hashlib.sha256(b"stable blocks").hexdigest(),
+        )
+        manifest = SimpleNamespace(
+            title="Short evidence",
+            assets=SimpleNamespace(sections=[], tables=[]),
+        )
+
+        with (
+            patch("src.presentation.tools.table_tools.document_service") as mock_docs,
+            patch("src.presentation.tools.table_tools.repository") as mock_repo,
+        ):
+            mock_docs.get_manifest = AsyncMock(return_value=manifest)
+            mock_repo.load_citation_index.return_value = [span]
+            result = await discover_sources(
+                "needle",
+                doc_ids=["doc_short"],
+                include_kg=False,
+                limit=1,
+            )
+
+        match = re.search(r"```json\s*\n\s*(\{[^\n]*\})\s*\n\s*```", result)
+        assert match is not None
+        ref = json.loads(match.group(1))
+
+        assert ref["source_type"] == "span"
+        assert ref["quote"] == span.text
+        assert ref["quote_truncated"] is False
+        assert ref["source_revision_id"] == span.source_revision_id
+        assert ref["locator_source_sha256"] == span.locator_source_sha256
+        assert ref["line_range"] == [0, 1]
+        assert ref["char_range"] == [0, len(markdown)]
+        assert ref["byte_range"] == [0, len(markdown)]
+        assert ref["bbox"] == span.bbox
+
+        monkeypatch.setattr(
+            document_evidence_support,
+            "load_or_build_evidence_spans",
+            lambda _repository, _doc_id: [span],
+        )
+        verification = await document_tools.verify_citation_ref(ref)
+        assert "Citation ref verified" in verification
 
 
 # Profile Tools

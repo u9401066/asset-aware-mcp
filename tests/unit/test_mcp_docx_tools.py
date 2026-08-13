@@ -8,6 +8,7 @@ error handling, input validation, and response formatting.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -73,8 +74,11 @@ class TestDocxTools:
             assert "docx_test_abc123" in result
             assert "10" in result  # total_blocks
 
-    async def test_ingest_docx_reports_context_progress(self) -> None:
+    async def test_ingest_docx_reports_context_progress(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """ingest_docx emits MCP progress when Context is injected."""
+        caplog.set_level(logging.INFO, logger="src.presentation.mcp_context")
         fake_ctx = MagicMock()
         fake_ctx.report_progress = AsyncMock()
         fake_ctx.log = AsyncMock()
@@ -98,7 +102,8 @@ class TestDocxTools:
             await ingest_docx("/test.docx", ctx=fake_ctx)
 
         assert fake_ctx.report_progress.await_count >= 2
-        assert fake_ctx.log.await_count >= 2
+        fake_ctx.log.assert_not_awaited()
+        assert "ingest_docx complete: docx_test_abc123" in caplog.text
 
     async def test_get_docx_content_not_found(self) -> None:
         """get_docx_content returns error for unknown doc_id."""

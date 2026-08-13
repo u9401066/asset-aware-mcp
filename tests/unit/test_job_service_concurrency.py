@@ -85,6 +85,30 @@ def test_ingest_worker_main_builds_minimal_dependencies_without_table_service(
 class TestJobServiceConcurrency:
     """Tests for job concurrency limit."""
 
+    async def test_ingest_job_rejects_empty_input_without_persisting(self) -> None:
+        """An empty batch must not become a misleading completed 0/0 job."""
+        from src.application.job_service import JobService
+
+        mock_store = AsyncMock()
+        service = JobService(job_store=mock_store)
+
+        with pytest.raises(ValueError, match="At least one input file"):
+            await service.create_ingest_job([])
+
+        mock_store.create.assert_not_awaited()
+
+    async def test_ingest_job_rejects_blank_input_path(self) -> None:
+        """Whitespace paths must not resolve to the server working directory."""
+        from src.application.job_service import JobService
+
+        mock_store = AsyncMock()
+        service = JobService(job_store=mock_store)
+
+        with pytest.raises(ValueError, match="non-empty strings"):
+            await service.create_ingest_job(["  "])
+
+        mock_store.create.assert_not_awaited()
+
     async def test_concurrent_job_limit(self) -> None:
         """JobService raises RuntimeError when limit exceeded."""
         from src.application.job_service import JobService

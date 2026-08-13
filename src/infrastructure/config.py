@@ -25,10 +25,24 @@ GPU_MODEL_HINT_ENV_VARS = (
 GPU_VISIBLE_DEVICE_ENV_VARS = ("NVIDIA_VISIBLE_DEVICES", "CUDA_VISIBLE_DEVICES")
 TRUE_ENV_VALUES = {"1", "true", "yes", "on"}
 FALSE_ENV_VALUES = {"0", "false", "no", "off", "none", "void", "-1"}
+DISABLE_DOTENV_ENV_VAR = "ASSET_AWARE_DISABLE_DOTENV"
 
 
 def _normalized_env_value(value: str | None) -> str:
     return (value or "").strip().lower()
+
+
+def settings_dotenv_file(env: Mapping[str, str] | None = None) -> str | None:
+    """Return the optional dotenv source for this process.
+
+    Interactive CLI use keeps the historical ``.env`` default. Managed MCP
+    launchers set ``ASSET_AWARE_DISABLE_DOTENV=true`` after constructing an
+    explicit, least-privilege environment, preventing the server from silently
+    reloading unrelated credentials from the client's working directory.
+    """
+    source = os.environ if env is None else env
+    disabled = _normalized_env_value(source.get(DISABLE_DOTENV_ENV_VAR))
+    return None if disabled in TRUE_ENV_VALUES else ".env"
 
 
 def env_prefers_gpu_model(env: Mapping[str, str] | None = None) -> bool:
@@ -188,7 +202,7 @@ class Settings(BaseSettings):
     )
 
     model_config = {
-        "env_file": ".env",
+        "env_file": settings_dotenv_file(),
         "env_file_encoding": "utf-8",
         "extra": "ignore",
     }

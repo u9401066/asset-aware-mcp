@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from src.presentation.tools.citation_support import (
+    asset_ref_from_span,
     coerce_range,
     format_line_range,
     load_citation_status,
@@ -77,8 +78,24 @@ def _claim_anchor_id(span_id: str) -> str:
 
 def _claim_draft_from_span_text(text: str, limit: int = 320) -> str:
     """Build a non-inventive claim draft from the exact evidence quote."""
-    compact = re.sub(r"\s+", " ", text).strip()
-    if len(compact) <= limit:
+    # Build only the response-sized prefix. ``re.sub`` over a multi-MiB span
+    # would allocate another full-size string before the response cap applies.
+    compact_chars: list[str] = []
+    pending_space = False
+    overflow = False
+    for char in text:
+        if char.isspace():
+            pending_space = bool(compact_chars)
+            continue
+        if pending_space:
+            compact_chars.append(" ")
+            pending_space = False
+        compact_chars.append(char)
+        if len(compact_chars) > limit:
+            overflow = True
+            break
+    compact = "".join(compact_chars)
+    if not overflow:
         return compact
     return compact[: limit - 1].rstrip() + "…"
 
@@ -209,6 +226,22 @@ def _asset_ref_from_manifest_asset(
     return ref
 
 
+def _strict_json_equal(actual: Any, expected: Any) -> bool:
+    """Compare locator values without Python's bool/int coercion."""
+    if type(actual) is not type(expected):
+        return False
+    if isinstance(expected, list):
+        return len(actual) == len(expected) and all(
+            _strict_json_equal(actual_item, expected_item)
+            for actual_item, expected_item in zip(actual, expected, strict=True)
+        )
+    if isinstance(expected, dict):
+        return actual.keys() == expected.keys() and all(
+            _strict_json_equal(actual[key], expected[key]) for key in expected
+        )
+    return bool(actual == expected)
+
+
 def _foam_entry_metadata(
     entry: dict[str, Any],
     *,
@@ -287,7 +320,7 @@ def _verify_span_ref_payload(
     def require_equal(field: str, expected: Any) -> None:
         if field not in ref or _is_missing(ref.get(field)):
             issues.append(f"{field} missing")
-        elif ref.get(field) != expected:
+        elif not _strict_json_equal(ref.get(field), expected):
             issues.append(f"{field} mismatch")
 
     def require_range(field: str, expected: list[int | None]) -> None:
@@ -315,17 +348,23 @@ def _verify_span_ref_payload(
     if span.bbox:
         require_equal("bbox", span.bbox)
 
-    quote = str(ref.get("quote") or "")
-    if quote and quote != span.text:
+    if "quote" not in ref:
+        issues.append("quote missing")
+    elif ref.get("quote") != span.text:
         issues.append("quote mismatch")
-    text_hashes = [
-        str(ref.get("quote_sha256") or ""),
-        str(ref.get("text_sha256") or ""),
-    ]
-    if not any(text_hashes):
-        issues.append("quote_sha256 or text_sha256 missing")
-    elif span.text_sha256 not in text_hashes:
-        issues.append("quote_sha256/text_sha256 mismatch")
+    require_equal("quote_sha256", span.text_sha256)
+    if "quote_chars" not in ref:
+        issues.append("quote_chars missing")
+    elif (
+        not isinstance(ref.get("quote_chars"), int)
+        or isinstance(ref.get("quote_chars"), bool)
+        or ref.get("quote_chars") != len(span.text)
+    ):
+        issues.append("quote_chars mismatch")
+    if "quote_truncated" not in ref:
+        issues.append("quote_truncated missing")
+    elif ref.get("quote_truncated") is not False:
+        issues.append("quote_truncated mismatch")
 
     return {
         "valid": not issues,
@@ -381,7 +420,19 @@ def _citation_bundle_entry(
         "asset_ref": ref,
     }
     if include_verification:
-        entry["verification"] = _verify_span_ref_payload(ref, repository=repository)
+        # Transport previews are intentionally non-canonical. Verification is
+        # still evaluated against the complete span ref, without exposing that
+        # potentially multi-megabyte ref in the public response.
+        verification_ref = (
+            asset_ref_from_span(span)
+            if ref.get("canonical_asset_ref") is False
+            else ref
+        )
+        verification = _verify_span_ref_payload(verification_ref, repository=repository)
+        if ref.get("canonical_asset_ref") is False:
+            verification["verified_ref_kind"] = "persisted_canonical_asset_ref"
+            verification["response_asset_ref_canonical"] = False
+        entry["verification"] = verification
     entry["foam"] = _foam_entry_metadata(entry, citation_key=citation_key)
     return entry
 
@@ -1148,7 +1199,13 @@ def _verify_asset_ref_payload(
     *,
     repository: Any,
 ) -> dict[str, Any]:
-    source_type = str(ref.get("source_type") or "")
+    source_type = ref.get("source_type")
+    if ref.get("canonical_asset_ref") is False:
+        return {
+            "valid": False,
+            "status": "unsupported",
+            "issues": ["Non-canonical AssetRef previews cannot be health-checked"],
+        }
     if source_type == "span":
         return _verify_span_ref_payload(ref, repository=repository)
     if source_type not in {"table", "figure"}:
@@ -1157,9 +1214,14 @@ def _verify_asset_ref_payload(
             "status": "unsupported",
             "issues": ["Only span/table/figure AssetRef objects can be health-checked"],
         }
-    doc_id = str(ref.get("doc_id") or "")
-    asset_id = str(ref.get("asset_id") or "")
-    if not doc_id or not asset_id:
+    doc_id = ref.get("doc_id")
+    asset_id = ref.get("asset_id")
+    if (
+        type(doc_id) is not str
+        or not doc_id
+        or type(asset_id) is not str
+        or not asset_id
+    ):
         return {
             "valid": False,
             "status": "invalid",
@@ -1188,31 +1250,42 @@ def _verify_asset_ref_payload(
             "issues": [f"{source_type} asset not found: {asset_id}"],
         }
     issues: list[str] = []
-    if "source_revision_id" in ref and ref.get("source_revision_id") != getattr(
-        manifest, "source_pdf_sha256", ""
-    ):
-        issues.append("source_revision_id mismatch")
-    if (
-        ref.get("locator_version")
-        and ref.get("locator_version") != _ASSET_LOCATOR_VERSION
-    ):
-        issues.append("locator_version mismatch")
+
+    def require_equal(field: str, expected: Any) -> None:
+        if field not in ref:
+            issues.append(f"{field} missing")
+        elif not _strict_json_equal(ref.get(field), expected):
+            issues.append(f"{field} mismatch")
+
+    require_equal("doc_id", getattr(manifest, "doc_id", ""))
+    require_equal("asset_id", getattr(asset, "id", ""))
+    require_equal("source_revision_id", getattr(manifest, "source_pdf_sha256", ""))
+    require_equal("locator_version", _ASSET_LOCATOR_VERSION)
     expected_locator = _asset_locator_sha256(manifest, source_type, asset)
-    if (
-        "locator_source_sha256" in ref
-        and ref.get("locator_source_sha256") != expected_locator
+    require_equal("locator_source_sha256", expected_locator)
+    require_equal("page", getattr(asset, "page", None))
+
+    expected_block_id = getattr(asset, "source_block_id", "")
+    if expected_block_id:
+        require_equal("block_id", expected_block_id)
+    elif "block_id" in ref and not _strict_json_equal(
+        ref.get("block_id"), expected_block_id
     ):
-        issues.append("locator_source_sha256 mismatch")
-    if "page" in ref and ref.get("page") != getattr(asset, "page", None):
-        issues.append("page mismatch")
-    if "block_id" in ref and ref.get("block_id") != getattr(
-        asset, "source_block_id", ""
-    ):
-        issues.append("source_block_id mismatch")
-    if "line_range" in ref and coerce_range(ref.get("line_range")) != [
+        issues.append("block_id mismatch")
+
+    expected_line_range = [
         getattr(asset, "line_start", None),
         getattr(asset, "line_end", None),
-    ]:
+    ]
+    if all(value is not None for value in expected_line_range):
+        if "line_range" not in ref:
+            issues.append("line_range missing")
+        elif coerce_range(ref.get("line_range")) != expected_line_range:
+            issues.append("line_range mismatch")
+    elif (
+        "line_range" in ref
+        and coerce_range(ref.get("line_range")) != expected_line_range
+    ):
         issues.append("line_range mismatch")
     return {
         "valid": not issues,

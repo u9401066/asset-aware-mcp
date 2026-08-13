@@ -28,12 +28,12 @@ from src.presentation.markdown_utils import escape_table_cell
 from src.presentation.mcp_app import mcp
 from src.presentation.mcp_context import log_message, report_progress
 from src.presentation.response_limits import format_limited_text_response, text_sha256
+from src.presentation.tools.citation_support import asset_ref_for_mcp_response
 
 if TYPE_CHECKING:
     from src.domain.citation import EvidenceSpan
 
 logger = logging.getLogger(__name__)
-ASSET_REF_QUOTE_MAX_CHARS = 1_000
 TABLE_INLINE_VALUE_MAX_CHARS = 2_000
 TABLE_JSON_STRING_MAX_CHARS = 1_000
 TABLE_JSON_MAX_ITEMS = 25
@@ -94,31 +94,7 @@ def _limited_table_response(title: str, text: str, guidance: str) -> str:
 
 
 def _span_asset_ref(span: EvidenceSpan) -> dict[str, Any]:
-    quote = span.text
-    ref: dict[str, Any] = {
-        "source_type": "span",
-        "doc_id": span.doc_id,
-        "span_id": span.span_id,
-        "block_id": span.block_id,
-        "page": span.page,
-        "source_revision_id": span.source_revision_id,
-        "locator_version": span.locator_version,
-        "quote": quote[:ASSET_REF_QUOTE_MAX_CHARS],
-        "quote_sha256": span.text_sha256,
-        "excerpt": span.text[:200],
-        "quote_chars": len(quote),
-        "quote_truncated": len(quote) > ASSET_REF_QUOTE_MAX_CHARS,
-        "craap": span.craap.model_dump(exclude_none=True),
-    }
-    if span.line_start is not None and span.line_end is not None:
-        ref["line_range"] = [span.line_start, span.line_end]
-    if span.char_start is not None and span.char_end is not None:
-        ref["char_range"] = [span.char_start, span.char_end]
-    if span.byte_start is not None and span.byte_end is not None:
-        ref["byte_range"] = [span.byte_start, span.byte_end]
-    if span.bbox:
-        ref["bbox"] = span.bbox
-    return ref
+    return asset_ref_for_mcp_response(span)
 
 
 # ============================================================================
@@ -1492,7 +1468,9 @@ async def discover_sources(
     🔍 資料來源探索：跨文件搜尋可用於表格的資料來源。
 
     整合 Section、Figure、Table、Knowledge Graph 多個資料庫，
-    返回統一的 AssetRef 格式結果，可直接用於 table_cite。
+    返回統一的 AssetRef 格式結果。短 evidence span 會保持
+    canonical；過長 span 僅回傳 discovery-only ``span_preview``，完整可驗證
+    AssetRef 必須從 persisted citation / agent-asset bundle 取得。
 
     Args:
         query: 搜尋關鍵字
@@ -1623,12 +1601,17 @@ async def discover_sources(
         )
 
     lines.append(
-        "\n💡 Copy the AssetRef JSON and use `table_cite('add', ...)` to attach as citation."
+        "\n💡 Short-span canonical refs remain self-verifying. For any "
+        "`span_preview`, export or write a persisted citation/agent-asset bundle "
+        "to retrieve the complete canonical AssetRef before attaching evidence."
     )
 
     return format_limited_text_response(
         title=f"Source Discovery: {query}",
         text="\n".join(lines),
         language="markdown",
-        guidance="pass doc_ids and a smaller limit for focused source discovery",
+        guidance=(
+            "pass doc_ids and a smaller limit, then export a persisted "
+            "citation/agent-asset bundle for complete self-verifying refs"
+        ),
     )
