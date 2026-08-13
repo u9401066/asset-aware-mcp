@@ -1,13 +1,7 @@
 # asset-aware-mcp
 
-0.7.0 重點：PDF readiness 現在同時包含 `ai_safety_report.json`,
-`native_structure.json`, `segmentation_coverage.json`, and
-`accessibility_report.json`；`document(op="pointer_index")`,
-`document(op="structural_retrieve")`, and `document(op="compare")` provide
-structural pointer retrieval/comparison without increasing the 30-tool public
-surface.
-
-> 🏥 具備資產感知能力的醫療 RAG MCP - 為 AI Agent 提供精確的 PDF 資產提取（表格、圖片、章節）與知識圖譜。
+> 給 AI Agent 使用的 citation-ready 文件基礎設施：把 PDF、DOCX、表格、
+> 圖片與 evidence span 轉成可重用資產，並組成 Foam／LightRAG wiki。
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -48,14 +42,16 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
   - **PyMuPDF**（預設）- 快速提取（~50MB），免模型
   - **PyMuPDF4LLM**（`[pdf-plus]`）- 同生態 drop-in 升級，具版面感知，免 GPU
   - **Docling**（`[docling]`）- MIT 授權，layout+table+formula+chart 引擎；主環境無法直接安裝時會透過獨立 `.venv-docling` 直譯器橋接（見 [docs/docling-setup.md](docs/docling-setup.md)）
-  - **MinerU**（`[mineru]`）- 最高精度引擎：公式→LaTeX、表格→HTML、跨頁表格合併；可純 CPU 執行
+  - **MinerU** - adapter 保留；因上游仍鎖住有漏洞的 `transformers<5` 鏈，套件 extra 暫停安裝
   - **Marker**（`use_marker=True`）- 高精度結構化解析 code path 保留；packaged runtime 仍因 upstream `marker-pdf` 尚未支援 patched Pillow 而暫時 security hold
 - 🧩 **統一 Segmentation 匯出** - 產生正規化 `segmentation.json`，整合 manifest、blocks、reading order 與持久化 line span。
+- 🩺 **安全 PDF Preflight Router** - `document(op="preflight")` 逐頁分類 native、sparse、image、scanned、hybrid，輸出 1-based/top-left locator、來源 SHA-256、OCR 理由與引擎建議；檢查在具 timeout／資源上限的隔離 process 執行。
+- 📦 **可重用 Agent Asset Bundle** - `document(op="export_assets")` 產生 deterministic `manifest.json`、`assets.jsonl`、媒體副本，以及可攜式 Foam `index.md`／`notes/**` 子樹，完整保留 stable ID、hash、locator 與 citation ref。
 - 🛡️ **PDF 安全、結構與覆蓋率稽核** - 受 OpenDataloader 啟發的 artifact-only 報告：`ai_safety_report.json`、`native_structure.json`、`segmentation_coverage.json`，透過既有 `document` facade 提供，不增加公開工具數；`document(op="prepare_ai")` 與 `document(op="auto")` 會回傳 agent-ready 狀態與下一步。
 - 🖼️ **版面 Overlay 偵錯** - 可從 `original.pdf` 產生 page overlay，直接檢查 bbox、區塊類型與 reading order。
 - 🔤 **按需 OCR 前處理** - 針對掃描型 PDF 提供可選 `ocrmypdf` 前處理流程，再進行 ETL。
 - 🧭 **章節導航** - 透過 `section` facade 提供動態層級章節樹：瀏覽、搜尋、詳情、內容讀取、區塊提取，支援任意深度的標題層級。
-- 🔄 **非同步任務流水線** - 支援大型 PDF ingest、Marker-required parse、OCR 與 conversion 的非同步處理與進度追蹤。
+- 🔄 **非同步任務流水線** - 支援大型 PDF ingest、目前設定的 structured parse、OCR 與 conversion 的非同步處理與進度追蹤。
 - 🔀 **混合格式批次攝入** - `document(op="auto", file_paths=[...])` 會自動偵測 PDF 與 DOCX/DOC/ODT/ODS 混合的批次，於單一 background job 內以各自正確的引擎攝入每個檔案，隔離單檔失敗不中斷其餘檔案，並回報逐檔進度——不需新增公開工具。
 - 🗺️ **文件清單 (Manifest)** - 為 Agent 提供結構化的文件「地圖」，實現精確數據存取。
 - 🧠 **LightRAG 整合** - 知識圖譜 + 向量索引，支援跨文件對比與推理。
@@ -63,7 +59,7 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 📝 **Docx 即時編輯 (DFM)** - 以 Markdown 格式編輯 .docx 檔案，透過 **Docx-Flavored Markdown** 格式。支援 `.docx` / `.docm`，也支援 `.doc`、`.odt`、`.ods` 經 LibreOffice 自動轉換後攝入。balanced surface 保留 6 個 DOCX/DFM 公開入口，涵蓋匯入、讀取、儲存、驗證、轉換、表格結構編輯計畫，以及 Docx ↔ A2T 表格橋接。
 - 📊 **A2T (Anything to Table)** - 7 個 operation-based 工具，從**任意來源**（PDF 資產、知識圖譜、URL、使用者輸入）建立專業表格。支援：穩定 row ID、row search/filter/paging、citation coverage、artifact-only 大表輸出、跳過大型表格時的可操作 UX、**引用管理** (AssetRef)、**變更審計**、**Schema 演進**、**模板**、**草稿機制**與**節省 Token 的續作模式**。
 - 🖥️ **VS Code 管理擴充功能** - 提供圖形化介面監控伺服器狀態、已匯入文件、document artifacts、citation spans，以及 **A2T 表格與草稿**，支援一鍵開啟 Excel。
-- 🔌 **MCP 伺服器** - 透過 FastMCP 向 Copilot/Claude 開放工具與資源。
+- 🔌 **MCP SDK 2 伺服器** - 使用官方 Python SDK `MCPServer`、runtime context injection 與 v2 client；刻意不支援 MCP SDK v1。
 - 🏥 **醫療研究優化** - 針對醫療文獻優化，支援 Base64 圖片傳輸供 Vision AI 分析。
 
 ## 🏗️ 架構
@@ -112,7 +108,7 @@ asset-aware-mcp/
 │   ├── domain/              # 🔵 領域層：實體、數值物件、介面定義
 │   ├── application/         # 🟢 應用層：文件服務、表格服務 (A2T)、資產服務
 │   ├── infrastructure/      # 🟠 基礎設施層：PyMuPDF、LightRAG、Excel 渲染器
-│   └── presentation/        # 🔴 展現層：MCP 伺服器 (FastMCP)
+│   └── presentation/        # 🔴 展現層：MCP SDK 2 MCPServer
 ├── data/                    # 文件與資產儲存目錄
 ├── docs/
 │   └── spec.md              # 技術規格書
@@ -145,12 +141,11 @@ asset-aware-mcp/
 # 安裝依賴 (使用 uv) — 預設維持快速 PyMuPDF backend
 uv sync
 
-# 可選高精度 PDF→資產引擎（皆已驗證與 Pillow>=12.2.0 相容）：
+# 可選高精度 PDF→資產引擎：
 # uv sync --extra pdf-plus   # PyMuPDF4LLM：同生態 drop-in 版面感知升級
 # uv sync --extra docling    # Docling：MIT 授權 layout+table+formula+chart
-# uv sync --extra mineru     # MinerU：最高精度公式/表格引擎
-# 安裝後設定 ETL_ENGINE=pymupdf4llm|docling|mineru。Marker 因 marker-pdf 鎖
-# Pillow<11 與安全基線 Pillow>=12.2.0 衝突，暫時 security hold。
+# MinerU 與 Marker packaged extras 目前皆為安全暫停。
+# 安裝後設定 ETL_ENGINE=pymupdf4llm|docling。
 
 # 啟動 MCP 伺服器
 uv run python -m src.presentation.server
@@ -167,7 +162,18 @@ VS Code 擴充套件在透過 version-pinned `uv tool run` 啟動 MCP server 時
 - 執行時資料留在 workspace：`.env` 與 `assetAwareMcp.dataDir` 預設指向 `./data`，讓攝入結果與 launched server 使用的 uv cache 跟著專案存放，避免佔用全域資源。
 
 引擎選擇說明：
-`ETL_ENGINE` 選擇拆解後端（預設 `pymupdf`）。結構化引擎（`pymupdf4llm`、`docling`、`mineru`）皆為懶加載，未安裝對應 extra 時會自動降級為 PyMuPDF。自 v0.6.28 起 Marker backend 暫時放入 security hold：upstream `marker-pdf` 1.10.2 需要 `Pillow<11`，但本版安全 runtime 需要 `Pillow>=12.2.0`。`use_marker=True` / `parse_pdf_structure` 會回報 Marker 暫不可用；如需維護中的高精度替代方案，可改用 `docling` 或 `mineru`。
+`ETL_ENGINE` 選擇拆解後端（預設 `pymupdf`）。目前 packaged structured engines 是 `pymupdf4llm` 與 `docling`，皆採懶加載，extra 未安裝時安全降級至 PyMuPDF。Marker 因 `marker-pdf` 仍要求 `Pillow<11` 而暫停；MinerU 3.4.4 又鎖定 `transformers<5`，但安全修補需要 `transformers>=5.5`，因此兩者 adapter 留在程式庫中、packaged extra 則不安裝已知有漏洞的 dependency chain。攝入前可先用 `document(op="preflight", pdf_path="...")` 決定走原生快速抽取、OCR 或 Docling。
+
+Agent asset／Foam handoff：
+
+```text
+document(op="preflight", pdf_path="/papers/source.pdf")
+document(op="auto", file_paths=["/papers/source.pdf"])
+document(op="export_assets", doc_id="doc_...", output_dir="agent-assets")
+```
+
+匯出目錄是 deterministic 且可攜的：`manifest.json` 是 bundle contract，
+`assets.jsonl` 是 agent-readable inventory，`index.md` 與 `notes/**` 可直接掛入或複製到 Foam workspace。
 
 ## 🔌 MCP 工具
 
@@ -193,9 +199,9 @@ PDF 稽核注意：
 | 類別 | 技術 |
 |----------|------------|
 | 語言 | Python 3.10+ |
-| ETL | **PyMuPDF** (fitz，預設) + 可選 **PyMuPDF4LLM** / **Docling** / **MinerU** 結構化引擎；**Marker** 暫時 security hold |
+| ETL | **PyMuPDF**（預設）+ 安全可選 **PyMuPDF4LLM**／**Docling**；MinerU、Marker adapter 暫時 dependency security hold |
 | RAG | LightRAG (lightrag-hku) |
-| MCP | FastMCP |
+| MCP | 官方 Python MCP SDK 2（`MCPServer`）；不支援 SDK v1 |
 | 儲存 | 本地檔案系統 (JSON/Markdown/PNG) |
 
 ## 📋 相關文件
@@ -203,8 +209,8 @@ PDF 稽核注意：
 安裝建議：
 - 預設安裝：`uv sync`
 - OpenRouter optional preset（v0.6.35 起）：在 VS Code extension Settings 選 `openrouter`，填入 `OPENROUTER_API_KEY`；預設 `OPENROUTER_MODEL=liquid/lfm-2.5-1.2b-instruct:free`，適合低成本快速摘要與 RAG 草稿查詢。
-- 高精度 PDF 引擎（v0.8.0 起）：`uv sync --extra pdf-plus`（PyMuPDF4LLM）、`--extra docling`（Docling）或 `--extra mineru`（MinerU），再設定對應 `ETL_ENGINE`。Docling 附跨平台安裝腳本（`scripts/setup_docling.py` / `.sh` / `.ps1`），自動建立獨立 `.venv-docling` 直譯器，見 [docs/docling-setup.md](docs/docling-setup.md)。
-- Marker backend：v0.7.0 暫時停用；`marker` / `pdf` extras 保留名稱但不安裝 `marker-pdf`。
+- 高精度 PDF 引擎：`uv sync --extra pdf-plus`（PyMuPDF4LLM）或 `uv sync --extra docling`（Docling），再設定對應 `ETL_ENGINE`。Docling 附跨平台隔離安裝腳本，見 [docs/docling-setup.md](docs/docling-setup.md)。
+- MinerU／Marker：adapter 保留供追蹤上游；packaged extras 暫為空，直到 dependency cap 可解析到已修補的 transformers／Pillow。
 - VS Code extension：`assetAwareMcp.enableMarkerBackend` 設定仍保留，但 security hold 期間 launcher 不會安裝 `marker-pdf`。
 
 - [技術規格書](docs/spec.md) - 詳細技術定義

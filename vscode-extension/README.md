@@ -6,17 +6,19 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v0.9.0/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v1.0.0/resources/banner.png)
 
-## What's New in v0.9.0
+## What's New in v1.0.0
 
-- **Automatic mixed-format batch ingestion**: `document(op="auto"/"ingest"/"import", file_paths=[...])` now auto-detects a batch mixing PDF with DOCX/DOC/ODT/ODS, ingests every file through its correct existing engine in one background job, isolates per-file failures so one bad file cannot abort the rest, and reports `[i/N filename]` progress through the existing `get_job_status` tool. No new public MCP tool was added (still 30).
-- **Multi-engine output provenance unified**: `source_engine` / `IngestResult.backend` now always reflect the real engine that parsed a document (`pymupdf`, `pymupdf4llm`, `docling`, `mineru[:pipeline]`) instead of being hardcoded, so figures/tables, segmentation `source_backend`, and citation-index attribution are consistent regardless of which ETL engine ran. `inspect_document_manifest` now prints the resolved `source_engine` for already-ingested documents.
-- **Docling coordinate normalization**: Docling bbox output is now normalised to top-left origin like PyMuPDF/Marker/MinerU, so downstream layout overlays, segmentation spans, and citation locators no longer need to special-case Docling's coordinate system.
+- **MCP SDK 2 runtime**: the server now requires the official Python SDK `>=2,<3` and uses `MCPServer`; SDK v1 is intentionally unsupported. Runtime context is injected by the SDK and no longer leaks into public tool schemas.
+- **PDF preflight and safe routing**: `document(op="preflight", pdf_path="...")` classifies native, sparse, image, scanned, or hybrid PDFs per page in an isolated subprocess and recommends native, OCR, or Docling extraction before ingest.
+- **Reusable agent asset bundles**: `document(op="export_assets", doc_id="...")` writes deterministic manifests, JSONL records, media, stable hashes/locators/citations, and a portable Foam wiki without overwriting unrelated output.
+- **Security and release refresh**: Python and extension locks were upgraded, dependency audits are release gates, and automated uv/npm/Actions updates are configured. MinerU and Marker remain adapter-only holds until their upstream caps admit patched dependencies.
+- **Balanced surface retained**: mixed-format batch ingestion, engine provenance, structural retrieval, DOCX/DFM and citation workflows remain available through 30 public tools and 13 resources.
 
 ## What's New in v0.8.0
 
-- **Multi-engine PDF -> asset ETL**: `ETL_ENGINE` now selects `pymupdf` (default), `pymupdf4llm` (drop-in layout-aware upgrade), `docling` (MIT-licensed layout+table+formula+chart engine), or `mineru` (highest-accuracy formula/table engine) — all verified compatible with the `Pillow>=12.2.0` security floor that keeps `marker` disabled.
+- **Historical v0.8 engine work**: this release introduced the MinerU adapter, but MinerU is now on a dependency security hold alongside Marker. The maintained install paths are `pymupdf` (default), `pymupdf4llm`, and `docling`.
 - **Zero-configuration Docling install**: a cross-platform installer (`scripts/setup_docling.py` / `.sh` / `.ps1`) provisions an isolated `.venv-docling` interpreter and bridges it via subprocess, so the main runtime never needs a direct, version-sensitive Docling install.
 - **Engine-agnostic structured parsing**: Marker, Docling, and MinerU now share a `StructuredPDFExtractor` protocol and emit Marker-compatible results, reusing the existing ingestion pipeline with no service-layer changes.
 
@@ -55,7 +57,7 @@
 ### v0.5.2
 
 - **Stable Python Runtime**: Extension launch now prefers Python 3.11 to avoid macOS native build failures on newer interpreters
-- **Optional Marker Backend**: Marker and torch are no longer installed by default; enable them only when you need structured parsing
+- **Historical Marker option (now held)**: the old setting remains for compatibility, but current releases never install or enable Marker; use PyMuPDF4LLM or Docling for structured parsing
 - **Safer Torch Resolution**: Added configurable `torchBackend`, defaulting to `cpu` to reduce wheel/CUDA mismatch issues
 
 ### v0.5.1
@@ -122,13 +124,15 @@ This extension provides a sophisticated **ETL (Extract, Transform, Load) Pipelin
 
 - **📄 PDF ETL**:
   - **PyMuPDF** (default) - Fast extraction (~50MB dependency), no models required
-  - **PyMuPDF4LLM** / **Docling** / **MinerU** - Optional higher-fidelity engines selected via `ETL_ENGINE`; Docling ships a cross-platform installer for an isolated interpreter
-  - **Marker** (`use_marker=True`) - Temporarily unavailable until upstream `marker-pdf` supports patched Pillow
+  - **PyMuPDF4LLM** / **Docling** - Secure optional higher-fidelity engines selected via `ETL_ENGINE`; Docling ships a cross-platform installer for an isolated interpreter
+  - **MinerU** / **Marker** - Adapters remain for upstream evaluation, but packaged extras are empty security holds until patched dependency chains resolve
+- **🩺 PDF Preflight**: Per-page OCR reasons, source hash, resource limits, and a native/OCR/Docling route before ingest
+- **📦 Agent Asset Export**: Deterministic text/table/figure records, citation-ready provenance, and Foam notes from one document facade operation
 - **🧩 Unified Segmentation**: Export normalized `segmentation.json` with reading order and markdown line ranges
 - **🖼️ Layout Overlay**: Visual bbox/type/reading-order inspection from the original PDF
 - **🔤 OCR Preprocessing**: Optional scanned-PDF cleanup before ETL
 - **🧭 Section Navigation**: Dynamic hierarchy section tree with 5 tools for browsing, searching, content reading, and block extraction
-- **🔄 Async Jobs**: Track progress for large document batches, OCR, Marker-required parse, and conversions with Job IDs.
+- **🔄 Async Jobs**: Track progress for large document batches, OCR, configured structured parsing, and conversions with Job IDs.
 - **🗺️ Document Manifest**: A structured index that lets Agents "see" document structure before reading.
 - **🖼️ Visual Assets**: Extract figures as Base64 images for Vision-capable Agents.
 - **📊 A2T (Anything to Table)**: 7 operation-based tools for creating tables from any source with stable row IDs, search/filter/paging, citation coverage, audit trail, artifact-only render, and Excel export
@@ -180,9 +184,9 @@ Since v0.6.34 the LightRAG / Knowledge Graph dependency stack ships as an
    a local source checkout (`uv sync --extra lightrag`) and emits the matching
    install command in a terminal.
 
-`Asset-Aware MCP: Install Marker Backend` is reserved for the future Marker
-runtime and currently surfaces a security-hold notice (`marker-pdf` pins
-`Pillow<11`).
+`Asset-Aware MCP: Marker Backend Status (Security Hold)` keeps the historical
+command ID for compatibility but only shows the hold status; it never installs
+or enables Marker (`marker-pdf` pins `Pillow<11`).
 
 ## 📖 Usage (Agent Flow)
 
@@ -221,8 +225,8 @@ The agent retrieves exactly what it needs:
 Runtime note:
 The extension prefers a managed Python 3.11 runtime when launching the MCP server via `uv tool run`, with Python 3.10 fallback for older machines. This avoids package builds on machines without native toolchains, especially macOS systems missing Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
 
-Marker note:
-The extension does not install Marker or torch by default. `assetAwareMcp.enableMarkerBackend` is retained for compatibility, but the launcher ignores it while upstream `marker-pdf` requires `Pillow<11` and the secure runtime requires `Pillow>=12.2.0`. Use the `ETL_ENGINE` setting (`pymupdf4llm`, `docling`, or `mineru`) for a maintained high-fidelity alternative.
+Structured backend note:
+The current packaged extras cannot install MinerU, Marker, or their torch stack. MinerU 3.4.4 pins `transformers<5` while current fixes require `transformers>=5.5`; Marker still requires `Pillow<11` while this runtime requires `Pillow>=12.2.0`. Both extras stay empty and fail closed. Use `ETL_ENGINE=pymupdf4llm` or `docling` for a maintained high-fidelity alternative.
 
 Installation scope & storage:
 - The VSIX installs as a user/global extension (standard VS Code behavior), so you do not need a separate install per workspace.
@@ -246,7 +250,7 @@ If the extension fails to start or the MCP server doesn't appear:
 1.  **Check VS Code Version**: Ensure you are using VS Code **1.96.0** or newer.
 2.  **Check Dependencies**: Run `Asset-Aware MCP: Check System Dependencies` from the command palette.
   The dependency checker will also show the preferred Python runtime used by the MCP launcher.
-  If Marker backend is enabled, it will show the active security hold instead of installing `marker-pdf`.
+  If the legacy Marker setting is requested, it shows `effective: false` and the active security hold instead of installing `marker-pdf`.
 3.  **Inspect Logs**:
     *   Open **Output** panel (`Ctrl+Shift+U`).
     *   Select **Asset-Aware MCP** from the dropdown to see extension logs.
@@ -268,13 +272,13 @@ The default surface is `balanced`: 17 operation-based facade tools plus 13 commo
 | Sections, jobs, KG, profiles | `section`, `job`, `get_job_status`, `list_jobs`, `knowledge`, `etl_profile` |
 | A2T tables | `plan_table`, `table_manage`, `table_data`, `table_cite`, `table_history`, `table_draft`, `discover_sources` |
 
-For PDF agent handoff, prefer `document(op="auto", file_paths=[...])` for new files and `document(op="prepare_ai", doc_id="...")` for existing documents. Use `document(op="prepare_ai", output_format="json")` when an agent needs the v2 readiness contract directly, including `missing_audits`, `invalid_audits`, and `audit_artifacts`. `document(op="audit", doc_id="...")` skips current audit artifacts only when they are present and valid; use `refresh=true` to rebuild. Job status and document inspection responses include these facade-style next actions while the public tool count stays at 30, and their artifact discovery is read-only.
+For PDF agent handoff, run `document(op="preflight", pdf_path="...")` when OCR/layout quality is uncertain, then use `document(op="auto", file_paths=[...])`. For an ingested document, use `document(op="prepare_ai", doc_id="...")`, audit as needed, and finish with `document(op="export_assets", doc_id="...")` to create a reusable Foam-compatible asset bundle. Job status and document inspection responses include facade-style next actions while the public tool count stays at 30.
 
 ## 🔗 Links
 
 - [GitHub Repository](https://github.com/u9401066/asset-aware-mcp)
 - [PyPI Package](https://pypi.org/project/asset-aware-mcp/)
-- [Technical Specification](https://github.com/u9401066/asset-aware-mcp/blob/master/docs/spec.md)
+- [Technical Specification](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/spec.md)
 
 ## 📝 License
 

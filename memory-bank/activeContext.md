@@ -1,5 +1,53 @@
 # Active Context
 
+## 2026-08-13 - MCP v2 / agent asset / Foam wiki major refresh
+
+- Goal: converge all safe branches and PRs into the default branch, migrate to
+  MCP Python SDK 2.x with no SDK-v1 runtime path, refresh document-to-agent
+  assets and Foam wiki workflows, and publish a fully gated Python/VSIX release.
+- Repository baseline is now fast-forwarded from local `0.6.3` to remote
+  `0.9.0` (`6ad9a5c`). The previous dirty workspace is recoverable from stash
+  `pre-v0.9-sync-2026-08-13`; installer-generated invalid MCP config backups
+  remain there and will not enter release artifacts.
+- MCP upstream baseline: official Python SDK `2.0.0` (released 2026-07-28).
+  The new project floor will be `mcp>=2,<3`, with `MCPServer`, v2 protocol
+  field names, and v2 in-memory client tests. No `mcp.server.fastmcp` fallback.
+- Pre-sync local baseline found Ruff/format/MyPy green and pytest at
+  `533 passed / 3 skipped / 1 failed / 16 errors`; all failures were the old
+  checkout's optional Marker integration suite running without Marker.
+- Repository convergence is complete: PRs #3/#4/#5/#8 were closed as empty,
+  superseded, conflicted/obsolete, or stale; all 13 non-default remote branches
+  were either already absorbed or safely retired after the remaining useful
+  backup semantics were ported with regression tests. No unique work was
+  discarded and no open PR remains.
+- MCP SDK 2 migration is implemented with `MCPServer`, runtime `Context`, v2
+  clients and snake_case protocol fields. The 30-tool schema regression proves
+  that `ctx` leakage fell from 11 tools to zero; SDK v1 is unsupported.
+- `document(op="preflight")` now provides a process-isolated,
+  `pdf-inspector`-informed router with stable `pdf-preflight-v1` provenance and
+  resource caps. Published `pdf-inspector` 1.14.1 was not added because it
+  predates the pinned upstream main commit's DoS hardening.
+- `document(op="export_assets")` now emits deterministic, atomic,
+  traversal-safe `agent-asset-bundle-v1` records plus portable Foam notes,
+  keeping exact hashes/locators/citations. The first implementation is backed
+  by the existing PDF `DocumentRepository`; DOCX/general adapters remain a
+  documented extension boundary.
+- Dependency locks, Actions, Dependabot, audit workflows, docs, GitHub metadata
+  and labels are refreshed for `1.0.0`. Base Python and VSIX npm audit results
+  are zero; MinerU and Marker packaged extras remain empty security holds.
+- Final local gates are green: 1,096 Python tests passed (30 intentional optional
+  skips), Python 3.10 MCP/preflight/bundle tests passed, Ruff/format/MyPy/Bandit,
+  uv/npm audits, docs/harness checks, wheel clean-venv smoke, 153 VSIX tests,
+  package audit, and VS Code 1.133 fresh/update activation smoke all passed.
+- Independent review additionally fixed LightRAG first-use initialization,
+  figure copy/hash TOCTOU, quadratic evidence joins, bounded bundle resources,
+  and production factory/worker enforcement of Marker/MinerU security holds.
+- Remaining release work: create segmented commits, atomically rename the
+  default branch `master` to `main`, push, monitor CI, tag and verify registry
+  publication. The final Docker image rebuilt successfully after one
+  environment-level Docker Hub frontend DNS retry; container doctor,
+  list-tools, SDK 2 schema and stdio smoke all passed.
+
 ## 2026-05-17 - v0.7.0 structural readiness and A2T production hardening
 
 - Release scope: publish `0.7.0` as the larger production-hardening release

@@ -23,6 +23,7 @@
 | `src/domain/repositories.py` | Repository interfaces |
 | `src/domain/services.py` | Domain service helpers |
 | `src/domain/marker_errors.py` | Marker backend error classification |
+| `src/domain/pdf_preflight.py` | Stable `pdf-preflight-v1` schema、page classification、OCR/engine routing、typed failures |
 
 ## Application
 
@@ -45,6 +46,10 @@
 | `src/application/worker_runner.py` | Worker runner port |
 | `src/application/markdown_block_builder.py` | Marker MarkdownOutput fallback block synthesis |
 | `src/application/output_paths.py` | Safe output path resolution |
+| `src/application/pdf_preflight_service.py` | Non-blocking application facade over the isolated PDF inspector |
+| `src/application/agent_asset_bundle_service.py` | Atomic deterministic `agent-asset-bundle-v1` export orchestration |
+| `src/application/agent_asset_bundle_format.py` | Canonical JSON/hash、bundle manifest、Foam index/note serialization |
+| `src/application/agent_asset_record_builder.py` | Segmentation + manifest + evidence -> text/table/figure agent asset records |
 
 ## Infrastructure
 
@@ -53,7 +58,13 @@
 | `src/infrastructure/file_storage.py` | Document/table artifacts persistence |
 | `src/infrastructure/job_store.py` | Atomic persisted job store |
 | `src/infrastructure/pdf_extractor.py` | PyMuPDF extraction |
-| `src/infrastructure/marker_adapter.py` | Marker backend adapter and conversion |
+| `src/infrastructure/pymupdf_preflight.py` | Process-isolated, bounded, read-only PDF page inspection and route recommendation |
+| `src/infrastructure/pymupdf4llm_adapter.py` | Layout-aware base extraction；backend unavailable 時自動降級 PyMuPDF |
+| `src/infrastructure/docling_adapter.py` | Active structured layout/table/formula/figure backend |
+| `src/infrastructure/mineru_adapter.py` | MinerU adapter retained；package extra currently empty on security hold |
+| `src/infrastructure/marker_adapter.py` | Marker adapter retained；package extra currently empty on Pillow security hold |
+| `src/infrastructure/structured_extractor.py` | StructuredPDFExtractor shared protocol |
+| `src/infrastructure/extractor_factory.py` | ETL engine selection、lazy backend preflight、PyMuPDF fallback |
 | `src/infrastructure/docx_adapter.py` | DOCX XML parse/write, tables, revisions, charts, media |
 | `src/infrastructure/dfm_parser.py` | DFM -> IR/parser |
 | `src/infrastructure/dfm_renderer.py` | IR -> DFM/Markdown rendering |
@@ -69,16 +80,21 @@
 
 ## Presentation
 
+Presentation runtime requires official MCP Python SDK 2 (`mcp>=2,<3`). SDK v1
+and `mcp.server.fastmcp` fallback are unsupported；balanced / compact / legacy
+remain tool-surface UX policies on the same SDK 2 server。
+
 | 檔案 | 功能 |
 |---|---|
-| `src/presentation/mcp_app.py` | FastMCP app instance |
+| `src/presentation/mcp_app.py` | `AssetAwareMCPServer(MCPServer)` singleton；tracks tools through public SDK registry APIs |
 | `src/presentation/server.py` | MCP server entrypoint |
 | `src/presentation/dependencies.py` | Composition root |
-| `src/presentation/mcp_context.py` | Progress/log helpers |
+| `src/presentation/mcp_context.py` | SDK 2 runtime `Context` progress/log helpers with timeout/error isolation |
 | `src/presentation/markdown_utils.py` | Presentation markdown formatting helpers |
 | `src/presentation/ingest_worker_main.py` | Isolated worker entrypoint |
-| `src/presentation/tools/{document,docx,job,knowledge,profile,section,table}_tools.py` | 30 balanced public MCP tools；63 legacy decorator tools；`citation_support.py` 與 `conversion_job_support.py` 為 shared helper |
-| `src/presentation/tool_surface.py` | balanced / compact / legacy runtime tool surface policy |
+| `src/presentation/tools/document_tools.py` | PDF/citation facades；含 read-only `preflight` 與 portable `export_assets`/`agent_assets` |
+| `src/presentation/tools/{docx,job,knowledge,profile,section,table}_tools.py` | 其餘 facade/shortcut/direct tools；`citation_support.py` 與 `conversion_job_support.py` 為 shared helper |
+| `src/presentation/tool_surface.py` | balanced / compact / legacy runtime policy；只用 MCPServer public `remove_tool` API |
 | `src/presentation/resources/*.py` | 13 MCP resources |
 
 ## VS Code Extension
@@ -118,3 +134,11 @@
 | `scripts/roundtrip_test.py` | DOCX round-trip helper |
 | `scripts/gh_update_issue_or_pr.sh` | GitHub issue/PR update helper |
 | `scripts/gh_update_repo_metadata.sh` | GitHub metadata helper |
+
+## Dependency Automation
+
+| 檔案 | 功能 |
+|---|---|
+| `pyproject.toml` / `uv.lock` | Python 3.10-compatible universal dependency contract；MCP SDK 2 and security floors |
+| `.github/dependabot.yml` | Weekly uv、npm、GitHub Actions update groups and PR limits |
+| `.github/workflows/dependency-security.yml` | Read-only scheduled/PR gate：`uv lock --check`、pinned uv 0.12.3 universal audit、npm low-level lock audit |

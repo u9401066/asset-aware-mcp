@@ -6,7 +6,7 @@
 
 ## 為什麼需要 jobs
 
-PDF ingest、Marker-required parse、OCR、LightRAG indexing 與文件格式 conversion 都可能超過 MCP client 的 request budget。Asset-Aware MCP 會把這些長任務放入 background job，讓 stdio client 仍能查詢狀態或取消任務。`convert_pdf_to_docx`、`convert_pdf_to_pptx`、DOCX/PDF/DOC/ODT conversion 與 Markdown export 現在預設 `async_mode=true`，會建立 conversion job；需要舊式同步回傳時可明確設 `async_mode=false`。
+PDF ingest、configured structured parse、OCR、LightRAG indexing 與文件格式 conversion 都可能超過 MCP client 的 request budget。Asset-Aware MCP 會把這些長任務放入 background job，讓 stdio client 仍能查詢狀態或取消任務。`convert_pdf_to_docx`、`convert_pdf_to_pptx`、DOCX/PDF/DOC/ODT conversion 與 Markdown export 現在預設 `async_mode=true`，會建立 conversion job；需要舊式同步回傳時可明確設 `async_mode=false`。
 
 來源：`src/application/job_service.py`、`src/domain/job.py`、`src/infrastructure/job_store.py`、`src/application/ingest_worker.py`、`src/application/worker_runner.py`、`src/infrastructure/subprocess_ingest_worker_runner.py`、`src/presentation/tools/conversion_job_support.py`、`src/presentation/tools/job_tools.py`。
 

@@ -8,7 +8,61 @@
 
 PDF pipeline 將原始 PDF 轉成可檢索、可視覺化、可引用的文件 artifacts。它不是單純抽文字，而是同時保存 document identity、assets、section structure、layout locator、reading order、line/char/byte spans 與 citation hash。
 
-來源：`src/application/document_service.py`、`src/infrastructure/pdf_extractor.py`、`src/infrastructure/{marker,docling,mineru,pymupdf4llm}_adapter.py`、`src/infrastructure/extractor_factory.py`、`src/application/segmentation_service.py`、`src/presentation/tools/document_tools.py`。
+來源：`src/domain/pdf_preflight.py`、`src/application/pdf_preflight_service.py`、`src/application/document_service.py`、`src/infrastructure/pymupdf_preflight.py`、`src/infrastructure/pdf_extractor.py`、`src/infrastructure/{docling,pymupdf4llm}_adapter.py`、`src/infrastructure/extractor_factory.py`、`src/application/segmentation_service.py`、`src/presentation/tools/document_tools.py`。
+
+## Preflight 與路由
+
+在 ingest 前可先執行：
+
+```text
+document(op="preflight", pdf_path="/absolute/path/to/source.pdf")
+```
+
+這是唯讀、非持久化的 PDF inspection operation。它計算來源 identity、逐頁 layout signals、OCR 建議與 extraction route，但不會執行 OCR、Docling 或正式 ingest，也不會改寫來源檔案。成功回傳固定的 `pdf-preflight-v1` schema：
+
+| 欄位 | 意義 |
+|---|---|
+| `schema_version`, `status` | 固定為 `pdf-preflight-v1`, `ok` |
+| `source` | `filename`、`size_bytes` 與原始 bytes 的 `sha256` |
+| `inspector` | inspector 名稱、`pymupdf` backend 與 backend version |
+| `coordinate_system` | 明確的頁碼、座標原點、單位與 bbox contract |
+| `page_count`, `classification_counts` | 文件頁數及五種 classification 的完整計數 |
+| `ocr_recommended`, `ocr_pages` | 文件層 OCR 判定與需要 OCR 的 1-based pages |
+| `recommended_engine` | 文件層 route：`pymupdf`、`pymupdf+ocr` 或 `docling` |
+| `pages[]` | 逐頁 locator、metrics、classification、OCR reasons 與 route |
+
+每個 `pages[].locator` 都使用 **1-based page number**。`page_bbox` 與 `content_bbox` 是 `[x0, y0, x1, y1]`、單位為 PDF points、原點在頁面左上、x 向右、y 向下，並以 **unrotated crop box** 為座標基準；頁面旋轉另存於 `rotation_degrees`，不可把它混入 locator 座標。失敗時回傳同版本的 `status=error`、typed `error_code` 與 `message`。
+
+### Classification、OCR reasons 與 route
+
+Preflight 是 deterministic heuristic，不是模型信心分數。它使用搜尋文字量、word/block counts、raster image coverage 與 vector drawing counts 分類：
+
+| Classification | 判定語意 | 一般 route |
+|---|---|---|
+| `native` | 有足夠且非疑似亂碼的 searchable text，沒有顯著 visual region | `pymupdf` |
+| `sparse` | searchable text 不足且沒有顯著 visual region；真正空白頁也屬此類 | 有 OCR reason 才用 `pymupdf+ocr`，空白頁維持 `pymupdf` |
+| `image` | 有顯著 raster/vector visual，但不像全頁掃描件且沒有足夠 native text | 通常 `pymupdf+ocr`；純 vector route 可升至 `docling` |
+| `scanned` | 沒有足夠 native text，且最大 raster image 覆蓋至少 72% 頁面 | `pymupdf+ocr` |
+| `hybrid` | 同頁同時有文字與顯著 visual content | `docling` |
+
+「足夠 native text」目前是非疑似亂碼，且至少 60 個非空白字元，或至少 30 個非空白字元加 5 個 words；「顯著 visual」是最大 raster image 覆蓋至少 18%，或至少 4 個 vector drawings。這些數值屬於 `pdf-preflight-v1` routing policy，不可解讀成內容正確率。
+
+逐頁 `ocr_reasons` 只使用下列固定值：
+
+- `no_text`：visual page 沒有可見文字。
+- `sparse_text`：有少量文字，但不足以視為可靠 native text。
+- `image_dominant`：最大 raster image 覆蓋至少 45%。
+- `suspected_scanned_page`：符合全頁掃描件條件。
+- `suspected_garbled_text`：文字含高比例 replacement/control/private-use/surrogate characters。
+- `vector_only`：沒有 raster image，但有足夠 vector drawings 且缺少可靠 native text。
+
+`ocr_recommended` 必須和 reasons 是否為空一致。文件層 route 取逐頁最高需求：有 `docling` page 時選 `docling`，否則有 OCR page 時選 `pymupdf+ocr`，其餘選 `pymupdf`。這只是下一步建議；caller 仍須明確啟動 ingest/OCR。
+
+### Process 與 resource guard
+
+預設 preflight 在獨立 `spawn` 子程序執行，wall timeout 為 20 秒。輸入上限為 256 MiB、2,000 pages，且每頁的 words、raster images、vector drawings 各自不得超過 100,000 筆；Linux worker 另有 best-effort 1.5 GiB address-space cap。它會檢查開頭 `%PDF-` signature、拒絕未解密 PDF，並在 parse 前後比較 stat 與 SHA-256，來源中途改變時回傳 `source_changed`。
+
+Preflight **不是 PDF sanitizer、malware scanner 或完整格式驗證器**。它不會移除 JavaScript、embedded files、actions、prompt-injection text 或其他 active content，也不會修復或解密 PDF。Process isolation 與 resource caps 只降低 parser failure/DoS 的影響；不代表檔案安全，也不能取代既有 `document(op="safety_audit")` artifact 或外部 sandbox/security scan。
 
 ## Ingest
 
@@ -16,9 +70,22 @@ PDF pipeline 將原始 PDF 轉成可檢索、可視覺化、可引用的文件 a
 
 - `document(op="auto", file_paths=[...])`
 - `document(op="ingest", ...)` or `ingest_documents(...)` when a shortcut is preferred
-- `parse_pdf_structure(...)`，Marker 專用 high-precision parse job
+- `parse_pdf_structure(...)`，歷史名稱保留、實際使用目前設定的 structured extractor；Docling 可用，held backend 會 fail closed
 
-預設後端是 PyMuPDF；`ETL_ENGINE` 環境變數可切換為 `pymupdf4llm`（同生態 drop-in 版面感知升級）、`docling`（MIT 授權 layout+table+formula+chart，安裝說明見 `docs/docling-setup.md`）或 `mineru`（最高精度，公式→LaTeX、表格→HTML）。三者皆懶加載、未安裝對應 extra 時自動降級為 PyMuPDF，並共用 `StructuredPDFExtractor` protocol 輸出 Marker-compatible 結果。`marker` extra 仍暫時為空，因為 `marker-pdf` 對 Pillow 的舊版 pin 會和安全 runtime 衝突。`parse_pdf_structure(...)` 是 structured-parse 入口；security hold 或 backend unavailable 會在建立 job 前回傳明確診斷。一般 `ingest_documents(use_marker=true)` 只代表偏好結構化引擎，公開工具沒有 `require_marker` 參數，引擎不可用時會走 PyMuPDF 安全流程。
+預設後端是 core dependency PyMuPDF。啟用中的 PDF optional extras 只有：
+
+- `pdf-plus`：PyMuPDF4LLM，同生態的 layout-aware drop-in 升級。
+- `docling`：MIT 授權的 structured layout/table/formula/figure engine；安裝方式見 `docs/docling-setup.md`。
+
+`mineru` 與 `marker` adapters 仍保留，但兩個 extras 都是空的 **security hold**，不屬於 active install path。MinerU 3.4.4 的 `transformers<5` 上限與目前 `transformers>=5.5` security floor 衝突；Marker PDF 1.10.2 的 `Pillow<11` 上限則與 `Pillow>=12.2.0` security floor 衝突。不得以放寬 security floor 的方式啟用它們。`pdf` 也是空的相容 placeholder，不是第三個 active engine extra。
+
+所有 optional adapters 都採 lazy import。`parse_pdf_structure(...)` 是保留舊 command ID 的 configured-structured shortcut；設定 `ETL_ENGINE=docling` 時使用 active Docling，Marker／MinerU security hold 或 backend unavailable 時會在建立 job 前回傳明確診斷。一般 `ingest_documents(use_marker=true)` 只代表偏好 composition root 已配置的結構化引擎，公開工具沒有 `require_marker` 參數，引擎不可用時會走 PyMuPDF 安全流程。
+
+### `firecrawl/pdf-inspector` 借鑑範圍
+
+Preflight 的 staged inspection、逐頁 OCR reasons、bounded work 與 extraction routing 借鑑自 `firecrawl/pdf-inspector`，研究基準固定在 [`076183e2e40a2ea71f9e04def182ea9984a1e50e`](https://github.com/firecrawl/pdf-inspector/commit/076183e2e40a2ea71f9e04def182ea9984a1e50e)。可對照其 pinned [`README.md`](https://github.com/firecrawl/pdf-inspector/blob/076183e2e40a2ea71f9e04def182ea9984a1e50e/README.md)、[核心 processing flow](https://github.com/firecrawl/pdf-inspector/blob/076183e2e40a2ea71f9e04def182ea9984a1e50e/src/lib.rs#L3882) 與 [detector constants/types](https://github.com/firecrawl/pdf-inspector/blob/076183e2e40a2ea71f9e04def182ea9984a1e50e/src/detector.rs#L14)。本專案沒有複製其混合 0/1-based API、座標慣例或 Markdown-only output；所有結果先正規化成上述 citation-safe schema。
+
+目前也**不依賴** `pdf-inspector`。官方發布的 [PyPI 1.14.1](https://pypi.org/project/pdf-inspector/1.14.1/) 早於 main 上後續的 DoS hardening；尤其 pinned commit [`076183e`](https://github.com/firecrawl/pdf-inspector/commit/076183e2e40a2ea71f9e04def182ea9984a1e50e) 才把 content-stream operation cap 移到 decode/allocation 之前。這不是宣稱 1.14.1 有特定 CVE，而是發布包尚未包含已知 upstream hardening，因此不能成為處理不可信 PDF 的 production dependency。未來只有在正式 release/sdist 包含這些 fixes 並通過本 repo 的 hostile-fixture gate 後才重新評估。
 
 ### 混合格式批次攝入
 

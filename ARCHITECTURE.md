@@ -7,13 +7,13 @@
 ```mermaid
 graph TD
     subgraph Presentation
-        MCP[MCP Server / FastMCP]
+        MCP[MCP SDK 2 / MCPServer]
     end
 
     subgraph Application
         DS[Document Service]
         TS[Table Service / A2T]
-        AS[Asset Service]
+        AS[Asset Bundle / Foam Services]
     end
 
     subgraph Domain
@@ -23,7 +23,7 @@ graph TD
     end
 
     subgraph Infrastructure
-        PA[PyMuPDF Adapter]
+        PA[PDF Preflight + Extractor Adapters]
         LR[LightRAG Adapter]
         FS[File Storage]
     end
@@ -39,12 +39,14 @@ graph TD
 ### 1. Presentation Layer (表現層)
 - **位置**: `src/presentation/`
 - **職責**: 實作 MCP 協議，定義 Tools (工具) 與 Resources (資源)。
-- **技術**: FastMCP。
+- **技術**: 官方 MCP Python SDK `>=2,<3` 的 `MCPServer`。SDK v1／FastMCP
+  路徑已移除，不提供相容 fallback。
 
 ### 2. Application Layer (應用層)
 - **位置**: `src/application/`
 - **職責**: 協調領域對象執行業務流程（如 Ingestion 流程、A2T 表格工作流）。
-- **組件**: `DocumentService`, `TableService` (A2T 核心), `AssetService`。
+- **組件**: `DocumentService`, `PDFPreflightService`, `AgentAssetBundleService`,
+  `TableService` (A2T 核心), `AssetService`。
 
 ### 3. Domain Layer (領域層)
 - **位置**: `src/domain/`
@@ -58,11 +60,16 @@ graph TD
 
 ## ETL 流程 (Asset-Aware)
 
-1. **Ingestion**: 接收 PDF 路徑，啟動非同步 Job。
-2. **Decomposition**: 使用 PyMuPDF 將 PDF 分解為 Markdown、表格與圖片。
-3. **Manifest Generation**: 建立 `manifest.json` 作為文件的「地圖」。
-4. **Indexing**: 將 Markdown 內容餵入 LightRAG 建立知識圖譜與向量索引。
-5. **Storage**: 將所有資產存儲於本地 `./data/doc_{id}/` 目錄。
+1. **Preflight**: 在隔離程序分類原生文字／掃描／混合 PDF，決定 native、OCR
+   或 Docling route，並鎖定 source SHA-256。
+2. **Ingestion**: 接收 PDF 或混合文件路徑，啟動非同步 Job。
+3. **Decomposition**: 使用 PyMuPDF 或安全可選的 structured engine 將文件分解
+   為 Markdown、表格與圖片。
+4. **Manifest Generation**: 建立 `manifest.json` 作為文件的「地圖」。
+5. **Asset Export**: 產生 deterministic JSONL、media、citation locators 與
+   Foam notes，作為 agent 可重用資產。
+6. **Indexing**: 選擇性將 Markdown 內容餵入 LightRAG 建立知識圖譜與向量索引。
+7. **Storage**: 將所有資產存儲於本地 `./data/doc_{id}/` 目錄。
 
 ## A2T (Anything to Table) 工作流
 

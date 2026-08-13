@@ -195,7 +195,7 @@ gh run view <run-id>
 gh release create v0.7.0 \
   --title "v0.7.0" \
   --notes-file CHANGELOG.md \
-  --target master
+  --target main
 ```
 
 ---

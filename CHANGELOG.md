@@ -7,6 +7,91 @@
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-13
+
+### Added
+
+- Added `document(op="preflight", pdf_path=...)`, a process-isolated PDF
+  inspection/router with a frozen `pdf-preflight-v1` schema, source SHA-256,
+  normalized 1-based/top-left page locators, native/sparse/image/scanned/hybrid
+  classification, per-page OCR reasons, engine recommendations, timeout and
+  input/layout/memory budgets, and source-change detection.
+- Added `document(op="export_assets", doc_id=...)`, which exports deterministic
+  `agent-asset-bundle-v1` manifests, agent-readable JSONL, text/table/figure
+  records, copied media, stable hashes/locators/citation refs, and a portable
+  Foam `index.md` plus `notes/**` subtree using staged replacement.
+- Added weekly Dependabot coverage for uv, npm, and GitHub Actions plus a
+  read-only dependency security workflow that audits the universal Python lock
+  and the VSIX npm lock.
+- Added pinned uv 0.12.3 native vulnerability auditing, npm low-severity
+  gating, Bandit medium/high source scanning, and a pinned zizmor workflow
+  security gate to local, CI, and release paths.
+- Added idempotent GitHub metadata and label synchronization scripts, including
+  MCP/PDF/DOCX/wiki/VSIX/CI, provenance, security, breaking-change, release,
+  and superseded workflow labels.
+
+### Changed
+
+- **Breaking:** migrated from MCP Python SDK v1/FastMCP to official `mcp>=2,<3`
+  and `MCPServer`. SDK v1 imports, field names, clients, and compatibility
+  fallbacks are no longer supported.
+- MCP `Context` is now imported at runtime for every context-aware tool, so it
+  is injected by the SDK instead of leaking into model-visible input schemas.
+  Smoke tests use the MCP v2 in-memory and stdio `Client` APIs.
+- Tool-surface filtering and diagnostics now use an Asset-Aware server registry
+  plus the SDK's public `remove_tool`/`list_tools` APIs instead of reaching into
+  `_tool_manager` internals.
+- Updated the universal Python lock, LightRAG floor to 1.5.6, GitHub Actions
+  majors, and the VSIX toolchain (ESLint 10, Sinon 22, test-electron 3, and
+  compatible Node typings); Python and npm audits report zero known
+  vulnerabilities without allowlists. Mocha is security-pinned to 11.3.0
+  because newer 11.x releases currently resolve an affected `diff` version;
+  TypeScript remains on the latest release accepted by `typescript-eslint`.
+- Default table and LightRAG stores now follow a relocated `DATA_DIR` unless
+  explicitly overridden. Ollama embedding dimensions are probed and cached
+  instead of being hard-coded to 768.
+- Updated PyMuPDF imports to the supported `pymupdf` module while preserving the
+  internal `fitz` alias, preventing deprecation text from corrupting MCP stdout.
+
+### Security
+
+- Kept `pdf-inspector` behind an internal adapter boundary because published
+  1.14.1 predates upstream content-stream/CID/Form expansion DoS hardening; the
+  built-in preflight applies process, time, file, page, layout, memory, and
+  source-identity guards without adding that dependency.
+- Put the MinerU extra on security hold because MinerU 3.4.4 pins
+  `transformers<5` while applicable fixes require `transformers>=5.5`. The
+  adapter remains available, but this package will not install that vulnerable
+  chain. Marker's existing Pillow security hold remains in place.
+- Agent bundle exports are traversal-safe, document-scoped, refuse to replace
+  non-bundle directories, never overwrite source documents, and preserve exact
+  citation/hash provenance. Bundle construction is bounded to 50,000 evidence
+  spans, 25,000 records, and 256 MiB of staged output by default.
+- Marker and MinerU are now rejected by the production extractor factory and
+  isolated worker even when their packages were installed manually. Stale
+  `ETL_ENGINE` settings still allow the base PyMuPDF server and diagnostics to
+  start, but a structured request fails closed with the canonical security-hold
+  explanation.
+
+### Fixed
+
+- Source-location lookup now preserves persisted line ranges and match strategy
+  and returns query-centered excerpts instead of unrelated block prefixes.
+- New document IDs use a 12-hex SHA-256 suffix instead of a 6-hex MD5 suffix,
+  reducing collision risk for large reusable-asset stores. Existing document
+  IDs remain readable; newly ingested copies receive the stronger stable ID.
+- Fixed a dead PPTX figure-title fallback exposed by the upgraded Ruff gate.
+- Fixed concurrent first-use LightRAG initialization so one ready instance is
+  published only after storage initialization; transient failures remain
+  retryable instead of caching a partial instance.
+- Fixed figure-export hash/copy TOCTOU by hashing the same source stream that is
+  copied to an atomic staged snapshot, then verifying the copied bytes and
+  source stat before publishing the record.
+- Replaced the quadratic agent-asset evidence join with a stable linear index
+  and added explicit span, record, and output-size failure contracts.
+- Closed or superseded every stale open PR and removed all absorbed/diverged
+  remote branches after manually porting their still-valid regression semantics.
+
 ## [0.9.0] - 2026-07-09
 
 ### Added

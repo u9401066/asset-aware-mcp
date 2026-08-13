@@ -2,8 +2,18 @@
 
 **Version:** 1.0.0  
 **Date:** 2026-02-09  
-**Status:** Draft  
+**Status:** Archived — security hold
 **Owner:** Asset-Aware MCP Team  
+
+> [!CAUTION]
+> 這是 2026-02-09 的歷史設計規格，不是目前可安裝 runtime contract。
+> `marker-pdf` 1.10.2 鎖定 `Pillow<11`，與本專案 `Pillow>=12.2.0` 安全底線
+> 衝突，因此 `[marker]` extra 為空且 installer 不會安裝或啟用 Marker。
+> 目前 active packaged structured engines 只有 PyMuPDF4LLM（`[pdf-plus]`）與
+> Docling（`[docling]`）；請以
+> [`docs/wiki/PDF-Document-Workflow.md`](wiki/PDF-Document-Workflow.md) 與
+> [`docs/wiki/MCP-Tools.md`](wiki/MCP-Tools.md) 為準。以下 Marker 安裝、測試與
+> `use_marker` 描述只保留作為架構沿革，不得當成操作指引。
 
 ---
 

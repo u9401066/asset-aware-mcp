@@ -11,14 +11,16 @@
 | 項目 | 說明 |
 |------|------|
 | 語言 | Python 3.10+ |
-| 框架 | FastMCP, LightRAG, PyMuPDF；可插拔高精度引擎 Docling / MinerU / PyMuPDF4LLM（Marker 因 Pillow<11 暫停） |
-| 策略 | 多引擎 PDF→資產：`ETL_ENGINE` 可選 pymupdf（快速預設）/ pymupdf4llm（版面感知）/ docling / mineru（高精度） |
+| 框架 | 官方 MCP Python SDK 2 `MCPServer`、LightRAG、PyMuPDF；active optional engines 為 Docling / PyMuPDF4LLM |
+| 策略 | 文件→可重用 agent assets；`ETL_ENGINE` active paths 為 pymupdf（快速預設）/ pymupdf4llm（版面感知）/ docling，MinerU/Marker adapter 目前 security hold |
 
 > 🎯 **核心目標**：完整、快速地把文件轉換成「圖、文、表」等 **agent 友善的資產**，並保留精確來源定位（page / bbox / line span）供引用。
 
 ### 核心功能
 
 - 📄 **PDF ETL** — 多引擎文件拆解成 agent 資產（圖片、表格、章節、公式），`ETL_ENGINE` 可插拔
+- 🩺 **PDF Preflight** — 攝入前唯讀、process-isolated page classification / OCR / engine routing
+- 📦 **Agent Asset Export** — deterministic text/table/figure + provenance bundle，可直接形成 Foam subtree
 - 🧩 **Segmentation Export** — 統一 segmentation schema（reading order + line span）
 - 📊 **A2T** — Anything to Table 表格建立
 - 🧭 **Section Navigation** — 動態層級章節導航（5 Tools）
@@ -40,11 +42,11 @@
 | `pymupdf`（預設） | 內建 | 快速、數位 PDF、無模型 | AGPL |
 | `pymupdf4llm` | `[pdf-plus]` | 低風險升級：版面感知 reading order + 表格 markdown | AGPL |
 | `docling` | `[docling]` | 高精度：layout+表格+公式+圖表理解，附輕量 GraniteDocling VLM | MIT |
-| `mineru` | `[mineru]` | 最高精度：公式→LaTeX、表格→HTML、跨頁表格合併（重、可純 CPU） | Apache-2.0 衍生 |
-| `marker` | 停用 | marker-pdf pin Pillow<11 與安全基線衝突 | — |
+| `mineru` | security hold（extra 空） | adapter 保留；MinerU 3.4.4 pin `transformers<5`，而 fixes 需要 `>=5.5` | Apache-2.0 衍生 |
+| `marker` | security hold（extra 空） | marker-pdf 1.10.2 pin Pillow<11 與安全基線衝突 | — |
 
-- 三大引擎皆已驗證相容 `Pillow>=12.2.0`（解析 pillow 12.3.0）。
-- 結構化引擎（docling/mineru/marker）實作共通 `StructuredPDFExtractor` Protocol，輸出 `MarkerParseResult`，共用 `_ingest_single_with_marker` 資產管線（零侵入切換）。
+- Active Docling / PyMuPDF4LLM extras 已驗證可解析 `Pillow>=12.2.0`；不得用 audit ignore 繞過 held backend 的不可解 graph。
+- 結構化 adapters（docling/mineru/marker）實作共通 `StructuredPDFExtractor` Protocol，輸出 `MarkerParseResult`，共用 `_ingest_single_with_marker` 資產管線；held backend 未安裝時降級 PyMuPDF。
 - 對應 adapter：`src/infrastructure/{pymupdf4llm,docling,mineru}_adapter.py`；工廠：`extractor_factory.py`。
 
 ---
@@ -79,6 +81,29 @@
 
 ---
 
+## MCP SDK 2 邊界
+
+- 唯一 runtime contract 是 `mcp>=2,<3` 與官方
+  `mcp.server.mcpserver.MCPServer`。SDK v1 不受支援；禁止新增
+  `mcp.server.fastmcp` 或其他 v1 fallback。
+- Tool `Context` 只能由 MCPServer 在 request runtime 注入，用於 bounded
+  progress/log。它不得成為 client input，也不得出現在公開 JSON schema；修改
+  decorators/signatures 時必須保留 schema-leak regression guard。
+- Tool registry 只能使用 SDK 公開 `add_tool`、`remove_tool`、`list_tools` API；
+  不得依賴 private tool-manager internals。
+- `balanced`（30）、`compact`（17）、`legacy`（完整 direct inventory）是 SDK 2
+  server 上的 tool UX policy。`legacy` 只相容舊 tool names/allow-lists，不是
+  SDK v1 protocol compatibility。
+- `document(op="preflight", pdf_path=...)` 必須維持唯讀：回傳穩定
+  `pdf-preflight-v1` source hash/page locator/OCR/engine routing schema，不建立
+  document artifacts。
+- `document(op="export_assets", doc_id=..., output_dir=...)`（alias
+  `agent_assets`）輸出 deterministic `agent-asset-bundle-v1`，包含
+  `manifest.json`、`assets.jsonl`、Foam `index.md`/`notes/**` 與 figure media；
+  不得改寫 source/citation state，且只能原子替換 matching managed bundle。
+
+---
+
 ## Python 環境（uv 優先）
 
 - 新專案必須使用 uv 管理套件
@@ -90,16 +115,32 @@
 uv venv
 uv sync                    # 基本安裝（PyMuPDF 快速引擎）
 
-# 高精度 PDF→資產引擎（可選，皆相容 Pillow>=12.2.0）
+# Active PDF→資產引擎（可選，皆相容 Pillow>=12.2.0）
 uv sync --extra pdf-plus   # pymupdf4llm（輕量版面感知，drop-in）
 uv sync --extra docling    # Docling（MIT：layout+表格+公式+圖表）
-uv sync --extra mineru     # MinerU（最高精度，重）
-# Marker extra 仍停用：marker-pdf 1.10.2 pin Pillow<11 與安全基線衝突。
+# MinerU / Marker extras 皆暫時為空；只保留 adapters，不安裝已知不安全 graph。
 
 # 安裝依賴
 uv add package-name
 uv add --dev pytest ruff
 ```
+
+### Dependency / Security automation
+
+- `uv lock --check` 驗證 manifest/lock 一致性；
+  `uvx --from uv==0.12.3 uv audit --preview-features audit-command --frozen --python-version 3.10`
+  必須對 universal lock 零漏洞，不使用 allowlist。
+- `npm --prefix vscode-extension audit --package-lock-only --audit-level=low`
+  稽核 VSIX lockfile。
+- `uv run bandit -q -r src -x tests --severity-level medium` 阻擋 Python
+  medium/high security findings。
+- `.github/workflows/dependency-security.yml` 在 dependency PR、手動執行與每週
+  排程只讀執行上述 gates，不自動寫回。
+- `.github/dependabot.yml` 每週管理 `uv`、`npm`、`github-actions`，採分組與
+  open-PR limits；Python 必須使用官方 `uv` ecosystem，讓 `pyproject.toml` 與
+  `uv.lock` 同步更新。
+- MinerU hold：3.4.4 pin `transformers<5`、修補線需 `>=5.5`。Marker hold：
+  marker-pdf 1.10.2 pin `Pillow<11`、專案安全底線為 `Pillow>=12.2.0`。
 
 ---
 
@@ -224,12 +265,17 @@ npm run test:ci
 src/
 ├── domain/           # 核心領域（純業務邏輯，無外部依賴）
 │   ├── entities.py        # Document, Asset, Section 等核心實體
+│   ├── pdf_preflight.py   # Stable PDF preflight schema / routing / failures
 │   ├── table_entities.py  # A2T 表格相關實體
 │   ├── section_tree.py    # SectionTree 章節樹結構
 │   ├── chunking.py        # 文本分塊策略
 │   └── repositories.py    # Repository 介面定義
 ├── application/      # 應用層（用例編排）
-│   ├── document_service.py  # ETL 文件處理（雙引擎）
+│   ├── document_service.py  # ETL 文件處理與 fallback orchestration
+│   ├── pdf_preflight_service.py # Async-safe preflight application facade
+│   ├── agent_asset_bundle_service.py # Atomic reusable agent/Foam bundle export
+│   ├── agent_asset_bundle_format.py  # Canonical JSON/hash + Foam serialization
+│   ├── agent_asset_record_builder.py # Segmentation/manifest/evidence records
 │   ├── table_service.py     # A2T 表格服務
 │   ├── section_service.py   # 章節導航服務
 │   ├── asset_service.py     # 資產查詢服務
@@ -240,8 +286,9 @@ src/
 │   ├── pdf_extractor.py     # PyMuPDF 快速提取（base + fallback）
 │   ├── pymupdf4llm_adapter.py # PyMuPDF4LLM 版面感知（drop-in 升級）
 │   ├── docling_adapter.py   # Docling 高精度（MIT：layout+表格+公式+圖表）
-│   ├── mineru_adapter.py    # MinerU 最高精度（公式→LaTeX、跨頁表格）
-│   ├── marker_adapter.py    # Marker 高精度提取（停用：Pillow<11）
+│   ├── mineru_adapter.py    # MinerU adapter（security hold；extra 空）
+│   ├── marker_adapter.py    # Marker adapter（security hold；Pillow<11）
+│   ├── pymupdf_preflight.py # Process-isolated bounded PDF inspection
 │   ├── structured_extractor.py # StructuredPDFExtractor Protocol（引擎共通契約）
 │   ├── extractor_factory.py # ETL_ENGINE 引擎選擇工廠
 │   ├── excel_renderer.py    # Excel 渲染
@@ -249,10 +296,12 @@ src/
 │   └── config.py            # 配置管理
 └── presentation/     # 呈現層（MCP Server, 模組化）
     ├── server.py            # Thin entry point (31 行)
-    ├── mcp_app.py           # FastMCP 單一實例
+    ├── mcp_app.py           # Official SDK 2 MCPServer 單一實例 + public registry tracking
+    ├── mcp_context.py       # Runtime Context progress/log helpers
+    ├── tool_surface.py      # balanced / compact / legacy public-API filtering
     ├── dependencies.py      # Composition Root
-    ├── tools/               # 59 tools (7 模組)
-    │   ├── document_tools.py   # ETL + document management (18)
+    ├── tools/               # 30 balanced public / 17 compact / 63 legacy tools
+    │   ├── document_tools.py   # ETL + preflight + reusable agent asset export
     │   ├── docx_tools.py       # Docx ↔ DFM + conversion (16)
     │   ├── section_tools.py    # Navigation (5)
     │   ├── job_tools.py        # Job management (4)

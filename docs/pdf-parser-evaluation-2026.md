@@ -1,188 +1,282 @@
-# PDF 拆解引擎評估報告：改善圖文拆解錯誤
+# PDF Parser 與 Preflight 評估報告（2026）
 
-**日期**: 2026-07-08
-**撰寫**: GitHub Copilot（自主研究）
-**觸發需求**: 大量尋找 PDF 拆解的 GitHub 套件／專案，評估能否改善目前圖文拆解的錯誤
-**Repo 狀態**: 已更新至 `v0.7.0`
+**原始評估日期**：2026-07-08
 
----
+**本次更新日期**：2026-08-13
 
-## 0. 執行摘要（TL;DR）
-
-- **根因**：高精度引擎 **Marker 目前被停用**（`pyproject.toml` 的 `marker = []`），因 `marker-pdf 1.10.2` 釘死 `Pillow<11`，與安全 runtime 要求的 `Pillow>=12.2.0` 衝突。圖文拆解因此**只剩 PyMuPDF**，其向量圖 figure 邊界、figure–caption 對應、表格結構、reading order 都靠啟發式，這是圖文錯誤的來源。
-- **決定性發現**：用 `uv pip compile` 實測，**Docling / MinerU / PyMuPDF4LLM 三者都能與 `Pillow>=12.2.0` 共存**（皆解析出 `pillow==12.3.0`）。**Marker 停用 ≠ 沒有高精度替代**。
-- **建議（分層）**：
-  - **Tier 1（低風險 drop-in）**：`pymupdf4llm` — 同 PyMuPDF 生態、零 Pillow 衝突、無 GPU，立即改善 reading order／表格 markdown。
-  - **Tier 2（取代 Marker 的主力）**：`docling` — **MIT 授權**、內建 layout+reading order+table+formula+**chart 理解**、附 **MCP server**，且 VLM 用 **GraniteDocling 258M**（與本專案 granite 後端一致）。
-  - **Tier 3（追求最高精度）**：`mineru` — OmniDocBench 分數最高、公式→LaTeX、表格→HTML、跨頁表格合併，可純 CPU 但吃資源。
-  - **模組化補強**：`Surya` / `gmft` 針對表格與 layout 單點強化。
+**範圍**：PDF inspection、routing、extraction engines、security holds 與 citation-ready asset workflow
 
 ---
 
-## 1. 問題根因分析
+## 0. 執行摘要
 
-### 1.1 Marker 為何停用
-`pyproject.toml`：
-```toml
-# marker-pdf 1.10.2 pins Pillow<11 while the secure runtime requires
-# Pillow>=12.2.0. Re-populate when upstream marker-pdf supports a
-# patched Pillow range.
-marker = []
-```
-安全基線 `Pillow>=12.2.0`（CVE 修補）與 marker-pdf 的 `Pillow<11` 互斥，因此高精度路徑被關閉。
-
-### 1.2 目前 PyMuPDF 路徑的弱點
-來源：`src/infrastructure/pdf_extractor.py` 的 `PyMuPDFExtractor._extract_images_direct`（3 個啟發式策略）。
-
-| 弱點 | 成因 |
-|------|------|
-| 向量圖 figure 漏抓／裁錯邊界 | 靠 `PYMUPDF_ENABLE_VECTOR_IMAGES` 區域偵測啟發式，非語意 layout |
-| figure ↔ caption 對位錯誤 | `_extract_figure_captions_worker` 靠位置鄰近度猜測 |
-| 表格結構跑掉（合併儲存格／跨頁斷裂） | 依賴 PyMuPDF `find_tables()` 幾何啟發式 |
-| 多欄 reading order 錯亂 | 依 text block 幾何順序，缺少閱讀序模型 |
-| 公式／特殊符號遺失 | 無數學辨識模型 |
-| 掃描 PDF 品質差 | OCR 為後掛，非整合式 layout-aware |
-
-> 這些都是「非語意 layout」的通病——要改善必須引入具備 **layout 理解模型** 的引擎。
+- Core PDF backend 仍是 `PyMuPDF>=1.24.0`；它提供不需模型的可靠 baseline、圖片 bytes、rendering 與 geometry。
+- 新增的 `document(op="preflight", pdf_path=...)` 先以內建 PyMuPDF 做 process-isolated inspection，回傳穩定 `pdf-preflight-v1` schema、原始來源 SHA-256、逐頁 classification、OCR reasons 與建議 route。
+- Active high-fidelity PDF extras **只有** `pdf-plus`（PyMuPDF4LLM）與 `docling`。`mineru`、`marker` 都是空 extra 的 **security hold**，不得透過降低 dependency security floors 重新啟用。
+- `firecrawl/pdf-inspector` 是設計參考，不是 runtime dependency。研究固定在 commit [`076183e2e40a2ea71f9e04def182ea9984a1e50e`](https://github.com/firecrawl/pdf-inspector/commit/076183e2e40a2ea71f9e04def182ea9984a1e50e)。PyPI 1.14.1 尚未包含該 commit 的 content-stream pre-decode DoS hardening，因此目前不導入。
+- Preflight 是 router，不是 parser correctness claim、PDF sanitizer、malware scanner、OCR engine 或 citation source；正式 evidence 仍由 manifest、blocks、segmentation 與 citation index 建立。
 
 ---
 
-## 2. 決定性驗證：Pillow 不再是障礙
+## 1. 問題與設計邊界
 
-實測指令（本機 `uv`，網路解析）：
-```bash
-printf "Pillow>=12.2.0\n<pkg>\n" | uv pip compile -
+只用單一 PDF parser 處理所有頁面，容易在下列文件失敗：
+
+- 原生文字與掃描頁混合。
+- 大幅 raster image 上疊少量或品質不佳的 OCR text layer。
+- 多欄、表格、圖說、向量圖與複雜 reading order。
+- 損壞、加密或刻意消耗 parser 資源的 PDF。
+
+本 repo 的核心不是產出一次性 Markdown，而是把文字、tables、figures、sections 與精準 locators 轉成 agent 可重用 assets。因此 preflight 的責任只包含：
+
+1. 固定原始來源 identity。
+2. 在任何正式 extraction 前提供 bounded、逐頁 signals。
+3. 將所有頁碼與座標正規化成單一 contract。
+4. 建議下一個 extractor/OCR route。
+5. 以 typed failure 結束不安全或超出 budget 的工作。
+
+它不負責修改來源、清理 active content、宣稱 PDF 安全，或把 heuristic classification 當作 citation evidence。
+
+---
+
+## 2. `pdf-preflight-v1` contract
+
+呼叫入口：
+
+```text
+document(op="preflight", pdf_path="/absolute/path/to/source.pdf")
 ```
 
-| 候選 | 解析結果 | 判定 |
-|------|----------|------|
-| `pymupdf4llm` | `pillow==12.3.0` | ✅ 相容 |
-| `docling` | `pillow==12.3.0` | ✅ 相容 |
-| `mineru` | `pillow==12.3.0` | ✅ 相容 |
+成功 payload：
 
-**結論**：三個主力全部通過完整依賴解析，與 `Pillow>=12.2.0` 無衝突。可直接以 optional extra 形式加入，不影響安全基線。
+| 欄位 | Contract |
+|---|---|
+| `schema_version` | 固定 `pdf-preflight-v1` |
+| `status` | 固定 `ok` |
+| `source` | `filename`、`size_bytes`、原始 source bytes 的 64-char lowercase `sha256` |
+| `inspector` | `asset-aware-pymupdf-preflight`、`pymupdf` 與 backend version |
+| `coordinate_system` | 明確宣告頁碼 base、origin、units、bbox format、axes 與 rotation basis |
+| `page_count` | 大於零且等於 `pages[]` 數量 |
+| `classification_counts` | `native/sparse/image/scanned/hybrid` 的完整 histogram |
+| `ocr_recommended` | 是否至少一頁有 OCR reason |
+| `ocr_pages` | 依頁面順序排列的 1-based OCR pages |
+| `recommended_engine` | 文件層 `pymupdf`、`pymupdf+ocr` 或 `docling` |
+| `pages[]` | locator、metrics、classification、OCR decision/reasons 與 page route |
 
----
+失敗 payload 維持相同 `schema_version`，並回傳 `status=error`、`error_code`、`message`。目前 error codes 為：
 
-## 3. 候選套件全景（大量清單）
-
-### A. 全流程文件理解引擎（可整段取代 Marker）
-| 專案 | Stars | 授權 | 精度/能力 | 資源 | 備註 |
-|------|-------|------|-----------|------|------|
-| **Docling** (IBM) | 62.8k | **MIT** | layout+reading order+table+formula+**chart 理解**、圖片分類 | 輕量 layout model；VLM=GraniteDocling 258M | **內建 MCP server**、LangChain/LlamaIndex、air-gapped、Py3.10–3.14 |
-| **MinerU** (OpenDataLab) | 73.8k | Apache-2.0 衍生 | **最高**（OmniDocBench 86–95）、公式→LaTeX、表格→HTML、跨頁表格合併、表內圖/公式 | **純 CPU 可跑**（pipeline backend），RAM 16GB+ | pipeline/VLM/hybrid 三後端、Py3.10–3.13 |
-| Marker (datalab) | 30k+ | GPL/商用 | 高精度、以 Surya 為底 | GPU 佳 | **停用中**（Pillow<11 衝突）|
-| unstructured | 12k+ | Apache-2.0 | 通用文件切塊 | 中 | 本專案曾遇 Py3.12 相容問題 |
-| PDF-Extract-Kit (OpenDataLab) | 12k+ | AGPL | MinerU 底層工具包 | GPU 佳 | 需自組 pipeline |
-
-### B. 同 PyMuPDF 生態（最低整合成本）
-| 專案 | Stars | 授權 | 能力 | 備註 |
-|------|-------|------|------|------|
-| **PyMuPDF4LLM** | 1.9k | AGPL/商用 | 多欄 reading order、table→markdown、image/vector 引用、hybrid OCR、`to_json`(bbox) | 新增 `pymupdf-layout`（layout-aware）、無 GPU、一行呼叫 |
-
-### C. 模組化引擎（單點強化 layout／表格／OCR）
-| 專案 | Stars | 授權 | 能力 | 備註 |
-|------|-------|------|------|------|
-| **Surya** (datalab) | 21.1k | Apache-2.0（模型 Rail-M，<$5M 免費） | layout+reading order+table_rec+OCR（90+ 語言）、公式`<math>` | Surya 2 為單一 VLM 650M，**需 vllm(GPU)/llama.cpp(CPU) server** |
-| gmft | 1k+ | MIT | 專注表格結構（基於 TATR） | 輕量、GPU 友善 |
-| Table-Transformer (TATR, MS) | 2k+ | MIT | 表格結構偵測/識別 | 學術基準模型 |
-| pdfplumber | 6k+ | MIT | 幾何式表格/文字/線條 | 純 Python、適合數位 PDF |
-| Camelot | 3k+ | MIT | lattice/stream 表格 | 對有框線表格佳 |
-
-### D. VLM / OCR 導向（掃描件、複雜版面、公式）
-| 專案 | 授權 | 能力 | 備註 |
-|------|------|------|------|
-| olmOCR (AllenAI) | Apache-2.0 | VLM 全頁 OCR、benchmark 標竿 | 需 GPU 較實用 |
-| Chandra (datalab) | 開源+模型授權 | 高精度 OCR（olmOCR-bench 85.9） | 5.3B，較重 |
-| Nougat (Meta) | MIT | 學術 PDF→markdown、公式強 | 2023 後維護趨緩 |
-| GROBID | Apache-2.0 | 學術文獻結構化（TEI/XML） | Java 服務、參考文獻/metadata 強 |
-
-> 精度標註：A、B 區與 Surya 的關鍵數據已於本次研究即時驗證；C（gmft/TATR/pdfplumber/Camelot）、D 區為既有領域知識，整合前建議再實測版本與授權。
-
----
-
-## 4. PyMuPDF 弱點 → 改善對應矩陣
-
-| 目前弱點 | 最佳解 | 次選 |
-|----------|--------|------|
-| 向量圖 figure 漏抓/裁錯 | Docling（layout 分類 Picture/Figure/Diagram） | MinerU、Surya layout |
-| figure ↔ caption 對位 | Docling / MinerU（語意標 Caption 並綁定） | Surya（Caption label） |
-| 表格結構（合併/跨頁） | MinerU（跨頁合併+表格→HTML） | Surya `table_rec` full HTML、gmft |
-| 多欄 reading order | Docling / MinerU（閱讀序模型） | PyMuPDF4LLM（layout mode） |
-| 公式/數學符號 | MinerU（→LaTeX）、Surya（`<math>`） | Nougat |
-| 掃描/OCR 品質 | MinerU（109 語言）、Surya（90+） | PyMuPDF4LLM hybrid OCR |
-| 低風險快速改善 | **PyMuPDF4LLM** | — |
-
----
-
-## 5. 三大主力深度評估
-
-### 5.1 Docling（★ 建議取代 Marker 的主力）
-- **優**：MIT 最乾淨可商用；layout+reading order+table+formula+**chart→table** 一站式；統一 `DoclingDocument`（可無損 JSON）；**內建 MCP server**；VLM 用 **GraniteDocling 258M**，與本專案預設 granite 後端天然契合；air-gapped 本地執行；Production/Stable、社群極活躍。
-- **缺**：VLM pipeline 首次需下載模型；預設 layout 模型仍需一定 CPU/記憶體（但遠低於 Marker 的 surya OOM 等級）。
-- **契合度**：本專案 `data/` 已存在 `doc_docling_paper_*`，方向相符。
-
-### 5.2 MinerU（★ 追求最高精度）
-- **優**：OmniDocBench 分數最高；公式→LaTeX、表格→HTML、跨頁表格合併、表內圖/公式辨識；pipeline backend **可純 CPU**；授權已從 AGPL 放寬為 Apache-2.0 衍生。
-- **缺**：完整依賴含 torch/onnxruntime，體積大；RAM 建議 16–32GB；**OOM 風險是主要顧慮**（呼應 issue-report 20260429 的 Marker OOM 痛點）。
-- **策略**：若採用，務必走 `pipeline`（`-b pipeline`）並沿用現有 subprocess+timeout 隔離機制。
-
-### 5.3 PyMuPDF4LLM（★ 低風險 drop-in）
-- **優**：同 PyMuPDF 生態、**零 Pillow 衝突**、無 GPU、`to_json` 提供 bbox/layout、page chunking 附 tables/images/graphics；改動面最小。
-- **缺**：仍為啟發式為主（雖加 `pymupdf-layout`），精度提升幅度不如 Docling/MinerU；AGPL 需注意商用授權。
-- **策略**：作為 PyMuPDF 的漸進升級，風險最低、可立即上線。
-
----
-
-## 6. 建議的整合路徑（符合 DDD 架構）
-
-現有設計：`PyMuPDFExtractor(PDFExtractorInterface)` 位於 `src/infrastructure/pdf_extractor.py`，由 Composition Root 注入。**新引擎應實作同一介面，作為可插拔的 high-fidelity 選項，保留 PyMuPDF 為 fast fallback。**
-
-```
-src/infrastructure/
-  pdf_extractor.py        # PyMuPDFExtractor (fast, 現況/fallback)
-  marker_adapter.py       # 停用中（Pillow<11）
-  docling_adapter.py      # ← 新增：DoclingExtractor(PDFExtractorInterface)  ★建議
+```text
+file_not_found, not_a_file, invalid_pdf, file_too_large,
+encrypted_pdf, page_limit_exceeded, source_changed, timeout,
+parse_failed, worker_failed
 ```
 
-`pyproject.toml`（新增 optional extra，取代空的 marker slot 作為新的高精度路徑）：
-```toml
-[project.optional-dependencies]
-# 高精度 layout 引擎（與 Pillow>=12.2.0 相容，已實測）
-docling = ["docling>=2.110.0"]
-# 或漸進升級路徑
-pdf-plus = ["pymupdf4llm>=0.3.4"]
-```
+Domain models 採 frozen、`extra=forbid`，並驗證：
 
-分階段落地：
-1. **Phase 0（低風險）**：加入 `pymupdf4llm` extra，於 `document_service` 增加一個 `engine="pymupdf4llm"` 選項，A/B 比對輸出品質。
-2. **Phase 1（主力）**：實作 `DoclingExtractor`，映射 Docling 的 layout labels（Picture/Table/Caption/Formula/SectionHeader…）到本專案的 segmentation schema 與 asset 實體；沿用既有 subprocess timeout/OOM 隔離。
-3. **Phase 2（選配）**：對高難度文件提供 `mineru -b pipeline` 後端；或以 `Surya table_rec` / `gmft` 單獨強化表格。
-4. **驗證**：以 `data/` 既有樣本（docling paper、attention、bert、resnet 等）跑回歸，比對 figure/caption/table 對位與 reading order。
+- 頁碼必須連續且從 1 開始。
+- `classification_counts` 必須能由 `pages[]` 重建。
+- `ocr_pages` 與文件/逐頁 OCR flags 必須一致。
+- bbox 必須 finite、正向且位於 page bbox 內。
 
----
+### 2.1 Locator contract
 
-## 7. 風險與注意事項
+- Page number：**1-based**。
+- Origin：**top-left**。
+- Units：PDF points。
+- Bbox：`[x0, y0, x1, y1]`。
+- Axes：x 向右、y 向下。
+- Basis：**unrotated crop box**；`page_bbox` 從 `(0, 0)` 開始。
+- Rotation：另存為 `rotation_degrees`（0/90/180/270），不得先旋轉 locator 再省略 basis metadata。
 
-- **OOM**：MinerU/Surya/Marker 這類重模型是主要風險（見 `docs/asset-aware-mcp-issue-report-20260429.md`）。Docling 預設 layout 模型較輕，建議優先；重後端一律走 subprocess + timeout。
-- **授權**：Docling=MIT、MinerU=Apache-2.0 衍生、Surya code=Apache-2.0（模型 Rail-M）；PyMuPDF4LLM=AGPL（商用需授權）。本專案為 Apache-2.0，**Docling 授權最相容**。
-- **模型下載**：VLM/layout 模型首次需下載，air-gapped 環境需預先快取。
-- **不建議**：直接大改 `pdf_extractor.py` 核心；應以新 adapter 並存、可切換。
+這個正規化層是必要的，因為 upstream libraries 常混用 0/1-based pages、bottom-left/top-left origins 或 rotated/unrotated coordinates。Infrastructure objects 不應直接洩漏至 citation domain。
 
 ---
 
-## 8. 下一步（待使用者確認）
+## 3. Classification 與 route policy
 
-1. 選定路徑：**Tier 1 快速（pymupdf4llm）** 或 **Tier 2 主力（docling）**？
-2. 確認後即可實作 POC：`DoclingExtractor` adapter + optional extra + 回歸比對腳本。
-3. 保留現有 `stash@{0}`（本次更新前暫存的 llm-wiki harness 變更），需要時 `git stash pop` 還原。
+### 3.1 Signals
+
+每頁收集：
+
+- non-whitespace text characters、words、text blocks。
+- raster image count、累計 coverage、最大 image coverage。
+- vector drawing count。
+- content union bbox 與 rotation。
+
+目前 `pdf-preflight-v1` 的 threshold：
+
+- Reliable native text：非疑似亂碼，且至少 60 個非空白字元；或至少 30 個非空白字元加 5 words。
+- Significant visual：最大 raster image coverage 至少 18%，或至少 4 個 vector drawings。
+- Image dominant：最大 raster image coverage 至少 45%。
+- Suspected scanned：缺少 reliable native text，且最大 raster image coverage 至少 72%。
+- Suspected garbled：至少 8 個非空白 characters，其中 replacement/control/private-use/surrogate 類別達 20%。
+
+Threshold 是 versioned routing policy，不是 precision/recall 或內容可信度分數。
+
+### 3.2 Page classes
+
+| Class | 語意 |
+|---|---|
+| `native` | 有 reliable native text，無 significant visual |
+| `sparse` | 沒有 reliable native text，也沒有 significant visual；包含真正空白頁 |
+| `image` | 有 significant visual、缺少 reliable native text，但不符合 scanned threshold |
+| `scanned` | 缺少 reliable native text，最大 raster image 覆蓋至少 72% |
+| `hybrid` | 同頁同時有文字與 significant visual |
+
+### 3.3 OCR reasons
+
+固定 enum：
+
+- `no_text`
+- `sparse_text`
+- `image_dominant`
+- `suspected_scanned_page`
+- `suspected_garbled_text`
+- `vector_only`
+
+`ocr_recommended` 嚴格等於 reasons 是否非空。空白 `sparse` page 沒有 OCR reason，不會浪費 OCR；有少量文字的 `sparse` page 才標記 `sparse_text`。`vector_only` 表示無 raster image、缺少 reliable native text，但 vector drawings 已達 visual threshold。
+
+### 3.4 Route
+
+Page route：
+
+1. `hybrid` 或 `vector_only` → `docling`。
+2. 其他有 OCR reason 的 page → `pymupdf+ocr`。
+3. 其餘 → `pymupdf`。
+
+Document route 依需求優先序聚合：`docling` > `pymupdf+ocr` > `pymupdf`。Preflight 只回傳建議，不會自動下載模型、啟動 OCR 或進行 ingest。
 
 ---
 
-## 附錄：本次研究已驗證事實
+## 4. Process isolation 與 resource caps
 
-- Repo：`v0.6.29 → v0.7.0`（fast-forward）。
-- `uv pip compile` 實測：`docling` / `mineru` / `pymupdf4llm` 皆與 `Pillow>=12.2.0` 相容（`pillow==12.3.0`）。
-- Docling：MIT、Py3.10–3.14、Production/Stable、內建 MCP、GraniteDocling 258M VLM。
-- MinerU：`pillow>=11.0.0`（無上限）、pipeline 可純 CPU、Apache-2.0 衍生授權。
-- Surya：Apache-2.0（code）、VLM 650M、需 vllm/llama.cpp 推論後端。
+預設 inspector 使用獨立 `spawn` process；application service 再以非阻塞方式等候，避免卡住 MCP event loop。
+
+| Guard | Default |
+|---|---:|
+| Wall timeout | 20 seconds |
+| Source file size | 256 MiB |
+| Page count | 2,000 |
+| Words per page | 100,000 |
+| Raster image records per page | 100,000 |
+| Vector drawing records per page | 100,000 |
+| Linux worker address space | best-effort 1.5 GiB |
+
+其他 fail-closed checks：
+
+- 檔案必須從 byte 0 開始具有 `%PDF-` signature。
+- 未解密 PDF 回傳 `encrypted_pdf`。
+- Parse 前後重新 stat 與 SHA-256；identity 或 bytes 改變時回傳 `source_changed`。
+- Worker payload 回到 parent 後重新經 Pydantic schema validation。
+- Timeout 後 terminate，必要時 kill worker。
+
+### 非 sanitizer 聲明
+
+這些 guard 只限制此 inspection operation 的工作量與 failure blast radius。Preflight 不會偵測或移除 JavaScript、launch actions、embedded files、malicious URLs、prompt injection、polyglot payload 或其他 active content；也不會修復、重新封裝、解密或保證 PDF 規格完整。處理不可信輸入仍應使用 OS/container sandbox、最小權限與獨立 security scanning。`document(op="safety_audit")` 也是 artifact-level AI safety signal，不是 malware certification。
+
+---
+
+## 5. Extraction engine status
+
+### 5.1 Active paths
+
+| Path | Packaging | Status | Role |
+|---|---|---|---|
+| PyMuPDF | core dependency | Active | Fast baseline、geometry、rendering、image bytes、fallback |
+| PyMuPDF4LLM | `pdf-plus` extra | Active | 輕量 layout-aware text/Markdown upgrade |
+| Docling | `docling` extra | Active | Structured layout、reading order、tables、formula/figure path |
+
+因此 active high-fidelity PDF extras **只有 `pdf-plus` 與 `docling`**。空的 `pdf` extra 是相容 placeholder，不代表另一個 engine。
+
+### 5.2 Security holds
+
+| Adapter | Extra | Hold reason | Re-enable gate |
+|---|---|---|---|
+| MinerU | `mineru = []` | MinerU 3.4.4 限制 `transformers<5`，而目前 security fixes 要求 `transformers>=5.5` | Upstream 解除 cap；安全 floor 可正常 resolve；isolated smoke/adversarial tests 通過 |
+| Marker | `marker = []` | Marker PDF 1.10.2 限制 `Pillow<11`，而 runtime 要求 `Pillow>=12.2.0` | Upstream 支援 patched Pillow range；artifact、OOM 與 citation regression gates 通過 |
+
+Adapters 可以保留，方便未來重啟或提供明確診斷；但不得把它們寫成 active、recommended install，也不得降級 security floors 來換取 resolver success。
+
+---
+
+## 6. `firecrawl/pdf-inspector` pinned 評估
+
+### 6.1 研究快照
+
+評估固定在 2026-08-12 的 commit [`076183e2e40a2ea71f9e04def182ea9984a1e50e`](https://github.com/firecrawl/pdf-inspector/commit/076183e2e40a2ea71f9e04def182ea9984a1e50e)，避免以變動中的 `main` 作為不可重現依據。
+
+Primary sources：
+
+- [Pinned README / architecture and public APIs](https://github.com/firecrawl/pdf-inspector/blob/076183e2e40a2ea71f9e04def182ea9984a1e50e/README.md)
+- [Core load → classify → extract → structure/table → Markdown flow](https://github.com/firecrawl/pdf-inspector/blob/076183e2e40a2ea71f9e04def182ea9984a1e50e/src/lib.rs#L3882)
+- [Detector limits and OCR routing signals](https://github.com/firecrawl/pdf-inspector/blob/076183e2e40a2ea71f9e04def182ea9984a1e50e/src/detector.rs#L14)
+- [Positioned text/item types](https://github.com/firecrawl/pdf-inspector/blob/076183e2e40a2ea71f9e04def182ea9984a1e50e/src/types.rs#L98)
+- [Tagged structure-tree / MCID extraction](https://github.com/firecrawl/pdf-inspector/blob/076183e2e40a2ea71f9e04def182ea9984a1e50e/src/structure_tree.rs#L18)
+- [Python binding surface](https://github.com/firecrawl/pdf-inspector/blob/076183e2e40a2ea71f9e04def182ea9984a1e50e/src/python.rs#L484)
+- [NAPI async/table surface](https://github.com/firecrawl/pdf-inspector/blob/076183e2e40a2ea71f9e04def182ea9984a1e50e/napi/src/lib.rs#L379)
+- [Integration/adversarial tests](https://github.com/firecrawl/pdf-inspector/blob/076183e2e40a2ea71f9e04def182ea9984a1e50e/tests/integration_tests.rs)
+- [Pinned CI workflow](https://github.com/firecrawl/pdf-inspector/blob/076183e2e40a2ea71f9e04def182ea9984a1e50e/.github/workflows/ci.yml)
+- [Single-source version sync script](https://github.com/firecrawl/pdf-inspector/blob/076183e2e40a2ea71f9e04def182ea9984a1e50e/scripts/version.py)
+
+### 6.2 值得借鑑
+
+- Parse/load 後分成 detect-only、analyze、full 的 staged work。
+- 逐頁 OCR reasons，而不是只有 document-level scanned boolean。
+- Positioned items 與 tagged `(page, MCID)` semantic join。
+- Tagged、ruled-line、alignment/heuristic 多層 table detection。
+- Fidelity 與 compact projections 分離。
+- 對 content operations、nested XObjects、structure trees、forms 與 table candidates 設明確 budgets。
+- Hostile/synthetic fixtures、golden output、cross-API invariants 與 paired benchmark gates。
+- Version locations 的 preflight/sync check、pinned Actions 與 idempotent registry publication。
+
+### 6.3 不應複製
+
+- 混合 0-based/1-based page conventions 與不同 coordinate origins。
+- 把轉換後 Markdown 當作 canonical citation evidence。
+- Image placeholder/bbox 當成完整 figure asset；本 repo 仍須保存實際 image bytes/hash。
+- Python/NAPI/WASM 能力不對稱或兩套語意不同的 CLI。
+- 將 backend confidence 當作 evidence quality 或 citation truth。
+- 只以 Markdown benchmark 決定完整 asset engine。
+- Publish workflow 與 full CI gate 解耦。
+
+本 repo 已有更完整的 source hashes、manifest、segmentation、EvidenceSpan、figures/tables、Foam 與 MCP domain，因此 pdf-inspector 最適合提供 preflight ideas，而不是替換 aggregate/schema。
+
+### 6.4 1.14.1 supply-chain caveat
+
+官方 [PyPI 1.14.1](https://pypi.org/project/pdf-inspector/1.14.1/) 的 source distribution 發布時間早於 pinned main 的後續 hardening。特別是 commit [`076183e`](https://github.com/firecrawl/pdf-inspector/commit/076183e2e40a2ea71f9e04def182ea9984a1e50e) 才把 content-stream operation cap 放到 operator allocation/decode 之前；1.14.1 sdist 仍是先 decode，再檢查 operation count。
+
+因此目前決策是：
+
+- 不把 `pdf-inspector==1.14.1` 加入 core 或 optional dependencies。
+- 不以未發布的 Git commit 取代正式 wheels，避免 VSIX/跨平台 supply-chain 與 reproducibility 問題。
+- 不把這項差異描述成未獲 upstream 認定的 CVE；準確說法是「發布包尚未包含 main 已合併的 DoS hardening」。
+- 等待包含 `076183e` 及當時其他必要 bounding fixes 的正式 release/sdist，再以 hostile PDFs、timeout/RSS、cross-platform wheel 與 citation invariants 重新驗證。
+
+---
+
+## 7. 建議驗證 gate
+
+每個 PDF routing/extraction backend 變更至少驗證：
+
+1. 五種 page classes 與每個 OCR reason 的 synthetic fixtures。
+2. 旋轉/crop box 的 1-based top-left locator invariants。
+3. 同一 source 重跑時 SHA-256、asset IDs、segment hashes 穩定。
+4. Native、OCR、structured engines 的 page count 與 source-page mapping 一致。
+5. Tables、figures、reading order、formula、OCR routing 與 exact citation locator 品質。
+6. Content streams、nested XObjects/structure/forms、巨大座標與 decompression/resource attacks。
+7. Timeout 後 worker 被回收，下一次 request 仍能成功。
+8. Baseline/candidate benchmark 不得遺失 predictions，並同時 gate aggregate 與 per-document regression。
+
+Markdown quality 只是其中一項；完整評估還必須包含 asset completeness、locator integrity、wall time 與 peak RSS。
+
+---
+
+## 8. 現行決策
+
+1. 預設使用 PyMuPDF core。
+2. 先執行 `document(op="preflight")` 取得可重現 routing signals。
+3. 低複雜 native pages 使用 PyMuPDF；需要輕量 layout-aware text 時可安裝 `pdf-plus`。
+4. Hybrid/vector/complex layout 使用 active `docling` extra。
+5. OCR reasons 明確的頁面才啟動 OCR；真正空白頁不做 OCR。
+6. MinerU、Marker 維持 security hold。
+7. pdf-inspector 只作 pinned design reference，直到正式 release 包含必要 hardening 並通過本 repo gates。

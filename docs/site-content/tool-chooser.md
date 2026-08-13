@@ -10,7 +10,7 @@
 | 任務 | 建議入口 | 何時看 reference |
 |---|---|---|
 | 攝入 PDF | `document(op="ingest")` / `ingest_documents` | 需要舊 allow-list 時可用 shortcut `ingest_documents` |
-| Marker-required parse | `document(op="parse")` / `parse_pdf_structure` | 需要 backend diagnostic 時查 PDF workflow |
+| Configured structured parse | `document(op="parse")` / `parse_pdf_structure` | 需要 backend diagnostic 時查 PDF workflow |
 | OCR PDF | `document(op="ocr")` | 長任務 artifact path 查 Background Jobs |
 | 看章節樹 | `section(op="tree")` / `document_asset(op="tree")` | 需要 resource URI 時查 MCP Resources |
 | 找可引用 span | `evidence(op="find")` / `find_evidence_spans` | source locator 搜尋用 `evidence(op="locate")` |
@@ -79,6 +79,6 @@ ingest_documents(index_knowledge_graph=true)
 
 - `section(...)` 是章節導覽；真正要驗證 claim 時回到 `evidence(...)`。
 - KG answer 是 discovery layer，不是最終引用來源。
-- `parse_pdf_structure` 是 Marker-required shortcut；Marker 不可用時會 fail closed。
+- `parse_pdf_structure` 使用目前設定的 structured extractor；Docling 可用，Marker／MinerU hold 或 backend 不可用時會 fail closed。
 - `ingest_documents(use_marker=true)` 只是偏好 Marker；目前公開參數沒有 `require_marker`。
 - `table_manage` 不直接寫 row/cell；row/cell 讀寫使用 `table_data`。

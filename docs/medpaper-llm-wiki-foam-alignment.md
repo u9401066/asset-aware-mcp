@@ -7,15 +7,18 @@ responsibilities.
 ## Boundary
 
 Asset-Aware MCP is the source-material decomposition and locator authority.
-It should emit document assets, evidence spans, and citation-ready references
-that can be re-verified against the original file.
+It emits document assets, evidence spans, citation-ready references, and a
+document-scoped portable agent/Foam bundle that can be re-verified against the
+original file.
 
 MedPaper is the durable LLM wiki writer. It owns Foam-facing reference notes,
 knowledge maps, synthesis pages, wikilinks, frontmatter, dashboards, and graph
 views.
 
 Foam is the Markdown navigation layer. It owns wikilinks, backlinks, graph
-views, hover previews, block embeds, and query rendering.
+views, hover previews, block embeds, and query rendering. Asset-Aware may emit
+a self-contained per-document Foam subtree, while MedPaper remains responsible
+for integrating that subtree into a durable, curated project wiki.
 
 ## Alignment Contract
 
@@ -40,8 +43,9 @@ Required fields for alignment:
 
 ## Foam-Compatible Promotion Shape
 
-Asset-Aware does not need to write Foam files directly. It should give
-MedPaper enough data to materialize notes like:
+Asset-Aware can either provide promotion data for MedPaper or write a bounded,
+portable per-document Foam subtree. It should give MedPaper enough data to
+materialize or integrate notes like:
 
 ```markdown
 ---
@@ -74,9 +78,61 @@ machine-readable AssetRef JSON beside each quote. When `wiki_root` is supplied,
 the bundle can be written into a Foam wiki and the managed evidence index block
 can be updated in place.
 
+## Portable Agent Asset Bundle
+
+For an ingested PDF document, the complete reusable-asset workflow is:
+
+```text
+document(
+  op="export_assets",
+  doc_id="doc_...",
+  output_dir="agent-assets"
+)
+```
+
+The output stays under that document's repository data directory:
+
+```text
+agent-assets/
+  manifest.json
+  assets.jsonl
+  index.md
+  notes/<stable-note>.md
+  media/<stable-media>
+```
+
+`assets.jsonl` contains deterministic text, table, and figure records. Each
+record keeps the source `asset_id`, a stable `<asset_type>:<asset_id>` key,
+format-neutral source identity (`source_sha256`, `source_kind`,
+`source_media_type`), content and record hashes, locator metadata, citation
+status, primary AssetRef when available, EvidenceSpan references, and Foam note
+metadata. `manifest.json` adds counts, artifact hashes, and `bundle_sha256`.
+
+`index.md` is the hub for the generated `notes/**`; every wikilink targets a
+note and block anchor created in the same export. Figure notes use relative
+links into `media/**`. No execution timestamp or output directory absolute path
+is embedded in these artifacts, so identical repository inputs produce the
+same bundle bytes and the subtree can be moved as a unit.
+
+The safety boundary is deliberate: `output_dir` must resolve to a strict child
+of the document directory. Traversal, the document root, source image folders,
+arbitrary pre-existing directories, and bundles belonging to another `doc_id`
+are rejected. Export uses a staging directory and rename-based replacement,
+does not overwrite source files, and only copies supported figure files that
+resolve inside the document directory.
+
+This does not transfer project-wiki ownership to Asset-Aware. MedPaper still
+chooses project paths and citation keys, merges or curates notes, builds topic
+maps and dashboards, and controls publication. It can treat the exported
+subtree and JSONL as a versionable, rebuildable source pack.
+
 ## Current Asset-Aware Coverage
 
 Already aligned:
+
+- `document(op="export_assets")` emits a deterministic agent bundle plus a
+  portable `index.md + notes/**` Foam subtree with stable asset identities,
+  artifact hashes, locators, citation provenance, and relative figure links.
 
 - `EvidenceSpan` stores stable `span_id`, `source_revision_id`,
   `locator_version`, line/char/byte ranges, text hashes, context, bbox,
@@ -121,6 +177,21 @@ Still intentionally delegated to MedPaper:
   publish-safe reference packs.
 - Deciding which evidence spans deserve promoted wiki pages.
 
+## Current Adapter Boundary
+
+The exporter currently consumes the PDF ingest side of `DocumentRepository`:
+its document manifest, canonical Markdown segmentation, citation index, and
+table/figure mappings. The v1 bundle uses generic source field names so future
+adapters do not inherit a PDF-only public contract, but that naming choice is
+not evidence that DOCX/DFM or arbitrary formats already flow through the
+exporter.
+
+A future DOCX/general adapter must explicitly normalize source identity,
+segments, assets, revisions, locators, and citation references into the bundle
+input contract. Until those adapter and conformance tests exist, use the
+existing DOCX/DFM revision/locator workflows separately and describe
+`document(op="export_assets")` as the PDF-backed vertical slice.
+
 ## Verification Checklist
 
 Use this checklist to confirm alignment before claiming a source is
@@ -128,6 +199,13 @@ Foam/wiki-ready:
 
 - Ingest or parse a source and build `manifest.json`, `blocks.json`, optional
   `segmentation.json`, and citation index.
+- For a reusable per-document source pack, call
+  `document(op="export_assets", doc_id="...", output_dir="agent-assets")` and
+  keep `index.md`, `notes/**`, `media/**`, `assets.jsonl`, and `manifest.json`
+  together.
+- Verify the export target is inside the document data directory, every hub
+  wikilink resolves to an emitted note/anchor, relative media links exist, and
+  manifest artifact hashes match the copied files.
 - Call `find_evidence_spans` for a representative claim and confirm the
   returned AssetRef includes `doc_id`, `span_id`, `source_revision_id`,
   `quote_sha256`, `line_range` or `char_range`, and page/bbox when available.

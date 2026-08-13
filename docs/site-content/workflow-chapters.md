@@ -18,7 +18,7 @@ MCP reference；不要一開始就從 balanced 30 個 tools 裡猜入口。
 | 階段 | 主要入口 | 產物 |
 |---|---|---|
 | 攝入 PDF | `document(op="ingest")` / `ingest_documents` | manifest、full markdown、assets、citation index |
-| 結構解析 | `document(op="parse")` / `parse_pdf_structure` | Marker-required job 或明確 diagnostic |
+| 結構解析 | `document(op="parse")` / `parse_pdf_structure` | Configured structured job 或明確 diagnostic |
 | OCR | `document(op="ocr")` | cleaned PDF job artifact |
 | layout / segmentation | `document(op="export_segmentation")`、`document(op="visualize_layout")` | `segmentation.json`、page overlay |
 | asset fetch | `document_asset(op="get")` / `fetch_document_asset` | table、figure、section、full text |

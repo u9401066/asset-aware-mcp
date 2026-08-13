@@ -510,10 +510,12 @@ exact contracts.
 
 | Item | Current Status |
 |---|---|
-| Latest code version | `0.9.0` |
+| Latest code version | `1.0.0` |
 | Runtime | Python `>=3.10`, managed with `uv` |
 | MCP endpoints | 30 public tools and 13 resources, 43 endpoints total |
-| PDF backend | Pluggable `ETL_ENGINE`: PyMuPDF by default, plus optional PyMuPDF4LLM/Docling/MinerU; Marker has been on security hold since `0.6.28` |
+| MCP runtime | Official Python SDK `>=2,<3` with `MCPServer`; SDK v1 is unsupported |
+| PDF backend | PyMuPDF by default, secure optional PyMuPDF4LLM/Docling, and isolated `document(op="preflight")` routing; MinerU/Marker are dependency security holds |
+| Agent assets | Deterministic `manifest.json`, `assets.jsonl`, citation locators, and portable Foam notes from `document(op="export_assets")` |
 | DOCX | DOCX/DOC/DFM round trip, Track Changes, LibreOffice conversion, strict validation |
 | RAG default | CPU `granite4.1:3b`; GPU hint `granite4.1:8b` |
 | Knowledge graph | Opt-in LightRAG (`lightrag-hku`) with verified citation bundles |

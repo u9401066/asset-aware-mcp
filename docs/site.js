@@ -3,7 +3,7 @@
 const DOC_PAGES = window.ASSET_AWARE_DOC_PAGES || [];
 const embeddedContent = window.ASSET_AWARE_DOC_PAGE_CONTENT || {};
 const DOC_STATS = window.ASSET_AWARE_DOC_STATS || {
-  version: "0.9.0",
+  version: "1.0.0",
   tools: 30,
   resources: 13,
   endpoints: 43,

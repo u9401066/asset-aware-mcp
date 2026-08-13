@@ -1,5 +1,9 @@
 # Roadmap
 
+- **v1.0.0** (2026-08-13) — MCP SDK 2 breaking migration; safe PDF preflight
+  routing; deterministic citation-ready agent asset/Foam bundles; zero-vulnerability
+  base/npm locks; scheduled dependency gates; GitHub/website/harness refresh.
+
 專案發展路線圖與功能規劃。完成的版本詳見 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
@@ -83,7 +87,7 @@
 
 | 平台 | 現況 | 目標 |
 |------|------|------|
-| PyPI | ✅ v0.3.3 | 維持更新 |
+| PyPI | 🚧 v1.0.0 release candidate | 通過 release gates 後發布 |
 | VSCode Marketplace | ✅ | 維持更新 |
 | MCP Hub | ❌ 未登錄 | 提交登錄 |
 | GitHub Topics | ❌ 未設定 | 加入 `mcp`, `ai-agents`, `pdf-extraction` |

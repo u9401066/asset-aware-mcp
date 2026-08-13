@@ -1,136 +1,80 @@
 # Product Context
 
-> 📌 此檔案描述專案的技術架構和產品定位。
+> 本檔描述目前產品定位與技術真相；歷史版本決策請見
+> `activeContext.md` 與 `decisionLog.md`。
 
-## 📋 專案概述
+## 專案定位
 
-**專案名稱**：asset-aware-mcp
+**asset-aware-mcp** 將 PDF、DOCX 與其他文件轉換成 agent 可重用、可驗證、
+可攜帶的文字／表格／圖片資產。每筆資產保留穩定 ID、來源 hash、精確 locator
+與 citation reference，並可輸出 Foam-compatible notes，供本機 LLM wiki 與
+LightRAG 知識圖譜重複使用。
 
-**一句話描述**：Asset-Aware MCP Server，讓 AI Agent 精準存取 PDF 資產並安全編輯 DOCX/DFM，支援文件級 CRUD、互轉與 strict round-trip 驗證
+主要使用者是需要可信文件證據鏈的研究人員，以及透過 Codex、Cline、Copilot
+或其他 MCP client 工作的開發者。
 
-**目標用戶**：醫學研究人員、使用 VS Code + Copilot 的開發者
+## 核心工作流
 
-## 🏗️ 架構
-
-```
-AI Agent (Copilot)
-       │ MCP Protocol
-       ▼
-MCP Server (server.py)
-  ├── ingest_documents
-  ├── inspect_document_manifest
-  ├── fetch_document_asset
-  └── consult_knowledge_graph
-       │
-       ▼
-ETL Pipeline (etl.py)
-  ├── Mistral OCR
-  ├── Asset Parser
-  └── LightRAG Index
-       │
-       ▼
-Local Storage
-  ├── {doc_id}_full.md
-  ├── {doc_id}_manifest.json
-  └── lightrag_db/
+```text
+source document
+  -> PDF preflight / DOCX ingest
+  -> bounded extractor routing
+  -> canonical document artifacts
+  -> segmentation + citation index
+  -> deterministic agent-asset-bundle-v1
+  -> Foam notes / local LLM wiki / optional LightRAG
 ```
 
-## ✨ 核心功能
+- `document(op="preflight", pdf_path=...)` 在寫入前分類 PDF、指出逐頁 OCR
+  原因並建議安全 route。
+- `document(op="auto", file_paths=[...])` 攝入 PDF、DOCX、DOC、ODT、ODS 等
+  支援格式；長任務使用可觀測 background job。
+- `document(op="export_assets", doc_id=...)` 產生 deterministic manifest、
+  JSONL records、Markdown/text/table/figure/media 與 portable Foam notes。
+- Evidence 與 citation 工具以 source revision、line/char/byte span、page/bbox
+  與 surrounding context 驗證引用，stale index 不會被宣稱為 citation-ready。
+- DOCX/DFM round trip 保留 block identity、格式與媒體，寫回前執行 stale source
+  與 strict validation guard。
 
-- 📄 PDF → Markdown 轉換 (PyMuPDF / Marker)
-- 🧩 Unified segmentation 匯出（reading order + markdown line span）
-- 🖼️ Layout overlay 偵錯（直接檢查 bbox / type / order）
-- 🔤 Optional OCR preprocessing（掃描 PDF 按需前處理）
-- 📝 Docx ↔ DFM 即時編輯與互轉 (17 tools, 6D validator + strict gate + table edit planning)
-- 🗺️ Document Manifest 生成 (Asset 清單)
-- 📊 A2T 表格系統 (7 operation-based tools)
-- 🧠 LightRAG 知識圖譜建立，可選 verified evidence bundle
-- 🔌 MCP Tools：預設 balanced surface 暴露 30 個公開 tools（17 facade + 13 shortcuts）與 13 resources 給 Agent；legacy 63-tool direct inventory 保留給舊 client 相容
-- 🧩 Cline-safe Marker background jobs with isolated subprocess execution and
-  explicit job status artifacts/warnings for long-running structure parsing
+## MCP Surface
 
-## 🔧 技術棧
+- 官方 MCP Python SDK `>=2,<3`，使用 `MCPServer`；SDK v1／FastMCP runtime
+  不受支援。
+- 預設 balanced surface：30 tools（17 facade + 13 shortcuts）與 13 resources。
+- compact surface：17 個 operation-based facade tools。
+- legacy surface：SDK 2 上的舊 direct tool-name inventory；不是 protocol v1
+  compatibility。
+- Runtime `Context` 由 SDK 注入，絕不出現在公開 tool input schema。
+
+## PDF Engines
+
+| 狀態 | Engine | 用途 |
+|---|---|---|
+| default | PyMuPDF | 快速、無模型、可靠 fallback |
+| optional `[pdf-plus]` | PyMuPDF4LLM | 輕量 layout-aware extraction |
+| optional `[docling]` | Docling | 隔離執行的結構化表格／公式／圖表 extraction |
+| security hold | MinerU | upstream 限制 `transformers<5`，目前不可安全解析 |
+| security hold | Marker | upstream 限制 `Pillow<11`，與安全底線衝突 |
+
+`pdf-inspector` 的分類、逐頁 OCR reason 與 resource-boundary 思路已落地為
+內建 preflight adapter；目前不直接依賴 registry 版，因其尚未包含 pinned
+upstream main 的最新 DoS hardening。
+
+## 技術棧
 
 | 類別 | 技術 |
-|------|------|
-| 語言 | Python 3.10+ |
-| OCR | Mistral AI SDK (`mistralai`) |
-| RAG | LightRAG (`lightrag-hku`) |
-| MCP | FastMCP (`fastmcp`) |
-| 儲存 | Local filesystem (JSON/Markdown) |
+|---|---|
+| Runtime | Python 3.10+、uv universal lock |
+| MCP | official `mcp` SDK 2.x / `MCPServer` |
+| PDF | PyMuPDF、optional PyMuPDF4LLM／Docling |
+| DOCX | python-docx、DFM／DocxIR reversible pipeline |
+| RAG / wiki | optional LightRAG、Foam-compatible Markdown |
+| Storage | local filesystem；JSON／JSONL／Markdown／media |
+| Quality | pytest、Ruff、mypy、Bandit、pinned uv audit、npm audit、artifact audit |
 
-## 📦 依賴
-
-### 核心依賴
-- mistralai
-- lightrag-hku
-- fastmcp
-
-### 開發依賴
-- pytest, pytest-cov
-- ruff, mypy
+核心 runtime dependency 包含 `mcp`、`pymupdf`、`pydantic`、`mistralai`；
+LightRAG 與 structured PDF engines 採明確 optional extra / isolated runtime。
 
 ---
-*Last updated: 2026-05-17*
 
-
-## Project Description
-
-Medical RAG with Asset-Aware MCP - Precise PDF asset retrieval (tables, figures, sections) and Knowledge Graph for AI Agents. Featuring A2T (Anything to Table) 2.0 for professional data orchestration.
-
-
-
-## Architecture
-
-┌─────────────────────────────────────────────────────────┐
-│                    AI Agent (Copilot)                   │
-└─────────────────────┬───────────────────────────────────┘
-                      │ MCP Protocol (Tools & Resources)
-┌─────────────────────▼───────────────────────────────────┐
-│                 MCP Server (server.py)                  │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────┐   │
-│  │   ingest    │ │  inspect    │ │     fetch       │   │
-│  │  documents  │ │  manifest   │ │     asset       │   │
-│  └─────────────┘ └─────────────┘ └─────────────────┘   │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │          A2T (Anything to Table) Workflow       │   │
-│  │  [Plan] → [Draft] → [Batch Add] → [Commit]      │   │
-│  └─────────────────────────────────────────────────┘   │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────────┐
-│                  ETL Pipeline (DDD)                     │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐              │
-│  │ PyMuPDF  │  │  Asset   │  │ LightRAG │              │
-│  │ Adapter  │→ │  Parser  │→ │  Index   │              │
-│  └──────────┘  └──────────┘  └──────────┘              │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────────┐
-│                   Local Storage                         │
-│  ./data/                                                │
-│  ├── {doc_id}/        # PDF document artifacts          │
-│  ├── tables/          # A2T Tables (JSON/MD/XLSX)       │
-│  │   └── drafts/      # Table Drafts (Persistence)      │
-│  └── lightrag_db/     # Knowledge Graph                 │
-└─────────────────────────────────────────────────────────┘
-
-
-
-## Technologies
-
-- Python 3.10+
-- DDD (Domain-Driven Design)
-- MCP (Model Context Protocol)
-- RAG (Retrieval-Augmented Generation)
-- Knowledge Graph (LightRAG)
-
-
-
-## Libraries and Dependencies
-
-- PyMuPDF (fitz)
-- LightRAG (lightrag-hku)
-- FastMCP
-- XlsxWriter
-- uv
+*Last updated: 2026-08-13*

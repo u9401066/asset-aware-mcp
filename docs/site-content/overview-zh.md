@@ -7,30 +7,23 @@ PDF、DOCX/DFM、表格、圖片、section、citation index、Foam evidence pack
 KG/RAG 串成可驗證的文件流程。
 
 這個網站改成章節式導覽：先選你正在做的任務，再進入對應的詳細頁或 reference。
-目前內容對齊 `0.9.0` 正式文件。
+目前內容對齊 `1.0.0` 正式文件。
 
-## 0.9.0 highlights
+## 1.0.0 highlights
 
-- Automatic mixed-format batch ingestion: `document(op="auto", file_paths=[...])`
-  auto-detects a batch mixing PDF with DOCX/DOC/ODT/ODS, ingests each file
-  through its correct existing engine in one background job, isolates
-  per-file failures, and reports per-file progress — no new public tool
-  added (still 30 tools / 43 endpoints).
-- Multi-engine output provenance is unified: `source_engine` /
-  `IngestResult.backend` always reflect the real parsing engine, so
-  figures/tables, segmentation `source_backend`, and citation-index
-  attribution stay consistent regardless of which `ETL_ENGINE` ran.
-- Pluggable multi-engine PDF -> asset ETL: `ETL_ENGINE` selects `pymupdf`
-  (default), `pymupdf4llm`, `docling`, or `mineru`, all verified compatible
-  with the `Pillow>=12.2.0` security floor that keeps `marker` disabled.
-- `document(op="pointer_index")`, `document(op="structural_retrieve")`, and
-  `document(op="compare")` add section-level structural retrieval and
-  comparison without increasing the balanced public tool count.
-- `document(op="audit")` now covers safety, native structure, segmentation
-  coverage, and accessibility readiness artifacts.
-- A2T tables now use stable row IDs, row search/filter/paging, citation
-  coverage, artifact-only large-table render, and explicit skipped-large-table
-  UX.
+- Runtime 已切換至官方 MCP Python SDK `>=2,<3` 與 `MCPServer`；MCP SDK v1
+  不再支援，30 個 public tool schema 也不會外露 runtime `ctx` 參數。
+- `document(op="preflight", pdf_path="...")` 在隔離 subprocess 中分類每頁
+  是否需要 OCR，並建議 native、OCR 或 Docling route；輸出統一為 1-based、
+  top-left 座標與來源 SHA-256。
+- `document(op="export_assets", doc_id="...")` 產出 deterministic
+  `manifest.json`、`assets.jsonl`、text/table/figure assets、citation locator
+  與可攜式 Foam index/notes，供 agent 重複使用或接入 LightRAG。
+- PDF、DOCX/DOC/ODT/ODS 混合批次攝入、來源 engine provenance、結構導覽與
+  citation audit 仍維持在 30 tools / 43 endpoints 的 balanced surface。
+- PyMuPDF4LLM 與 Docling 是目前可安裝的 structured engines。MinerU 與
+  Marker adapter 保留，但 packaged extras 因上游 dependency security cap
+  暫停，避免安裝已知有漏洞的 transformers／Pillow chain。
 
 <div class="path-grid">
   <section class="path-card">
@@ -65,6 +58,7 @@ KG/RAG 串成可驗證的文件流程。
 |---|---|---|
 | 第一次安裝 | [快速開始](#/getting-started) | [VS Code Extension And MCP Setup](#/vs-code-extension) |
 | 處理 PDF | [流程章節](#/workflow-chapters) | [PDF Document Workflow](#/pdf-workflow) |
+| 匯出 agent assets | [PDF Document Workflow](#/pdf-workflow) | [LLM Wiki Knowledge Base](#/llm-wiki) |
 | 找章節與定位 | [Document Sections And Navigation](#/document-sections) | [Citation Provenance](#/citation-provenance) |
 | 編輯 Word / DFM | [流程章節](#/workflow-chapters) | [DOCX DFM Workflow](#/docx-dfm-workflow) |
 | 產出引用結論 | [Citation Provenance](#/citation-provenance) | [LLM Wiki Knowledge Base](#/llm-wiki) |

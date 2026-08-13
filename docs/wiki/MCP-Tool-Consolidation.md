@@ -2,7 +2,8 @@
 
 本文件記錄目前 MCP tool surface 的整併策略。目標不是砍功能，而是讓 agent
 預設看到更少、更穩定、更任務導向的入口，同時保留舊 client 的 direct tool
-相容模式。
+名稱相容模式。所有模式都使用官方 MCP Python SDK 2 `MCPServer`；SDK v1 不受
+支援，`legacy` 也不代表 v1 protocol compatibility。
 
 ## Current Policy
 
@@ -10,13 +11,13 @@
 |---|---|---:|---|
 | `balanced` | 預設，或 `ASSET_AWARE_MCP_TOOL_SURFACE=balanced` | 30 | 一般 Cline/Codex/Copilot 建議模式。 |
 | `compact` | `ASSET_AWARE_MCP_TOOL_SURFACE=compact` | 17 | 只保留 operation-based facade tools，適合嚴格 allow-list。 |
-| `legacy` | `ASSET_AWARE_MCP_TOOL_SURFACE=legacy` 或 `ASSET_AWARE_MCP_ENABLE_LEGACY_TOOLS=true` | 63 | 舊 client/direct tool 相容模式。 |
+| `legacy` | `ASSET_AWARE_MCP_TOOL_SURFACE=legacy` 或 `ASSET_AWARE_MCP_ENABLE_LEGACY_TOOLS=true` | 63 | SDK 2 上的舊 client/direct tool-name 相容模式。 |
 
 ## Compact 17 Tools
 
 | Target tool | 收納範圍 |
 |---|---|
-| `document` | PDF auto ingest/readiness, list/delete/inspect/parse/OCR/layout/segmentation/audit/accessibility/pointer_index/structural_retrieve/compare |
+| `document` | PDF preflight、auto ingest/readiness、list/delete/inspect/parse/OCR/layout/segmentation、agent asset export、audit/accessibility/pointer_index/structural_retrieve/compare |
 | `document_asset` | asset fetch、asset Foam notes、section forwarding |
 | `evidence` | citation span find/verify/bundle/locate/claim promotion/wiki health |
 | `convert_document` | PDF/DOCX/Markdown conversion |
@@ -42,7 +43,7 @@ Balanced surface = compact 17 + 下列 13 個高頻 shortcut direct tools：
 |---|---|
 | `ingest_documents` | PDF 攝入是最常見起點，名稱直覺。 |
 | `list_documents` | 輕量、唯讀、常用於 smoke 與探索。 |
-| `parse_pdf_structure` | Marker-required parse 需要清楚 exposed diagnostic path。 |
+| `parse_pdf_structure` | Configured structured parse 需要清楚 exposed diagnostic path。 |
 | `fetch_document_asset` | asset 精讀常用且語意清楚。 |
 | `find_evidence_spans` | citation workflow 高頻入口。 |
 | `verify_citation_ref` | fail-closed citation verification 高頻入口。 |
@@ -89,6 +90,7 @@ Balanced surface = compact 17 + 下列 13 個高頻 shortcut direct tools：
 
 | Legacy direct tool | Target |
 |---|---|
+| Safe route inspection before ingest | `document(op="preflight", pdf_path=...)`; returns stable `pdf-preflight-v1` without mutating the source |
 | `ingest_documents(file_paths, ...)` | `document(op="ingest", file_paths=..., ...)` |
 | AI-ready handoff for new or existing PDFs | `document(op="auto", file_paths=[...])` or `document(op="auto", doc_id=...)` |
 | Combined PDF readiness audit | `document(op="audit", doc_id=...)`; use `refresh=true` only when artifacts must be rebuilt |
@@ -98,6 +100,7 @@ Balanced surface = compact 17 + 下列 13 個高頻 shortcut direct tools：
 | `delete_document(doc_id)` | `document(op="delete", doc_id=...)` |
 | `inspect_document_manifest(doc_id)` | `document(op="inspect", doc_id=...)` |
 | `export_document_segmentation(doc_id, ...)` | `document(op="export_segmentation", doc_id=..., ...)` |
+| Portable agent/Foam asset handoff | `document(op="export_assets", doc_id=..., output_dir=...)` (`agent_assets` alias) |
 | `visualize_document_layout(doc_id, ...)` | `document(op="visualize_layout", doc_id=..., ...)` |
 | `ocr_pdf_document(pdf_path, ...)` | `document(op="ocr", pdf_path=..., ...)` |
 | `fetch_document_asset(doc_id, asset_type, asset_id, ...)` | `document_asset(op="get", doc_id=..., asset_type=..., asset_id=...)` |
@@ -147,11 +150,17 @@ Balanced surface = compact 17 + 下列 13 個高頻 shortcut direct tools：
 
 ## Runtime Implementation
 
-- Tool decorators still register the full compatibility inventory.
+- Tool decorators register the full compatibility inventory on the official
+  SDK 2 `MCPServer`; there is no SDK v1/FastMCP fallback path.
 - `src.presentation.server` imports all tools/resources first, then applies
   `src.presentation.tool_surface.apply_tool_surface_policy(mcp)`.
-- Surface switching is import-time and mutates FastMCP's tool registry, so tests
-  for different surfaces must run in subprocesses.
+- `AssetAwareMCPServer` tracks registrations through the public `add_tool` API;
+  surface filtering uses public `remove_tool`, and diagnostics/tests enumerate
+  through public `list_tools`. Private registry internals are not a contract.
+- Surface switching is import-time and filters MCPServer's public registry, so
+  tests for different surfaces must run in subprocesses.
+- MCP SDK 2 `Context` parameters are runtime-injected. They may drive bounded
+  progress/log calls but must never appear in public tool input schemas.
 - `asset-aware-mcp list-tools --json` reports `surface`, `count`, and `tools`.
 
 ## Compatibility Rules
@@ -164,12 +173,14 @@ Balanced surface = compact 17 + 下列 13 個高頻 shortcut direct tools：
 - Preserve background job async defaults, status semantics, cancellation, and
   artifact reporting.
 - Keep legacy mode available while bundled VSIX/Cline/Codex/Copilot harnesses
-  and user allow-lists migrate.
+  and user allow-lists migrate; this promise covers tool UX only, not SDK v1.
 
 ## Verification Requirements
 
 - `tests/unit/test_mcp_server_startup.py` must prove balanced=30, compact=17,
   and legacy/direct compatibility is still available.
+- `tests/test_mcp_tools.py` must exercise the registered MCPServer/client path
+  and prove runtime `Context` never leaks into any public input schema.
 - Direct-vs-facade parity tests must cover section, document OCR/layout/export,
   DOCX, job, evidence, conversion, and A2T paths before removing any legacy path.
 - `scripts/count_tools.sh` and `scripts/count_tools.ps1` must report both public

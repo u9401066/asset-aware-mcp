@@ -1,6 +1,6 @@
 # Agent 資產完整覆蓋 — Gap 分析與實現路線圖
 
-> 📅 2026-03-19 | 核心目標：所有可作為 agent 資產的文件，都能良好轉換並被 agent 理解
+> 📅 初版 2026-03-19；垂直切片更新 2026-08-13 | 核心目標：所有可作為 agent 資產的文件，都能良好轉換並被 agent 理解
 
 ---
 
@@ -14,6 +14,42 @@ Layer 1: 📄 格式轉換    — 任何輸入 → 統一中間格式 (Markdown/
 ```
 
 **原則**：每一層都建立在前一層之上。格式轉換是地基。
+
+### 1.1 目前已落地：PDF DocumentRepository → Agent Asset Bundle
+
+`document(op="export_assets", doc_id="...", output_dir="agent-assets")` 現在可將
+一份已由 PDF 管線 ingest 的文件匯出為 deterministic、citation-aware bundle：
+
+```text
+agent-assets/
+  manifest.json
+  assets.jsonl
+  index.md
+  notes/*.md
+  media/*
+```
+
+- `assets.jsonl` 收錄可用的 text segments、tables、figures，沿用來源 `asset_id`，
+  並保存 content/record hashes、locator 與 citation/AssetRef/EvidenceSpan provenance。
+- `manifest.json` 保存格式中立的 `source_sha256`、`source_kind`、
+  `source_media_type`、canonical Markdown/locator hashes、counts、artifact inventory 與
+  `bundle_sha256`。
+- `index.md + notes/**` 是可攜式 Foam 子樹；note filename、anchor、wikilink 都由
+  stable identity 推導，媒體使用相對連結。
+- 相同來源 revision 與輸入 artifacts 產生固定排序及 byte-stable bundle；沒有把
+  執行時間或 output 絕對路徑寫入 bundle。
+- 寫入限制在文件資料目錄的嚴格子目錄；exporter 拒絕 traversal、來源目錄、任意
+  非 bundle 目錄及不同 `doc_id` 的 bundle，並以 staging + rename replacement 更新。
+- Evidence 先依 block/asset 建立線性索引；預設最多 50,000 spans、25,000 records、
+  256 MiB staged output，超限會以明確錯誤中止並清除 staging，不會產生半套 bundle。
+- Figure 由同一來源 file descriptor 串流複製與 SHA-256，核對來源 stat 後才以
+  atomic rename 發布；record 宣告的 media hash 因此對應實際複製位元組。
+
+這是最小但完整的 **PDF-backed vertical slice**，不是所有格式的統一 ingest/export
+已完成。v1 契約雖使用通用 source 欄位，目前的 repository manifest、segmentation、
+citation index 與 table/figure mapping 仍來自 PDF document pipeline。DOCX/DFM、XLSX、
+HTML 與其他格式需要各自 adapter 提供等價的 source identity、segments、assets、
+locators，再共用同一 bundle writer；不能只因 schema 名稱通用就宣稱已支援。
 
 ---
 
@@ -41,6 +77,7 @@ Layer 1: 📄 格式轉換    — 任何輸入 → 統一中間格式 (Markdown/
 | **公式** | ⚠️ 僅圖片 | ⚠️ 僅圖片 | 無 LaTeX/MathML 語義 |
 | **腳註** | ⚠️ 行內 | ✅ | DOCX: 完整 / PDF: 合併入文字 |
 | **程式碼區塊** | — | — | 無特殊處理 |
+| **可重用 agent bundle** | ✅ text/table/figure | ❌ 尚無 adapter | JSONL + manifest + portable Foam subtree |
 
 ### 2.3 結構導航 (Layer 3) — 現有覆蓋
 
@@ -67,6 +104,24 @@ Layer 1: 📄 格式轉換    — 任何輸入 → 統一中間格式 (Markdown/
 ---
 
 ## 3. Gap 分析
+
+### 已關閉的橫向 Gap：單文件 PDF 資產交付
+
+過去 PDF 的 segmentation、manifest、citation index、table/figure 各自存在，agent
+需要自行拼接。`document(op="export_assets")` 已提供共同交付邊界：stable IDs、source
+identity、hashes、locators、citations、JSONL 與 Foam notes 在同一個 deterministic
+bundle 中。剩餘工作是增加來源 adapters 與上層策展，而不是複製另一套 PDF writer。
+
+仍未關閉：
+
+- DOCX/DFM 尚未映射到這個 DocumentRepository exporter；現有 Word locator/revision
+  資料不能被描述成已自動輸出相同 bundle。
+- General document adapter registry、跨格式統一 `DocumentAssetSource` protocol 與
+  adapter conformance tests 尚未實作。
+- Bundle 是單文件 portable subtree，不負責跨文件去重、topic synthesis、人工 wiki
+  merge、dashboard 或 publish lifecycle。
+- `citation_ready` 代表有可回查引用資料，不代表 CRAAP 品質已自動評分或內容主張已
+  經人工審查。
 
 ### 🔴 P0 — 核心缺失（嚴重影響 agent 可用性）
 

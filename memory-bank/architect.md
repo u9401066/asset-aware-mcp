@@ -125,15 +125,39 @@ DfmTableBridge: DocxIR.tables ↔ A2T TableAsset
 └── python-environment.md
 ```
 
+### ADR-005: 官方 MCP SDK 2 為唯一 runtime contract
+
+**日期**：2026-08-13
+
+**決定**：使用官方 `mcp>=2,<3` 的 `MCPServer`、runtime-injected `Context` 與
+SDK 2 client。移除 FastMCP／SDK v1 fallback；`legacy` 僅保留 SDK 2 上的舊
+tool-name inventory。
+
+**理由**：避免公開 schema 洩漏 context、依賴 private registry，以及兩套
+protocol/runtime 路徑造成 release drift。
+
+### ADR-006: 文件輸出採可驗證 agent asset contract
+
+**日期**：2026-08-13
+
+**決定**：canonical document artifacts 經 segmentation/citation index 輸出
+`agent-asset-bundle-v1`；record 必須帶 source identity、stable locator、hash
+與 citation state。Bundle 使用 document-scoped staging/atomic replace，並可
+產生 portable Foam subtree。
+
+**理由**：agent 與 LLM wiki 需要可重用資產，而不只是一次性的分析報告；
+引用必須能偵測 stale source 並 fail closed。
+
 ---
-*Last updated: 2025-12-15*
+*Last updated: 2026-08-13*
 
 
 
 ## Architectural Decisions
 
-- 採用 Docling 作為主要 ETL 引擎以獲得高品質的表格與章節識別
-- 使用 FastMCP 簡化 MCP Server 開發流程
+- 以 PyMuPDF 作為安全、快速的預設 ETL；PyMuPDF4LLM／Docling 為可選的
+  structured extractors，MinerU／Marker 維持 security hold
+- 使用官方 MCP Python SDK 2 `MCPServer`；不提供 SDK v1／FastMCP fallback
 - 本地優先存儲策略，所有資產保留在 ./data 目錄下
 
 
@@ -149,9 +173,10 @@ DfmTableBridge: DocxIR.tables ↔ A2T TableAsset
 
 ## Components
 
-### Presentation Layer (FastMCP)
+### Presentation Layer (MCPServer)
 
-實作 MCP 協議，定義 Tools 與 Resources。使用 FastMCP 框架。
+以官方 SDK 2 實作 MCP tools/resources，並透過公開 registry API 管理 balanced、
+compact 與 legacy tool-name surfaces。
 
 **Responsibilities:**
 
@@ -185,6 +210,7 @@ DfmTableBridge: DocxIR.tables ↔ A2T TableAsset
 
 **Responsibilities:**
 
-- DoclingAdapter: 使用 IBM Docling 進行高精度 PDF 解析
+- PyMuPDFPreflight: 在隔離 process 中分類 PDF、產生 OCR reasons 與 route
+- PyMuPDF/Docling adapters: 預設快速 extraction 與可選高精度 structured route
 - LightRAGAdapter: 實作知識圖譜索引與查詢
 - FileStorage: 處理本地檔案系統的讀寫與圖片儲存

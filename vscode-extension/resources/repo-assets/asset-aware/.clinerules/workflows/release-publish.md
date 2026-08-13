@@ -90,10 +90,10 @@ Create a release commit:
 </execute_command>
 
 ## Step 6: Push commit to origin
-Push the default branch (`master`) to `origin`. If git credentials are missing, stop and ask the user to configure authentication.
+Push the default branch (`main`) to `origin`. If git credentials are missing, stop and ask the user to configure authentication.
 
 <execute_command>
-<command>git push origin master</command>
+<command>git push origin main</command>
 </execute_command>
 
 ## Step 7: Tag + push tag

@@ -11,6 +11,11 @@ shortcut direct tools。若只想讓 agent 面對最小入口，可設定
 direct tool 名稱，可設定 `ASSET_AWARE_MCP_TOOL_SURFACE=legacy` 或
 `ASSET_AWARE_MCP_ENABLE_LEGACY_TOOLS=true` 暫時公開完整 legacy inventory。
 
+所有 surface 都執行在官方 MCP Python SDK 2 `MCPServer`（`mcp>=2,<3`）上。
+SDK v1 不受支援且沒有 FastMCP/v1 fallback；此處的 `legacy` 僅指 direct tool
+名稱與既有 allow-list 的 UX 相容。Tool 的 `Context` 由 server 在 runtime 注入，
+不屬於 client input schema；測試會 fail closed 防止 `ctx` 欄位洩漏。
+
 工具數量請以 runtime 為準：
 
 ```bash
@@ -25,14 +30,14 @@ uv run asset-aware-mcp list-tools --json
 
 | Tool | 主要參數 | 功能 |
 |---|---|---|
-| `parse_pdf_structure` | `pdf_path`, `output_dir`, `async_mode`, OCR/Marker/page options | Marker-required PDF structure parse shortcut；backend unavailable 時 fail closed 並給診斷。 |
+| `parse_pdf_structure` | `pdf_path`, `output_dir`, `async_mode`, OCR/structured/page options | Configured structured PDF parse shortcut；Docling 可用，held／缺少 backend 時 fail closed 並給診斷。 |
 | `find_evidence_spans` | `doc_id`, `query`, `span_id`, `span_kinds`, `limit` | 搜尋 citation-ready evidence spans。 |
 | `verify_citation_ref` | `ref` | 驗證 AssetRef 是否仍符合 citation index 與 locator/hash。 |
 | `citation_bundle` | `doc_id`, query/span filters, `output_format`, Foam write options | 匯出 verified evidence bundle，可產生 Markdown/JSON/Foam evidence pack。 |
 | `ingest_documents` | `file_paths`, `async_mode`, `use_marker`, OCR/Marker/page options | 攝入 PDF，建立 manifest、markdown、blocks、assets、citation artifacts。 |
 | `list_documents` | 無 | 列出已處理 PDF 文件摘要。 |
 | `fetch_document_asset` | `doc_id`, `asset_type`, `asset_id`, `max_size`, `max_chars` | 依 asset identity 讀取 table/figure/section/full text。 |
-| `document` | `op`, PDF ingest/parse/list/delete/inspect/OCR/layout/segmentation/audit/readiness/retrieval/compare parameters | PDF document facade；支援 `auto`, `prepare_ai`, `audit`, `ingest`, `parse`, `list`, `delete`, `inspect`, `ocr`, `export_segmentation`, `visualize_layout`, `safety_audit`, `native_structure`, `coverage`, `accessibility`, `pointer_index`, `structural_retrieve`, `compare`。 |
+| `document` | `op`, PDF path/document/output/ingest/OCR/layout/audit/retrieval parameters | PDF document facade；除 ingest/readiness/audit/retrieval 外，也支援 read-only `preflight` 與 citation-ready `export_assets` agent/Foam bundle。完整 ops 見下方。 |
 | `document_asset` | `op`, `doc_id`, asset/section/Foam note parameters | Asset facade；支援 asset fetch、section forwarding、asset Foam notes。 |
 | `evidence` | `op`, `doc_id`, query/span/ref parameters, Foam options | Evidence facade；支援 `find`, `verify`, `bundle`, `locate`, `claim_promotion`, `health`。 |
 | `convert_document` | `source`, `target_format`, `source_format`, `output_path`, `mode`, `async_mode` | PDF/DOCX/Markdown conversion facade；大型 conversion 預設 job-backed。 |
@@ -90,13 +95,21 @@ uv run asset-aware-mcp list-tools --json
 
 - `compact` surface 只公開 17 個 operation-based facade tools。
 - `balanced` surface 在 `compact` 之外多保留 13 個高頻 shortcuts，總數 30。
-- `legacy` surface 會公開完整 decorator inventory，目前為 63 tools；這是相容模式，不是建議給 agent 的預設工具面。
+- `legacy` surface 會公開完整 decorator inventory，目前為 63 tools；這是 SDK 2
+  內的 tool-name 相容模式，不是 SDK v1 protocol compatibility，也不是建議給
+  agent 的預設工具面。
 - Facade 轉接不得改變 citation locator、AssetRef、hash、line/page/bbox metadata、DOCX stale source guard 或 background job semantics。
 
-### Document Audit Ops
+### Document Inspection, Audit, And Asset Ops
 
 The OpenDataloader-inspired PDF audit features stay inside the existing `document` facade, so the balanced public tool count remains 30:
 
+- `document(op="preflight", pdf_path="...")` performs a read-only,
+  process-isolated PDF inspection before ingest. Its stable `pdf-preflight-v1`
+  response preserves source SHA-256 and page/bbox provenance, classifies every
+  page, and reports OCR pages plus the recommended extraction route. Invalid,
+  encrypted, oversized, over-page-limit, changed, or timed-out inputs return a
+  stable error payload rather than partially ingesting the source.
 - `document(op="auto", file_paths=[...])` starts the normal ingest/background job flow. `document(op="auto", doc_id="...")` returns the AI readiness state for an existing document.
 - `document(op="prepare_ai", doc_id="...", output_format="json")` returns the v2 readiness contract with `status`, `blockers`, `warnings`, `capabilities`, `artifacts`, `missing_audits`, `invalid_audits`, `audit_artifacts`, and `next_actions`. The default Markdown response embeds the same JSON for humans.
 - `document(op="audit", doc_id="...")` reuses current safety/native/coverage/accessibility artifacts by default and reports them as cached only when they are present and valid. Pass `refresh=true` to rebuild all four diagnostics.
@@ -107,5 +120,17 @@ The OpenDataloader-inspired PDF audit features stay inside the existing `documen
 - `document(op="pointer_index", doc_id="...")` writes `section_pointer_index.jsonl`, a deterministic section proxy index with breadcrumbs, page/line/char/byte locators, source hashes, asset ids, and evidence-span ids.
 - `document(op="structural_retrieve", doc_id="...", query="...")` searches an existing valid pointer index and materializes bounded section previews. Use `document(op="pointer_index")` or `refresh=true` when the index is missing or stale.
 - `document(op="compare", doc_id="...", doc_b_id="...", criteria="...")` writes a deterministic structural comparison bundle for review before claims are promoted.
+- `document(op="export_assets", doc_id="...", output_dir="agent-assets")`
+  (alias `agent_assets`) writes `agent-asset-bundle-v1`: `manifest.json`,
+  agent-readable `assets.jsonl`, a Foam `index.md`, per-asset `notes/**`, and
+  copied figure `media/**`. Each text/table/figure record carries stable source
+  identity, content/record hashes, locators, AssetRef/evidence refs, and a Foam
+  wikilink; replacement is restricted to a matching managed bundle.
 
-These ops are artifact-only diagnostics and retrieval helpers. They report findings, coverage, and structural pointers without changing source text, citation spans, AssetRefs, or table/document write-back behavior. Readiness and job-status artifact discovery are read-only and do not create document directories. `list_documents`, `inspect_document_manifest`, and `get_job_status` now surface `document(op="prepare_ai", ...)` / `document(op="audit", ...)` next actions so agents do not have to memorize the individual audit ops.
+Preflight is read-only; audit/retrieval ops are artifact-only diagnostics; asset
+export writes only a managed child bundle and never mutates the source document,
+citation spans, AssetRefs, or table/document write-back state. Readiness and
+job-status artifact discovery are read-only and do not create document
+directories. `list_documents`, `inspect_document_manifest`, and `get_job_status`
+surface `document(op="prepare_ai", ...)` / `document(op="audit", ...)` next
+actions so agents do not have to memorize the individual audit ops.

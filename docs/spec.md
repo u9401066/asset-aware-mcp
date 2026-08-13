@@ -12,7 +12,7 @@ Build a local-first Model Context Protocol (MCP) server tailored for medical res
 ┌─────────────────────────────────────────────────────────────┐
 │                   Presentation Layer                         │
 │                   (MCP Server Interface)                     │
-│  server.py - FastMCP tools & resources exposed to AI Agent  │
+│  server.py - MCPServer tools & resources exposed to AI Agent│
 └─────────────────────┬───────────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────────┐
@@ -65,7 +65,7 @@ Build a local-first Model Context Protocol (MCP) server tailored for medical res
 | Category | Technology | Purpose |
 | -------- | ---------- | ------- |
 | Language | Python 3.10+ | Core runtime |
-| MCP | `mcp` (Python SDK) | MCP server with FastMCP |
+| MCP | official `mcp>=2,<3` Python SDK | MCPServer; SDK v1 unsupported |
 | ETL | **PyMuPDF** | Primary PDF decomposition & Table recognition |
 | RAG | LightRAG (`lightrag-hku`) | Knowledge Graph & Vector Index |
 | Validation | Pydantic | Data models & validation |
@@ -97,7 +97,7 @@ asset-aware-mcp/
 │   │   └── config.py                # Settings & environment
 │   │
 │   └── presentation/                # 🔴 Presentation Layer (Interface)
-│       └── server.py                # MCP Server (FastMCP)
+│       └── server.py                # MCP SDK 2 server entrypoint
 │
 ├── data/                            # Local storage root
 │   ├── {doc_id}/                    # PDF document artifacts

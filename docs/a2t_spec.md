@@ -1,8 +1,8 @@
 # A2T (Anything to Table) - asset-aware-mcp 內建功能模組
-**Version:** 3.1.0 (Integrated MVP)  
-**Date:** 2026-01-05  
+**Version:** 3.1.0 (Integrated MVP)
+**Date:** 2026-01-05
 **位置:** `src/application/table_service.py` + `src/presentation/server.py`
-**依賴:** 整合於 asset-aware-mcp，共用 FastMCP 實例
+**依賴:** 整合於 asset-aware-mcp，共用 MCP SDK 2 `MCPServer` 實例
 
 ---
 

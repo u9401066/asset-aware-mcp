@@ -1,6 +1,7 @@
 # asset-aware-mcp
 
-> 🏥 Medical RAG with Asset-Aware MCP - Precise PDF asset retrieval (tables, figures, sections) and Knowledge Graph for AI Agents.
+> Citation-ready document infrastructure for AI agents: turn PDFs, DOCX files,
+> tables, figures, and evidence spans into reusable assets and Foam/LightRAG wikis.
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -41,15 +42,17 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
   - **PyMuPDF** (default) - Fast extraction (~50MB), no models required
   - **PyMuPDF4LLM** (`[pdf-plus]`) - Drop-in layout-aware upgrade, no GPU
   - **Docling** (`[docling]`) - MIT-licensed layout+table+formula+chart engine; bridges through an isolated `.venv-docling` interpreter when the main environment can't install it directly (see [docs/docling-setup.md](docs/docling-setup.md))
-  - **MinerU** (`[mineru]`) - Highest-accuracy engine: formula→LaTeX, table→HTML, cross-page table merge; CPU-capable
+  - **MinerU** - Adapter retained, but the packaged extra is on security hold while MinerU pins a vulnerable `transformers<5` chain
   - **Marker** (`use_marker=True`) - High-precision structured parsing code path retained, but packaged runtime remains on security hold until upstream `marker-pdf` supports patched Pillow
 - 🧩 **Unified Segmentation Export** - Normalized `segmentation.json` merges manifest, blocks, reading order, and persisted markdown line spans for downstream tools and extensions.
+- 🩺 **Safe PDF Preflight Router** - `document(op="preflight")` classifies each page as native, sparse, image, scanned, or hybrid; returns 1-based top-left locators, source SHA-256, OCR reasons, and a bounded extraction-engine recommendation from a process-isolated inspector.
+- 📦 **Reusable Agent Asset Bundles** - `document(op="export_assets")` writes deterministic `manifest.json`, `assets.jsonl`, copied media, and a portable Foam `index.md`/`notes/**` subtree while preserving stable IDs, hashes, locators, and citation refs.
 - 🛡️ **PDF Safety/Structure/Coverage/Accessibility Audits** - OpenDataloader-inspired artifact-only reports flag suspicious hidden/off-page/prompt-injection text, native structure signals, segmentation coverage gaps, and accessibility/readability readiness via the existing `document` facade. `document(op="prepare_ai")` and `document(op="auto")` expose agent-ready status and next actions without adding public tools.
 - 🧭 **Structural Pointer Retrieval** - Proxy-Pointer-inspired `document(op="pointer_index")`, `document(op="structural_retrieve")`, and `document(op="compare")` preserve section breadcrumbs, line/char/byte locators, source hashes, asset IDs, and evidence-span provenance without adding MCP tools.
 - 🖼️ **Layout Overlay Debugging** - Render page overlays from `original.pdf` to inspect bbox, segment type, and reading order visually.
 - 🔤 **On-Demand OCR Preprocessing** - Optional `ocrmypdf` preprocessing path for scanned PDFs before ETL.
 - 🧭 **Section Navigation** - Dynamic hierarchy section tree through the `section` facade: browse, search, detail, content reading, and block extraction for any depth of headings.
-- 🔄 **Async Job Pipeline** - Supports asynchronous ingest, Marker-required parse, OCR, and conversion jobs with progress tracking.
+- 🔄 **Async Job Pipeline** - Supports asynchronous ingest, configured structured parse, OCR, and conversion jobs with progress tracking.
 - 🔀 **Mixed-Format Batch Ingestion** - `document(op="auto", file_paths=[...])` auto-detects a batch mixing PDF with DOCX/DOC/ODT/ODS, ingests each file through its correct existing engine in one background job, isolates per-file failures so one bad file cannot abort the rest, and reports per-file progress — no new public tool required.
 - 🗺️ **Document Manifest** - Provides a structured "map" of the document for precise data access by Agents.
 - 🧠 **LightRAG Integration** - Knowledge Graph + Vector Index, supporting cross-document comparison and reasoning.
@@ -58,7 +61,7 @@ AI: This is the architecture diagram for Scaled Dot-Product Attention:
 - 🛡️ **DFM Integrity Checker** - Automatic validation and auto-repair at every pipeline stage (post-ingest, pre-save, post-save). Catches orphan markers, column mismatches, and format inconsistencies.
 - 📊 **A2T (Anything to Table)** - 7 operation-based tools for building professional tables from **any source** (PDF assets, Knowledge Graph, URLs, user input). Features: stable row IDs, row search/filter/paging, citation coverage, artifact-only large-table render, skipped-large-table UX, **Citations** (AssetRef), **Audit Trail**, **Schema Evolution**, **Templates**, **Drafting**, and **Token-efficient resumption**.
 - 🖥️ **VS Code Management Extension** - Graphical interface for monitoring server status, ingested documents, document artifacts, citation spans, and **A2T tables/drafts** with one-click Excel export.
-- 🔌 **MCP Server** - Exposes tools and resources to Copilot/Claude via FastMCP.
+- 🔌 **MCP SDK 2 Server** - Uses the official Python SDK `MCPServer` API, runtime-injected context, and v2 clients. MCP SDK v1 is intentionally unsupported.
 - 🏥 **Medical Research Focus** - Optimized for medical literature, supporting Base64 image transmission for Vision AI analysis.
 
 ## 🏗️ Architecture
@@ -111,7 +114,7 @@ asset-aware-mcp/
 │   ├── domain/              # 🔵 Domain: Entities, Value Objects, Interfaces
 │   ├── application/         # 🟢 Application: Doc Service, Table Service (A2T), Asset Service
 │   ├── infrastructure/      # 🟠 Infrastructure: PyMuPDF, LightRAG, Excel Renderer
-│   └── presentation/        # 🔴 Presentation: MCP Server (FastMCP)
+│   └── presentation/        # 🔴 Presentation: MCP SDK 2 MCPServer
 ├── data/                    # Document and Asset Storage
 ├── docs/
 │   └── spec.md              # Technical Specification
@@ -144,12 +147,11 @@ Visual overview for the project. All diagrams use consistent GitHub README style
 # Install dependencies (using uv) — default install stays on the fast PyMuPDF backend
 uv sync
 
-# Optional high-fidelity PDF->asset engines (all verified Pillow>=12.2.0-safe):
+# Optional high-fidelity PDF->asset engines:
 # uv sync --extra pdf-plus   # PyMuPDF4LLM: drop-in layout-aware upgrade
 # uv sync --extra docling    # Docling: MIT layout+table+formula+chart engine
-# uv sync --extra mineru     # MinerU: highest-accuracy formula/table engine
-# Then set ETL_ENGINE=pymupdf4llm|docling|mineru. Marker remains on security
-# hold because marker-pdf pins Pillow<11 vs. the Pillow>=12.2.0 security floor.
+# MinerU and Marker packaged extras are temporarily empty security holds.
+# Then set ETL_ENGINE=pymupdf4llm|docling.
 
 # Run MCP Server
 uv run python -m src.presentation.server
@@ -165,7 +167,19 @@ Installation scope note:
 - Runtime data stays with your repo: `.env` and `assetAwareMcp.dataDir` default to `./data`, so ingested assets and the uv cache used by the launched server remain scoped to the current workspace.
 
 Engine selection note:
-`ETL_ENGINE` picks the extraction backend (default `pymupdf`). Structured engines (`pymupdf4llm`, `docling`, `mineru`) lazy-load and gracefully fall back to PyMuPDF when their extra isn't installed. Since v0.6.28 the packaged Marker extra has intentionally stayed on security hold: upstream `marker-pdf` 1.10.2 requires `Pillow<11`, while this release pins `Pillow>=12.2.0` for patched image-processing security. `use_marker=True` / `parse_pdf_structure` will report that Marker is unavailable until upstream Marker supports a patched Pillow range — use `docling` or `mineru` for a maintained high-fidelity alternative today.
+`ETL_ENGINE` picks the extraction backend (default `pymupdf`). The active packaged structured engines (`pymupdf4llm`, `docling`) lazy-load and gracefully fall back to PyMuPDF when their extra is not installed. Marker remains on hold because `marker-pdf` requires `Pillow<11`; MinerU is also on hold because MinerU 3.4.4 pins `transformers<5` while current security fixes require `transformers>=5.5`. Both adapters remain in-tree, but this package will not install a known-vulnerable dependency chain. Use `document(op="preflight", pdf_path="...")` to choose between fast native extraction, OCR, and Docling before ingest.
+
+Agent asset / Foam handoff:
+
+```text
+document(op="preflight", pdf_path="/papers/source.pdf")
+document(op="auto", file_paths=["/papers/source.pdf"])
+document(op="export_assets", doc_id="doc_...", output_dir="agent-assets")
+```
+
+The exported directory is deterministic and portable: `manifest.json` is the
+bundle contract, `assets.jsonl` is the agent-readable inventory, and
+`index.md` plus `notes/**` can be mounted or copied into a Foam workspace.
 
 ## 🔌 MCP Tools
 
@@ -192,9 +206,9 @@ The audit reports are inspired by OpenDataloader-style artifact workflows, but t
 |----------|------------|
 | Language | Python 3.10+ |
 | Package Manager | **uv** (all pip/setup-python removed) |
-| ETL | **PyMuPDF** (fitz, default) + optional **PyMuPDF4LLM** / **Docling** / **MinerU** structured engines; **Marker** is temporarily on security hold |
+| ETL | **PyMuPDF** (default) + secure optional **PyMuPDF4LLM** / **Docling** engines; MinerU and Marker adapters are on dependency security hold |
 | RAG | LightRAG (lightrag-hku) |
-| MCP | FastMCP |
+| MCP | Official Python MCP SDK 2 (`MCPServer`); SDK v1 unsupported |
 | Storage | Local filesystem (JSON/Markdown/PNG) |
 
 ## 📋 Documentation
@@ -204,8 +218,8 @@ Installation guidance:
 - LightRAG / Knowledge Graph backend (optional, since v0.6.34): `uv tool install --upgrade --python 3.11 'asset-aware-mcp[lightrag]'` for uvx/published users, or `uv sync --extra lightrag` for local source checkouts. Required before setting `ENABLE_LIGHTRAG=true`.
 - VS Code extension: run the command `Asset-Aware MCP: Install LightRAG Backend` from the Command Palette; it auto-detects source vs published mode and emits the matching install command.
 - OpenRouter optional preset (since v0.6.35): set `LLM_BACKEND=openrouter`, `OPENROUTER_API_KEY=...`, and optionally `OPENROUTER_MODEL=liquid/lfm-2.5-1.2b-instruct:free` for fast low-cost summaries and draft RAG answers. LightRAG retrieval still uses the configured embedding backend.
-- High-fidelity PDF engines (since v0.8.0): `uv sync --extra pdf-plus` (PyMuPDF4LLM), `--extra docling` (Docling), or `--extra mineru` (MinerU), then set `ETL_ENGINE` accordingly. Docling ships a cross-platform installer (`scripts/setup_docling.py` / `.sh` / `.ps1`) that provisions an isolated `.venv-docling` interpreter — see [docs/docling-setup.md](docs/docling-setup.md).
-- Marker backend: still on security hold because `marker-pdf` pins vulnerable `Pillow<11`; the `marker` / `pdf` extras are compatibility placeholders until upstream supports patched Pillow.
+- High-fidelity PDF engines: `uv sync --extra pdf-plus` (PyMuPDF4LLM) or `uv sync --extra docling` (Docling), then set `ETL_ENGINE` accordingly. Docling ships a cross-platform isolated installer; see [docs/docling-setup.md](docs/docling-setup.md).
+- MinerU and Marker backends: their adapters remain available for upstream testing, but the packaged extras are empty security holds until their dependency caps permit patched `transformers` and Pillow releases.
 - VS Code extension: `assetAwareMcp.enableMarkerBackend` is retained as a setting, but the launcher will not install `marker-pdf` while the security hold is active.
 
 - [Technical Spec](docs/spec.md) - Detailed technical specification

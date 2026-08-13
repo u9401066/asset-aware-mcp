@@ -29,5 +29,5 @@ These rules are meant for Cline usage in this repository.
 - If you need product/architecture context, start with `memory-bank/activeContext.md` and `ARCHITECTURE.md`.
 
 ## Repo Defaults
-- Default branch: `master` (release workflows assume this unless the repo is reconfigured).
+- Default branch: `main` (release workflows assume this unless the repo is reconfigured).
 - Use `.clineignore` to keep Cline indexing fast; explicitly mention ignored fixtures when you need them.
