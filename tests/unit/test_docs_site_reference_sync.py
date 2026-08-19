@@ -644,3 +644,48 @@ def test_docs_links_point_to_known_pages_and_assets() -> None:
                 continue
             wiki_stem = target.split("#", 1)[0]
             assert wiki_stem in known_wiki_stems, (path, target)
+
+
+def test_public_docs_do_not_restore_retired_or_machine_local_claims() -> None:
+    wiki_readme = (WIKI_DIR / "README.md").read_text(encoding="utf-8")
+    release_guide = (WIKI_DIR / "Release-And-Testing.md").read_text(encoding="utf-8")
+    git_hygiene = (WIKI_DIR / "Git-Harness-Hygiene.md").read_text(encoding="utf-8")
+
+    assert "github.com/u9401066/asset-aware-mcp/wiki" in wiki_readme
+    assert "currently returns 404" not in wiki_readme
+    assert "`assets/` directory contains" not in wiki_readme
+
+    for required in [
+        "./scripts/release.sh",
+        "./scripts/release.sh --push-tag",
+        "cross-platform-smoke",
+        "release-preflight",
+        "publish-pypi",
+        "publish-vscode",
+        "github-release",
+        "Post-Publish Verification",
+    ]:
+        assert required in release_guide
+    assert "不使用 BuildKit cache mount" in release_guide
+    assert "Dockerfile 使用 cache mount" not in release_guide
+
+    assert "選用的本機降噪" in git_hygiene
+    assert "git ls-files -v" in git_hygiene
+    assert "本機已將" not in git_hygiene
+
+
+def test_traditional_chinese_readme_covers_current_feature_handoff() -> None:
+    readme = (ROOT / "README.zh-TW.md").read_text(encoding="utf-8")
+
+    for required in [
+        "PDF 安全、結構、覆蓋率與可及性稽核",
+        "結構指標檢索（Structural Pointer Retrieval）",
+        'document(op="pointer_index")',
+        'document(op="structural_retrieve"',
+        'document(op="compare"',
+        "DFM 完整性檢查器",
+        "asset-aware-mcp[lightrag]",
+        "uv sync --extra lightrag",
+        "Asset-Aware MCP: Install LightRAG Backend",
+    ]:
+        assert required in readme

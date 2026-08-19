@@ -74,7 +74,8 @@ persisted bundle 與 `verify_citation_ref`。
 - 檔案層 YAML frontmatter：`type: evidence_pack`、`source_doc_id`、`bundle_version`、returned/matched counts。
 - 每個 evidence span 都有 `^spn-...` block anchor，可被 `[[paper-key#^spn-...]]` 或 `![[paper-key#^spn-...]]` 引用。
 - 每個 evidence block 保留 `source_revision_id`、`locator_source_sha256`、`text_sha256`、page/line locator 與 verification status。
-- 每個 evidence block 內嵌 span-level AssetRef JSON，MedPaper/Foam 層可保存它並在 promotion 前呼叫 `verify_citation_ref`。
+- 每個 evidence block 內嵌 span-level AssetRef JSON；任何 Foam／下游 wiki
+  工作流都可保存它，並在 promotion 前呼叫 `verify_citation_ref`。
 
 可寫檔的最小流程：
 

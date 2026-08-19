@@ -108,8 +108,8 @@ DOCX/general document 要使用同一 bundle schema，仍需各自 adapter 將�
 segments、assets 與 locators 正規化後再交給 exporter。
 
 這個 bundle 也不是完整的專案 wiki 管理器：它不選 citation key、不建立跨文件 topic
-map、不合併既有人工 notes，也不取代 MedPaper 的 dashboards、graph curation 或 publish
-流程。它提供的是可驗證、可搬移、可被上述流程重用的單文件基礎資產。
+map、不合併既有人工 notes，也不取代任何下游產品的 dashboards、graph curation 或
+publish 流程。它提供的是可驗證、可搬移、可被上述流程重用的單文件基礎資產。
 
 ## Evidence Pack
 

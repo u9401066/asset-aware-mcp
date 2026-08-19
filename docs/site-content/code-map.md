@@ -144,3 +144,4 @@ remain tool-surface UX policies on the same SDK 2 server。
 | `pyproject.toml` / `uv.lock` | Python 3.10-compatible universal dependency contract；MCP SDK 2 and security floors |
 | `.github/dependabot.yml` | Weekly uv、npm、GitHub Actions update groups and PR limits |
 | `.github/workflows/dependency-security.yml` | Read-only scheduled/PR gate：`uv lock --check`、pinned uv 0.12.3 universal audit、npm low-level lock audit |
+| `.github/workflows/project-hygiene.yml` | Weekly website/docs/README/assistant-asset drift gates、managed-label sync，以及 optional token-gated repository metadata sync |

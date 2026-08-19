@@ -7,6 +7,23 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Refreshed the standalone universal lock after `v1.0.1`, including Docling
+  `2.120.2`, docling-parse `7.13.0`, Ruff `0.16.3`, MyPy `2.3.1`,
+  pytest-timeout `2.5.0`, and the current compatible transitive patch releases.
+  This is source-maintenance state on `main`; the immutable `v1.0.1` registry
+  artifacts remain tied to their annotated release tag and published hashes.
+- Added a least-privilege weekly project-hygiene workflow. It rebuild-checks
+  the generated website, runs public README/wiki regressions, verifies bundled
+  assistant assets and release metadata, and idempotently synchronizes the
+  managed label set without deleting user labels. Repository description,
+  homepage and topics stay check-only unless a dedicated repo-scoped
+  `PROJECT_HYGIENE_TOKEN` with Administration write permission is configured.
+- Corrected the Traditional Chinese README feature parity, GitHub Wiki source
+  status, release/tag/registry procedure, legacy-compatible Docker guidance,
+  and the local-only nature and risks of Git `skip-worktree` hygiene.
+
 ## [1.0.1] - 2026-08-13
 
 ### Changed

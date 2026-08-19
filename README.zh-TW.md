@@ -71,7 +71,8 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 🧩 **統一 Segmentation 匯出** - 產生正規化 `segmentation.json`，整合 manifest、blocks、reading order 與持久化 line span。
 - 🩺 **安全 PDF Preflight Router** - `document(op="preflight")` 逐頁分類 native、sparse、image、scanned、hybrid，輸出 1-based/top-left locator、來源 SHA-256、OCR 理由與引擎建議；檢查在具 timeout／資源上限的隔離 process 執行。
 - 📦 **可重用 Agent Asset Bundle** - `document(op="export_assets")` 產生 deterministic `manifest.json`、`assets.jsonl`、媒體副本，以及可攜式 Foam `index.md`／`notes/**` 子樹，完整保留 stable ID、hash、locator 與 citation ref。
-- 🛡️ **PDF 安全、結構與覆蓋率稽核** - 受 OpenDataloader 啟發的 artifact-only 報告：`ai_safety_report.json`、`native_structure.json`、`segmentation_coverage.json`，透過既有 `document` facade 提供，不增加公開工具數；`document(op="prepare_ai")` 與 `document(op="auto")` 會回傳 agent-ready 狀態與下一步。
+- 🛡️ **PDF 安全、結構、覆蓋率與可及性稽核** - 受 OpenDataloader 啟發的 artifact-only 報告會標示隱藏／超出頁面／prompt-injection 文字、原生結構訊號、segmentation 覆蓋缺口，以及可及性／可讀性就緒度；它們透過既有 `document` facade 提供，不增加公開工具數。`document(op="prepare_ai")` 與 `document(op="auto")` 會回傳 agent-ready 狀態與下一步。
+- 🧭 **結構指標檢索（Structural Pointer Retrieval）** - 受 Proxy-Pointer 啟發的 `document(op="pointer_index")`、`document(op="structural_retrieve")` 與 `document(op="compare")` 會保留章節 breadcrumb、line/char/byte locator、來源 hash、asset ID 與 evidence-span provenance，不需新增 MCP 工具。
 - 🖼️ **版面 Overlay 偵錯** - 可從 `original.pdf` 產生 page overlay，直接檢查 bbox、區塊類型與 reading order。
 - 🔤 **按需 OCR 前處理** - 針對掃描型 PDF 提供可選 `ocrmypdf` 前處理流程，再進行 ETL。
 - 🧭 **章節導航** - 透過 `section` facade 提供動態層級章節樹：瀏覽、搜尋、詳情、內容讀取、區塊提取，支援任意深度的標題層級。
@@ -81,6 +82,7 @@ AI：這是 Scaled Dot-Product Attention 的架構圖：
 - 🧠 **LightRAG 整合** - 知識圖譜 + 向量索引，支援跨文件對比與推理。
 - 🧾 **Verified Citation Bundles** - `citation_bundle`、Foam evidence pack、citation health check、table/figure evidence notes 與 claim promotion 可輸出含 locator、quote/hash、context、CRAAP scaffold 與 verification 的 evidence bundle。
 - 📝 **Docx 即時編輯 (DFM)** - 以 Markdown 格式編輯 .docx 檔案，透過 **Docx-Flavored Markdown** 格式。支援 `.docx` / `.docm`，也支援 `.doc`、`.odt`、`.ods` 經 LibreOffice 自動轉換後攝入。balanced surface 保留 6 個 DOCX/DFM 公開入口，涵蓋匯入、讀取、儲存、驗證、轉換、表格結構編輯計畫，以及 Docx ↔ A2T 表格橋接。
+- 🛡️ **DFM 完整性檢查器** - 在 post-ingest、pre-save 與 post-save 各階段自動驗證並修復可安全修復的問題，捕捉 orphan marker、欄位數不一致與格式矛盾。
 - 📊 **A2T (Anything to Table)** - 7 個 operation-based 工具，從**任意來源**（PDF 資產、知識圖譜、URL、使用者輸入）建立專業表格。支援：穩定 row ID、row search/filter/paging、citation coverage、artifact-only 大表輸出、跳過大型表格時的可操作 UX、**引用管理** (AssetRef)、**變更審計**、**Schema 演進**、**模板**、**草稿機制**與**節省 Token 的續作模式**。
 - 🖥️ **VS Code 管理擴充功能** - 提供圖形化介面監控伺服器狀態、已匯入文件、document artifacts、citation spans，以及 **A2T 表格與草稿**，支援一鍵開啟 Excel。
 - 🔌 **MCP SDK 2 伺服器** - 使用官方 Python SDK `MCPServer`、runtime context injection 與 v2 client；刻意不支援 MCP SDK v1。
@@ -208,6 +210,8 @@ document(op="export_assets", doc_id="doc_...", output_dir="agent-assets")
 Agent 接力建議：
 新 PDF 用 `document(op="auto", file_paths=[...])`，既有文件用 `document(op="auto", doc_id="...")` 或 `document(op="prepare_ai", doc_id="...")`。`document(op="prepare_ai", output_format="json")` 會回傳 v2 readiness contract：`status`、`blockers`、`warnings`、`capabilities`、`artifacts`、`missing_audits`、`invalid_audits`、`audit_artifacts`、`next_actions`。`document(op="audit", doc_id="...")` 只會在現有稽核 artifacts 存在且有效時重用；需要全部重建時傳 `refresh=true`。readiness 與 job status 的 artifact discovery 是 read-only，不會因查狀態建立新的文件資料夾。
 
+`document(op="audit")` 會一次處理 safety、native structure、coverage 與 accessibility 報告；當 agent 需要章節層級的結構檢索或比較時，使用 `document(op="pointer_index")`、`document(op="structural_retrieve", query="...")` 與 `document(op="compare", doc_b_id="...", criteria="...")`。這些 operation 共用現有 `document` facade，不增加公開 tool inventory。
+
 PDF 稽核注意：
 這些報告是受 OpenDataloader 類 artifact 工作流啟發，但不是 sanitizer、PDF/UA 認證，也不是 OpenDataloader 相容層；它們會保留來源 artifact，並以保守診斷供人工或 agent 後續檢查。
 
@@ -224,7 +228,9 @@ PDF 稽核注意：
 ## 📋 相關文件
 
 安裝建議：
-- 預設安裝：`uv sync`
+- 預設安裝：`uv sync`（精簡約 227 MB；不含 LightRAG/KG 相依套件）。
+- LightRAG／Knowledge Graph backend（選用，v0.6.34 起）：已發布套件／uvx 使用者執行 `uv tool install --upgrade --python 3.11 'asset-aware-mcp[lightrag]'`，local source checkout 執行 `uv sync --extra lightrag`；設定 `ENABLE_LIGHTRAG=true` 前必須先安裝。
+- VS Code 擴充套件：從 Command Palette 執行 `Asset-Aware MCP: Install LightRAG Backend`；它會自動判斷 source 或 published mode，並顯示對應安裝指令。
 - OpenRouter optional preset（v0.6.35 起）：在 VS Code extension Settings 選 `openrouter`，填入 `OPENROUTER_API_KEY`；預設 `OPENROUTER_MODEL=liquid/lfm-2.5-1.2b-instruct:free`，適合低成本快速摘要與 RAG 草稿查詢。
 - 高精度 PDF 引擎：`uv sync --extra pdf-plus`（PyMuPDF4LLM）或 `uv sync --extra docling`（Docling），再設定對應 `ETL_ENGINE`。Docling 附跨平台隔離安裝腳本，見 [docs/docling-setup.md](docs/docling-setup.md)。
 - MinerU／Marker：adapter 保留供追蹤上游；packaged extras 暫為空，直到 dependency cap 可解析到已修補的 transformers／Pillow。

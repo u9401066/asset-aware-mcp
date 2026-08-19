@@ -1,13 +1,15 @@
 # Asset-Aware MCP Wiki Source
 
-This directory mirrors the GitHub Wiki page set. `Home.md` is the wiki entry
-page and `_Sidebar.md` is the GitHub Wiki sidebar.
+This directory is the versioned source for the GitHub Wiki page set. `Home.md`
+is the wiki entry page and `_Sidebar.md` is the GitHub Wiki sidebar.
 
-The `assets/` directory contains web-sized JPG diagrams generated from the
-current code/wiki surface. They replace older high-resolution concept diagrams
-whose embedded version/tool-count labels were out of date.
+The wiki is initialized and published at
+<https://github.com/u9401066/asset-aware-mcp/wiki>. This versioned directory is
+the reviewed source used to synchronize its Markdown pages; do not treat a
+separate local wiki clone as the source of truth.
 
-The GitHub repository has Wiki enabled, but the backing
-`asset-aware-mcp.wiki.git` repository currently returns 404 until the first wiki
-page is initialized by GitHub. After that, these files can be pushed directly to
-the wiki repository.
+The current page set intentionally has no raster-diagram dependency. The GitHub
+Pages reader is generated from these files with
+`python3 scripts/build_docs_site.py`; run the same command with `--check` before
+publishing. Synchronize the backing `asset-aware-mcp.wiki.git` repository only
+from a reviewed commit, then verify the remote page set and links.
