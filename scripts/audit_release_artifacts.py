@@ -96,6 +96,25 @@ def check_links() -> list[str]:
     return errors
 
 
+def check_public_doc_versions(version: str) -> list[str]:
+    """Keep release-facing README copy pinned to the current package version."""
+    required = {
+        "README.md": [f"## v{version} "],
+        "README.zh-TW.md": [f"## v{version} "],
+        "vscode-extension/README.md": [
+            f"## What's New in v{version}",
+            f"asset-aware-mcp/v{version}/resources/banner.png",
+        ],
+    }
+    errors: list[str] = []
+    for path, needles in required.items():
+        text = (ROOT / path).read_text(encoding="utf-8")
+        for needle in needles:
+            if needle not in text:
+                errors.append(f"{path}: missing current-version marker {needle!r}")
+    return errors
+
+
 def artifact_paths(version: str) -> dict[str, Path]:
     """Return the canonical release artifact paths for a project version."""
     return {
@@ -260,6 +279,7 @@ def audit_release(requirement: str) -> list[str]:
     version = read_project_version()
     errors.extend(check_versions())
     errors.extend(check_links())
+    errors.extend(check_public_doc_versions(version))
     errors.extend(check_required_artifacts(version, requirement))
 
     required = required_artifact_kinds(requirement)

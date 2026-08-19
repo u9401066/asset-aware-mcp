@@ -1,0 +1,128 @@
+name: Scheduled Project Hygiene
+
+on:
+  schedule:
+    - cron: "43 6 * * 3"
+  workflow_dispatch:
+    inputs:
+      apply_repository_metadata:
+        description: "Apply description/homepage/topics with PROJECT_HYGIENE_TOKEN"
+        required: false
+        type: boolean
+        default: false
+
+# Content checks and repository-metadata reads stay read-only by default.
+permissions:
+  contents: read
+
+concurrency:
+  group: project-hygiene
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "24"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  content-drift:
+    name: Website, docs, README, and harness drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
+        with:
+          version: "0.12.3"
+          enable-cache: false
+
+      - name: Set up locked Python environment
+        run: |
+          uv python install "$PYTHON_VERSION"
+          uv sync --frozen --python "$PYTHON_VERSION"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Check deterministic website and public metadata
+        run: |
+          python3 scripts/build_docs_site.py --check
+          python3 scripts/audit_release_artifacts.py --require metadata
+
+      - name: Check bundled assistant assets
+        run: npm --prefix vscode-extension run sync-assets:check
+
+      - name: Run focused public-doc regressions
+        run: >-
+          uv run --frozen --python "$PYTHON_VERSION" pytest -q
+          tests/unit/test_docs_site_reference_sync.py
+          tests/unit/test_public_docs_hygiene.py
+
+      - name: Audit the maintenance and release harnesses
+        run: python3 scripts/audit_release_harness.py
+
+  managed-labels:
+    name: Synchronize managed labels
+    if: github.repository == 'u9401066/asset-aware-mcp'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write # Required only to create/update the canonical managed label set.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Apply and verify managed labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ./scripts/gh_sync_labels.sh --apply
+          ./scripts/gh_sync_labels.sh --check
+
+  repository-metadata:
+    name: Check or synchronize repository metadata
+    if: github.repository == 'u9401066/asset-aware-mcp'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Check or apply description, homepage, and topics
+        env:
+          ADMIN_TOKEN: ${{ secrets.PROJECT_HYGIENE_TOKEN }}
+          READ_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_APPLY: ${{ inputs.apply_repository_metadata || false }}
+        run: |
+          should_apply=false
+          if [ "$EVENT_NAME" = "schedule" ] || [ "$MANUAL_APPLY" = "true" ]; then
+            should_apply=true
+          fi
+
+          if [ "$should_apply" = "true" ] && [ -n "$ADMIN_TOKEN" ]; then
+            GH_TOKEN="$ADMIN_TOKEN" ./scripts/gh_update_repo_metadata.sh --apply
+            {
+              echo "### Repository metadata"
+              echo "Applied and verified with the repo-scoped PROJECT_HYGIENE_TOKEN."
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$MANUAL_APPLY" = "true" ]; then
+            echo "ERROR: PROJECT_HYGIENE_TOKEN is required for repository metadata writes." >&2
+            exit 1
+          else
+            GH_TOKEN="$READ_TOKEN" ./scripts/gh_update_repo_metadata.sh --check
+            {
+              echo "### Repository metadata"
+              echo "Check-only: configure PROJECT_HYGIENE_TOKEN with Administration write permission for scheduled synchronization."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

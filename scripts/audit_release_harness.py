@@ -260,6 +260,7 @@ def main() -> int:
         ".github/workflows/ci.yml",
         ".github/workflows/release.yml",
         ".github/workflows/dependency-security.yml",
+        ".github/workflows/project-hygiene.yml",
     ]:
         for subject, guard in [
             ("uses: actions/checkout@", "persist-credentials: false"),
@@ -285,6 +286,48 @@ def main() -> int:
             ],
         )
     )
+    errors.extend(
+        require_text(
+            ".github/workflows/project-hygiene.yml",
+            [
+                "schedule:",
+                'cron: "43 6 * * 3"',
+                "permissions:",
+                "contents: read",
+                "issues: write",
+                "if: github.repository == 'u9401066/asset-aware-mcp'",
+                "persist-credentials: false",
+                "enable-cache: false",
+                'version: "0.12.3"',
+                "package-manager-cache: false",
+                'uv sync --frozen --python "$PYTHON_VERSION"',
+                "python3 scripts/build_docs_site.py --check",
+                "python3 scripts/audit_release_artifacts.py --require metadata",
+                "npm --prefix vscode-extension run sync-assets:check",
+                "tests/unit/test_docs_site_reference_sync.py",
+                "tests/unit/test_public_docs_hygiene.py",
+                "python3 scripts/audit_release_harness.py",
+                "./scripts/gh_sync_labels.sh --apply",
+                "./scripts/gh_sync_labels.sh --check",
+                "./scripts/gh_update_repo_metadata.sh --apply",
+                "./scripts/gh_update_repo_metadata.sh --check",
+                "PROJECT_HYGIENE_TOKEN",
+                "Check-only:",
+            ],
+        )
+    )
+    project_hygiene_repo_guard_error = require_exact_count(
+        ".github/workflows/project-hygiene.yml",
+        "if: github.repository == 'u9401066/asset-aware-mcp'",
+        2,
+    )
+    if project_hygiene_repo_guard_error:
+        errors.append(project_hygiene_repo_guard_error)
+    for script_path in [
+        "scripts/gh_update_repo_metadata.sh",
+        "scripts/gh_sync_labels.sh",
+    ]:
+        errors.extend(require_text(script_path, ["--check", "--apply"]))
 
     release_contents_read_error = require_count(
         ".github/workflows/release.yml", "contents: read", 2

@@ -66,6 +66,33 @@ def test_required_artifact_modes_fail_closed(tmp_path: Path) -> None:
     assert check_required_artifacts("1.2.3", "all") == []
 
 
+def test_public_doc_version_audit_checks_all_release_facing_readmes(
+    tmp_path: Path,
+) -> None:
+    namespace: dict[str, Any] = runpy.run_path("scripts/audit_release_artifacts.py")
+    check_public_doc_versions = namespace["check_public_doc_versions"]
+    check_public_doc_versions.__globals__["ROOT"] = tmp_path
+
+    content = {
+        "README.md": "## v1.2.3 current\n",
+        "README.zh-TW.md": "## v1.2.3 最新\n",
+        "vscode-extension/README.md": (
+            "## What's New in v1.2.3\nasset-aware-mcp/v1.2.3/resources/banner.png\n"
+        ),
+    }
+    for relative, text in content.items():
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    assert check_public_doc_versions("1.2.3") == []
+
+    (tmp_path / "README.zh-TW.md").write_text("## v1.2.2 舊版\n", encoding="utf-8")
+    assert check_public_doc_versions("1.2.3") == [
+        "README.zh-TW.md: missing current-version marker '## v1.2.3 '"
+    ]
+
+
 def test_vsix_audit_rejects_generated_media_at_extension_root(tmp_path: Path) -> None:
     namespace: dict[str, Any] = runpy.run_path("scripts/audit_release_artifacts.py")
     check_vsix = namespace["check_vsix"]
@@ -110,6 +137,7 @@ def test_release_artifact_cli_returns_nonzero_when_required_files_are_missing(
     globals_["read_project_version"] = lambda: "1.2.3"
     globals_["check_versions"] = list
     globals_["check_links"] = list
+    globals_["check_public_doc_versions"] = lambda _version: []
 
     assert main(["--require", "python"]) == 1
     output = capsys.readouterr().out
