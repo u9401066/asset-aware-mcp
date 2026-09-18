@@ -13,6 +13,11 @@ from pptx.util import Emu, Pt
 from src.domain.native_assets import NativeEditResult
 from src.infrastructure.native_ooxml import xml_bytes
 from src.infrastructure.native_pptx_package import NS, NativePptxPackage
+from src.infrastructure.native_pptx_pictures import (
+    add_pictures,
+    read_picture,
+    replace_pictures,
+)
 from src.infrastructure.native_pptx_records import shape_record, text_body
 from src.infrastructure.native_pptx_shape_edit import add_shapes, delete_shapes
 
@@ -82,6 +87,9 @@ def _verify_parts(
 
 
 class NativePresentation:
+    add_pictures = staticmethod(add_pictures)
+    replace_pictures = staticmethod(replace_pictures)
+    read_picture = staticmethod(read_picture)
     add_shapes = staticmethod(add_shapes)
     delete_shapes = staticmethod(delete_shapes)
 

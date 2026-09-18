@@ -9,7 +9,13 @@
   zero errors; exact final transcription). No new version: public 1.4.0 / Unreleased.
 - [x] Native PDF runtime e47ad9f and tests/docs 4af244d pushed; Pages 35349131496
   passed with exact public bytes. CI follow-up adds PDF to explicit platform/SDK2 lists.
-- [ ] Final CI follow-up push and exact CI/Pages verification pending.
+- [x] Final 44568f7 CI 35349396027 (all ten jobs) and Pages 35349393804 passed.
+- [x] Native PPTX picture add/replace/read/extract and native-file-ref-v1 implemented.
+  Exact media, shared-image isolation, lineage, CAS and immutable evidence/wiki tested.
+  1,790 Python tests / 199 extension tests; two real Codex picture runs each 38 calls,
+  zero errors, three actual image deliveries and independent package/shape audits.
+  Source hashes match the evaluated runtime. Public remains 1.4.0 / Unreleased.
+- [ ] Commit/push picture checkpoint and verify its exact CI/Pages deployment.
 
 - [x] Unreleased checkpoint: native PPTX textbox addition / existing shape deletion
   with reference, dependency, version and XML preservation guards; truthful A2T
@@ -18,7 +24,7 @@
   pass; first transcription errors were corrected and retained in evidence.
   Docs/README/harness/assets/Pages sources synchronized, public version stays 1.4.0.
   Exact commit ab49252 CI 35342913394 and Pages 35342912718 passed.
-- [ ] Broader structural CRUD remains: slide manipulation, non-text creation,
+- [ ] Broader structural CRUD remains: slide manipulation, broader non-text creation,
   full format coverage, opaque dependency handling and real-document evaluation.
 
 - [ ] Goal item 7: real Codex MCP PDF image-to-structured-data CRUD evaluation,

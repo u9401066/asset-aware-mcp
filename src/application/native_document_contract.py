@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from src.application.native_schema import schema_discovery
+from src.domain.native_file_reference import NativeFileReference
 from src.domain.native_operations import NATIVE_OPERATIONS
 
 if TYPE_CHECKING:
@@ -24,10 +25,14 @@ def native_asset_summary(
         "format": asset.format,
         "media_type": asset.media_type,
         "revision": asset.revision,
+        "file_reference": NativeFileReference(
+            asset_id=asset.asset_id, revision=asset.revision
+        ).model_dump(),
         "archived": asset.archived,
         "source": asset.source.model_dump() if asset.source else None,
         "revision_count": len(asset.history),
         "capabilities": {
+            "verify_file_bytes": True,
             "read_pdf": asset.format == "pdf" and pdf_enabled,
             "edit_pdf_pages": asset.format == "pdf"
             and pdf_enabled
@@ -37,6 +42,10 @@ def native_asset_summary(
             "refresh_source": asset.source is not None and not asset.archived,
             "read_pptx": asset.format == "pptx" and pptx_enabled,
             "verify_pptx_shapes": asset.format == "pptx" and pptx_enabled,
+            "read_pptx_pictures": asset.format == "pptx" and pptx_enabled,
+            "edit_pptx_pictures": asset.format == "pptx"
+            and pptx_enabled
+            and not asset.archived,
             "edit_pptx": asset.format == "pptx" and pptx_enabled and not asset.archived,
             "add_pptx_shapes": asset.format == "pptx"
             and pptx_enabled
@@ -72,6 +81,7 @@ def native_document_contract(
         "operations": list(NATIVE_OPERATIONS),
         **schema_discovery(for_op),
         "identity": "Stable asset IDs, SHA-256 revisions and revision-scoped locators.",
+        "file_reference_policy": "file_reference identifies exact immutable file bytes; verify does not assert source freshness or semantic meaning.",
         "formats": _formats(docx_enabled, pptx_enabled, pdf_enabled),
         "verification": "MCP checks integrity; agents verify semantics, layout and calculated results.",
         "docx_policy": "Pin revision; assemble all DFM chunks with frontmatter/markers. Updates stage versions; writeback is explicit.",
@@ -112,7 +122,8 @@ def _edit_constraints(format_name: str) -> list[str]:
             "digital_signatures",
             "document_protection",
             "slide_structure",
-            "non_text_shape_creation",
+            "non_picture_non_text_shape_creation",
+            "linked_or_alternate_picture_representations",
             "shape_reference_dependencies",
             "zero_extent_group_insertion",
             "field_runs",
@@ -140,6 +151,10 @@ def _formats(
         if pdf_enabled
         else [],
         "pptx": [
+            "add_pptx_pictures",
+            "replace_pptx_pictures",
+            "read_pptx_picture",
+            "extract_pptx_picture",
             "create_pptx",
             "read_pptx",
             "read_pptx_shape",

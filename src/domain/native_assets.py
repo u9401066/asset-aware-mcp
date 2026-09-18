@@ -12,6 +12,9 @@ from src.domain.citation_format import (
     CitationMetadata,  # noqa: TC001 -- Pydantic runtime schema
 )
 from src.domain.native_docx import NativeDocxEdit  # noqa: TC001 -- Pydantic schema
+from src.domain.native_file_reference import (
+    NativeFileReference,  # noqa: TC001 -- Pydantic schema
+)
 from src.domain.native_operations import (
     NativeOperation,
     operation_fields,
@@ -30,6 +33,10 @@ from src.domain.native_pptx import (
     NativePptxTextEdit,
     NativePresentationCreate,
     validate_shape_additions,
+)
+from src.domain.native_pptx_picture import (  # noqa: TC001 -- Pydantic schema
+    NativePptxPictureCreate,
+    NativePptxPictureReplace,
 )
 
 if TYPE_CHECKING:
@@ -306,6 +313,12 @@ class NativeDocumentRequest(NativeModel):
     pdf_order: list[NativePdfReference] = Field(default_factory=list, max_length=2000)
     render_size: int = Field(default=1024, ge=64, le=2048)
     pptx_locator: NativePptxShapeLocator | None = None
+    pptx_pictures: list[NativePptxPictureCreate] = Field(
+        default_factory=list, max_length=100
+    )
+    pptx_picture_edits: list[NativePptxPictureReplace] = Field(
+        default_factory=list, max_length=100
+    )
     pptx_edits: list[NativePptxTextEdit] = Field(default_factory=list, max_length=1000)
     pptx_shapes: list[NativePptxShapeCreate] = Field(
         default_factory=list, max_length=100
@@ -318,6 +331,7 @@ class NativeDocumentRequest(NativeModel):
         | NativeDocxBlockReference
         | NativePptxReference
         | NativePdfReference
+        | NativeFileReference
         | None
     ) = None
     edits: list[NativeCellEdit] = Field(

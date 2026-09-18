@@ -13,6 +13,10 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from src.domain.native_assets import NativeEditResult
+    from src.domain.native_pptx_picture import (
+        NativePptxPictureCreate,
+        NativePptxPictureReplace,
+    )
 
 PPTX_MEDIA_TYPE = (
     "application/vnd.openxmlformats-officedocument.presentationml.presentation"
@@ -186,6 +190,24 @@ class NativePptxReference(PptxModel):
 
 
 class NativePresentationAdapter(Protocol):
+    def add_pictures(
+        self,
+        data: bytes,
+        items: list[NativePptxPictureCreate],
+        sources: dict[str, bytes],
+    ) -> tuple[bytes, NativeEditResult]: ...
+    def replace_pictures(
+        self,
+        data: bytes,
+        items: list[NativePptxPictureReplace],
+        sources: dict[str, bytes],
+    ) -> tuple[bytes, NativeEditResult]: ...
+    def read_picture(
+        self,
+        data: bytes,
+        locator: NativePptxShapeLocator,
+        render_size: int | None = None,
+    ) -> dict[str, Any]: ...
     def package_parts(self, data: bytes) -> dict[str, bytes]: ...
     def create(self, request: NativePresentationCreate) -> bytes: ...
     def inspect(self, data: bytes) -> dict[str, Any]: ...

@@ -22,6 +22,10 @@ NativeOperation = Literal[
     "delete_pdf_pages",
     "reorder_pdf_pages",
     "create_pptx",
+    "add_pptx_pictures",
+    "replace_pptx_pictures",
+    "read_pptx_picture",
+    "extract_pptx_picture",
     "read_pptx",
     "read_pptx_shape",
     "update_pptx",
@@ -70,6 +74,10 @@ NATIVE_OPERATIONS = {
     "delete_pdf_pages": _fields("asset_id expected_revision pdf_page_refs"),
     "reorder_pdf_pages": _fields("asset_id expected_revision pdf_order"),
     "create_pptx": _fields("presentation"),
+    "add_pptx_pictures": _fields("asset_id expected_revision pptx_pictures"),
+    "replace_pptx_pictures": _fields("asset_id expected_revision pptx_picture_edits"),
+    "read_pptx_picture": _fields("asset_id pptx_locator", "revision render_size"),
+    "extract_pptx_picture": _fields("asset_id pptx_locator", "revision"),
     "read_pptx": _fields("asset_id", "revision offset limit"),
     "read_pptx_shape": _fields(
         "asset_id pptx_locator", "revision text_offset text_limit"

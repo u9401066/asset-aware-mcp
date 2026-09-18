@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 from src.application.native_pdf_operations import PDF_REVIEW, attach_pdf_evidence
 from src.application.native_pptx_operations import attach_pptx_evidence
 from src.domain.native_assets import NativeDocxBlockReference
+from src.domain.native_file_reference import NativeFileReference
 from src.domain.native_pdf import NativePdfReference
 from src.domain.native_pptx import NativePptxReference
 
@@ -57,8 +58,11 @@ class NativeEvidenceService:
         reference: NativeCellReference
         | NativeDocxBlockReference
         | NativePptxReference
-        | NativePdfReference,
+        | NativePdfReference
+        | NativeFileReference,
     ) -> dict[str, Any]:
+        if isinstance(reference, NativeFileReference):
+            return self._verify_file(reference)
         if isinstance(reference, NativePdfReference):
             return self._verify_pdf(reference)
         if isinstance(reference, NativePptxReference):
@@ -124,6 +128,27 @@ class NativeEvidenceService:
                 "semantic_accuracy",
                 "rendered_layout",
                 "fields_and_revisions",
+            ],
+        }
+
+    def _verify_file(self, reference: NativeFileReference) -> dict[str, Any]:
+        asset = self.repository.load(reference.asset_id)
+        data = self.repository.read(asset.asset_id, reference.revision)
+        valid = hashlib.sha256(data).hexdigest() == reference.revision
+        return {
+            "success": True,
+            "valid": valid,
+            "asset_id": asset.asset_id,
+            "revision": reference.revision,
+            "archived": asset.archived,
+            "is_current_managed_revision": asset.revision == reference.revision,
+            "verification_scope": "immutable_file_bytes",
+            "checks": {"revision_hash": valid},
+            "source_freshness": "not_checked; refresh tracks external human edits",
+            "review_required": [
+                "semantic_accuracy",
+                "rendered_layout",
+                "content_interpretation",
             ],
         }
 

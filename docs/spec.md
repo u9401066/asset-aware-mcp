@@ -568,3 +568,47 @@ bound a subsequent full-frame receive; partial writes must not bypass the overal
 worker deadline. Serialize NativeEditResult as plain data, then validate it in the
 parent. Reject missing/partial/corrupt/oversized results and reap children before
 removing their private temporary directory.
+
+## Native PPTX image assets and picture CRUD (1.4.x development)
+
+The next cross-format capability is moving immutable human image assets into and
+out of native presentations. Keep public 1.4.0, accumulate Unreleased, and keep
+MCP necessary checks distinct from the agent's complete semantic/visual review.
+
+- A native-file-ref-v1 identifies complete immutable file bytes by asset ID and
+  revision SHA-256. It does not assert image meaning. Register remains the entry
+  point for human PNG/JPEG files; canonical file verification uses managed bytes.
+- add_pptx_pictures accepts revision-bound image references and existing slide,
+  notes or nonzero-extent group containers. Use local EMU rectangles and explicit
+  contain/cover/stretch fitting. Embed exact original image bytes, not a re-encoded
+  copy. Persist source refs in operation history and expose new shape locators.
+- replace_pptx_pictures targets complete current-revision shape references and
+  new image references. Preserve the existing picture mapping (geometry, rotation,
+  flips, crop, effects and z-order) by changing only the image relationship ID.
+  This policy is explicit; new image aspect ratios may alter the displayed content
+  and require agent review. Shared original image parts/relationships stay intact;
+  never overwrite a shared part when replacing one picture. Reject external-linked,
+  ambiguous and alternate-representation image targets rather than retaining a
+  competing image rendition silently.
+- read_pptx_picture resolves the pinned picture's internal image relationship,
+  returns exact media hash/metadata and a real bounded MCP image preview. The
+  preview is the embedded image, not a rendering of the slide/crop/effects.
+  extract_pptx_picture creates an independent image asset from the exact embedded
+  bytes with originating PPTX revision/shape/media lineage in its first history.
+- Existing delete_pptx_shapes handles picture deletion and retains media; it is
+  not secure erasure. Old presentation evidence and wiki attachments remain valid.
+  Do not change the released shape-v1 representation/hash schema to add metadata.
+- Preserve original package members byte-for-byte except planned owner XML,
+  owner relationships and content types; retain ZIP member metadata. Add only
+  explicitly planned media/relationship members. Compare exact new bytes,
+  validate relationships/content types and reverse XML changes to prove the rest
+  of each touched part is unchanged. Reopen independently with python-pptx in tests.
+- Validate PNG/JPEG signatures/content, decompressed dimensions and resource budgets;
+  reject multi-frame and EXIF-oriented inputs that cannot be faithfully displayed
+  without an explicit transform. Keep immutable originals. Add corruption, shared-
+  media, group/notes, stale/CAS/source backup, evidence/wiki and real SDK2 tests.
+- Upstream public references: python-pptx Shapes.add_picture accepts width/height
+  and preserves aspect when only one dimension is supplied; Image exposes exact
+  blob, content type, dimensions and digest. Pillow provides verification and
+  decompression-bomb limits. Use these libraries behind native ports, not a
+  load-and-save of the user's whole presentation.

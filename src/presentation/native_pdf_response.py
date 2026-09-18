@@ -16,6 +16,8 @@ from src.presentation.response_limits import (
 
 def native_pdf_image_response(
     payload: dict[str, Any],
+    *,
+    title: str = "Native PDF page preview",
 ) -> list[TextContent | ImageContent]:
     metadata = dict(payload)
     png = metadata.pop("image_png")
@@ -29,15 +31,13 @@ def native_pdf_image_response(
                         **metadata,
                         "success": False,
                         "image_omitted": True,
-                        "error": "Native PDF preview exceeds the MCP image limit; retry with a smaller render_size.",
+                        "error": "Native image preview exceeds the MCP image limit; retry with a smaller render_size.",
                     },
                     ensure_ascii=False,
                 ),
             )
         ]
-    formatted = format_limited_json_response(
-        title="Native PDF page preview", payload=metadata
-    )
+    formatted = format_limited_json_response(title=title, payload=metadata)
     text = (
         formatted
         if isinstance(formatted, str)

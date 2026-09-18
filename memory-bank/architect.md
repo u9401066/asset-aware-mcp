@@ -1,5 +1,16 @@
 # System Architect
 
+## 2026-09-18 — native picture composition and extraction
+
+Domain: native file references and typed picture create/replace requests.
+Infrastructure: bounded PNG/JPEG validation, scoped package additions, scratch-node
+building, media/relationship plans and independently reopened XML/byte checks.
+Application: managed picture dispatch, immutable image-source reads, CAS mutation,
+source lineage on new image assets and whole-file reference verification.
+Presentation: reuse bounded MCP PNG response for embedded raster previews.
+No image conversion or full slide renderer; source writes retain existing guards.
+
+
 ## 2026-09-18 — Native PDF page assets and evidence
 
 Domain defines strict page locators/references, mutually exclusive blank/copy inputs,

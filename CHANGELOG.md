@@ -9,6 +9,14 @@
 
 ### Added
 
+- Native-file references identify complete immutable bytes across formats. PPTX
+  picture operations add exact PNG/JPEG assets with explicit contain/cover/stretch
+  fitting, replace one picture while preserving its existing mapping and shared
+  media, deliver bounded embedded-image previews, and extract independent image
+  assets with source lineage. Existing shape evidence, deletion and wiki package
+  attachments remain compatible. Source/version/CAS, image budgets, exact new part
+  bytes, relationships, content types and XML outside the requested edits are checked.
+  Previews do not render the slide's crop/effects/layout; agents complete that review.
 - Native PDF page create/read/render/copy/insert/delete/reorder and rotation/crop
   edits through pikepdf/QPDF, with bounded PyMuPDF text/render readback. Immutable
   page references, persisted copy lineage and `pdf-pages-v1` evidence wikis include

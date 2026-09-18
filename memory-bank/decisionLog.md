@@ -1,5 +1,15 @@
 # Decision Log
 
+## 2026-09-18 — native picture assets preserve exact image bytes
+
+Add four bounded PPTX picture operations and native-file-ref-v1. Use python-pptx
+only for new scratch picture nodes; preserve original package parts and modify
+only intended XML/relationships. Replacement adds new media rather than overwriting
+shared media. Extracted images retain source shape/media lineage. PNG preview scope
+is embedded raster only. Complete slide semantics/rendering remains Agent work.
+Keep published version 1.4.0 and collect this work under Unreleased for 1.4.x.
+
+
 ## 2026-09-18 — Native PDF object-preserving page operations, bounded worker and version pacing
 
 Keep public 1.4.0 and accumulate Unreleased for 1.4.x. Adopt pikepdf 10.13.0.post1

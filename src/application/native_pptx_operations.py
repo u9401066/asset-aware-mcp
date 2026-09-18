@@ -7,6 +7,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from src.application.native_document_contract import native_asset_summary
+from src.application.native_pptx_picture_operations import NativePptxPictureOperations
 from src.domain.native_pptx import PPTX_MEDIA_TYPE, shape_representation_sha256
 
 if TYPE_CHECKING:
@@ -60,10 +61,15 @@ class NativePptxOperations:
     ):
         self.repository = repository
         self.presentations = presentations
+        self.pictures = NativePptxPictureOperations(repository, presentations)
 
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
         return {
             "create_pptx": self._create,
+            "add_pptx_pictures": self.pictures.execute,
+            "replace_pptx_pictures": self.pictures.execute,
+            "read_pptx_picture": self.pictures.execute,
+            "extract_pptx_picture": self.pictures.execute,
             "read_pptx": self._read,
             "read_pptx_shape": self._read_shape,
             "update_pptx": self._update,

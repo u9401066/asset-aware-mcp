@@ -14,6 +14,10 @@
 未發布項目也包含有檢查保護的 PPTX 文字框新增／形狀刪除，以及 A2T 操作結果的
 實際列 ID。詳見 [形狀操作](docs/wiki/Native-File-Assets.md#pptx-shape-operations-unreleased)。
 公開版維持 **1.4.0**，後續開發沿用 **1.4.x**，不因單次功能提交跳版號。
+未發布的圖片操作可將 PNG／JPEG 資產插入、替換到 PPTX，透過 MCP 顯示內嵌
+圖片，再拆出為獨立版本資產。共用圖片不被覆寫，來源引用保留在歷程。
+詳見 [圖片資產操作](docs/wiki/Native-File-Assets.md#pptx-picture-assets-unreleased)。
+
 原生 PDF 頁面協作也列於 **Unreleased**：讀取／顯示頁面、建立新 PDF、
 插入／複製／刪除／重排頁面及調整旋轉／裁切，先建立受管理版本。
 頁面證據與 Wiki 預覽保留完整來源附件。詳見

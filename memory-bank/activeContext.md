@@ -1,5 +1,46 @@
 # Active Context
 
+## 2026-09-18 — native PPTX image assets, local verification in progress
+
+Public version remains 1.4.0; all current work is Unreleased for the 1.4.x line.
+User explicitly rejects rapid version jumps. MCP performs necessary deterministic
+checks; Agent coordinates full semantic/visual/formula verification and correction.
+Use asset-aware-mcp-agent-assets on main; original user worktree is untouched.
+Previous checkpoint 44568f7: exact CI 35349396027 (all ten jobs) and Pages 35349393804
+success. Active long goal remains incomplete; broader structural CRUD remains.
+
+Implemented native-file-ref-v1 and four native PPTX picture operations: add,
+replace, read actual MCP PNG, extract independent asset with source lineage.
+Exact PNG/JPEG media; shared media preserved; replacement changes only r:embed.
+Creation supports slide/notes/nonzero groups with contain/cover/stretch. Existing
+shape-v1 evidence/wiki and explicit source/backup/writeback guards are retained.
+MCP verifies source/revision/CAS, resource budgets, exact additions, untouched parts,
+relationships/content types and reverse XML. Embedded-image previews do not apply
+slide crop, transforms, effects or color management. Agent must review actual slides.
+Limits: 16 MiB/16M pixels per raster; 32 MiB/64M per batch including repeated uses.
+Reject animated/multiframe, EXIF orientation, linked/alternate rasters and bad media.
+No new dependency. python-pptx builds scratch nodes only; original packages use
+scoped XML and additions. Pillow verifies containers, then reopens before metadata
+and decoding. Source API docs: python-pptx Shapes, Pillow Image (2026-09-18).
+
+Initial full suite 1,753 passed / 30 skipped before final guards/auditor tests.
+Backend ten tests, guards nineteen, managed seven and actual SDK2 picture workflow
+pass. Auditor regression matrix with existing PDF auditor: 44 passed.
+Actual Codex CLI 0.154.0-alpha.6.1 picture runs 01 and 02 passed independently:
+/tmp/asset-aware-codex-pptx-pictures-{01,02}. Run 01: 38 calls, no errors, three images,
+two complete shape records, exact A101/007 and C301/001 visual transcription.
+Run 02: also 38 calls, zero errors, three actual images and two full shape records.
+Both runs pass the strengthened audit. CLI default model, not pinned.
+Auditor verifies pixels independently, exact media, prior complete mutation refs,
+source bytes/mtime, old shape proofs, lineage, baseline shape XML, notes/untouched
+parts and wiki attachments. Tests do not launch a model. Logs/fixtures stay in /tmp.
+
+README/CHANGELOG/spec/native-file and release-testing guides updated; English site
+copy and harness/CI updated, bundled assets/build/gates/commit/push still pending.
+Need final Ruff/format/mypy/Bandit/full pytest, VSIX sync then 199 tests/package,
+docs desktop/mobile zh/en checks, audits/build, direct main commits under user
+identity and exact CI/Pages verification. No tag, no minor bump, no self PR.
+
 ## 2026-09-18 — native PDF collaboration verified locally; commit/push pending
 
 Public release remains 1.4.0; this is Unreleased main work for 1.4.x. User explicitly
@@ -870,3 +911,20 @@ src/
 
 ---
 *Last updated: 2026-04-24*
+
+Final local gates: 1,790 passed / 30 optional skipped; Ruff/format/mypy (158 files),
+Bandit, 199 extension tests, 64-file VSIX package, Python build/artifact audits,
+docs/harness/18-skill/sync audits all passed. Dependency audits: universal 214
+packages and npm lock report zero known vulnerabilities. GH metadata/17 labels
+match canonical settings. Playwright 1.63.0 (Browser plugin not available) verifies
+http://127.0.0.1:8876/#/native-file-assets and release-testing, desktop 1440x1000 and
+mobile 390x844, zh/en, language interactions, no overflow or console warnings.
+Screenshots /tmp/native-pptx-pictures-{desktop,mobile}-{zh,en}.png; desktop-en and
+mobile-zh visually inspected. Local cached CDN assets used, so CDN reachability is
+not covered.
+Codex runtime source SHA256 e1f39a4829b26d243f6737a9f91c8e136a3f8c091d7db44a8d84ca7c7a8e50bd
+Lock SHA256 abfaddf3d7d964ace1e210b1fd584e1717775a70f8ccdc98ad9b669b61f1bcd3
+Local VSIX fresh/update installation passed. Activation was skipped locally (no
+xvfb-run), as were absent 0.2.10 baseline and optional runtime diagnostics checks;
+CI will require activation. Local Docker image build/import smoke passed, as did
+all artifact audits (metadata, wheel/sdist and VSIX). Exact post-push CI/Pages pending.

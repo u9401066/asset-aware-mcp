@@ -15,6 +15,11 @@ Development on `main` adds complete, hash-pinned A2T citation readback through
 Unreleased work also adds guarded PPTX text-box insertion and shape deletion, plus
 resolved A2T row IDs in operation results. See [shape operations](docs/wiki/Native-File-Assets.md#pptx-shape-operations-unreleased).
 The published version remains **1.4.0**; development stays on the **1.4.x** line.
+Unreleased picture operations now insert and replace exact PNG/JPEG assets in PPTX,
+preview embedded images through MCP, and extract them as independent versioned files.
+Shared media remains intact; source references persist in history. See
+[picture assets](docs/wiki/Native-File-Assets.md#pptx-picture-assets-unreleased).
+
 Native PDF page collaboration is also **Unreleased**: read/render pages, compose
 new PDFs, insert/copy/delete/reorder pages, and change rotation/crop in managed
 revisions. Page evidence and wiki previews retain exact source attachments.
