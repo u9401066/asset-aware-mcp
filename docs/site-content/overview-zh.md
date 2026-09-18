@@ -23,18 +23,6 @@ MCP 提供來源／版本、格式與操作結果的必要檢查；Agent 負責�
   provenance；完整 CSL 與原生文件 wiki adapter 仍待實作。
 - MCP SDK 2.2.0；必要結構檢查與確定性修復由 MCP 執行，語意、畫面、公式結果由 Agent 核對。
 
-## 1.0.1 highlights
-
-- process-isolated PDF worker 改以 private、atomic、bounded MessagePack 結果檔
-  交接，移除大型圖片塞滿 multiprocessing pipe 的 deadlock，也不再使用可執行
-  pickle；partial、oversized、malformed 與 crash 都 fail closed。
-- Codex managed config 會以真實 TOML 語意驗證並保留 custom／unrelated table，
-  套用 180／900 秒 timeout、隔離 cwd 與 dotenv opt-out；credential value 不會
-  落入 `config.toml`。
-- 真實 MCP SDK 2 stdio 測試會拆出 text、table、超過 512 KiB 的 figure，驗證
-  citation-ready evidence、每個 hash/locator、Foam notes、deterministic re-export
-  與來源 PDF hash/mtime 不變。
-
 ## 1.0.0 highlights
 
 - Runtime 已切換至官方 MCP Python SDK `>=2,<3` 與 `MCPServer`；MCP SDK v1
