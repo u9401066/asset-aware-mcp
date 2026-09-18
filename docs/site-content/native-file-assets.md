@@ -348,10 +348,69 @@ document(op="native", native_request={
 母片、版面、主題及 relationship 檔都保留原始位元組與路徑對照；舊的 opaque
 快照不會被取代，人工改動過的受管理筆記會阻擋重新匯出。
 
-Current scope: transitional `.pptx`, explicit creation and precise existing text-run
+Version 1.4.0 scope: transitional `.pptx`, explicit creation and precise existing text-run
 updates. Signed/protected presentations, field-run edits, new tabs/line breaks,
 merged-cell continuations and structural/style redesign are rejected. Legacy `.ppt`,
 macro `.pptm` and strict PresentationML are outside this adapter. Direct slide/notes
 shape trees are parsed; unsupported and inherited features remain in exact source
 attachments. Package preservation does not prove semantic accuracy, visual fidelity
 or extraction completeness. Agents perform the complete review and correction.
+
+## PPTX shape operations (Unreleased)
+
+目前僅 `main` 開發版提供，公開版仍是 1.4.0，後續沿用 1.4.x。
+先查 `contract(for_op="add_pptx_shapes")` 或 `delete_pptx_shapes`，確認安裝版本
+有提供操作。兩者都要求 `asset_id` 與 `expected_revision`，每批 1–100 個。
+
+`add_pptx_shapes` 的 `pptx_shapes` 指定既有投影片、既有備註或群組容器：
+
+```python
+document(op="native", native_request={
+    "op": "add_pptx_shapes", "asset_id": asset_id,
+    "expected_revision": revision,
+    "pptx_shapes": [{
+        "container": {
+            "slide_id": shape_locator["slide_id"],
+            "part": shape_locator["part"],
+            "region": shape_locator["region"]
+        },
+        "textbox": {
+            "left": 914400, "top": 914400,
+            "width": 3657600, "height": 914400,
+            "paragraphs": [[{"text": "待 Agent 核對", "bold": True}]]
+        }
+    }]
+})
+```
+
+容器可加 `group_shape_id`。位置使用容器的本地 EMU 座標；既有群組轉換不會
+自動重算，零 extent 的群組會拒絕新增。文字框加在容器最後一層（最上層）；
+不支援指定插入位置。每批合計最多 20,000 個文字 run／4 MiB UTF-8 文字。
+只支援新增文字框；圖片／圖表／投影片建立及重排尚未納入這項操作。
+
+新增後使用回傳的 `review_request` 讀取新版本，依 `next_offset` 續讀形狀清單，
+再用 `read_pptx_shape` 分段核對完整表示。既有 `update_pptx` 可修改新文字框的
+run。大型操作回應若標為 `response_truncated`，不能把摘要當成完整操作紀錄；
+以受管理版本的分頁讀回為準。
+
+`delete_pptx_shapes` 的 `pptx_shape_refs` 必須是目前預期版本讀回的完整
+`native-pptx-shape-ref-v1`（含 asset、revision、locator、value_sha256）：
+
+```python
+document(op="native", native_request={
+    "op": "delete_pptx_shapes", "asset_id": asset_id,
+    "expected_revision": current_revision,
+    "pptx_shape_refs": [complete_shape["evidence"]]
+})
+```
+
+刪除群組包含其子形狀；不能同批重複指定形狀或同時指定祖先與子形狀。
+仍被連接線、動畫或 build 的已知 shape-ID 引用指向時會拒絕刪除；相依連接線
+可和目標同批刪除。檢查涵蓋 `a:stCxn/endCxn @id` 及數值 `spid/shapeid`，
+並未涵蓋所有廠商擴充／GUID 相依。Agent 仍須檢查實際開啟與播放結果。
+
+MCP 重新讀回新套件，檢查 ID、套件檔案清單、未修改 part 的原始位元組，並將
+指定 XML 操作反向還原後核對其餘 XML。關係、圖片、圖表與內嵌附件即使不再被
+形狀使用也會保留，**這不是機密資料清除功能**。舊版本、舊引用與 Wiki 快照
+仍可讀取及驗證。操作只建立受管理版本；來源檔另行 `writeback`，保留備份與
+來源衝突檢查。MCP 負責這些必要檢查，Agent 負責完整語意／視覺核對與修正。

@@ -28,6 +28,12 @@ citation-ready provenance.
   PPTX shape JSON must be assembled at one revision; update_pptx uses native run
   locators and original text hashes. Full layout/overflow/inherited-style review
   remains with the agent. Wiki snapshots preserve exact component/package evidence.
+- When advertised, add_pptx_shapes inserts typed textboxes into existing slide,
+  notes or nonzero-extent group containers; coordinates are local EMU. Delete with
+  delete_pptx_shapes and full shape refs from the expected revision. Known surviving
+  connector/timing/build references block deletion. Media and relationships remain;
+  deletion is not secure erasure. Follow review_request and read complete shapes.
+  Agents review rendering and unmodeled dependencies; source writeback is explicit.
 - MCP checks source/package/value integrity. Agent review covers meaning,
   rendered layout and formula results; never equate structural checks with full fidelity.
 

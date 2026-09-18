@@ -2,6 +2,16 @@
 
 ## 2026-09-18 active goal — not complete
 
+- [x] Unreleased checkpoint: native PPTX textbox addition / existing shape deletion
+  with reference, dependency, version and XML preservation guards; truthful A2T
+  row-ID results after earlier-row deletion. 1,647 Python tests / 199 extension
+  tests pass. Real SDK2 CRUD/writeback and scanned Codex run (49 calls, nine checks)
+  pass; first transcription errors were corrected and retained in evidence.
+  Docs/README/harness/assets/Pages sources synchronized, public version stays 1.4.0.
+  Exact commit CI/Pages must still be checked after push.
+- [ ] Broader structural CRUD remains: slide manipulation, non-text creation,
+  full format coverage, opaque dependency handling and real-document evaluation.
+
 - [ ] Goal item 7: real Codex MCP PDF image-to-structured-data CRUD evaluation,
   independent fixture truth, actual image/tool-call evidence and repeatable SDK
   regressions. The synthetic baseline shipped in 1.4.0; broader coverage is ongoing.

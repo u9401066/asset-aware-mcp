@@ -294,7 +294,12 @@ class TableService:
             new_value=row,
         )
         self._save_table(context)
-        return {"success": True, "citations_removed": removed_citations}
+        return {
+            "success": True,
+            "row_index": index,
+            "row_id": context.row_id_for_index(index),
+            "citations_removed": removed_citations,
+        }
 
     def delete_row(self, table_id: str, index: int, row_id: str = "") -> dict[str, Any]:
         """Delete a row by index."""
@@ -321,7 +326,12 @@ class TableService:
         self._shift_citation_keys(context, index)
         self._record_change(context, "delete_row", deleted_target, old_value=old_row)
         self._save_table(context)
-        return {"success": True, "total_rows": context.row_count}
+        return {
+            "success": True,
+            "row_index": index,
+            "row_id": deleted_row_id,
+            "total_rows": context.row_count,
+        }
 
     def _shift_citation_keys(self, context: TableContext, deleted_index: int) -> None:
         """After deleting a row, shift citation keys for rows above it."""
@@ -437,6 +447,7 @@ class TableService:
             "row_index": row_index,
             "column": column_name,
             "old_value": old_value,
+            "row_id": context.row_id_for_index(row_index),
             "new_value": value,
             "citation_removed": citation_removed,
         }
@@ -959,7 +970,12 @@ class TableService:
             )
 
         self._save_table(context)
-        return {"success": True}
+        return {
+            "success": True,
+            "row_index": row_index,
+            "row_id": context.row_id_for_index(row_index),
+            "column": column_name,
+        }
 
     # =========================================================================
     # Schema Evolution
@@ -1099,7 +1115,13 @@ class TableService:
             old_value=old_value,
         )
         self._save_table(context)
-        return {"success": True, "old_value": old_value}
+        return {
+            "success": True,
+            "row_index": row_index,
+            "row_id": context.row_id_for_index(row_index),
+            "column": column_name,
+            "old_value": old_value,
+        }
 
     def citation_coverage(
         self,

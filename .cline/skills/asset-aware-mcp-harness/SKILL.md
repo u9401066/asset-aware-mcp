@@ -46,6 +46,12 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
   only the returned paragraph/run (and paired table row/column) locators with text
   hash preconditions. verify checks shape references; export_wiki retains shapes
   and exact package attachments. Agents review layout, overflow and inherited styles.
+- When advertised, add_pptx_shapes inserts typed textboxes into existing slide,
+  notes or nonzero-extent group containers; coordinates are local EMU. Delete with
+  delete_pptx_shapes and full shape refs from the expected revision. Known surviving
+  connector/timing/build references block deletion. Media and relationships remain;
+  deletion is not secure erasure. Follow review_request and read complete shapes.
+  Agents review rendering and unmodeled dependencies; source writeback is explicit.
 - Native cell refs are not PDF AssetRefs. Version 1.2.0 adds native `verify` and
   `export_wiki`: immutable revision snapshots and full references with citation
   display. Existing notes are verified, never replaced; curate synthesis adjacent.

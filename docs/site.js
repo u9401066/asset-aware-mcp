@@ -250,6 +250,18 @@ Native PPTX supports create_pptx, read_pptx, read_pptx_shape and update_pptx. Cr
 
 The native-contract-v2 discovery response supports for_op. Check schema_delivery; follow schema_request for complete JSON pages, preserve schema_sha256 and for_op, then verify the assembled UTF-8 hash. Existing native document inputs are unchanged. Version 1.4.0 includes this discovery migration; clients must no longer assume that the full schema is always inline.
 
+### PPTX shape operations (Unreleased)
+
+Development on main adds add_pptx_shapes and delete_pptx_shapes. Public version remains 1.4.0; subsequent development stays on 1.4.x. Query the installed contract before use. Both operations require asset_id and expected_revision and accept 1–100 targets per atomic batch.
+
+add_pptx_shapes takes pptx_shapes with container (slide_id, part, region and optional group_shape_id) and a typed textbox. Existing slide, notes and nonzero-extent group containers are supported. Positions use local EMU coordinates; group transforms remain unchanged. New textboxes append at the top of the container's z-order. Batch limits are 20,000 runs and 4 MiB of UTF-8 text. Image/chart creation, slide creation/reordering and arbitrary insertion positions are outside these operations.
+
+Follow review_request to read the new revision, page shape listings and assemble complete read_pptx_shape JSON. Existing update_pptx can edit the new runs. If an operation response is marked response_truncated, use revision-pinned paged readback instead of treating the preview as complete.
+
+delete_pptx_shapes takes pptx_shape_refs containing complete native-pptx-shape-ref-v1 evidence from the expected revision. Groups include descendants. Duplicate targets, ancestor/descendant overlaps, stale hashes and surviving known connector/timing/build shape references are rejected. A connector and its target can be deleted together. Checks cover numeric spid/shapeid and a:stCxn/endCxn IDs; arbitrary vendor-extension or GUID dependencies still require agent review.
+
+MCP verifies package inventory, untouched member bytes, IDs and XML outside requested nodes by reversing the planned changes for comparison. Relationships, media and embedded parts remain even when orphaned; deletion is not secure erasure. Historical evidence and wiki snapshots remain available. Edits stage managed revisions; explicit writeback retains source checks and backups. Agents perform the full semantic and visual review and correction.
+
 See the source page for operation fields, examples, format restrictions and recovery details.`,
   "workflow-chapters": `## Choose by source and task
 Use the PDF workflow for page inspection and extraction, the DOCX workflow for reversible DFM editing, and A2T for reusable tables. Evidence, wiki, and knowledge features build on those source-specific paths.

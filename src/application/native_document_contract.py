@@ -30,6 +30,12 @@ def native_asset_summary(
             "read_pptx": asset.format == "pptx" and pptx_enabled,
             "verify_pptx_shapes": asset.format == "pptx" and pptx_enabled,
             "edit_pptx": asset.format == "pptx" and pptx_enabled and not asset.archived,
+            "add_pptx_shapes": asset.format == "pptx"
+            and pptx_enabled
+            and not asset.archived,
+            "delete_pptx_shapes": asset.format == "pptx"
+            and pptx_enabled
+            and not asset.archived,
             "read_docx": asset.format == "docx" and docx_enabled,
             "verify_docx_blocks": asset.format == "docx" and docx_enabled,
             "edit_docx": asset.format == "docx" and docx_enabled and not asset.archived,
@@ -63,6 +69,8 @@ def native_document_contract(
                 "read_pptx",
                 "read_pptx_shape",
                 "update_pptx",
+                "add_pptx_shapes",
+                "delete_pptx_shapes",
                 "verify",
                 "export_wiki",
             ]
@@ -114,7 +122,10 @@ def _edit_constraints(format_name: str) -> list[str]:
         return [
             "digital_signatures",
             "document_protection",
-            "structural_edits",
+            "slide_structure",
+            "non_text_shape_creation",
+            "shape_reference_dependencies",
+            "zero_extent_group_insertion",
             "field_runs",
             "inherited_formatting",
         ]

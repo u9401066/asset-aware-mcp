@@ -182,7 +182,7 @@ class NativePptxPackage(NativeOOXMLPackage):
         for name in self.parts:
             if name.startswith("_xmlsignatures/"):
                 raise ValueError(
-                    "Digitally signed presentations cannot use scoped text edits"
+                    "Digitally signed presentations cannot use native edits"
                 )
             if name.endswith(".rels"):
                 for relation in self.xml(name):
@@ -190,5 +190,5 @@ class NativePptxPackage(NativeOOXMLPackage):
                         f"{REL_NS}/digital-signature/"
                     ):
                         raise ValueError(
-                            "Digitally signed presentations cannot use scoped text edits"
+                            "Digitally signed presentations cannot use native edits"
                         )

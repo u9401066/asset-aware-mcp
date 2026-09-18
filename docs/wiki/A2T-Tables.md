@@ -64,6 +64,10 @@ table_cite(operation="read", table_id="tbl_...", row_id="row_...",
 沒有的 locator 不會補造。分頁片段不是 canonical AssetRef，摘要也不能當完整
 引文。hash 只核對儲存內容，Agent 仍須查看來源並判斷它是否支持該儲存格。
 
+main 開發版也修正操作結果的列識別：傳入 `row_id` 時以穩定 ID 為準，讀取、
+更新、清空與刪除結果顯示實際解析的列索引；刪除回報的是刪除前索引。引用歷史
+使用列 ID 標示，避免預設 `row_index=-1` 或舊索引造成誤導。
+
 ## Large Table UX
 
 - `table_data(op="query_rows", offset=..., limit=..., search=..., filters=...)`

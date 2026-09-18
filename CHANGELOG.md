@@ -9,6 +9,13 @@
 
 ### Added
 
+- Native `add_pptx_shapes` inserts typed textboxes in existing slide, notes or
+  nonzero-extent group containers; `delete_pptx_shapes` removes reference-pinned
+  shapes, including group descendants. Revision/hash checks, known connector and
+  timing/build dependencies, exact package inventory, untouched bytes and XML
+  outside requested nodes are checked before committing a managed revision.
+  Relationships and media are retained; deletion is not secure erasure. Agents
+  review layout, semantics and unmodeled dependencies. Source writeback is explicit.
 - `table_cite(operation="read")` returns complete cell/value/citation snapshots in
   bounded, hash-pinned JSON pages. Stable row identity and current value bind every
   full locator, quote/hash and annotation; stale or mixed-cell pages are rejected.
@@ -17,6 +24,14 @@
 - SDK2 PDF workflows now reconstruct citations through MCP. Opt-in Codex runs
   additionally require independently audited canonical readbacks for every final
   Reading cell after the last correction, retaining prior evaluation evidence.
+
+### Fixed
+
+- A2T read/update/delete/clear and citation result labels now identify the resolved
+  stable row and current index, including after earlier-row deletion. A supplied
+  row ID takes precedence over a default or conflicting input index.
+
+Public version remains 1.4.0; these changes accumulate on main for the 1.4.x line.
 
 ## [1.4.0] - 2026-09-18
 

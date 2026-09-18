@@ -763,7 +763,7 @@ def _data_get_row(table_id: str, row_index: int, row_id: str = "") -> str:
             conf = cite.get("confidence", "N/A")
             lines.append(f"  - `{col}`: {refs_count} refs (confidence: {conf})")
     return _limited_table_response(
-        f"Table Row: {table_id}/{row_index}",
+        f"Table Row: {table_id}/{result['row_index']}",
         "\n".join(lines),
         "use `get_cell` for focused reads or render the table to a file",
     )
@@ -780,7 +780,9 @@ def _data_update_row(
     result = table_service.update_row(table_id, row_index, row, row_id=row_id)
     if result["success"]:
         preview = table_service.preview_table(table_id)
-        return f"✅ Row {row_index} updated.\n\n{preview}"
+        return (
+            f"✅ Row {result['row_index']} (`{result['row_id']}`) updated.\n\n{preview}"
+        )
     return f"❌ {result.get('errors')}"
 
 
@@ -789,7 +791,10 @@ def _data_delete_row(table_id: str, row_index: int, row_id: str = "") -> str:
         return "❌ `row_index` is required (0-based)."
     result = table_service.delete_row(table_id, row_index, row_id=row_id)
     preview = table_service.preview_table(table_id)
-    return f"✅ Row {row_index} deleted. Total: {result['total_rows']}.\n\n{preview}"
+    return (
+        f"✅ Row {result['row_index']} (`{result['row_id']}`) deleted. "
+        f"Total: {result['total_rows']}.\n\n{preview}"
+    )
 
 
 def _data_get_cell(
@@ -802,7 +807,8 @@ def _data_get_cell(
         return "❌ `row_index` and `column_name` are required."
     result = table_service.get_cell(table_id, row_index, column_name, row_id=row_id)
     lines = [
-        f"**Cell [{row_index}:{column_name}]:** `{_inline_preview(result['value'])}`",
+        f"**Cell [{result['row_index']}:{column_name}] (`{result['row_id']}`):** "
+        f"`{_inline_preview(result['value'])}`",
     ]
     if result.get("citation"):
         cite = result["citation"]
@@ -811,7 +817,7 @@ def _data_get_cell(
             f"**Citation:** {refs_count} refs, confidence: {cite.get('confidence', 'N/A')}"
         )
     return _limited_table_response(
-        f"Table Cell: {table_id}/{row_index}/{column_name}",
+        f"Table Cell: {table_id}/{result['row_index']}/{column_name}",
         "\n".join(lines),
         "render the table to a file for full cell content",
     )
@@ -841,14 +847,14 @@ def _data_update_cell(
 
     msg = (
         f"✅ Cell updated.\n"
-        f"- **[{result['row_index']}:{result['column']}]**\n"
+        f"- **[{result['row_index']}:{result['column']}]** (`{result['row_id']}`)\n"
         f"- Old: `{result['old_value']}` → New: `{result['new_value']}`\n"
         f"- **字元數**: {char_count}"
     )
     if line_count > 0:
         msg += f" (含 {line_count} 個換行符，將以 `<br>` 轉義寫入 DFM)"
     return _limited_table_response(
-        f"Table Cell Update: {table_id}/{row_index}/{column_name}",
+        f"Table Cell Update: {table_id}/{result['row_index']}/{column_name}",
         msg,
         "use table history or render to a file for full content",
     )
@@ -864,7 +870,10 @@ def _data_clear_cell(
         return "❌ `row_index` and `column_name` are required."
     result = table_service.clear_cell(table_id, row_index, column_name, row_id=row_id)
     result["old_value"] = _inline_preview(result.get("old_value"))
-    return f"✅ Cell [{row_index}:{column_name}] cleared. Old value: `{result['old_value']}`"
+    return (
+        f"✅ Cell [{result['row_index']}:{column_name}] (`{result['row_id']}`) cleared. "
+        f"Old value: `{result['old_value']}`"
+    )
 
 
 # ============================================================================
@@ -1098,7 +1107,10 @@ def _cite_remove(
         row_id=row_id,
     )
     if result["success"]:
-        return f"✅ Citation removed from [{row_index}:{column_name}]."
+        return (
+            f"✅ Citation removed from [{result['row_index']}:{column_name}] "
+            f"(`{result['row_id']}`)."
+        )
     return f"❌ {result.get('error', 'Unknown error')}"
 
 
@@ -1131,9 +1143,10 @@ def _cite_cell_history(
         column_name,
         row_id=row_id,
     )
+    identity = row_id or str(row_index)
     if not history:
-        return f"No history for [{row_index}:{column_name}]."
-    lines = [f"## Cell History [{row_index}:{column_name}]\n"]
+        return f"No history for [{identity}:{column_name}]."
+    lines = [f"## Cell History [{identity}:{column_name}]\n"]
     visible_history = history[:20]
     for entry in visible_history:
         ts = entry["timestamp"][:19]

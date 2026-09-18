@@ -1,5 +1,19 @@
 # Decision Log
 
+## 2026-09-18 — bounded native PPTX shape operations and truthful row results
+
+Keep published version 1.4.0 and accumulate Unreleased on main for 1.4.x. Shape
+creation reuses public python-pptx only to generate new nodes; existing packages
+are edited through scoped lxml overlays. Preserve group transforms and reject
+zero extents instead of silently recalculating old geometry. Shape deletion uses
+full current-revision evidence, rejects known surviving dependencies and retains
+relationships/media. Reversal-based XML comparison bounds what changed; neither
+it nor package reopening proves full visual fidelity or opaque dependency safety.
+MCP performs necessary mechanical checks; the agent completes semantic/visual
+review and corrections. Existing shape-v1 evidence digest semantics remain stable.
+A2T responses must report the resolved stable row identity; input row indices are
+not reliable labels when an explicit row ID takes precedence.
+
 ## 2026-09-18 — canonical A2T citation readback without conflating verification
 
 Live Codex PDF testing could inspect only citation counts/labels even though full

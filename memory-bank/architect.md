@@ -1,5 +1,14 @@
 # System Architect
 
+## 2026-09-18 — native PPTX shape CRUD boundaries
+
+Domain adds typed shape containers/additions and reuses native shape references.
+Infrastructure splits isolated textbox generation from scoped shape-tree edits,
+ID/reference checks and reversible XML verification. Application routes additions
+and deletions through the same immutable revision/CAS repository, exposes follow-up
+read requests and preserves explicit writeback. Existing evidence and wiki ports
+remain compatible. No new dependency or presentation-layer tool is introduced.
+
 ## 2026-09-18 — native PPTX and scalable discovery
 
 Domain native_pptx defines strict creation, native shape/run locators, text edits,

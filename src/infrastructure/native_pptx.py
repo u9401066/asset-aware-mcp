@@ -14,6 +14,7 @@ from src.domain.native_assets import NativeEditResult
 from src.infrastructure.native_ooxml import xml_bytes
 from src.infrastructure.native_pptx_package import NS, NativePptxPackage
 from src.infrastructure.native_pptx_records import shape_record, text_body
+from src.infrastructure.native_pptx_shape_edit import add_shapes, delete_shapes
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -81,6 +82,9 @@ def _verify_parts(
 
 
 class NativePresentation:
+    add_shapes = staticmethod(add_shapes)
+    delete_shapes = staticmethod(delete_shapes)
+
     def package_parts(self, data: bytes) -> dict[str, bytes]:
         return NativePptxPackage(data).parts
 

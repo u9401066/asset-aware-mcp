@@ -16,11 +16,13 @@ from src.domain.native_operations import (
     NativeOperation,
     operation_fields,
 )
-from src.domain.native_pptx import (  # noqa: TC001 -- Pydantic runtime models
+from src.domain.native_pptx import (
     NativePptxReference,
+    NativePptxShapeCreate,
     NativePptxShapeLocator,
     NativePptxTextEdit,
     NativePresentationCreate,
+    validate_shape_additions,
 )
 
 if TYPE_CHECKING:
@@ -283,6 +285,12 @@ class NativeDocumentRequest(NativeModel):
     presentation: NativePresentationCreate | None = None
     pptx_locator: NativePptxShapeLocator | None = None
     pptx_edits: list[NativePptxTextEdit] = Field(default_factory=list, max_length=1000)
+    pptx_shapes: list[NativePptxShapeCreate] = Field(
+        default_factory=list, max_length=100
+    )
+    pptx_shape_refs: list[NativePptxReference] = Field(
+        default_factory=list, max_length=100
+    )
     reference: (
         NativeCellReference | NativeDocxBlockReference | NativePptxReference | None
     ) = None
@@ -303,6 +311,13 @@ class NativeDocumentRequest(NativeModel):
         if value is not None:
             cell_position(value)
         return value
+
+    @field_validator("pptx_shapes")
+    @classmethod
+    def validate_pptx_shapes(
+        cls, value: list[NativePptxShapeCreate]
+    ) -> list[NativePptxShapeCreate]:
+        return validate_shape_additions(value)
 
     @model_validator(mode="after")
     def validate_operation(self) -> NativeDocumentRequest:

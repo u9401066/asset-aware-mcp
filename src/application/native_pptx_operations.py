@@ -7,7 +7,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from src.application.native_document_contract import native_asset_summary
-from src.domain.native_pptx import PPTX_MEDIA_TYPE
+from src.domain.native_pptx import PPTX_MEDIA_TYPE, shape_representation_sha256
 
 if TYPE_CHECKING:
     from src.domain.native_assets import NativeAssetRepository, NativeDocumentRequest
@@ -23,15 +23,12 @@ REVIEW_REQUIRED = [
 
 def attach_pptx_evidence(record: dict[str, Any], asset_id: str, revision: str) -> None:
     record["schema_version"] = "native-pptx-shape-v1"
-    canonical = json.dumps(
-        record, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    )
     record["evidence"] = {
         "schema_version": "native-pptx-shape-ref-v1",
         "asset_id": asset_id,
         "revision": revision,
         "locator": dict(record["locator"]),
-        "value_sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+        "value_sha256": shape_representation_sha256(record),
         "verification_scope": "immutable_native_representation",
     }
 
@@ -70,6 +67,8 @@ class NativePptxOperations:
             "read_pptx": self._read,
             "read_pptx_shape": self._read_shape,
             "update_pptx": self._update,
+            "add_pptx_shapes": self._update,
+            "delete_pptx_shapes": self._update,
         }[request.op](request)
 
     def _source(self, request: NativeDocumentRequest) -> tuple[bytes, str, str]:
@@ -150,10 +149,23 @@ class NativePptxOperations:
             raise ValueError("This format has no native PPTX editor")
         if asset.archived or asset.revision != request.expected_revision:
             raise ValueError("Archived or stale native asset; inspect before editing")
-        updated, checks = self.presentations.edit(
-            self.repository.read(asset.asset_id, request.expected_revision),
-            request.pptx_edits,
-        )
+        for reference in request.pptx_shape_refs:
+            if (
+                reference.asset_id != asset.asset_id
+                or reference.revision != request.expected_revision
+            ):
+                raise ValueError(
+                    "Presentation deletion reference has a different asset or revision"
+                )
+        data = self.repository.read(asset.asset_id, request.expected_revision)
+        if request.op == "add_pptx_shapes":
+            updated, checks = self.presentations.add_shapes(data, request.pptx_shapes)
+        elif request.op == "delete_pptx_shapes":
+            updated, checks = self.presentations.delete_shapes(
+                data, request.pptx_shape_refs
+            )
+        else:
+            updated, checks = self.presentations.edit(data, request.pptx_edits)
         committed = self.repository.commit(
             asset.asset_id, request.expected_revision, updated, checks
         )
@@ -162,4 +174,9 @@ class NativePptxOperations:
             "asset": native_asset_summary(committed, pptx_enabled=True),
             "operation_result": checks.model_dump(),
             "source_written": False,
+            "review_request": {
+                "op": "read_pptx",
+                "asset_id": asset.asset_id,
+                "revision": committed.revision,
+            },
         }

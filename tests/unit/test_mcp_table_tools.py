@@ -224,7 +224,11 @@ class TestTableTools:
     async def test_table_data_get_cell_large_value_returns_preview(self) -> None:
         """Large cell values should not be inlined in full."""
         with patch("src.presentation.tools.table_tools.table_service") as mock_svc:
-            mock_svc.get_cell.return_value = {"value": "B" * 80_000}
+            mock_svc.get_cell.return_value = {
+                "value": "B" * 80_000,
+                "row_index": 0,
+                "row_id": "row_0",
+            }
             from src.presentation.tools.table_tools import table_data
 
             result = await table_data(
@@ -241,7 +245,12 @@ class TestTableTools:
     async def test_table_data_clear_cell_passes_row_id(self) -> None:
         """clear_cell supports stable row IDs through the facade."""
         with patch("src.presentation.tools.table_tools.table_service") as mock_svc:
-            mock_svc.clear_cell.return_value = {"success": True, "old_value": "A"}
+            mock_svc.clear_cell.return_value = {
+                "success": True,
+                "old_value": "A",
+                "row_index": 0,
+                "row_id": "row_a",
+            }
             from src.presentation.tools.table_tools import table_data
 
             result = await table_data(

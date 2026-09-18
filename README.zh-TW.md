@@ -11,6 +11,9 @@
 
 `main` 開發版新增 `table_cite(operation="read")`，可分頁讀回完整引用並核對
 固定 hash；尚未包含在已發布套件。詳見 [完整引用讀回](docs/wiki/A2T-Tables.md)。
+未發布項目也包含有檢查保護的 PPTX 文字框新增／形狀刪除，以及 A2T 操作結果的
+實際列 ID。詳見 [形狀操作](docs/wiki/Native-File-Assets.md#pptx-shape-operations-unreleased)。
+公開版維持 **1.4.0**，後續開發沿用 **1.4.x**，不因單次功能提交跳版號。
 
 1.4.0 提供 `contract.for_op` 與 `native-contract-v2`。先查看
 `schema_delivery`，需要分段時沿用 `schema_request` 與 `schema_sha256`，

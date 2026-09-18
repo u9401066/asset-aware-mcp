@@ -2,6 +2,56 @@
 
 ## 2026-09-18 — cross-format CRUD and evidence library
 
+Current work after 53714f2: fix truthful A2T row-ID result labels, then add native
+PPTX shape creation/deletion. Previous turn was progress: citation readback commit
+53714f22a8d92c18fc25e8867fc4f6d9099febd0 has green CI 35339895059 (all ten jobs),
+Pages 35339894396 and matching public JS bytes. main and origin/main were clean
+and equal before this turn. Public version remains 1.4.0; do not jump versions.
+
+Current checkpoint: A2T result labels return resolved row_id/index;
+18 new tests cover earlier-row deletion and conflicting/default indices. Corrected
+baseline against git archive 53714f2: 16 failed / 2 passed, then all 18 pass. The
+initial invalid fixture-intent setup failure is not regression evidence.
+
+Native add_pptx_shapes/delete_pptx_shapes are now implemented. Domain contracts
+bound atomic batches (1..100, 20,000 runs / 4 MiB UTF-8); application stages revisions
+with CAS. New textboxes are built in an independent python-pptx scratch package,
+converted to plain lxml and inserted in existing slide/notes/group XML only. Group
+transforms remain untouched; zero extents fail closed. IDs avoid known reference
+IDs and extLst remains last. Delete checks complete shape-v1 representation hashes,
+asset/revision, duplicates, ancestor overlap and surviving numeric spid/shapeid or
+connector IDs. Package inventory/untouched bytes and reverse-applied XML comparison
+are checked. All related media/relationships remain; this is not secure erasure.
+Unmodeled vendor/GUID dependencies and rendering require agent review.
+
+Current full Python gate: 1,647 passed / 30 optional skips. New raw-shape suite:
+27 passed; managed operations + real SDK2 CRUD: 16 passed. Tests cover connectors,
+zero extents, protected/signed files, package/XML corruption, aggregate bounds,
+source backup/conflicts, CAS, old references and immutable wiki snapshots. Public
+version remains 1.4.0; this accumulates Unreleased for 1.4.x. Live Codex scanned
+PDF recheck /tmp/asset-aware-codex-row-identity-scanned-01 passed all nine independent
+checks: 49 MCP calls, zero tool errors, 9 canonical citation reads with continuations.
+First transcription was NOT exact: B201 Count 03 -> 003 and B202 8 -> 18 were
+corrected by the agent before final verification. Real tool responses now show
+resolved row indices/IDs when the input row_index is omitted. Independent auditor
+reopened Excel and checked source/image/citation/bundle integrity; agent prose is
+not used as proof. Runtime source SHA256:
+54463c8594dd9734a52ec680ab7ae77e7b3c37c93dfee1066b141cd702fc390c.
+Ruff/format/mypy (138 files)/Bandit pass; 199 extension tests and 64-file VSIX
+package guard pass. Docs generator/harness/artifact (1.4.0)/18 skills/assets sync,
+GitHub metadata and 17 labels pass. Playwright desktop/mobile zh/en checks pass
+for the new Unreleased shape operations, language switching, overflow and console
+errors (/tmp/pptx-shape-crud-browser.cjs). Cached pinned CDN scripts were routed;
+this does not test live CDN availability. Remaining: commit/push and exact CI/Pages.
+Do not edit the original user worktree or mark the broad goal complete.
+
+Primary research checked this turn:
+https://python-pptx.readthedocs.io/en/latest/api/shapes.html (public textbox/element,
+shape ID collision warning, z-order and automatic group extent recalculation),
+https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.startconnection?view=openxml-3.0.1
+and presentation.shapetarget.shapeid / presentation.shapetree (shape references/tree).
+Implement with current pinned python-pptx; no new dependency is selected.
+
 Current public release is **v1.4.0**, annotated at main@da829fa6f360bd684fda9b8d31efee3651a9ed94.
 Tag object: 2eae299581211126d7bbc3e5586b6f4b3a028b54.
 Worktree: /home/eric/workspace251226/asset-aware-mcp-agent-assets, branch main.

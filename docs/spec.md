@@ -79,6 +79,50 @@ cell's references through MCP, with independent audit of returned locators/conte
 
 ### Starting coverage and completion evidence
 
+A2T operation results identify the resolved stable row and index, including the
+pre-deletion index for deleted rows. A row_id takes precedence over an input index;
+never display the unused -1/default or a conflicting input index as the operated
+target. Cell-history labels use the validated stable row ID when supplied. This
+changes result metadata/presentation only; row identity, data, citation invalidation
+and history semantics remain unchanged. Regress after deleting an earlier row.
+
+### Native PPTX shape structure (1.4.x development)
+
+Add add_pptx_shapes and delete_pptx_shapes under document/native, preserving the
+existing native-contract-v2 discovery flow. Both require asset_id and expected_revision,
+stage managed revisions through CAS, and never implicitly write the human source.
+
+add_pptx_shapes accepts up to 100 typed textbox additions. Each supplies a container
+(slide_id, part, region, optional group_shape_id) and the existing textbox model
+(local EMU geometry, explicit paragraphs/runs/styles). Resolve the container through
+the presentation relationships, allocate unused unsigned 32-bit shape IDs in its
+part, and append shapes at the top of z-order before extLst. Generate only the new
+textbox XML using python-pptx's public API; do not round-trip the existing package
+through that library. Preserve group transforms without automatically resizing or
+repositioning existing children. Bound aggregate additions to 20,000 runs / 4 MiB
+UTF-8 text. Return generated locators for reading and subsequent edits.
+
+delete_pptx_shapes accepts up to 100 existing NativePptxReference objects. Require
+matching asset/revision and exact full representation hashes. Reject duplicates
+and overlapping ancestor/descendant requests. A group deletion includes its subtree.
+Reject removal when remaining known connector, timing or build references target
+removed shape IDs; deleting a dependent connector in the same batch is allowed.
+Shape deletion retains package relationships and related media/embedding parts;
+it is not secure content erasure. Slide creation/removal, non-text shape creation,
+animation editing and interpretation of arbitrary extension dependencies remain
+separate capabilities, not implied by these operations.
+
+For either operation, validate package inventory and untouched member bytes,
+read back the intended structural change, and reverse only the planned shape
+changes in an independent parsed result to compare all other XML canonically.
+Preserve existing immutable references/wiki snapshots and their exact old hashes.
+Reject stale, signed/protected, strict/macro/legacy, ambiguous or invalid packages.
+Report known mechanical check coverage separately from agent review of meaning,
+rendering, z-order, overflow, inherited styles and unmodeled dependencies.
+Tests cover groups/notes, text formatting, connector/timing dependencies, retained
+charts/media/foreign parts, ID exhaustion/collisions, stale refs/CAS, tampered output,
+reopened presentations, historical evidence/wiki and real SDK2 writeback/backups.
+
 Published 1.0.1 covers PDF read/decompose/export, scoped DOCX/DFM writeback and
 independent A2T table creation/edit/export. Native spreadsheet/presentation CRUD,
 general asset registration, cross-format wiki export, per-format operation checks

@@ -62,7 +62,10 @@ and LightRAG knowledge graph outputs.
   Query the installed contract before PPTX operations: create/read/read-shape/update
   work on native presentations with revision/run-text preconditions. Shape refs and
   wiki snapshots preserve exact native representations/parts. Agents review semantics,
-  inherited formatting, rendered layout and overflow; structural editing is separate.
+  inherited formatting, rendered layout and overflow. When advertised, add_pptx_shapes
+  inserts typed textboxes; delete_pptx_shapes uses full current-revision shape refs.
+  Known dependencies block deletion; retained media means deletion is not secure
+  erasure. Slide structure and arbitrary shape creation remain separate work.
 
 ## PDF -> Asset Engine Selection
 

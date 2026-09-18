@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
@@ -28,11 +30,20 @@ class PptxModel(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
 
-class NativePptxShapeLocator(PptxModel):
+class NativePptxPartLocator(PptxModel):
     slide_id: str = Field(pattern=r"^[1-9][0-9]*$", max_length=10)
     part: str = Field(min_length=1, max_length=1024)
     region: Literal["slide", "notes"] = "slide"
+
+
+class NativePptxShapeLocator(NativePptxPartLocator):
     shape_id: str = Field(pattern=r"^(0|[1-9][0-9]*)$", max_length=10)
+
+
+class NativePptxShapeContainer(NativePptxPartLocator):
+    group_shape_id: str | None = Field(
+        default=None, pattern=r"^(0|[1-9][0-9]*)$", max_length=10
+    )
 
 
 class NativePptxRunLocator(NativePptxShapeLocator):
@@ -93,6 +104,34 @@ class NativePptxTextBoxCreate(PptxModel):
         if any(not runs or len(runs) > 100 for runs in value):
             raise ValueError("Each paragraph requires 1 to 100 runs")
         return value
+
+
+class NativePptxShapeCreate(PptxModel):
+    container: NativePptxShapeContainer
+    textbox: NativePptxTextBoxCreate
+
+
+def validate_shape_additions(
+    items: list[NativePptxShapeCreate],
+) -> list[NativePptxShapeCreate]:
+    count, size = 0, 0
+    for item in items:
+        for paragraph in item.textbox.paragraphs:
+            count += len(paragraph)
+            size += sum(len(run.text.encode("utf-8")) for run in paragraph)
+    if count > MAX_PPTX_COMPONENTS or size > 4 * 1024 * 1024:
+        raise ValueError(
+            "Presentation additions exceed 20,000 runs or 4 MiB UTF-8 text"
+        )
+    return items
+
+
+def shape_representation_sha256(record: dict[str, Any]) -> str:
+    """Keep the released shape-v1 digest stable for reads, edits and deletion."""
+    value = {key: item for key, item in record.items() if key != "evidence"}
+    value["schema_version"] = "native-pptx-shape-v1"
+    text = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 class NativePptxSlideCreate(PptxModel):
@@ -158,4 +197,10 @@ class NativePresentationAdapter(Protocol):
     ) -> dict[str, Any]: ...
     def edit(
         self, data: bytes, edits: list[NativePptxTextEdit]
+    ) -> tuple[bytes, NativeEditResult]: ...
+    def add_shapes(
+        self, data: bytes, additions: list[NativePptxShapeCreate]
+    ) -> tuple[bytes, NativeEditResult]: ...
+    def delete_shapes(
+        self, data: bytes, references: list[NativePptxReference]
     ) -> tuple[bytes, NativeEditResult]: ...
