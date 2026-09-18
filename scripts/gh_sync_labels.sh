@@ -20,7 +20,7 @@ LABELS=(
   "area:fidelity|0e8a16|Format preservation, necessary checks and agent review evidence"
   "area:citations|0052cc|Citation presentation contracts and academic/custom rendering"
   "area:mcp|5319e7|MCP protocol, server, tools, resources, or clients"
-  "area:pdf|1d76db|PDF extraction, OCR, layout, or preflight routing"
+  "area:pdf|1d76db|PDF page CRUD, extraction, OCR, layout, and preflight routing"
   "area:docx|0e8a16|DOCX, DFM, round-trip fidelity, or writeback"
   "area:wiki|8250df|Foam, LightRAG, knowledge graph, or reusable agent assets"
   "area:vsix|006b75|VS Code extension, packaging, installation, or UX"

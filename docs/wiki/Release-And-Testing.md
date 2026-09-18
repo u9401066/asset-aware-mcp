@@ -260,3 +260,31 @@ uv run python scripts/smoke_mcp_stdio.py -- docker run --rm -i asset-aware-mcp:s
 Docker build context 已忽略 local uv/runtime caches、assistant harness folders 與 document processing artifacts，避免 release smoke 被本機輸出拖慢或污染。
 目前 Dockerfile 刻意不使用 BuildKit cache mount，以保留 legacy builder
 相容性；這個 build 不會單因 Dockerfile 而要求 `docker buildx`。
+
+## Codex native PDF evaluation (Unreleased)
+
+原生頁面路徑另有 opt-in 實測，普通 pytest 不會呼叫模型：
+
+```bash
+uv run pytest tests/unit/test_native_pdf*.py tests/unit/test_codex_native_pdf_audit.py tests/integration/test_native_pdf_stdio.py
+uv run python -m tests.codex_native_pdf.run --codex /absolute/path/to/codex --output /tmp/native-pdf-run
+uv run python -m tests.codex_native_pdf.audit /tmp/native-pdf-run
+```
+
+output 必須是新目錄。Runner 使用現有 Codex 登入，不讀取憑證；隔離使用者
+設定，只開放本 checkout 的 document MCP tool，關閉 shell／其他 server／
+subagents。三頁純掃描測資需真正收到 PNG，完整讀回頁面引用，建立新 PDF、
+插入兩張空白頁、旋轉、刪除空白、重排、核對舊引用，再 publish 與 export_wiki。
+原始來源不可回寫。預期轉錄保留字串、前導零及 Unicode，µ／μ 不會正規化。
+
+獨立稽核讀取實際事件、受管理版本與檔案；分別檢查圖片交付、完整分段引用、
+複製來源歷程、來源 hash／mtime、最終頁序／幾何／像素、Wiki hash 與精確轉錄。
+模型宣稱成功不算證據。保留 audit.json、events.jsonl、expected.json 與完整
+artifacts；失敗或修正不能改成首次全對。此測資與固定 renderer 的像素比對
+不代表通用 OCR 準確率、任意 PDF 保真或所有檢視器行為。
+
+2026-09-18 的 native scanned run 02（最終 worker 實作）完成 49 次 MCP
+呼叫、零工具錯誤，七項獨立檢查全部通過：十份完整頁面表示、六張實際
+原始／最終 PNG、七列 35 格最終精確轉錄，以及來源、歷程、最終 PDF 與
+Wiki 核對。MCP 圖片另外比對其固定版本的獨立渲染像素。較早 run 01 的
+171 次呼叫與通過結果另行保留；呼叫數受模型分段讀取策略影響。

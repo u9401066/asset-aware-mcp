@@ -414,3 +414,73 @@ MCP 重新讀回新套件，檢查 ID、套件檔案清單、未修改 part 的�
 形狀使用也會保留，**這不是機密資料清除功能**。舊版本、舊引用與 Wiki 快照
 仍可讀取及驗證。操作只建立受管理版本；來源檔另行 `writeback`，保留備份與
 來源衝突檢查。MCP 負責這些必要檢查，Agent 負責完整語意／視覺核對與修正。
+
+## Native PDF pages (Unreleased)
+
+`main` 開發版提供原生 PDF 頁面協作；公開套件仍是 **1.4.0**，後續沿用
+**1.4.x**。先用 `contract(for_op="create_pdf")` 確認安裝版本有這些操作。
+
+| 操作 | 用途與必要輸入 |
+|------|----------------|
+| `create_pdf` | `pdf_create` 的 name、pages；每頁恰好指定 blank 或完整 reference |
+| `read_pdf` | asset_id；以 offset／limit 分頁讀取 locator 與頁面幾何 |
+| `read_pdf_page` | asset_id、pdf_locator；分段讀取完整頁面 JSON 與 evidence |
+| `render_pdf_page` | asset_id、pdf_locator；render_size 為最長邊 64–2048 px，回傳 MCP PNG |
+| `add_pdf_pages` | asset_id、expected_revision、pdf_insert（position、pages） |
+| `update_pdf` | asset_id、expected_revision、pdf_edits（reference、rotation／crop_box） |
+| `delete_pdf_pages` | asset_id、expected_revision、pdf_page_refs；至少保留一頁 |
+| `reorder_pdf_pages` | asset_id、expected_revision、pdf_order；每頁完整引用恰好一次 |
+
+`page_index` 從 0 開始。頁面 locator 同時含 object_id 與 generation，僅適用
+該不可變版本；寫入後重新讀取新版本，不能沿用舊 locator／引用來修改。
+`read_pdf_page` 須固定 revision，沿用 next_text_offset 讀完 text_excerpt，
+核對完整 UTF-8 text_sha256 後才解析 JSON。evidence 是
+`native-pdf-page-ref-v1`，含 asset、revision、locator 與完整表示的 hash。
+原生 text_blocks 不執行 OCR；掃描頁需 Agent 檢視實際 PNG 或另走 OCR／A2T。
+
+```python
+# refs 是來源每頁完整讀回的 record["evidence"]。
+document(op="native", native_request={
+    "op": "create_pdf",
+    "pdf_create": {"name": "review.pdf", "pages": [
+        {"reference": refs[2]}, {"reference": refs[0]},
+        {"blank": {"width": 595, "height": 842}}
+    ]}
+})
+# 以下使用新資產目前版本重新讀回的 current_ref。
+document(op="native", native_request={
+    "op": "update_pdf", "asset_id": new_asset_id,
+    "expected_revision": current_revision,
+    "pdf_edits": [{"reference": current_ref, "rotation": 180}]
+})
+```
+
+rotation 為絕對角度 0／90／180／270。crop_box 是 PDF 原生、未旋轉的
+左下原點使用者座標 `[x0,y0,x1,y1]`，必須在 MediaBox 內；單位受 UserUnit
+縮放。它不同於 text_blocks 使用的 PyMuPDF 未旋轉 point 座標。頁面紀錄
+提供 user_unit 與 coordinate_systems，不應把兩種 bbox 直接混用。
+
+pikepdf/QPDF 負責保留物件關係的編輯，PyMuPDF 獨立讀取文字與像素。
+MCP 核對來源／版本、完整物件圖與 encoded stream hash、剩餘頁面相依、
+文件屬性、表單登記、存檔後讀回，以及未修改頁面的最長邊 512 px 渲染。
+指定旋轉／裁切的頁面由 Agent 另行顯示核對。已知複製造成的 annotation
+Popup／Parent／IRT 回指可依來源關係確定性修復，修復後仍須通過完整圖比對。
+PDF 物件編號、xref 與檔案 ID 可因存檔改變；不保證整份 PDF 位元組不變。
+原始檔與舊版本則保持原始位元組。
+
+同文件操作保留受檢查的書籤／連結、頁標籤、表單、metadata 與附件。
+跨文件複製保留選定頁面與可完整整合的表單，不匯入文件層 metadata／附件；
+來源引用寫入新資產的歷程。加密、簽章、XFA、需要 parser 修復的檔案、
+刪除／複製後懸空的頁面引用、部分表單或欄位改名會被拒絕。跨文件的 tagged
+PDF、layer 與 named-destination 整合目前也拒絕，避免默默丟失文件相依。
+同批不能重複複製同一來源頁面。每份最多 2,000 頁／64 MiB；新增、複製、幾何修改或刪除每批最多 100 頁。
+Worker 有 60 秒期限及支援平台的記憶體上限；超出界限不發布部分結果。
+
+`verify` 可核對舊頁面引用，並另外回報是否仍為目前版本。
+`export_wiki` 使用獨立 `pdf-pages-v1` projection：Foam 頁面筆記、完整
+records.jsonl、768 px 預覽與完整 PDF 附件，支援既有 citation contract。
+舊 opaque 快照保持不變；修改過的受管理筆記會阻擋重用，人工綜合筆記放在旁邊。
+更新先建立受管理版本，明確 publish／writeback 才輸出或回寫，回寫保留備份
+及來源衝突檢查。任意文字物件編輯、OCR、自動語意校正、機密資料清除皆不在
+這個頁面操作範圍；裁切／刪頁不是 secure redaction。Agent 負責完整解析度
+版面、語意、表單／檢視器行為、腳本頁索引、閱讀順序與可及性的完整核對與修正。

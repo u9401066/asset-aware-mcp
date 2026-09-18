@@ -35,7 +35,7 @@ EXPECTED_LABELS = """area:formats\t1d76db\tNative document format capabilities a
 area:fidelity\t0e8a16\tFormat preservation, necessary checks and agent review evidence
 area:citations\t0052cc\tCitation presentation contracts and academic/custom rendering
 area:mcp\t5319e7\tMCP protocol, server, tools, resources, or clients
-area:pdf\t1d76db\tPDF extraction, OCR, layout, or preflight routing
+area:pdf\t1d76db\tPDF page CRUD, extraction, OCR, layout, and preflight routing
 area:docx\t0e8a16\tDOCX, DFM, round-trip fidelity, or writeback
 area:wiki\t8250df\tFoam, LightRAG, knowledge graph, or reusable agent assets
 area:vsix\t006b75\tVS Code extension, packaging, installation, or UX
@@ -83,7 +83,7 @@ if [[ "$1" == "api" && "$*" == *"--jq .description"* ]]; then
   if [[ "${GH_FAKE_SCENARIO:-ok}" == "metadata-drift" ]]; then
     printf '%s\\n' 'stale description'
   else
-    printf '%s\\n' 'Agent document collaboration: PDF assets, DOCX writeback, versioned spreadsheets and wikilink evidence libraries with provenance and citation contracts'
+    printf '%s\\n' 'Agent document collaboration: versioned PDF pages, DOCX/PPTX and spreadsheets, with checked edits, source provenance and wikilink evidence libraries'
   fi
 elif [[ "$1" == "api" && "$*" == *"--jq .homepage"* ]]; then
   printf '%s\\n' 'https://u9401066.github.io/asset-aware-mcp/'

@@ -37,6 +37,18 @@ citation-ready provenance.
 - MCP checks source/package/value integrity. Agent review covers meaning,
   rendered layout and formula results; never equate structural checks with full fidelity.
 
+- When advertised, native PDF supports create_pdf/read_pdf/read_pdf_page/
+  render_pdf_page/add_pdf_pages/update_pdf/delete_pdf_pages/reorder_pdf_pages.
+  Pin revisions, assemble complete page JSON and verify its UTF-8 hash; retrieve
+  current page refs before every mutation. PNGs are actual MCP images; native text
+  is not OCR. Page copying retains explicit source lineage. Rotation is absolute;
+  crop uses native PDF bottom-left user space, distinct from text-block coordinates.
+  verify/export_wiki retain old evidence, exact PDFs and previews. Check supported
+  dependencies before copying/deleting; cropping/deletion is not secure erasure.
+  MCP checks graphs/versions and bounded unchanged-page rendering; agents review
+  semantics, full-resolution layout, forms, scripts, reading order and accessibility.
+  Stage managed revisions before explicit writeback with source checks and backups.
+
 ## Verification Loop
 
 - For Python changes, run the focused tests first, then the full Python gate.

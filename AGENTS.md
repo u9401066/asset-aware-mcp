@@ -67,6 +67,18 @@ and LightRAG knowledge graph outputs.
   Known dependencies block deletion; retained media means deletion is not secure
   erasure. Slide structure and arbitrary shape creation remain separate work.
 
+- When advertised, native PDF supports create_pdf/read_pdf/read_pdf_page/
+  render_pdf_page/add_pdf_pages/update_pdf/delete_pdf_pages/reorder_pdf_pages.
+  Pin revisions, assemble complete page JSON and verify its UTF-8 hash; retrieve
+  current page refs before every mutation. PNGs are actual MCP images; native text
+  is not OCR. Page copying retains explicit source lineage. Rotation is absolute;
+  crop uses native PDF bottom-left user space, distinct from text-block coordinates.
+  verify/export_wiki retain old evidence, exact PDFs and previews. Check supported
+  dependencies before copying/deleting; cropping/deletion is not secure erasure.
+  MCP checks graphs/versions and bounded unchanged-page rendering; agents review
+  semantics, full-resolution layout, forms, scripts, reading order and accessibility.
+  Stage managed revisions before explicit writeback with source checks and backups.
+
 ## PDF -> Asset Engine Selection
 
 The core goal is turning documents into complete, agent-friendly figure/table/

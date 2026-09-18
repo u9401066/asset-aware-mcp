@@ -262,6 +262,20 @@ delete_pptx_shapes takes pptx_shape_refs containing complete native-pptx-shape-r
 
 MCP verifies package inventory, untouched member bytes, IDs and XML outside requested nodes by reversing the planned changes for comparison. Relationships, media and embedded parts remain even when orphaned; deletion is not secure erasure. Historical evidence and wiki snapshots remain available. Edits stage managed revisions; explicit writeback retains source checks and backups. Agents perform the full semantic and visual review and correction.
 
+### Native PDF pages (Unreleased)
+
+Main adds create_pdf, read_pdf, read_pdf_page, render_pdf_page, add_pdf_pages, update_pdf, delete_pdf_pages and reorder_pdf_pages. Public version remains 1.4.0 on the 1.4.x development line. Discover each installed operation through contract.for_op. Creation takes pdf_create with a name and pages, each specifying exactly one blank or full source reference. Insertion takes pdf_insert with position and pages. Mutations require asset_id and expected_revision; deletion uses pdf_page_refs, reordering uses pdf_order with every page exactly once, and geometry edits use pdf_edits with reference and absolute rotation or crop_box.
+
+Page indices are zero-based. Locators combine page_index, object_id and generation at one immutable revision; read fresh references after writes. Assemble every read_pdf_page text_excerpt at one revision using next_text_offset and verify UTF-8 text_sha256 before parsing. render_pdf_page returns actual MCP PNG images with a longest edge of 64–2048 pixels. Native text extraction is not OCR. Scanned-page interpretation remains an agent/OCR task.
+
+Rotation is absolute 0/90/180/270 degrees. Crop boxes use unrotated native PDF user space, bottom-left origin and UserUnit-scaled units, inside MediaBox. PyMuPDF text blocks use a different unrotated point coordinate system; records declare both. Page operations do not replace arbitrary PDF text or provide secure redaction.
+
+pikepdf/QPDF preserves page identities and encoded streams; PyMuPDF independently reads text and pixels. Checks cover version/representation hashes, remaining page dependencies, document properties, copied form registration, serialized object graphs and unchanged-page rendering at 512 pixels. Known annotation backreferences are deterministically relinked and graph-checked. Agents review changed-page geometry, full-resolution layout, semantics, forms, scripts, reading order and accessibility. Serialized object numbers/xref/file IDs can change; original source bytes and old revisions remain exact.
+
+Within-document edits retain checked bookmarks/links, labels, forms, metadata and attachments. Cross-document copies retain selected pages and complete supported form trees, persist source-reference lineage and do not import document-level metadata/attachments. Encryption, signatures, XFA, parser repairs, dangling page dependencies, partial/renamed fields and cross-document tagged/layer/named-destination integration are rejected. A copy batch cannot repeat a source page. Limits are 2,000 pages/64 MiB per PDF and 100 pages per mutation batch except whole-document reordering. A 60-second worker deadline, supported-platform memory limits and private atomic MessagePack results bound execution and output.
+
+verify retains historical page evidence. export_wiki creates an immutable pdf-pages-v1 projection with complete JSONL, page notes, 768-pixel previews, citation contracts and the exact PDF attachment. Old opaque snapshots remain; modified managed notes block reuse. Publish/writeback are explicit, with source checks and backups. See [native PDF evaluation](#/release-testing) for real Codex MCP calls and independent audits.
+
 See the source page for operation fields, examples, format restrictions and recovery details.`,
   "workflow-chapters": `## Choose by source and task
 Use the PDF workflow for page inspection and extraction, the DOCX workflow for reversible DFM editing, and A2T for reusable tables. Evidence, wiki, and knowledge features build on those source-specific paths.
@@ -367,6 +381,13 @@ The runner connects only the current checkout's MCP server to synthetic data, ca
 Main development adds \`citation_readback_required\`: after all corrections, Codex must use \`table_cite read\` for every final Reading cell. The independent auditor checks complete MCP pages, hash continuity, stable cell binding and equality with persisted references. \`citation_paging_required\` also requires at least one actual continuation using 200-character pages. Historical runs retain their original eight checks; they do not retroactively prove this new capability.
 
 Recovered tool errors remain visible as \`passed_with_recoveries\`; \`first_transcription_exact\` distinguishes initial extraction from a corrected final result. The three-page corpus covers digital, scanned and mixed pages, rotation/cropbox offsets, leading zeros, signs and units. It does not establish general OCR accuracy, handwriting support or PDF layout writeback fidelity.
+
+## Codex native PDF evaluation (Unreleased)
+Run \`uv run python -m tests.codex_native_pdf.run --codex /absolute/path/to/codex --output /tmp/native-pdf-run\` for the separate native page workflow. Three image-only pages require actual MCP PNG delivery, complete page JSON, a new composed PDF, two blank insertions, rotation, deletion, reordering, historical verification, publication and wiki export. The original source must remain unchanged. Ordinary pytest never invokes a model.
+
+Re-audit with \`uv run python -m tests.codex_native_pdf.audit /tmp/native-pdf-run\`. Independent checks inspect actual image pixels, contiguous reference readbacks, persisted lineage/history, source hash/mtime, final page order/geometry/pixels, wiki files and exact string transcription. Unicode µ/μ is not normalized. Keep raw events, runtime/lock hashes, artifacts and tool errors, including failed runs. These synthetic checks do not establish arbitrary PDF fidelity or general OCR accuracy.
+
+On 2026-09-18, native scanned run 02 against the final worker completed 49 MCP calls with zero tool errors. All seven independent checks passed, including ten full page records, six actual original/final images, and exact final transcription of seven rows/35 cells. Images were independently compared to their pinned-revision render pixels. Earlier run 01 retained 171 calls and its passing evidence; call counts depend on the model's paging strategy.
 
 ## Publish in order
 Confirm built artifacts and runtime diagnostics before tagging, then verify each public registry after publication.`,

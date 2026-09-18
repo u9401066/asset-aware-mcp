@@ -54,8 +54,9 @@ metadata checks pass. VSIX: 199 tests and 64-file package contents pass. All 17
 managed labels and repository description/homepage/topics are synchronized. Universal lock Python3.10 audit previously passed
 214 audited packages, no known vulnerabilities/adverse statuses; npm audit passes.
 
-Remaining checkpoint work: final diff review, focused audit tests, memory synchronization,
-small commits/direct main push, exact CI and Pages verification. No tag/release.
+Runtime and raw adapter tests committed as e47ad9f. Focused auditor/GitHub hygiene
+tests pass (22). Remaining test/docs/harness files are the second checkpoint commit;
+then direct main push and exact CI/Pages verification. No tag/release.
 Broader active goal remains unfinished (slide/non-text CRUD, additional formats,
 real-document evaluation, arbitrary PDF text editing). Do not mark goal complete.
 
