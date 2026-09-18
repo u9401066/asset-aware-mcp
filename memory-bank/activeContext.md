@@ -28,7 +28,14 @@ revisions preserve prior notes. Manifest-last publication reports interrupted ou
 Full regression: 1,356 passed, 30 optional skips; types/lint/configured security gate,
 asset sync and desktop/mobile bilingual reader checks pass. Pushed e3bb2cf and Pages
 succeeded. Windows CI 35317000129 found three new test-reader locale assumptions;
-explicit UTF-8 reads are being fixed before the cross-platform CI rerun.
+6407d31 fixed explicit UTF-8 reads. CI 35317215411 and Pages 35317214962 now pass.
+Existing PDF bundle publication is now hardened locally: verify inventory/hash,
+reject curated edits, recheck under a lock and retain backups on actual replacement.
+Full suite: 1,374 passed, 30 optional skips, with 18 new preservation regressions.
+Commit/push and cross-platform CI verification are next for this bounded change.
+Read-only DOCX review confirmed the existing DFM save path already performs
+stale-session and unedited-block checks; future native identity/version integration
+must reuse those checks rather than introducing an independent editor.
 Latest documentation checkpoint 977c75f passed CI 35315597500 and Pages.
 
 Development after 1.1.0 adds native cell-reference verification (not in v1.1.0):

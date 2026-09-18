@@ -23,6 +23,7 @@ from src.domain.entities import (
     SectionAsset,
     TableAsset,
 )
+from src.infrastructure.bundle_publisher import FileBundlePublisher
 from src.infrastructure.file_storage import FileStorage
 from src.presentation.tools.citation_support import asset_ref_from_span
 from src.presentation.tools.document_evidence_support import (
@@ -146,7 +147,9 @@ Figure 1. Treatment flow.
         ),
     )
     return (
-        AgentAssetBundleService(repository, SegmentationService(repository)),
+        AgentAssetBundleService(
+            repository, SegmentationService(repository), publisher=FileBundlePublisher()
+        ),
         repository,
         doc_id,
     )
@@ -462,7 +465,9 @@ async def test_agent_asset_bundle_reports_document_not_found_without_writing(
     tmp_path: Path,
 ) -> None:
     repository = FileStorage(tmp_path / "data")
-    service = AgentAssetBundleService(repository, SegmentationService(repository))
+    service = AgentAssetBundleService(
+        repository, SegmentationService(repository), publisher=FileBundlePublisher()
+    )
 
     result = await _export(service, "doc_missing", "bundle")
 
@@ -506,6 +511,7 @@ async def test_agent_asset_bundle_fails_closed_on_explicit_resource_limits(
     service = AgentAssetBundleService(
         repository,
         SegmentationService(repository),
+        publisher=FileBundlePublisher(),
         **limits,
     )
 
@@ -613,9 +619,12 @@ async def test_document_facade_dispatches_export_assets(
     captured: dict[str, object] = {}
 
     class FakeExporter:
-        def __init__(self, repository: object, segmentation_service: object) -> None:
+        def __init__(
+            self, repository: object, segmentation_service: object, *, publisher: object
+        ) -> None:
             captured["repository"] = repository
             captured["segmentation_service"] = segmentation_service
+            captured["publisher"] = publisher
 
         async def export(self, doc_id: str, **kwargs: object) -> dict[str, object]:
             captured.update({"doc_id": doc_id, **kwargs})

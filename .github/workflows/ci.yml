@@ -123,6 +123,7 @@ jobs:
           tests/unit/test_native_evidence.py
           tests/unit/test_native_wiki.py
           tests/unit/test_native_wiki_publication.py
+          tests/unit/test_bundle_publication.py
           tests/integration/test_native_asset_stdio_e2e.py
           -q --timeout=120
 
@@ -181,6 +182,7 @@ jobs:
           tests/unit/test_native_evidence.py
           tests/unit/test_native_wiki.py
           tests/unit/test_native_wiki_publication.py
+          tests/unit/test_bundle_publication.py
           tests/integration/test_native_asset_stdio_e2e.py -q --timeout=120
 
       - name: Set up Node.js
@@ -231,6 +233,7 @@ jobs:
           tests/unit/test_native_evidence.py
           tests/unit/test_native_wiki.py
           tests/unit/test_native_wiki_publication.py
+          tests/unit/test_bundle_publication.py
           tests/integration/test_native_asset_stdio_e2e.py -q --timeout=120
 
       - name: Set up Node.js

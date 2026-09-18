@@ -26,6 +26,7 @@ from src.application.structural_pointer_service import StructuralPointerService
 from src.application.table_service import TableService
 from src.domain.etl_profile import ETLProfile
 from src.domain.marker_errors import MARKER_INSTALL_HINT, MarkerBackendUnavailable
+from src.infrastructure.bundle_publisher import FileBundlePublisher
 from src.infrastructure.config import settings
 from src.infrastructure.excel_renderer import ExcelRenderer
 from src.infrastructure.extractor_factory import (
@@ -109,6 +110,7 @@ except (FileNotFoundError, KeyError, json.JSONDecodeError):
     etl_profile = ETLProfile.default()
 
 repository = FileStorage(settings.data_dir)
+bundle_publisher = FileBundlePublisher()
 native_document_service = NativeDocumentService(
     FileNativeAssetRepository(settings.data_dir / "native-assets"),
     SpreadsheetFileAdapter(),

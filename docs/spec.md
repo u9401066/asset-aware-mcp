@@ -128,6 +128,18 @@ their files and report reconciliation rather than claiming atomic directory visi
 Source/store overlap is rejected. Formula, semantic and rendered review remain agent
 responsibilities. Standards-aware academic formatting remains separate work.
 
+### Existing PDF bundle publication integrity
+
+Refreshing an existing generated PDF bundle requires its complete declared artifact
+inventory, manifest self-hash and file hashes to verify. Modified, missing, extra or
+symlink entries reject replacement; the matching doc_id/version marker alone is not
+ownership evidence. Recheck the observed manifest token under an OS advisory lock
+immediately before publication. Identical exports reuse existing files. Changed
+exports retain the previous directory as a named backup and return its path, so
+late writes through external editors' open handles are not deleted. An external
+writer is not serialized by the MCP lock; conflicts retain recoverable files and
+must not claim successful publication. Source-overlap protections remain enforced.
+
 ### 2.1 DDD (Domain-Driven Design) 分層架構
 
 ```text

@@ -49,6 +49,7 @@ from src.domain.pdf_preflight import PDFPreflightError
 from src.infrastructure.structured_extractor import is_structured_engine
 from src.presentation.dependencies import (
     asset_service,
+    bundle_publisher,
     document_service,
     docx_service,
     get_marker_extractor,
@@ -2688,7 +2689,9 @@ async def document(
     if operation in {"export_assets", "agent_assets"}:
         if not doc_id:
             return _missing_document_param("doc_id")
-        exporter = AgentAssetBundleService(repository, segmentation_service)
+        exporter = AgentAssetBundleService(
+            repository, segmentation_service, publisher=bundle_publisher
+        )
         try:
             return await exporter.export(
                 doc_id,

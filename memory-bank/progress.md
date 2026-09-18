@@ -27,6 +27,22 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
+## 2026-09-18 existing PDF bundle protection (unreleased)
+
+- Replaced marker-only directory replacement with an injected domain publication
+  port and infrastructure inventory/publisher implementations. Verify manifest
+  self-hash, bounded complete file/directory inventory, file sizes/hashes and no
+  symlinks; preserve manually modified or unexpected content by refusing refresh.
+- Recheck the observed manifest token under the OS lock; identical outputs reuse
+  files and mtimes. Actual updates retain the former directory and report backup_path.
+  Late writes through old POSIX editor handles remain in that backup. Failed or
+  competing publication restores the old target when possible or preserves both
+  the competing target and named backup. No external-editor serialization claim.
+- 18 new data-preservation regressions; focused bundle/citation/SDK2 tests pass 61.
+  Full Python suite passes 1,374 tests, 30 optional skips. Ruff/format/MyPy,
+  configured Bandit gate and release harness audit pass. Cross-platform CI includes
+  these new regressions. README/wiki/Pages explain the unpublished behavior.
+
 ## 2026-09-18 native wiki snapshot checkpoint (unreleased)
 
 - Added native/export_wiki through the existing document facade: immutable source
@@ -53,6 +69,9 @@ Baseline revalidated; isolated latest main while preserving original user edits.
   test-reader failures: the new Unicode tests relied on the cp1252 locale instead
   of specifying UTF-8. Exported bytes are already explicitly UTF-8. Corrected the
   test reads; rerun cross-platform CI before treating this checkpoint as verified.
+- Follow-up 6407d31 passed every job in CI 35317215411, including Windows native
+  tests/VSIX install, macOS, Python 3.10 and Linux integration. Pages 35317214962 is
+  green. Existing PDF bundle publication protection is the next bounded change.
 
 ## 2026-09-18 release and native reference checkpoint
 

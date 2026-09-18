@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import json
 import re
 import shutil
 import tempfile
-import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -30,10 +28,12 @@ from src.application.agent_asset_record_builder import (
 from src.application.citation_format_service import render_citation
 from src.application.citation_index_service import CitationIndexService
 from src.application.output_paths import resolve_document_output_dir
+from src.domain.bundle_publication import BundlePublicationPolicy
 from src.domain.citation_format import CitationMetadata, resolve_citation_format
 
 if TYPE_CHECKING:
     from src.application.segmentation_service import SegmentationService
+    from src.domain.bundle_publication import BundlePublisher
     from src.domain.repositories import DocumentRepository
 
 
@@ -45,6 +45,7 @@ class AgentAssetBundleService:
         repository: DocumentRepository,
         segmentation_service: SegmentationService,
         *,
+        publisher: BundlePublisher,
         max_spans: int = DEFAULT_MAX_BUNDLE_SPANS,
         max_records: int = DEFAULT_MAX_BUNDLE_RECORDS,
         max_output_bytes: int = DEFAULT_MAX_BUNDLE_OUTPUT_BYTES,
@@ -60,6 +61,7 @@ class AgentAssetBundleService:
         self.max_spans = max_spans
         self.max_records = max_records
         self.max_output_bytes = max_output_bytes
+        self.publisher = publisher
 
     async def export(
         self,
@@ -95,7 +97,8 @@ class AgentAssetBundleService:
                 "Agent asset output must be a child of the document directory"
             )
         self._validate_target_is_not_source(target, doc_dir, manifest)
-        self._validate_existing_target(target, doc_id)
+        policy = BundlePublicationPolicy(doc_id, BUNDLE_VERSION, self.max_output_bytes)
+        observed_token = self.publisher.inspect(target, policy)
         target.parent.mkdir(parents=True, exist_ok=True)
 
         first_segmentation = (
@@ -180,7 +183,7 @@ class AgentAssetBundleService:
                 output_budget,
                 citation_format=citation_format,
             )
-            self._replace_target(stage, target)
+            publication = self.publisher.publish(stage, target, policy, observed_token)
         except Exception:
             if stage.exists():
                 shutil.rmtree(stage)
@@ -188,6 +191,7 @@ class AgentAssetBundleService:
 
         return {
             "success": True,
+            **publication,
             "operation": "export_assets",
             "bundle_version": BUNDLE_VERSION,
             "doc_id": doc_id,
@@ -204,27 +208,6 @@ class AgentAssetBundleService:
             "asset_count": len(records),
             "counts": counts(records),
         }
-
-    @staticmethod
-    def _validate_existing_target(target: Path, doc_id: str) -> None:
-        if not target.exists():
-            return
-        if not target.is_dir():
-            raise ValueError(
-                f"Agent asset output exists and is not a directory: {target}"
-            )
-        marker = target / "manifest.json"
-        try:
-            payload = json.loads(marker.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
-            raise ValueError(
-                f"Refusing to replace non-bundle output directory: {target}"
-            ) from exc
-        if (
-            payload.get("bundle_version") != BUNDLE_VERSION
-            or payload.get("doc_id") != doc_id
-        ):
-            raise ValueError(f"Refusing to replace non-matching bundle: {target}")
 
     @classmethod
     def _validate_target_is_not_source(
@@ -353,18 +336,3 @@ class AgentAssetBundleService:
                 "Citation index could not be aligned with the current document "
                 "revision and locator metadata"
             )
-
-    @staticmethod
-    def _replace_target(stage: Path, target: Path) -> None:
-        backup: Path | None = None
-        if target.exists():
-            backup = target.with_name(f".{target.name}.backup-{uuid.uuid4().hex}")
-            target.replace(backup)
-        try:
-            stage.replace(target)
-        except Exception:
-            if backup is not None and backup.exists() and not target.exists():
-                backup.replace(target)
-            raise
-        if backup is not None and backup.exists():
-            shutil.rmtree(backup)

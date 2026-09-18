@@ -301,7 +301,10 @@ Use stable row identifiers and cell-level AssetRefs so every comparison can retu
 Agent asset and evidence exports can create Foam-compatible indexes, notes, anchors, tables, figures, and media. These files remain readable Markdown while retaining embedded provenance records.
 
 ## Check evidence health
-Run wiki health checks before promoting claims, and keep unresolved or stale references visible for review.`,
+Run wiki health checks before promoting claims, and keep unresolved or stale references visible for review.
+
+## Development after 1.1.0: preserve human notes
+Current main verifies the complete existing PDF bundle inventory and hashes before refreshing it. Changed, missing, extra or symlink entries stop replacement. Identical exports reuse files; actual replacements retain the previous directory and return backup_path. Publication rechecks the observed version under an OS lock, while external editors still require coordination. These changes are not in 1.1.0 packages.`,
   "knowledge-graph": `## Use discovery as optional context
 LightRAG is opt-in and can support consultation or graph export when its backend is configured. Knowledge responses help discovery but do not replace canonical document evidence.
 

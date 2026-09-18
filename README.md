@@ -73,6 +73,8 @@ Development after 1.1.0 adds native reference verification and `native/export_wi
 revision-pinned notes, original attachments, full cell evidence and custom citation
 display. Exports preserve old snapshots and reject modified files. These additions
 are on main, not in the 1.1.0 packages; see the native operation guide.
+Main also protects existing PDF bundle notes with inventory/hash checks and retained
+backups when a verified generated bundle is replaced.
 
 ## ✨ Features
 

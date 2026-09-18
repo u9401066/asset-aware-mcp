@@ -17,6 +17,13 @@
   verifies existing inventories/bytes, never overwrites notes and reports retained
   partial output. Opaque formats export attachments without invented cell content.
 
+### Fixed
+
+- PDF asset bundle refresh now validates the complete inventory, manifest and
+  artifact hashes, preserves human changes, rechecks publication under an OS lock
+  and retains replaced directories for recovery. Identical exports reuse files.
+- Native wiki regression readers specify UTF-8 on Windows locales.
+
 ## [1.1.0] - 2026-09-18
 
 ### Added
