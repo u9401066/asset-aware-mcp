@@ -48,6 +48,7 @@ Baseline revalidated; isolated latest main while preserving original user edits.
   validation keyword; default-cap and old workbook stdio regressions now pass.
 - README/Pages/spec/roadmap and bundled harness distinguish this development from
   published 1.2.0. Python 3.10/macOS/Windows CI now runs the DOCX regressions.
+  Pushed bbdbf8a; CI 35321780547 passed all ten jobs and Pages 35321779592 passed.
   No claim of arbitrary DOCX structure/style CRUD, complete rendered fidelity,
   DOCX component citations/wiki, PPTX editing or standards-complete CSL support.
 

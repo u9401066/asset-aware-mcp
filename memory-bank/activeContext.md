@@ -45,8 +45,10 @@ and a real SDK2 DOCX read/edit/writeback flow; 199 VSIX tests, types/lint/Bandit
 docs/harness synchronization and desktop/mobile bilingual reader checks pass.
 Full regression caught an oversized native contract response; removing JSON
 Schema display titles (without removing fields named title) fixed truncation.
-New DOCX tests are included in Python 3.10, macOS and Windows CI. Commit/push and
-cross-platform CI are next. Documentation explicitly distinguishes main from 1.2.0.
+New DOCX tests are included in Python 3.10, macOS and Windows CI. Main checkpoint
+bbdbf8a056eba128ec01b092ea26f7bbe5d823a9 passed every job in CI 35321780547,
+including Windows/macOS installation and native tests; Pages 35321779592 passed.
+Documentation explicitly distinguishes main from 1.2.0; no new tag was created.
 The previous release documentation checkpoint 01b77dc passed CI 35320080065 and Pages.
 
 New source files: src/domain/native_docx.py,
@@ -57,6 +59,14 @@ Tests: tests/native_docx_helpers.py, tests/unit/test_native_docx.py,
 tests/unit/test_native_docx_failures.py, tests/integration/test_native_docx_stdio_e2e.py.
 Next: immutable DOCX component evidence/wiki integration, then remaining native
 format/structural CRUD and standards-aware citations. Broad goal remains active.
+Read-only next-step findings: DocxIrSerializationMixin._block_to_dict already
+retains content/runs/cell formats and native locator metadata; reuse it instead of
+reconstructing block meaning from the 80-character list_blocks previews. Existing
+1.2.0 native wiki snapshots for DOCX are opaque and keyed only by asset/revision;
+a new component projection must preserve those old directories/links. Native
+contract JSON now occupies 10,712 of the default 12,000 response characters; adding
+reference types requires an explicit bounded-schema strategy and regression.
+No component-reference/wiki implementation has been started.
 
 CSL research: citeproc-py still documents missing year-suffix/disambiguation,
 subsequent et-al and collapsing support; installing it alone cannot justify full
