@@ -27,7 +27,23 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
-## 2026-09-18 native file assets — PR #10, CI pending
+## 2026-09-18 direct-main integration and 1.1.0 preparation
+
+- User explicitly requested direct code changes without self-PRs. Green b882fa1
+  was fast-forwarded to main using the owner's allowed bypass of the approving
+  review requirement, without changing protection settings. This supersedes the
+  earlier unanswered admin-merge question. PRs #9/#10 auto-completed; remote topic
+  branches were deleted. Main is the only remote branch.
+- CI 35313470325 passed every job, including native operations on Python 3.10,
+  macOS and Windows plus Linux VSIX activation. Main CI 35313709615 also passed.
+- Docker native-checkpoint build/doctor/SDK2 stdio pass; Pages deployment from
+  b882fa1 succeeded. Preparing 1.1.0 metadata/docs/harness and release gates.
+- Version 1.1.0 metadata, bilingual docs, repository metadata contract and bundled
+  agent harness are synchronized. Final-version Python regression: 1,326 passed,
+  30 optional skips. Complete release harness/tag/registry verification is next.
+- No new tag or registry release has been published yet. Overall goal remains active.
+
+## 2026-09-18 native file assets — merged to main
 
 - Source-independent registration, immutable revisions, typed native request
   contract, XLSX create and scoped XLSX/XLSM read/update/clear are implemented.
@@ -58,7 +74,7 @@ Baseline revalidated; isolated latest main while preserving original user edits.
 - Broader native structural CRUD, native wiki/academic citation integration,
   visual verification and other formats remain in scope after this milestone.
 
-## 2026-09-18 citation contract milestone — PR #9, release pending
+## 2026-09-18 citation contract milestone — merged, release pending
 
 - Added citation-format-v1 custom/source/author-year/numeric display contracts to
   evidence bundles, Foam notes and portable asset exports. Canonical evidence,

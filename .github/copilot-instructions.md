@@ -22,6 +22,7 @@
 - 🩺 **PDF Preflight** — 攝入前唯讀、process-isolated page classification / OCR / engine routing
 - 📦 **Agent Asset Export** — deterministic text/table/figure + provenance bundle，可直接形成 Foam subtree
 - 🧩 **Segmentation Export** — 統一 segmentation schema（reading order + line span）
+- 📊 **Native files** — `document(op="native")` 支援原生檔案版本、XLSX 建立、XLSX/XLSM cells 讀寫、明確回寫與來源同步；完整語意／視覺／公式核對由 Agent 負責。
 - 📊 **A2T** — Anything to Table 表格建立
 - 🧭 **Section Navigation** — 動態層級章節導航（5 Tools）
 - 🔍 **Knowledge Graph** — 跨文獻知識圖譜（LightRAG）

@@ -4,13 +4,22 @@ Asset-Aware MCP 是給 AI agents 使用的 citation-ready 文件工作流伺服�
 PDF、DOCX/DFM、表格、圖片、section、citation index、Foam evidence pack 與選用
 KG/RAG 串成可驗證的文件流程。
 
-章節導覽依任務整理；現行正式版本為 `1.0.1`，擴充工作另列於下方。
+章節導覽依任務整理；本份文件對應 `1.1.0`。正式發布狀態以
+[GitHub Releases](https://github.com/u9401066/asset-aware-mcp/releases) 為準。
 
 ## 進行中的產品方向
 
 目標是 Agent 跨格式文件 CRUD、獨立表格創造與 wikilink 證據庫。
 MCP 提供來源／版本、格式與操作結果的必要檢查；Agent 負責完整核對與修正。
 現有 PDF、DOCX/DFM、A2T 與可攜資產保留來源；原生試算表／簡報 CRUD 等仍在擴充。
+
+## 1.1.0 highlights
+
+- 原生檔案具固定 ID 與不可變版本，支援獨立 XLSX 建立、XLSX/XLSM cells 局部編輯、
+  來源回寫、外部修改同步與衝突回報；詳見 [Native File Assets](Native-File-Assets)。
+- 引用格式 contract 支援來源標籤、作者／年份、指定編號與自訂範本，保留 canonical
+  provenance；完整 CSL 與原生文件 wiki adapter 仍待實作。
+- MCP SDK 2.2.0；必要結構檢查與確定性修復由 MCP 執行，語意、畫面、公式結果由 Agent 核對。
 
 ## 1.0.1 highlights
 

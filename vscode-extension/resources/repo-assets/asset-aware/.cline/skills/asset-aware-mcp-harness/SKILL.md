@@ -26,6 +26,17 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
 - Prefer stable, verifiable spans (line/char/byte offsets + hashes) over loose “source: page 3” citations.
 - Treat CRAAP fields as a conservative scaffold: avoid claiming more confidence than you can actually verify.
 
+## Native Document Operations
+
+- Discover the typed contract with `document(op="native", native_request={"op":"contract"})`.
+- Use native register/create/inspect/read_cell/update operations for workbooks;
+  keep expected revisions and source hashes through publish/writeback/refresh.
+- Keep source backups and report divergent edits for agent reconciliation.
+  MCP performs mechanical checks and supported deterministic repairs; the agent
+  verifies semantics, rendered layout and formula results.
+- Native cell refs are not PDF AssetRefs. Broader native CRUD and native wiki
+  export remain separate capability boundaries; do not invent unsupported tools.
+
 ## MCP Auto-Config Mindset
 - VSIX install/update must keep Copilot `.vscode/mcp.json`, Cline `cline_mcp_settings.json`, and Codex `config.toml` idempotent.
 - Preserve unrelated MCP servers and user-local Cline/Codex metadata.

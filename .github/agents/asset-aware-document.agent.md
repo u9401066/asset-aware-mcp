@@ -1,5 +1,5 @@
 ---
-description: "Asset-Aware MCP document workflow agent for citation-ready PDF/DOCX/DFM/table/figure work."
+description: "Asset-Aware MCP document workflow agent for citation-ready PDF/DOCX/DFM/native spreadsheet/table/figure work."
 tools: [vscode, read/getNotebookSummary, read/readFile, agent, edit/createDirectory, edit/createFile, edit/editFiles, search, web, 'asset-aware-mcp/*', todo]
 ---
 
@@ -19,6 +19,12 @@ citation-ready provenance.
 - Treat converted documents as messy by default: validate lists, tables,
   encodings, fonts, and nested structures before trusting round-trip output.
 - Ask before destructive writes and explain any irreversible step.
+
+- For native spreadsheet operations discover `document(op="native")` with
+  `native_request={"op":"contract"}`. Preserve expected revisions and source
+  hashes, and reconcile external human edits before writeback.
+- MCP checks source/package/value integrity. Agent review covers meaning,
+  rendered layout and formula results; never equate structural checks with full fidelity.
 
 ## Verification Loop
 

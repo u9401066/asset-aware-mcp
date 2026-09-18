@@ -2,15 +2,22 @@
 
 ## 2026-09-18 — cross-format CRUD and evidence library
 
-Authoritative baseline is origin/main e612d20, published 1.0.1. Original master
-worktree remains at 0.9.0 with pre-existing user changes; do not reset it.
-Worktree: /home/eric/workspace251226/asset-aware-mcp-agent-assets;
-branch: feat/native-document-assets, based on PR #9's 36b8cfe.
-PR #9 now has all 12 GitHub checks green. Standard merge was rejected by the
-one-review branch rule; explicit admin-merge authorization is pending. Continue
-native work independently, and never infer approval from goal continuation.
-Author remains u9401066 <u9401066@gap.kmu.edu.tw>. Merge completed work to main and
-remove merged work branches; preserve the original dirty master worktree.
+Authoritative code is origin/main b882fa1; latest published version remains 1.0.1.
+Worktree: /home/eric/workspace251226/asset-aware-mcp-agent-assets; branch main.
+User explicitly changed item 6: edit code directly, no self-PR workflow, integrate
+into main and remove other branches. After green CI, main was fast-forwarded
+using the repository owner's permitted admin bypass; protection rules were not
+changed. PRs #9/#10 auto-completed, both remote topic branches and the unused
+local citation branch are deleted. Future checkpoints use direct main commits.
+The original master worktree still contains pre-existing user changes; preserve it.
+Author remains u9401066 <u9401066@gap.kmu.edu.tw>.
+
+Preparing 1.1.0 for the citation/native spreadsheet milestone. Code gates passed
+1,326 Python tests, 199 VSIX tests, true SDK 2 stdio, Python 3.10/macOS/Windows
+native regressions, Linux activation, wheel/sdist audit/install and Docker smoke.
+Release metadata/docs/harness are being synchronized. No 1.1.0 tag exists yet.
+Run complete release gates on clean main, monitor main CI, then tag/publish and
+verify registries. Keep the larger cross-format CRUD/wiki goal active.
 
 The latest explicit user reply confirms: MCP provides necessary source/version,
 format-preservation and operation-result checks; the agent owns complete semantic
@@ -22,28 +29,17 @@ Full scope is tracked in docs/spec.md and ROADMAP.md; a milestone is not complet
 User goal item 5 adds MCP SDK 2.0+ and current package/repository evaluation.
 The baseline used MCP 2.0.0; this milestone locks and verifies MCP 2.2.0.
 
-Citation presentation contracts are implemented in evidence/Foam and portable
-asset exports. Python 1,281 tests pass; see progress.md for gates/limitations.
-The citation-contract milestone is pushed in PR #9. Automated review identified
-two ambiguous completion statements; roadmap/spec now separate implemented custom
-display contracts from remaining academic styles and native-format integration. CI is green; await required review or explicit admin-merge authorization, then release
-through the normal gates. Continue native capabilities/CRUD and inspectable results
-as the next milestone. Managed labels are synchronized; description/Pages deploy
-follow merge. Browser desktop/mobile language/copy checks passed with cached exact
-CDN scripts; VSIX activation still needs the CI display-enabled runner.
-README/Pages/GitHub metadata/labels/MEM and staged commits/push/releases are
-explicitly authorized. Full release gates remain required before tagging.
+Citation display contracts and native spreadsheet operations are merged to main.
+Full regression: 1,326 Python passes (30 optional skips), 199 VSIX passes, actual
+SDK 2 stdio and native cases on Windows/macOS/Python 3.10, Linux VSIX activation,
+wheel/sdist install and Docker gates. Native IO/read/guard/repair/editor modules
+are separated. Browser desktop/mobile reader and bilingual interaction checks
+pass using cached exact CDN scripts. Pages deployment from b882fa1 succeeded.
 
-
-Native spreadsheet milestone is implemented in feat/native-document-assets.
-45 focused tests pass, including real SDK 2 stdio, source divergence/recovery,
-long cell provenance, formula guards, special text and crash-released locks.
-Native IO/read/guard/repair/editor modules are separated. Full regression passes
-1,326 tests (30 optional skips); 199 VSIX tests, package inventory, harness/docs
-audits and desktop/mobile bilingual reader checks pass. Commit aa41ddd is pushed as
-PR #10 (depends on #9). Wheel and install gates pass; native regression steps are
-being added to Python 3.10/macOS/Windows jobs. Monitor CI and resolve findings. Keep broad
-native CRUD/wiki work active.
+README/Pages/GitHub metadata/labels/MEM and direct commits/push/releases are
+explicitly authorized. Complete versioned release gates before tagging 1.1.0;
+then apply metadata/labels from main and verify registry artifacts. Broader native
+CRUD, wiki adapters and standards-aware academic citations remain active work.
 
 
 ## 2026-08-13 - v1.0.1 large-PDF and Codex hardening

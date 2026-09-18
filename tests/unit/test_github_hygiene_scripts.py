@@ -28,8 +28,8 @@ mcp-server
 ocr
 pdf
 python
-segmentation
-wikilinks"""
+wikilinks
+xlsx"""
 
 EXPECTED_LABELS = """area:formats\t1d76db\tNative document format capabilities and CRUD adapters
 area:fidelity\t0e8a16\tFormat preservation, necessary checks and agent review evidence
@@ -83,7 +83,7 @@ if [[ "$1" == "api" && "$*" == *"--jq .description"* ]]; then
   if [[ "${GH_FAKE_SCENARIO:-ok}" == "metadata-drift" ]]; then
     printf '%s\\n' 'stale description'
   else
-    printf '%s\\n' 'Agent document collaboration: PDF assets, DOCX writeback, independent tables and wikilink evidence libraries, with provenance and citation format contracts'
+    printf '%s\\n' 'Agent document collaboration: PDF assets, DOCX writeback, versioned spreadsheets and wikilink evidence libraries with provenance and citation contracts'
   fi
 elif [[ "$1" == "api" && "$*" == *"--jq .homepage"* ]]; then
   printf '%s\\n' 'https://u9401066.github.io/asset-aware-mcp/'

@@ -7,6 +7,17 @@
 
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+## v1.1.0 原生資產與引用格式
+
+- 原生檔案具有固定 ID 與不可變版本；可獨立建立 XLSX，並讀取、編輯、清空
+  XLSX/XLSM 儲存格，附明確的格式保留檢查。
+- 支援明確匯出、來源回寫及外部修改同步，保留歷史並偵測人類／Agent 修改衝突。
+  語意、畫面與公式結果仍由 Agent 核對。
+- PDF 證據／Foam 匯出的引用格式可自訂，底層來源定位與 hash 保持獨立。
+  完整 CSL 與原生文件 wiki adapter 仍待實作。
+- 使用官方 MCP SDK 2.2.0 與修補後套件，原生操作已有 Windows、macOS、Linux
+  和 Python 3.10 回歸驗證。
+
 ## v1.0.1 可靠性翻新
 
 - 大型 PDF 文字、表格與圖片結果改用 private、atomic、具大小上限的
@@ -37,7 +48,7 @@ Agent 需要操作原生文件、可編輯元件與可重用證據，包含獨�
 Agent 負責完整的語意與視覺核對，依據可檢查的結果協調修正。
 
 目前覆蓋 PDF 讀取／拆解／可攜資產匯出、DOCX/DFM 局部編修與獨立 A2T 表格。
-開發分支新增原生檔案登錄、不可變版本、獨立 XLSX 建立、XLSX/XLSM 局部儲存格編輯、
+v1.1.0 新增原生檔案登錄、不可變版本、獨立 XLSX 建立、XLSX/XLSM 局部儲存格編輯、
 明確來源回寫與外部修改同步。詳見[原生文件用法與限制](docs/wiki/Native-File-Assets.md)。
 更廣泛的原生 CRUD、各格式必要檢查與 Agent 核對流程仍在開發；有轉檔工具不代表保真回寫。
 詳見[規格與 contract](docs/spec.md)及[路線圖](ROADMAP.md)。
@@ -45,9 +56,9 @@ Agent 負責完整的語意與視覺核對，依據可檢查的結果協調修�
 Asset 包含身分、版本、原生定位、表示、關係、操作能力與驗證狀態。Wiki 筆記是
 連回資產的文本投影；人類引用格式可擴充，底層證據引用保持獨立。
 
-開發分支已加入引用格式 contract：支援來源標籤、作者／年份、指定編號與自訂範本，
+v1.1.0 已加入引用格式 contract：支援來源標籤、作者／年份、指定編號與自訂範本，
 套用到證據與 Foam 匯出時保留原始來源資訊；完整 APA/CSL 渲染仍待實作。
-詳見[用法與限制](docs/wiki/LLM-Wiki-Knowledge-Base.md#citation-format-contracts-unreleased)。
+詳見[用法與限制](docs/wiki/LLM-Wiki-Knowledge-Base.md#citation-format-contracts)。
 
 ## ✨ 特色
 

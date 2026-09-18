@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-18
+
 ### Added
 
 - Native file registry with stable IDs, immutable SHA-256 revisions, optimistic

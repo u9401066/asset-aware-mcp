@@ -1,11 +1,11 @@
-# Native File Assets（開發分支，尚未發布）
+# Native File Assets（v1.1.0）
 
 Agent 可以登錄人類交付的檔案，也可以直接建立 XLSX 工作簿。每份檔案都有固定
 `asset_id`、不可變的 SHA-256 版本與操作能力；PDF、DOCX 等既有工作流程仍使用
 各自的工具。登錄其他格式會保留原始內容，不代表已具備該格式的編輯器。
 
 Native file assets have stable IDs, immutable revisions and explicit format
-capabilities. This unreleased milestone adds XLSX creation and scoped XLSX/XLSM
+capabilities. Version 1.1.0 adds XLSX creation and scoped XLSX/XLSM
 cell reads/edits through the existing `document` tool. It does not complete
 cross-format CRUD, native wiki export or visual fidelity verification.
 

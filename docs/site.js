@@ -225,7 +225,7 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 
 ## Verify preservation
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
-  "native-file-assets": `## Native spreadsheets and versioned files — unreleased
+  "native-file-assets": `## Native spreadsheets and versioned files — v1.1.0
 
 Use the document tool with op="native" and a typed native_request. Start with native_request={"op":"contract"} to discover the schema.
 
@@ -377,7 +377,7 @@ function defineTool(name, category, summary, inputs, outcome, example, module) {
 }
 
 const TOOLS = [
-  defineTool("document", "document", "Document facade for PDF workflows and versioned native spreadsheet operations (unreleased).", "op, pdf_path, doc_id, file_paths, output_dir, native_request", "PDF assets or native file revisions with explicit preservation checks", 'document(op="export_assets", doc_id="doc_...", output_dir="agent-assets")', "document_tools.py"),
+  defineTool("document", "document", "Document facade for PDF workflows and versioned native spreadsheet operations (v1.1.0).", "op, pdf_path, doc_id, file_paths, output_dir, native_request", "PDF assets or native file revisions with explicit preservation checks", 'document(op="export_assets", doc_id="doc_...", output_dir="agent-assets")', "document_tools.py"),
   defineTool("document_asset", "document", "Fetch document assets, navigate sections, and write table or figure Foam notes.", "op, doc_id, asset_type, asset_id, path", "Bounded asset content or provenance-rich Foam notes", 'document_asset(op="foam_notes", doc_id="doc_...", asset_type="all")', "document_tools.py"),
   defineTool("section", "document", "Browse, search, and read a document section tree.", "op, doc_id, path, query, limit", "Section hierarchy, detail, content, or bounded blocks", 'section(op="tree", doc_id="doc_...", max_depth=3)', "section_tools.py"),
   defineTool("ingest_documents", "document", "High-frequency PDF ingest shortcut with background-job semantics.", "file_paths, async_mode, use_marker, ocr_enabled, ocr_language", "Job id and per-file progress without blocking stdio", 'ingest_documents(file_paths=["/papers/source.pdf"])', "document_tools.py"),

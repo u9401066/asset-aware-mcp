@@ -31,6 +31,17 @@ verification.
 - Keep CRAAP values conservative unless the implementation can justify them.
 - Preserve aliases/backward compatibility when evolving MCP tool payloads.
 
+## Native Document Operations
+
+- Discover the typed contract with `document(op="native", native_request={"op":"contract"})`.
+- Use native register/create/inspect/read_cell/update operations for workbooks;
+  keep expected revisions and source hashes through publish/writeback/refresh.
+- Keep source backups and report divergent edits for agent reconciliation.
+  MCP performs mechanical checks and supported deterministic repairs; the agent
+  verifies semantics, rendered layout and formula results.
+- Native cell refs are not PDF AssetRefs. Broader native CRUD and native wiki
+  export remain separate capability boundaries; do not invent unsupported tools.
+
 ## Release Rules
 
 - Treat VSIX install/update as a first-class release path.

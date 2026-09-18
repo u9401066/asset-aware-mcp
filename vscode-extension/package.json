@@ -2,7 +2,7 @@
     "name": "asset-aware-mcp",
     "displayName": "Asset-Aware MCP",
     "description": "MCP SDK 2 workflows that turn PDF/DOCX content into citation-ready agent assets and Foam/LightRAG wikis",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "publisher": "u9401066",
     "engines": {
         "vscode": "^1.96.0"

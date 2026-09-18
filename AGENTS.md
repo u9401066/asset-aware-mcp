@@ -36,6 +36,19 @@ and LightRAG knowledge graph outputs.
    `document(op="export_assets", doc_id="doc_...", output_dir="agent-assets")`;
    use the generated Foam index and notes as the portable wiki layer.
 
+## Native Files and Agent Review
+
+- For native workbooks use `document(op="native", native_request={"op":"contract"})`.
+  Register an existing file or create XLSX independently; typed cell edits use the
+  returned expected revision. Edits create managed versions before explicit writeback.
+- Refresh human source changes under the same asset ID. Divergence requires agent
+  reconciliation; never discard either revision to make a stale check pass.
+- MCP checks package/source/value integrity and supports deterministic repairs.
+  Agents verify semantics, rendered layout and recalculated formulas. Read-back or
+  byte preservation alone does not prove full visual fidelity.
+- Use `read_cell` with text offsets for long cells. Native cell references differ
+  from PDF AssetRefs; native wiki/citation integration is not available yet.
+
 ## PDF -> Asset Engine Selection
 
 The core goal is turning documents into complete, agent-friendly figure/table/

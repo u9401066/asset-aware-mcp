@@ -7,6 +7,17 @@
 
 🌐 [繁體中文](README.zh-TW.md) · [Docs Site](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+## v1.1.0 native assets and citation contracts
+
+- Register native files with stable IDs and immutable revisions; create XLSX
+  workbooks and read/update/clear XLSX/XLSM cells with explicit preservation checks.
+- Publish, write back or refresh sources while retaining history and detecting
+  divergent human/agent edits. Semantic, visual and formula review stays agent-owned.
+- Customize citation display in PDF evidence/Foam exports without replacing
+  canonical source locators or hashes. Full CSL and native wiki adapters remain planned.
+- Official MCP SDK 2.2.0, patched dependencies and native operation regressions
+  on Windows, macOS, Linux and Python 3.10.
+
 ## v1.0.1 reliability refresh
 
 - Large PDF text/table/figure results use a private, atomic, size-bounded
@@ -43,7 +54,7 @@ versions, format constraints and operation results; the agent verifies meaning
 and visual layout and coordinates corrections using inspectable evidence.
 
 Current coverage: PDF ingestion/decomposition/portable export, DOCX/DFM scoped
-editing and independent A2T tables. The development branch adds native file
+editing and independent A2T tables. Version 1.1.0 adds native file
 registration, immutable revisions, XLSX creation and scoped XLSX/XLSM cell edits,
 with explicit source writeback and refresh. See [native usage and limits](docs/wiki/Native-File-Assets.md).
 Broader native CRUD, per-format checks and agent review workflows remain ongoing;
@@ -53,10 +64,10 @@ Assets carry identity, revision, native locators, representations, relationships
 capabilities and validation state. Wiki notes are linked projections; configurable
 citation display must preserve the underlying evidence references.
 
-Citation format contracts are available on the development branch: source,
+Version 1.1.0 includes citation format contracts: source,
 author/year, explicit numbering and custom templates for evidence/Foam exports.
 They preserve canonical provenance; full APA/CSL rendering remains future work.
-See [usage and limits](docs/wiki/LLM-Wiki-Knowledge-Base.md#citation-format-contracts-unreleased).
+See [usage and limits](docs/wiki/LLM-Wiki-Knowledge-Base.md#citation-format-contracts).
 
 ## ✨ Features
 

@@ -176,7 +176,7 @@ evidence(
 Health check 會回查 embedded AssetRef JSON、span/table/figure locator、asset note
 和 `[[note#^anchor]]` link 是否 drift。若 drift，重新匯出 bundle，再更新 topic note。
 
-## Citation format contracts (Unreleased)
+## Citation format contracts
 
 Use `evidence(op="contract")` to inspect the format schema, metadata schema and
 presets. Both `evidence(op="bundle")` / `citation_bundle` and

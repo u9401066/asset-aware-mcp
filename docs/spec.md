@@ -54,7 +54,7 @@ Published 1.0.1 covers PDF read/decompose/export, scoped DOCX/DFM writeback and
 independent A2T table creation/edit/export. Native spreadsheet/presentation CRUD,
 general asset registration, cross-format wiki export, per-format operation checks
 and agent review workflows, and standards-aware APA/Chicago/CSL rendering remain
-unfinished. Unreleased milestones add custom citation display contracts to existing PDF
+unfinished in that baseline. Version 1.1.0 adds custom citation display contracts to existing PDF
 evidence/Foam and portable exports, plus a native file registry and scoped
 spreadsheet operations described below. Remaining native-format adapters,
 spreadsheet structural CRUD and academic style rendering are still unfinished. Conversion to
@@ -62,7 +62,7 @@ DOCX/PPTX does not prove native round-trip fidelity. ROADMAP.md tracks full scop
 Each milestone updates README, Pages, repository metadata/labels and Memory Bank;
 reviewed commits are pushed in stages and releases require the full harness.
 
-### Native file assets and spreadsheet operations (implemented, unreleased)
+### Native file assets and spreadsheet operations (v1.1.0)
 
 A registered file receives a persistent asset ID independent of its filename and
 content hash. Immutable revisions use SHA-256. Source identity, native structure,
