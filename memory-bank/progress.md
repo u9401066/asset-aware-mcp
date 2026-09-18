@@ -30,22 +30,27 @@ Baseline revalidated; isolated latest main while preserving original user edits.
 ## 2026-09-18 release and native reference checkpoint
 
 - v1.1.0 is annotated at 0e71b4c. Complete local release.sh gates and main CI
-  35314228355 pass; release workflow 35314426885 is being monitored.
+  35314228355 pass; release workflow 35314426885 passed all eight jobs.
 - PyPI 1.1.0 is published with the correct author. Wheel SHA-256 d5ae3e5c0f7a3e8304aaefc57d305a4fa847321251d54121cf212da78ba3c1d3
   and sdist SHA-256 6788bfafaf8286e447086e2096ef56fa319a692d55f934630fec154e73651c58
-  match local checked artifacts exactly. Marketplace/GitHub Release verification pending.
+  match local checked artifacts exactly. Marketplace and GitHub Release are public:
+  https://github.com/u9401066/asset-aware-mcp/releases/tag/v1.1.0
+  Marketplace VSIX SHA-256 58b152d33b2b8b614b37febf5ec4199161207feaf54197fb6da3d0faa0700086
+  matches the GitHub Release asset digest; package version/publisher/native harness
+  and absence of compiled tests are verified.
 - Only main remains in local/remote branch lists. Original dirty worktree is
   detached at its unchanged old commit; tracked diff and untracked inventory were
   verified unchanged. No further self-PR workflow; future changes go directly to main.
 - Post-1.1.0 native reference verification is implemented: immutable revision
   integrity, exact native locator and complete cell hash; head freshness and
   semantic/rendered/formula review remain separate. Full suite 1,335 passed,
-  30 optional skips. README/guide/roadmap/spec distinguish unreleased coverage.
+  30 optional skips. Code checkpoint e2fa020 has fully green CI 35315203866.
+  README/guide/roadmap/spec distinguish this unreleased addition from 1.1.0.
 - Native wiki export and preservation of manually edited generated notes are next.
   Existing PDF bundle replacement checks only its matching marker, so do not reuse
   that publication policy for a curated native evidence library without added checks.
 
-## 2026-09-18 direct-main integration and 1.1.0 preparation
+## 2026-09-18 direct-main integration and 1.1.0 preparation (completed)
 
 - User explicitly requested direct code changes without self-PRs. Green b882fa1
   was fast-forwarded to main using the owner's allowed bypass of the approving
@@ -59,7 +64,8 @@ Baseline revalidated; isolated latest main while preserving original user edits.
 - Version 1.1.0 metadata, bilingual docs, repository metadata contract and bundled
   agent harness are synchronized. Final-version Python regression: 1,326 passed,
   30 optional skips. Complete release harness/tag/registry verification is next.
-- No new tag or registry release has been published yet. Overall goal remains active.
+- v1.1.0 publication is complete; post-1.1.0 native evidence work and the larger
+  overall goal remain active.
 
 ## 2026-09-18 native file assets — merged to main
 
@@ -88,11 +94,11 @@ Baseline revalidated; isolated latest main while preserving original user edits.
   VSIX install smoke pass. Local activation has no display and remains a CI gate.
 - Add explicit native fixture/stdio regressions to Python 3.10, macOS and Windows
   CI steps; extension-only smoke did not exercise OS file locks or source writes.
-  CI is being monitored; no version/tag/release yet.
+  These CI steps passed; the native milestone is released in 1.1.0.
 - Broader native structural CRUD, native wiki/academic citation integration,
   visual verification and other formats remain in scope after this milestone.
 
-## 2026-09-18 citation contract milestone — merged, release pending
+## 2026-09-18 citation contract milestone — released in 1.1.0
 
 - Added citation-format-v1 custom/source/author-year/numeric display contracts to
   evidence bundles, Foam notes and portable asset exports. Canonical evidence,

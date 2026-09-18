@@ -2,7 +2,7 @@
 
 ## 2026-09-18 — cross-format CRUD and evidence library
 
-Current main is 0e71b4c, the annotated v1.1.0 release source. Worktree:
+Native reference code checkpoint is main@e2fa020; v1.1.0 is tagged at 0e71b4c. Worktree:
 /home/eric/workspace251226/asset-aware-mcp-agent-assets, branch main.
 User explicitly requests direct code changes without self-PRs. Check locally,
 commit/push main using the owner's allowed protection bypass, then monitor CI.
@@ -15,15 +15,17 @@ its tracked diff and untracked inventory were checked unchanged. Preserve those
 pre-existing user modifications; actual development stays in the main worktree.
 
 Version 1.1.0 passed complete local release gates and CI 35314228355, then tag
-v1.1.0 was pushed. Release workflow 35314426885: tests, three-OS smoke, artifact
-preflight and PyPI publishing passed; Marketplace visibility/GitHub Release are
-being monitored. Public PyPI wheel/sdist SHA-256 exactly match the checked local
-artifacts. Repository metadata/labels and Pages are synchronized.
+v1.1.0 was pushed. Release workflow 35314426885 succeeded: PyPI, Marketplace and
+GitHub Release are published. Public PyPI wheel/sdist SHA-256 exactly match the
+checked local artifacts. The downloaded Marketplace VSIX hash matches the GitHub
+Release asset digest; version, publisher, native harness and absence of compiled
+tests are verified. Repository metadata/labels and Pages are synchronized.
 
 Development after 1.1.0 adds native cell-reference verification (not in v1.1.0):
 NativeCellReference/Locator models, NativeEvidenceService, strict native locator
 resolution and document native op=verify. Full current regression: 1,335 passed,
-30 optional skips, including 9 new integrity tests plus real SDK 2 calls. Native
+30 optional skips, including 9 new integrity tests plus real SDK 2 calls. CI
+35315203866 is fully green at e2fa020. Native
 wiki export is next; protect manually edited notes and unexpected files rather
 than copying the existing marker-only bundle replacement behavior. Documentation
 explicitly separates current release coverage from this unreleased addition.
