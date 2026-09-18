@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from functools import partial
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -15,6 +16,7 @@ from src.application.dfm_integrity import (
     IntegrityReport,
 )
 from src.application.native_document_contract import native_document_contract
+from src.application.native_schema import read_schema
 from src.domain.native_assets import NativeDocumentRequest
 from src.domain.native_docx import NativeDocxEdit
 from src.infrastructure import native_docx_workspace
@@ -145,8 +147,21 @@ def test_extended_native_contract_fits_default_response_without_losing_input_fie
     contract = native_document_contract(docx_enabled=True)
     response = format_limited_json_response(title="Native contract", payload=contract)
     assert "response_truncated" not in response
-    assert "update_docx" in response["schema"]["properties"]["op"]["enum"]
-    definitions = response["schema"]["$defs"]
+    assert response["schema_delivery"] == "paged"
+    request = response["schema_request"]
+    text = ""
+    while True:
+        page = read_schema(NativeDocumentRequest.model_validate(request))
+        assert "response_truncated" not in format_limited_json_response(
+            title="Native schema", payload=page
+        )
+        text += page["text_excerpt"]
+        if page["next_text_offset"] is None:
+            break
+        request = {**request, "text_offset": page["next_text_offset"]}
+    schema = json.loads(text)
+    assert "update_docx" in schema["properties"]["op"]["enum"]
+    definitions = schema["$defs"]
     assert "title" in definitions["CitationMetadata"]["properties"]
     assert definitions["NativeDocxEdit"]["properties"]["dfm_text"]["maxLength"] > 0
     assert definitions["NativeDocxBlockLocator"]["properties"]["block_id"]["pattern"]

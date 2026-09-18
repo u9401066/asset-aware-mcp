@@ -2499,13 +2499,15 @@ async def document(
     - ``preflight``: ``pdf_path`` only; ``file_paths`` is rejected.
     - ``inspect`` / ``prepare_ai`` / audit and retrieval operations: ``doc_id``.
     - ``export_assets`` / ``agent_assets``: ``doc_id``; ``output_dir`` is optional.
-    - ``native``: ``native_request`` with its own op (contract/register/create/
+    - ``native``: ``native_request`` with its own op (contract/schema/register/create/
       list/inspect/read_cell/read_docx/read_docx_block/update_docx/verify/export_wiki/update/history/publish/writeback/refresh/archive).
       XLSX/XLSM expose cells; DOCX has a checked DFM bridge. Other formats expose
       metadata. Native wiki includes XLSX/XLSM cells and DOCX blocks/parts;
       other formats retain opaque source attachments. Verification checks integrity,
       while agents review semantics, rendered layout and extraction coverage.
       Native wiki citation_contract/citation_metadata belong inside native_request.
+      contract accepts for_op for one operation. Check schema_delivery; follow
+      schema_request for complete paged JSON and pin schema_sha256 on continuation.
 
     Existing direct document tools stay registered and keep their original
     contracts. The facade descriptions make op-specific requirements visible
@@ -2538,7 +2540,7 @@ async def document(
         return format_limited_json_response(
             title="Native document asset",
             payload=payload,
-            guidance="Use a smaller native_request.limit for inspect/history/blocks, or read_cell/read_docx/read_docx_block with text_offset/text_limit. Pin revision while assembling excerpts. Re-inspect the asset after a truncated write response.",
+            guidance="Use a smaller native_request.limit for inspect/history/blocks, or read_cell/read_docx/read_docx_block/schema with text_offset/text_limit. Pin revision (schema_sha256 for schema). Use contract.for_op for one operation. Re-inspect the asset after a truncated write response.",
         )
     if operation not in {"export_assets", "agent_assets"} and (
         citation_contract is not None or citation_metadata is not None

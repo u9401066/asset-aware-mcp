@@ -1,5 +1,24 @@
 # Decision Log
 
+## 2026-09-18 — asset workflow value and scalable operation discovery
+
+- User confirms MCP owns necessary checks and operation evidence; the agent owns
+  full semantic/rendered review and correction. A parser wrapper or MCP transport
+  alone is not sufficient differentiation: Docling already supplies both structured
+  parsing and MCP integration (official repository rechecked). Reuse parser and PDF
+  manipulation libraries rather than duplicating their engines.
+- Product value must be demonstrated with repeatable workflows: exact source and
+  revision references, bounded component access, preservation of untouched content,
+  explicit writeback/divergence handling and reusable wiki evidence. Measure these
+  outcomes against direct model workflows and existing parsers on the same fixtures;
+  avoid claiming inherently better extraction or automatic semantic correctness.
+- `native-contract-v2` explicitly migrates discovery to selected-operation schemas
+  and hash-pinned JSON pages. Share runtime required/optional field rules; retain
+  complete validation keywords and transitive definitions. Keep normal response
+  caps, including JSON escaping, instead of raising limits with each new format.
+  The complete SDK input schema and existing operation payloads remain available.
+
+
 ## 2026-09-18 — parsed DOCX evidence and distinct wiki projections
 
 - Reuse complete DocxIR serialization; canonical block hashes never use truncated

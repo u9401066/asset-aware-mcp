@@ -16,6 +16,28 @@ Version 1.3.0 adds the DOCX bridge and block evidence described below.
 Discover the installed contract
 before using the new operations.
 
+## Contract v2 (on main, pending release)
+
+main 分支的 `contract` 回傳 `contract_version="native-contract-v2"`。
+此變更尚未包含在 v1.3.0；請先查安裝版本。客戶端應查看 `schema_delivery`，
+不要假設 `schema` 一定存在。只查單一操作可使用：
+
+```python
+document(op="native", native_request={"op": "contract", "for_op": "update_docx"})
+```
+
+需要完整規格時，將回傳的 `schema_request` 原樣放入 `native_request`。
+依 `next_text_offset` 繼續讀取，每頁保留同一個 `schema_sha256` 與 `for_op`；
+續讀缺少雜湊、安裝版本改變或 scope 不同會拒絕。串接 `text_excerpt` 後，
+先核對 UTF-8 SHA-256 與 `text_length`，再解析 JSON。單一操作的 schema
+保留必要欄位、非空限制與相依定義；實際語意和檔案狀態仍由 runtime 檢查。
+
+Clients migrating from the v1.3 always-inline response must inspect
+`schema_delivery` and follow `schema_request` for paged schemas. `for_op` limits
+fields to one operation; the full declared request schema remains in MCP
+`tools/list` and is also available through `schema`. Canonical JSON pages use
+character offsets and a UTF-8 SHA-256. Existing native document inputs are unchanged.
+
 ## 開始使用
 
 先查詢契約，取得實際支援的操作與 typed request schema：

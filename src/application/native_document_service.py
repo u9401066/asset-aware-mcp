@@ -14,6 +14,7 @@ from src.application.native_evidence_service import (
     NativeEvidenceService,
     attach_native_evidence,
 )
+from src.application.native_schema import read_schema
 from src.application.native_wiki_service import NativeWikiService
 
 if TYPE_CHECKING:
@@ -52,6 +53,7 @@ class NativeDocumentService:
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
         handlers = {
             "contract": self._contract,
+            "schema": read_schema,
             "list": self._list,
             "register": self._register,
             "create": self._create,
@@ -81,7 +83,7 @@ class NativeDocumentService:
         return self.evidence.verify(request.reference)
 
     def _contract(self, request: NativeDocumentRequest) -> dict[str, Any]:
-        return native_document_contract(docx_enabled=self.docx is not None)
+        return native_document_contract(request, docx_enabled=self.docx is not None)
 
     def _list(self, request: NativeDocumentRequest) -> dict[str, Any]:
         return {

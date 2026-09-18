@@ -29,6 +29,9 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
 ## Native Document Operations
 
 - Discover the typed contract with `document(op="native", native_request={"op":"contract"})`.
+  For native-contract-v2 (main, pending release), check schema_delivery. Use for_op
+  for one operation or follow schema_request, retaining schema_sha256/for_op across
+  pages; assemble all text_excerpt chunks and verify UTF-8 SHA-256 before parsing.
 - Use native register/create/inspect/read_cell/update operations for workbooks;
   keep expected revisions and source hashes through publish/writeback/refresh.
 - Keep source backups and report divergent edits for agent reconciliation.

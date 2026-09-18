@@ -7,6 +7,13 @@
 
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+## 開發中：原生操作規格查詢
+
+main 分支新增 `contract.for_op` 與 `native-contract-v2`。先查看
+`schema_delivery`，需要分段時沿用 `schema_request` 與 `schema_sha256`，
+避免格式增加後截斷規格；尚未發布。詳見
+[查詢與遷移說明](docs/wiki/Native-File-Assets.md#contract-v2-on-main-pending-release)。
+
 ## v1.3.0 原生 DOCX 版本與元件證據
 
 - 讀取固定版本的 DOCX/DFM，檢查編輯後先建立受管理版本，再明確回寫來源。

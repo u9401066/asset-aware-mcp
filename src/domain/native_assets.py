@@ -12,6 +12,10 @@ from src.domain.citation_format import (
     CitationMetadata,  # noqa: TC001 -- Pydantic runtime schema
 )
 from src.domain.native_docx import NativeDocxEdit  # noqa: TC001 -- Pydantic schema
+from src.domain.native_operations import (
+    NativeOperation,
+    operation_fields,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -256,25 +260,9 @@ class NativeDocxBlockReference(NativeModel):
 
 
 class NativeDocumentRequest(NativeModel):
-    op: Literal[
-        "contract",
-        "register",
-        "create",
-        "list",
-        "inspect",
-        "read_cell",
-        "read_docx",
-        "read_docx_block",
-        "update_docx",
-        "verify",
-        "export_wiki",
-        "update",
-        "history",
-        "publish",
-        "writeback",
-        "refresh",
-        "archive",
-    ] = "contract"
+    op: NativeOperation = "contract"
+    for_op: NativeOperation | None = None
+    schema_sha256: str | None = Field(default=None, pattern=SHA256_PATTERN)
     source_path: str | None = Field(default=None, min_length=1, max_length=4096)
     asset_id: str | None = Field(default=None, pattern=ASSET_ID_PATTERN)
     revision: str | None = Field(default=None, pattern=SHA256_PATTERN)
@@ -307,40 +295,20 @@ class NativeDocumentRequest(NativeModel):
 
     @model_validator(mode="after")
     def validate_operation(self) -> NativeDocumentRequest:
-        required = {
-            "register": {"source_path"},
-            "create": {"workbook"},
-            "inspect": {"asset_id"},
-            "read_cell": {"asset_id", "sheet", "cell"},
-            "read_docx": {"asset_id"},
-            "read_docx_block": {"asset_id", "block_id"},
-            "update_docx": {"asset_id", "expected_revision", "docx_edit"},
-            "verify": {"reference"},
-            "export_wiki": {"asset_id", "output_dir"},
-            "history": {"asset_id"},
-            "update": {"asset_id", "expected_revision", "edits"},
-            "publish": {"asset_id", "expected_revision", "output_path"},
-            "writeback": {"asset_id", "expected_revision", "expected_source_sha256"},
-            "refresh": {"asset_id", "expected_revision", "expected_source_sha256"},
-            "archive": {"asset_id", "expected_revision"},
-        }.get(self.op, set())
+        fields = operation_fields(self.op)
+        required, optional = fields.required, fields.optional
         missing = [name for name in required if not getattr(self, name)]
         if missing:
             raise ValueError(
                 "Missing native operation fields: " + ", ".join(sorted(missing))
             )
-        optional = {
-            "list": {"offset", "limit"},
-            "history": {"offset", "limit"},
-            "inspect": {"sheet", "offset", "limit", "revision"},
-            "read_cell": {"revision", "text_offset", "text_limit"},
-            "read_docx": {"revision", "text_offset", "text_limit", "offset", "limit"},
-            "read_docx_block": {"revision", "text_offset", "text_limit"},
-            "export_wiki": {"revision", "citation_contract", "citation_metadata"},
-        }.get(self.op, set())
         unused = self.model_fields_set - required - optional - {"op"}
         if unused:
             raise ValueError(
                 "Fields not used by this native operation: " + ", ".join(sorted(unused))
+            )
+        if self.op == "schema" and self.text_offset and not self.schema_sha256:
+            raise ValueError(
+                "Schema continuation requires schema_sha256 from the first page"
             )
         return self

@@ -62,6 +62,59 @@ DOCX/PPTX does not prove native round-trip fidelity. ROADMAP.md tracks full scop
 Each milestone updates README, Pages, repository metadata/labels and Memory Bank;
 reviewed commits are pushed in stages and releases require the full harness.
 
+### Scalable native operation discovery (next milestone)
+
+The SDK tool input retains the full typed NativeDocumentRequest schema. Native
+contract discovery must not duplicate an ever-growing schema until the response
+cap silently truncates it. Introduce native-contract-v2 with capabilities,
+operation names, a canonical schema digest and an explicit schema delivery mode.
+Small schemas may remain inline; large schemas are obtained via native op=schema
+using bounded text_offset/text_limit chunks. Each page identifies the full schema
+hash; subsequent pages require that hash and reject a changed installed contract.
+Agents assemble the complete JSON and verify its hash before interpreting it.
+
+contract(for_op=...) returns the declared schema for one operation, including only
+its supported fields and transitive definitions, required/non-null inputs and the
+unchanged field constraints. The operation field registry is shared with runtime
+validation, so discovery cannot drift from required/unused field checks. Complete
+request schemas remain available via schema without for_op. Runtime semantic
+validators are still authoritative; JSON Schema is not a claim of exhaustive
+validation of XML text, file states or preservation constraints.
+
+Existing native operation inputs and aliases remain accepted. Discovery clients
+must inspect schema_delivery instead of assuming schema is always inline; use the
+returned schema_request or select for_op. This explicit migration replaces the old
+oversized response failure, without raising global output limits or weakening any
+validation keyword. The normal MCP tools/list schema remains complete.
+
+### Native PPTX collaboration (next milestone)
+
+Treat the original presentation as an immutable native root with revision-scoped
+slides, shape trees, text runs, table cells, notes and exact package-part relations.
+Resolve slide IDs through presentation relationships rather than assuming that
+slide order determines package filenames. Preserve nested group hierarchy and
+local coordinates; do not claim computed visual bounds or inherited formatting.
+Native read/decompose returns bounded views and complete evidence representations;
+unknown objects retain source XML and package attachments for agent interpretation.
+
+Create independent PPTX documents using the existing python-pptx dependency.
+Updates to existing presentations must operate on precise native targets, preserving
+run/paragraph properties, layouts, masters, themes, media, charts and unrelated
+package parts. Broad .text assignment can clear runs and is unsuitable for checked
+preservation. Reopen and compare results before a managed revision CAS; source
+publish/writeback remains explicit. Signed/protected, ambiguous or unsupported
+operations must be explained without silently dropping features.
+
+Component evidence binds original revision and locators; wiki projection retains
+full records, exact source/package attachments and existing snapshots. Structural
+CRUD and complete rendered/semantic review remain part of the broad objective;
+each operation advertises its actual scope. MCP performs necessary deterministic
+checks; agents review text meaning, overflow, layout, animations and object behavior.
+
+Reference decisions: [python-pptx shape hierarchy](https://python-pptx.readthedocs.io/en/latest/user/understanding-shapes.html),
+[text frames, paragraphs and runs](https://python-pptx.readthedocs.io/en/latest/user/text.html),
+and [PresentationML package structure](https://learn.microsoft.com/en-us/office/open-xml/presentation/structure-of-a-presentationml-document).
+
 ### Native DOCX / DFM bridge (v1.3.0)
 
 `read_docx` reads a registered DOCX immutable revision through the existing DFM

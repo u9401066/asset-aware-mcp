@@ -27,6 +27,22 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
+## 2026-09-18 native discovery (implemented) / PPTX (next)
+
+- Revalidated clean main@269893f and its green exact-commit CI. Full goal stays active.
+- Implemented bounded full-schema retrieval, per-operation discovery sharing
+  runtime field guards and explicit native-contract-v2 migration from inline schemas.
+  Hash pins reject mixed scope/server versions; encoded excerpts also stay bounded.
+- Added 31 discovery regressions and updated real SDK2/DOCX tests. Full Python suite:
+  1,454 passed / 30 optional skips. Lint/format/types, docs generation/check,
+  harness/skills audit and bundled asset synchronization passed.
+- README/zh/native guide/CHANGELOG/Pages and assistant instructions updated;
+  changes are on main pending release.
+- Next native adapter work covers real presentation structure and precise edits;
+  preserve grouped shapes, runs, layouts/masters/media and unparsed OOXML features.
+  Existing Markdown-to-PPTX conversion is not native format-preserving editing.
+
+
 ## 2026-09-18 v1.3.0 published and verified
 
 - Annotated v1.3.0 points to 2aba6595453a65aa6fd541b3d93df69c9b041fc6.

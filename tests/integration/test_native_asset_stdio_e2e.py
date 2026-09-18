@@ -27,6 +27,37 @@ def _unwrap(result: Any) -> dict[str, Any]:
     return payload
 
 
+async def _discover(native, document) -> None:
+    contract = await native(op="contract")
+    assert contract["success"]
+    assert contract["contract_version"] == "native-contract-v2"
+    assert contract["schema_delivery"] == "paged"
+    request = contract["schema_request"]
+    chunks = []
+    while True:
+        page = await native(**request)
+        assert page["success"], page
+        assert "response_truncated" not in page
+        assert page["schema_sha256"] == contract["schema_sha256"]
+        chunks.append(page["text_excerpt"])
+        if page["next_text_offset"] is None:
+            break
+        request = {**request, "text_offset": page["next_text_offset"]}
+    text = "".join(chunks)
+    assert hashlib.sha256(text.encode("utf-8")).hexdigest() == contract["schema_sha256"]
+    schema = json.loads(text)
+    assert "export_wiki" in schema["properties"]["op"]["enum"]
+    declared = document.input_schema["$defs"]["NativeDocumentRequest"]
+    assert schema["properties"]["op"]["enum"] == declared["properties"]["op"]["enum"]
+    assert "NativeDocxEdit" in document.input_schema["$defs"]
+    for operation in ("create", "update_docx"):
+        scoped = await native(op="contract", for_op=operation)
+        assert scoped["schema_delivery"] == "inline"
+        assert scoped["schema"]["properties"]["op"]["const"] == operation
+    rejected = await native(op="schema", schema_sha256="0" * 64)
+    assert rejected["success"] is False
+
+
 @pytest.mark.timeout(60)
 async def test_native_workbook_creation_and_edit_over_sdk2_stdio(
     tmp_path: Path,
@@ -55,9 +86,7 @@ async def test_native_workbook_creation_and_edit_over_sdk2_stdio(
                 )
             )
 
-        contract = await native(op="contract")
-        assert contract["success"]
-        assert "export_wiki" in contract["schema"]["properties"]["op"]["enum"]
+        await _discover(native, document)
         created = await native(
             op="create",
             workbook={

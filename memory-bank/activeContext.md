@@ -78,6 +78,18 @@ MCP owns mechanical source/version/locator/package/write checks and explicit,
 deterministic repairs. Agents own semantics, rendering, fields/formulas, extraction
 review and subsequent correction. No structural pass is a full-fidelity guarantee.
 
+Current work: scalable native discovery is implemented on main, pending release:
+native-contract-v2 supports for_op and complete schema pages pinned by SHA-256.
+Required/optional runtime fields share one registry. SDK input schema remains
+complete; clients must inspect schema_delivery rather than assume inline schema.
+Thirty-one new regressions plus updated DOCX/SDK2 discovery tests pass. Full suite:
+1,454 passed / 30 optional skips; lint/format/types, docs and both harness audits,
+asset sync and diff hygiene passed. Log: /tmp/asset-aware-native-discovery-tests.log.
+README/Pages/native guide/CHANGELOG and bundled assistant instructions are updated.
+Next: native PPTX creation/read/decomposition/scoped updates and component evidence.
+Spec is updated before code. Prior main checkpoint 269893f and CI 35327372945 were
+revalidated successful. The broader goal remains active.
+
 Next work remains active: broader native formats (including PPTX), structural
 CRUD, independent table/native bridges, cross-format asset relationships and agent
 review workflows, plus standards-aware academic citations. Before expanding native

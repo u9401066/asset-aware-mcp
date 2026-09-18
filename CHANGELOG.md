@@ -7,6 +7,18 @@
 
 ## [Unreleased]
 
+### Added
+
+- Native schema discovery by operation (`contract.for_op`) and complete hash-pinned
+  JSON pages (`schema`). Shared runtime field rules keep required/unused fields
+  aligned; large future schemas remain retrievable within normal response limits.
+
+### Changed
+
+- Native discovery returns `native-contract-v2`: clients must check
+  `schema_delivery` and follow `schema_request` when the schema is paged, instead
+  of assuming an inline `schema`. Existing document operation inputs are unchanged.
+
 ## [1.3.0] - 2026-09-18
 
 ### Added

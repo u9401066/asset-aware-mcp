@@ -7,6 +7,13 @@
 
 🌐 [繁體中文](README.zh-TW.md) · [Docs Site](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+## In development: scalable native discovery
+
+`native/contract` now supports `for_op`; `native-contract-v2` declares whether the
+schema is inline or paged. Follow `schema_request` and preserve `schema_sha256`
+across pages. This is on main, pending release; see the
+[discovery guide](docs/wiki/Native-File-Assets.md#contract-v2-on-main-pending-release).
+
 ## v1.3.0 native DOCX revisions and evidence
 
 - Read revision-bound DOCX/DFM and stage checked edits before explicit source writeback.

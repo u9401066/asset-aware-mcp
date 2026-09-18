@@ -4,34 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from src.domain.native_assets import NativeDocumentRequest
+from src.application.native_schema import schema_discovery
+from src.domain.native_operations import NATIVE_OPERATIONS
 
 if TYPE_CHECKING:
-    from src.domain.native_assets import NativeFileAsset
-
-
-def _compact_schema(schema: dict[str, Any]) -> dict[str, Any]:
-    """Omit prose annotations/null defaults while preserving validation keywords."""
-    result: dict[str, Any] = {}
-    for key, value in schema.items():
-        if key in {"title", "description"} or (key == "default" and value is None):
-            continue
-        if key in {"properties", "$defs", "patternProperties", "dependentSchemas"}:
-            result[key] = {name: _compact_schema(node) for name, node in value.items()}
-        elif key in {"anyOf", "oneOf", "allOf", "prefixItems"}:
-            result[key] = [_compact_schema(node) for node in value]
-        elif key in {
-            "items",
-            "additionalProperties",
-            "not",
-            "if",
-            "then",
-            "else",
-        } and isinstance(value, dict):
-            result[key] = _compact_schema(value)
-        else:
-            result[key] = value
-    return result
+    from src.domain.native_assets import NativeDocumentRequest, NativeFileAsset
 
 
 def native_asset_summary(
@@ -81,10 +58,15 @@ def native_asset_summary(
     }
 
 
-def native_document_contract(*, docx_enabled: bool = False) -> dict[str, Any]:
+def native_document_contract(
+    request: NativeDocumentRequest | None = None, *, docx_enabled: bool = False
+) -> dict[str, Any]:
+    for_op = request.for_op if request is not None else None
     return {
         "success": True,
-        "schema": _compact_schema(NativeDocumentRequest.model_json_schema()),
+        "contract_version": "native-contract-v2",
+        "operations": list(NATIVE_OPERATIONS),
+        **schema_discovery(for_op),
         "identity": "Stable asset IDs, SHA-256 revisions and revision-scoped locators.",
         "formats": {
             "docx": [
