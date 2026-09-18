@@ -32,6 +32,11 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
 - [ ] Real-file regressions, README/Pages/metadata/labels/MEM synchronization,
   reviewed staged commits/pushes and fully verified releases throughout the work.
 
+## 1.1.0 之後的開發
+
+- 原生 cell 引用可核對不可變版本、定位與完整表示 hash；舊引用在更新／封存後仍可驗證。
+- 原生 wiki 匯出與人工修改筆記的保留機制仍在進行；尚未發布這項新增引用驗證。
+
 ## v1.1.0 階段成果
 
 - 原生檔案 registry：固定 ID、不可變版本、能力與來源狀態；其他格式可先保留原始內容。

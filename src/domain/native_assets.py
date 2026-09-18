@@ -190,7 +190,34 @@ class NativeAssetRepository(Protocol):
     def list_assets(self, offset: int, limit: int) -> list[NativeFileAsset]: ...
 
 
+class NativeCellLocator(NativeModel):
+    sheet_id: str = Field(min_length=1, max_length=128)
+    part: str = Field(min_length=1, max_length=1024)
+    kind: str = Field(min_length=1, max_length=1024)
+    cell: str = Field(min_length=2, max_length=10)
+
+    @field_validator("cell")
+    @classmethod
+    def validate_cell(cls, value: str) -> str:
+        cell_position(value)
+        return value
+
+
+class NativeCellReference(NativeModel):
+    schema_version: Literal["native-cell-ref-v1"] = "native-cell-ref-v1"
+    asset_id: str = Field(pattern=ASSET_ID_PATTERN)
+    revision: str = Field(pattern=SHA256_PATTERN)
+    locator: NativeCellLocator
+    value_sha256: str = Field(pattern=SHA256_PATTERN)
+    verification_scope: Literal["immutable_native_representation"] = (
+        "immutable_native_representation"
+    )
+
+
 class NativeSpreadsheetAdapter(Protocol):
+    def read_cell_by_locator(
+        self, data: bytes, locator: NativeCellLocator
+    ) -> dict[str, Any]: ...
     def read_cell(self, data: bytes, sheet: str, cell: str) -> dict[str, Any]: ...
 
     def inspect(
@@ -210,6 +237,7 @@ class NativeDocumentRequest(NativeModel):
         "list",
         "inspect",
         "read_cell",
+        "verify",
         "update",
         "history",
         "publish",
@@ -224,6 +252,7 @@ class NativeDocumentRequest(NativeModel):
     expected_source_sha256: str | None = Field(default=None, pattern=SHA256_PATTERN)
     output_path: str | None = Field(default=None, min_length=1, max_length=4096)
     workbook: NativeWorkbookCreate | None = None
+    reference: NativeCellReference | None = None
     edits: list[NativeCellEdit] = Field(
         default_factory=list, max_length=MAX_NATIVE_CELLS
     )
@@ -248,6 +277,7 @@ class NativeDocumentRequest(NativeModel):
             "create": {"workbook"},
             "inspect": {"asset_id"},
             "read_cell": {"asset_id", "sheet", "cell"},
+            "verify": {"reference"},
             "history": {"asset_id"},
             "update": {"asset_id", "expected_revision", "edits"},
             "publish": {"asset_id", "expected_revision", "output_path"},

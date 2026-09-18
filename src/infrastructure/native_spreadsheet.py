@@ -13,6 +13,7 @@ from src.infrastructure.native_spreadsheet_reader import NativeSpreadsheetReader
 if TYPE_CHECKING:
     from src.domain.native_assets import (
         NativeCellEdit,
+        NativeCellLocator,
         NativeEditResult,
         NativeWorkbookCreate,
     )
@@ -42,6 +43,20 @@ def create_native_workbook(request: NativeWorkbookCreate) -> bytes:
 
 class SpreadsheetFileAdapter:
     """Format port used by the application layer; parsing remains infrastructure."""
+
+    def read_cell_by_locator(
+        self, data: bytes, locator: NativeCellLocator
+    ) -> dict[str, Any]:
+        book = NativeSpreadsheet(data)
+        expected_sheet = locator.model_dump(exclude={"cell"})
+        matching = [
+            name for name, info in book.sheets.items() if info == expected_sheet
+        ]
+        if len(matching) != 1:
+            raise ValueError(
+                "Native cell locator does not match one worksheet in this revision"
+            )
+        return book.read_cell(matching[0], locator.cell)
 
     def read_cell(self, data: bytes, sheet: str, cell: str) -> dict[str, Any]:
         return NativeSpreadsheet(data).read_cell(sheet, cell)

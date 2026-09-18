@@ -100,6 +100,21 @@ and [Microsoft worksheet structure](https://learn.microsoft.com/en-us/office/ope
 
 ## 2. Core Architecture
 
+### Next milestone: native evidence verification and wiki publication
+
+Native cell references must be independently checkable against the immutable
+registered revision: verify blob hash, worksheet identity/part/kind, cell address
+and the full canonical cell representation hash. Report whether that revision is
+the current managed head separately from reference validity. This verifies native
+representation integrity, not formula evaluation, rendered layout or claim support.
+Old valid references remain verifiable after updates or archival.
+
+Portable native wiki exports will retain these references independently of custom
+citation display. Stable note targets must survive display/metadata changes;
+publication must detect and preserve manually changed notes or unexpected files.
+Native reference verification is the first implementation step; native wiki export
+and standards-aware academic formatting remain separate work.
+
 ### 2.1 DDD (Domain-Driven Design) 分層架構
 
 ```text

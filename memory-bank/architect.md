@@ -2,6 +2,13 @@
 
 > 📌 此檔案記錄重大架構決策，架構變更時更新。
 
+## Native evidence integrity (post-1.1.0)
+
+`NativeEvidenceService` owns canonical cell references and immutable-revision
+verification. Native document orchestration delegates to it; spreadsheet locator
+resolution remains inside the format adapter. Validity, managed-head freshness,
+external-source freshness and agent semantic/visual/formula review are distinct.
+
 ## 2026-09-18 — native files and spreadsheets (unreleased)
 
 - Domain `native_assets.py` defines strict file/revision/source identities, typed

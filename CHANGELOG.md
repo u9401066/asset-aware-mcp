@@ -7,6 +7,12 @@
 
 ## [Unreleased]
 
+### Added
+
+- Native cell reference verification against immutable revision bytes, native
+  worksheet/cell locators and complete representation hashes. Old references remain
+  valid after updates or archival; managed-head freshness is reported separately.
+
 ## [1.1.0] - 2026-09-18
 
 ### Added

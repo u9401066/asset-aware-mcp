@@ -126,3 +126,15 @@ Independent openpyxl reads supplement package-level tests for common workbook
 features; they do not substitute for visual review or prove every escape/rendering case.
 Text escaping follows [Microsoft's ST_Xstring implementation notes](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oe376/bd0aa042-434a-4ca7-b25f-4e1fd25a954d),
 including carriage returns and literal escape-looking underscores.
+
+## 開發中：原生引用驗證（未包含於 1.1.0）
+
+目前 main 新增 `document(op="native", native_request={"op":"verify", "reference": ref})`，
+其中 `ref` 為 `inspect` 或 `read_cell` 回傳的 `evidence` 物件。它核對不可變版本的
+檔案 hash、worksheet／cell 定位與完整 cell 表示 hash，回傳 `valid`；另外以
+`is_current_managed_revision` 標示是否仍是目前受管理版本。舊引用及已封存資產仍可驗證。
+來源人類檔案的新鮮度、語意、視覺與公式計算不在這項完整性核對之內。
+
+This development addition verifies native references against their immutable
+revision, including references obtained with a short excerpt. It is separate from
+PDF reference verification and does not yet provide native wiki export.

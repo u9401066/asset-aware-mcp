@@ -2,22 +2,31 @@
 
 ## 2026-09-18 — cross-format CRUD and evidence library
 
-Authoritative code is origin/main b882fa1; latest published version remains 1.0.1.
-Worktree: /home/eric/workspace251226/asset-aware-mcp-agent-assets; branch main.
-User explicitly changed item 6: edit code directly, no self-PR workflow, integrate
-into main and remove other branches. After green CI, main was fast-forwarded
-using the repository owner's permitted admin bypass; protection rules were not
-changed. PRs #9/#10 auto-completed, both remote topic branches and the unused
-local citation branch are deleted. Future checkpoints use direct main commits.
-The original master worktree still contains pre-existing user changes; preserve it.
-Author remains u9401066 <u9401066@gap.kmu.edu.tw>.
+Current main is 0e71b4c, the annotated v1.1.0 release source. Worktree:
+/home/eric/workspace251226/asset-aware-mcp-agent-assets, branch main.
+User explicitly requests direct code changes without self-PRs. Check locally,
+commit/push main using the owner's allowed protection bypass, then monitor CI.
+Do not create self-PRs or change branch protection. Author:
+u9401066 <u9401066@gap.kmu.edu.tw>.
 
-Preparing 1.1.0 for the citation/native spreadsheet milestone. Code gates passed
-1,326 Python tests, 199 VSIX tests, true SDK 2 stdio, Python 3.10/macOS/Windows
-native regressions, Linux activation, wheel/sdist audit/install and Docker smoke.
-Release metadata/docs/harness are being synchronized. No 1.1.0 tag exists yet.
-Run complete release gates on clean main, monitor main CI, then tag/publish and
-verify registries. Keep the larger cross-format CRUD/wiki goal active.
+All remote and local branches except main are deleted. The original worktree at
+/home/eric/workspace251226/asset-aware-mcp is detached at its unchanged 6ad9a5c;
+its tracked diff and untracked inventory were checked unchanged. Preserve those
+pre-existing user modifications; actual development stays in the main worktree.
+
+Version 1.1.0 passed complete local release gates and CI 35314228355, then tag
+v1.1.0 was pushed. Release workflow 35314426885: tests, three-OS smoke, artifact
+preflight and PyPI publishing passed; Marketplace visibility/GitHub Release are
+being monitored. Public PyPI wheel/sdist SHA-256 exactly match the checked local
+artifacts. Repository metadata/labels and Pages are synchronized.
+
+Development after 1.1.0 adds native cell-reference verification (not in v1.1.0):
+NativeCellReference/Locator models, NativeEvidenceService, strict native locator
+resolution and document native op=verify. Full current regression: 1,335 passed,
+30 optional skips, including 9 new integrity tests plus real SDK 2 calls. Native
+wiki export is next; protect manually edited notes and unexpected files rather
+than copying the existing marker-only bundle replacement behavior. Documentation
+explicitly separates current release coverage from this unreleased addition.
 
 The latest explicit user reply confirms: MCP provides necessary source/version,
 format-preservation and operation-result checks; the agent owns complete semantic
@@ -29,17 +38,9 @@ Full scope is tracked in docs/spec.md and ROADMAP.md; a milestone is not complet
 User goal item 5 adds MCP SDK 2.0+ and current package/repository evaluation.
 The baseline used MCP 2.0.0; this milestone locks and verifies MCP 2.2.0.
 
-Citation display contracts and native spreadsheet operations are merged to main.
-Full regression: 1,326 Python passes (30 optional skips), 199 VSIX passes, actual
-SDK 2 stdio and native cases on Windows/macOS/Python 3.10, Linux VSIX activation,
-wheel/sdist install and Docker gates. Native IO/read/guard/repair/editor modules
-are separated. Browser desktop/mobile reader and bilingual interaction checks
-pass using cached exact CDN scripts. Pages deployment from b882fa1 succeeded.
-
-README/Pages/GitHub metadata/labels/MEM and direct commits/push/releases are
-explicitly authorized. Complete versioned release gates before tagging 1.1.0;
-then apply metadata/labels from main and verify registry artifacts. Broader native
-CRUD, wiki adapters and standards-aware academic citations remain active work.
+Broader structural CRUD, DOCX/PPTX/general native adapters, native wiki publication,
+standards-aware academic citations and agent review workflows remain active work.
+A milestone or release does not complete the overall goal.
 
 
 ## 2026-08-13 - v1.0.1 large-PDF and Codex hardening

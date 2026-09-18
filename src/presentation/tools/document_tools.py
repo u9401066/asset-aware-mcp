@@ -2499,7 +2499,7 @@ async def document(
     - ``inspect`` / ``prepare_ai`` / audit and retrieval operations: ``doc_id``.
     - ``export_assets`` / ``agent_assets``: ``doc_id``; ``output_dir`` is optional.
     - ``native``: ``native_request`` with its own op (contract/register/create/
-      list/inspect/read_cell/update/history/publish/writeback/refresh/archive). XLSX/XLSM cell
+      list/inspect/read_cell/verify/update/history/publish/writeback/refresh/archive). XLSX/XLSM cell
       operations retain native package features; other formats expose metadata.
 
     Existing direct document tools stay registered and keep their original

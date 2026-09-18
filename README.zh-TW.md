@@ -60,6 +60,9 @@ v1.1.0 已加入引用格式 contract：支援來源標籤、作者／年份、�
 套用到證據與 Foam 匯出時保留原始來源資訊；完整 APA/CSL 渲染仍待實作。
 詳見[用法與限制](docs/wiki/LLM-Wiki-Knowledge-Base.md#citation-format-contracts)。
 
+1.1.0 之後的開發已新增原生儲存格引用驗證，可對不可變版本核對定位與 hash；
+原生文件 wiki 匯出仍在進行，詳見原生文件操作指南。
+
 ## ✨ 特色
 
 - 📄 **資產感知 ETL** - PDF → Markdown，採可插拔多引擎解析架構（`ETL_ENGINE`）：

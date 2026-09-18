@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from typing import TYPE_CHECKING, Any
 
+from src.application.native_evidence_service import (
+    NativeEvidenceService,
+    attach_native_evidence,
+)
 from src.domain.native_assets import NativeDocumentRequest
 
 if TYPE_CHECKING:
@@ -22,6 +25,7 @@ class NativeDocumentService:
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
+        self.evidence = NativeEvidenceService(repository, spreadsheets)
 
     @staticmethod
     def _summary(asset: NativeFileAsset) -> dict[str, Any]:
@@ -39,6 +43,7 @@ class NativeDocumentService:
                 "immutable_history": True,
                 "refresh_source": asset.source is not None and not asset.archived,
                 "inspect_cells": asset.format in {"xlsx", "xlsm"},
+                "verify_cells": asset.format in {"xlsx", "xlsm"},
                 "edit_cells": asset.format in {"xlsx", "xlsm"} and not asset.archived,
                 "writeback": asset.source is not None and not asset.archived,
                 "rendered_verification": False,
@@ -53,20 +58,6 @@ class NativeDocumentService:
             },
         }
 
-    @staticmethod
-    def _attach_evidence(cell: dict[str, Any], asset_id: str, revision: str) -> None:
-        canonical = json.dumps(
-            cell, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-        )
-        cell["evidence"] = {
-            "schema_version": "native-cell-ref-v1",
-            "asset_id": asset_id,
-            "revision": revision,
-            "locator": dict(cell["locator"]),
-            "value_sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
-            "verification_scope": "immutable_native_representation",
-        }
-
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
         handlers = {
             "contract": self._contract,
@@ -75,6 +66,7 @@ class NativeDocumentService:
             "create": self._create,
             "history": self._history,
             "read_cell": self._read_cell,
+            "verify": self._verify,
             "inspect": self._inspect,
             "refresh": self._refresh,
             "archive": self._archive,
@@ -83,6 +75,10 @@ class NativeDocumentService:
             "update": self._update,
         }
         return handlers[request.op](request)
+
+    def _verify(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        assert request.reference is not None
+        return self.evidence.verify(request.reference)
 
     def _contract(self, request: NativeDocumentRequest) -> dict[str, Any]:
         return {
@@ -157,7 +153,7 @@ class NativeDocumentService:
         cell = self.spreadsheets.read_cell(
             self.repository.read(asset_id, revision), request.sheet, request.cell
         )
-        self._attach_evidence(cell, asset_id, revision)
+        attach_native_evidence(cell, asset_id, revision)
         if isinstance(cell.get("value"), str):
             value = cell.pop("value")
             start = min(request.text_offset, len(value))
@@ -196,7 +192,7 @@ class NativeDocumentService:
                 limit=request.limit,
             )
             for cell in result["content"]["cells"]:
-                self._attach_evidence(cell, asset_id, revision)
+                attach_native_evidence(cell, asset_id, revision)
         else:
             result["content"] = {
                 "representation": "opaque_binary",

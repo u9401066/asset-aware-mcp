@@ -95,6 +95,11 @@ async def test_native_workbook_creation_and_edit_over_sdk2_stdio(
         assert excerpt["cell"]["value_excerpt"] == "=li"
         assert excerpt["cell"]["next_text_offset"] == 3
         assert excerpt["cell"]["evidence"] == cells[0]["evidence"]
+        verified = await native(op="verify", reference=excerpt["cell"]["evidence"])
+        assert verified["valid"] is True
+        assert verified["is_current_managed_revision"] is True
+        tampered = dict(excerpt["cell"]["evidence"], value_sha256="f" * 64)
+        assert (await native(op="verify", reference=tampered))["valid"] is False
         rejected = await native(
             op="update",
             asset_id=current["asset_id"],

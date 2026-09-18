@@ -27,6 +27,24 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
+## 2026-09-18 release and native reference checkpoint
+
+- v1.1.0 is annotated at 0e71b4c. Complete local release.sh gates and main CI
+  35314228355 pass; release workflow 35314426885 is being monitored.
+- PyPI 1.1.0 is published with the correct author. Wheel SHA-256 d5ae3e5c0f7a3e8304aaefc57d305a4fa847321251d54121cf212da78ba3c1d3
+  and sdist SHA-256 6788bfafaf8286e447086e2096ef56fa319a692d55f934630fec154e73651c58
+  match local checked artifacts exactly. Marketplace/GitHub Release verification pending.
+- Only main remains in local/remote branch lists. Original dirty worktree is
+  detached at its unchanged old commit; tracked diff and untracked inventory were
+  verified unchanged. No further self-PR workflow; future changes go directly to main.
+- Post-1.1.0 native reference verification is implemented: immutable revision
+  integrity, exact native locator and complete cell hash; head freshness and
+  semantic/rendered/formula review remain separate. Full suite 1,335 passed,
+  30 optional skips. README/guide/roadmap/spec distinguish unreleased coverage.
+- Native wiki export and preservation of manually edited generated notes are next.
+  Existing PDF bundle replacement checks only its matching marker, so do not reuse
+  that publication policy for a curated native evidence library without added checks.
+
 ## 2026-09-18 direct-main integration and 1.1.0 preparation
 
 - User explicitly requested direct code changes without self-PRs. Green b882fa1
