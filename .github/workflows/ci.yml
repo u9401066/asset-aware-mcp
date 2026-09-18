@@ -124,6 +124,11 @@ jobs:
           tests/unit/test_native_pptx.py
           tests/unit/test_native_pptx_operations.py
           tests/unit/test_native_pptx_wiki.py
+          tests/unit/test_native_pdf.py
+          tests/unit/test_native_pdf_contract.py
+          tests/unit/test_native_pdf_guards.py
+          tests/unit/test_native_pdf_operations.py
+          tests/unit/test_native_pdf_worker.py
           tests/unit/test_native_docx.py
           tests/unit/test_native_docx_failures.py
           tests/unit/test_native_docx_evidence.py
@@ -134,6 +139,7 @@ jobs:
           tests/unit/test_native_wiki_publication.py
           tests/unit/test_bundle_publication.py
           tests/integration/test_native_pptx_stdio_e2e.py
+          tests/integration/test_native_pdf_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py
           tests/integration/test_native_asset_stdio_e2e.py
           -q --timeout=120
@@ -194,6 +200,11 @@ jobs:
           tests/unit/test_native_pptx.py
           tests/unit/test_native_pptx_operations.py
           tests/unit/test_native_pptx_wiki.py
+          tests/unit/test_native_pdf.py
+          tests/unit/test_native_pdf_contract.py
+          tests/unit/test_native_pdf_guards.py
+          tests/unit/test_native_pdf_operations.py
+          tests/unit/test_native_pdf_worker.py
           tests/unit/test_native_docx.py
           tests/unit/test_native_docx_failures.py
           tests/unit/test_native_docx_evidence.py
@@ -204,6 +215,7 @@ jobs:
           tests/unit/test_native_wiki_publication.py
           tests/unit/test_bundle_publication.py
           tests/integration/test_native_pptx_stdio_e2e.py
+          tests/integration/test_native_pdf_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py
           tests/integration/test_native_asset_stdio_e2e.py -q --timeout=120
 
@@ -256,6 +268,11 @@ jobs:
           tests/unit/test_native_pptx.py
           tests/unit/test_native_pptx_operations.py
           tests/unit/test_native_pptx_wiki.py
+          tests/unit/test_native_pdf.py
+          tests/unit/test_native_pdf_contract.py
+          tests/unit/test_native_pdf_guards.py
+          tests/unit/test_native_pdf_operations.py
+          tests/unit/test_native_pdf_worker.py
           tests/unit/test_native_docx.py
           tests/unit/test_native_docx_failures.py
           tests/unit/test_native_docx_evidence.py
@@ -266,6 +283,7 @@ jobs:
           tests/unit/test_native_wiki_publication.py
           tests/unit/test_bundle_publication.py
           tests/integration/test_native_pptx_stdio_e2e.py
+          tests/integration/test_native_pdf_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py
           tests/integration/test_native_asset_stdio_e2e.py -q --timeout=120
 
@@ -403,6 +421,7 @@ jobs:
             tests/integration/test_docx_complex_sample_roundtrip.py \
             tests/integration/test_pdf_asset_stdio_e2e.py \
             tests/integration/test_pdf_crud_stdio_matrix.py \
+            tests/integration/test_native_pdf_stdio.py \
             -v --timeout=180 --junitxml=junit-integration.xml
 
       - name: Upload Integration Test Results

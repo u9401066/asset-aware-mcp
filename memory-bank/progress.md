@@ -7,7 +7,9 @@
   wiki and explicit source writeback. 1,739 Python tests pass / 30 optional skips.
   SDK2 and Codex scanned run 02 pass all seven independent checks (49 MCP calls,
   zero errors; exact final transcription). No new version: public 1.4.0 / Unreleased.
-- [ ] Native PDF checkpoint commit/push and exact CI/Pages verification pending.
+- [x] Native PDF runtime e47ad9f and tests/docs 4af244d pushed; Pages 35349131496
+  passed with exact public bytes. CI follow-up adds PDF to explicit platform/SDK2 lists.
+- [ ] Final CI follow-up push and exact CI/Pages verification pending.
 
 - [x] Unreleased checkpoint: native PPTX textbox addition / existing shape deletion
   with reference, dependency, version and XML preservation guards; truthful A2T

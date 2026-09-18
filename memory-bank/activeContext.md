@@ -54,9 +54,13 @@ metadata checks pass. VSIX: 199 tests and 64-file package contents pass. All 17
 managed labels and repository description/homepage/topics are synchronized. Universal lock Python3.10 audit previously passed
 214 audited packages, no known vulnerabilities/adverse statuses; npm audit passes.
 
-Runtime and raw adapter tests committed as e47ad9f. Focused auditor/GitHub hygiene
-tests pass (22). Remaining test/docs/harness files are the second checkpoint commit;
-then direct main push and exact CI/Pages verification. No tag/release.
+Runtime committed e47ad9f; tests/docs/harness committed 4af244d and pushed directly
+to main. Pages 35349131496 passed; public site.js, site-content.js and both changed
+Markdown guides exactly match committed bytes. CI 35349131756 was in progress.
+Final audit found the CI integration job uses an explicit file list, so add native
+PDF SDK2 plus focused backend/worker tests to Python3.10/macOS/Windows and Linux
+integration jobs. A small CI follow-up will supersede the earlier CI run. No tag
+or release; exact final CI still needs verification.
 Broader active goal remains unfinished (slide/non-text CRUD, additional formats,
 real-document evaluation, arbitrary PDF text editing). Do not mark goal complete.
 
