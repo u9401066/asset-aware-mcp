@@ -116,13 +116,64 @@ response migration; account for that when choosing the next release version.
 Goal stays active. The current goal turn made concrete progress (schema discovery
 and native presentation creation/edit/evidence/wiki), and is not blocked.
 
-Next work remains active: broader native formats (including PPTX), structural
-CRUD, independent table/native bridges, cross-format asset relationships and agent
-review workflows, plus standards-aware academic citations. Before expanding native
-operations, address contract growth: the compact native contract uses 11,932 of
-12,000 default response characters; full typed schema is already in the SDK tool
-input schema. Use a scalable discovery strategy with compatibility regressions;
-never drop validation keywords or merely raise the global response limit.
+Release preparation: 2.0.0 reflects the breaking native contract response migration
+(always-inline schema becomes explicit inline/paged delivery). Version metadata,
+README/Pages/extension copy and bundled harness instructions are being synchronized.
+Checkpoint cf7f166 and its CI 35332075734/Pages 35332074774 were revalidated green.
+Public release remains 1.3.0 until the new workflow succeeds. Pre-tag full release
+harness, tagged CI and public artifact verification are required. No new PDF
+backend dependency is added by this release.
+
+The user added goal item 7: directly use Codex to exercise MCP, especially
+image/scanned PDF to structured-data CRUD with adequate tests. Prioritize this
+before tagging 2.0.0. Existing real SDK2 tests are not agent-driven validation.
+Build synthetic digital/scanned/mixed fixtures, preserve independent truth, run
+the installed authenticated Codex CLI against this checkout via ephemeral MCP
+overrides, and verify actual tool events and persisted results. Never alter the
+user's persistent config or original sources; do not expose credentials.
+
+Goal item 7 now has a reusable baseline under tests/codex_pdf: synthetic digital,
+scanned and mixed 3-page fixtures (7 rows / 35 cells), a real opt-in Codex CLI
+runner, an independent event/artifact auditor and an SDK2 CRUD matrix. Source
+truth stays outside the agent workspace; shell/apps/subagents are disabled and
+only one required checkout-local MCP server is configured. No persistent user
+configuration or credentials are read/changed. CLI 0.154.0-alpha.6.1 uses existing
+ChatGPT login and its default model; runs are not a pinned-model benchmark.
+
+Live testing exposed a rotated crop bug: image locators were intersected with
+rotated page.rect and passed directly to rendering. Pad/intersect in unrotated
+cropbox space, then apply rotation_matrix for rendering. Sixteen full/partial
+pixel regressions across 0/90/180/270 and crop offsets had 10 failures before and
+16 passes after. Image-only section errors now point to inspect/figure fetch.
+
+Live evidence: /tmp/asset-aware-codex-pdf-mixed-03 (56 successful MCP calls, two
+recovered tool errors), /tmp/asset-aware-codex-pdf-scanned-01 (46 / one recovery),
+and /tmp/asset-aware-codex-pdf-scanned-02 (48 / three recoveries). Independent
+audits pass all eight final artifact/workflow checks. The second scanned run
+initially dropped two leading zeros, then visually rechecked and corrected them;
+first_transcription_exact remains false. Its first audit was overly strict about
+unrelated correction edits; the auditor now targets the requested B202 Reading
+edit/restore history while retaining final-data equality, with regression tests.
+The earlier mixed-02 correctly fails scan pixel integrity despite correct rows.
+The first configuration attempt mixed-01 was blocked by MCP approval policy;
+explicit approval is now scoped only to this authorized synthetic test server.
+
+Final full tests: 1,546 passed / 30 optional skips (53 added since the PPTX
+checkpoint). VSIX: 199 passed, 64-file package inventory. Lint/format/types/Bandit,
+docs/harness/skills/metadata audits, sync parity and diff hygiene pass. Logs:
+/tmp/asset-aware-pdf-codex-full-tests-final.log and
+/tmp/asset-aware-pdf-codex-extension-tests.log. Exact commit CI is pending.
+Desktop/mobile zh/en browser QA includes the new Codex guide; screenshots
+/tmp/pdf-codex-{desktop,mobile}.png use cached pinned CDN assets and therefore
+do not test live CDN availability. Rebuilt docs include commands and limits;
+English Pages has corresponding evaluation guidance. No general OCR accuracy,
+handwriting/complex-table coverage or PDF source-layout writeback is claimed.
+
+Next implementation work remains active: native structural CRUD (slide/shape
+addition/removal and equivalent operations for other formats), independent table/
+native bridges, asset relationships and complete agent review workflows. Scalable
+schema discovery and scoped native PPTX operations are already implemented; do not
+repeat the old discovery-size investigation. The full goal remains incomplete.
 CSL evaluation is recorded in decisionLog.md: citeproc-py has documented conformance
 gaps, citeproc-js needs ordered citation context and CPAL/AGPL evaluation, while
 jgm/citeproc offers a BSD Haskell/JSON executable. No citation engine is selected.

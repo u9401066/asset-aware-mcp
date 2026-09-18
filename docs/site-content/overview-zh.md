@@ -6,7 +6,7 @@ Asset-Aware MCP 是給 AI agents 使用的 citation-ready 文件工作流伺服�
 PDF、DOCX/DFM、表格、圖片、section、citation index、Foam evidence pack 與選用
 KG/RAG 串成可驗證的文件流程。
 
-章節導覽依任務整理；本份文件對應 `1.3.0`。正式發布狀態以
+章節導覽依任務整理；本份文件對應 `2.0.0`。正式發布狀態以
 [GitHub Releases](https://github.com/u9401066/asset-aware-mcp/releases) 為準。
 
 ## 進行中的產品方向
@@ -15,11 +15,12 @@ KG/RAG 串成可驗證的文件流程。
 MCP 提供來源／版本、格式與操作結果的必要檢查；Agent 負責完整核對與修正。
 現有 PDF、DOCX/DFM、A2T 與可攜資產保留來源；原生試算表／簡報 CRUD 等仍在擴充。
 
-## 1.3.0 highlights
+## 2.0.0 highlights
 
-- 原生 DOCX 版本接到 DFM 檢查與明確回寫，區塊引用可核對完整解析表示。
-- DOCX Wiki 保留區塊證據、原始檔與逐一保留的 package parts，保護既有快照。
-- 語意、Word 版面、欄位與抽取完整性仍由 Agent 核對；詳見 [Native File Assets](#/native-file-assets)。
+- 原生 PPTX 建立、形狀／備註讀取與精確文字修改，版本引用與 Wiki 保留完整套件附件。
+- contract 改為可分段規格：先看 schema_delivery，用 for_op 或 hash-pinned schema_request。
+- 舊 XLSX／DOCX 證據不變；Agent 核對語意、版面、繼承格式與溢出。詳見 [Native File Assets](#/native-file-assets)。
+- Codex 實測掃描 PDF → 表格 CRUD／引用／Excel；旋轉裁切有像素回歸，詳見 [Release And Testing](#/release-testing)。
 
 ## 1.2.0 highlights
 

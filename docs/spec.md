@@ -62,7 +62,36 @@ DOCX/PPTX does not prove native round-trip fidelity. ROADMAP.md tracks full scop
 Each milestone updates README, Pages, repository metadata/labels and Memory Bank;
 reviewed commits are pushed in stages and releases require the full harness.
 
-### Scalable native operation discovery (next milestone)
+### Codex-driven PDF collaboration verification
+
+Exercise the current checkout through a real Codex CLI MCP connection, in an
+isolated synthetic-data workspace, without changing user MCP configuration.
+Keep the expected transcription outside the agent workspace. Capture JSONL tool
+events and independently compare persisted outputs with fixture truth; an agent's
+success statement or a passing SDK transport test is insufficient evidence.
+
+Cover digital, image-only and mixed/rotated PDF pages. Require source preflight,
+ingestion, actual MCP image delivery, agent transcription, structured table CRUD,
+source references and reusable asset export. Image-only pages must not acquire
+fabricated text-span citations. Distinguish editing derived structured data from
+rewriting the original PDF; preserve original hashes throughout the workflow.
+
+Use deterministic SDK regressions for mechanical invariants and opt-in Codex
+runs for perception/tool-use evaluation. The latter requires an authenticated
+Codex CLI and may incur model usage; it must not silently run during pytest or
+claim universal OCR accuracy from a small synthetic corpus. Record skipped,
+failed, unperformed and successful checks separately.
+
+Figure crop coordinates use unrotated cropbox-relative page space, consistently
+with PDF preflight and native image locators. Intersect/pad in that space, then
+transform the clip into the rotated rendering space. Rotated/cropped full-page
+scans must retain the complete visible page; pixel comparisons against a full
+page render and partial-region crops cover all right-angle rotations.
+An image-only ingestion may legitimately have figures without section blocks.
+Section-navigation errors must point agents to the document asset inventory and
+image fetch path, rather than requiring a particular held extraction backend.
+
+### Scalable native operation discovery (v2.0.0)
 
 The SDK tool input retains the full typed NativeDocumentRequest schema. Native
 contract discovery must not duplicate an ever-growing schema until the response
@@ -87,7 +116,7 @@ returned schema_request or select for_op. This explicit migration replaces the o
 oversized response failure, without raising global output limits or weakening any
 validation keyword. The normal MCP tools/list schema remains complete.
 
-### Native PPTX collaboration (main implementation, pending release)
+### Native PPTX collaboration (v2.0.0)
 
 Treat the original presentation as an immutable native root with revision-scoped
 slides, shape trees, text runs, table cells, notes and exact package-part relations.

@@ -1359,7 +1359,7 @@ class PyMuPDFExtractor(PDFExtractorInterface):
     def _render_page_crop(
         self, page: fitz.Page, bbox: fitz.Rect
     ) -> dict[str, Any] | None:
-        """Render an expanded page-region crop around a figure bbox."""
+        """Pad in unrotated locator space, then render the rotated page clip."""
         if bbox.is_empty:
             return None
 
@@ -1383,13 +1383,13 @@ class PyMuPDFExtractor(PDFExtractorInterface):
             bbox.x1 + x_padding,
             bbox.y1 + bottom_padding,
         )
-        clip = clip & page.rect
+        clip = clip & (page.rect * page.derotation_matrix)
         if clip.is_empty:
             return None
 
         pix = page.get_pixmap(
             matrix=fitz.Matrix(zoom, zoom),
-            clip=clip,
+            clip=clip * page.rotation_matrix,
             alpha=False,
         )
         image_bytes = pix.tobytes("png")

@@ -225,7 +225,7 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 
 ## Verify preservation
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
-  "native-file-assets": `## Native documents and versioned files — v1.3.0
+  "native-file-assets": `## Native documents and versioned files — v2.0.0
 
 Use the document tool with op="native" and a typed native_request. Start with native_request={"op":"contract"} to discover the schema.
 
@@ -244,11 +244,11 @@ New revisions create new snapshots. Existing notes are verified and never replac
 ## v1.3.0: native DOCX
 Version 1.3.0 adds read_docx and update_docx using the existing DFM checks. Read all excerpts at a fixed revision, preserve frontmatter and block markers, then submit complete edits to create a managed revision. Untouched OOXML parts are checked byte for byte; source writeback stays explicit. DOCX block references now support bounded read_docx_block and native verification. A distinct docx-blocks-v1 wiki projection includes full parsed block records, the original DOCX and exact package-part attachments, preserving previous snapshots. Integrity does not prove extraction completeness. Document structure/style edits and full layout verification remain separate work.
 
-### On main, pending release: native PPTX and schema discovery
+### v2.0.0: native PPTX and schema discovery
 
 Native PPTX supports create_pptx, read_pptx, read_pptx_shape and update_pptx. Creation uses explicit text boxes, styled runs and notes; updates target existing native runs with revision and text-hash preconditions. Shape references support verify. The pptx-shapes-v1 wiki projection retains complete shape JSON/XML and exact package attachments, including media, charts, layouts, masters and relationships. Older snapshots remain unchanged. Agents review rendering, overflow, inherited formatting and semantic accuracy; structural edits and legacy or macro formats remain outside this adapter.
 
-The native-contract-v2 discovery response supports for_op. Check schema_delivery; follow schema_request for complete JSON pages, preserve schema_sha256 and for_op, then verify the assembled UTF-8 hash. Existing native document inputs are unchanged. These changes are on main and are not included in the published v1.3.0 package.
+The native-contract-v2 discovery response supports for_op. Check schema_delivery; follow schema_request for complete JSON pages, preserve schema_sha256 and for_op, then verify the assembled UTF-8 hash. Existing native document inputs are unchanged. Version 2.0.0 is a major release because discovery clients must migrate from assuming that the full schema is always inline.
 
 See the source page for operation fields, examples, format restrictions and recovery details.`,
   "workflow-chapters": `## Choose by source and task
@@ -342,6 +342,13 @@ Run Python checks, documentation generation, extension tests, asset parity, and 
   "release-testing": `## Run release gates
 A release candidate must pass lint, formatting, types, full tests, documentation checks, security audits, package audits, VSIX tests, and artifact verification. Install and activation smoke tests validate the production extension path.
 
+## Codex PDF evaluation
+Run \`uv run python -m tests.codex_pdf.run --mode scanned --output /tmp/pdf-codex-scanned\` from a checkout with a logged-in Codex CLI. The output directory must be new; use \`--codex /absolute/path/to/codex\` if needed. This explicit opt-in uses model quota. Ordinary pytest never starts Codex.
+
+The runner connects only the current checkout's MCP server to synthetic data, captures actual image/tool events, and independently checks final transcription, citations, edit/delete/restore history, source hashes, scan pixels, reopened Excel and asset bundles. Re-run the independent auditor with \`uv run python -m tests.codex_pdf.audit /tmp/pdf-codex-scanned\`.
+
+Recovered tool errors remain visible as \`passed_with_recoveries\`; \`first_transcription_exact\` distinguishes initial extraction from a corrected final result. The three-page corpus covers digital, scanned and mixed pages, rotation/cropbox offsets, leading zeros, signs and units. It does not establish general OCR accuracy, handwriting support or PDF layout writeback fidelity.
+
 ## Publish in order
 Confirm built artifacts and runtime diagnostics before tagging, then verify each public registry after publication.`,
   "mcp-tool-consolidation": `## Understand the surfaces
@@ -394,7 +401,7 @@ function defineTool(name, category, summary, inputs, outcome, example, module) {
 }
 
 const TOOLS = [
-  defineTool("document", "document", "Document facade for PDF workflows, native file versions and DOCX block evidence and wiki snapshots (v1.3.0).", "op, pdf_path, doc_id, file_paths, output_dir, native_request", "PDF assets or native file revisions with explicit preservation checks", 'document(op="export_assets", doc_id="doc_...", output_dir="agent-assets")', "document_tools.py"),
+  defineTool("document", "document", "Document facade for PDF workflows, native file versions, DOCX/PPTX evidence and wiki snapshots (v2.0.0).", "op, pdf_path, doc_id, file_paths, output_dir, native_request", "PDF assets or native file revisions with explicit preservation checks", 'document(op="export_assets", doc_id="doc_...", output_dir="agent-assets")', "document_tools.py"),
   defineTool("document_asset", "document", "Fetch document assets, navigate sections, and write table or figure Foam notes.", "op, doc_id, asset_type, asset_id, path", "Bounded asset content or provenance-rich Foam notes", 'document_asset(op="foam_notes", doc_id="doc_...", asset_type="all")', "document_tools.py"),
   defineTool("section", "document", "Browse, search, and read a document section tree.", "op, doc_id, path, query, limit", "Section hierarchy, detail, content, or bounded blocks", 'section(op="tree", doc_id="doc_...", max_depth=3)', "section_tools.py"),
   defineTool("ingest_documents", "document", "High-frequency PDF ingest shortcut with background-job semantics.", "file_paths, async_mode, use_marker, ocr_enabled, ocr_language", "Job id and per-file progress without blocking stdio", 'ingest_documents(file_paths=["/papers/source.pdf"])', "document_tools.py"),

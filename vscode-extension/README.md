@@ -1,12 +1,19 @@
 # Asset-Aware MCP
 
-> Native document and evidence tools for agents: PDF assets, DOCX writeback, versioned spreadsheets and citation-ready wikis.
+> Native document and evidence tools for agents: PDF assets, DOCX writeback, versioned spreadsheets/presentations and citation-ready wikis.
 
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/u9401066.asset-aware-mcp)](https://marketplace.visualstudio.com/items?itemName=u9401066.asset-aware-mcp)
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v1.3.0/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v2.0.0/resources/banner.png)
+
+## What's New in v2.0.0
+
+- Create native presentations, read slide/notes shapes, and update precise existing text runs.
+- Verify revision-pinned shape references and export full shape/XML evidence with exact package attachments.
+- Native discovery changes to `native-contract-v2`: check `schema_delivery`, select `for_op`, or follow `schema_request` with its hash across pages. Clients that assume an inline schema must migrate.
+- Existing native operation inputs and XLSX/DOCX wiki snapshots remain compatible. Agents review meaning, layout, overflow and inherited formatting.
 
 ## What's New in v1.3.0
 

@@ -17,6 +17,43 @@ appear in public tool input schemas. `mcp>=2,<3` is the supported contract；SDK
 v1 and FastMCP/v1 fallback are intentionally unsupported。Balanced / compact /
 legacy matrix 僅驗證 tool UX，不代表 protocol-version compatibility。
 
+## Codex PDF evaluation
+
+這是模型實際使用 MCP 的 opt-in 測試，與一般 SDK stdio 測試分開。需要已登入的
+Codex CLI，會使用模型額度；一般 `pytest` 不會啟動 Codex。來源只有產生的合成
+PDF，執行器不更改使用者 MCP 設定，也不讀取登入憑證。
+
+```bash
+uv run pytest tests/unit/test_pdf_rotated_crops.py tests/unit/test_codex_pdf_evaluation.py tests/integration/test_pdf_crud_stdio_matrix.py -q
+uv run python -m tests.codex_pdf.run --mode mixed --output /tmp/pdf-codex-mixed
+uv run python -m tests.codex_pdf.run --mode scanned --output /tmp/pdf-codex-scanned
+# Codex 未在 PATH 時加 --codex /absolute/path/to/codex；output 必須是新目錄。
+# 重做獨立稽核，不再呼叫模型：
+uv run python -m tests.codex_pdf.audit /tmp/pdf-codex-scanned
+```
+
+執行器以 `--ignore-user-config`／`--ephemeral` 和單一必要 MCP server 連到目前
+checkout；停用 shell／其他 apps／子 Agent，只允許測試用工具操作隔離資料。
+這依據 [Codex 非互動模式](https://learn.chatgpt.com/docs/non-interactive-mode) 與
+[MCP 設定](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)。實際通過範例使用
+CLI `0.154.0-alpha.6.1`；模型沿用 Codex 預設，不宣稱不同模型版本結果相同。
+
+每份三頁 PDF 有七列、五欄，涵蓋純文字／無文字層掃描／混合頁、90 度旋轉、
+非零 cropbox、前導零、負號、小數、百分比、比較符號與 µ 單位。期望值保留在
+Agent 工作目錄之外，禁止用 shell 或讀取 fixture 程式取得答案。
+
+`events.jsonl` 保留真實 MCP 呼叫及影像回應；`audit.json` 獨立核對來源 hash/mtime、
+35 個欄位值、實際影像傳遞、掃描像素、各列引用、修改／刪除／還原歷史、Excel
+重新開啟與 Wiki 資產包 hash。`run.json` 記錄程序結果，`expected.json` 記錄測資與
+伺服器程式／lock hash。程序 exit 0 或 Agent 宣告成功，均不足以通過稽核。
+可修復的工具錯誤保留在報告，完成後標示 `passed_with_recoveries`。
+`first_transcription_exact` 另記初次轉錄是否完全正確，不把 Agent 事後修正
+當成第一次就讀對；第二輪純掃描實測曾有兩個前導零缺漏，重新看圖後修正。
+
+這些結果驗證限定測資與工具工作流程。掃描文字由 Agent 視覺轉錄，不冒充既有
+文字 span；影像無法證明原始字元的 Unicode 編碼。模糊／手寫／合併儲存格／
+複雜多欄與真實文件基準仍須擴充。表格 CRUD 操作衍生資料，並不改寫 PDF 版面。
+
 ## Full Python Gates
 
 ```bash

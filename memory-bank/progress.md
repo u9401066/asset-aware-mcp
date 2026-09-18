@@ -2,6 +2,13 @@
 
 ## 2026-09-18 active goal — not complete
 
+- [ ] Goal item 7: real Codex MCP PDF image-to-structured-data CRUD evaluation,
+  independent fixture truth, actual image/tool-call evidence and repeatable SDK
+  regressions. Release preparation is retained; tagging waits for this work.
+  Baseline implemented: three SDK modes, live mixed/scanned Codex runs, eight
+  independent final checks, first-pass accuracy and recoveries recorded separately.
+  Messy real-document corpus expansion remains active.
+
 - [ ] Maintain MCP SDK 2.0+ compatibility, evaluate current native-format/PDF
   libraries against official repositories and regression evidence; adopt suitable
   updates without removing format features or bypassing release checks.
@@ -27,7 +34,30 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
-## 2026-09-18 native discovery and PPTX (implemented, pending release)
+## 2026-09-18 v2.0.0 release preparation
+
+- Codex PDF baseline exposed and fixed rotated figure cropping (10/16 failing
+  pixel cases before, 16/16 after). Real mixed/scanned workflows preserve source,
+  transcribe 35 cells, cite assets, update/delete/restore and export checked Excel
+  plus Wiki bundles. A second scan run corrected two first-pass leading-zero
+  mistakes; the initial error remains visible in its independent audit.
+- Added an opt-in isolated Codex runner and negative audit guards, plus three
+  production SDK2 digital/scanned/mixed CRUD regressions included in CI. Tests
+  never silently invoke a model. New section guidance supports image-only PDFs.
+- Validation: 1,546 Python passed / 30 optional skips, 199 VSIX tests and package
+  checks, lint/format/types/Bandit, docs/harness/skills/metadata audits and asset
+  synchronization. Desktop/mobile zh/en guide QA passed with cached pinned CDN
+  assets. New corpus baseline adds 53 regressions. Exact commit CI remains pending.
+
+- Revalidated clean main@cf7f166 and successful checkpoint CI/Pages. Previous goal
+  turn made concrete progress (native schema discovery and PPTX collaboration).
+- Prepare 2.0.0 because native-contract-v2 changes the discovery response shape;
+  document the client migration explicitly. Full release harness, exact-tag CI and
+  public PyPI/Marketplace/GitHub artifact verification remain to be completed.
+- Structural CRUD, further formats, standard academic citations and complete agent
+  review workflows remain active after this publication milestone.
+
+## 2026-09-18 native discovery and PPTX (implemented, release preparation)
 
 - Revalidated clean main@269893f and its green exact-commit CI. Full goal stays active.
 - Implemented bounded full-schema retrieval, per-operation discovery sharing

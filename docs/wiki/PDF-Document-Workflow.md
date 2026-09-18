@@ -108,6 +108,19 @@ Preflight 的 staged inspection、逐頁 OCR reasons、bounded work 與 extracti
 
 這些 artifact 預設落在 `$DATA_DIR/{doc_id}/`。A2T 的 durable table files 則位於 `$DATA_DIR/tables/`；PDF table 結構本身主要透過 manifest、blocks 與 segmentation 讀取。
 
+## Agent 視覺轉錄與圖像完整性
+
+掃描 PDF 可先保留圖像資產，由 Agent 透過 `document_asset(op="get",
+asset_type="figure", ...)` 核對，再以 A2T 建表及操作衍生資料。沒有文字層時可能
+沒有 section blocks；先用 `document(op="inspect")` 找圖片，不應把缺少章節樹
+當成圖像擷取失敗。視覺轉錄引用 figure/page，不能捏造文字 span 或 OCR quote。
+
+Figure crop 的 padding、裁切範圍與 locator 使用未旋轉的 cropbox 相對座標，再
+轉到渲染座標；避免 90／270 度頁面因長寬交換而截斷影像。16 個像素測試覆蓋
+0／90／180／270 度、cropbox 位移及全頁／局部裁切，依據
+[PyMuPDF 頁面座標規格](https://pymupdf.readthedocs.io/en/latest/page.html)。
+完整 Codex 實測與限制見 [Release And Testing](Release-And-Testing#codex-pdf-evaluation)。
+
 ## OCR
 
 `ocr_pdf_document(...)` 會建立 background job，並透過 `src/infrastructure/ocr_processor.py` 包裝 `ocrmypdf`。支援：

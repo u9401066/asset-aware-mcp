@@ -259,7 +259,10 @@ class TestListSectionTree:
 
         assert "❌" in result
         assert "blocks.json not found" in result
-        assert "ingest_documents" in result  # 應包含修復建議
+        assert 'document(op="inspect"' in result
+        assert 'asset_type="figure"' in result
+        assert "OCR" in result
+        assert "use_marker" not in result
 
     @pytest.mark.asyncio
     async def test_max_depth_limit(self, setup_data_dir):

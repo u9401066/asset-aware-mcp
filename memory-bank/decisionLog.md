@@ -1,5 +1,15 @@
 # Decision Log
 
+## 2026-09-18 — version 2.0.0 for native discovery migration
+
+Native-contract-v2 changes an observable public response: clients can no longer
+assume `contract["schema"]` is always present. Use a major release, 2.0.0, with
+schema_delivery/for_op/schema_request migration instructions. Existing document
+operation inputs and stored evidence snapshots remain compatible. The broad goal
+already authorizes periodic releases; no additional version confirmation is needed.
+Publishing is still conditional on the complete release and artifact checks.
+
+
 ## 2026-09-18 — PDF assembly should preserve document references deliberately
 
 - Rechecked pikepdf's official page-assembly documentation:
@@ -250,3 +260,22 @@ explicitly authorized. Full release gates remain required before tagging.
 
 Domain owns pure contracts; application binds display to evidence; infrastructure
 owns native format IO. Citation formatting never mutates source provenance.
+# 2026-09-18 — real Codex PDF evidence and correction boundary
+
+User goal item 7 requires Codex itself to exercise MCP. A direct SDK client is
+still necessary for repeatable mechanics, but cannot establish image perception
+or agent tool use. Add a separately opted-in CLI runner with synthetic inputs,
+one current-checkout stdio server, existing authentication, no persistent config
+writes, and independent trace/artifact checks. Retain recoverable tool failures
+and first-pass transcription accuracy instead of reporting only final success.
+One scan run dropped two leading zeros and corrected them after image reinspection;
+this is agent correction, not deterministic MCP semantic validation.
+
+Image integrity is a necessary MCP responsibility: real testing found rotated
+page crops mixed unrotated locator and rotated rendering coordinates. Fix the
+coordinate transform, with independent full-page/pixel crop regressions. Preserve
+unrotated cropbox locator metadata. This is supported by official PyMuPDF Page
+coordinate documentation: https://pymupdf.readthedocs.io/en/latest/page.html.
+Codex launch follows https://learn.chatgpt.com/docs/non-interactive-mode and
+https://learn.chatgpt.com/docs/extend/mcp?surface=cli. Synthetic workflow results
+are not general OCR, handwriting, arbitrary table or PDF writeback benchmarks.

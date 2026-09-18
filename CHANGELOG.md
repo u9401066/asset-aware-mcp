@@ -7,7 +7,14 @@
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-09-18
+
 ### Added
+
+- Opt-in Codex MCP evaluation with synthetic digital/scanned/mixed PDFs, actual
+  image/tool-call evidence and independent transcription, citation, CRUD, Excel
+  and asset-bundle checks. Deterministic SDK2 matrix and negative audit tests run
+  without model access; live results retain recovered tool errors.
 
 - Native PPTX creation with explicit text boxes, paragraphs, styled runs and notes;
   bounded slide/notes shape reads and complete JSON/XML component pages. Precise
@@ -21,11 +28,27 @@
   JSON pages (`schema`). Shared runtime field rules keep required/unused fields
   aligned; large future schemas remain retrievable within normal response limits.
 
+### Breaking
+
+- Native contract discovery no longer guarantees an inline `schema`. The major
+  version reflects this response migration. Check `schema_delivery`, use `for_op`
+  for one operation, or assemble the hash-pinned `schema_request` pages. The complete
+  MCP SDK input schema remains available; existing document operation inputs and
+  evidence snapshots retain their previous contracts.
+
 ### Changed
 
 - Native discovery returns `native-contract-v2`: clients must check
   `schema_delivery` and follow `schema_request` when the schema is paged, instead
   of assuming an inline `schema`. Existing document operation inputs are unchanged.
+
+### Fixed
+
+- Rotated PDF figure crops now pad/intersect in unrotated locator space and
+  transform the rendering clip. Sixteen pixel regressions cover full/partial
+  crops, cropbox offsets and all right-angle rotations; ten failed before the fix.
+- Missing section blocks now guide image-only workflows to document inventory
+  and figure inspection, with OCR/structured extraction as an explicit next step.
 
 ## [1.3.0] - 2026-09-18
 

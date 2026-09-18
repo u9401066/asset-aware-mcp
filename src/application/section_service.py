@@ -183,7 +183,12 @@ class SectionService:
         if tree is None:
             return (
                 f"❌ **blocks.json not found for doc_id: `{doc_id}`**\n\n"
-                f"Please run `ingest_documents` with `use_marker=True` first to generate blocks.json."
+                "Image-only PDFs may have figure assets without section text. "
+                f'Use `document(op="inspect", doc_id="{doc_id}")` for the asset '
+                'inventory, then `document_asset(op="get", asset_type="figure", '
+                "doc_id=..., asset_id=...)` to inspect images. If text sections "
+                "are needed, choose OCR or a configured structured extractor "
+                "and re-ingest the source."
             )
 
         lines = [

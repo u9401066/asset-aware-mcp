@@ -402,6 +402,7 @@ jobs:
             tests/test_mcp_tools.py \
             tests/integration/test_docx_complex_sample_roundtrip.py \
             tests/integration/test_pdf_asset_stdio_e2e.py \
+            tests/integration/test_pdf_crud_stdio_matrix.py \
             -v --timeout=180 --junitxml=junit-integration.xml
 
       - name: Upload Integration Test Results
