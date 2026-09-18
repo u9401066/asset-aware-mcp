@@ -27,7 +27,7 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
-## 2026-09-18 native discovery (implemented) / PPTX (next)
+## 2026-09-18 native discovery and PPTX (implemented, pending release)
 
 - Revalidated clean main@269893f and its green exact-commit CI. Full goal stays active.
 - Implemented bounded full-schema retrieval, per-operation discovery sharing
@@ -38,9 +38,18 @@ Baseline revalidated; isolated latest main while preserving original user edits.
   harness/skills audit and bundled asset synchronization passed.
 - README/zh/native guide/CHANGELOG/Pages and assistant instructions updated;
   changes are on main pending release.
-- Next native adapter work covers real presentation structure and precise edits;
-  preserve grouped shapes, runs, layouts/masters/media and unparsed OOXML features.
-  Existing Markdown-to-PPTX conversion is not native format-preserving editing.
+- Discovery commit 1546bd3 has green CI 35329453898 and Pages 35329453179.
+- PPTX now supports independent native creation, slide/notes shapes, complete JSON
+  component pages, precise existing-run edits, revision-pinned references and exact
+  package wiki attachments. Reuses source/CAS/writeback guards. New pptx-shapes-v1
+  snapshots preserve older opaque outputs; v1.2 XLSX/v1.3 DOCX goldens remain stable.
+- 35 additional presentation/compatibility regressions plus four new operation-schema
+  cases pass: full Python 1,493 passed / 30 optional skips. VSIX 199 tests/package
+  checks, lint/format/types/Bandit, docs/harness audits and synchronization passed.
+- Desktop/mobile zh/en browser QA passed with cached pinned CDNs; English native
+  overview now reflects unreleased PPTX/schema capabilities. Metadata/labels checked.
+- Feature commit CI and release work follow. Broad structural CRUD, legacy/macro
+  formats, academic CSL and complete agent review remain ongoing.
 
 
 ## 2026-09-18 v1.3.0 published and verified

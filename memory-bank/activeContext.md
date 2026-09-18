@@ -78,17 +78,38 @@ MCP owns mechanical source/version/locator/package/write checks and explicit,
 deterministic repairs. Agents own semantics, rendering, fields/formulas, extraction
 review and subsequent correction. No structural pass is a full-fidelity guarantee.
 
-Current work: scalable native discovery is implemented on main, pending release:
-native-contract-v2 supports for_op and complete schema pages pinned by SHA-256.
-Required/optional runtime fields share one registry. SDK input schema remains
-complete; clients must inspect schema_delivery rather than assume inline schema.
-Thirty-one new regressions plus updated DOCX/SDK2 discovery tests pass. Full suite:
-1,454 passed / 30 optional skips; lint/format/types, docs and both harness audits,
-asset sync and diff hygiene passed. Log: /tmp/asset-aware-native-discovery-tests.log.
-README/Pages/native guide/CHANGELOG and bundled assistant instructions are updated.
-Next: native PPTX creation/read/decomposition/scoped updates and component evidence.
-Spec is updated before code. Prior main checkpoint 269893f and CI 35327372945 were
-revalidated successful. The broader goal remains active.
+Current work: native PPTX collaboration is implemented, pending release and exact
+feature-commit CI. Discovery checkpoint 1546bd351d633c169955ffd9a1540d31b6ef148b
+has green CI 35329453898 and Pages 35329453179. Native-contract-v2 provides for_op
+and complete hash-pinned schema pages; existing operation inputs remain unchanged.
+
+PPTX exposes create_pptx/read_pptx/read_pptx_shape/update_pptx, native verify and
+export_wiki. Creation uses python-pptx with explicit text boxes, paragraphs, styled
+runs, dimensions in EMU and notes. Native edits resolve relationship-backed slide/
+notes/shape IDs, preserve group/local transforms, require run hashes and managed
+revision CAS, and change only existing a:t nodes. Package inventory/untouched bytes,
+read-back and canonical XML outside the requested text nodes are checked. Fields,
+new tabs/line breaks, merged-cell continuations and structural edits are rejected;
+signed/protected or strict/macro/legacy presentations require separate support.
+
+Shape evidence binds full JSON/XML to revision-scoped locators. PPTX wiki uses
+pptx-shapes-v1, retaining every exact package member and previous opaque snapshots.
+Golden v1.2 XLSX/v1.3 DOCX artifacts remain unchanged. Bounded reads materialize only
+requested shape representations; agents review semantics, inheritance, overflow and
+rendered layout. Integrity does not prove extraction completeness or visual fidelity.
+
+Validation: 1,493 Python passed / 30 optional skips; 199 VSIX tests and package-content
+checks passed. Lint/format/types/Bandit, docs generation/check, harness/skills audits,
+asset synchronization and diff hygiene passed. Real SDK2 tests cover creation,
+read/edit/evidence/wiki/publication/writeback/stale rejection. Logs:
+/tmp/asset-aware-native-pptx-tests.log and /tmp/asset-aware-pptx-extension-tests.log.
+Desktop/mobile zh/en browser QA passed after updating the English native overview;
+pinned cached CDN replay was used, so it does not prove live CDN availability.
+Screenshots: /tmp/native-pptx-{desktop,mobile}-{zh,en}.png. GitHub metadata/17 managed
+labels remain synchronized. Original detached worktree and user edits are untouched.
+README/Pages/spec/CHANGELOG/MEM and all bundled native harness guidance are updated.
+Next: verify exact-commit CI, then continue broader native CRUD, citation standards,
+agent review workflows and a fully audited publication milestone. Goal stays active.
 
 Next work remains active: broader native formats (including PPTX), structural
 CRUD, independent table/native bridges, cross-format asset relationships and agent

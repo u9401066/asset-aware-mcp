@@ -16,6 +16,12 @@ from src.domain.native_operations import (
     NativeOperation,
     operation_fields,
 )
+from src.domain.native_pptx import (  # noqa: TC001 -- Pydantic runtime models
+    NativePptxReference,
+    NativePptxShapeLocator,
+    NativePptxTextEdit,
+    NativePresentationCreate,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -274,7 +280,12 @@ class NativeDocumentRequest(NativeModel):
     citation_metadata: CitationMetadata | None = None
     workbook: NativeWorkbookCreate | None = None
     docx_edit: NativeDocxEdit | None = None
-    reference: NativeCellReference | NativeDocxBlockReference | None = None
+    presentation: NativePresentationCreate | None = None
+    pptx_locator: NativePptxShapeLocator | None = None
+    pptx_edits: list[NativePptxTextEdit] = Field(default_factory=list, max_length=1000)
+    reference: (
+        NativeCellReference | NativeDocxBlockReference | NativePptxReference | None
+    ) = None
     edits: list[NativeCellEdit] = Field(
         default_factory=list, max_length=MAX_NATIVE_CELLS
     )

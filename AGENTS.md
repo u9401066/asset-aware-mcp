@@ -57,6 +57,13 @@ and LightRAG knowledge graph outputs.
   checks the parsed representation. DOCX wiki snapshots retain exact package parts;
   extraction completeness, meaning and rendered layout require agent review.
 
+- On main (pending release), native-contract-v2 supports for_op and hash-pinned
+  schema pages. Check schema_delivery and preserve schema_sha256 while assembling.
+  Query the installed contract before PPTX operations: create/read/read-shape/update
+  work on native presentations with revision/run-text preconditions. Shape refs and
+  wiki snapshots preserve exact native representations/parts. Agents review semantics,
+  inherited formatting, rendered layout and overflow; structural editing is separate.
+
 ## PDF -> Asset Engine Selection
 
 The core goal is turning documents into complete, agent-friendly figure/table/

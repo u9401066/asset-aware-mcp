@@ -1,0 +1,165 @@
+"""Managed presentation operations with precise native locators and review evidence."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from typing import TYPE_CHECKING, Any
+
+from src.application.native_document_contract import native_asset_summary
+from src.domain.native_pptx import PPTX_MEDIA_TYPE
+
+if TYPE_CHECKING:
+    from src.domain.native_assets import NativeAssetRepository, NativeDocumentRequest
+    from src.domain.native_pptx import NativePresentationAdapter
+
+REVIEW_REQUIRED = [
+    "semantic_accuracy",
+    "rendered_layout",
+    "text_overflow",
+    "inherited_formatting",
+]
+
+
+def attach_pptx_evidence(record: dict[str, Any], asset_id: str, revision: str) -> None:
+    record["schema_version"] = "native-pptx-shape-v1"
+    canonical = json.dumps(
+        record, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
+    record["evidence"] = {
+        "schema_version": "native-pptx-shape-ref-v1",
+        "asset_id": asset_id,
+        "revision": revision,
+        "locator": dict(record["locator"]),
+        "value_sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+        "verification_scope": "immutable_native_representation",
+    }
+
+
+def shape_excerpt(record: dict[str, Any], offset: int, limit: int) -> dict[str, Any]:
+    text = json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    start = min(offset, len(text))
+    end = min(start + limit, len(text))
+    while len(json.dumps(text[start:end], ensure_ascii=False)) > 8000:
+        end = start + (end - start) // 2
+    return {
+        "locator": record["locator"],
+        "evidence": record["evidence"],
+        "text_excerpt": text[start:end],
+        "text_length": len(text),
+        "text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        "excerpt_char_range": [start, end],
+        "next_text_offset": end if end < len(text) else None,
+        "representation_complete": start == 0 and end == len(text),
+        "serialization": "canonical-json; UTF-8 SHA-256",
+    }
+
+
+class NativePptxOperations:
+    def __init__(
+        self,
+        repository: NativeAssetRepository,
+        presentations: NativePresentationAdapter,
+    ):
+        self.repository = repository
+        self.presentations = presentations
+
+    def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        return {
+            "create_pptx": self._create,
+            "read_pptx": self._read,
+            "read_pptx_shape": self._read_shape,
+            "update_pptx": self._update,
+        }[request.op](request)
+
+    def _source(self, request: NativeDocumentRequest) -> tuple[bytes, str, str]:
+        assert request.asset_id is not None
+        asset = self.repository.load(request.asset_id)
+        if asset.format != "pptx":
+            raise ValueError("This format has no native PPTX reader")
+        revision = request.revision or asset.revision
+        return self.repository.read(asset.asset_id, revision), asset.asset_id, revision
+
+    def _create(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        assert request.presentation is not None
+        data = self.presentations.create(request.presentation)
+        asset = self.repository.create(
+            request.presentation.name, data, "pptx", PPTX_MEDIA_TYPE
+        )
+        return {
+            "success": True,
+            "asset": native_asset_summary(asset, pptx_enabled=True),
+            "source_written": False,
+            "review_required": REVIEW_REQUIRED,
+        }
+
+    def _read(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        data, asset_id, revision = self._source(request)
+        metadata = self.presentations.inspect(data)
+        slides = metadata.pop("slides")
+        selected = []
+        count = metadata["shape_count"]
+        for record in self.presentations.iter_shapes(
+            data, offset=request.offset, limit=request.limit
+        ):
+            attach_pptx_evidence(record, asset_id, revision)
+            selected.append(
+                {
+                    "locator": record["locator"],
+                    "kind": record["kind"],
+                    "name": record["name"][:120],
+                    "group_path": record["group_path"],
+                    "evidence": record["evidence"],
+                }
+            )
+        return {
+            "success": True,
+            "asset_id": asset_id,
+            "inspected_revision": revision,
+            "metadata": metadata,
+            "slides": slides[request.offset : request.offset + request.limit],
+            "next_slide_offset": request.offset + request.limit
+            if request.offset + request.limit < len(slides)
+            else None,
+            "shapes": selected,
+            "shape_count": count,
+            "next_offset": request.offset + request.limit
+            if request.offset + request.limit < count
+            else None,
+            "locator_scope": "immutable_revision; shape IDs may change in later revisions",
+            "review_required": REVIEW_REQUIRED,
+        }
+
+    def _read_shape(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        assert request.pptx_locator is not None
+        data, asset_id, revision = self._source(request)
+        record = self.presentations.read_shape(data, request.pptx_locator)
+        attach_pptx_evidence(record, asset_id, revision)
+        return {
+            "success": True,
+            "asset_id": asset_id,
+            "inspected_revision": revision,
+            "shape": shape_excerpt(record, request.text_offset, request.text_limit),
+            "review_required": REVIEW_REQUIRED,
+        }
+
+    def _update(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        assert request.asset_id is not None and request.expected_revision is not None
+        asset = self.repository.load(request.asset_id)
+        if asset.format != "pptx":
+            raise ValueError("This format has no native PPTX editor")
+        if asset.archived or asset.revision != request.expected_revision:
+            raise ValueError("Archived or stale native asset; inspect before editing")
+        updated, checks = self.presentations.edit(
+            self.repository.read(asset.asset_id, request.expected_revision),
+            request.pptx_edits,
+        )
+        committed = self.repository.commit(
+            asset.asset_id, request.expected_revision, updated, checks
+        )
+        return {
+            "success": True,
+            "asset": native_asset_summary(committed, pptx_enabled=True),
+            "operation_result": checks.model_dump(),
+            "source_written": False,
+        }

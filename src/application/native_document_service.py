@@ -14,6 +14,7 @@ from src.application.native_evidence_service import (
     NativeEvidenceService,
     attach_native_evidence,
 )
+from src.application.native_pptx_operations import NativePptxOperations
 from src.application.native_schema import read_schema
 from src.application.native_wiki_service import NativeWikiService
 
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
         NativeSpreadsheetAdapter,
     )
     from src.domain.native_docx import NativeDocxAdapter
+    from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_wiki import NativeWikiPublisher
 
 
@@ -35,20 +37,33 @@ class NativeDocumentService:
         spreadsheets: NativeSpreadsheetAdapter,
         wiki_publisher: NativeWikiPublisher | None = None,
         docx: NativeDocxAdapter | None = None,
+        presentations: NativePresentationAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.docx = docx
-        self.evidence = NativeEvidenceService(repository, spreadsheets, docx)
+        self.presentations = presentations
+        self.pptx_operations = (
+            NativePptxOperations(repository, presentations) if presentations else None
+        )
+        self.evidence = NativeEvidenceService(
+            repository, spreadsheets, docx, presentations
+        )
         self.docx_operations = NativeDocxOperations(repository, docx) if docx else None
         self.wiki = (
-            NativeWikiService(repository, spreadsheets, wiki_publisher, docx)
+            NativeWikiService(
+                repository, spreadsheets, wiki_publisher, docx, presentations
+            )
             if wiki_publisher is not None
             else None
         )
 
     def _summary(self, asset: NativeFileAsset) -> dict[str, Any]:
-        return native_asset_summary(asset, docx_enabled=self.docx is not None)
+        return native_asset_summary(
+            asset,
+            docx_enabled=self.docx is not None,
+            pptx_enabled=self.presentations is not None,
+        )
 
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
         handlers = {
@@ -59,6 +74,10 @@ class NativeDocumentService:
             "create": self._create,
             "history": self._history,
             "read_cell": self._read_cell,
+            "create_pptx": self._pptx_operation,
+            "read_pptx": self._pptx_operation,
+            "read_pptx_shape": self._pptx_operation,
+            "update_pptx": self._pptx_operation,
             "read_docx": self._docx_operation,
             "read_docx_block": self._docx_operation,
             "update_docx": self._docx_operation,
@@ -83,7 +102,11 @@ class NativeDocumentService:
         return self.evidence.verify(request.reference)
 
     def _contract(self, request: NativeDocumentRequest) -> dict[str, Any]:
-        return native_document_contract(request, docx_enabled=self.docx is not None)
+        return native_document_contract(
+            request,
+            docx_enabled=self.docx is not None,
+            pptx_enabled=self.presentations is not None,
+        )
 
     def _list(self, request: NativeDocumentRequest) -> dict[str, Any]:
         return {
@@ -178,6 +201,12 @@ class NativeDocumentService:
             )
             for cell in result["content"]["cells"]:
                 attach_native_evidence(cell, asset_id, revision)
+        elif asset.format == "pptx" and self.presentations is not None:
+            result["content"] = {
+                "representation": "pptx_package",
+                "size_bytes": len(data),
+                "read_operation": "read_pptx",
+            }
         elif asset.format == "docx" and self.docx is not None:
             result["content"] = {
                 "representation": "docx_package",
@@ -265,3 +294,8 @@ class NativeDocumentService:
         if self.docx_operations is None:
             raise ValueError("The native DOCX bridge is not configured")
         return self.docx_operations.execute(request)
+
+    def _pptx_operation(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        if self.pptx_operations is None:
+            raise ValueError("The native PPTX adapter is not configured")
+        return self.pptx_operations.execute(request)

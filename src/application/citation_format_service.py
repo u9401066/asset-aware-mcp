@@ -43,6 +43,14 @@ def render_citation(
     part, block_id = locator.get("part"), locator.get("block_id")
     if part is not None and block_id is not None:
         location.append(f"{part}#{block_id}")
+    if (
+        part is not None
+        and locator.get("slide_id") is not None
+        and locator.get("shape_id") is not None
+    ):
+        location.append(
+            f"slide ID {locator['slide_id']}, {part}#shape-{locator['shape_id']}"
+        )
     line_range = locator.get("line_range")
     if line_range and all(x is not None for x in line_range):
         location.append(f"lines {line_range[0] + 1}-{line_range[1]}")

@@ -13,6 +13,10 @@ NativeOperation = Literal[
     "list",
     "inspect",
     "read_cell",
+    "create_pptx",
+    "read_pptx",
+    "read_pptx_shape",
+    "update_pptx",
     "read_docx",
     "read_docx_block",
     "update_docx",
@@ -47,6 +51,12 @@ NATIVE_OPERATIONS = {
     "list": _fields(optional="offset limit"),
     "inspect": _fields("asset_id", "sheet offset limit revision"),
     "read_cell": _fields("asset_id sheet cell", "revision text_offset text_limit"),
+    "create_pptx": _fields("presentation"),
+    "read_pptx": _fields("asset_id", "revision offset limit"),
+    "read_pptx_shape": _fields(
+        "asset_id pptx_locator", "revision text_offset text_limit"
+    ),
+    "update_pptx": _fields("asset_id expected_revision pptx_edits"),
     "read_docx": _fields("asset_id", "revision text_offset text_limit offset limit"),
     "read_docx_block": _fields("asset_id block_id", "revision text_offset text_limit"),
     "update_docx": _fields("asset_id expected_revision docx_edit"),

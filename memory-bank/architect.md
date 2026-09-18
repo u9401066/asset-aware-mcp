@@ -1,5 +1,16 @@
 # System Architect
 
+## 2026-09-18 — native PPTX and scalable discovery
+
+Domain native_pptx defines strict creation, native shape/run locators, text edits,
+references and an adapter port. Infrastructure resolves PresentationML relationships,
+parses explicit shape structure and preserves exact OOXML members during run edits;
+python-pptx supplies independent creation. Application coordinates immutable versions,
+CAS, chunked component JSON, evidence verification and pptx-shapes-v1 wiki snapshots.
+Schema discovery shares the runtime operation field registry and uses hash-pinned
+JSON pages. Presentation keeps one typed document facade and the complete SDK schema.
+
+
 ## 2026-09-18 — native DOCX bridge
 
 - Domain defines typed NativeDocxEdit and adapter/workspace ports without IO.

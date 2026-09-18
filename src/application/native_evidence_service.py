@@ -6,7 +6,9 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 
+from src.application.native_pptx_operations import attach_pptx_evidence
 from src.domain.native_assets import NativeDocxBlockReference
+from src.domain.native_pptx import NativePptxReference
 
 if TYPE_CHECKING:
     from src.domain.native_assets import (
@@ -15,6 +17,7 @@ if TYPE_CHECKING:
         NativeSpreadsheetAdapter,
     )
     from src.domain.native_docx import NativeDocxAdapter
+    from src.domain.native_pptx import NativePresentationAdapter
 
 
 def attach_native_evidence(cell: dict[str, Any], asset_id: str, revision: str) -> None:
@@ -37,14 +40,19 @@ class NativeEvidenceService:
         repository: NativeAssetRepository,
         spreadsheets: NativeSpreadsheetAdapter,
         docx: NativeDocxAdapter | None = None,
+        presentations: NativePresentationAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.docx = docx
+        self.presentations = presentations
 
     def verify(
-        self, reference: NativeCellReference | NativeDocxBlockReference
+        self,
+        reference: NativeCellReference | NativeDocxBlockReference | NativePptxReference,
     ) -> dict[str, Any]:
+        if isinstance(reference, NativePptxReference):
+            return self._verify_pptx(reference)
         if isinstance(reference, NativeDocxBlockReference):
             return self._verify_docx(reference)
         asset = self.repository.load(reference.asset_id)
@@ -106,5 +114,37 @@ class NativeEvidenceService:
                 "semantic_accuracy",
                 "rendered_layout",
                 "fields_and_revisions",
+            ],
+        }
+
+    def _verify_pptx(self, reference: NativePptxReference) -> dict[str, Any]:
+        asset = self.repository.load(reference.asset_id)
+        if asset.format != "pptx" or self.presentations is None:
+            raise ValueError("This format has no native PPTX verifier")
+        record = self.presentations.read_shape(
+            self.repository.read(reference.asset_id, reference.revision),
+            reference.locator,
+        )
+        attach_pptx_evidence(record, reference.asset_id, reference.revision)
+        valid = record["evidence"] == reference.model_dump()
+        return {
+            "success": True,
+            "valid": valid,
+            "asset_id": reference.asset_id,
+            "revision": reference.revision,
+            "is_current_managed_revision": asset.revision == reference.revision,
+            "archived": asset.archived,
+            "verification_scope": "immutable_native_representation",
+            "checks": {
+                "revision_hash": True,
+                "native_locator": True,
+                "shape_representation_hash": valid,
+            },
+            "source_freshness": "not_checked; refresh tracks external human edits",
+            "review_required": [
+                "semantic_accuracy",
+                "rendered_layout",
+                "text_overflow",
+                "inherited_formatting",
             ],
         }

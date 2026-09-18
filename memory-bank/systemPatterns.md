@@ -1,5 +1,20 @@
 # System Patterns
 
+## Native run preservation and complete schema pages (2026-09-18)
+
+PPTX updates resolve revision-scoped slide/notes/shape/paragraph/run locators and
+require original text hashes. Reopen bytes, compare requested values, restore only
+those text nodes in memory and compare canonical XML; all untouched package members
+must retain exact bytes. Group coordinates remain local and inherited formatting
+is not inferred. Agents verify semantics, rendering and overflow. Wiki snapshots
+use a distinct projection and preserve every raw package part.
+
+Native contract delivery selects one operation or chunks canonical complete JSON.
+Continuation uses the original full-schema SHA-256; field guards and discovery
+share one registry. Validate semantic constraints at runtime, independent of the
+JSON Schema's declarative constraints. Preserve existing format projection hashes.
+
+
 > 📌 此檔案記錄專案中使用的模式和慣例，新模式出現時更新。
 
 ## Projection compatibility (2026-09-18)

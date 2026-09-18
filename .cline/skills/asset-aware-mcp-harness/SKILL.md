@@ -37,6 +37,11 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
 - Keep source backups and report divergent edits for agent reconciliation.
   MCP performs mechanical checks and supported deterministic repairs; the agent
   verifies semantics, rendered layout and formula results.
+- When advertised, native PPTX supports create_pptx/read_pptx/read_pptx_shape/
+  update_pptx. Assemble shape JSON at one revision and verify its UTF-8 hash; edit
+  only the returned paragraph/run (and paired table row/column) locators with text
+  hash preconditions. verify checks shape references; export_wiki retains shapes
+  and exact package attachments. Agents review layout, overflow and inherited styles.
 - Native cell refs are not PDF AssetRefs. Version 1.2.0 adds native `verify` and
   `export_wiki`: immutable revision snapshots and full references with citation
   display. Existing notes are verified, never replaced; curate synthesis adjacent.

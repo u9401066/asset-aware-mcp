@@ -7,12 +7,15 @@
 
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
-## 開發中：原生操作規格查詢
+## 開發中：原生簡報協作與操作規格查詢
 
 main 分支新增 `contract.for_op` 與 `native-contract-v2`。先查看
 `schema_delivery`，需要分段時沿用 `schema_request` 與 `schema_sha256`，
 避免格式增加後截斷規格；尚未發布。詳見
 [查詢與遷移說明](docs/wiki/Native-File-Assets.md#contract-v2-on-main-pending-release)。
+原生 PPTX 已可建立、讀取投影片／備註形狀、精確修改文字 run、核對版本引用及
+匯出證據 Wiki。完整形狀 XML 與套件附件會保留；版面、文字溢出與繼承格式
+由 Agent 核對。詳見 [PPTX 操作說明](docs/wiki/Native-File-Assets.md#native-pptx-on-main-pending-release)。
 
 ## v1.3.0 原生 DOCX 版本與元件證據
 

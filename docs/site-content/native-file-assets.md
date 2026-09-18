@@ -289,3 +289,69 @@ DOCX Wiki 使用 `docx-blocks-v1` projection，包含各區塊的 Foam note、�
 
 完整性通過僅代表紀錄可對回指定版本的解析表示，不代表 parser 抽取了每個特徵，
 也不代表該段內容支持某項結論。Agent 仍須核對語意、Word 版面、欄位與修訂追蹤。
+
+
+## Native PPTX (on main, pending release)
+
+main 分支新增原生簡報能力；v1.3.0 尚未提供。先查安裝版本的 `contract`。
+PPTX 可直接建立，位置與大小使用 EMU（914400 EMU = 1 inch）：
+
+```python
+document(op="native", native_request={
+    "op": "create_pptx",
+    "presentation": {
+        "name": "research.pptx",
+        "slides": [{
+            "textboxes": [{
+                "paragraphs": [[
+                    {"text": "研究結果", "bold": True, "font_size_pt": 24},
+                    {"text": " — 待核對"}
+                ]]
+            }],
+            "notes": "由 Agent 核對數據、版面與文字溢出。"
+        }]
+    }
+})
+```
+
+`read_pptx` 使用 `asset_id`、可選的 `revision`／`offset`／`limit`，回傳
+投影片清單與形狀摘要。形狀與投影片清單分別有 `next_offset` 和
+`next_slide_offset`；兩者都用 `offset` 續讀。空白投影片仍會列出。
+形狀的 locator 包含 `slide_id`、原生 `part`、`region`（slide 或 notes）及
+`shape_id`；不要把投影片順序當成檔名或穩定識別。
+
+`read_pptx_shape` 使用回傳的 `pptx_locator`，提供完整形狀表示的 JSON 分段。
+保留同一個 `revision`，依 `next_text_offset` 串接 `text_excerpt`，核對
+UTF-8 `text_sha256` 後再解析。JSON 包含原始形狀 XML、群組路徑、本地座標、
+段落、一般文字 run、欄位、換行與表格儲存格。繼承格式與畫面座標不會臆測。
+
+```python
+document(op="native", native_request={
+    "op": "update_pptx", "asset_id": asset_id, "expected_revision": revision,
+    "pptx_edits": [{
+        "locator": {**shape_locator, "paragraph": 0, "run": 0},
+        "expected_text_sha256": original_run["text_sha256"],
+        "text": "修訂後的文字"
+    }]
+})
+```
+
+`paragraph`／`run` 與表格 `row`／`column` 從 0 開始。`run` 只索引一般
+`a:r`，欄位與換行不會佔用 run 索引；以讀取結果提供的索引為準。表格需同時
+提供 row 和 column，合併儲存格只可修改起點。更新保留 run 格式及其他 XML，
+回傳受管理新版本；來源仍須明確 `writeback`。空字串可清空既有 run，
+但不刪除段落、形狀或投影片。
+
+`verify` 可核對 `native-pptx-shape-ref-v1`，舊版本與封存後仍可驗證；
+目前版本狀態另外回報。`export_wiki` 使用 `pptx-shapes-v1`，保留形狀筆記、
+完整 records.jsonl、原始 PPTX 及每一個原生套件附件。圖片、圖表、內嵌工作簿、
+母片、版面、主題及 relationship 檔都保留原始位元組與路徑對照；舊的 opaque
+快照不會被取代，人工改動過的受管理筆記會阻擋重新匯出。
+
+Current scope: transitional `.pptx`, explicit creation and precise existing text-run
+updates. Signed/protected presentations, field-run edits, new tabs/line breaks,
+merged-cell continuations and structural/style redesign are rejected. Legacy `.ppt`,
+macro `.pptm` and strict PresentationML are outside this adapter. Direct slide/notes
+shape trees are parsed; unsupported and inherited features remain in exact source
+attachments. Package preservation does not prove semantic accuracy, visual fidelity
+or extraction completeness. Agents perform the complete review and correction.

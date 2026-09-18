@@ -87,7 +87,7 @@ returned schema_request or select for_op. This explicit migration replaces the o
 oversized response failure, without raising global output limits or weakening any
 validation keyword. The normal MCP tools/list schema remains complete.
 
-### Native PPTX collaboration (next milestone)
+### Native PPTX collaboration (main implementation, pending release)
 
 Treat the original presentation as an immutable native root with revision-scoped
 slides, shape trees, text runs, table cells, notes and exact package-part relations.
@@ -114,6 +114,24 @@ checks; agents review text meaning, overflow, layout, animations and object beha
 Reference decisions: [python-pptx shape hierarchy](https://python-pptx.readthedocs.io/en/latest/user/understanding-shapes.html),
 [text frames, paragraphs and runs](https://python-pptx.readthedocs.io/en/latest/user/text.html),
 and [PresentationML package structure](https://learn.microsoft.com/en-us/office/open-xml/presentation/structure-of-a-presentationml-document).
+
+Implemented operations: create_pptx (presentation), read_pptx (asset_id with
+revision/offset/limit), read_pptx_shape (asset_id/pptx_locator with JSON text pages),
+update_pptx (asset_id/expected_revision/pptx_edits), native verify and export_wiki.
+Locators carry slide_id, native part, slide/notes region and shape_id. Text edit
+locators additionally carry paragraph/run indices and paired optional table row/
+column. Regular runs are indexed independently of fields and line-break nodes;
+text hashes are required preconditions. Tabs/newlines, field editing, merged-cell
+continuations and structural edits are rejected. Creation supports explicit
+text boxes, paragraphs, styled runs, dimensions in EMU and notes.
+
+PPTX wiki projection pptx-shapes-v1 retains complete shape JSON/XML and every
+original package part; previous opaque snapshots remain separate. Existing v1.2
+XLSX and v1.3 DOCX artifact digests are regression guarded. Source/revision/CAS
+checks are mechanical; visual bounds, inherited formatting, text overflow and
+semantic accuracy require agent review. Legacy .ppt, macro .pptm and strict
+PresentationML are outside the native editor's current scope.
+
 
 ### Native DOCX / DFM bridge (v1.3.0)
 

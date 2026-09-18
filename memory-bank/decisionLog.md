@@ -1,5 +1,26 @@
 # Decision Log
 
+## 2026-09-18 — precise native PPTX edits and evidence projection
+
+- Reuse python-pptx for independent creation, then edit existing DrawingML a:t
+  nodes through bounded OOXML packages. Whole shape/text-frame assignment clears
+  runs per upstream documentation; do not use it for preserving existing formats.
+- Resolve slide identity through relationships; locate slide/notes shapes by native
+  IDs and retain group ancestry/local transforms. Regular run indices exclude
+  fields and break nodes. Never infer inherited formatting or world-space bounds.
+- Require both managed revision CAS and source-run hashes. Reopen updated bytes,
+  restore requested text nodes in memory and compare canonical XML, while package
+  replacement preserves all untouched member bytes. This proves the declared
+  mechanical scope; the agent still reviews semantics, rendering and overflow.
+- Use a new pptx-shapes-v1 wiki projection and attach every exact package member.
+  Unknown features remain available in source/XML/relationships. Old opaque PPTX
+  snapshots are separate; golden v1.2 XLSX and v1.3 DOCX output hashes remain stable.
+  PPTX source references are revision-scoped and distinct from PDF/Word/cell refs.
+- Official references: https://python-pptx.readthedocs.io/en/latest/user/text.html,
+  https://python-pptx.readthedocs.io/en/latest/user/understanding-shapes.html,
+  https://learn.microsoft.com/en-us/office/open-xml/presentation/structure-of-a-presentationml-document.
+
+
 ## 2026-09-18 — asset workflow value and scalable operation discovery
 
 - User confirms MCP owns necessary checks and operation evidence; the agent owns

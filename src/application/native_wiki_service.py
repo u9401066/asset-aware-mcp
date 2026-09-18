@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any
 
 from src.application.native_docx_wiki import NativeDocxWikiContent
 from src.application.native_evidence_service import attach_native_evidence
+from src.application.native_pptx_operations import attach_pptx_evidence
+from src.application.native_pptx_wiki import NativePptxWikiContent
 from src.application.native_wiki_format import NativeWikiContent
 from src.domain.citation_format import CitationMetadata, resolve_citation_format
 from src.domain.native_wiki import MAX_WIKI_CELLS
@@ -17,6 +19,7 @@ if TYPE_CHECKING:
         NativeSpreadsheetAdapter,
     )
     from src.domain.native_docx import NativeDocxAdapter
+    from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_wiki import NativeWikiPublisher
 
 
@@ -27,11 +30,13 @@ class NativeWikiService:
         spreadsheets: NativeSpreadsheetAdapter,
         publisher: NativeWikiPublisher,
         docx: NativeDocxAdapter | None = None,
+        presentations: NativePresentationAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.publisher = publisher
         self.docx = docx
+        self.presentations = presentations
 
     def export(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.asset_id is not None and request.output_dir is not None
@@ -46,6 +51,8 @@ class NativeWikiService:
         builder = (
             NativeDocxWikiContent
             if asset.format == "docx" and self.docx
+            else NativePptxWikiContent
+            if asset.format == "pptx" and self.presentations
             else NativeWikiContent
         )
         content = builder(
@@ -90,3 +97,9 @@ class NativeWikiService:
             content.add_parts(decomposition.parts)
             for block in decomposition.blocks:
                 content.add_block(block)
+
+        elif isinstance(content, NativePptxWikiContent) and self.presentations:
+            content.add_parts(self.presentations.package_parts(data))
+            for shape in self.presentations.iter_shapes(data):
+                attach_pptx_evidence(shape, identity["asset_id"], identity["revision"])
+                content.add_shape(shape)

@@ -9,6 +9,14 @@
 
 ### Added
 
+- Native PPTX creation with explicit text boxes, paragraphs, styled runs and notes;
+  bounded slide/notes shape reads and complete JSON/XML component pages. Precise
+  existing-run edits require revision and text hashes, preserve untouched package
+  bytes and all other XML structure, and stage managed revisions before writeback.
+- Presentation shape references and `pptx-shapes-v1` evidence wikis retain complete
+  component records, the original presentation and exact package attachments.
+  Old opaque snapshots and v1.2 XLSX/v1.3 DOCX artifact bytes remain unchanged.
+  Agents review semantics, inherited formatting, rendered layout and overflow.
 - Native schema discovery by operation (`contract.for_op`) and complete hash-pinned
   JSON pages (`schema`). Shared runtime field rules keep required/unused fields
   aligned; large future schemas remain retrievable within normal response limits.
