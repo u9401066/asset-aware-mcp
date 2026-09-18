@@ -76,18 +76,18 @@ def request_schema(for_op: str | None = None) -> dict[str, Any]:
         "properties": properties,
         "required": ["op", *sorted(fields.required)],
     }
-    if for_op == "schema":
+    if for_op in {"schema", "read_derivations", "verify_derivation"}:
+        hash_field = "schema_sha256" if for_op == "schema" else "derivations_sha256"
+        offset_field = "offset" if for_op == "verify_derivation" else "text_offset"
         selected["allOf"] = [
             {
                 "if": {
-                    "properties": {"text_offset": {"minimum": 1}},
-                    "required": ["text_offset"],
+                    "properties": {offset_field: {"minimum": 1}},
+                    "required": [offset_field],
                 },
                 "then": {
-                    "required": ["schema_sha256"],
-                    "properties": {
-                        "schema_sha256": _non_null(properties["schema_sha256"])
-                    },
+                    "required": [hash_field],
+                    "properties": {hash_field: _non_null(properties[hash_field])},
                 },
             }
         ]

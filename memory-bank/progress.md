@@ -21,7 +21,13 @@
   Typed citation preset/template schema added after an actual Codex input failure.
   Scanned PDF -> native table run 02: 66 calls, zero errors, exact first transcription;
   run 01 recovery retained. 1,857 Python tests / 199 extension tests pass.
-- [ ] Commit/push table checkpoint and verify exact CI/Pages; public stays 1.4.0.
+- [x] Table checkpoint 8c7548b: exact CI 35358045055 (ten jobs, including Linux
+  activation) and Pages 35358043487 passed; public site bytes match. Version 1.4.0.
+- [x] Cross-asset derivation ledger with verified native references, separate agent
+  review assertions, append-only corrections/retractions and portable Wiki implemented.
+  1,909 Python tests / 199 extension tests; real Codex runs 02/03 pass independent
+  derivation/PPTX/source audits with 93/92 calls and zero MCP tool errors.
+- [ ] Commit/push derivation checkpoint and verify exact CI/Pages; public stays 1.4.0.
 
 - [x] Unreleased checkpoint: native PPTX textbox addition / existing shape deletion
   with reference, dependency, version and XML preservation guards; truthful A2T

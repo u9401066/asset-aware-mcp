@@ -2555,7 +2555,7 @@ async def document(
         return format_limited_json_response(
             title="Native document asset",
             payload=payload,
-            guidance="Use a smaller native_request.limit for inspect/history/blocks/pages, or read_cell/read_docx/read_docx_block/read_pptx_shape/read_pdf_page/schema with text_offset/text_limit. Pin revision (schema_sha256 for schema). Use contract.for_op for one operation. Re-inspect the asset after a truncated write response.",
+            guidance="Use a smaller native_request.limit for inspect/history/blocks/pages/verify_derivation, or read_cell/read_docx/read_docx_block/read_pptx_shape/read_pdf_page/schema/read_derivations with text_offset/text_limit. Pin revision, schema_sha256 or derivations_sha256 as appropriate. Use contract.for_op for one operation. Re-inspect the asset after a truncated write response.",
         )
     if operation not in {"export_assets", "agent_assets"} and (
         citation_contract is not None or citation_metadata is not None

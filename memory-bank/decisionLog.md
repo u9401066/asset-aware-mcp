@@ -1,5 +1,17 @@
 # Decision Log
 
+## 2026-09-18 — provenance assertions separate from citation display and byte revisions
+
+Record source-to-target derivation explicitly using existing native file/component
+references. Agent identity/activity/review remain caller claims; a valid source hash
+must never turn a failed semantic review into success. Metadata has its own ledger
+CAS and immutable event history so corrections/retractions do not alter source files.
+Historical references are allowed and never auto-retargeted. Wiki attachments cover
+active assertions on the chosen output revision; other ledger history is labeled
+unverified by that export. W3C PROV-O/Docling Graph informed the design without a claim
+of full RDF conformance. Continue Unreleased/main at public version 1.4.0 / 1.4.x.
+
+
 ## 2026-09-18 — editable native tables and typed citation display
 
 Create DrawingML tables from explicit grid/cell/merge input using scratch python-pptx;

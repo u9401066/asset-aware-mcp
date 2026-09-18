@@ -22,6 +22,10 @@
 引用顯示的預設／模板也有 typed 規格可查。詳見
 [原生表格](docs/wiki/Native-File-Assets.md#native-pptx-tables-unreleased)。
 
+未發布的轉製來源帳本可連結原生來源與產物的完整版本引用，保留修訂／撤回
+紀錄，並將來源附件帶入證據 Wiki；機械檢查與 Agent 核對聲明各自保存。
+詳見 [跨資產來源關係](docs/wiki/Native-File-Assets.md#native-derivations-unreleased)。
+
 原生 PDF 頁面協作也列於 **Unreleased**：讀取／顯示頁面、建立新 PDF、
 插入／複製／刪除／重排頁面及調整旋轉／裁切，先建立受管理版本。
 頁面證據與 Wiki 預覽保留完整來源附件。詳見

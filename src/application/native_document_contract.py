@@ -76,6 +76,7 @@ def native_document_contract(
     docx_enabled: bool = False,
     pptx_enabled: bool = False,
     pdf_enabled: bool = False,
+    derivations_enabled: bool = False,
 ) -> dict[str, Any]:
     for_op = request.for_op if request is not None else None
     return {
@@ -85,6 +86,8 @@ def native_document_contract(
         **schema_discovery(for_op),
         "identity": "Stable asset IDs, SHA-256 revisions and revision-scoped locators.",
         "citation_policy": "citation_contract selects a display preset or custom inline/reference templates; it does not store source references or verification reports.",
+        "derivations_enabled": derivations_enabled,
+        "derivation_policy": "Read complete hash-pinned ledger before record/retract; endpoint integrity and caller-supplied agent review are separate. New file revisions never inherit old assertions automatically.",
         "file_reference_policy": "file_reference identifies exact immutable file bytes; verify does not assert source freshness or semantic meaning.",
         "formats": _formats(docx_enabled, pptx_enabled, pdf_enabled),
         "verification": "MCP checks integrity; agents verify semantics, layout and calculated results.",

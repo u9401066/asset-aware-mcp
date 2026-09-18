@@ -38,6 +38,8 @@ class NativeWikiContent:
         snapshot_identity = {k: identity[k] for k in ("asset_id", "revision")}
         if projection:
             snapshot_identity["projection"] = projection
+        if "derivations_sha256" in identity:
+            snapshot_identity["derivations_sha256"] = identity["derivations_sha256"]
         self.snapshot_id = digest(canonical_json(snapshot_identity))
         self.prefix = f"native-{self.snapshot_id}"
         self.index_name = f"{self.prefix}-index.md"
@@ -50,6 +52,7 @@ class NativeWikiContent:
         self.size = 0
         self.records: list[bytes] = []
         self.links: list[str] = []
+        self.extra_manifest: dict[str, Any] = {}
 
     def record_counts(self) -> dict[str, int]:
         return {"cell_count": len(self.records)}
@@ -130,6 +133,7 @@ class NativeWikiContent:
             "source_attachment": self.source_name,
             "index_note": self.index_name,
             **self.manifest_details(),
+            **self.extra_manifest,
             "citation_contract": self.contract.model_dump(mode="json"),
             "citation_metadata": self.metadata.model_dump(mode="json"),
             "metadata_origin": "caller_supplied; title defaults to source name",

@@ -25,6 +25,11 @@ rich text, then read/edited/deleted through existing native shape operations.
 Citation display presets/templates now have typed discovery. See
 [native tables](docs/wiki/Native-File-Assets.md#native-pptx-tables-unreleased).
 
+Unreleased derivation ledgers connect exact native source and target references,
+retain corrections/retractions, and carry source attachments into evidence wikis.
+Machine integrity checks and agent review claims remain separate. See
+[source-to-asset provenance](docs/wiki/Native-File-Assets.md#native-derivations-unreleased).
+
 Native PDF page collaboration is also **Unreleased**: read/render pages, compose
 new PDFs, insert/copy/delete/reorder pages, and change rotation/crop in managed
 revisions. Page evidence and wiki previews retain exact source attachments.

@@ -654,3 +654,41 @@ including required inline_template/reference_template and bounded allowed templa
 fields. Valid existing JSON inputs remain accepted; native wiki passes the typed
 model's JSON representation to the existing resolver. Canonical source references
 are separate from display contracts and cannot be overridden by formatting input.
+
+### Native derivation ledger (Unreleased, 1.4.x)
+
+An agent may record that a revision-pinned native component/file was derived from
+one or more other native references. `record_derivation` verifies the target and
+every source before storing a bounded, content-addressed assertion. Supported
+references are existing file/cell/DOCX-block/PPTX-shape/PDF-page references; no
+invented locator or document text is accepted as proof. Activity, agent identity
+and semantic/layout/formula review fields are caller assertions, never authenticated
+identity or machine proof of meaning. Historical targets/sources remain explicit;
+links never migrate automatically when a document changes.
+
+`read_derivations` returns the complete append-only ledger as canonical JSON pages
+pinned by `derivations_sha256`; continuations require that hash. Recording and
+`retract_derivation` require `expected_derivations_sha256` from a prior read. A new
+record can atomically supersede an active record on the same target asset. Retraction
+and supersession preserve prior assertions. `verify_derivation` separately reports
+active status, immutable-reference validity, current managed revisions and the
+agent's review claims. It does not assert external-file freshness or semantic support.
+
+Store the ledger separately from native file bytes, under the existing per-asset
+operation lock with atomic writes and digest compare-and-swap. Bound each assertion
+to 64 unique sources, each ledger to 1,000 events and 16 MiB. Validate event replay,
+record hashes and target identity on load. Reject archived-target mutations,
+self-references, stale writes, unknown/inactive replacements and malformed records.
+No cross-asset transaction is required: references address immutable revisions.
+
+Wiki export pins the ledger digest into a distinct snapshot identity, preserves
+the full ledger for audit, and adds human-readable wikilink notes plus exact source
+attachments for active assertions targeting the exported file revision. Verify
+those references again before publishing; preserve existing snapshots/curated notes.
+Retractions create new snapshots without rewriting old exports. Citation display
+templates stay separate from canonical provenance. Existing no-ledger snapshots
+retain their identities and byte format. Output byte/artifact budgets still apply.
+
+References: [W3C PROV-O derivation](https://www.w3.org/TR/prov-o/#Derivation) and
+[Docling Graph provenance ledger](https://github.com/docling-project/docling-graph/blob/main/docs/fundamentals/graph-management/provenance.md).
+This API uses those concepts; it does not claim complete PROV-O/RDF conformance.

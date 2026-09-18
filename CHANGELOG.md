@@ -9,6 +9,11 @@
 
 ### Added
 
+- Native derivation ledgers connect verified file/cell/DOCX/PPTX/PDF references,
+  preserve attributed agent review, and support hash-pinned reads, atomic
+  supersession, retraction and historical verification. Exact source attachments
+  and ledger-pinned wiki snapshots preserve portable provenance without changing
+  source files or treating agent assertions as machine semantic verification.
 - Add native PPTX table insertion with explicit row/column dimensions, rich cell
   text, direct formatting, destination default style, checked merges and atomic
   revisions. Existing shape read/edit/delete/evidence/wiki operations apply.

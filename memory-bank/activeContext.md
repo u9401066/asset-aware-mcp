@@ -1,5 +1,63 @@
 # Active Context
 
+## 2026-09-18 — cross-asset derivation ledger in progress
+
+Previous turn made verified progress: 19dfb3f/8c7548b pushed; CI 35358045055 (ten
+jobs, Linux activation) and Pages 35358043487 revalidated successful at exact HEAD.
+Public site bytes match. Main is clean at start; source worktree remains untouched.
+Public version stays 1.4.0; new work accumulates Unreleased for 1.4.x.
+Specification first: record/read/retract/verify native derivations using existing
+full immutable references, separate agent review claims and append-only CAS ledger.
+Wiki includes source attachments and distinct ledger-pinned snapshots. References
+checked: W3C PROV-O and Docling Graph provenance docs, 2026-09-18. Full goal remains
+active: broader native structural CRUD, formats, real corpus and citations remain.
+
+Implemented native derivation record/read/retract/verify, atomic supersession,
+full reference verification across five families, bounded CAS/event replay and wiki
+source attachments. Existing native models modularized with public import compatibility.
+Initial full suite: 1,896 passed / 30 optional skipped in 61.25s. Thirteen independent
+Codex-auditor regressions added afterward and pass. SDK2 scanned PDF->PPTX linkage,
+stale-write rejection, correction/retraction and exact source wiki attachments pass.
+Actual run 01 never started Codex: mistyped executable extension path, FileNotFoundError;
+startup log retained. Corrected path run 02: 93 MCP calls, zero MCP errors, exact first
+transcription, one PNG, five complete records, four ledger events/one active assertion,
+all independent audits passed. Model self-reported a local orchestration syntax recovery
+without a separate error event; preserved in agent_reported_limitations. This is not
+counted as an observed MCP tool error or silently discarded. Run 03 passed: 92 calls,
+zero MCP errors, exact first transcription, same five-record/four-event/source audit.
+Evidence: /tmp/asset-aware-codex-derivations-{01,02,03}; source SHA256
+bf399b5246cb6fd4c48b039ea102e3257eac69f433f1e9ceb3275cc73eca685c;
+lock SHA256 abfaddf3d7d964ace1e210b1fd584e1717775a70f8ccdc98ad9b669b61f1bcd3.
+Removed only completed pytest-187 after terminal full-suite proof and no live pytest;
+retained logs/Codex/user files, recovering its 477 MiB fixture space. Final full suite
+passed 1,909 / 30 skips (62.02s), then its completed fixtures were also removed before
+Docker build to recover space. Final logs retained. Ruff/format/mypy 167 source files,
+Bandit, 199 extension tests/64-file VSIX, Python build/artifact audits and dependency
+audits passed (214 Python packages and npm lock: zero known vulnerabilities).
+Browser zh/en desktop/mobile passes without overflow or console errors; Playwright
+1.63.0 fallback, no Browser plugin, cached CDN assets and task-local libraries from
+/tmp/asset-aware-contracts-browser-libs/usr/lib/x86_64-linux-gnu via LD_LIBRARY_PATH.
+Initial browser launch lacked libasound/libgbm; corrected without system installation.
+Screenshots /tmp/native-derivations-{desktop,mobile}-{zh,en}.png. Local VSIX fresh/update
+installation and Docker build/native derivation wiring passed; activation skipped locally
+(no xvfb), absent 0.2.10 baseline and optional runtime diagnostic skipped. CI enforces
+activation. Final review added supported source attachment suffixes so exported PDF can
+be directly re-registered; the real SDK2 regression confirms format and exact revision.
+Focused 18 tests pass. Runs 02/03 describe the preceding runtime; run 04 and full gates
+are repeated for this final production change. Previous task-only Docker image removed
+after successful smoke to recover space. Exact post-push CI/Pages remain pending.
+GitHub metadata and 17 managed labels match canonical configuration.
+
+Final source after the portable-extension fix passed the full suite again: 1,909
+passed / 30 skipped in 61.69s, /tmp/asset-aware-derivations-release-final.log.
+Python wheel/sdist artifact audit and final Docker build/native wiring passed.
+Removed only completed pytest-185/188 fixtures with live root excluded; original
+files, actual Codex evidence and test logs retained. Desktop-en/mobile-zh screenshots
+of the new derivation guide were viewed and legible. Public remains 1.4.0.
+Final-source Codex run 04 is in progress; its source SHA256 is
+dba99f0ee01452813611fd2eb18ecdf84a32e0fd240d499a873adcc7ebde3604.
+
+
 ## 2026-09-18 — native editable PPTX tables verified locally; push pending
 
 Previous turn is verified progress: d46fdce/e220434 implements picture assets;

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 from typing import TYPE_CHECKING, Any
 
+from src.application.native_derivation_service import NativeDerivationService
 from src.application.native_document_contract import (
     native_asset_summary,
     native_document_contract,
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
         NativeFileAsset,
         NativeSpreadsheetAdapter,
     )
+    from src.domain.native_derivation import NativeDerivationRepository
     from src.domain.native_docx import NativeDocxAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
@@ -41,6 +43,7 @@ class NativeDocumentService:
         docx: NativeDocxAdapter | None = None,
         presentations: NativePresentationAdapter | None = None,
         pdfs: NativePdfAdapter | None = None,
+        derivations: NativeDerivationRepository | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
@@ -54,10 +57,19 @@ class NativeDocumentService:
         self.evidence = NativeEvidenceService(
             repository, spreadsheets, docx, presentations, pdfs
         )
+        self.derivations = (
+            NativeDerivationService(derivations, self.evidence) if derivations else None
+        )
         self.docx_operations = NativeDocxOperations(repository, docx) if docx else None
         self.wiki = (
             NativeWikiService(
-                repository, spreadsheets, wiki_publisher, docx, presentations, pdfs
+                repository,
+                spreadsheets,
+                wiki_publisher,
+                docx,
+                presentations,
+                pdfs,
+                self.derivations,
             )
             if wiki_publisher is not None
             else None
@@ -103,6 +115,10 @@ class NativeDocumentService:
             "read_docx_block": self._docx_operation,
             "update_docx": self._docx_operation,
             "verify": self._verify,
+            "record_derivation": self._derivation_operation,
+            "read_derivations": self._derivation_operation,
+            "retract_derivation": self._derivation_operation,
+            "verify_derivation": self._derivation_operation,
             "export_wiki": self._export_wiki,
             "inspect": self._inspect,
             "refresh": self._refresh,
@@ -117,6 +133,11 @@ class NativeDocumentService:
         if self.wiki is None:
             raise ValueError("Native wiki publisher is not configured")
         return self.wiki.export(request)
+
+    def _derivation_operation(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        if self.derivations is None:
+            raise ValueError("Native derivation repository is not configured")
+        return self.derivations.execute(request)
 
     def _pdf_operation(self, request: NativeDocumentRequest) -> dict[str, Any]:
         if self.pdf_operations is None:
@@ -133,6 +154,7 @@ class NativeDocumentService:
             docx_enabled=self.docx is not None,
             pptx_enabled=self.presentations is not None,
             pdf_enabled=self.pdfs is not None,
+            derivations_enabled=self.derivations is not None,
         )
 
     def _list(self, request: NativeDocumentRequest) -> dict[str, Any]:

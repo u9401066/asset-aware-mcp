@@ -1,5 +1,18 @@
 # System Architect
 
+## 2026-09-18 — native derivation ledger
+
+Extract stable file/cell/DOCX model definitions into native_asset_models; native_assets
+keeps backward-compatible public re-exports and request schemas without import cycles.
+Domain derivation models pin full reference unions, review claims and validated event
+replay. Infrastructure stores bounded append-only metadata under the existing native
+asset lock with CAS and atomic publication, separate from file bytes. Application
+verifies endpoints, pages ledger/proof responses and augments wiki builders with a
+ledger-pinned identity, full history, readable notes and exact source attachments.
+Presentation wires the repository into the existing SDK2 document/native surface.
+No new tool name or dependency; regular callers without a ledger retain wiki identity.
+
+
 ## 2026-09-18 — native table composition and citation schema
 
 Domain native_pptx_table models define EMU grids, cells, merges and aggregate budgets.

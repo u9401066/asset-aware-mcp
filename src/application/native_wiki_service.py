@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from src.application.native_derivation_wiki import add_derivations
 from src.application.native_docx_wiki import NativeDocxWikiContent
 from src.application.native_evidence_service import attach_native_evidence
 from src.application.native_pdf_operations import attach_pdf_evidence
@@ -12,14 +13,18 @@ from src.application.native_pptx_operations import attach_pptx_evidence
 from src.application.native_pptx_wiki import NativePptxWikiContent
 from src.application.native_wiki_format import NativeWikiContent
 from src.domain.citation_format import CitationMetadata, resolve_citation_format
+from src.domain.native_derivation import fingerprint
 from src.domain.native_wiki import MAX_WIKI_CELLS
 
 if TYPE_CHECKING:
+    from src.application.native_derivation_service import NativeDerivationService
     from src.domain.native_assets import (
         NativeAssetRepository,
         NativeDocumentRequest,
+        NativeFileAsset,
         NativeSpreadsheetAdapter,
     )
+    from src.domain.native_derivation import NativeDerivationLedger
     from src.domain.native_docx import NativeDocxAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
@@ -35,6 +40,7 @@ class NativeWikiService:
         docx: NativeDocxAdapter | None = None,
         presentations: NativePresentationAdapter | None = None,
         pdfs: NativePdfAdapter | None = None,
+        derivations: NativeDerivationService | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
@@ -42,38 +48,24 @@ class NativeWikiService:
         self.docx = docx
         self.presentations = presentations
         self.pdfs = pdfs
+        self.derivations = derivations
 
     def export(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.asset_id is not None and request.output_dir is not None
         asset = self.repository.load(request.asset_id)
         revision = request.revision or asset.revision
+        if request.derivations_sha256 is not None and self.derivations is None:
+            raise ValueError("Native derivation repository is not configured")
+        ledger = (
+            self.derivations.ledger(asset.asset_id, request.derivations_sha256)
+            if self.derivations
+            else None
+        )
         data = self.repository.read(asset.asset_id, revision)
-        contract = resolve_citation_format(
-            request.citation_contract.model_dump(mode="json")
-            if request.citation_contract is not None
-            else {"preset": "source"}
-        )
-        builder = (
-            NativePdfWikiContent
-            if asset.format == "pdf" and self.pdfs
-            else NativeDocxWikiContent
-            if asset.format == "docx" and self.docx
-            else NativePptxWikiContent
-            if asset.format == "pptx" and self.presentations
-            else NativeWikiContent
-        )
-        content = builder(
-            {
-                "asset_id": asset.asset_id,
-                "revision": revision,
-                "name": asset.name,
-                "format": asset.format,
-                "media_type": asset.media_type,
-            },
-            contract,
-            request.citation_metadata or CitationMetadata(),
-        )
+        content = self._content(request, asset, revision, ledger)
         self._populate(content, data)
+        if ledger is not None and self.derivations is not None:
+            add_derivations(content, ledger, self.derivations, self.repository)
         result = self.publisher.publish(
             request.output_dir,
             content.snapshot_id,
@@ -88,6 +80,44 @@ class NativeWikiService:
             **content.record_counts(),
             "review_required": content.review_required(),
         }
+
+    def _content(
+        self,
+        request: NativeDocumentRequest,
+        asset: NativeFileAsset,
+        revision: str,
+        ledger: NativeDerivationLedger | None,
+    ) -> NativeWikiContent:
+        contract = resolve_citation_format(
+            request.citation_contract.model_dump(mode="json")
+            if request.citation_contract is not None
+            else {"preset": "source"}
+        )
+        builder = (
+            NativePdfWikiContent
+            if asset.format == "pdf" and self.pdfs
+            else NativeDocxWikiContent
+            if asset.format == "docx" and self.docx
+            else NativePptxWikiContent
+            if asset.format == "pptx" and self.presentations
+            else NativeWikiContent
+        )
+        return builder(
+            {
+                "asset_id": asset.asset_id,
+                "revision": revision,
+                "name": asset.name,
+                "format": asset.format,
+                "media_type": asset.media_type,
+                **(
+                    {"derivations_sha256": fingerprint(ledger)}
+                    if ledger and ledger.events
+                    else {}
+                ),
+            },
+            contract,
+            request.citation_metadata or CitationMetadata(),
+        )
 
     def _populate(self, content: NativeWikiContent, data: bytes) -> None:
         identity = content.identity
