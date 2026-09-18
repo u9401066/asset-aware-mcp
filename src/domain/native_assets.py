@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from src.domain.citation_format import (
     CitationMetadata,  # noqa: TC001 -- Pydantic runtime schema
 )
+from src.domain.native_docx import NativeDocxEdit  # noqa: TC001 -- Pydantic schema
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -246,6 +247,8 @@ class NativeDocumentRequest(NativeModel):
         "list",
         "inspect",
         "read_cell",
+        "read_docx",
+        "update_docx",
         "verify",
         "export_wiki",
         "update",
@@ -265,6 +268,7 @@ class NativeDocumentRequest(NativeModel):
     citation_contract: dict[str, Any] | None = None
     citation_metadata: CitationMetadata | None = None
     workbook: NativeWorkbookCreate | None = None
+    docx_edit: NativeDocxEdit | None = None
     reference: NativeCellReference | None = None
     edits: list[NativeCellEdit] = Field(
         default_factory=list, max_length=MAX_NATIVE_CELLS
@@ -290,6 +294,8 @@ class NativeDocumentRequest(NativeModel):
             "create": {"workbook"},
             "inspect": {"asset_id"},
             "read_cell": {"asset_id", "sheet", "cell"},
+            "read_docx": {"asset_id"},
+            "update_docx": {"asset_id", "expected_revision", "docx_edit"},
             "verify": {"reference"},
             "export_wiki": {"asset_id", "output_dir"},
             "history": {"asset_id"},
@@ -309,6 +315,7 @@ class NativeDocumentRequest(NativeModel):
             "history": {"offset", "limit"},
             "inspect": {"sheet", "offset", "limit", "revision"},
             "read_cell": {"revision", "text_offset", "text_limit"},
+            "read_docx": {"revision", "text_offset", "text_limit", "offset", "limit"},
             "export_wiki": {"revision", "citation_contract", "citation_metadata"},
         }.get(self.op, set())
         unused = self.model_fields_set - required - optional - {"op"}

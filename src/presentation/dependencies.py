@@ -18,6 +18,7 @@ from src.application.docx_service import DocxService
 from src.application.job_service import JobService
 from src.application.knowledge_service import KnowledgeService
 from src.application.native_document_service import NativeDocumentService
+from src.application.native_docx_bridge import NativeDocxBridge
 from src.application.pdf_preflight_service import PDFPreflightService
 from src.application.pdf_report_service import PdfArtifactReportService
 from src.application.section_service import SectionService
@@ -39,6 +40,7 @@ from src.infrastructure.file_storage import FileStorage
 from src.infrastructure.job_store import FileJobStore
 from src.infrastructure.layout_visualizer import LayoutVisualizer
 from src.infrastructure.native_asset_store import FileNativeAssetRepository
+from src.infrastructure.native_docx_workspace import FileNativeDocxWorkspaces
 from src.infrastructure.native_spreadsheet import SpreadsheetFileAdapter
 from src.infrastructure.native_wiki_publisher import FileNativeWikiPublisher
 from src.infrastructure.ocr_processor import OCRProcessor
@@ -115,6 +117,7 @@ native_document_service = NativeDocumentService(
     FileNativeAssetRepository(settings.data_dir / "native-assets"),
     SpreadsheetFileAdapter(),
     FileNativeWikiPublisher((settings.data_dir / "native-assets",)),
+    NativeDocxBridge(FileNativeDocxWorkspaces()),
 )
 # Engine selection (config-driven via ETL_ENGINE): the base extractor is always
 # available (PyMuPDF, or the layout-aware pymupdf4llm) and doubles as the fast

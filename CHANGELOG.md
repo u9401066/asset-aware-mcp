@@ -7,6 +7,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- Native DOCX `read_docx` / `update_docx` bridge: deterministic, bounded DFM
+  excerpts bound to the full asset/revision, existing DFM save guards, checked
+  OOXML preservation and managed revision commits before explicit source writeback.
+  Supports scoped existing-body edits and opt-in tracked changes; complete
+  semantic/rendered review remains with the agent.
+
 ## [1.2.0] - 2026-09-18
 
 ### Added

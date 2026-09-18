@@ -5,19 +5,24 @@ from __future__ import annotations
 import hashlib
 from typing import TYPE_CHECKING, Any
 
+from src.application.native_document_contract import (
+    native_asset_summary,
+    native_document_contract,
+)
 from src.application.native_evidence_service import (
     NativeEvidenceService,
     attach_native_evidence,
 )
 from src.application.native_wiki_service import NativeWikiService
-from src.domain.native_assets import NativeDocumentRequest
 
 if TYPE_CHECKING:
     from src.domain.native_assets import (
         NativeAssetRepository,
+        NativeDocumentRequest,
         NativeFileAsset,
         NativeSpreadsheetAdapter,
     )
+    from src.domain.native_docx import NativeDocxAdapter
     from src.domain.native_wiki import NativeWikiPublisher
 
 
@@ -27,9 +32,11 @@ class NativeDocumentService:
         repository: NativeAssetRepository,
         spreadsheets: NativeSpreadsheetAdapter,
         wiki_publisher: NativeWikiPublisher | None = None,
+        docx: NativeDocxAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
+        self.docx = docx
         self.evidence = NativeEvidenceService(repository, spreadsheets)
         self.wiki = (
             NativeWikiService(repository, spreadsheets, wiki_publisher)
@@ -37,36 +44,8 @@ class NativeDocumentService:
             else None
         )
 
-    @staticmethod
-    def _summary(asset: NativeFileAsset) -> dict[str, Any]:
-        return {
-            "asset_id": asset.asset_id,
-            "name": asset.name,
-            "format": asset.format,
-            "media_type": asset.media_type,
-            "revision": asset.revision,
-            "archived": asset.archived,
-            "source": asset.source.model_dump() if asset.source else None,
-            "revision_count": len(asset.history),
-            "capabilities": {
-                "inspect_metadata": True,
-                "immutable_history": True,
-                "refresh_source": asset.source is not None and not asset.archived,
-                "inspect_cells": asset.format in {"xlsx", "xlsm"},
-                "verify_cells": asset.format in {"xlsx", "xlsm"},
-                "edit_cells": asset.format in {"xlsx", "xlsm"} and not asset.archived,
-                "writeback": asset.source is not None and not asset.archived,
-                "rendered_verification": False,
-                "formula_evaluation": False,
-                "edit_constraints": [
-                    "protected_sheets",
-                    "shared_array_formulas",
-                    "rich_text_runs",
-                    "table_headers_totals_calculated_columns",
-                    "digital_signatures",
-                ],
-            },
-        }
+    def _summary(self, asset: NativeFileAsset) -> dict[str, Any]:
+        return native_asset_summary(asset, docx_enabled=self.docx is not None)
 
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
         handlers = {
@@ -76,6 +55,8 @@ class NativeDocumentService:
             "create": self._create,
             "history": self._history,
             "read_cell": self._read_cell,
+            "read_docx": self._read_docx,
+            "update_docx": self._update_docx,
             "verify": self._verify,
             "export_wiki": self._export_wiki,
             "inspect": self._inspect,
@@ -97,25 +78,7 @@ class NativeDocumentService:
         return self.evidence.verify(request.reference)
 
     def _contract(self, request: NativeDocumentRequest) -> dict[str, Any]:
-        return {
-            "success": True,
-            "schema": NativeDocumentRequest.model_json_schema(),
-            "identity": "Stable asset ID; immutable SHA-256 revisions; native sheet/cell locators",
-            "formats": {
-                "xlsx": ["create", "inspect_cells", "edit_cells"],
-                "xlsm": ["inspect_cells", "edit_cells"],
-                "other": [
-                    "register",
-                    "inspect_metadata",
-                    "history",
-                    "publish",
-                    "archive",
-                ],
-            },
-            "verification": "Package/locator/source checks are mechanical; agents verify semantics and rendered layout.",
-            "archive_policy": "Archive preserves revisions and never deletes the human source file.",
-            "wiki_policy": "export_wiki creates immutable revision snapshots; existing notes are verified, never replaced. Native citation fields belong inside native_request.",
-        }
+        return native_document_contract(docx_enabled=self.docx is not None)
 
     def _list(self, request: NativeDocumentRequest) -> dict[str, Any]:
         return {
@@ -210,6 +173,13 @@ class NativeDocumentService:
             )
             for cell in result["content"]["cells"]:
                 attach_native_evidence(cell, asset_id, revision)
+        elif asset.format == "docx" and self.docx is not None:
+            result["content"] = {
+                "representation": "docx_package",
+                "size_bytes": len(data),
+                "native_editor": "dfm_bridge",
+                "read_operation": "read_docx",
+            }
         else:
             result["content"] = {
                 "representation": "opaque_binary",
@@ -283,5 +253,65 @@ class NativeDocumentService:
             "success": True,
             "asset": self._summary(committed),
             "operation_result": checks.model_dump(),
+            "source_written": False,
+        }
+
+    def _read_docx(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        assert request.asset_id is not None
+        asset = self.repository.load(request.asset_id)
+        if asset.format != "docx" or self.docx is None:
+            raise ValueError("This format has no configured native DOCX bridge")
+        revision = request.revision or asset.revision
+        document = self.docx.read(
+            self.repository.read(asset.asset_id, revision), asset.asset_id, revision
+        )
+        text = document.dfm_text
+        start = min(request.text_offset, len(text))
+        end = min(start + request.text_limit, len(text))
+        return {
+            "success": True,
+            "asset": self._summary(asset),
+            "inspected_revision": revision,
+            "dfm": {
+                "text_excerpt": text[start:end],
+                "text_length": len(text),
+                "text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                "excerpt_char_range": [start, end],
+                "next_text_offset": end if end < len(text) else None,
+                "representation_complete": start == 0 and end == len(text),
+            },
+            "blocks": document.blocks[request.offset : request.offset + request.limit],
+            "block_count": len(document.blocks),
+            "next_offset": request.offset + request.limit
+            if request.offset + request.limit < len(document.blocks)
+            else None,
+            "locator_scope": "immutable_revision; block IDs may change in later revisions",
+            "review_required": [
+                "semantic_accuracy",
+                "rendered_layout",
+                "fields_and_revisions",
+            ],
+        }
+
+    def _update_docx(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        assert request.asset_id is not None and request.expected_revision is not None
+        assert request.docx_edit is not None
+        asset = self.repository.load(request.asset_id)
+        if asset.format != "docx" or self.docx is None:
+            raise ValueError("This format has no configured native DOCX bridge")
+        if asset.archived or asset.revision != request.expected_revision:
+            raise ValueError("Archived or stale native asset; inspect before editing")
+        data = self.repository.read(asset.asset_id, request.expected_revision)
+        updated, checks, warnings = self.docx.edit(
+            data, asset.asset_id, request.expected_revision, request.docx_edit
+        )
+        committed = self.repository.commit(
+            asset.asset_id, request.expected_revision, updated, checks
+        )
+        return {
+            "success": True,
+            "asset": self._summary(committed),
+            "operation_result": checks.model_dump(),
+            "warnings": warnings,
             "source_written": False,
         }

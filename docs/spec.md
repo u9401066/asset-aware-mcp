@@ -62,6 +62,32 @@ DOCX/PPTX does not prove native round-trip fidelity. ROADMAP.md tracks full scop
 Each milestone updates README, Pages, repository metadata/labels and Memory Bank;
 reviewed commits are pushed in stages and releases require the full harness.
 
+### Native DOCX / DFM bridge (next milestone, not in 1.2.0)
+
+`read_docx` reads a registered DOCX immutable revision through the existing DFM
+parser/renderer in a private temporary workspace. Its deterministic DFM projection
+omits the session creation timestamp and binds the full native asset ID and SHA-256
+revision in frontmatter. Return bounded character excerpts, the full projection
+hash and paginated block summaries; clients must assemble every excerpt before
+editing. Block IDs and locators are revision-scoped, not cross-version identities.
+
+`update_docx` requires expected_revision and a complete docx_edit payload. Re-ingest
+that immutable revision, check the native frontmatter binding, then reuse
+DocxService.save_docx with force disabled. Existing DFM session/checksum,
+pre/post-save, table-shape and unedited-block guards remain mandatory. Only after
+these pass may a checked package become a managed native revision under the
+repository's compare-and-swap lock. No update writes to the human source file;
+publish/writeback remain explicit native operations with their existing checks.
+
+Before parsing, enforce the native ZIP/member/XML limits, reject DTDs and require
+the supported transitional DOCX main part. Signed/protected documents require a
+separate editing workflow. After editing, verify identical member inventory and
+unchanged bytes outside document.xml (plus settings.xml for explicit tracked
+changes). Report changed parts/block IDs, preservation checks and agent review
+requirements. This adds scoped existing-body edits, not arbitrary insertion,
+deletion, style design, DOC/DOCM conversion, complete visual fidelity or native
+DOCX evidence/wiki integration. Legacy DOCX operations remain available.
+
 ### Native file assets and spreadsheet operations (v1.1.0)
 
 A registered file receives a persistent asset ID independent of its filename and

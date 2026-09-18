@@ -31,12 +31,32 @@ retains changed-output backups; curated edits are rejected without overwriting.
 These checks remain mechanical, with semantic/rendered/formula review delegated
 to the agent. Repository metadata and managed labels are synchronized.
 
-Next bounded change: bridge DOCX native versions to the existing DFM workflow.
-Reuse DocxService session/checksum, pre/post-save and unedited-block guards in a
-private workspace. Do not introduce a second DOCX editing algorithm. Expose bounded
-DFM reads and managed revision updates, followed by the existing explicit native
-writeback. Package checks must verify untouched parts and report unsupported edits;
-complete layout/semantic review remains with the agent. No DOCX bridge code yet.
+Native DOCX bridge is now implemented locally after 1.2.0 (not yet released).
+read_docx returns deterministic revision-bound DFM excerpts plus block summaries;
+update_docx re-ingests immutable bytes in a private workspace and reuses the
+existing DocxService checks with no force path. Complete marker/order, styles,
+source binding, bounded OOXML and unchanged-part checks precede revision CAS.
+Tracked changes are explicit. Signed/protected packages, including relocated
+relationship targets, are refused for editing. Native writeback remains separate.
+The source and metadata remain untouched on failed validation or concurrent edits.
+
+Validation: 1,404 Python tests passed / 30 optional skips, including 29 new cases
+and a real SDK2 DOCX read/edit/writeback flow; 199 VSIX tests, types/lint/Bandit,
+docs/harness synchronization and desktop/mobile bilingual reader checks pass.
+Full regression caught an oversized native contract response; removing JSON
+Schema display titles (without removing fields named title) fixed truncation.
+New DOCX tests are included in Python 3.10, macOS and Windows CI. Commit/push and
+cross-platform CI are next. Documentation explicitly distinguishes main from 1.2.0.
+The previous release documentation checkpoint 01b77dc passed CI 35320080065 and Pages.
+
+New source files: src/domain/native_docx.py,
+src/application/native_docx_bridge.py, src/application/native_document_contract.py,
+src/infrastructure/native_docx_workspace.py. Existing native service/request and
+presentation wiring are extended; DocxService adds changed_block_ids to results.
+Tests: tests/native_docx_helpers.py, tests/unit/test_native_docx.py,
+tests/unit/test_native_docx_failures.py, tests/integration/test_native_docx_stdio_e2e.py.
+Next: immutable DOCX component evidence/wiki integration, then remaining native
+format/structural CRUD and standards-aware citations. Broad goal remains active.
 
 CSL research: citeproc-py still documents missing year-suffix/disambiguation,
 subsequent et-al and collapsing support; installing it alone cannot justify full

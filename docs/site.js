@@ -241,6 +241,9 @@ Version 1.2.0 adds verify and export_wiki. Export a revision-pinned Foam index a
 
 New revisions create new snapshots. Existing notes are verified and never replaced; modified or unexpected files stop reuse. Put human synthesis in adjacent notes. A new citation style for the same revision requires a separate wiki directory. The 20,000-cell and 128 MiB limits reject incomplete exports. Interrupted publication retains files and reports reconciliation_required. Full academic CSL formatting and rendered verification remain separate work.
 
+## Development after 1.2.0: native DOCX
+The main branch adds read_docx and update_docx using the existing DFM checks. Read all excerpts at a fixed revision, preserve frontmatter and block markers, then submit complete edits to create a managed revision. Untouched OOXML parts are checked byte for byte; source writeback stays explicit. This is not in the 1.2.0 registry packages. Document structure/style edits, DOCX component wiki references and full layout verification remain separate work.
+
 See the source page for operation fields, examples, format restrictions and recovery details.`,
   "workflow-chapters": `## Choose by source and task
 Use the PDF workflow for page inspection and extraction, the DOCX workflow for reversible DFM editing, and A2T for reusable tables. Evidence, wiki, and knowledge features build on those source-specific paths.

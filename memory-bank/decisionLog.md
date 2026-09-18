@@ -1,5 +1,20 @@
 # Decision Log
 
+## 2026-09-18 — reuse the DFM write path for native DOCX
+
+- Avoid a second Word editing implementation. Native revisions supply immutable
+  bytes to the existing DocxService session/checksum, pre/post-save and unedited
+  block guards. The workspace adapter adds package inventory/byte preservation.
+- Expose deterministic bounded DFM reads with full native identity/revision
+  binding. Removing only the derived session creation timestamp permits stable
+  chunk assembly across stateless reads. Native edits preserve every marker and
+  its order; document-level style/structural changes remain unsupported explicitly.
+- Native edits create managed versions before source writeback; existing CAS,
+  backup and divergence semantics apply. The latest user clarification governs:
+  MCP performs necessary mechanical checks, while agents own full semantic and
+  rendered review and subsequent correction. No structural pass implies fidelity.
+
+
 ## 2026-09-18 — academic citation processor evaluation
 
 - Keep canonical asset references independent of citation presentation. Standards

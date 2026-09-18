@@ -50,6 +50,10 @@ and LightRAG knowledge graph outputs.
   from PDF AssetRefs. Since 1.2.0, `verify` checks native refs and `export_wiki`
   creates immutable snapshots; preserve existing notes and keep synthesis adjacent.
 
+- Query the contract for native DOCX support. read_docx chunks must use one
+  revision; update_docx requires complete DFM with its original native binding and
+  block markers. Updates create managed revisions before explicit source writeback.
+
 ## PDF -> Asset Engine Selection
 
 The core goal is turning documents into complete, agent-friendly figure/table/

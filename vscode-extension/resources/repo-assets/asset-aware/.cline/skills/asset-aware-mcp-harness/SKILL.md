@@ -39,6 +39,11 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
   display. Existing notes are verified, never replaced; curate synthesis adjacent.
   Broader native CRUD remains separate; do not invent unsupported operations.
 
+- Query the installed contract before native DOCX operations. When read_docx and
+  update_docx are advertised, assemble DFM chunks at one revision, retain native
+  frontmatter/block markers, and keep managed updates separate from source writeback.
+  The agent reviews rendered Word layout and meaning; MCP performs DFM/package checks.
+
 ## MCP Auto-Config Mindset
 - VSIX install/update must keep Copilot `.vscode/mcp.json`, Cline `cline_mcp_settings.json`, and Codex `config.toml` idempotent.
 - Preserve unrelated MCP servers and user-local Cline/Codex metadata.

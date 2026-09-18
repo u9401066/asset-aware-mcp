@@ -829,6 +829,7 @@ class DocxService(DocxIrSerializationMixin):
                 "success": True,
                 "output_path": str(result_path),
                 "integrity": post_report.to_summary(),
+                "changed_block_ids": sorted(expected_changed_ids),
                 "track_changes": track_changes,
             }
             if track_changes:

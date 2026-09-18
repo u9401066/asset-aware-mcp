@@ -2500,8 +2500,9 @@ async def document(
     - ``inspect`` / ``prepare_ai`` / audit and retrieval operations: ``doc_id``.
     - ``export_assets`` / ``agent_assets``: ``doc_id``; ``output_dir`` is optional.
     - ``native``: ``native_request`` with its own op (contract/register/create/
-      list/inspect/read_cell/verify/export_wiki/update/history/publish/writeback/refresh/archive).
-      XLSX/XLSM expose cells; other formats expose metadata and opaque wiki attachments.
+      list/inspect/read_cell/read_docx/update_docx/verify/export_wiki/update/history/publish/writeback/refresh/archive).
+      XLSX/XLSM expose cells; DOCX has a checked DFM bridge. Other formats expose
+      metadata. Native wiki cells are XLSX/XLSM only; other attachments remain opaque.
       Native wiki citation_contract/citation_metadata belong inside native_request.
 
     Existing direct document tools stay registered and keep their original
@@ -2535,7 +2536,7 @@ async def document(
         return format_limited_json_response(
             title="Native document asset",
             payload=payload,
-            guidance="Use a smaller native_request.limit for inspect/history, or read_cell with text_offset/text_limit for long cell text. Re-inspect the asset after a truncated write response.",
+            guidance="Use a smaller native_request.limit for inspect/history/blocks, or read_cell/read_docx with text_offset/text_limit. Pin revision while assembling excerpts. Re-inspect the asset after a truncated write response.",
         )
     if operation not in {"export_assets", "agent_assets"} and (
         citation_contract is not None or citation_metadata is not None

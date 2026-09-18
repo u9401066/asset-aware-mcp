@@ -27,6 +27,30 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
+## 2026-09-18 native DOCX version / DFM bridge (unreleased)
+
+- Native read_docx/update_docx reuse DocxService's existing session/checksum,
+  table-shape, unedited-block and pre/post-save checks. DFM projection excludes
+  volatile session timestamps, binds the full asset/revision, uses bounded chunks
+  and preserves marker order. Writes first create a managed revision, then reuse
+  explicit native publish/writeback. Old revisions remain readable after updates.
+- Added private workspace and bounded OOXML guards. Preserve every unaffected
+  ZIP member; only document.xml and opt-in tracked-change settings.xml may change.
+  Signed/protected documents, including relocated signature/settings targets,
+  reject updates. Source files remain unchanged on parsing/check/concurrency failure.
+- 29 new regressions cover formatted paragraphs/tables/media/header/footer,
+  chunk assembly, stale/cross-asset DFM, missing markers/styles, no-op bytes,
+  pre/post integrity failures, cleanup, concurrent CAS, tracked author and real
+  SDK2 stdio source writeback/backups. Full suite: 1,404 passed / 30 optional skips.
+  199 VSIX tests, lint/format/types, configured Bandit gate and reader QA pass.
+- Full regression exposed contract response truncation after schema growth.
+  Compact annotation titles while preserving named title properties and every
+  validation keyword; default-cap and old workbook stdio regressions now pass.
+- README/Pages/spec/roadmap and bundled harness distinguish this development from
+  published 1.2.0. Python 3.10/macOS/Windows CI now runs the DOCX regressions.
+  No claim of arbitrary DOCX structure/style CRUD, complete rendered fidelity,
+  DOCX component citations/wiki, PPTX editing or standards-complete CSL support.
+
 ## 2026-09-18 v1.2.0 published and verified
 
 - Annotated v1.2.0 targets dd0224f333bf466a388b1cbc291061a87f70b2d5. Exact-head CI

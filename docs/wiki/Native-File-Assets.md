@@ -10,6 +10,10 @@ cell reads/edits through the existing `document` tool. It does not complete
 cross-format CRUD or visual fidelity verification. Version 1.2.0 adds native
 reference verification and immutable wiki snapshots, described below.
 
+`main` after 1.2.0 also includes the DOCX bridge described at the end of this page.
+It is not available in the 1.2.0 registry packages; discover the installed contract
+before using the new operations.
+
 ## 開始使用
 
 先查詢契約，取得實際支援的操作與 typed request schema：
@@ -179,3 +183,47 @@ symlink 會拒絕覆蓋。若要用不同引用格式重新呈現同一版本，
 Native exports preserve immutable source bytes and full cell references, while
 custom citation templates only affect presentation. Existing snapshots are never
 replaced. Agents retain responsibility for semantic, rendered and formula review.
+
+
+## Development after 1.2.0: native DOCX bridge
+
+尚未發布的 `main` 新增 `read_docx`／`update_docx`，使用既有 DFM 流程處理已登錄
+DOCX 的指定版本。先查 `contract` 確認安裝版本支援，再操作：
+
+```python
+document(op="native", native_request={
+    "op": "read_docx", "asset_id": asset_id, "revision": revision,
+    "text_offset": 0, "text_limit": 4000, "offset": 0, "limit": 20
+})
+```
+
+`dfm.text_excerpt` 是字元分段；持續以同一個 `revision` 讀到
+`next_text_offset=null`，依序組合並核對 `text_sha256`。完整 DFM 上限為 4 MiB UTF-8。
+`blocks` 另用 `offset`／`limit` 分頁，含 preview、類型與既有原生 locator metadata。
+Block IDs 僅對該版本有效，尚不是跨版本元件 ID 或可交給原生 `verify` 的證據引用。
+DFM 中附件路徑是保留資訊，不是持久公開的檔案路徑；工作暫存於操作結束後清除。
+
+```python
+document(op="native", native_request={
+    "op": "update_docx", "asset_id": asset_id, "expected_revision": revision,
+    "docx_edit": {
+        "dfm_text": complete_edited_dfm,
+        "track_changes": True,
+        "revision_author": "研究作者"
+    }
+})
+```
+
+保留完整 frontmatter 與每個區塊標記的原始順序。工具核對原生 asset/revision 綁定，
+再執行既有 DFM session/checksum、儲存前後、表格形狀及未修改區塊檢查；沒有 `force`
+選項。簽章與保護文件可讀，但目前拒絕更新。支援既有本文段落及同形表格內容更新，
+不支援插刪區塊、重新排序、文件樣式設計或 DOC/DOCM 轉換。
+
+回應提供新 `asset.revision`、`operation_result` 的實際 changed parts／block IDs、
+未修改 parts 數量、必要檢查及 Agent 核對項目。除 `word/document.xml`，以及明確
+指定修訂追蹤時的 `word/settings.xml`，其他 ZIP member 內容必須逐一相同。這仍不
+證明 Word 顯示、欄位更新或內容語意正確；Agent 需開啟／渲染新版本核對與修正。
+
+更新只寫入受管理版本，`source_written=false`。接著可 `publish` 新檔供審閱，再用
+既有 `writeback` 明確回寫來源，保留備份並檢查來源是否已被人類修改。舊版本仍可
+`read_docx`。DOCX `export_wiki` 暫時仍是原始附件快照，尚未輸出 DOCX 元件引用筆記。

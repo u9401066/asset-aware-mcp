@@ -66,6 +66,11 @@ v1.1.0 已加入引用格式 contract：支援來源標籤、作者／年份、�
 
 ## ✨ 特色
 
+`main` 在 1.2.0 之後新增原生 DOCX 橋接：`read_docx`／`update_docx` 綁定來源版本，
+沿用 DFM 檢查後建立受管理版本，保留未修改的 package parts，並支援明確指定的
+文字修訂追蹤。來源回寫與 Agent 版面核對仍是後續步驟。這項功能尚未包含在
+1.2.0 發布套件；詳見[DOCX 橋接指南](docs/wiki/Native-File-Assets.md#development-after-120-native-docx-bridge)。
+
 - 📄 **資產感知 ETL** - PDF → Markdown，採可插拔多引擎解析架構（`ETL_ENGINE`）：
   - **PyMuPDF**（預設）- 快速提取（~50MB），免模型
   - **PyMuPDF4LLM**（`[pdf-plus]`）- 同生態 drop-in 升級，具版面感知，免 GPU

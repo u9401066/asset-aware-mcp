@@ -1,5 +1,24 @@
 # System Architect
 
+## 2026-09-18 — native DOCX bridge
+
+- Domain defines typed NativeDocxEdit and adapter/workspace ports without IO.
+  Application NativeDocxBridge reuses DocxService in a private session; it is a
+  blocking adapter invoked in the existing MCP native worker thread. The private
+  event loop only adapts the established asynchronous service entry points.
+- FileNativeDocxWorkspaces owns temporary files, bounded OOXML inspection and
+  preservation comparison. Input/output packages and unchanged bytes are checked;
+  signed/protected packages require another explicit supported workflow. Private
+  workspaces are cleaned on success/failure and are not persistent asset locations.
+- NativeDocumentService remains responsible for immutable revision selection,
+  expected-revision CAS and explicit source writeback. It injects the DOCX adapter;
+  capability/contract serialization was extracted to native_document_contract.py
+  to keep the coordinator within module/class limits. Contract titles are compacted
+  as annotations only, preserving actual input fields named title and all constraints.
+- DFM block IDs/locators remain revision-scoped. The bridge does not promote them
+  to verified native references or claim full DOCX component wiki integration.
+
+
 > 📌 此檔案記錄重大架構決策，架構變更時更新。
 
 ## Native evidence integrity (post-1.1.0)
