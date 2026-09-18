@@ -27,7 +27,7 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
-## 2026-09-18 native file assets — implemented, CI checkpoint pending
+## 2026-09-18 native file assets — PR #10, CI pending
 
 - Source-independent registration, immutable revisions, typed native request
   contract, XLSX create and scoped XLSX/XLSM read/update/clear are implemented.
@@ -48,7 +48,13 @@ Baseline revalidated; isolated latest main while preserving original user edits.
   console checks pass; screenshots are outside the repository. Exact cached CDN
   scripts were reused, so live CDN availability is not covered.
 - README bilingual, native operation guide, Pages reader, changelog, roadmap and
-  architecture are updated. No version/tag/release yet; CI/push pending.
+  architecture are updated. Commit aa41ddd is pushed in PR #10:
+  https://github.com/u9401066/asset-aware-mcp/pull/10 (depends on #9).
+- Built wheel/sdist artifact audit, clean-wheel runtime/stdio and fresh/update
+  VSIX install smoke pass. Local activation has no display and remains a CI gate.
+- Add explicit native fixture/stdio regressions to Python 3.10, macOS and Windows
+  CI steps; extension-only smoke did not exercise OS file locks or source writes.
+  CI is being monitored; no version/tag/release yet.
 - Broader native structural CRUD, native wiki/academic citation integration,
   visual verification and other formats remain in scope after this milestone.
 

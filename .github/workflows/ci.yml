@@ -118,6 +118,9 @@ jobs:
       - name: Run focused MCP schema and stdio runtime tests
         run: >-
           uv run --python 3.10 pytest tests/test_mcp_tools.py
+          tests/unit/test_native_document_assets.py
+          tests/unit/test_native_spreadsheet_edges.py
+          tests/integration/test_native_asset_stdio_e2e.py
           -q --timeout=120
 
   # ==========================================
@@ -168,6 +171,12 @@ jobs:
       - name: Run installer diagnostics
         run: bash scripts/install.sh --check
 
+      - name: Verify native file and spreadsheet operations
+        run: >-
+          uv run --frozen pytest tests/unit/test_native_document_assets.py
+          tests/unit/test_native_spreadsheet_edges.py
+          tests/integration/test_native_asset_stdio_e2e.py -q --timeout=120
+
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
@@ -207,6 +216,13 @@ jobs:
       - name: Install via project installer
         shell: pwsh
         run: powershell -ExecutionPolicy Bypass -File scripts/install.ps1
+
+      - name: Verify native file and spreadsheet operations
+        shell: pwsh
+        run: >-
+          uv run --frozen pytest tests/unit/test_native_document_assets.py
+          tests/unit/test_native_spreadsheet_edges.py
+          tests/integration/test_native_asset_stdio_e2e.py -q --timeout=120
 
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7

@@ -40,8 +40,9 @@ Native spreadsheet milestone is implemented in feat/native-document-assets.
 long cell provenance, formula guards, special text and crash-released locks.
 Native IO/read/guard/repair/editor modules are separated. Full regression passes
 1,326 tests (30 optional skips); 199 VSIX tests, package inventory, harness/docs
-audits and desktop/mobile bilingual reader checks pass. Commit exact paths, push,
-create a main-targeted PR (depends on PR #9) and monitor all CI checks. Keep broad
+audits and desktop/mobile bilingual reader checks pass. Commit aa41ddd is pushed as
+PR #10 (depends on #9). Wheel and install gates pass; native regression steps are
+being added to Python 3.10/macOS/Windows jobs. Monitor CI and resolve findings. Keep broad
 native CRUD/wiki work active.
 
 
