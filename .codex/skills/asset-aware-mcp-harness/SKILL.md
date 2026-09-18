@@ -72,6 +72,16 @@ verification.
   and semantic support still require agent review. Never treat DFM temporary paths
   as persistent media attachments; use manifest.part_attachments.
 
+- When advertised, add_pptx_pictures embeds registered PNG/JPEG file_reference
+  bytes in existing containers. replace_pptx_pictures uses full current shape refs
+  and preserve_existing mapping; shared media is never overwritten. read_pptx_picture
+  returns an actual embedded-image PNG, not a slide render. extract_pptx_picture
+  creates an independent native image asset with source shape/media lineage.
+  native-file-ref-v1 verifies immutable whole-file bytes, not meaning or live source
+  freshness. Use read_pptx_shape for complete geometry/evidence; Agent reviews slide
+  rendering, crop, effects and semantics. Delete via delete_pptx_shapes; retained
+  media is not secure erasure. These operations remain Unreleased on the 1.4.x line.
+
 - When advertised, native PDF supports create_pdf/read_pdf/read_pdf_page/
   render_pdf_page/add_pdf_pages/update_pdf/delete_pdf_pages/reorder_pdf_pages.
   Pin revisions, assemble complete page JSON and verify its UTF-8 hash; retrieve

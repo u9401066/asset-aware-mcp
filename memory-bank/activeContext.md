@@ -928,3 +928,7 @@ Local VSIX fresh/update installation passed. Activation was skipped locally (no
 xvfb-run), as were absent 0.2.10 baseline and optional runtime diagnostics checks;
 CI will require activation. Local Docker image build/import smoke passed, as did
 all artifact audits (metadata, wheel/sdist and VSIX). Exact post-push CI/Pages pending.
+
+Runtime/backend/managed/SDK changes committed as e220434 under
+u9401066 <u9401066@gap.kmu.edu.tw>. Final documentation, harness, Codex auditor and
+platform CI commit is being prepared before a single main push; no release tag.

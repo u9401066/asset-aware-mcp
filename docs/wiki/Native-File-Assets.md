@@ -482,3 +482,69 @@ records.jsonl、768 px 預覽與完整 PDF 附件，支援既有 citation contra
 及來源衝突檢查。任意文字物件編輯、OCR、自動語意校正、機密資料清除皆不在
 這個頁面操作範圍；裁切／刪頁不是 secure redaction。Agent 負責完整解析度
 版面、語意、表單／檢視器行為、腳本頁索引、閱讀順序與可及性的完整核對與修正。
+
+## PPTX picture assets (Unreleased)
+
+公開版仍是 **1.4.0**，以下是 `main` 的 **1.4.x** 開發內容。先查安裝版本的
+`contract.for_op`。人類圖片經 `register` 成為固定 asset_id 與 SHA-256 版本；
+回傳的 `file_reference`（`native-file-ref-v1`）代表完整不可變檔案位元組。
+任何格式均可用 `verify` 核對這種引用，但檔案 hash 正確不代表模型理解內容，
+也不代表磁碟上的人類來源仍未變動；需要時使用 `refresh`。
+
+| 操作 | 必要輸入與結果 |
+|------|----------------|
+| `add_pptx_pictures` | asset_id、expected_revision、pptx_pictures；插入圖片，回傳新 shape locator |
+| `replace_pptx_pictures` | asset_id、expected_revision、pptx_picture_edits；只替換指定形狀的圖片關聯 |
+| `read_pptx_picture` | asset_id、pptx_locator；可指定 revision／render_size，回傳實際 MCP PNG 與原始 media hash |
+| `extract_pptx_picture` | asset_id、pptx_locator；可指定 revision，建立獨立圖片資產，保留來源簡報／形狀／media 歷程 |
+| `delete_pptx_shapes` | 既有操作；以目前版本完整形狀引用刪除圖片，保留底層 media |
+
+```python
+# image_asset 是 register 人類 PNG/JPEG 檔的回應；container 由 read_pptx 查得。
+document(op="native", native_request={
+    "op": "add_pptx_pictures", "asset_id": deck_id,
+    "expected_revision": deck_revision,
+    "pptx_pictures": [{
+        "container": container, "image": image_asset["file_reference"],
+        "left": 914400, "top": 914400, "width": 3657600, "height": 1828800,
+        "fit": "contain", "name": "Evidence figure", "description": "圖像替代文字"
+    }]
+})
+# 先在新版本完整讀回 read_pptx_shape，不能沿用舊版引用。
+document(op="native", native_request={
+    "op": "replace_pptx_pictures", "asset_id": deck_id,
+    "expected_revision": current_revision,
+    "pptx_picture_edits": [{
+        "reference": current_picture["evidence"],
+        "image": replacement_image["file_reference"],
+        "mapping": "preserve_existing"
+    }]
+})
+```
+
+新增支援既有投影片、備註與非零 extent 群組，座標是容器本地 EMU。
+`contain` 等比例置中、`cover` 等比例填滿並設定中央裁切、`stretch` 明確拉伸。
+圖片加入容器頂層，群組既有 transform 不重算。圖片本身保持原始 PNG／JPEG
+位元組，沒有重編碼；name／description 是呼叫者提供的名稱與替代文字。
+
+替換使用 `preserve_existing`：只改 `r:embed` 指向新的圖片關聯，保留位置、
+大小、旋轉、翻轉、裁切、效果與堆疊順序。新圖片長寬比不同時，既有映射可能
+使內容變形或裁切不同，Agent 必須核對。即使多個形狀共用原圖，其他形狀與
+原始圖片 part 都不變。刪圖也保留 media，因此不是機密資料清除。
+
+`read_pptx_picture` 顯示的是**內嵌圖片本身**，不是投影片的最終畫面；
+不套用投影片裁切、群組 transform、效果或色彩管理。回應分別提供原圖 SHA、
+預覽 PNG SHA、media part 與形狀引用。完整形狀仍用 `read_pptx_shape` 分段
+讀回；既有 shape-v1 引用格式保持不變。`extract_pptx_picture` 複製原圖位元組
+成新資產，初始歷程記錄來源簡報版本、形狀引用、media part 與 hash。
+
+目前支援經驗證的單幀 PNG／JPEG；EXIF 需旋轉、動畫、多幀、外部連結、
+替代圖片表示及不一致的 content type 會拒絕，避免默默選錯顯示來源。
+每張最多 16 MiB／1,600 萬像素，每批 1–100 張、合計 32 MiB／6,400 萬像素
+（重複來源也計入）；套件整體仍受原生檔案與解壓縮上限保護。
+
+MCP 檢查來源與目標版本、圖片內容、關聯、content type、完整新增位元組及
+未變更 part，並反向還原指定 XML 編輯後比對其餘內容。新增與拆出操作保留
+跨資產來源歷程。Wiki 沿用 `pptx-shapes-v1`，完整 media／關聯與 PPTX 附件
+仍可驗證，既有快照不會改寫。來源 publish／writeback 沿用明確操作、備份與
+衝突檢查。Agent 負責實際簡報畫面、語意、替代文字、裁切與色彩的完整核對。

@@ -26,6 +26,7 @@
 - 📝 **Native DOCX（1.3.0）** — `read_docx`／`update_docx` 將不可變版本接到 DFM 檢查，更新先建立受管理版本，來源回寫仍明確指定；先查安裝版本 contract。元件引用可用 `read_docx_block`／`verify`，Wiki 使用獨立 projection 保留完整區塊與原始 package parts；完整性不代表抽取完整。
 - 📽️ **Native PPTX（1.4.0）** — 原生建立、投影片／備註形狀讀取、精確文字 run 更新、版本引用與完整 package Wiki；先查安裝版本 contract，完整語意／版面／文字溢出由 Agent 核對。`native-contract-v2` 支援 for_op 與 schema_sha256 分段規格。
 - 📽️ **PPTX 形狀操作（main 未發布）** — 先查 contract；`add_pptx_shapes` 新增文字框，`delete_pptx_shapes` 使用目前版本完整引用刪除形狀。已知相依會阻擋刪除，附件仍保留；Agent 核對版面與未涵蓋相依，來源回寫仍明確指定。公開版維持 1.4.0／後續 1.4.x。
+- 🖼️ **PPTX 圖片（main 未發布）** — `add_pptx_pictures`／`replace_pptx_pictures` 使用版本化 PNG/JPEG 資產，保留共用 media；`read_pptx_picture` 顯示實際內嵌圖片，`extract_pptx_picture` 建立含來源歷程的新資產。`native-file-ref-v1` 只驗證完整不可變位元組。Agent 核對投影片畫面、裁切、效果與語意；公開版仍 1.4.0／後續 1.4.x。
 - 📄 **Native PDF（main 未發布）** — 頁面建立／讀取／PNG 顯示／複製／插刪／重排／旋轉裁切、版本引用與 Wiki；先查 contract，完整頁面引用必須固定版本。MCP 檢查物件圖與有限解析度讀回，Agent 核對語意／完整畫面／表單行為；不提供任意文字編輯或 secure redaction。公開版仍 1.4.0。
 - 📊 **A2T** — Anything to Table 表格建立
 - 🧭 **Section Navigation** — 動態層級章節導航（5 Tools）

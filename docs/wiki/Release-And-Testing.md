@@ -288,3 +288,23 @@ artifacts；失敗或修正不能改成首次全對。此測資與固定 rendere
 原始／最終 PNG、七列 35 格最終精確轉錄，以及來源、歷程、最終 PDF 與
 Wiki 核對。MCP 圖片另外比對其固定版本的獨立渲染像素。較早 run 01 的
 171 次呼叫與通過結果另行保留；呼叫數受模型分段讀取策略影響。
+
+## Codex PPTX picture evaluation (Unreleased)
+
+```bash
+uv run pytest tests/unit/test_native_pptx_picture*.py tests/integration/test_native_pptx_picture_stdio.py
+uv run python -m tests.codex_pptx_pictures.run --codex /absolute/path/to/codex --output /tmp/pptx-picture-run
+uv run python -m tests.codex_pptx_pictures.audit /tmp/pptx-picture-run
+```
+
+Runner 使用新的輸出目錄與既有登入，僅開放本 checkout 的 native document
+MCP 工具。模型須登錄圖片／簡報、插入兩張共用圖片、完整讀回形狀、顯示 PNG、
+拆出並驗證圖片資產、只替換其中一張、確認另一張仍為原圖、刪除第二張、核對
+舊引用，最後 publish／export_wiki。原始檔案不可回寫。預期值不交給模型。
+獨立稽核比對實際圖片像素、版本歷程、圖片位元組、拆出來源與 Wiki；轉錄
+保留前導零。嵌入圖片預覽通過不代表投影片渲染已驗證。普通 pytest 不啟動模型。
+
+2026-09-18 的兩次實測各完成 38 次 MCP 呼叫、零工具錯誤、3 次實際圖片
+顯示與 2 份完整形狀讀回。獨立稽核確認原始形狀／備註與未修改 parts 保留，
+來源 A101／007 與替換 C301／001 的辨讀相符；此為合成案例，不能外推一般
+OCR 正確率或完整簡報版面。執行紀錄保留來源與 lock hash，可比對實測版本。

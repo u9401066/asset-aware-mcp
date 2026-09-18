@@ -139,14 +139,14 @@ def validate_record(record):
     )
 
 
-def complete_records(calls):
+def complete_records(calls, *, operation="read_pdf_page", record_key="page"):
     buffers, records = {}, {}
     for call in calls:
         args = call["arguments"]["native_request"]
-        if args["op"] != "read_pdf_page":
+        if args["op"] != operation:
             continue
         result = payload(call)
-        page = result["page"]
+        page = result[record_key]
         key = (result["asset_id"], result["inspected_revision"], page["text_sha256"])
         start, end = page["excerpt_char_range"]
         require(start == args.get("text_offset", 0), "Readback offset mismatch")

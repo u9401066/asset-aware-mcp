@@ -276,6 +276,16 @@ Within-document edits retain checked bookmarks/links, labels, forms, metadata an
 
 verify retains historical page evidence. export_wiki creates an immutable pdf-pages-v1 projection with complete JSONL, page notes, 768-pixel previews, citation contracts and the exact PDF attachment. Old opaque snapshots remain; modified managed notes block reuse. Publish/writeback are explicit, with source checks and backups. See [native PDF evaluation](#/release-testing) for real Codex MCP calls and independent audits.
 
+### PPTX picture assets (Unreleased)
+
+Main adds add_pptx_pictures, replace_pptx_pictures, read_pptx_picture and extract_pptx_picture. Public version remains 1.4.0; development continues on 1.4.x. Register human PNG/JPEG files, then use their native-file-ref-v1 file_reference. verify checks immutable whole-file bytes; it does not prove semantic interpretation or live source freshness.
+
+Creation accepts an existing slide, notes or nonzero-extent group container, local EMU left/top/width/height, fit=contain/cover/stretch, name and description. Mutation requires asset_id and expected_revision. Replacement takes full current shape references and mapping=preserve_existing: only the image relationship changes; crop, geometry, rotation, flips, effects and stacking order remain. Original image bytes are embedded exactly, and shared media is never overwritten. Different aspect ratios still require visual review.
+
+read_pptx_picture returns an actual MCP PNG and separate original-image and preview hashes. This is the embedded raster only: slide crop, group transforms, effects and color management are not rendered. Use read_pptx_shape for complete geometry and evidence. extract_pptx_picture copies exact image bytes into a new native asset whose initial history retains the source deck revision, full shape reference and media hash. Existing delete_pptx_shapes retains underlying media and is not secure erasure.
+
+Sources must be single-frame PNG/JPEG without EXIF rotation. Linked/alternate image representations, ambiguous content types and unsupported formats are rejected. Limits: 16 MiB / 16 million pixels per image, 1–100 pictures and 32 MiB / 64 million pixels per batch, counting repeated uses. Package limits still apply. MCP checks source/revision/CAS, image integrity, exact new parts, untouched bytes and XML outside the operation. Agents review semantics, actual slide rendering, crop, accessibility and color. pptx-shapes-v1 wiki snapshots retain all media/relationships and exact PPTX files; publish/writeback remain explicit.
+
 See the source page for operation fields, examples, format restrictions and recovery details.`,
   "workflow-chapters": `## Choose by source and task
 Use the PDF workflow for page inspection and extraction, the DOCX workflow for reversible DFM editing, and A2T for reusable tables. Evidence, wiki, and knowledge features build on those source-specific paths.
@@ -388,6 +398,9 @@ Run \`uv run python -m tests.codex_native_pdf.run --codex /absolute/path/to/code
 Re-audit with \`uv run python -m tests.codex_native_pdf.audit /tmp/native-pdf-run\`. Independent checks inspect actual image pixels, contiguous reference readbacks, persisted lineage/history, source hash/mtime, final page order/geometry/pixels, wiki files and exact string transcription. Unicode µ/μ is not normalized. Keep raw events, runtime/lock hashes, artifacts and tool errors, including failed runs. These synthetic checks do not establish arbitrary PDF fidelity or general OCR accuracy.
 
 On 2026-09-18, native scanned run 02 against the final worker completed 49 MCP calls with zero tool errors. All seven independent checks passed, including ten full page records, six actual original/final images, and exact final transcription of seven rows/35 cells. Images were independently compared to their pinned-revision render pixels. Earlier run 01 retained 171 calls and its passing evidence; call counts depend on the model's paging strategy.
+
+## Codex PPTX picture evaluation (Unreleased)
+Run \`uv run python -m tests.codex_pptx_pictures.run --codex /absolute/path/to/codex --output /tmp/pptx-picture-run\`. The logged-in CLI uses only the native document MCP tool. A synthetic raster with leading zeros is inserted twice into a complex deck, viewed as actual MCP images, extracted, replaced on only one shape and deleted on the other. Full shape reads, historical references, exact image bytes, shared-media isolation, unchanged shapes/parts and wiki artifacts are independently audited. Ordinary pytest never starts Codex. Embedded-image verification does not establish slide rendering or general OCR accuracy. Two runs on 2026-09-18 each completed 38 MCP calls with zero tool errors, three actual image deliveries and two complete shape records; exact leading-zero visual transcription and the independent package audit passed.
 
 ## Publish in order
 Confirm built artifacts and runtime diagnostics before tagging, then verify each public registry after publication.`,
