@@ -78,8 +78,9 @@ MCP owns mechanical source/version/locator/package/write checks and explicit,
 deterministic repairs. Agents own semantics, rendering, fields/formulas, extraction
 review and subsequent correction. No structural pass is a full-fidelity guarantee.
 
-Current work: native PPTX collaboration is implemented, pending release and exact
-feature-commit CI. Discovery checkpoint 1546bd351d633c169955ffd9a1540d31b6ef148b
+Current work: native PPTX collaboration is implemented and verified, pending release.
+Feature commit 2364feefe50204f094eacc34f8d20464a7914578 has successful CI
+35331710478 (all ten jobs, including Windows/macOS/Linux) and Pages 35331709690. Discovery checkpoint 1546bd351d633c169955ffd9a1540d31b6ef148b
 has green CI 35329453898 and Pages 35329453179. Native-contract-v2 provides for_op
 and complete hash-pinned schema pages; existing operation inputs remain unchanged.
 
@@ -108,8 +109,12 @@ pinned cached CDN replay was used, so it does not prove live CDN availability.
 Screenshots: /tmp/native-pptx-{desktop,mobile}-{zh,en}.png. GitHub metadata/17 managed
 labels remain synchronized. Original detached worktree and user edits are untouched.
 README/Pages/spec/CHANGELOG/MEM and all bundled native harness guidance are updated.
-Next: verify exact-commit CI, then continue broader native CRUD, citation standards,
-agent review workflows and a fully audited publication milestone. Goal stays active.
+Next: continue broader native CRUD, citation standards, agent review workflows and
+a fully audited publication milestone. Current public version remains 1.3.0; never
+republish these new bytes under that tag/version. Native discovery has an explicit
+response migration; account for that when choosing the next release version.
+Goal stays active. The current goal turn made concrete progress (schema discovery
+and native presentation creation/edit/evidence/wiki), and is not blocked.
 
 Next work remains active: broader native formats (including PPTX), structural
 CRUD, independent table/native bridges, cross-format asset relationships and agent

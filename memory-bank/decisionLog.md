@@ -1,5 +1,21 @@
 # Decision Log
 
+## 2026-09-18 — PDF assembly should preserve document references deliberately
+
+- Rechecked pikepdf's official page-assembly documentation:
+  https://pikepdf.readthedocs.io/en/latest/topics/pages.html.
+  Copying page data does not automatically transfer whole-document bookmarks or
+  metadata. Replacing/copying page objects can break indirect references; documented
+  emplace and remove/reinsert operations preserve different identity guarantees.
+  Future native PDF contracts need explicit page mapping, link/bookmark/metadata
+  handling and check coverage, not just a successfully saved output file.
+- pypdf's official merge documentation describes importing relevant named
+  destinations and controlled append/merge operations:
+  https://pypdf.readthedocs.io/en/stable/user/merging-pdfs.html.
+  Evaluate these with representative linked/bookmarked/form PDFs before selecting
+  an adapter. No new PDF dependency was added for the presentation milestone.
+
+
 ## 2026-09-18 — precise native PPTX edits and evidence projection
 
 - Reuse python-pptx for independent creation, then edit existing DrawingML a:t

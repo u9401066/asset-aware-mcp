@@ -48,7 +48,8 @@ Baseline revalidated; isolated latest main while preserving original user edits.
   checks, lint/format/types/Bandit, docs/harness audits and synchronization passed.
 - Desktop/mobile zh/en browser QA passed with cached pinned CDNs; English native
   overview now reflects unreleased PPTX/schema capabilities. Metadata/labels checked.
-- Feature commit CI and release work follow. Broad structural CRUD, legacy/macro
+- Feature commit 2364fee passed all ten CI jobs in 35331710478 and Pages
+  35331709690. Publication remains pending. Broad structural CRUD, legacy/macro
   formats, academic CSL and complete agent review remain ongoing.
 
 
