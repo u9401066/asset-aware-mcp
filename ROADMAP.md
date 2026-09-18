@@ -32,7 +32,7 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
 - [ ] Real-file regressions, README/Pages/metadata/labels/MEM synchronization,
   reviewed staged commits/pushes and fully verified releases throughout the work.
 
-## v1.3.0 階段成果（發布候選）
+## v1.3.0 已發布階段成果
 
 - DOCX 原生版本已接到 DFM 讀寫：固定來源版本的分段讀取、完整區塊標記檢查、
   保留未修改 parts、舊版／跨文件／併發修改拒絕，以及獨立來源回寫。

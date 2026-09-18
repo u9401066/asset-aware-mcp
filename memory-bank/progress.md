@@ -27,6 +27,24 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
+## 2026-09-18 v1.3.0 published and verified
+
+- Annotated v1.3.0 points to 2aba6595453a65aa6fd541b3d93df69c9b041fc6.
+  Exact-tag CI 35325369333 and Pages 35325368633 passed. Release workflow
+  35325631670 completed all eight jobs, including all three install platforms.
+- Public PyPI wheel/sdist match local audited bytes; Marketplace and GitHub VSIX
+  bytes match after HTTP gzip decoding. Version, author/publisher, new DOCX modules,
+  two native harnesses and exclusion of compiled VSIX tests are checked. Digests and
+  verification artifact paths are recorded in activeContext.md.
+- Full local release.sh: 1,423 Python passed / 30 optional skips, 199 VSIX tests,
+  all audits, package/runtime/Docker/stdio gates passed. CI supplies Xvfb activation.
+  Docs/browser QA, repository metadata and managed labels are synchronized.
+- Stale status observations required fresh exact-run API queries; the workflow
+  itself succeeded. No tag was moved and no duplicate publication was requested.
+- Broader native formats, structural CRUD, academic citation engines and agent
+  review workflows remain active; this milestone does not complete the overall goal.
+
+
 ## 2026-09-18 v1.3.0 release preparation
 
 - Feature b50ed3505161c486473773cefec8d9f9006ef32f passed all jobs in CI
@@ -39,7 +57,7 @@ Baseline revalidated; isolated latest main while preserving original user edits.
   release-candidate CI, full release.sh, annotated tag and publication verification.
 
 
-## 2026-09-18 DOCX component evidence / wiki (unreleased)
+## 2026-09-18 DOCX component evidence / wiki (released in 1.3.0)
 
 - Complete parsed block representations feed revision-pinned native references,
   bounded read_docx_block and verification. Integrity, head freshness, source
@@ -54,7 +72,7 @@ Baseline revalidated; isolated latest main while preserving original user edits.
   configured for Python 3.10, macOS and Windows CI; every job passed on b50ed35.
 
 
-## 2026-09-18 native DOCX version / DFM bridge (unreleased)
+## 2026-09-18 native DOCX version / DFM bridge (released in 1.3.0)
 
 - Native read_docx/update_docx reuse DocxService's existing session/checksum,
   table-shape, unedited-block and pre/post-save checks. DFM projection excludes

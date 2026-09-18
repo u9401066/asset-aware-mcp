@@ -2,119 +2,96 @@
 
 ## 2026-09-18 — cross-format CRUD and evidence library
 
-Preparing **v1.3.0** from the DOCX bridge and component-evidence milestone.
-Current public release is **v1.2.0**, annotated at main@dd0224f333bf466a388b1cbc291061a87f70b2d5.
+Current public release is **v1.3.0**, annotated at main@2aba6595453a65aa6fd541b3d93df69c9b041fc6.
+Tag object: b9217ed4a74d9f348129bb472f6ae340325a9aab.
 Worktree: /home/eric/workspace251226/asset-aware-mcp-agent-assets, branch main.
 The user requests direct commits/pushes without self-PRs; use the owner's existing
-bypass and monitor CI without changing branch protection. Author:
-u9401066 <u9401066@gap.kmu.edu.tw>.
+bypass, preserve branch protection and monitor exact-commit CI. Author:
+u9401066 <u9401066@gap.kmu.edu.tw>. Only main remains locally and remotely.
+The original worktree /home/eric/workspace251226/asset-aware-mcp stays detached at
+6ad9a5c with pre-existing user changes preserved. Do not edit/reset that tree.
 
-Only main remains in local/remote branch lists. The original worktree at
-/home/eric/workspace251226/asset-aware-mcp remains detached at 6ad9a5c with its
-pre-existing tracked/untracked user changes preserved. Do not edit/reset that tree.
+Version 1.3.0 is published on PyPI, VS Code Marketplace and GitHub Release:
+https://github.com/u9401066/asset-aware-mcp/releases/tag/v1.3.0
+Exact-tag CI 35325369333 and Pages 35325368633 passed. Release 35325631670 passed
+all eight jobs: tests/activation, three-platform install smoke, artifact preflight,
+PyPI, Marketplace and GitHub Release. Full local release.sh also passed: 1,423
+Python tests / 30 optional skips, 199 VSIX tests, lint/types/Bandit, zero-issue
+Python/npm audits, docs/harness, wheel/sdist/runtime and Docker/SDK2 stdio checks.
+Local Xvfb is unavailable; Linux CI supplied required extension activation checks.
+Bilingual reader QA passed at desktop 1440x1000 and mobile 390x844 using the pinned
+cached CDN assets (not a live-CDN availability test). Metadata/labels are synchronized.
 
-Version 1.2.0 is published on PyPI, VS Code Marketplace and GitHub Release:
-https://github.com/u9401066/asset-aware-mcp/releases/tag/v1.2.0
-Exact release commit CI 35318628716 and Pages 35318627849 passed. Release workflow
-35318888092 passed the test, cross-platform installation, artifact preflight and
-registry publication jobs. Public PyPI wheel/sdist hashes match locally checked
-artifacts; downloaded Marketplace VSIX matches the GitHub asset digest. Package
-version/publisher, both native harnesses and absence of compiled tests are verified.
-Full local release.sh: 1,375 Python tests passed / 30 optional skips, 199 VSIX tests,
-lint/types/security audits, docs/harness, wheel/sdist/runtime and Docker SDK2 smoke.
-Local Xvfb was unavailable; Linux CI ran the required extension activation check.
+Public Python artifact digests match the local audited builds:
+- wheel: 8d248e60960f1bd02a71b4f598ac014704c461d1be4a78859af9603da2bdff61
+- sdist: 06c2b2d4730e2a3eded6a84a972e4c81873b3490c8d0eab667c0bd457d5a6223
+Marketplace VSIX matches GitHub's release asset digest after decoding the declared
+HTTP Content-Encoding: gzip transport: 2229c295d710e6a677dec36d883c0ff0bac7ecddf333fbba0a518bbe664b2d3d.
+Version, author/publisher, required new DOCX source files, both bundled native
+harnesses and absence of compiled VSIX tests are verified. Verification artifacts
+are under /tmp/asset-aware-release13-verified.json, /tmp/asset-aware-release13-github.json,
+/tmp/asset-aware-pypi-1.3.0.json and /tmp/asset-aware-mcp-1.3.0-marketplace.vsix.
+Do not recreate/move v1.3.0 or republish different Python bytes under that version.
 
-Released native coverage: stable file IDs, immutable revisions, independent XLSX
-creation, scoped XLSX/XLSM cell edits, explicit publish/writeback/refresh/archive,
-native cell reference verification, and immutable wiki snapshots with custom
-citation display. PDF bundle refresh now verifies its complete inventory and
-retains changed-output backups; curated edits are rejected without overwriting.
-These checks remain mechanical, with semantic/rendered/formula review delegated
-to the agent. Repository metadata and managed labels are synchronized.
+Observation pitfall: repeated gh run view/watch and Marketplace queries returned
+stale in-progress/version data. Completed job logs and a fresh gh api GET with a
+unique verification query parameter plus Cache-Control: no-cache confirmed success.
+Prefer fresh exact-run/job API queries when status contradicts completed logs;
+do not rerun publication merely because an observation is stale. Decode HTTP
+content encoding before comparing artifact bytes (the raw gzip envelope differs).
 
-Native DOCX bridge is now implemented locally after 1.2.0 (not yet released).
-read_docx returns deterministic revision-bound DFM excerpts plus block summaries;
-update_docx re-ingests immutable bytes in a private workspace and reuses the
-existing DocxService checks with no force path. Complete marker/order, styles,
-source binding, bounded OOXML and unchanged-part checks precede revision CAS.
-Tracked changes are explicit. Signed/protected packages, including relocated
-relationship targets, are refused for editing. Native writeback remains separate.
-The source and metadata remain untouched on failed validation or concurrent edits.
+Released native coverage includes stable file IDs, immutable SHA-256 revisions,
+independent XLSX creation, scoped XLSX/XLSM cell edits and explicit
+publish/writeback/refresh/archive. Native cell evidence and v1.2 wiki projections
+retain exact legacy artifact hashes. PDF bundle refresh validates inventory/hashes,
+rejects human edits and retains backups on actual generated-content replacement.
 
-Validation: 1,404 Python tests passed / 30 optional skips, including 29 new cases
-and a real SDK2 DOCX read/edit/writeback flow; 199 VSIX tests, types/lint/Bandit,
-docs/harness synchronization and desktop/mobile bilingual reader checks pass.
-Full regression caught an oversized native contract response; removing JSON
-Schema display titles (without removing fields named title) fixed truncation.
-New DOCX tests are included in Python 3.10, macOS and Windows CI. Main checkpoint
-bbdbf8a056eba128ec01b092ea26f7bbe5d823a9 passed every job in CI 35321780547,
-including Windows/macOS installation and native tests; Pages 35321779592 passed.
-Documentation explicitly distinguishes main from 1.2.0; no new tag was created.
-The previous release documentation checkpoint 01b77dc passed CI 35320080065 and Pages.
+The 1.3.0 DOCX bridge reuses the existing DFM session/checksum, pre/post-save,
+table-shape and unedited-block guards in private workspaces. read_docx returns
+revision-bound deterministic DFM chunks; update_docx requires the complete native
+binding and block markers. Updates commit managed revisions with CAS before any
+explicit source writeback. Untouched package parts retain exact bytes. Signed or
+protected packages are readable but updates are rejected, including relocated
+signature/settings targets. Structural/style design edits remain unsupported.
 
-New source files: src/domain/native_docx.py,
-src/application/native_docx_bridge.py, src/application/native_document_contract.py,
-src/infrastructure/native_docx_workspace.py. Existing native service/request and
-presentation wiring are extended; DocxService adds changed_block_ids to results.
-Tests: tests/native_docx_helpers.py, tests/unit/test_native_docx.py,
-tests/unit/test_native_docx_failures.py, tests/integration/test_native_docx_stdio_e2e.py.
-DOCX component references/wiki integration is now implemented locally (unreleased),
-reusing complete DocxIR block serialization and exact original package-part bytes.
+DOCX evidence uses full DocxIR block serialization, never truncated previews.
 read_docx summaries, read_docx_block and export_wiki share native-docx-block-ref-v1;
-verify checks the immutable revision, exact part/block locator and canonical full
-representation hash. Agent semantics, extraction coverage, fields and visual review
-remain separate. NativeDocxOperations keeps the native coordinator bounded.
-DOCX wiki uses docx-blocks-v1 in snapshot identity; old opaque DOCX snapshots remain
-untouched and the v1.2 spreadsheet artifact golden hashes are unchanged. Exact
-source and all package parts accompany block notes/JSONL; temporary DFM media paths
-are not promoted to fabricated persistent associations. Part map includes native
-path, filename, digest and byte size. Existing publication/no-overwrite guards apply.
+verify checks immutable bytes, exact part/block locator and representation hash.
+Old references survive edits/archive, with freshness reported separately. Block IDs
+are revision-scoped, not stable cross-revision component IDs.
+DOCX wiki uses a distinct docx-blocks-v1 projection: complete JSONL, block/index
+notes, original DOCX and exact package-part attachments with path/hash/size mapping.
+Old opaque DOCX snapshots remain untouched; DFM temporary media paths never become
+fabricated persistent associations. Limits: 20,000 blocks, 10,000 package parts,
+30,004 artifacts and 128 MiB. Integrity does not prove extraction completeness.
 
-Validation: 1,423 Python passed / 30 optional skips, 199 VSIX tests, lint/format,
-mypy (127 source files), Bandit, docs/harness synchronization and desktop/mobile
-bilingual reader checks passed. Nineteen new tests cover full representation hashes,
-long Unicode, repeated text, forged locators/revisions, corrupted blobs, old refs,
-exact package attachments, unknown parts, note injection, output limits, legacy
-projection compatibility and custom citation display. The SDK2 DOCX flow now runs
-block read/verify/wiki and old-reference checks; new tests join all platform jobs.
-Native contract annotations/null defaults are compacted without removing input
-validation; default response limit regression passes (11,932 characters).
+Feature commits: bbdbf8a (DFM bridge, CI 35321780547) and b50ed35 (block/wiki evidence,
+CI 35324654138; Pages 35324654419), all green. Forty-eight tests were added since
+1.2.0, including real SDK2 read/edit/writeback/block verification/wiki flows.
+Key modules: src/application/native_docx_{bridge,records,operations,wiki}.py,
+native_document_contract.py, native_evidence_service.py, native_wiki_{format,service}.py;
+src/domain/native_assets.py and native_docx.py; infrastructure workspace/publisher.
 
-Changed modules: src/domain/native_assets.py, native_docx.py, native_wiki.py;
-src/application/native_docx_{bridge,records,operations,wiki}.py,
-native_{document_contract,document_service,evidence_service,wiki_format,wiki_service}.py,
-docx_service.py, citation_format_service.py; infrastructure native DOCX workspace
-and wiki publisher; presentation document facade. Tests/docs/README/Pages/harness
-assets are synchronized. Feature commit b50ed3505161c486473773cefec8d9f9006ef32f is on main;
-Pages 35324654419 and every job in CI 35324654138 passed, including Windows,
-macOS, Linux activation and Python 3.10.
-Version 1.3.0 metadata and release docs are synchronized; uv.lock changes only
-the project version. Dependency audits report zero known issues. Metadata/docs
-regressions (32 tests), release-harness audit and bilingual reader QA pass. Commit
-and push this release candidate, run scripts/release.sh and wait for exact-commit
-CI before creating the annotated tag. Public registry verification remains pending. Remaining structural native
-CRUD, PPTX/general adapters, standards-aware citations and agent review workflows
-remain active; this milestone does not complete the broad goal.
+The latest explicit user clarification governs the broad goal:
+「MCP 提供必要檢查，Agent 負責完整核對與修正」.
+MCP owns mechanical source/version/locator/package/write checks and explicit,
+deterministic repairs. Agents own semantics, rendering, fields/formulas, extraction
+review and subsequent correction. No structural pass is a full-fidelity guarantee.
 
-CSL research: citeproc-py still documents missing year-suffix/disambiguation,
-subsequent et-al and collapsing support; installing it alone cannot justify full
-APA/Chicago claims. citeproc-js is CPAL/AGPL and needs ordered citation context;
-jgm/citeproc offers a BSD Haskell/JSON CLI alternative. No engine selected/installed.
-See decisionLog.md for primary sources and required evaluation cases.
-
-The latest explicit user reply confirms: MCP provides necessary source/version,
-format-preservation and operation-result checks; the agent owns complete semantic
-and visual verification and coordinates corrections. This clarification overrides
-the earlier complete-MCP-validation wording. Deterministic checks remain enforced
-on every supported write; do not claim full fidelity from structural checks alone.
-Full scope is tracked in docs/spec.md and ROADMAP.md; a milestone is not completion.
-
-User goal item 5 adds MCP SDK 2.0+ and current package/repository evaluation.
-The baseline used MCP 2.0.0; this milestone locks and verifies MCP 2.2.0.
-
-Broader structural CRUD, DOCX/PPTX/general native adapters, curated wiki integration,
-standards-aware academic citations and agent review workflows remain active work.
-A milestone or release does not complete the overall goal.
+Next work remains active: broader native formats (including PPTX), structural
+CRUD, independent table/native bridges, cross-format asset relationships and agent
+review workflows, plus standards-aware academic citations. Before expanding native
+operations, address contract growth: the compact native contract uses 11,932 of
+12,000 default response characters; full typed schema is already in the SDK tool
+input schema. Use a scalable discovery strategy with compatibility regressions;
+never drop validation keywords or merely raise the global response limit.
+CSL evaluation is recorded in decisionLog.md: citeproc-py has documented conformance
+gaps, citeproc-js needs ordered citation context and CPAL/AGPL evaluation, while
+jgm/citeproc offers a BSD Haskell/JSON executable. No citation engine is selected.
+MCP SDK stays >=2,<3, locked to 2.2.0. Docling/pdfplumber/pikepdf/pypdf roles were
+rechecked against official repositories; no new dependency was added in 1.3.0.
+MinerU/Marker security holds remain. A release is a milestone, not completion of
+the broad goal in docs/spec.md and ROADMAP.md.
 
 
 ## 2026-08-13 - v1.0.1 large-PDF and Codex hardening
