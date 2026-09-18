@@ -122,6 +122,9 @@ jobs:
           tests/unit/test_native_spreadsheet_edges.py
           tests/unit/test_native_docx.py
           tests/unit/test_native_docx_failures.py
+          tests/unit/test_native_docx_evidence.py
+          tests/unit/test_native_docx_wiki.py
+          tests/unit/test_native_wiki_compatibility.py
           tests/unit/test_native_evidence.py
           tests/unit/test_native_wiki.py
           tests/unit/test_native_wiki_publication.py
@@ -184,6 +187,9 @@ jobs:
           tests/unit/test_native_spreadsheet_edges.py
           tests/unit/test_native_docx.py
           tests/unit/test_native_docx_failures.py
+          tests/unit/test_native_docx_evidence.py
+          tests/unit/test_native_docx_wiki.py
+          tests/unit/test_native_wiki_compatibility.py
           tests/unit/test_native_evidence.py
           tests/unit/test_native_wiki.py
           tests/unit/test_native_wiki_publication.py
@@ -238,6 +244,9 @@ jobs:
           tests/unit/test_native_spreadsheet_edges.py
           tests/unit/test_native_docx.py
           tests/unit/test_native_docx_failures.py
+          tests/unit/test_native_docx_evidence.py
+          tests/unit/test_native_docx_wiki.py
+          tests/unit/test_native_wiki_compatibility.py
           tests/unit/test_native_evidence.py
           tests/unit/test_native_wiki.py
           tests/unit/test_native_wiki_publication.py

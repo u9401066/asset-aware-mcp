@@ -13,10 +13,16 @@ from typing import TYPE_CHECKING, Any
 import yaml
 
 from src.application.docx_service import DocxService
-from src.domain.native_docx import MAX_DFM_BYTES, NativeDocxRead
+from src.application.native_docx_records import docx_block_record, docx_block_summary
+from src.domain.native_docx import (
+    MAX_DFM_BYTES,
+    MAX_DOCX_BLOCKS,
+    NativeDocxDecomposition,
+    NativeDocxRead,
+)
 
 if TYPE_CHECKING:
-    from src.domain.native_assets import NativeEditResult
+    from src.domain.native_assets import NativeDocxBlockLocator, NativeEditResult
     from src.domain.native_docx import (
         NativeDocxEdit,
         NativeDocxWorkspace,
@@ -91,10 +97,56 @@ class NativeDocxBridge:
         with self.workspaces.open(data) as workspace:
             service, doc_id = await self._ingest(workspace)
             dfm = await service.get_dfm(doc_id)
-            blocks = await service.list_blocks(doc_id)
-            if dfm is None or blocks is None:
+            if dfm is None:
                 raise ValueError("DOCX workflow did not return its DFM representation")
-            return NativeDocxRead(_bound_dfm(dfm, asset_id, revision), blocks)
+            records = await self._records(service, doc_id, asset_id, revision)
+            return NativeDocxRead(
+                _bound_dfm(dfm, asset_id, revision),
+                [docx_block_summary(record) for record in records],
+            )
+
+    @staticmethod
+    async def _records(
+        service: DocxService, doc_id: str, asset_id: str, revision: str
+    ) -> list[dict[str, Any]]:
+        blocks = await service.list_blocks(doc_id, full=True)
+        if blocks is None or len(blocks) > MAX_DOCX_BLOCKS:
+            raise ValueError(
+                "DOCX block collection is unavailable or exceeds its 20000-block limit"
+            )
+        if len({block["id"] for block in blocks}) != len(blocks):
+            raise ValueError("DOCX block identities are ambiguous")
+        return [docx_block_record(block, asset_id, revision) for block in blocks]
+
+    def decompose(
+        self, data: bytes, asset_id: str, revision: str
+    ) -> NativeDocxDecomposition:
+        return asyncio.run(self._decompose(data, asset_id, revision))
+
+    async def _decompose(
+        self, data: bytes, asset_id: str, revision: str
+    ) -> NativeDocxDecomposition:
+        with self.workspaces.open(data) as workspace:
+            service, doc_id = await self._ingest(workspace)
+            records = await self._records(service, doc_id, asset_id, revision)
+            return NativeDocxDecomposition(records, workspace.package_parts())
+
+    def read_block(
+        self,
+        data: bytes,
+        asset_id: str,
+        revision: str,
+        block_id: str,
+        locator: NativeDocxBlockLocator | None = None,
+    ) -> dict[str, Any]:
+        for record in self.decompose(data, asset_id, revision).blocks:
+            if record["block_id"] == block_id:
+                if locator is not None and record["locator"] != locator.model_dump():
+                    raise ValueError(
+                        "Native DOCX locator does not match the source part"
+                    )
+                return record
+        raise ValueError("Native DOCX block locator does not exist in this revision")
 
     def edit(
         self, data: bytes, asset_id: str, revision: str, edit: NativeDocxEdit

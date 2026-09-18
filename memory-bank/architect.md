@@ -15,8 +15,14 @@
   capability/contract serialization was extracted to native_document_contract.py
   to keep the coordinator within module/class limits. Contract titles are compacted
   as annotations only, preserving actual input fields named title and all constraints.
-- DFM block IDs/locators remain revision-scoped. The bridge does not promote them
-  to verified native references or claim full DOCX component wiki integration.
+- DFM block IDs/locators remain revision-scoped. The next component layer now reuses
+  full block serialization through native_docx_records.py, adds native DOCX block
+  verification and bounded native_docx_operations.py reads. Exact package parts
+  come from the workspace port, without application filesystem access.
+- NativeDocxWikiContent specializes the existing wiki serializer under a distinct
+  docx-blocks-v1 snapshot identity. Legacy output bytes stay unchanged; the existing
+  publisher owns all IO/no-overwrite checks. Original part mapping and exact bytes
+  preserve unparsed content without claiming extraction completeness.
 
 
 > 📌 此檔案記錄重大架構決策，架構變更時更新。

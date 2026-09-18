@@ -9,6 +9,12 @@
 
 ### Added
 
+- Native DOCX block references and `read_docx_block`: complete parsed representation
+  hashes, bounded text previews and immutable-revision verification with freshness
+  reported separately. DOCX wiki snapshots carry full block evidence, original
+  documents and exact package-part attachments with native locator citation display.
+  A distinct projection preserves prior opaque DOCX snapshots; v1.2 spreadsheet
+  artifact hashes remain unchanged. Extraction coverage and agent review stay explicit.
 - Native DOCX `read_docx` / `update_docx` bridge: deterministic, bounded DFM
   excerpts bound to the full asset/revision, existing DFM save guards, checked
   OOXML preservation and managed revision commits before explicit source writeback.

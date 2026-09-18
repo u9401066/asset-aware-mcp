@@ -53,6 +53,9 @@ and LightRAG knowledge graph outputs.
 - Query the contract for native DOCX support. read_docx chunks must use one
   revision; update_docx requires complete DFM with its original native binding and
   block markers. Updates create managed revisions before explicit source writeback.
+  When advertised, read_docx_block returns revision-pinned native references; verify
+  checks the parsed representation. DOCX wiki snapshots retain exact package parts;
+  extraction completeness, meaning and rendered layout require agent review.
 
 ## PDF -> Asset Engine Selection
 

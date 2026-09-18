@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from src.application.native_docx_wiki import NativeDocxWikiContent
 from src.application.native_evidence_service import attach_native_evidence
 from src.application.native_wiki_format import NativeWikiContent
 from src.domain.citation_format import CitationMetadata, resolve_citation_format
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
         NativeDocumentRequest,
         NativeSpreadsheetAdapter,
     )
+    from src.domain.native_docx import NativeDocxAdapter
     from src.domain.native_wiki import NativeWikiPublisher
 
 
@@ -24,10 +26,12 @@ class NativeWikiService:
         repository: NativeAssetRepository,
         spreadsheets: NativeSpreadsheetAdapter,
         publisher: NativeWikiPublisher,
+        docx: NativeDocxAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.publisher = publisher
+        self.docx = docx
 
     def export(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.asset_id is not None and request.output_dir is not None
@@ -39,7 +43,12 @@ class NativeWikiService:
             if request.citation_contract is not None
             else {"preset": "source"}
         )
-        content = NativeWikiContent(
+        builder = (
+            NativeDocxWikiContent
+            if asset.format == "docx" and self.docx
+            else NativeWikiContent
+        )
+        content = builder(
             {
                 "asset_id": asset.asset_id,
                 "revision": revision,
@@ -50,12 +59,7 @@ class NativeWikiService:
             contract,
             request.citation_metadata or CitationMetadata(),
         )
-        if asset.format in {"xlsx", "xlsm"}:
-            for count, cell in enumerate(self.spreadsheets.iter_cells(data), start=1):
-                if count > MAX_WIKI_CELLS:
-                    raise ValueError("Native wiki exceeds the stored-cell limit")
-                attach_native_evidence(cell, asset.asset_id, revision)
-                content.add_cell(cell)
+        self._populate(content, data)
         result = self.publisher.publish(
             request.output_dir,
             content.snapshot_id,
@@ -67,10 +71,22 @@ class NativeWikiService:
             "asset_id": asset.asset_id,
             "revision": revision,
             "index_note": content.index_name,
-            "cell_count": len(content.records),
-            "review_required": [
-                "semantic_accuracy",
-                "rendered_layout",
-                "formula_results",
-            ],
+            **content.record_counts(),
+            "review_required": content.review_required(),
         }
+
+    def _populate(self, content: NativeWikiContent, data: bytes) -> None:
+        identity = content.identity
+        if identity["format"] in {"xlsx", "xlsm"}:
+            for count, cell in enumerate(self.spreadsheets.iter_cells(data), start=1):
+                if count > MAX_WIKI_CELLS:
+                    raise ValueError("Native wiki exceeds the stored-cell limit")
+                attach_native_evidence(cell, identity["asset_id"], identity["revision"])
+                content.add_cell(cell)
+        elif isinstance(content, NativeDocxWikiContent) and self.docx:
+            decomposition = self.docx.decompose(
+                data, identity["asset_id"], identity["revision"]
+            )
+            content.add_parts(decomposition.parts)
+            for block in decomposition.blocks:
+                content.add_block(block)

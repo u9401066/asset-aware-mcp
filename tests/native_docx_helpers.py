@@ -17,6 +17,7 @@ from src.domain.native_assets import NativeDocumentRequest
 from src.infrastructure.native_asset_store import FileNativeAssetRepository
 from src.infrastructure.native_docx_workspace import FileNativeDocxWorkspaces
 from src.infrastructure.native_spreadsheet import SpreadsheetFileAdapter
+from src.infrastructure.native_wiki_publisher import FileNativeWikiPublisher
 
 
 def build_docx() -> bytes:
@@ -29,6 +30,7 @@ def build_docx() -> bytes:
     table = document.add_table(rows=2, cols=2)
     table.style = "Table Grid"
     table.cell(0, 0).text = "Item"
+    table.cell(0, 0).paragraphs[0].runs[0].bold = True
     table.cell(0, 1).text = "Value"
     table.cell(1, 0).text = "Drug"
     table.cell(1, 1).text = "Old value"
@@ -76,6 +78,7 @@ def native_docx(tmp_path: Path) -> tuple[NativeDocumentService, dict[str, Any], 
     service = NativeDocumentService(
         FileNativeAssetRepository(tmp_path / "native"),
         SpreadsheetFileAdapter(),
+        FileNativeWikiPublisher((tmp_path / "native",)),
         docx=NativeDocxBridge(FileNativeDocxWorkspaces()),
     )
     asset = call(service, op="register", source_path=str(source))["asset"]

@@ -11,10 +11,10 @@ if TYPE_CHECKING:
 
 
 def _compact_schema(schema: dict[str, Any]) -> dict[str, Any]:
-    """Omit display titles without removing identically named input properties."""
+    """Omit prose annotations/null defaults while preserving validation keywords."""
     result: dict[str, Any] = {}
     for key, value in schema.items():
-        if key == "title":
+        if key in {"title", "description"} or (key == "default" and value is None):
             continue
         if key in {"properties", "$defs", "patternProperties", "dependentSchemas"}:
             result[key] = {name: _compact_schema(node) for name, node in value.items()}
@@ -51,6 +51,7 @@ def native_asset_summary(
             "immutable_history": True,
             "refresh_source": asset.source is not None and not asset.archived,
             "read_docx": asset.format == "docx" and docx_enabled,
+            "verify_docx_blocks": asset.format == "docx" and docx_enabled,
             "edit_docx": asset.format == "docx" and docx_enabled and not asset.archived,
             "inspect_cells": asset.format in {"xlsx", "xlsm"},
             "verify_cells": asset.format in {"xlsx", "xlsm"},
@@ -84,9 +85,17 @@ def native_document_contract(*, docx_enabled: bool = False) -> dict[str, Any]:
     return {
         "success": True,
         "schema": _compact_schema(NativeDocumentRequest.model_json_schema()),
-        "identity": "Stable asset ID; immutable SHA-256 revisions; revision-scoped native locators",
+        "identity": "Stable asset IDs, SHA-256 revisions and revision-scoped locators.",
         "formats": {
-            "docx": ["read_docx", "update_docx"] if docx_enabled else [],
+            "docx": [
+                "read_docx",
+                "read_docx_block",
+                "update_docx",
+                "verify",
+                "export_wiki",
+            ]
+            if docx_enabled
+            else [],
             "xlsx": ["create", "inspect_cells", "edit_cells"],
             "xlsm": ["inspect_cells", "edit_cells"],
             "other": [
@@ -97,8 +106,8 @@ def native_document_contract(*, docx_enabled: bool = False) -> dict[str, Any]:
                 "archive",
             ],
         },
-        "verification": "Package/locator/source checks are mechanical; agents verify semantics and rendered layout.",
-        "docx_policy": "read_docx returns deterministic DFM excerpts. Assemble all chunks at one revision before update_docx; retain block markers and frontmatter. Updates create managed revisions; source writeback is explicit.",
-        "archive_policy": "Archive preserves revisions and never deletes the human source file.",
-        "wiki_policy": "export_wiki creates immutable revision snapshots; existing notes are verified, never replaced. Native citation fields belong inside native_request.",
+        "verification": "MCP checks integrity; agents verify semantics, layout and calculated results.",
+        "docx_policy": "Pin revision; assemble all DFM chunks with frontmatter/markers. Updates stage versions; writeback is explicit.",
+        "archive_policy": "Archive retains history and the human source.",
+        "wiki_policy": "Immutable snapshots; never replace existing notes. Citation fields go inside native_request.",
     }

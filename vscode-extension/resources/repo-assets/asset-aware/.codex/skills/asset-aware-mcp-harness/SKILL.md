@@ -48,6 +48,11 @@ verification.
   update_docx are advertised, assemble DFM chunks at one revision, retain native
   frontmatter/block markers, and keep managed updates separate from source writeback.
   The agent reviews rendered Word layout and meaning; MCP performs DFM/package checks.
+- When the installed contract advertises read_docx_block, use its revision-pinned
+  evidence with native verify. DOCX export_wiki retains full parsed blocks and exact
+  package parts in a distinct projection. Preserve old snapshots; extraction coverage
+  and semantic support still require agent review. Never treat DFM temporary paths
+  as persistent media attachments; use manifest.part_attachments.
 
 ## Release Rules
 

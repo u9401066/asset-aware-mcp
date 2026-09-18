@@ -90,7 +90,10 @@ def test_native_dfm_chunks_are_stable_and_bound_to_full_asset_revision(
     assert result["asset"]["capabilities"]["read_docx"] is True
     assert call(service, op="contract")["formats"]["docx"] == [
         "read_docx",
+        "read_docx_block",
         "update_docx",
+        "verify",
+        "export_wiki",
     ]
 
 

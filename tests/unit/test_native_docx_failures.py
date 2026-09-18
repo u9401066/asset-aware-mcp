@@ -149,6 +149,13 @@ def test_extended_native_contract_fits_default_response_without_losing_input_fie
     definitions = response["schema"]["$defs"]
     assert "title" in definitions["CitationMetadata"]["properties"]
     assert definitions["NativeDocxEdit"]["properties"]["dfm_text"]["maxLength"] > 0
+    assert definitions["NativeDocxBlockLocator"]["properties"]["block_id"]["pattern"]
+    assert definitions["NativeDocxBlockReference"]["additionalProperties"] is False
+    assert "value_sha256" in definitions["NativeDocxBlockReference"]["required"]
+    assert (
+        definitions["NativeDocxBlockReference"]["properties"]["schema_version"]["const"]
+        == "native-docx-block-ref-v1"
+    )
 
 
 @pytest.mark.parametrize("kind", ["signature", "protection"])

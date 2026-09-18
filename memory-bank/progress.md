@@ -27,6 +27,21 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
+## 2026-09-18 DOCX component evidence / wiki (unreleased)
+
+- Complete parsed block representations feed revision-pinned native references,
+  bounded read_docx_block and verification. Integrity, head freshness, source
+  freshness, extraction coverage and agent meaning/layout review stay distinct.
+- DOCX block notes/JSONL, original DOCX and every exact package part export under a
+  distinct docx-blocks-v1 projection. Existing opaque DOCX exports remain untouched;
+  v1.2 spreadsheet artifact hashes are covered by a golden regression. Custom
+  citation display uses native part/block location without changing evidence IDs.
+- 1,423 Python passed / 30 optional skips; 199 VSIX tests, types/lint/Bandit,
+  docs/harness synchronization and bilingual desktop/mobile reader checks passed.
+  Nineteen added tests plus extended real SDK2 native DOCX flow. New cases are
+  configured for Python 3.10, macOS and Windows CI. Commit/push CI remains pending.
+
+
 ## 2026-09-18 native DOCX version / DFM bridge (unreleased)
 
 - Native read_docx/update_docx reuse DocxService's existing session/checksum,

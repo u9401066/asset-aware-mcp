@@ -239,6 +239,22 @@ class NativeSpreadsheetAdapter(Protocol):
     ) -> tuple[bytes, NativeEditResult]: ...
 
 
+class NativeDocxBlockLocator(NativeModel):
+    block_id: str = Field(pattern=r"^[a-z]+[0-9]+$", max_length=64)
+    part: str = Field(min_length=1, max_length=1024)
+
+
+class NativeDocxBlockReference(NativeModel):
+    schema_version: Literal["native-docx-block-ref-v1"] = "native-docx-block-ref-v1"
+    asset_id: str = Field(pattern=ASSET_ID_PATTERN)
+    revision: str = Field(pattern=SHA256_PATTERN)
+    locator: NativeDocxBlockLocator
+    value_sha256: str = Field(pattern=SHA256_PATTERN)
+    verification_scope: Literal["immutable_native_representation"] = (
+        "immutable_native_representation"
+    )
+
+
 class NativeDocumentRequest(NativeModel):
     op: Literal[
         "contract",
@@ -248,6 +264,7 @@ class NativeDocumentRequest(NativeModel):
         "inspect",
         "read_cell",
         "read_docx",
+        "read_docx_block",
         "update_docx",
         "verify",
         "export_wiki",
@@ -269,12 +286,13 @@ class NativeDocumentRequest(NativeModel):
     citation_metadata: CitationMetadata | None = None
     workbook: NativeWorkbookCreate | None = None
     docx_edit: NativeDocxEdit | None = None
-    reference: NativeCellReference | None = None
+    reference: NativeCellReference | NativeDocxBlockReference | None = None
     edits: list[NativeCellEdit] = Field(
         default_factory=list, max_length=MAX_NATIVE_CELLS
     )
     sheet: str | None = Field(default=None, min_length=1, max_length=31)
     cell: str | None = Field(default=None, min_length=2, max_length=10)
+    block_id: str | None = Field(default=None, pattern=r"^[a-z]+[0-9]+$", max_length=64)
     text_offset: int = Field(default=0, ge=0)
     text_limit: int = Field(default=2000, ge=1, le=4000)
     offset: int = Field(default=0, ge=0)
@@ -295,6 +313,7 @@ class NativeDocumentRequest(NativeModel):
             "inspect": {"asset_id"},
             "read_cell": {"asset_id", "sheet", "cell"},
             "read_docx": {"asset_id"},
+            "read_docx_block": {"asset_id", "block_id"},
             "update_docx": {"asset_id", "expected_revision", "docx_edit"},
             "verify": {"reference"},
             "export_wiki": {"asset_id", "output_dir"},
@@ -316,6 +335,7 @@ class NativeDocumentRequest(NativeModel):
             "inspect": {"sheet", "offset", "limit", "revision"},
             "read_cell": {"revision", "text_offset", "text_limit"},
             "read_docx": {"revision", "text_offset", "text_limit", "offset", "limit"},
+            "read_docx_block": {"revision", "text_offset", "text_limit"},
             "export_wiki": {"revision", "citation_contract", "citation_metadata"},
         }.get(self.op, set())
         unused = self.model_fields_set - required - optional - {"op"}

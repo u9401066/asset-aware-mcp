@@ -1,5 +1,25 @@
 # Decision Log
 
+## 2026-09-18 — parsed DOCX evidence and distinct wiki projections
+
+- Reuse complete DocxIR serialization; canonical block hashes never use truncated
+  previews. A reference binds asset ID, immutable revision, native part and block
+  ID. Successful integrity verification does not claim exhaustive extraction or
+  semantic support. Old revision references survive updates and archive.
+- Add docx-blocks-v1 to DOCX snapshot identity rather than replacing v1.2 opaque
+  exports. Keep legacy XLSX/XLSM projection serialization byte-identical. Export
+  every original package part with exact bytes and original-path/hash mapping;
+  parser temporary media names cannot establish reliable chart/image associations.
+- Upstream roles rechecked against official repositories:
+  [Docling](https://github.com/docling-project/docling) provides structured parsing
+  and a common document representation; [pdfplumber](https://github.com/jsvine/pdfplumber)
+  exposes characters/geometry/table extraction; [pikepdf](https://github.com/pikepdf/pikepdf)
+  provides QPDF-backed read/write; [pypdf](https://github.com/py-pdf/pypdf) provides
+  page split/merge/crop/transformation. Reuse these capabilities where appropriate;
+  asset identity, revisions, source checks and evidence publication remain project
+  responsibilities. No new dependency is introduced in the DOCX evidence milestone.
+
+
 ## 2026-09-18 — reuse the DFM write path for native DOCX
 
 - Avoid a second Word editing implementation. Native revisions supply immutable

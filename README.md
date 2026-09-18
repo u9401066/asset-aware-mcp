@@ -79,8 +79,11 @@ backups when a verified generated bundle is replaced.
 On `main` after 1.2.0, the native DOCX bridge adds revision-bound `read_docx` and
 `update_docx`, reusing the existing DFM checks before committing a managed version.
 It preserves unrelated package parts and supports explicit tracked text changes;
-source writeback and agent layout review remain separate. This addition is not yet
-in the 1.2.0 registry packages. See the [DOCX bridge guide](docs/wiki/Native-File-Assets.md#development-after-120-native-docx-bridge).
+source writeback and agent layout review remain separate. DOCX block references now
+support bounded reads and native verification; wiki snapshots include full block
+records, the original DOCX and exact package-part attachments. Existing 1.2.0 wiki
+outputs retain their identities and bytes. These additions are not yet in the
+1.2.0 registry packages. See the [DOCX bridge guide](docs/wiki/Native-File-Assets.md#development-after-120-native-docx-bridge).
 
 - 📄 **Asset-Aware ETL** - PDF → Markdown with a pluggable multi-engine parser (`ETL_ENGINE`):
   - **PyMuPDF** (default) - Fast extraction (~50MB), no models required

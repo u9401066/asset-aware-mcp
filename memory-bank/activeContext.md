@@ -57,16 +57,37 @@ src/infrastructure/native_docx_workspace.py. Existing native service/request and
 presentation wiring are extended; DocxService adds changed_block_ids to results.
 Tests: tests/native_docx_helpers.py, tests/unit/test_native_docx.py,
 tests/unit/test_native_docx_failures.py, tests/integration/test_native_docx_stdio_e2e.py.
-Next: immutable DOCX component evidence/wiki integration, then remaining native
-format/structural CRUD and standards-aware citations. Broad goal remains active.
-Read-only next-step findings: DocxIrSerializationMixin._block_to_dict already
-retains content/runs/cell formats and native locator metadata; reuse it instead of
-reconstructing block meaning from the 80-character list_blocks previews. Existing
-1.2.0 native wiki snapshots for DOCX are opaque and keyed only by asset/revision;
-a new component projection must preserve those old directories/links. Native
-contract JSON now occupies 10,712 of the default 12,000 response characters; adding
-reference types requires an explicit bounded-schema strategy and regression.
-No component-reference/wiki implementation has been started.
+DOCX component references/wiki integration is now implemented locally (unreleased),
+reusing complete DocxIR block serialization and exact original package-part bytes.
+read_docx summaries, read_docx_block and export_wiki share native-docx-block-ref-v1;
+verify checks the immutable revision, exact part/block locator and canonical full
+representation hash. Agent semantics, extraction coverage, fields and visual review
+remain separate. NativeDocxOperations keeps the native coordinator bounded.
+DOCX wiki uses docx-blocks-v1 in snapshot identity; old opaque DOCX snapshots remain
+untouched and the v1.2 spreadsheet artifact golden hashes are unchanged. Exact
+source and all package parts accompany block notes/JSONL; temporary DFM media paths
+are not promoted to fabricated persistent associations. Part map includes native
+path, filename, digest and byte size. Existing publication/no-overwrite guards apply.
+
+Validation: 1,423 Python passed / 30 optional skips, 199 VSIX tests, lint/format,
+mypy (127 source files), Bandit, docs/harness synchronization and desktop/mobile
+bilingual reader checks passed. Nineteen new tests cover full representation hashes,
+long Unicode, repeated text, forged locators/revisions, corrupted blobs, old refs,
+exact package attachments, unknown parts, note injection, output limits, legacy
+projection compatibility and custom citation display. The SDK2 DOCX flow now runs
+block read/verify/wiki and old-reference checks; new tests join all platform jobs.
+Native contract annotations/null defaults are compacted without removing input
+validation; default response limit regression passes (11,932 characters).
+
+Changed modules: src/domain/native_assets.py, native_docx.py, native_wiki.py;
+src/application/native_docx_{bridge,records,operations,wiki}.py,
+native_{document_contract,document_service,evidence_service,wiki_format,wiki_service}.py,
+docx_service.py, citation_format_service.py; infrastructure native DOCX workspace
+and wiki publisher; presentation document facade. Tests/docs/README/Pages/harness
+assets are synchronized. Pending: commit/push and exact-commit CI, then release
+this coherent DOCX milestone after all release gates. Remaining structural native
+CRUD, PPTX/general adapters, standards-aware citations and agent review workflows
+remain active; this milestone does not complete the broad goal.
 
 CSL research: citeproc-py still documents missing year-suffix/disambiguation,
 subsequent et-al and collapsing support; installing it alone cannot justify full

@@ -11,10 +11,11 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 if TYPE_CHECKING:
     from contextlib import AbstractContextManager
 
-    from src.domain.native_assets import NativeEditResult
+    from src.domain.native_assets import NativeDocxBlockLocator, NativeEditResult
     from src.domain.repositories import DocumentRepository
 
 MAX_DFM_BYTES = 4 * 1024 * 1024
+MAX_DOCX_BLOCKS = 20_000
 
 
 class NativeDocxEdit(BaseModel):
@@ -44,9 +45,17 @@ class NativeDocxRead:
     blocks: list[dict[str, Any]]
 
 
+@dataclass
+class NativeDocxDecomposition:
+    blocks: list[dict[str, Any]]
+    parts: dict[str, bytes]
+
+
 class NativeDocxWorkspace(Protocol):
     repository: DocumentRepository
     source_path: str
+
+    def package_parts(self) -> dict[str, bytes]: ...
 
     def read_result(
         self, path: str, changed_blocks: list[str], track_changes: bool
@@ -61,6 +70,19 @@ class NativeDocxWorkspaces(Protocol):
 
 class NativeDocxAdapter(Protocol):
     def read(self, data: bytes, asset_id: str, revision: str) -> NativeDocxRead: ...
+
+    def decompose(
+        self, data: bytes, asset_id: str, revision: str
+    ) -> NativeDocxDecomposition: ...
+
+    def read_block(
+        self,
+        data: bytes,
+        asset_id: str,
+        revision: str,
+        block_id: str,
+        locator: NativeDocxBlockLocator | None = None,
+    ) -> dict[str, Any]: ...
 
     def edit(
         self, data: bytes, asset_id: str, revision: str, edit: NativeDocxEdit

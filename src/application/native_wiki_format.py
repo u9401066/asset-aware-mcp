@@ -29,13 +29,16 @@ class NativeWikiContent:
         identity: dict[str, str],
         contract: CitationFormatContract,
         metadata: CitationMetadata,
+        *,
+        projection: str | None = None,
     ):
         self.identity = identity
         self.contract = contract
         self.metadata = metadata
-        self.snapshot_id = digest(
-            canonical_json({k: identity[k] for k in ("asset_id", "revision")})
-        )
+        snapshot_identity = {k: identity[k] for k in ("asset_id", "revision")}
+        if projection:
+            snapshot_identity["projection"] = projection
+        self.snapshot_id = digest(canonical_json(snapshot_identity))
         self.prefix = f"native-{self.snapshot_id}"
         self.index_name = f"{self.prefix}-index.md"
         self.source_name = self.prefix + (
@@ -47,6 +50,20 @@ class NativeWikiContent:
         self.size = 0
         self.records: list[bytes] = []
         self.links: list[str] = []
+
+    def record_counts(self) -> dict[str, int]:
+        return {"cell_count": len(self.records)}
+
+    def manifest_details(self) -> dict[str, Any]:
+        return {
+            **self.record_counts(),
+            "representation": "stored_cells"
+            if self.identity["format"] in {"xlsx", "xlsm"}
+            else "opaque_binary",
+        }
+
+    def review_required(self) -> list[str]:
+        return ["semantic_accuracy", "rendered_layout", "formula_results"]
 
     def add_file(self, name: str, data: bytes) -> None:
         if name in self.files:
@@ -112,10 +129,7 @@ class NativeWikiContent:
             **self.identity,
             "source_attachment": self.source_name,
             "index_note": self.index_name,
-            "cell_count": len(self.records),
-            "representation": "stored_cells"
-            if self.identity["format"] in {"xlsx", "xlsm"}
-            else "opaque_binary",
+            **self.manifest_details(),
             "citation_contract": self.contract.model_dump(mode="json"),
             "citation_metadata": self.metadata.model_dump(mode="json"),
             "metadata_origin": "caller_supplied; title defaults to source name",

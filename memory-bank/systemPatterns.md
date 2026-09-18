@@ -2,6 +2,15 @@
 
 > 📌 此檔案記錄專案中使用的模式和慣例，新模式出現時更新。
 
+## Projection compatibility (2026-09-18)
+
+Revision-bound evidence hashes use complete parsed representations; bounded text
+previews carry the canonical reference separately. Upgrading an opaque DOCX wiki
+to parsed block notes uses a new projection identity, preserving old snapshots and
+links. Unrelated format outputs remain byte-identical under golden hash tests.
+Package-part attachments preserve exact source bytes and their native path mapping;
+parser-local filenames do not establish media relationships or extraction accuracy.
+
 ## Native document mutation pattern (2026-09-18)
 
 Read immutable revision -> validate typed edits and unsupported features -> modify

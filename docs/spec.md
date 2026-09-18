@@ -62,7 +62,7 @@ DOCX/PPTX does not prove native round-trip fidelity. ROADMAP.md tracks full scop
 Each milestone updates README, Pages, repository metadata/labels and Memory Bank;
 reviewed commits are pushed in stages and releases require the full harness.
 
-### Native DOCX / DFM bridge (next milestone, not in 1.2.0)
+### Native DOCX / DFM bridge (main after 1.2.0, unreleased)
 
 `read_docx` reads a registered DOCX immutable revision through the existing DFM
 parser/renderer in a private temporary workspace. Its deterministic DFM projection
@@ -85,8 +85,33 @@ separate editing workflow. After editing, verify identical member inventory and
 unchanged bytes outside document.xml (plus settings.xml for explicit tracked
 changes). Report changed parts/block IDs, preservation checks and agent review
 requirements. This adds scoped existing-body edits, not arbitrary insertion,
-deletion, style design, DOC/DOCM conversion, complete visual fidelity or native
-DOCX evidence/wiki integration. Legacy DOCX operations remain available.
+deletion, style design, DOC/DOCM conversion or complete visual fidelity. Native
+DOCX evidence/wiki integration is described below. Legacy operations remain available.
+
+### DOCX component evidence and wiki projection (main after 1.2.0, unreleased)
+
+Native DOCX blocks expose the complete existing IR representation, native part and
+revision-scoped block ID, plus a canonical representation hash. read_docx_block
+returns bounded text excerpts with full-reference and full-text hashes. read_docx
+summaries carry the same references; previews are never used to compute evidence.
+verify resolves the immutable blob and exact block/part, recomputes the complete
+representation and reports integrity separately from freshness and agent review.
+Old references remain verifiable after edits/archive. The serializer's extraction
+coverage is explicit: integrity does not prove that every OOXML feature was parsed.
+
+DOCX export_wiki uses the distinct docx-blocks-v1 projection in snapshot identity,
+so previously exported opaque DOCX snapshots and all XLSX/XLSM snapshots remain
+untouched. Export full JSONL block representations/references, revision-pinned
+block/index notes, the original DOCX and exact package-part attachments with
+original-part-to-filename mapping and hashes. Each attachment's provenance points
+to the original package member; do not infer chart values or fabricate media links
+from temporary DFM filenames. Block/part locators drive custom citation display.
+
+Retain existing no-overwrite publication rules. Reject whole exports exceeding
+20,000 block records, 10,000 package parts, 30,004 artifacts or 128 MiB; never export
+a silently incomplete evidence collection. Unknown/unsupported parsed semantics
+remain available in the original and package parts for agent review. No claim of
+full visual fidelity, automatic quality scoring or semantic claim verification.
 
 ### Native file assets and spreadsheet operations (v1.1.0)
 

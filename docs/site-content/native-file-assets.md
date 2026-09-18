@@ -195,14 +195,15 @@ DOCX 的指定版本。先查 `contract` 確認安裝版本支援，再操作：
 ```python
 document(op="native", native_request={
     "op": "read_docx", "asset_id": asset_id, "revision": revision,
-    "text_offset": 0, "text_limit": 4000, "offset": 0, "limit": 20
+    "text_offset": 0, "text_limit": 4000, "offset": 0, "limit": 2
 })
 ```
 
 `dfm.text_excerpt` 是字元分段；持續以同一個 `revision` 讀到
 `next_text_offset=null`，依序組合並核對 `text_sha256`。完整 DFM 上限為 4 MiB UTF-8。
-`blocks` 另用 `offset`／`limit` 分頁，含 preview、類型與既有原生 locator metadata。
-Block IDs 僅對該版本有效，尚不是跨版本元件 ID 或可交給原生 `verify` 的證據引用。
+`blocks` 另用 `offset`／`limit` 分頁，含 preview、類型、原生 locator metadata 與
+`native-docx-block-ref-v1` evidence。Block IDs 僅對該版本有效，不是跨版本元件 ID；
+引用包含完整版本與套件位置，可交給原生 `verify`。
 DFM 中附件路徑是保留資訊，不是持久公開的檔案路徑；工作暫存於操作結束後清除。
 
 ```python
@@ -228,4 +229,41 @@ document(op="native", native_request={
 
 更新只寫入受管理版本，`source_written=false`。接著可 `publish` 新檔供審閱，再用
 既有 `writeback` 明確回寫來源，保留備份並檢查來源是否已被人類修改。舊版本仍可
-`read_docx`。DOCX `export_wiki` 暫時仍是原始附件快照，尚未輸出 DOCX 元件引用筆記。
+`read_docx`、`read_docx_block` 與 `verify`，也可重新匯出該版本的 Wiki 快照。
+
+### DOCX block evidence and wiki projection
+
+同一個尚未發布的 main 也提供元件證據：
+
+```python
+block = document(op="native", native_request={
+    "op": "read_docx_block", "asset_id": asset_id, "revision": revision,
+    "block_id": block_id, "text_offset": 0, "text_limit": 1000
+})
+document(op="native", native_request={
+    "op": "verify", "reference": block["block"]["evidence"]
+})
+document(op="native", native_request={
+    "op": "export_wiki", "asset_id": asset_id, "revision": revision,
+    "output_dir": "/absolute/path/wiki/sources"
+})
+```
+
+引用的 hash 涵蓋既有 DFM parser 產生的完整區塊表示，包含 runs、cell formats 及
+來源 metadata；80 字預覽或分段文字不參與替代雜湊。`read_docx_block` 回傳 bounded
+text、完整文字 hash 與完整 evidence，`representation_complete=false` 表示完整表示
+需讀取 Wiki 的 `records.jsonl`。引用驗證核對不可變版本、part/block locator 與表示
+hash；目前 managed revision、封存狀態及人類來源是否已同步是各自獨立的狀態。
+
+DOCX Wiki 使用 `docx-blocks-v1` projection，包含各區塊的 Foam note、完整 JSONL
+證據、原始 DOCX，以及每個 package part 的原始位元組。`manifest.json` 的
+`part_attachments` 保存原生路徑、附件檔名、hash 與大小。DFM 暫存檔名不被假裝成
+永久媒體連結；parser 未理解的圖表、嵌入物或特殊內容仍保留在原始檔與套件附件中。
+自訂引用的 `{locator}` 使用 `word/document.xml#p...` 等來源 part/block。
+
+新的 projection 會建立不同目錄，保留 1.2.0 的 opaque DOCX 快照；XLSX/XLSM 匯出
+內容與連結不變。既有快照若被人工修改，重匯出會拒絕覆蓋。每份匯出上限為
+20,000 個區塊、10,000 個套件檔案及總計 128 MiB；超限即拒絕整份匯出。
+
+完整性通過僅代表紀錄可對回指定版本的解析表示，不代表 parser 抽取了每個特徵，
+也不代表該段內容支持某項結論。Agent 仍須核對語意、Word 版面、欄位與修訂追蹤。

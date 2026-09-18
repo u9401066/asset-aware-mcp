@@ -9,6 +9,7 @@ from src.application.native_document_contract import (
     native_asset_summary,
     native_document_contract,
 )
+from src.application.native_docx_operations import NativeDocxOperations
 from src.application.native_evidence_service import (
     NativeEvidenceService,
     attach_native_evidence,
@@ -37,9 +38,10 @@ class NativeDocumentService:
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.docx = docx
-        self.evidence = NativeEvidenceService(repository, spreadsheets)
+        self.evidence = NativeEvidenceService(repository, spreadsheets, docx)
+        self.docx_operations = NativeDocxOperations(repository, docx) if docx else None
         self.wiki = (
-            NativeWikiService(repository, spreadsheets, wiki_publisher)
+            NativeWikiService(repository, spreadsheets, wiki_publisher, docx)
             if wiki_publisher is not None
             else None
         )
@@ -55,8 +57,9 @@ class NativeDocumentService:
             "create": self._create,
             "history": self._history,
             "read_cell": self._read_cell,
-            "read_docx": self._read_docx,
-            "update_docx": self._update_docx,
+            "read_docx": self._docx_operation,
+            "read_docx_block": self._docx_operation,
+            "update_docx": self._docx_operation,
             "verify": self._verify,
             "export_wiki": self._export_wiki,
             "inspect": self._inspect,
@@ -256,62 +259,7 @@ class NativeDocumentService:
             "source_written": False,
         }
 
-    def _read_docx(self, request: NativeDocumentRequest) -> dict[str, Any]:
-        assert request.asset_id is not None
-        asset = self.repository.load(request.asset_id)
-        if asset.format != "docx" or self.docx is None:
-            raise ValueError("This format has no configured native DOCX bridge")
-        revision = request.revision or asset.revision
-        document = self.docx.read(
-            self.repository.read(asset.asset_id, revision), asset.asset_id, revision
-        )
-        text = document.dfm_text
-        start = min(request.text_offset, len(text))
-        end = min(start + request.text_limit, len(text))
-        return {
-            "success": True,
-            "asset": self._summary(asset),
-            "inspected_revision": revision,
-            "dfm": {
-                "text_excerpt": text[start:end],
-                "text_length": len(text),
-                "text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
-                "excerpt_char_range": [start, end],
-                "next_text_offset": end if end < len(text) else None,
-                "representation_complete": start == 0 and end == len(text),
-            },
-            "blocks": document.blocks[request.offset : request.offset + request.limit],
-            "block_count": len(document.blocks),
-            "next_offset": request.offset + request.limit
-            if request.offset + request.limit < len(document.blocks)
-            else None,
-            "locator_scope": "immutable_revision; block IDs may change in later revisions",
-            "review_required": [
-                "semantic_accuracy",
-                "rendered_layout",
-                "fields_and_revisions",
-            ],
-        }
-
-    def _update_docx(self, request: NativeDocumentRequest) -> dict[str, Any]:
-        assert request.asset_id is not None and request.expected_revision is not None
-        assert request.docx_edit is not None
-        asset = self.repository.load(request.asset_id)
-        if asset.format != "docx" or self.docx is None:
-            raise ValueError("This format has no configured native DOCX bridge")
-        if asset.archived or asset.revision != request.expected_revision:
-            raise ValueError("Archived or stale native asset; inspect before editing")
-        data = self.repository.read(asset.asset_id, request.expected_revision)
-        updated, checks, warnings = self.docx.edit(
-            data, asset.asset_id, request.expected_revision, request.docx_edit
-        )
-        committed = self.repository.commit(
-            asset.asset_id, request.expected_revision, updated, checks
-        )
-        return {
-            "success": True,
-            "asset": self._summary(committed),
-            "operation_result": checks.model_dump(),
-            "warnings": warnings,
-            "source_written": False,
-        }
+    def _docx_operation(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        if self.docx_operations is None:
+            raise ValueError("The native DOCX bridge is not configured")
+        return self.docx_operations.execute(request)

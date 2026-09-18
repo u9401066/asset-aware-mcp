@@ -7,6 +7,8 @@ from typing import Any, Protocol
 NATIVE_WIKI_VERSION = "native-wiki-v1"
 MAX_WIKI_BYTES = 128 * 1024 * 1024
 MAX_WIKI_CELLS = 20_000
+MAX_WIKI_PARTS = 10_000
+MAX_WIKI_ARTIFACTS = MAX_WIKI_CELLS + MAX_WIKI_PARTS + 4
 
 
 class NativeWikiPublisher(Protocol):

@@ -376,7 +376,9 @@ class DocxService(DocxIrSerializationMixin):
             "metadata": block.metadata,
         }
 
-    async def list_blocks(self, doc_id: str) -> list[dict[str, Any]] | None:
+    async def list_blocks(
+        self, doc_id: str, *, full: bool = False
+    ) -> list[dict[str, Any]] | None:
         """
         List all blocks in a document with summary info.
 
@@ -386,6 +388,16 @@ class DocxService(DocxIrSerializationMixin):
         ir = self._load_ir(doc_id)
         if ir is None:
             return None
+
+        if full:
+            return [
+                {
+                    **self._block_to_dict(block),
+                    "text": block.plain_text,
+                    "editable": block.is_editable,
+                }
+                for block in ir.blocks
+            ]
 
         blocks = []
         for block in ir.blocks:

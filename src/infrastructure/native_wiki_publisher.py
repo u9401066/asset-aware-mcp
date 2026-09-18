@@ -8,7 +8,7 @@ from itertools import islice
 from pathlib import Path
 from typing import Any
 
-from src.domain.native_wiki import MAX_WIKI_BYTES, MAX_WIKI_CELLS
+from src.domain.native_wiki import MAX_WIKI_ARTIFACTS, MAX_WIKI_BYTES
 from src.infrastructure.native_file_io import _identity, _read_file
 
 
@@ -70,7 +70,7 @@ class FileNativeWikiPublisher:
     def _validate_payload(snapshot_id: str, files: dict[str, bytes]) -> None:
         if re.fullmatch(r"[a-f0-9]{64}", snapshot_id) is None:
             raise ValueError("Invalid native wiki snapshot identity")
-        if "manifest.json" not in files or len(files) > MAX_WIKI_CELLS + 4:
+        if "manifest.json" not in files or len(files) > MAX_WIKI_ARTIFACTS:
             raise ValueError("Invalid native wiki artifact inventory")
         if sum(len(data) for data in files.values()) > MAX_WIKI_BYTES:
             raise ValueError("Native wiki exceeds the output byte limit")

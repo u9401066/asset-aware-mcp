@@ -97,6 +97,9 @@ class _Workspace:
         source.write_bytes(package.original)
         self.source_path = str(source)
 
+    def package_parts(self) -> dict[str, bytes]:
+        return dict(self.package.parts)
+
     def read_result(
         self, path: str, changed_blocks: list[str], track_changes: bool
     ) -> tuple[bytes, NativeEditResult]:

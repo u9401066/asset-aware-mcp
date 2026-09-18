@@ -56,6 +56,7 @@ async def test_native_docx_edit_and_writeback_over_sdk2_stdio(tmp_path: Path) ->
         asset = registered["asset"]
         inspection = await native(op="inspect", asset_id=asset["asset_id"])
         assert inspection["content"]["native_editor"] == "dfm_bridge"
+        reference = await _verify_wiki_blocks(native, asset, tmp_path)
         text = await _read_complete_dfm(native, asset)
         changed = await native(
             op="update_docx",
@@ -76,7 +77,36 @@ async def test_native_docx_edit_and_writeback_over_sdk2_stdio(tmp_path: Path) ->
         assert stale["success"] is False and "stale" in stale["error"]
         await _writeback_and_check(native, source, asset, current, original)
         assert await _read_complete_dfm(native, asset) == text
+        old = await native(op="verify", reference=reference)
+        assert old["valid"] and not old["is_current_managed_revision"]
         assert not list((tmp_path / "data").glob("docx_*"))
+
+
+async def _verify_wiki_blocks(native: Any, asset: dict, tmp_path: Path) -> dict:
+    result = await native(op="read_docx", asset_id=asset["asset_id"], limit=2)
+    reference = result["blocks"][0]["evidence"]
+    block = await native(
+        op="read_docx_block",
+        asset_id=asset["asset_id"],
+        revision=asset["revision"],
+        block_id=reference["locator"]["block_id"],
+        text_limit=5,
+    )
+    assert block["success"] and block["block"]["evidence"] == reference
+    assert len(block["block"]["text_excerpt"]) <= 5
+    exported = await native(
+        op="export_wiki", asset_id=asset["asset_id"], output_dir=str(tmp_path / "wiki")
+    )
+    assert exported["success"] and exported["block_count"] > 0
+    root = Path(exported["output_dir"])
+    records = [
+        json.loads(line)
+        for line in (root / "records.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert reference in [r["evidence"] for r in records]
+    for record in records:
+        assert (await native(op="verify", reference=record["evidence"]))["valid"]
+    return reference
 
 
 async def _read_complete_dfm(native: Any, asset: dict[str, Any]) -> str:
