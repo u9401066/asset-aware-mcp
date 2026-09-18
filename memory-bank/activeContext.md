@@ -19,7 +19,11 @@ The baseline used MCP 2.0.0; this milestone locks and verifies MCP 2.2.0.
 
 Citation presentation contracts are implemented in evidence/Foam and portable
 asset exports. Python 1,281 tests pass; see progress.md for gates/limitations.
-Next: stage commits and PR, then native capabilities/CRUD and inspectable results.
+Commit 07d7c90 is pushed in PR #9. Await CI and required review; then release
+through the normal gates. Continue native capabilities/CRUD and inspectable results
+as the next milestone. Managed labels are synchronized; description/Pages deploy
+follow merge. Browser desktop/mobile language/copy checks passed with cached exact
+CDN scripts; VSIX activation still needs the CI display-enabled runner.
 README/Pages/GitHub metadata/labels/MEM and staged commits/push/releases are
 explicitly authorized. Full release gates remain required before tagging.
 

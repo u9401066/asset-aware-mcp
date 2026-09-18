@@ -25,7 +25,7 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
-## 2026-09-18 citation contract milestone — implemented, awaiting PR/release
+## 2026-09-18 citation contract milestone — PR #9, release pending
 
 - Added citation-format-v1 custom/source/author-year/numeric display contracts to
   evidence bundles, Foam notes and portable asset exports. Canonical evidence,
@@ -43,7 +43,16 @@ Baseline revalidated; isolated latest main while preserving original user edits.
 - VSIX: 199 unit tests, package inventory, assistant asset sync and fresh/update
   install smoke pass. Activation remains unverified (no Xvfb/display in this host).
 - Wheel/sdist audit, clean Python 3.10 wheel runtime/stdio and Docker build/doctor/
-  stdio pass. Browser QA, staged commits and PR are the next checkpoint.
+  stdio pass. Desktop 1440×1000 and mobile 390×844 Playwright checks pass for
+  identity, content, language switching, overflow and console health. Exact CDN
+  scripts were locally replayed after browser CDN timeouts; live CDN reliability
+  is outside this check. Screenshots remain in /tmp, outside source control.
+- Commit 07d7c90 is pushed; PR https://github.com/u9401066/asset-aware-mcp/pull/9
+  has passed the dependency-security workflow, with CI/review still running.
+  Managed labels are synchronized. Description/topics and Pages deployment await
+  merge so scheduled hygiene stays aligned with the authoritative default branch.
+- main requires one approving review and the Test Summary status; no tag/release
+  has been published, and the branch policy has not been bypassed.
 - Native XLSX/PPTX CRUD, generalized asset registration, cross-format wiki adapters
   and standards-aware scholarly formatting remain open; the overall goal is active.
 
