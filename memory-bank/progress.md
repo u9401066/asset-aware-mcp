@@ -34,7 +34,18 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
-## 2026-09-18 v2.0.0 release preparation
+## 2026-09-18 v1.4.0 release preparation
+
+- User explicitly rejected the proposed 2.0.0 jump and requested 1.4.x. Use 1.4.0
+  for this milestone and 1.4.x for subsequent small fixes. No 2.0.0 tag/package
+  exists; retain the native discovery migration notice while correcting metadata.
+- Version 1.4.0 metadata, lockfile, Docker, VSIX, guides, anchors and bundled
+  instructions are synchronized; 35 focused metadata/docs tests pass. Preparation
+  commit 929e878 has green CI 35335476121; correction commit CI remains pending.
+- Repeated live mixed-04 is retained as a strict failure: Greek mu versus micro
+  sign in one Unit cell, with matching Excel mismatch. Six other checks pass;
+  raster appearance alone cannot establish original Unicode identity. Do not
+  weaken source comparison or report universal/lossless vision accuracy.
 
 - Codex PDF baseline exposed and fixed rotated figure cropping (10/16 failing
   pixel cases before, 16/16 after). Real mixed/scanned workflows preserve source,
@@ -51,8 +62,8 @@ Baseline revalidated; isolated latest main while preserving original user edits.
 
 - Revalidated clean main@cf7f166 and successful checkpoint CI/Pages. Previous goal
   turn made concrete progress (native schema discovery and PPTX collaboration).
-- Prepare 2.0.0 because native-contract-v2 changes the discovery response shape;
-  document the client migration explicitly. Full release harness, exact-tag CI and
+- Prepare 1.4.0 as requested; native-contract-v2 changes the discovery response
+  shape, so document the migration explicitly. Full release harness, exact-tag CI and
   public PyPI/Marketplace/GitHub artifact verification remain to be completed.
 - Structural CRUD, further formats, standard academic citations and complete agent
   review workflows remain active after this publication milestone.

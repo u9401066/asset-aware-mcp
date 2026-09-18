@@ -116,8 +116,10 @@ response migration; account for that when choosing the next release version.
 Goal stays active. The current goal turn made concrete progress (schema discovery
 and native presentation creation/edit/evidence/wiki), and is not blocked.
 
-Release preparation: 2.0.0 reflects the breaking native contract response migration
-(always-inline schema becomes explicit inline/paged delivery). Version metadata,
+Release preparation: **1.4.0**, following the user's explicit correction to keep
+incremental releases in 1.4.x. The proposed 2.0.0 was committed only as preparation
+at 929e878; no 2.0.0 tag or package was published. Native discovery still documents
+its client migration from always-inline schema to inline/paged delivery. Version metadata,
 README/Pages/extension copy and bundled harness instructions are being synchronized.
 Checkpoint cf7f166 and its CI 35332075734/Pages 35332074774 were revalidated green.
 Public release remains 1.3.0 until the new workflow succeeds. Pre-tag full release
@@ -126,7 +128,7 @@ backend dependency is added by this release.
 
 The user added goal item 7: directly use Codex to exercise MCP, especially
 image/scanned PDF to structured-data CRUD with adequate tests. Prioritize this
-before tagging 2.0.0. Existing real SDK2 tests are not agent-driven validation.
+before tagging 1.4.0. Existing real SDK2 tests are not agent-driven validation.
 Build synthetic digital/scanned/mixed fixtures, preserve independent truth, run
 the installed authenticated Codex CLI against this checkout via ephemeral MCP
 overrides, and verify actual tool events and persisted results. Never alter the
@@ -158,11 +160,21 @@ The earlier mixed-02 correctly fails scan pixel integrity despite correct rows.
 The first configuration attempt mixed-01 was blocked by MCP approval policy;
 explicit approval is now scoped only to this authorized synthetic test server.
 
+Latest repeated live run /tmp/asset-aware-codex-pdf-mixed-04 completed 47 successful
+MCP calls but fails strict transcription/Excel equality: B201 Unit was Greek
+mu U+03BC instead of micro sign U+00B5. The raster glyph cannot recover the original
+Unicode codepoint. Keep this failed result and limitation explicit; do not silently
+normalize the evidence or describe all live runs as lossless. Other six checks pass.
+This is a perception/encoding boundary, not a regression in mechanical crop repair.
+
 Final full tests: 1,546 passed / 30 optional skips (53 added since the PPTX
 checkpoint). VSIX: 199 passed, 64-file package inventory. Lint/format/types/Bandit,
 docs/harness/skills/metadata audits, sync parity and diff hygiene pass. Logs:
 /tmp/asset-aware-pdf-codex-full-tests-final.log and
-/tmp/asset-aware-pdf-codex-extension-tests.log. Exact commit CI is pending.
+/tmp/asset-aware-pdf-codex-extension-tests.log. Commit 929e878 has green CI
+35335476121; the user's version correction to 1.4.0 needs its own exact-commit CI.
+Thirty-five metadata/public-doc/release-audit tests pass for 1.4.0; lock changes
+only the project's version. No v2.0.0 or v1.4.0 remote tag exists yet.
 Desktop/mobile zh/en browser QA includes the new Codex guide; screenshots
 /tmp/pdf-codex-{desktop,mobile}.png use cached pinned CDN assets and therefore
 do not test live CDN availability. Rebuilt docs include commands and limits;

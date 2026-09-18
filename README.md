@@ -7,16 +7,16 @@
 
 🌐 [繁體中文](README.zh-TW.md) · [Docs Site](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
-## v2.0.0 native presentations and discovery migration
+## v1.4.0 native presentations and discovery migration
 
 `native/contract` now supports `for_op`; `native-contract-v2` declares whether the
 schema is inline or paged. Follow `schema_request` and preserve `schema_sha256`
 across pages. Clients must migrate from assuming an inline schema; see the
-[discovery guide](docs/wiki/Native-File-Assets.md#contract-v2-200).
+[discovery guide](docs/wiki/Native-File-Assets.md#contract-v2-140).
 Native PPTX creation, slide/notes shapes, precise run edits and revision-pinned
 references extend native document collaboration. Wiki snapshots retain full shape XML and exact
 package attachments. Untouched content is checked; agents review rendered layout,
-overflow and inherited formatting. See the [PPTX guide](docs/wiki/Native-File-Assets.md#native-pptx-200).
+overflow and inherited formatting. See the [PPTX guide](docs/wiki/Native-File-Assets.md#native-pptx-140).
 
 PDF validation now includes real Codex MCP runs over scanned and mixed pages,
 with independent transcription, citation, CRUD, Excel and bundle checks. These

@@ -6,9 +6,9 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v2.0.0/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v1.4.0/resources/banner.png)
 
-## What's New in v2.0.0
+## What's New in v1.4.0
 
 - Create native presentations, read slide/notes shapes, and update precise existing text runs.
 - Verify revision-pinned shape references and export full shape/XML evidence with exact package attachments.

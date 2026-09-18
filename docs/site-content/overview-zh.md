@@ -6,7 +6,7 @@ Asset-Aware MCP 是給 AI agents 使用的 citation-ready 文件工作流伺服�
 PDF、DOCX/DFM、表格、圖片、section、citation index、Foam evidence pack 與選用
 KG/RAG 串成可驗證的文件流程。
 
-章節導覽依任務整理；本份文件對應 `2.0.0`。正式發布狀態以
+章節導覽依任務整理；本份文件對應 `1.4.0`。正式發布狀態以
 [GitHub Releases](https://github.com/u9401066/asset-aware-mcp/releases) 為準。
 
 ## 進行中的產品方向
@@ -15,7 +15,7 @@ KG/RAG 串成可驗證的文件流程。
 MCP 提供來源／版本、格式與操作結果的必要檢查；Agent 負責完整核對與修正。
 現有 PDF、DOCX/DFM、A2T 與可攜資產保留來源；原生試算表／簡報 CRUD 等仍在擴充。
 
-## 2.0.0 highlights
+## 1.4.0 highlights
 
 - 原生 PPTX 建立、形狀／備註讀取與精確文字修改，版本引用與 Wiki 保留完整套件附件。
 - contract 改為可分段規格：先看 schema_delivery，用 for_op 或 hash-pinned schema_request。

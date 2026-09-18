@@ -7,15 +7,15 @@
 
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
-## v2.0.0 原生簡報協作與規格查詢遷移
+## v1.4.0 原生簡報協作與規格查詢遷移
 
-2.0.0 提供 `contract.for_op` 與 `native-contract-v2`。先查看
+1.4.0 提供 `contract.for_op` 與 `native-contract-v2`。先查看
 `schema_delivery`，需要分段時沿用 `schema_request` 與 `schema_sha256`，
 客戶端須遷移原本假設完整 schema 永遠內嵌的讀法。詳見
-[查詢與遷移說明](docs/wiki/Native-File-Assets.md#contract-v2-200)。
+[查詢與遷移說明](docs/wiki/Native-File-Assets.md#contract-v2-140)。
 原生 PPTX 已可建立、讀取投影片／備註形狀、精確修改文字 run、核對版本引用及
 匯出證據 Wiki。完整形狀 XML 與套件附件會保留；版面、文字溢出與繼承格式
-由 Agent 核對。詳見 [PPTX 操作說明](docs/wiki/Native-File-Assets.md#native-pptx-200)。
+由 Agent 核對。詳見 [PPTX 操作說明](docs/wiki/Native-File-Assets.md#native-pptx-140)。
 
 PDF 已加入 Codex 實際呼叫 MCP 的掃描／混合頁測試，獨立核對轉錄、引用、
 CRUD、Excel 與資產包，並修正實測發現的旋轉圖片裁切問題。詳見

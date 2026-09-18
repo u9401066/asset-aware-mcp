@@ -7,7 +7,7 @@
 
 ## [Unreleased]
 
-## [2.0.0] - 2026-09-18
+## [1.4.0] - 2026-09-18
 
 ### Added
 
@@ -30,8 +30,8 @@
 
 ### Breaking
 
-- Native contract discovery no longer guarantees an inline `schema`. The major
-  version reflects this response migration. Check `schema_delivery`, use `for_op`
+- Native contract discovery no longer guarantees an inline `schema`.
+  Check `schema_delivery`, use `for_op`
   for one operation, or assemble the hash-pinned `schema_request` pages. The complete
   MCP SDK input schema remains available; existing document operation inputs and
   evidence snapshots retain their previous contracts.

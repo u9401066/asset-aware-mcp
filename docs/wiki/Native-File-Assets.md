@@ -1,4 +1,4 @@
-# Native File Assets（v2.0.0）
+# Native File Assets（v1.4.0）
 
 Agent 可以登錄人類交付的檔案，也可以直接建立 XLSX 工作簿。每份檔案都有固定
 `asset_id`、不可變的 SHA-256 版本與操作能力；PDF、DOCX 等既有工作流程仍使用
@@ -14,9 +14,9 @@ Version 1.3.0 adds the DOCX bridge and block evidence described below.
 Discover the installed contract
 before using the new operations.
 
-## Contract v2 (2.0.0)
+## Contract v2 (1.4.0)
 
-2.0.0 的 `contract` 回傳 `contract_version="native-contract-v2"`。
+1.4.0 的 `contract` 回傳 `contract_version="native-contract-v2"`。
 此回應變更需要客戶端遷移；請先查安裝版本。客戶端應查看 `schema_delivery`，
 不要假設 `schema` 一定存在。只查單一操作可使用：
 
@@ -289,9 +289,9 @@ DOCX Wiki 使用 `docx-blocks-v1` projection，包含各區塊的 Foam note、�
 也不代表該段內容支持某項結論。Agent 仍須核對語意、Word 版面、欄位與修訂追蹤。
 
 
-## Native PPTX (2.0.0)
+## Native PPTX (1.4.0)
 
-2.0.0 新增原生簡報能力。先查安裝版本的 `contract`。
+1.4.0 新增原生簡報能力。先查安裝版本的 `contract`。
 PPTX 可直接建立，位置與大小使用 EMU（914400 EMU = 1 inch）：
 
 ```python

@@ -57,7 +57,7 @@ and LightRAG knowledge graph outputs.
   checks the parsed representation. DOCX wiki snapshots retain exact package parts;
   extraction completeness, meaning and rendered layout require agent review.
 
-- Since 2.0.0, native-contract-v2 supports for_op and hash-pinned
+- Since 1.4.0, native-contract-v2 supports for_op and hash-pinned
   schema pages. Check schema_delivery and preserve schema_sha256 while assembling.
   Query the installed contract before PPTX operations: create/read/read-shape/update
   work on native presentations with revision/run-text preconditions. Shape refs and

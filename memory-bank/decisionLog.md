@@ -1,13 +1,16 @@
 # Decision Log
 
-## 2026-09-18 — version 2.0.0 for native discovery migration
+## 2026-09-18 — user-directed 1.4.x release sequence
 
-Native-contract-v2 changes an observable public response: clients can no longer
-assume `contract["schema"]` is always present. Use a major release, 2.0.0, with
-schema_delivery/for_op/schema_request migration instructions. Existing document
-operation inputs and stored evidence snapshots remain compatible. The broad goal
-already authorizes periodic releases; no additional version confirmation is needed.
-Publishing is still conditional on the complete release and artifact checks.
+The user explicitly said not to jump versions so quickly and requested 1.4.x.
+Use **1.4.0** for this milestone, with 1.4.x for subsequent small fixes. This
+supersedes the previous 2.0.0 proposal, which reached main only as preparation at
+929e878; no 2.0.0 tag or package was published. Do not infer another major bump
+from an internal contract version. Native-contract-v2 still changes the discovery
+response, so preserve explicit schema_delivery/for_op/schema_request migration
+instructions. Existing document inputs and evidence snapshots remain compatible.
+The full release/artifact checks still apply; SDK 2.x is a separate dependency
+version and remains unchanged.
 
 
 ## 2026-09-18 — PDF assembly should preserve document references deliberately

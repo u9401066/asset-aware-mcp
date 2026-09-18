@@ -91,7 +91,7 @@ An image-only ingestion may legitimately have figures without section blocks.
 Section-navigation errors must point agents to the document asset inventory and
 image fetch path, rather than requiring a particular held extraction backend.
 
-### Scalable native operation discovery (v2.0.0)
+### Scalable native operation discovery (v1.4.0)
 
 The SDK tool input retains the full typed NativeDocumentRequest schema. Native
 contract discovery must not duplicate an ever-growing schema until the response
@@ -116,7 +116,7 @@ returned schema_request or select for_op. This explicit migration replaces the o
 oversized response failure, without raising global output limits or weakening any
 validation keyword. The normal MCP tools/list schema remains complete.
 
-### Native PPTX collaboration (v2.0.0)
+### Native PPTX collaboration (v1.4.0)
 
 Treat the original presentation as an immutable native root with revision-scoped
 slides, shape trees, text runs, table cells, notes and exact package-part relations.

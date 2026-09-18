@@ -24,7 +24,7 @@ citation-ready provenance.
   `native_request={"op":"contract"}`. Preserve expected revisions and source
   hashes, and reconcile external human edits before writeback.
 - Query the installed native contract for DOCX/PPTX support. native-contract-v2
-  (2.0.0+) uses schema_delivery, for_op and hash-pinned schema pages.
+  (1.4.0+) uses schema_delivery, for_op and hash-pinned schema pages.
   PPTX shape JSON must be assembled at one revision; update_pptx uses native run
   locators and original text hashes. Full layout/overflow/inherited-style review
   remains with the agent. Wiki snapshots preserve exact component/package evidence.
