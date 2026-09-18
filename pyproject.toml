@@ -1,6 +1,6 @@
 [project]
 name = "asset-aware-mcp"
-version = "1.2.0"
+version = "1.3.0"
 description = "Citation-ready PDF and DOCX workflows that export reusable agent assets and Foam/LightRAG wikis over MCP"
 readme = "README.md"
 license = { text = "Apache-2.0" }

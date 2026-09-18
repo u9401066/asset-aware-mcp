@@ -2,7 +2,8 @@
 
 ## 2026-09-18 — cross-format CRUD and evidence library
 
-Current release is **v1.2.0**, annotated at main@dd0224f333bf466a388b1cbc291061a87f70b2d5.
+Preparing **v1.3.0** from the DOCX bridge and component-evidence milestone.
+Current public release is **v1.2.0**, annotated at main@dd0224f333bf466a388b1cbc291061a87f70b2d5.
 Worktree: /home/eric/workspace251226/asset-aware-mcp-agent-assets, branch main.
 The user requests direct commits/pushes without self-PRs; use the owner's existing
 bypass and monitor CI without changing branch protection. Author:
@@ -84,8 +85,14 @@ src/application/native_docx_{bridge,records,operations,wiki}.py,
 native_{document_contract,document_service,evidence_service,wiki_format,wiki_service}.py,
 docx_service.py, citation_format_service.py; infrastructure native DOCX workspace
 and wiki publisher; presentation document facade. Tests/docs/README/Pages/harness
-assets are synchronized. Pending: commit/push and exact-commit CI, then release
-this coherent DOCX milestone after all release gates. Remaining structural native
+assets are synchronized. Feature commit b50ed3505161c486473773cefec8d9f9006ef32f is on main;
+Pages 35324654419 and every job in CI 35324654138 passed, including Windows,
+macOS, Linux activation and Python 3.10.
+Version 1.3.0 metadata and release docs are synchronized; uv.lock changes only
+the project version. Dependency audits report zero known issues. Metadata/docs
+regressions (32 tests), release-harness audit and bilingual reader QA pass. Commit
+and push this release candidate, run scripts/release.sh and wait for exact-commit
+CI before creating the annotated tag. Public registry verification remains pending. Remaining structural native
 CRUD, PPTX/general adapters, standards-aware citations and agent review workflows
 remain active; this milestone does not complete the broad goal.
 

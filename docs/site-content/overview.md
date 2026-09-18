@@ -36,7 +36,7 @@ exact contracts.
 
 | Item | Current Status |
 |---|---|
-| Latest code version | `1.2.0` |
+| Latest code version | `1.3.0` |
 | Runtime | Python `>=3.10`, managed with `uv` |
 | MCP endpoints | 30 public tools and 13 resources, 43 endpoints total |
 | MCP runtime | Official Python SDK `>=2,<3` with `MCPServer`; SDK v1 is unsupported |

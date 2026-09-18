@@ -7,6 +7,15 @@
 
 🌐 [繁體中文](README.zh-TW.md) · [Docs Site](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+## v1.3.0 native DOCX revisions and evidence
+
+- Read revision-bound DOCX/DFM and stage checked edits before explicit source writeback.
+- Verify complete parsed block references; bounded excerpts retain full evidence hashes.
+- Export DOCX block notes, original documents and exact package-part attachments.
+  Existing opaque DOCX and spreadsheet snapshots retain their identities and content.
+- Source/package checks remain mechanical; agents review meaning, Word layout,
+  fields and extraction coverage. Structural edits and full CSL remain planned.
+
 ## v1.2.0 native evidence wikis and note preservation
 
 - Verify native cell references against immutable source revisions, including old versions.
@@ -76,14 +85,13 @@ backups when a verified generated bundle is replaced.
 
 ## ✨ Features
 
-On `main` after 1.2.0, the native DOCX bridge adds revision-bound `read_docx` and
+Version 1.3.0 adds a native DOCX bridge with revision-bound `read_docx` and
 `update_docx`, reusing the existing DFM checks before committing a managed version.
 It preserves unrelated package parts and supports explicit tracked text changes;
 source writeback and agent layout review remain separate. DOCX block references now
 support bounded reads and native verification; wiki snapshots include full block
 records, the original DOCX and exact package-part attachments. Existing 1.2.0 wiki
-outputs retain their identities and bytes. These additions are not yet in the
-1.2.0 registry packages. See the [DOCX bridge guide](docs/wiki/Native-File-Assets.md#development-after-120-native-docx-bridge).
+outputs retain their identities and bytes. See the [DOCX bridge guide](docs/wiki/Native-File-Assets.md#130-native-docx-bridge).
 
 - 📄 **Asset-Aware ETL** - PDF → Markdown with a pluggable multi-engine parser (`ETL_ENGINE`):
   - **PyMuPDF** (default) - Fast extraction (~50MB), no models required

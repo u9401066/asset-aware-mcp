@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-18
+
 ### Added
 
 - Native DOCX block references and `read_docx_block`: complete parsed representation

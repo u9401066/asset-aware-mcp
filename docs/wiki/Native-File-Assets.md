@@ -1,4 +1,4 @@
-# Native File Assets（v1.2.0）
+# Native File Assets（v1.3.0）
 
 Agent 可以登錄人類交付的檔案，也可以直接建立 XLSX 工作簿。每份檔案都有固定
 `asset_id`、不可變的 SHA-256 版本與操作能力；PDF、DOCX 等既有工作流程仍使用
@@ -10,8 +10,8 @@ cell reads/edits through the existing `document` tool. It does not complete
 cross-format CRUD or visual fidelity verification. Version 1.2.0 adds native
 reference verification and immutable wiki snapshots, described below.
 
-`main` after 1.2.0 also includes the DOCX bridge described at the end of this page.
-It is not available in the 1.2.0 registry packages; discover the installed contract
+Version 1.3.0 adds the DOCX bridge and block evidence described below.
+Discover the installed contract
 before using the new operations.
 
 ## 開始使用
@@ -185,9 +185,9 @@ custom citation templates only affect presentation. Existing snapshots are never
 replaced. Agents retain responsibility for semantic, rendered and formula review.
 
 
-## Development after 1.2.0: native DOCX bridge
+## 1.3.0: native DOCX bridge
 
-尚未發布的 `main` 新增 `read_docx`／`update_docx`，使用既有 DFM 流程處理已登錄
+1.3.0 新增 `read_docx`／`update_docx`，使用既有 DFM 流程處理已登錄
 DOCX 的指定版本。先查 `contract` 確認安裝版本支援，再操作：
 
 ```python
@@ -231,7 +231,7 @@ document(op="native", native_request={
 
 ### DOCX block evidence and wiki projection
 
-同一個尚未發布的 main 也提供元件證據：
+1.3.0 也提供元件證據：
 
 ```python
 block = document(op="native", native_request={

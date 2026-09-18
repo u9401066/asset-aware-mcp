@@ -27,6 +27,18 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
+## 2026-09-18 v1.3.0 release preparation
+
+- Feature b50ed3505161c486473773cefec8d9f9006ef32f passed all jobs in CI
+  35324654138, including Windows/macOS/native tests and Linux extension activation;
+  Pages 35324654419 passed. Existing branch protection remains unchanged.
+- Synchronized seven version sources, changelog, bilingual README/Pages, extension
+  README and harness. Public latest remains 1.2.0 until registry verification.
+- Candidate metadata/docs regressions: 32 passed; dependency audits zero known
+  issues; desktop/mobile bilingual reader QA and harness audit pass. Next: exact
+  release-candidate CI, full release.sh, annotated tag and publication verification.
+
+
 ## 2026-09-18 DOCX component evidence / wiki (unreleased)
 
 - Complete parsed block representations feed revision-pinned native references,
@@ -39,7 +51,7 @@ Baseline revalidated; isolated latest main while preserving original user edits.
 - 1,423 Python passed / 30 optional skips; 199 VSIX tests, types/lint/Bandit,
   docs/harness synchronization and bilingual desktop/mobile reader checks passed.
   Nineteen added tests plus extended real SDK2 native DOCX flow. New cases are
-  configured for Python 3.10, macOS and Windows CI. Commit/push CI remains pending.
+  configured for Python 3.10, macOS and Windows CI; every job passed on b50ed35.
 
 
 ## 2026-09-18 native DOCX version / DFM bridge (unreleased)

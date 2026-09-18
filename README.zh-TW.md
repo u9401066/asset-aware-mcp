@@ -7,6 +7,14 @@
 
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+## v1.3.0 原生 DOCX 版本與元件證據
+
+- 讀取固定版本的 DOCX/DFM，檢查編輯後先建立受管理版本，再明確回寫來源。
+- 驗證完整解析區塊的引用；文字分段仍保留完整證據 hash。
+- 匯出區塊筆記、原始 DOCX 與各套件檔案的原始位元組；保留舊快照及連結。
+- MCP 檢查來源與格式，Agent 核對語意、Word 版面、欄位及抽取完整性。
+  結構插刪與完整 CSL 引用仍待實作。
+
 ## v1.2.0 原生證據 Wiki 與筆記保護
 
 - 原生儲存格引用可對不可變來源版本驗證，舊版本引用仍可核對。
@@ -66,11 +74,11 @@ v1.1.0 已加入引用格式 contract：支援來源標籤、作者／年份、�
 
 ## ✨ 特色
 
-`main` 在 1.2.0 之後新增原生 DOCX 橋接：`read_docx`／`update_docx` 綁定來源版本，
+1.3.0 新增原生 DOCX 橋接：`read_docx`／`update_docx` 綁定來源版本，
 沿用 DFM 檢查後建立受管理版本，保留未修改的 package parts，並支援明確指定的
 文字修訂追蹤。DOCX 區塊引用支援分段讀取及原生驗證；Wiki 快照包含完整區塊
 紀錄、原始 DOCX 與逐一保留的套件附件，既有 1.2.0 快照身分與內容保持不變。
-來源回寫與 Agent 版面核對仍是後續步驟。這些功能尚未包含在 1.2.0 發布套件；詳見[DOCX 橋接指南](docs/wiki/Native-File-Assets.md#development-after-120-native-docx-bridge)。
+來源回寫與 Agent 版面核對仍是後續步驟；詳見[DOCX 橋接指南](docs/wiki/Native-File-Assets.md#130-native-docx-bridge)。
 
 - 📄 **資產感知 ETL** - PDF → Markdown，採可插拔多引擎解析架構（`ETL_ENGINE`）：
   - **PyMuPDF**（預設）- 快速提取（~50MB），免模型

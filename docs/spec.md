@@ -62,7 +62,7 @@ DOCX/PPTX does not prove native round-trip fidelity. ROADMAP.md tracks full scop
 Each milestone updates README, Pages, repository metadata/labels and Memory Bank;
 reviewed commits are pushed in stages and releases require the full harness.
 
-### Native DOCX / DFM bridge (main after 1.2.0, unreleased)
+### Native DOCX / DFM bridge (v1.3.0)
 
 `read_docx` reads a registered DOCX immutable revision through the existing DFM
 parser/renderer in a private temporary workspace. Its deterministic DFM projection
@@ -88,7 +88,7 @@ requirements. This adds scoped existing-body edits, not arbitrary insertion,
 deletion, style design, DOC/DOCM conversion or complete visual fidelity. Native
 DOCX evidence/wiki integration is described below. Legacy operations remain available.
 
-### DOCX component evidence and wiki projection (main after 1.2.0, unreleased)
+### DOCX component evidence and wiki projection (v1.3.0)
 
 Native DOCX blocks expose the complete existing IR representation, native part and
 revision-scoped block ID, plus a canonical representation hash. read_docx_block

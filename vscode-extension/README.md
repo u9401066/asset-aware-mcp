@@ -6,7 +6,14 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v1.2.0/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v1.3.0/resources/banner.png)
+
+## What's New in v1.3.0
+
+- Native DOCX revisions reuse the checked DFM editing workflow; source writeback is explicit.
+- Bounded block reads and native verification bind full parsed representations to immutable revisions.
+- DOCX wiki exports include revision-pinned notes, full evidence, original DOCX and exact package parts.
+- Existing snapshots stay intact; agents review semantics, Word layout, fields and extraction coverage.
 
 ## What's New in v1.2.0
 

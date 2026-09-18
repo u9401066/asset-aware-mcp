@@ -23,7 +23,7 @@
 - 📦 **Agent Asset Export** — deterministic text/table/figure + provenance bundle，可直接形成 Foam subtree
 - 🧩 **Segmentation Export** — 統一 segmentation schema（reading order + line span）
 - 📊 **Native files** — `document(op="native")` 支援原生檔案版本、XLSX 建立、XLSX/XLSM cells 讀寫、明確回寫與來源同步；完整語意／視覺／公式核對由 Agent 負責。
-- 📝 **Native DOCX（main after 1.2.0）** — `read_docx`／`update_docx` 將不可變版本接到 DFM 檢查，更新先建立受管理版本，來源回寫仍明確指定；先查安裝版本 contract。元件引用可用 `read_docx_block`／`verify`，Wiki 使用獨立 projection 保留完整區塊與原始 package parts；完整性不代表抽取完整。
+- 📝 **Native DOCX（1.3.0）** — `read_docx`／`update_docx` 將不可變版本接到 DFM 檢查，更新先建立受管理版本，來源回寫仍明確指定；先查安裝版本 contract。元件引用可用 `read_docx_block`／`verify`，Wiki 使用獨立 projection 保留完整區塊與原始 package parts；完整性不代表抽取完整。
 - 📊 **A2T** — Anything to Table 表格建立
 - 🧭 **Section Navigation** — 動態層級章節導航（5 Tools）
 - 🔍 **Knowledge Graph** — 跨文獻知識圖譜（LightRAG）

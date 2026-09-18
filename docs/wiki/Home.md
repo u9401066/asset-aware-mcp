@@ -4,7 +4,7 @@ Asset-Aware MCP 是給 AI agents 使用的 citation-ready 文件工作流伺服�
 PDF、DOCX/DFM、表格、圖片、section、citation index、Foam evidence pack 與選用
 KG/RAG 串成可驗證的文件流程。
 
-章節導覽依任務整理；本份文件對應 `1.2.0`。正式發布狀態以
+章節導覽依任務整理；本份文件對應 `1.3.0`。正式發布狀態以
 [GitHub Releases](https://github.com/u9401066/asset-aware-mcp/releases) 為準。
 
 ## 進行中的產品方向
@@ -12,6 +12,12 @@ KG/RAG 串成可驗證的文件流程。
 目標是 Agent 跨格式文件 CRUD、獨立表格創造與 wikilink 證據庫。
 MCP 提供來源／版本、格式與操作結果的必要檢查；Agent 負責完整核對與修正。
 現有 PDF、DOCX/DFM、A2T 與可攜資產保留來源；原生試算表／簡報 CRUD 等仍在擴充。
+
+## 1.3.0 highlights
+
+- 原生 DOCX 版本接到 DFM 檢查與明確回寫，區塊引用可核對完整解析表示。
+- DOCX Wiki 保留區塊證據、原始檔與逐一保留的 package parts，保護既有快照。
+- 語意、Word 版面、欄位與抽取完整性仍由 Agent 核對；詳見 [Native File Assets](Native-File-Assets)。
 
 ## 1.2.0 highlights
 
@@ -21,21 +27,13 @@ MCP 提供來源／版本、格式與操作結果的必要檢查；Agent 負責�
   固定資產 ID、獨立 XLSX 建立與局部編輯持續支援；完整 CSL 仍待實作。
 - MCP SDK 2.2.0；必要結構檢查與確定性修復由 MCP 執行，語意、畫面、公式結果由 Agent 核對。
 
-## 1.0.0 highlights
+## 1.0.0 foundation
 
-- Runtime 已切換至官方 MCP Python SDK `>=2,<3` 與 `MCPServer`；MCP SDK v1
-  不再支援，30 個 public tool schema 也不會外露 runtime `ctx` 參數。
-- `document(op="preflight", pdf_path="...")` 在隔離 subprocess 中分類每頁
-  是否需要 OCR，並建議 native、OCR 或 Docling route；輸出統一為 1-based、
-  top-left 座標與來源 SHA-256。
-- `document(op="export_assets", doc_id="...")` 產出 deterministic
-  `manifest.json`、`assets.jsonl`、text/table/figure assets、citation locator
-  與可攜式 Foam index/notes，供 agent 重複使用或接入 LightRAG。
-- PDF、DOCX/DOC/ODT/ODS 混合批次攝入、來源 engine provenance、結構導覽與
-  citation audit 仍維持在 30 tools / 43 endpoints 的 balanced surface。
-- PyMuPDF4LLM 與 Docling 是目前可安裝的 structured engines。MinerU 與
-  Marker adapter 保留，但 packaged extras 因上游 dependency security cap
-  暫停，避免安裝已知有漏洞的 transformers／Pillow chain。
+- 官方 MCP Python SDK `>=2,<3` 與 `MCPServer`，30 個 public tools 不外露 runtime context。
+- PDF preflight 在隔離程序判斷 OCR／引擎路線，保留頁碼、座標與來源 SHA-256。
+- 可攜式 agent-asset bundle 保留完整紀錄、圖文表、citation locator 與 Foam notes。
+- 混合文件攝入、結構導覽與 citation audit；PyMuPDF4LLM / Docling 可用，
+  MinerU / Marker 因相依安全限制維持暫停。
 
 <div class="path-grid">
   <section class="path-card">
