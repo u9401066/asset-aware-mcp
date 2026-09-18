@@ -286,6 +286,16 @@ read_pptx_picture returns an actual MCP PNG and separate original-image and prev
 
 Sources must be single-frame PNG/JPEG without EXIF rotation. Linked/alternate image representations, ambiguous content types and unsupported formats are rejected. Limits: 16 MiB / 16 million pixels per image, 1–100 pictures and 32 MiB / 64 million pixels per batch, counting repeated uses. Package limits still apply. MCP checks source/revision/CAS, image integrity, exact new parts, untouched bytes and XML outside the operation. Agents review semantics, actual slide rendering, crop, accessibility and color. pptx-shapes-v1 wiki snapshots retain all media/relationships and exact PPTX files; publish/writeback remain explicit.
 
+### Native PPTX tables (Unreleased)
+
+add_pptx_tables takes asset_id, expected_revision and pptx_tables. Each item has an existing container and table with local EMU left/top, column_widths, row_heights and a matching rectangular cells matrix. Cells contain paragraphs of formatted runs plus alignment, vertical_anchor, margin and optional six-digit RGB fill_rgb/text_rgb. Name/description provide identity and alt text. Numbers, leading zeros and formula-like strings remain literal text.
+
+Inclusive, zero-based merge rectangles cannot overlap or exceed the grid; covered cells must remain empty/default to avoid hidden data loss. Merges are built before text is populated. Existing destination tableStyles/default GUID is used, with no invented style ID when absent. First/last row/column and banding flags select style roles. MCP checks the requested geometry, strings, direct formatting, merge map, untouched parts and XML. Agents review actual rendering, themes, overflow and meaning.
+
+Read complete tables with read_pptx_shape; update_pptx edits anchor cell runs and delete_pptx_shapes deletes whole tables using full current references. Historical verification, wiki snapshots and guarded source writeback remain available. Existing-grid row/column operations, automatic A2T bridging and semantic PDF-to-cell lineage remain follow-up work. Limits: 100 tables per batch, 100 rows/columns per table, 10,000 cells, 20,000 runs and 4 MiB UTF-8 text per batch; dimensions and summed extents are bounded to 100,000,000 EMU.
+
+Native export_wiki now exposes citation_contract as a typed union: source/author-year/numeric preset, or custom inline_template and reference_template. Valid existing JSON remains compatible. Display contracts do not store source references, proof reports or arbitrary transcription data; canonical evidence remains separate.
+
 See the source page for operation fields, examples, format restrictions and recovery details.`,
   "workflow-chapters": `## Choose by source and task
 Use the PDF workflow for page inspection and extraction, the DOCX workflow for reversible DFM editing, and A2T for reusable tables. Evidence, wiki, and knowledge features build on those source-specific paths.
@@ -401,6 +411,11 @@ On 2026-09-18, native scanned run 02 against the final worker completed 49 MCP c
 
 ## Codex PPTX picture evaluation (Unreleased)
 Run \`uv run python -m tests.codex_pptx_pictures.run --codex /absolute/path/to/codex --output /tmp/pptx-picture-run\`. The logged-in CLI uses only the native document MCP tool. A synthetic raster with leading zeros is inserted twice into a complex deck, viewed as actual MCP images, extracted, replaced on only one shape and deleted on the other. Full shape reads, historical references, exact image bytes, shared-media isolation, unchanged shapes/parts and wiki artifacts are independently audited. Ordinary pytest never starts Codex. Embedded-image verification does not establish slide rendering or general OCR accuracy. Two runs on 2026-09-18 each completed 38 MCP calls with zero tool errors, three actual image deliveries and two complete shape records; exact leading-zero visual transcription and the independent package audit passed.
+
+## Codex scanned PDF to PPTX table evaluation (Unreleased)
+Run \`uv run python -m tests.codex_pptx_tables.run --codex /absolute/path/to/codex --output /tmp/pptx-table-run\`. The actual CLI views a scanned first-page PNG, creates editable tables with a merged title, reads full native representations, edits/restores a cell, deletes a duplicate, verifies old/source evidence and publishes PPTX/wiki. Independent audits check exact strings, pixels, grids/merges, reference chronology and managed history. Ordinary pytest never starts a model.
+
+Run 01 on 2026-09-18 made 67 attempts / 66 successful calls, with exact initial transcription and one recovered citation-format input error. The agent initially put source proof objects into citation_contract; the typed display schema now advertises the valid selectors/templates. Recovery remains visible as passed_with_recoveries. Run 02 with the typed schema completed 66 calls with zero tool errors, exact first transcription, one actual scanned PNG and four distinct complete evidence records. Both runs pass the final PPTX/wiki/history audit. This synthetic case does not establish general OCR accuracy or complete slide visual fidelity.
 
 ## Publish in order
 Confirm built artifacts and runtime diagnostics before tagging, then verify each public registry after publication.`,

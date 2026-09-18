@@ -550,3 +550,67 @@ MCP 檢查來源與目標版本、圖片內容、關聯、content type、完整�
 跨資產來源歷程。Wiki 沿用 `pptx-shapes-v1`，完整 media／關聯與 PPTX 附件
 仍可驗證，既有快照不會改寫。來源 publish／writeback 沿用明確操作、備份與
 衝突檢查。Agent 負責實際簡報畫面、語意、替代文字、裁切與色彩的完整核對。
+
+## Native PPTX tables (Unreleased)
+
+`add_pptx_tables` 可在既有投影片、備註或非零大小的群組中新增可編輯表格。
+公開版仍是 **1.4.0**，此功能屬於 `main` 的 **1.4.x** 開發內容；先查
+`contract.for_op="add_pptx_tables"`，需要時完整讀回分頁 schema。
+
+```python
+document(op="native", native_request={
+    "op": "add_pptx_tables", "asset_id": deck_id,
+    "expected_revision": current_revision,
+    "pptx_tables": [{
+        "container": container,
+        "table": {
+            "left": 914400, "top": 914400,
+            "column_widths": [2743200, 1828800],
+            "row_heights": [457200, 457200, 457200],
+            "cells": [
+                [{"paragraphs": [[{"text": "結果", "bold": True}]]}, {}],
+                [{"paragraphs": [[{"text": "Sample"}]]},
+                 {"paragraphs": [[{"text": "Count"}]]}],
+                [{"paragraphs": [[{"text": "A101"}]]},
+                 {"paragraphs": [[{"text": "007"}]]}]
+            ],
+            "merges": [{"row": 0, "column": 0, "end_row": 0, "end_column": 1}],
+            "name": "結果表", "description": "樣本與顯示數值"
+        }
+    }]
+})
+```
+
+座標、欄寬與列高都是容器本地 EMU；表格總寬／高等於各欄／列的合計。
+`cells` 必須是相符的矩形，數字、前導零和 `=SUM(...)` 都是原樣文字，
+不做公式計算。每格可有多段／多個 run；run 支援文字、粗斜體與整數字級。
+儲存格支援 `alignment`（left/center/right）、`vertical_anchor`
+（top/middle/bottom）、四邊共同 `margin`，以及六位 RGB `fill_rgb`／`text_rgb`。
+
+合併座標從 0 起算，終點包含在範圍內。範圍不能重疊、反向或超界；除左上角
+外，被覆蓋的格子必須是空白預設 `{}`，避免文字或格式默默消失。MCP 先建立
+合併，再填入內容，最後核對 XML 中的合併範圍、列欄尺寸、原樣文字與直接格式。
+
+新增表格採目的簡報 `tableStyles` 的預設 GUID，不匯入其他簡報的樣式或 parts；
+若沒有樣式關聯，就不臆造樣式 ID。`first_row`、`last_row`、`first_column`、
+`last_column`、`row_banding`、`column_banding` 控制對應的樣式角色。
+實際字型、主題、框線、裁切、文字溢出與畫面仍需 Agent 在簡報檢視器核對。
+
+新增後使用 `read_pptx_shape` 完整分段讀回格子／文字 run／合併與格式；
+`update_pptx` 修改指定格子的 run（合併格只能改左上角），
+`delete_pptx_shapes` 使用完整目前版本引用刪除整個表格。
+`verify` 和 `export_wiki` 保留歷史表示與完整 PPTX／parts。來源回寫仍須明確
+操作並保留來源檢查和備份。既有表格的列欄插刪、合併範圍重排、A2T 自動橋接
+與 PDF 到表格的語意來源連結仍是後續工作，不因新增表格而自動成立。
+
+每批 1–100 個表格，每表最多 100 列／100 欄；合計最多 10,000 格、20,000 runs
+與 4 MiB UTF-8 文字。每個尺寸及合計寬／高最多 100,000,000 EMU。超界、
+來源版本過期、並行更新或任一表格失敗時，不提交部分版本。
+
+### Citation display schema (Unreleased)
+
+原生 `export_wiki` 的 `citation_contract` 現在有可探索的型別規格：
+`{"preset":"source"}`、`author-year`／`numeric` 預設，或同時提供
+`inline_template` 與 `reference_template` 的自訂格式。既有有效 JSON 不變。
+這是**引用顯示格式**，不能放入來源引用、驗證報告或任意轉錄資料；正規證據
+仍保存在版本、locator、hash 與 Wiki records 中，不能用格式欄位覆寫。

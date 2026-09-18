@@ -53,6 +53,12 @@ Next goal gap after this checkpoint: explicit cross-asset semantic derivation li
 by merely matching table text or exporting native source evidence. Broader grid/slide
 CRUD, real-document corpus and remaining formats also stay in the original scope.
 
+Runtime/table/schema and SDK2 changes committed as 19dfb3f under
+u9401066 <u9401066@gap.kmu.edu.tw>. The remaining commit contains the opt-in Codex
+evaluator, auditor regressions, platform CI, bilingual site and synced harness.
+Current source/lock hashes still match actual Codex run 02. Push both commits to
+main, then verify exact final CI/Pages and public site bytes; no version bump/tag.
+
 ## 2026-09-18 — native PPTX image assets, local verification in progress
 
 Public version remains 1.4.0; all current work is Unreleased for the 1.4.x line.

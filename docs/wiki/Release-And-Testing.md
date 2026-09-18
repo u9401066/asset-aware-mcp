@@ -308,3 +308,25 @@ MCP 工具。模型須登錄圖片／簡報、插入兩張共用圖片、完整�
 顯示與 2 份完整形狀讀回。獨立稽核確認原始形狀／備註與未修改 parts 保留，
 來源 A101／007 與替換 C301／001 的辨讀相符；此為合成案例，不能外推一般
 OCR 正確率或完整簡報版面。執行紀錄保留來源與 lock hash，可比對實測版本。
+
+## Codex scanned PDF to PPTX table evaluation (Unreleased)
+
+```bash
+uv run python -m tests.codex_pptx_tables.run \
+  --codex /absolute/path/to/codex --output /tmp/pptx-table-run
+```
+
+實際 Codex CLI 只使用 `document(op="native")`：看掃描頁的真正 MCP PNG，
+建立含合併標題的可編輯表格、完整讀回、改值／還原、刪除副本、驗證原始頁面
+與舊表格引用，再輸出 PPTX／Wiki。獨立稽核比對頁面像素、完整引用使用順序、
+前導零等原樣文字、每個受管理版本的表格尺寸與合併、歷史證據及附件位元組。
+
+2026-09-18 run 01：67 次嘗試、66 次成功呼叫、1 次已恢復的格式輸入錯誤；
+初次轉錄完全正確。模型曾把來源證據塞入 `citation_contract`，MCP 拒絕後修正。
+此紀錄保留為 `passed_with_recoveries`；新的 typed citation display schema
+直接公開預設／模板欄位，後續重跑驗證。模型實測不在一般 pytest 自動啟動。
+這是合成掃描頁，不代表一般 OCR 準確率、真實文件 corpus 或投影片完整渲染。
+
+同日 run 02 使用完成型別規格修正的 runtime：66 次呼叫、零工具錯誤，
+初次轉錄完全正確；1 張實際掃描 PNG、4 份不同版本／定位的完整證據紀錄
+（重複讀取另計）。兩次的最終 PPTX／Wiki 與歷史還原稽核都通過。

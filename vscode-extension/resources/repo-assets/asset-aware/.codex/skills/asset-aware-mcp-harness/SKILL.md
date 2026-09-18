@@ -82,6 +82,15 @@ verification.
   rendering, crop, effects and semantics. Delete via delete_pptx_shapes; retained
   media is not secure erasure. These operations remain Unreleased on the 1.4.x line.
 
+- When advertised, add_pptx_tables inserts native editable tables into existing
+  containers with explicit EMU grids, structured cell runs, formatting and merges.
+  Covered cells must remain default/empty. Read complete shape JSON, edit anchor
+  runs with update_pptx, and delete tables with current full shape references.
+  Preserve exact display strings; formulas are literal text. Default table style
+  comes from the destination; Agent reviews rendered layout and overflow.
+  citation_contract is a typed display preset/custom-template union, not a place
+  for source references or proof reports. Preserve canonical evidence separately.
+
 - When advertised, native PDF supports create_pdf/read_pdf/read_pdf_page/
   render_pdf_page/add_pdf_pages/update_pdf/delete_pdf_pages/reorder_pdf_pages.
   Pin revisions, assemble complete page JSON and verify its UTF-8 hash; retrieve
