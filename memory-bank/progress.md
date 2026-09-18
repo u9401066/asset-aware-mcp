@@ -27,18 +27,24 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
-## 2026-09-18 v1.2.0 release preparation
+## 2026-09-18 v1.2.0 published and verified
 
-- Native wiki checkpoint 6407d31 passed CI 35317215411; PDF bundle protection
-  7225a58 passed CI 35318171828. Repository metadata and managed labels are in sync.
-- Preparing 1.2.0: native reference verification, immutable native wiki snapshots,
-  custom native citation display and protection for refreshed PDF bundle notes.
-  Python/VSIX/Docker/lock metadata, README/Pages and bundled harness are aligned.
-- Added a final reuse-boundary race regression: recheck the existing target after
-  staged output verification, even for an otherwise identical export. Full versioned
-  regression: 1,375 passed, 30 optional skips. Types/lint/docs/harness checks pass.
-- Full release.sh gates, exact-head CI, annotated tag, registry publication and
-  public artifact verification remain pending. Do not treat preparation as publication.
+- Annotated v1.2.0 targets dd0224f333bf466a388b1cbc291061a87f70b2d5. Exact-head CI
+  35318628716 and Pages 35318627849 pass. Release workflow 35318888092 publishes
+  PyPI, Marketplace and GitHub Release after full cross-platform/artifact gates.
+- Complete local release.sh passed: 1,375 Python tests / 30 optional skips,
+  199 VSIX tests, lint/types/security audits, docs/harness synchronization,
+  wheel/sdist clean-runtime checks and Docker SDK2 smoke. CI supplied Xvfb activation.
+- Public PyPI bytes match the checked local artifacts and metadata author:
+  wheel SHA-256 69de5928349f4e275f591ad17e5fc847a3b872eb31949283c7674fa926780f43;
+  sdist SHA-256 f633bb2627af1900ad23f729b95d43a8d2c973b638f9b136ab15f9aafb130eb6.
+- Marketplace VSIX SHA-256 22b471546144cdbe1c127b84f8ac65b188f2eb9d7a1349d669fc93c4447a782f
+  matches the GitHub Release digest. Version 1.2.0, publisher u9401066, two current
+  bundled native harnesses and no compiled test payload are verified.
+  Release: https://github.com/u9401066/asset-aware-mcp/releases/tag/v1.2.0
+- Native reference/wiki export and PDF curated-note protection are released.
+  DOCX/PPTX/general CRUD, spreadsheet structural operations, agent integration and
+  standards-aware academic citations remain unfinished; the overall goal is active.
 
 ## 2026-09-18 existing PDF bundle protection (included in 1.2.0 preparation)
 

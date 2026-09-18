@@ -2,53 +2,47 @@
 
 ## 2026-09-18 — cross-format CRUD and evidence library
 
-Current code checkpoint is main@7225a58; v1.1.0 is tagged at 0e71b4c. Preparing 1.2.0. Worktree:
-/home/eric/workspace251226/asset-aware-mcp-agent-assets, branch main.
-User explicitly requests direct code changes without self-PRs. Check locally,
-commit/push main using the owner's allowed protection bypass, then monitor CI.
-Do not create self-PRs or change branch protection. Author:
+Current release is **v1.2.0**, annotated at main@dd0224f333bf466a388b1cbc291061a87f70b2d5.
+Worktree: /home/eric/workspace251226/asset-aware-mcp-agent-assets, branch main.
+The user requests direct commits/pushes without self-PRs; use the owner's existing
+bypass and monitor CI without changing branch protection. Author:
 u9401066 <u9401066@gap.kmu.edu.tw>.
 
-All remote and local branches except main are deleted. The original worktree at
-/home/eric/workspace251226/asset-aware-mcp is detached at its unchanged 6ad9a5c;
-its tracked diff and untracked inventory were checked unchanged. Preserve those
-pre-existing user modifications; actual development stays in the main worktree.
+Only main remains in local/remote branch lists. The original worktree at
+/home/eric/workspace251226/asset-aware-mcp remains detached at 6ad9a5c with its
+pre-existing tracked/untracked user changes preserved. Do not edit/reset that tree.
 
-Version 1.1.0 passed complete local release gates and CI 35314228355, then tag
-v1.1.0 was pushed. Release workflow 35314426885 succeeded: PyPI, Marketplace and
-GitHub Release are published. Public PyPI wheel/sdist SHA-256 exactly match the
-checked local artifacts. The downloaded Marketplace VSIX hash matches the GitHub
-Release asset digest; version, publisher, native harness and absence of compiled
-tests are verified. Repository metadata/labels and Pages are synchronized.
+Version 1.2.0 is published on PyPI, VS Code Marketplace and GitHub Release:
+https://github.com/u9401066/asset-aware-mcp/releases/tag/v1.2.0
+Exact release commit CI 35318628716 and Pages 35318627849 passed. Release workflow
+35318888092 passed the test, cross-platform installation, artifact preflight and
+registry publication jobs. Public PyPI wheel/sdist hashes match locally checked
+artifacts; downloaded Marketplace VSIX matches the GitHub asset digest. Package
+version/publisher, both native harnesses and absence of compiled tests are verified.
+Full local release.sh: 1,375 Python tests passed / 30 optional skips, 199 VSIX tests,
+lint/types/security audits, docs/harness, wheel/sdist/runtime and Docker SDK2 smoke.
+Local Xvfb was unavailable; Linux CI ran the required extension activation check.
 
-Native wiki implementation is now complete locally (unreleased): immutable revision snapshots,
-revision-pinned links, source/JSONL evidence, custom citation display and no-overwrite
-publication. Exact existing inventory/bytes must match for idempotent reuse; new
-revisions preserve prior notes. Manifest-last publication reports interrupted output.
-Full regression: 1,356 passed, 30 optional skips; types/lint/configured security gate,
-asset sync and desktop/mobile bilingual reader checks pass. Pushed e3bb2cf and Pages
-succeeded. Windows CI 35317000129 found three new test-reader locale assumptions;
-6407d31 fixed explicit UTF-8 reads. CI 35317215411 and Pages 35317214962 now pass.
-Existing PDF bundle publication is now hardened locally: verify inventory/hash,
-reject curated edits, recheck under a lock and retain backups on actual replacement.
-Full suite: 1,374 passed, 30 optional skips, with 18 new preservation regressions.
-Checkpoint 7225a58 passed every job in CI 35318171828. Preparing 1.2.0 now includes
-one extra reuse-boundary race check/test and aligned Python/VSIX/Docker/docs/harness
-metadata. Full current regression: 1,375 passed, 30 optional skips. Commit/push,
-exact-head CI, full release.sh, annotated tag and registry verification are pending.
-Read-only DOCX review confirmed the existing DFM save path already performs
-stale-session and unedited-block checks; future native identity/version integration
-must reuse those checks rather than introducing an independent editor.
-Latest documentation checkpoint 977c75f passed CI 35315597500 and Pages.
+Released native coverage: stable file IDs, immutable revisions, independent XLSX
+creation, scoped XLSX/XLSM cell edits, explicit publish/writeback/refresh/archive,
+native cell reference verification, and immutable wiki snapshots with custom
+citation display. PDF bundle refresh now verifies its complete inventory and
+retains changed-output backups; curated edits are rejected without overwriting.
+These checks remain mechanical, with semantic/rendered/formula review delegated
+to the agent. Repository metadata and managed labels are synchronized.
 
-Development after 1.1.0 adds native cell-reference verification (not in v1.1.0):
-NativeCellReference/Locator models, NativeEvidenceService, strict native locator
-resolution and document native op=verify. Full current regression: 1,335 passed,
-30 optional skips, including 9 new integrity tests plus real SDK 2 calls. CI
-35315203866 is fully green at e2fa020. Native wiki export now preserves manually
-edited notes and unexpected files by rejecting replacement, rather than copying
-the existing marker-only PDF bundle replacement behavior. Documentation
-explicitly separates current release coverage from this unreleased addition.
+Next bounded change: bridge DOCX native versions to the existing DFM workflow.
+Reuse DocxService session/checksum, pre/post-save and unedited-block guards in a
+private workspace. Do not introduce a second DOCX editing algorithm. Expose bounded
+DFM reads and managed revision updates, followed by the existing explicit native
+writeback. Package checks must verify untouched parts and report unsupported edits;
+complete layout/semantic review remains with the agent. No DOCX bridge code yet.
+
+CSL research: citeproc-py still documents missing year-suffix/disambiguation,
+subsequent et-al and collapsing support; installing it alone cannot justify full
+APA/Chicago claims. citeproc-js is CPAL/AGPL and needs ordered citation context;
+jgm/citeproc offers a BSD Haskell/JSON CLI alternative. No engine selected/installed.
+See decisionLog.md for primary sources and required evaluation cases.
 
 The latest explicit user reply confirms: MCP provides necessary source/version,
 format-preservation and operation-result checks; the agent owns complete semantic

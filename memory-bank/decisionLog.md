@@ -1,5 +1,28 @@
 # Decision Log
 
+## 2026-09-18 — academic citation processor evaluation
+
+- Keep canonical asset references independent of citation presentation. Standards
+  need ordered document-level citation clusters, a bibliography, explicit CSL
+  metadata/style/locale and repeatable engine/version hashes. Formatting each
+  evidence record independently cannot implement context-dependent disambiguation.
+- Primary sources checked: [CSL developer guide](https://citationstyles.org/developers/),
+  [citeproc-py](https://github.com/citeproc-py/citeproc-py),
+  [citeproc-js API](https://citeproc-js.readthedocs.io/en/latest/running.html),
+  [citeproc-js license](https://github.com/Juris-M/citeproc-js/blob/master/LICENSE),
+  and [jgm/citeproc](https://github.com/jgm/citeproc).
+- citeproc-py's documented gaps include disambiguation/year-suffix, subsequent
+  et-al, collapsing, punctuation-in-quote and display. It is not accepted as a
+  complete APA/Chicago engine merely because it consumes CSL. citeproc-js has a
+  CPAL/AGPL license and production use requires processCitationCluster rather than
+  context-free makeCitationCluster. jgm/citeproc is a BSD Haskell implementation
+  with a JSON executable option; it also documents conformance limitations.
+- No dependency selected/installed in 1.2.0. Evaluate same-author/year suffixes,
+  reordered/deleted citations, numeric order, note styles, locale and missing
+  metadata before adding a backend. Keep external conversion separate from native
+  format-preserving editing; Pandoc conversion is not a fidelity guarantee.
+
+
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-09-18 | **PDF bundle refresh must prove unchanged generated content and retain replaced trees** | A matching manifest marker did not protect human edits. Publication now validates complete inventory/hashes, rechecks the observed version under an OS lock, reuses identical output and retains real replacement backups. Keeping old inodes also preserves late writes from already-open external editor handles. Publication IO is moved behind a domain port into infrastructure. |
