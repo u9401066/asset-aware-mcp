@@ -1,5 +1,19 @@
 # System Architect
 
+## 2026-09-18 — Native PDF page assets and evidence
+
+Domain defines strict page locators/references, mutually exclusive blank/copy inputs,
+geometry edits and NativePdfAdapter. Infrastructure separates bounded QPDF graphs,
+package rules, form/annotation integration, mutation checks and spawn worker. The
+worker reuses PDF extraction private atomic MessagePack, validates NativeEditResult
+on return and cleans children/files on all paths. Application performs source loads,
+aggregate budgets, asset/revision checks, CAS commit, evidence binding and distinct
+pdf-pages-v1 immutable wiki projection. Repository creation accepts an optional edit
+report so a newly composed file retains exact source-copy lineage from revision one.
+Presentation returns TextContent + actual PNG ImageContent through existing document
+facade; the public tool count is unchanged. Existing PDF ETL/A2T remains the separate
+image-to-structured-data path. Source backups and wiki note protection remain shared.
+
 ## 2026-09-18 — native PPTX shape CRUD boundaries
 
 Domain adds typed shape containers/additions and reuses native shape references.

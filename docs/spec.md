@@ -518,3 +518,53 @@ asset-aware-mcp/
   [OmniDocBench](https://github.com/opendatalab/OmniDocBench): scholarly structures,
   table extraction and parsing evaluation. Selection requires local real-file
   evaluation; repository claims alone do not establish fidelity.
+
+
+## Native PDF page assets and structural CRUD (1.4.x development)
+
+Goal: extend the immutable native asset registry to PDF pages, including native
+read/decompose/render, independent creation, page insertion/copy/deletion/reorder,
+geometry updates, explicit source writeback and immutable wiki evidence. This is
+page-level editing, not arbitrary semantic text replacement or secure redaction.
+MCP performs source/version, object-graph, known dependency and readback checks;
+agents verify meaning, layout, accessibility, forms and viewer-specific behavior.
+
+Use pikepdf/QPDF for object-aware edits and PyMuPDF for independent text/render
+inspection. Preserve page identities during reorder by detach/reinsert, never
+page assignment. Typed references bind asset ID, immutable revision, page index,
+object/generation locator and canonical representation digest. Reject mismatched
+or duplicate mutation targets and CAS conflicts. Source files change only through
+existing guarded writeback with backups; historical refs remain valid.
+
+Verification must account for source pages with text, images, vectors, crop/rotate,
+annotations, forms, hyperlinks, bookmarks, metadata, attachments and inherited
+page attributes. Object graph hashing must be bounded and stable across output
+object renumbering, preserving stream data and shared references. Compare all
+existing page content and document-level objects except planned changes, then
+reopen with an independent parser. Document metadata is not silently imported by
+page copying. Any unsupported dependency must be reported or rejected before
+commit, not flattened or dropped. Encrypted/signed/repaired inputs require explicit
+unsupported diagnostics rather than implicit protection removal or repair.
+
+All operations use bounded schemas/pages and explicit preservation/review scopes.
+Pikepdf compatibility, universal lock security, Python 3.10 and SDK2 transport must
+be tested before enabling the adapter. Required tests include positive mixed
+content CRUD, rendering/text preservation, internal links/forms/page labels,
+negative corruption/dependency/stale writes, prior evidence/wiki stability, and
+actual Codex MCP use. Keep public version 1.4.0 and accumulate Unreleased for 1.4.x.
+
+
+PDF copying must also check annotation graph backreferences. The initial pinned
+pikepdf form-aware copy experiment duplicated note/popup graph objects and broke
+the original reciprocal identity even though rendered pixels matched. A supported
+deterministic repair may relink copied Popup/Parent/IRT pointers using the exact
+source-to-destination annotation correspondence, followed by full graph equality.
+Do not weaken the graph check merely to accept the upstream copy. Form fields must
+remain registered in AcroForm and retain their source values/resources.
+
+Native PDF worker results must use the existing private, atomic, size-bounded
+MessagePack handoff used by PDF extraction. A pipe readability check does not
+bound a subsequent full-frame receive; partial writes must not bypass the overall
+worker deadline. Serialize NativeEditResult as plain data, then validate it in the
+parent. Reject missing/partial/corrupt/oversized results and reap children before
+removing their private temporary directory.

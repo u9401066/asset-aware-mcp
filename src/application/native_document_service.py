@@ -14,6 +14,7 @@ from src.application.native_evidence_service import (
     NativeEvidenceService,
     attach_native_evidence,
 )
+from src.application.native_pdf_operations import NativePdfOperations
 from src.application.native_pptx_operations import NativePptxOperations
 from src.application.native_schema import read_schema
 from src.application.native_wiki_service import NativeWikiService
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
         NativeSpreadsheetAdapter,
     )
     from src.domain.native_docx import NativeDocxAdapter
+    from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_wiki import NativeWikiPublisher
 
@@ -38,21 +40,24 @@ class NativeDocumentService:
         wiki_publisher: NativeWikiPublisher | None = None,
         docx: NativeDocxAdapter | None = None,
         presentations: NativePresentationAdapter | None = None,
+        pdfs: NativePdfAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.docx = docx
         self.presentations = presentations
+        self.pdfs = pdfs
+        self.pdf_operations = NativePdfOperations(repository, pdfs) if pdfs else None
         self.pptx_operations = (
             NativePptxOperations(repository, presentations) if presentations else None
         )
         self.evidence = NativeEvidenceService(
-            repository, spreadsheets, docx, presentations
+            repository, spreadsheets, docx, presentations, pdfs
         )
         self.docx_operations = NativeDocxOperations(repository, docx) if docx else None
         self.wiki = (
             NativeWikiService(
-                repository, spreadsheets, wiki_publisher, docx, presentations
+                repository, spreadsheets, wiki_publisher, docx, presentations, pdfs
             )
             if wiki_publisher is not None
             else None
@@ -63,6 +68,7 @@ class NativeDocumentService:
             asset,
             docx_enabled=self.docx is not None,
             pptx_enabled=self.presentations is not None,
+            pdf_enabled=self.pdfs is not None,
         )
 
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
@@ -74,6 +80,14 @@ class NativeDocumentService:
             "create": self._create,
             "history": self._history,
             "read_cell": self._read_cell,
+            "create_pdf": self._pdf_operation,
+            "read_pdf": self._pdf_operation,
+            "read_pdf_page": self._pdf_operation,
+            "render_pdf_page": self._pdf_operation,
+            "add_pdf_pages": self._pdf_operation,
+            "update_pdf": self._pdf_operation,
+            "delete_pdf_pages": self._pdf_operation,
+            "reorder_pdf_pages": self._pdf_operation,
             "create_pptx": self._pptx_operation,
             "read_pptx": self._pptx_operation,
             "read_pptx_shape": self._pptx_operation,
@@ -99,6 +113,11 @@ class NativeDocumentService:
             raise ValueError("Native wiki publisher is not configured")
         return self.wiki.export(request)
 
+    def _pdf_operation(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        if self.pdf_operations is None:
+            raise ValueError("Native PDF adapter is not configured")
+        return self.pdf_operations.execute(request)
+
     def _verify(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.reference is not None
         return self.evidence.verify(request.reference)
@@ -108,6 +127,7 @@ class NativeDocumentService:
             request,
             docx_enabled=self.docx is not None,
             pptx_enabled=self.presentations is not None,
+            pdf_enabled=self.pdfs is not None,
         )
 
     def _list(self, request: NativeDocumentRequest) -> dict[str, Any]:

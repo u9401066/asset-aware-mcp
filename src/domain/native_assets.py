@@ -16,6 +16,13 @@ from src.domain.native_operations import (
     NativeOperation,
     operation_fields,
 )
+from src.domain.native_pdf import (  # noqa: TC001 -- Pydantic runtime models
+    NativePdfCreate,
+    NativePdfInsert,
+    NativePdfPageEdit,
+    NativePdfPageLocator,
+    NativePdfReference,
+)
 from src.domain.native_pptx import (
     NativePptxReference,
     NativePptxShapeCreate,
@@ -186,7 +193,13 @@ class NativeAssetRepository(Protocol):
 
     def register(self, source_path: str) -> NativeFileAsset: ...
     def create(
-        self, name: str, data: bytes, format_name: str, media_type: str
+        self,
+        name: str,
+        data: bytes,
+        format_name: str,
+        media_type: str,
+        *,
+        result: NativeEditResult | None = None,
     ) -> NativeFileAsset: ...
     def load(self, asset_id: str) -> NativeFileAsset: ...
     def read(self, asset_id: str, revision: str | None = None) -> bytes: ...
@@ -283,6 +296,15 @@ class NativeDocumentRequest(NativeModel):
     workbook: NativeWorkbookCreate | None = None
     docx_edit: NativeDocxEdit | None = None
     presentation: NativePresentationCreate | None = None
+    pdf_create: NativePdfCreate | None = None
+    pdf_insert: NativePdfInsert | None = None
+    pdf_locator: NativePdfPageLocator | None = None
+    pdf_edits: list[NativePdfPageEdit] = Field(default_factory=list, max_length=100)
+    pdf_page_refs: list[NativePdfReference] = Field(
+        default_factory=list, max_length=100
+    )
+    pdf_order: list[NativePdfReference] = Field(default_factory=list, max_length=2000)
+    render_size: int = Field(default=1024, ge=64, le=2048)
     pptx_locator: NativePptxShapeLocator | None = None
     pptx_edits: list[NativePptxTextEdit] = Field(default_factory=list, max_length=1000)
     pptx_shapes: list[NativePptxShapeCreate] = Field(
@@ -292,7 +314,11 @@ class NativeDocumentRequest(NativeModel):
         default_factory=list, max_length=100
     )
     reference: (
-        NativeCellReference | NativeDocxBlockReference | NativePptxReference | None
+        NativeCellReference
+        | NativeDocxBlockReference
+        | NativePptxReference
+        | NativePdfReference
+        | None
     ) = None
     edits: list[NativeCellEdit] = Field(
         default_factory=list, max_length=MAX_NATIVE_CELLS

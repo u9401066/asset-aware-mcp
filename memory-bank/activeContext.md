@@ -1,5 +1,65 @@
 # Active Context
 
+## 2026-09-18 — native PDF collaboration verified locally; commit/push pending
+
+Public release remains 1.4.0; this is Unreleased main work for 1.4.x. User explicitly
+rejects rapid version jumps. MCP provides necessary mechanical checks and supported
+deterministic repairs; Agent coordinates complete semantic/visual/formula review.
+Previous checkpoint ab49252 has green CI 35342913394 (ten jobs) and Pages 35342912718.
+Original user worktree remains untouched; use asset-aware-mcp-agent-assets on main.
+
+Current implementation: native PDF create/read/render/insert/copy/delete/reorder/
+rotation/crop, revision-bound full page JSON/evidence, persisted copy lineage,
+historical verification, pdf-pages-v1 wiki and explicit publish/writeback through
+existing source/hash/mtime/backup guards. pikepdf>=10.13.0.post1,<11 uses public
+form-aware copy; PyMuPDF independently reads text and pixels. No universal layout
+or OCR correctness claim, arbitrary PDF text replacement or secure redaction.
+
+PDF graph checks normalize object numbering while preserving encoded stream hashes,
+cycles and page identities. Verify remaining page dependencies, untouched document
+properties, form registration, serialized graphs and unchanged-page 512-pixel renders.
+Repair discovered copied annotation Popup/Parent/IRT backreference duplication from
+exact source mapping, then require graph equality. Preserve effective page labels.
+Reject encryption/signatures/XFA/parser repair, dangling references, partial/renamed
+forms and cross-document tagged/layer/named-destination integration. Copying pages
+does not import document-level metadata/attachments. Source revisions remain exact.
+
+Production worker: spawn, supported-platform 1.5 GiB address-space cap, 60-second
+deadline, private atomic MessagePack handoff (128 MiB), validated edit reports and
+child cleanup. Reuses tested PDF extractor transport; no blocking full pipe receive.
+8 new worker tests cover large/partial/corrupt/oversized output, cleanup and invalid
+timeouts. Full suite now 1,739 passed / 30 optional skips; Ruff/format/mypy (150 files)
+and Bandit passed. SDK2 integration verifies actual PNG content, full-page chunks,
+CRUD, copied forms, source writeback and wiki. Domain schema expresses exclusive page
+inputs and nonempty geometry; bool/string/float rotations rejected without coercion.
+
+Live Codex run 01: 171 actual MCP calls, zero tool errors, 13 complete page records,
+all seven independent checks passed. Run 02 after worker/type/helper changes:
+49 calls, zero errors, ten complete page records, six actual source/final images,
+all seven checks passed including exact final 7-row/35-cell transcription, original
+source hash/mtime, final page order/rotation/pixels, persisted lineage and wiki files.
+Both runs are synthetic scanned three-page PDFs with no hidden OCR. Original and
+final images are independently compared to the pinned revision render, beyond PNG
+hash self-consistency. Do not reinterpret this as general real-document coverage.
+Evidence: /tmp/asset-aware-codex-native-pdf-scanned-01 and -02.
+Run 02 server source SHA-256: fff357bad15d8f678afc938ae3c64c88a7af79837df8e52ec22207152e4503dd
+Run 02 lock SHA-256: abfaddf3d7d964ace1e210b1fd584e1717775a70f8ccdc98ad9b669b61f1bcd3
+
+README en/zh, CHANGELOG Unreleased, wiki/site en/zh, harness and bundled assets
+updated. Browser plugin unavailable; cached Playwright/Chromium validates language
+switching, content, desktop/mobile overflow and console health on localhost:8876.
+CDN scripts were routed from cached copies; this does not test CDN availability.
+Screenshots: /tmp/native-pdf-crud-{desktop,mobile}-{zh,en}.png. Website/docs/harness
+metadata checks pass. VSIX: 199 tests and 64-file package contents pass. All 17
+managed labels and repository description/homepage/topics are synchronized. Universal lock Python3.10 audit previously passed
+214 audited packages, no known vulnerabilities/adverse statuses; npm audit passes.
+
+Remaining checkpoint work: final diff review, focused audit tests, memory synchronization,
+small commits/direct main push, exact CI and Pages verification. No tag/release.
+Broader active goal remains unfinished (slide/non-text CRUD, additional formats,
+real-document evaluation, arbitrary PDF text editing). Do not mark goal complete.
+
+
 ## 2026-09-18 — cross-format CRUD and evidence library
 
 Current work after 53714f2: fix truthful A2T row-ID result labels, then add native

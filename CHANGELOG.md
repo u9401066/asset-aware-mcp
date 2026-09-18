@@ -9,6 +9,19 @@
 
 ### Added
 
+- Native PDF page create/read/render/copy/insert/delete/reorder and rotation/crop
+  edits through pikepdf/QPDF, with bounded PyMuPDF text/render readback. Immutable
+  page references, persisted copy lineage and `pdf-pages-v1` evidence wikis include
+  exact source PDFs, previews and full page JSON. Production operations run in a
+  bounded worker; source writeback retains existing revision/source checks and backups.
+  Encoded-stream graphs, document properties, page dependencies, form registration
+  and unchanged-page pixels are checked. Known copied annotation backreferences
+  receive a deterministic repair followed by graph verification. Encrypted/signed/
+  XFA/repair-dependent files and unsupported cross-document dependencies fail closed.
+  This does not provide arbitrary PDF text editing, OCR or secure redaction.
+- Real SDK2 native PDF integration and an opt-in Codex scanned-PDF evaluation with
+  independent image, page-readback, history, source, pixel, transcription and wiki
+  auditing; regular tests never invoke a model.
 - Native `add_pptx_shapes` inserts typed textboxes in existing slide, notes or
   nonzero-extent group containers; `delete_pptx_shapes` removes reference-pinned
   shapes, including group descendants. Revision/hash checks, known connector and

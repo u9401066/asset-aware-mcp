@@ -96,9 +96,15 @@ class FileNativeAssetRepository:
         return asset
 
     def create(
-        self, name: str, data: bytes, format_name: str, media_type: str
+        self,
+        name: str,
+        data: bytes,
+        format_name: str,
+        media_type: str,
+        *,
+        result: NativeEditResult | None = None,
     ) -> NativeFileAsset:
-        return self._create(name, data, format_name, media_type)
+        return self._create(name, data, format_name, media_type, result=result)
 
     def _create(
         self,
@@ -108,6 +114,7 @@ class FileNativeAssetRepository:
         media_type: str,
         *,
         source: NativeSource | None = None,
+        result: NativeEditResult | None = None,
     ) -> NativeFileAsset:
         if not name or "/" in name or "\\" in name or "\x00" in name:
             raise ValueError("Native asset names must be filenames")
@@ -130,6 +137,7 @@ class FileNativeAssetRepository:
                     sha256=revision,
                     size_bytes=len(data),
                     operation="register" if source else "create",
+                    result=result,
                 )
             ],
         )

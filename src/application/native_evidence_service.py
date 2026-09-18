@@ -6,8 +6,10 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 
+from src.application.native_pdf_operations import PDF_REVIEW, attach_pdf_evidence
 from src.application.native_pptx_operations import attach_pptx_evidence
 from src.domain.native_assets import NativeDocxBlockReference
+from src.domain.native_pdf import NativePdfReference
 from src.domain.native_pptx import NativePptxReference
 
 if TYPE_CHECKING:
@@ -17,6 +19,7 @@ if TYPE_CHECKING:
         NativeSpreadsheetAdapter,
     )
     from src.domain.native_docx import NativeDocxAdapter
+    from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
 
 
@@ -41,16 +44,23 @@ class NativeEvidenceService:
         spreadsheets: NativeSpreadsheetAdapter,
         docx: NativeDocxAdapter | None = None,
         presentations: NativePresentationAdapter | None = None,
+        pdfs: NativePdfAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.docx = docx
         self.presentations = presentations
+        self.pdfs = pdfs
 
     def verify(
         self,
-        reference: NativeCellReference | NativeDocxBlockReference | NativePptxReference,
+        reference: NativeCellReference
+        | NativeDocxBlockReference
+        | NativePptxReference
+        | NativePdfReference,
     ) -> dict[str, Any]:
+        if isinstance(reference, NativePdfReference):
+            return self._verify_pdf(reference)
         if isinstance(reference, NativePptxReference):
             return self._verify_pptx(reference)
         if isinstance(reference, NativeDocxBlockReference):
@@ -115,6 +125,32 @@ class NativeEvidenceService:
                 "rendered_layout",
                 "fields_and_revisions",
             ],
+        }
+
+    def _verify_pdf(self, reference: NativePdfReference) -> dict[str, Any]:
+        asset = self.repository.load(reference.asset_id)
+        if asset.format != "pdf" or self.pdfs is None:
+            raise ValueError("This format has no native PDF verifier")
+        record = self.pdfs.read_page(
+            self.repository.read(asset.asset_id, reference.revision), reference.locator
+        )
+        attach_pdf_evidence(record, asset.asset_id, reference.revision)
+        valid = record["evidence"] == reference.model_dump()
+        return {
+            "success": True,
+            "valid": valid,
+            "asset_id": asset.asset_id,
+            "revision": reference.revision,
+            "is_current_managed_revision": asset.revision == reference.revision,
+            "archived": asset.archived,
+            "verification_scope": "immutable_native_representation",
+            "checks": {
+                "revision_hash": True,
+                "native_locator": True,
+                "page_representation_hash": valid,
+            },
+            "source_freshness": "not_checked; refresh tracks external human edits",
+            "review_required": PDF_REVIEW,
         }
 
     def _verify_pptx(self, reference: NativePptxReference) -> dict[str, Any]:

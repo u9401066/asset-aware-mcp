@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any
 
 from src.application.native_docx_wiki import NativeDocxWikiContent
 from src.application.native_evidence_service import attach_native_evidence
+from src.application.native_pdf_operations import attach_pdf_evidence
+from src.application.native_pdf_wiki import NativePdfWikiContent
 from src.application.native_pptx_operations import attach_pptx_evidence
 from src.application.native_pptx_wiki import NativePptxWikiContent
 from src.application.native_wiki_format import NativeWikiContent
@@ -19,6 +21,7 @@ if TYPE_CHECKING:
         NativeSpreadsheetAdapter,
     )
     from src.domain.native_docx import NativeDocxAdapter
+    from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_wiki import NativeWikiPublisher
 
@@ -31,12 +34,14 @@ class NativeWikiService:
         publisher: NativeWikiPublisher,
         docx: NativeDocxAdapter | None = None,
         presentations: NativePresentationAdapter | None = None,
+        pdfs: NativePdfAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.publisher = publisher
         self.docx = docx
         self.presentations = presentations
+        self.pdfs = pdfs
 
     def export(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.asset_id is not None and request.output_dir is not None
@@ -49,7 +54,9 @@ class NativeWikiService:
             else {"preset": "source"}
         )
         builder = (
-            NativeDocxWikiContent
+            NativePdfWikiContent
+            if asset.format == "pdf" and self.pdfs
+            else NativeDocxWikiContent
             if asset.format == "docx" and self.docx
             else NativePptxWikiContent
             if asset.format == "pptx" and self.presentations
@@ -84,7 +91,13 @@ class NativeWikiService:
 
     def _populate(self, content: NativeWikiContent, data: bytes) -> None:
         identity = content.identity
-        if identity["format"] in {"xlsx", "xlsm"}:
+        if isinstance(content, NativePdfWikiContent) and self.pdfs:
+            for item in self.pdfs.decompose(data):
+                attach_pdf_evidence(
+                    item["record"], identity["asset_id"], identity["revision"]
+                )
+                content.add_page(item["record"], item["png"])
+        elif identity["format"] in {"xlsx", "xlsm"}:
             for count, cell in enumerate(self.spreadsheets.iter_cells(data), start=1):
                 if count > MAX_WIKI_CELLS:
                     raise ValueError("Native wiki exceeds the stored-cell limit")

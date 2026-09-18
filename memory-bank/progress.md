@@ -2,13 +2,20 @@
 
 ## 2026-09-18 active goal — not complete
 
+- [x] Native PDF page collaboration implemented and locally verified: create/read/
+  render/copy/insert/delete/reorder/geometry, source lineage, immutable evidence,
+  wiki and explicit source writeback. 1,739 Python tests pass / 30 optional skips.
+  SDK2 and Codex scanned run 02 pass all seven independent checks (49 MCP calls,
+  zero errors; exact final transcription). No new version: public 1.4.0 / Unreleased.
+- [ ] Native PDF checkpoint commit/push and exact CI/Pages verification pending.
+
 - [x] Unreleased checkpoint: native PPTX textbox addition / existing shape deletion
   with reference, dependency, version and XML preservation guards; truthful A2T
   row-ID results after earlier-row deletion. 1,647 Python tests / 199 extension
   tests pass. Real SDK2 CRUD/writeback and scanned Codex run (49 calls, nine checks)
   pass; first transcription errors were corrected and retained in evidence.
   Docs/README/harness/assets/Pages sources synchronized, public version stays 1.4.0.
-  Exact commit CI/Pages must still be checked after push.
+  Exact commit ab49252 CI 35342913394 and Pages 35342912718 passed.
 - [ ] Broader structural CRUD remains: slide manipulation, non-text creation,
   full format coverage, opaque dependency handling and real-document evaluation.
 
@@ -53,8 +60,7 @@ Baseline revalidated; isolated latest main while preserving original user edits.
   checks, docs/harness/skills/metadata audits, sync parity and bilingual browser QA
   passed. README/Pages/CHANGELOG mark main development as unreleased; version1.4.0
   remains unchanged. Exact commit CI/Pages must be verified after push.
-- [ ] Fix A2T row-ID operation result messages that still display input index -1;
-  continue native structural CRUD, cross-format table bridges and real corpus work.
+- [x] A2T row-ID result labels fixed in ab49252; structural CRUD and corpus work remain active.
 
 
 ## 2026-09-18 v1.4.0 published and verified

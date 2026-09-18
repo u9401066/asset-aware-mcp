@@ -1,5 +1,22 @@
 # Decision Log
 
+## 2026-09-18 — Native PDF object-preserving page operations, bounded worker and version pacing
+
+Keep public 1.4.0 and accumulate Unreleased for 1.4.x. Adopt pikepdf 10.13.0.post1
+(public form-aware copy API) behind a domain port; PyMuPDF remains an independent
+reader/renderer. Do not flatten PDF pages or promise arbitrary text editing. Preserve
+page object identity when reordering; page assignment can break destinations.
+Cross-document copies require complete supported dependencies and source references.
+Known copied annotation backreferences can be repaired deterministically from source
+identity; pixel equality alone did not catch that upstream graph duplication.
+Use bounded canonical graphs, page/form/document checks and immutable revisions.
+Agent performs semantic/full-resolution/viewer review. Reuse private atomic MessagePack
+worker handoff to bound partial/large outputs rather than a blocking pipe receive.
+Official references: https://pikepdf.readthedocs.io/en/latest/topics/pages.html and
+https://pikepdf.readthedocs.io/en/latest/topics/interactive_forms.html.
+Real Codex scan evaluation after final runtime changes passes seven independent
+checks; preserve run 01 and 02 evidence and their exact runtime/lock hashes.
+
 ## 2026-09-18 — bounded native PPTX shape operations and truthful row results
 
 Keep published version 1.4.0 and accumulate Unreleased on main for 1.4.x. Shape

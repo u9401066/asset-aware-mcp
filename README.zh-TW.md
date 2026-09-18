@@ -14,6 +14,12 @@
 未發布項目也包含有檢查保護的 PPTX 文字框新增／形狀刪除，以及 A2T 操作結果的
 實際列 ID。詳見 [形狀操作](docs/wiki/Native-File-Assets.md#pptx-shape-operations-unreleased)。
 公開版維持 **1.4.0**，後續開發沿用 **1.4.x**，不因單次功能提交跳版號。
+原生 PDF 頁面協作也列於 **Unreleased**：讀取／顯示頁面、建立新 PDF、
+插入／複製／刪除／重排頁面及調整旋轉／裁切，先建立受管理版本。
+頁面證據與 Wiki 預覽保留完整來源附件。詳見
+[PDF 操作與限制](docs/wiki/Native-File-Assets.md#native-pdf-pages-unreleased)。
+MCP 檢查物件圖、來源版本及有限解析度的獨立渲染讀回；
+語意、完整解析度版面與檢視器行為由 Agent 核對。
 
 1.4.0 提供 `contract.for_op` 與 `native-contract-v2`。先查看
 `schema_delivery`，需要分段時沿用 `schema_request` 與 `schema_sha256`，

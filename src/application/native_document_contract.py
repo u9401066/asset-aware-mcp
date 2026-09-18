@@ -12,7 +12,11 @@ if TYPE_CHECKING:
 
 
 def native_asset_summary(
-    asset: NativeFileAsset, *, docx_enabled: bool = False, pptx_enabled: bool = False
+    asset: NativeFileAsset,
+    *,
+    docx_enabled: bool = False,
+    pptx_enabled: bool = False,
+    pdf_enabled: bool = False,
 ) -> dict[str, Any]:
     return {
         "asset_id": asset.asset_id,
@@ -24,6 +28,10 @@ def native_asset_summary(
         "source": asset.source.model_dump() if asset.source else None,
         "revision_count": len(asset.history),
         "capabilities": {
+            "read_pdf": asset.format == "pdf" and pdf_enabled,
+            "edit_pdf_pages": asset.format == "pdf"
+            and pdf_enabled
+            and not asset.archived,
             "inspect_metadata": True,
             "immutable_history": True,
             "refresh_source": asset.source is not None and not asset.archived,
@@ -55,6 +63,7 @@ def native_document_contract(
     *,
     docx_enabled: bool = False,
     pptx_enabled: bool = False,
+    pdf_enabled: bool = False,
 ) -> dict[str, Any]:
     for_op = request.for_op if request is not None else None
     return {
@@ -63,38 +72,7 @@ def native_document_contract(
         "operations": list(NATIVE_OPERATIONS),
         **schema_discovery(for_op),
         "identity": "Stable asset IDs, SHA-256 revisions and revision-scoped locators.",
-        "formats": {
-            "pptx": [
-                "create_pptx",
-                "read_pptx",
-                "read_pptx_shape",
-                "update_pptx",
-                "add_pptx_shapes",
-                "delete_pptx_shapes",
-                "verify",
-                "export_wiki",
-            ]
-            if pptx_enabled
-            else [],
-            "docx": [
-                "read_docx",
-                "read_docx_block",
-                "update_docx",
-                "verify",
-                "export_wiki",
-            ]
-            if docx_enabled
-            else [],
-            "xlsx": ["create", "inspect_cells", "edit_cells"],
-            "xlsm": ["inspect_cells", "edit_cells"],
-            "other": [
-                "register",
-                "inspect_metadata",
-                "history",
-                "publish",
-                "archive",
-            ],
-        },
+        "formats": _formats(docx_enabled, pptx_enabled, pdf_enabled),
         "verification": "MCP checks integrity; agents verify semantics, layout and calculated results.",
         "docx_policy": "Pin revision; assemble all DFM chunks with frontmatter/markers. Updates stage versions; writeback is explicit.",
         "archive_policy": "Archive retains history and the human source.",
@@ -103,6 +81,17 @@ def native_document_contract(
 
 
 def _edit_constraints(format_name: str) -> list[str]:
+    if format_name == "pdf":
+        return [
+            "encrypted_or_signed_documents",
+            "parser_repairs",
+            "XFA_forms",
+            "remaining_page_dependencies",
+            "partial_or_conflicting_form_copies",
+            "cross_document_tagged_layer_named_destination_integration",
+            "semantic_text_replacement",
+            "secure_redaction",
+        ]
     if format_name in {"xlsx", "xlsm"}:
         return [
             "protected_sheets",
@@ -130,3 +119,54 @@ def _edit_constraints(format_name: str) -> list[str]:
             "inherited_formatting",
         ]
     return []
+
+
+def _formats(
+    docx_enabled: bool, pptx_enabled: bool, pdf_enabled: bool
+) -> dict[str, list[str]]:
+    return {
+        "pdf": [
+            "create_pdf",
+            "read_pdf",
+            "read_pdf_page",
+            "render_pdf_page",
+            "add_pdf_pages",
+            "update_pdf",
+            "delete_pdf_pages",
+            "reorder_pdf_pages",
+            "verify",
+            "export_wiki",
+        ]
+        if pdf_enabled
+        else [],
+        "pptx": [
+            "create_pptx",
+            "read_pptx",
+            "read_pptx_shape",
+            "update_pptx",
+            "add_pptx_shapes",
+            "delete_pptx_shapes",
+            "verify",
+            "export_wiki",
+        ]
+        if pptx_enabled
+        else [],
+        "docx": [
+            "read_docx",
+            "read_docx_block",
+            "update_docx",
+            "verify",
+            "export_wiki",
+        ]
+        if docx_enabled
+        else [],
+        "xlsx": ["create", "inspect_cells", "edit_cells"],
+        "xlsm": ["inspect_cells", "edit_cells"],
+        "other": [
+            "register",
+            "inspect_metadata",
+            "history",
+            "publish",
+            "archive",
+        ],
+    }
