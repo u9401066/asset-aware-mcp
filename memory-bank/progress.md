@@ -49,7 +49,10 @@ Baseline revalidated; isolated latest main while preserving original user edits.
   exact CDN scripts (not a live CDN availability test).
 - README/guide/spec/roadmap/Pages and bundled harness distinguish main from v1.1.0.
   Focused native wiki/reference tests now run on Python 3.10, macOS and Windows CI.
-  Direct main commit/push and its CI verification follow; no self-PR is created.
+  Code is pushed at e3bb2cf; Pages succeeded. CI 35317000129 exposed three Windows
+  test-reader failures: the new Unicode tests relied on the cp1252 locale instead
+  of specifying UTF-8. Exported bytes are already explicitly UTF-8. Corrected the
+  test reads; rerun cross-platform CI before treating this checkpoint as verified.
 
 ## 2026-09-18 release and native reference checkpoint
 

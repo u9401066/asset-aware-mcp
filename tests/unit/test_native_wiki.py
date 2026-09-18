@@ -64,7 +64,8 @@ def _export(
 
 def _records(path: Path) -> list[dict]:
     return [
-        json.loads(line) for line in (path / "records.jsonl").read_text().splitlines()
+        json.loads(line)
+        for line in (path / "records.jsonl").read_text(encoding="utf-8").splitlines()
     ]
 
 
@@ -76,7 +77,7 @@ def test_portable_snapshot_has_exact_source_resolvable_links_and_full_references
     assert result["success"] and result["cell_count"] == 4
     assert result["reused"] is False
     root = Path(result["output_dir"])
-    manifest = json.loads((root / "manifest.json").read_text())
+    manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
     source = (root / manifest["source_attachment"]).read_bytes()
     assert hashlib.sha256(source).hexdigest() == asset["revision"]
     assert NativeSpreadsheet(source).read_cell("O'Brien 成本", "B2")["value"] == 42
@@ -91,7 +92,7 @@ def test_portable_snapshot_has_exact_source_resolvable_links_and_full_references
         }
     for record in _records(root):
         assert _call(service, op="verify", reference=record["evidence"])["valid"]
-        note = (root / record["note"]).read_text()
+        note = (root / record["note"]).read_text(encoding="utf-8")
         assert record["evidence"]["value_sha256"] in note
         assert len(re.findall(r"^# ", note, flags=re.MULTILINE)) == 1
         assert "<script>" not in note
@@ -121,7 +122,7 @@ def test_reexport_is_idempotent_and_does_not_touch_adjacent_curated_notes(
     second = _export(service, asset, root)
     assert second["reused"] is True
     assert before == {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in before}
-    assert curated.read_text() == "Human synthesis"
+    assert curated.read_text(encoding="utf-8") == "Human synthesis"
 
 
 def test_new_revision_preserves_old_links_even_after_archival(
@@ -235,7 +236,7 @@ def test_opaque_source_has_no_invented_native_interpretation(
     asset = _call(service, op="register", source_path=str(source))["asset"]
     result = _export(service, asset, tmp_path / "wiki")
     root = Path(result["output_dir"])
-    manifest = json.loads((root / "manifest.json").read_text())
+    manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["representation"] == "opaque_binary"
     assert result["cell_count"] == 0
     assert (root / manifest["source_attachment"]).read_bytes() == b"opaque bytes"

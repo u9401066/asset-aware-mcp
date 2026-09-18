@@ -26,7 +26,9 @@ revision-pinned links, source/JSONL evidence, custom citation display and no-ove
 publication. Exact existing inventory/bytes must match for idempotent reuse; new
 revisions preserve prior notes. Manifest-last publication reports interrupted output.
 Full regression: 1,356 passed, 30 optional skips; types/lint/configured security gate,
-asset sync and desktop/mobile bilingual reader checks pass. Push and CI are next.
+asset sync and desktop/mobile bilingual reader checks pass. Pushed e3bb2cf and Pages
+succeeded. Windows CI 35317000129 found three new test-reader locale assumptions;
+explicit UTF-8 reads are being fixed before the cross-platform CI rerun.
 Latest documentation checkpoint 977c75f passed CI 35315597500 and Pages.
 
 Development after 1.1.0 adds native cell-reference verification (not in v1.1.0):

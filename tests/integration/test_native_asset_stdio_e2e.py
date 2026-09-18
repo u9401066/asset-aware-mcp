@@ -112,7 +112,9 @@ async def test_native_workbook_creation_and_edit_over_sdk2_stdio(
         wiki = Path(exported["output_dir"])
         records = [
             json.loads(line)
-            for line in (wiki / "records.jsonl").read_text().splitlines()
+            for line in (wiki / "records.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
         ]
         assert records[0]["evidence"] == cells[0]["evidence"]
         assert "Lin, 2026" in records[0]["citation_presentation"]["inline"]
@@ -124,7 +126,9 @@ async def test_native_workbook_creation_and_edit_over_sdk2_stdio(
             output_dir=str(tmp_path / "wiki"),
         )
         assert conflict["success"] is False
-        assert (wiki / exported["index_note"]).read_text() == "Human edit"
+        assert (wiki / exported["index_note"]).read_text(
+            encoding="utf-8"
+        ) == "Human edit"
         rejected = await native(
             op="update",
             asset_id=current["asset_id"],
