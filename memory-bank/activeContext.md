@@ -2,8 +2,8 @@
 
 ## 2026-09-18 — cross-format CRUD and evidence library
 
-Current public release is **v1.3.0**, annotated at main@2aba6595453a65aa6fd541b3d93df69c9b041fc6.
-Tag object: b9217ed4a74d9f348129bb472f6ae340325a9aab.
+Current public release is **v1.4.0**, annotated at main@da829fa6f360bd684fda9b8d31efee3651a9ed94.
+Tag object: 2eae299581211126d7bbc3e5586b6f4b3a028b54.
 Worktree: /home/eric/workspace251226/asset-aware-mcp-agent-assets, branch main.
 The user requests direct commits/pushes without self-PRs; use the owner's existing
 bypass, preserve branch protection and monitor exact-commit CI. Author:
@@ -11,7 +11,31 @@ u9401066 <u9401066@gap.kmu.edu.tw>. Only main remains locally and remotely.
 The original worktree /home/eric/workspace251226/asset-aware-mcp stays detached at
 6ad9a5c with pre-existing user changes preserved. Do not edit/reset that tree.
 
-Version 1.3.0 is published on PyPI, VS Code Marketplace and GitHub Release:
+Version 1.4.0 is published on PyPI, VS Code Marketplace and GitHub Release:
+https://github.com/u9401066/asset-aware-mcp/releases/tag/v1.4.0
+Exact-tag CI 35335805871 (all ten jobs), Pages 35335805355 and Release 35336169071
+(all eight jobs) passed. Full local release.sh passed with 1,546 Python tests /
+30 optional skips, 199 VSIX tests and all audit/package/runtime/Docker/SDK2 gates.
+CI supplied extension activation because local Xvfb is unavailable.
+
+Public Python artifacts match the locally audited builds byte-for-byte:
+
+- wheel: 5d3ed4a4e760f50db223d8bc2b0ff47241d10a91aa04ddd34bcd52aacb563a83
+- sdist: c18b12aa78d8d854492bfbac221c182f4bfd6fe0a8218719e942b5fe10e5ba38
+
+GitHub and Marketplace VSIX bytes match after declared HTTP gzip decoding:
+4c4bc06c6e47de5edfba1de27d8a0ce2c3b918e160e9c2283882b3a39cbaaa15.
+Version, author/publisher, native source modules, bundled harnesses and exclusion
+of compiled VSIX tests are verified. Public site.js/site-content.js match the
+release commit. Proof: /tmp/asset-aware-release14-verified.json,
+/tmp/asset-aware-release14-python-verified.json and
+/tmp/asset-aware-release14-pretag.log. Initial registry/index visibility delays
+resolved without duplicate publication. Do not move the tag or republish bytes.
+The user explicitly requests 1.4.x for subsequent small updates. No v2.0.0 tag
+or package was published; contract-v2 and MCP SDK 2.x are separate version axes.
+
+Previous milestone v1.3.0 remains published at 2aba6595453a65aa6fd541b3d93df69c9b041fc6
+(tag object b9217ed4a74d9f348129bb472f6ae340325a9aab):
 https://github.com/u9401066/asset-aware-mcp/releases/tag/v1.3.0
 Exact-tag CI 35325369333 and Pages 35325368633 passed. Release 35325631670 passed
 all eight jobs: tests/activation, three-platform install smoke, artifact preflight,
@@ -78,7 +102,7 @@ MCP owns mechanical source/version/locator/package/write checks and explicit,
 deterministic repairs. Agents own semantics, rendering, fields/formulas, extraction
 review and subsequent correction. No structural pass is a full-fidelity guarantee.
 
-Current work: native PPTX collaboration is implemented and verified, pending release.
+Native PPTX collaboration is implemented, verified and released in v1.4.0.
 Feature commit 2364feefe50204f094eacc34f8d20464a7914578 has successful CI
 35331710478 (all ten jobs, including Windows/macOS/Linux) and Pages 35331709690. Discovery checkpoint 1546bd351d633c169955ffd9a1540d31b6ef148b
 has green CI 35329453898 and Pages 35329453179. Native-contract-v2 provides for_op
@@ -109,29 +133,27 @@ pinned cached CDN replay was used, so it does not prove live CDN availability.
 Screenshots: /tmp/native-pptx-{desktop,mobile}-{zh,en}.png. GitHub metadata/17 managed
 labels remain synchronized. Original detached worktree and user edits are untouched.
 README/Pages/spec/CHANGELOG/MEM and all bundled native harness guidance are updated.
-Next: continue broader native CRUD, citation standards, agent review workflows and
-a fully audited publication milestone. Current public version remains 1.3.0; never
-republish these new bytes under that tag/version. Native discovery has an explicit
-response migration; account for that when choosing the next release version.
+Next: continue broader native CRUD, citation standards and agent review workflows.
+Native discovery has an explicit response migration, documented in v1.4.0 despite
+the owner's requested minor-version sequence. Never republish new bytes under an
+existing tag/version.
 Goal stays active. The current goal turn made concrete progress (schema discovery
 and native presentation creation/edit/evidence/wiki), and is not blocked.
 
-Release preparation: **1.4.0**, following the user's explicit correction to keep
+Published release: **1.4.0**, following the user's explicit correction to keep
 incremental releases in 1.4.x. The proposed 2.0.0 was committed only as preparation
 at 929e878; no 2.0.0 tag or package was published. Native discovery still documents
 its client migration from always-inline schema to inline/paged delivery. Version metadata,
-README/Pages/extension copy and bundled harness instructions are being synchronized.
+README/Pages/extension copy and bundled harness instructions are synchronized.
 Checkpoint cf7f166 and its CI 35332075734/Pages 35332074774 were revalidated green.
-Public release remains 1.3.0 until the new workflow succeeds. Pre-tag full release
-harness, tagged CI and public artifact verification are required. No new PDF
-backend dependency is added by this release.
+Pre-tag full release harness, tagged CI and public artifact verification all passed
+for 1.4.0; proof is recorded above. No new PDF backend dependency was added.
 
 The user added goal item 7: directly use Codex to exercise MCP, especially
-image/scanned PDF to structured-data CRUD with adequate tests. Prioritize this
-before tagging 1.4.0. Existing real SDK2 tests are not agent-driven validation.
-Build synthetic digital/scanned/mixed fixtures, preserve independent truth, run
-the installed authenticated Codex CLI against this checkout via ephemeral MCP
-overrides, and verify actual tool events and persisted results. Never alter the
+image/scanned PDF to structured-data CRUD with adequate tests. Its synthetic
+baseline was completed before tagging 1.4.0. Existing real SDK2 tests alone are
+not agent-driven validation. Continue preserving independent fixture truth and
+checking actual Codex MCP events and persisted artifacts. Never alter the
 user's persistent config or original sources; do not expose credentials.
 
 Goal item 7 now has a reusable baseline under tests/codex_pdf: synthetic digital,
@@ -172,16 +194,22 @@ checkpoint). VSIX: 199 passed, 64-file package inventory. Lint/format/types/Band
 docs/harness/skills/metadata audits, sync parity and diff hygiene pass. Logs:
 /tmp/asset-aware-pdf-codex-full-tests-final.log and
 /tmp/asset-aware-pdf-codex-extension-tests.log. Commit 929e878 has green CI
-35335476121; the user's version correction to 1.4.0 needs its own exact-commit CI.
+35335476121; version correction da829fa has green exact-commit CI 35335805871.
 Thirty-five metadata/public-doc/release-audit tests pass for 1.4.0; lock changes
-only the project's version. No v2.0.0 or v1.4.0 remote tag exists yet.
+only the project's version. Remote v1.4.0 is verified; no v2.0.0 tag was created.
 Desktop/mobile zh/en browser QA includes the new Codex guide; screenshots
 /tmp/pdf-codex-{desktop,mobile}.png use cached pinned CDN assets and therefore
 do not test live CDN availability. Rebuilt docs include commands and limits;
 English Pages has corresponding evaluation guidance. No general OCR accuracy,
 handwriting/complex-table coverage or PDF source-layout writeback is claimed.
 
-Next implementation work remains active: native structural CRUD (slide/shape
+Next priority from live Codex evidence: table_cite get currently summarizes refs
+without their full doc_id/asset_id/page and precise locators. Persisted refs pass
+the independent auditor, but the agent needs bounded canonical reference readback
+to complete its own review. Add suitable paging/hash integrity without truncating
+canonical quotes or inventing locators. Expand the real-document evaluation corpus.
+
+Further implementation work remains active: native structural CRUD (slide/shape
 addition/removal and equivalent operations for other formats), independent table/
 native bridges, asset relationships and complete agent review workflows. Scalable
 schema discovery and scoped native PPTX operations are already implemented; do not

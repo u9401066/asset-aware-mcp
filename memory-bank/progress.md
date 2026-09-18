@@ -1,10 +1,10 @@
-# Progress (Updated: 2026-08-13)
+# Progress (Updated: 2026-09-18)
 
 ## 2026-09-18 active goal — not complete
 
 - [ ] Goal item 7: real Codex MCP PDF image-to-structured-data CRUD evaluation,
   independent fixture truth, actual image/tool-call evidence and repeatable SDK
-  regressions. Release preparation is retained; tagging waits for this work.
+  regressions. The synthetic baseline shipped in 1.4.0; broader coverage is ongoing.
   Baseline implemented: three SDK modes, live mixed/scanned Codex runs, eight
   independent final checks, first-pass accuracy and recoveries recorded separately.
   Messy real-document corpus expansion remains active.
@@ -34,14 +34,20 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
-## 2026-09-18 v1.4.0 release preparation
+## 2026-09-18 v1.4.0 published and verified
 
 - User explicitly rejected the proposed 2.0.0 jump and requested 1.4.x. Use 1.4.0
   for this milestone and 1.4.x for subsequent small fixes. No 2.0.0 tag/package
   exists; retain the native discovery migration notice while correcting metadata.
 - Version 1.4.0 metadata, lockfile, Docker, VSIX, guides, anchors and bundled
   instructions are synchronized; 35 focused metadata/docs tests pass. Preparation
-  commit 929e878 has green CI 35335476121; correction commit CI remains pending.
+  commit 929e878 has green CI 35335476121; correction da829fa has green CI
+  35335805871 and Pages 35335805355.
+- Annotated v1.4.0 points to da829fa6f360bd684fda9b8d31efee3651a9ed94.
+  Release workflow 35336169071 passed all eight jobs. Public PyPI wheel/sdist
+  match audited local bytes; GitHub/Marketplace VSIX bytes match after HTTP gzip
+  decoding. Version/author/native modules/bundled harnesses and public Pages
+  source bytes are verified. Hashes and proof paths are in activeContext.md.
 - Repeated live mixed-04 is retained as a strict failure: Greek mu versus micro
   sign in one Unit cell, with matching Excel mismatch. Six other checks pass;
   raster appearance alone cannot establish original Unicode identity. Do not
@@ -58,17 +64,20 @@ Baseline revalidated; isolated latest main while preserving original user edits.
 - Validation: 1,546 Python passed / 30 optional skips, 199 VSIX tests and package
   checks, lint/format/types/Bandit, docs/harness/skills/metadata audits and asset
   synchronization. Desktop/mobile zh/en guide QA passed with cached pinned CDN
-  assets. New corpus baseline adds 53 regressions. Exact commit CI remains pending.
+  assets. New corpus baseline adds 53 regressions. Exact release commit CI passed.
 
 - Revalidated clean main@cf7f166 and successful checkpoint CI/Pages. Previous goal
   turn made concrete progress (native schema discovery and PPTX collaboration).
-- Prepare 1.4.0 as requested; native-contract-v2 changes the discovery response
-  shape, so document the migration explicitly. Full release harness, exact-tag CI and
-  public PyPI/Marketplace/GitHub artifact verification remain to be completed.
+- Released 1.4.0 as requested; native-contract-v2 changes the discovery response
+  shape, with an explicit migration notice. Full release harness, exact-tag CI and
+  public PyPI/Marketplace/GitHub artifact verification passed. Registry/index
+  visibility delays resolved; no tag movement or duplicate publication was needed.
+- Next: expose bounded canonical table citation readback so agents can inspect
+  precise persisted locators, and expand beyond the synthetic document corpus.
 - Structural CRUD, further formats, standard academic citations and complete agent
   review workflows remain active after this publication milestone.
 
-## 2026-09-18 native discovery and PPTX (implemented, release preparation)
+## 2026-09-18 native discovery and PPTX (released in 1.4.0)
 
 - Revalidated clean main@269893f and its green exact-commit CI. Full goal stays active.
 - Implemented bounded full-schema retrieval, per-operation discovery sharing
@@ -78,7 +87,7 @@ Baseline revalidated; isolated latest main while preserving original user edits.
   1,454 passed / 30 optional skips. Lint/format/types, docs generation/check,
   harness/skills audit and bundled asset synchronization passed.
 - README/zh/native guide/CHANGELOG/Pages and assistant instructions updated;
-  changes are on main pending release.
+  changes are on main and included in 1.4.0.
 - Discovery commit 1546bd3 has green CI 35329453898 and Pages 35329453179.
 - PPTX now supports independent native creation, slide/notes shapes, complete JSON
   component pages, precise existing-run edits, revision-pinned references and exact
@@ -88,9 +97,9 @@ Baseline revalidated; isolated latest main while preserving original user edits.
   cases pass: full Python 1,493 passed / 30 optional skips. VSIX 199 tests/package
   checks, lint/format/types/Bandit, docs/harness audits and synchronization passed.
 - Desktop/mobile zh/en browser QA passed with cached pinned CDNs; English native
-  overview now reflects unreleased PPTX/schema capabilities. Metadata/labels checked.
+  overview reflects the PPTX/schema capabilities released in 1.4.0. Metadata/labels checked.
 - Feature commit 2364fee passed all ten CI jobs in 35331710478 and Pages
-  35331709690. Publication remains pending. Broad structural CRUD, legacy/macro
+  35331709690. Published in 1.4.0. Broad structural CRUD, legacy/macro
   formats, academic CSL and complete agent review remain ongoing.
 
 

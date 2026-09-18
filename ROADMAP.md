@@ -10,6 +10,8 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
 
 ## 2026-09-18 active goal — not complete
 
+- [ ] 直接使用 Codex 測試 MCP 的 PDF 圖像轉結構化資料 CRUD；1.4.0 已提供
+  合成數位／掃描／混合文件基線與獨立稽核，後續擴充真實複雜文件。
 - [ ] Maintain MCP SDK 2.0+ compatibility, evaluate current native-format/PDF
   libraries against official repositories and regression evidence; adopt suitable
   updates without removing format features or bypassing release checks.
@@ -32,14 +34,29 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
 - [ ] Real-file regressions, README/Pages/metadata/labels/MEM synchronization,
   reviewed staged commits/pushes and fully verified releases throughout the work.
 
+## v1.4.0 已發布階段成果
+
+- 原生 PPTX 建立、投影片／備註形狀讀取、既有文字 run 更新、版本引用與
+  完整 package Wiki 已發布；新增／刪除形狀等結構操作仍待實作。
+- `native-contract-v2` 提供按操作查詢與 hash 固定的完整 schema 分頁；
+  已說明舊版 inline response 的遷移方式，專案後續小幅更新沿用 1.4.x。
+- Codex 實際 MCP 測試涵蓋圖像讀取、35 cells 轉錄、引用、更新／刪除／還原，
+  以及 Excel／Wiki 匯出；SDK2 三種 PDF 模式納入回歸測試。
+- 修正旋轉／裁切 PDF 的 figure 渲染座標，16 組獨立像素比對通過。
+  Agent 初次轉錄錯誤與修正分開記錄；保留 µ／μ 嚴格比對失敗，沒有宣稱
+  任意掃描文件皆能無損轉錄。結構化表格 CRUD 不會改寫原 PDF 版面。
+- 1,546 Python tests、199 VSIX tests、完整發布檢查及公開 artifacts 交叉驗證
+  完成；[v1.4.0 release](https://github.com/u9401066/asset-aware-mcp/releases/tag/v1.4.0)
+  是階段成果，跨格式總目標仍在進行。
+
 ## v1.3.0 已發布階段成果
 
 - DOCX 原生版本已接到 DFM 讀寫：固定來源版本的分段讀取、完整區塊標記檢查、
   保留未修改 parts、舊版／跨文件／併發修改拒絕，以及獨立來源回寫。
 - DOCX 元件引用驗證／wiki 匯出已接上：版本固定的區塊證據、完整表示與原始
   套件附件，保留舊快照；完整性檢查不等於語意或抽取完整性驗證。
-- 仍未提供 DOCX 結構插刪、樣式設計；PPTX 與
-  其他格式的原生編輯、學術引用引擎及完整 Agent 核對流程仍在範圍內。
+- 仍未提供 DOCX 結構插刪、樣式設計；其他格式的原生編輯、學術引用引擎
+  及完整 Agent 核對流程仍在範圍內。PPTX 的後續進展見 1.4.0。
 
 ## v1.2.0 已發布成果
 
@@ -52,8 +69,8 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
 - 原生檔案 registry：固定 ID、不可變版本、能力與來源狀態；其他格式可先保留原始內容。
 - XLSX 建立、XLSX/XLSM cells 讀取／分段讀取／typed update／清空、歷史、
   明確回寫、外部修改 refresh、保留歷史的 archive。格式限制與 Agent 核對仍明確保留。
-- 尚未完成工作表／列欄結構 CRUD、原生 wiki 引用、A2T 橋接或視覺核對自動化；
-  以上子項進展不代表跨格式總目標完成。
+- 尚未完成工作表／列欄結構 CRUD、A2T 橋接或視覺核對自動化；原生 wiki
+  引用已於 1.2.0 提供。以上子項進展不代表跨格式總目標完成。
 
 ## 已完成
 
@@ -103,6 +120,13 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
    held/unavailable backend 要有明確診斷，不能偽裝成成功的 structured parse。
 
 ## 下一階段
+
+### Agent 證據核對的近期缺口
+
+- 讓 `table_cite get` 可有界地讀回完整來源識別、頁碼與精確 locator，讓 Agent
+  能核對已保存的引用；canonical quote 與 hash 不可用截斷摘要取代。
+- 擴充真實掃描／複雜表格 corpus，分別記錄初次轉錄、Agent 修正及最終
+  artifact 稽核結果；MCP 的機械完整性檢查與語意／視覺核對維持明確分工。
 
 ### 1. PDF preflight router 與 structured extraction
 
