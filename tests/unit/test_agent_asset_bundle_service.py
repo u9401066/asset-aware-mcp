@@ -633,3 +633,71 @@ async def test_document_facade_dispatches_export_assets(
     assert (
         captured["asset_ref_factory"] is document_tools._asset_ref_from_manifest_asset
     )
+
+
+async def test_citation_style_changes_display_but_not_evidence_or_links(
+    tmp_path: Path,
+) -> None:
+    service, _repository, doc_id = _fixture(tmp_path)
+    baseline = await _export(service, doc_id, "plain")
+    result = await service.export(
+        doc_id,
+        output_dir="styled",
+        span_ref_factory=asset_ref_from_span,
+        asset_ref_factory=_asset_ref_from_manifest_asset,
+        citation_contract={
+            "inline_template": "【{source_id}/{asset_id}】",
+            "reference_template": "{title}",
+        },
+    )
+    old = [
+        json.loads(line)
+        for line in Path(baseline["assets_path"]).read_text().splitlines()
+    ]
+    new = [
+        json.loads(line)
+        for line in Path(result["assets_path"]).read_text().splitlines()
+    ]
+    for before, after in zip(old, new, strict=True):
+        for key in (
+            "asset_id",
+            "asset_key",
+            "source_identity",
+            "locator",
+            "content_sha256",
+            "citation",
+            "foam",
+        ):
+            assert before[key] == after[key]
+        expected_hash = hashlib.sha256(
+            canonical_json(
+                {k: v for k, v in after.items() if k != "record_sha256"}
+            ).encode()
+        ).hexdigest()
+        assert after["record_sha256"] == expected_hash
+        assert after["record_sha256"] != before["record_sha256"]
+        note = Path(result["output_dir"]) / after["foam"]["path"]
+        assert (
+            after["citation_presentation"]["inline"].replace("_", r"\_")
+            in note.read_text()
+        )
+    manifest = json.loads(Path(result["manifest_path"]).read_text())
+    assert manifest["citation_format"]["contract"]["version"] == "citation-format-v1"
+    snapshot = {
+        p.relative_to(result["output_dir"]).as_posix(): p.read_bytes()
+        for p in Path(result["output_dir"]).rglob("*")
+        if p.is_file()
+    }
+    with pytest.raises(ValueError, match="Missing citation metadata"):
+        await service.export(
+            doc_id,
+            output_dir="styled",
+            span_ref_factory=asset_ref_from_span,
+            asset_ref_factory=_asset_ref_from_manifest_asset,
+            citation_contract={"preset": "author-year"},
+        )
+    assert {
+        p.relative_to(result["output_dir"]).as_posix(): p.read_bytes()
+        for p in Path(result["output_dir"]).rglob("*")
+        if p.is_file()
+    } == snapshot

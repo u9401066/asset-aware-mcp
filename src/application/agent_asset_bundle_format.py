@@ -8,6 +8,8 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from src.application.citation_format_service import citation_markdown
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -128,6 +130,8 @@ def write_bundle(
     source_identity: dict[str, Any],
     records: list[dict[str, Any]],
     budget: BundleOutputBudget,
+    *,
+    citation_format: dict[str, Any] | None = None,
 ) -> None:
     budget.clear_projection()
     for record in records:
@@ -163,6 +167,8 @@ def write_bundle(
         "assets": asset_inventory,
         "artifacts": artifact_inventory(stage),
     }
+    if citation_format is not None:
+        payload["citation_format"] = citation_format
     payload["bundle_sha256"] = sha256_text(canonical_json(payload))
     _write_text(
         stage / "manifest.json",
@@ -200,6 +206,18 @@ def asset_note(record: dict[str, Any]) -> str:
         f"- `page`: {record['locator'].get('page') or '?'}",
         "",
     ]
+    presentation = record.get("citation_presentation")
+    if presentation:
+        lines.extend(
+            [
+                f"Citation: {citation_markdown(presentation['inline'])}",
+                "",
+                f"Reference: {citation_markdown(presentation['reference'])}",
+                "",
+                f"- `citation_contract_sha256`: `{presentation['contract_sha256']}`",
+                "",
+            ]
+        )
     content = record["content"]
     if record["asset_type"] == "figure":
         if content.get("media_path"):

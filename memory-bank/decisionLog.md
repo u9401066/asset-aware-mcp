@@ -111,3 +111,25 @@
 | 2026-02-09 | **ETL Profile 設定模組化** | ETL 管線中大量硬編碼常數（字型閾值、heading noise patterns、caption patterns、section keywords 等），不同期刊格式需不同設定。決定採用「兩者並行」策略：Python dataclass 定義預設值 + JSON 檔案可覆蓋。`ETLProfile` 為 frozen dataclass（domain value object），`ETLProfileRegistry` 提供 5 個內建預設。DI 鏈：`dependencies.py` 建立共享 profile → `PyMuPDFExtractor(profile=)` + `ManifestGenerator(profile=)`。 |
 | 2026-02-09 | **Marker ETL 規格書與缺陷修復** | 建立完整規格書 `docs/marker-etl-spec.md`，定義品質要求（QM/QF/QT/QI/QS/QB/QST/QMT/QE），修復 3 個實作缺陷：(1) Figure-Block 匹配 bug — 改為 index-based 1:1 匹配而非全部用第一個、(2) Table row/col 解析 — 從 markdown 表格文字解析實際行列數、(3) 圖片尺寸讀取 — 使用 PIL 取得實際 width/height。新增 89 個單元測試全部通過。 |
 | 2026-07-08 | 採用可插拔多引擎 PDF→資產架構：ETL_ENGINE 環境變數選擇 pymupdf（預設）/pymupdf4llm/docling/mineru，並讓結構化引擎 Docling/MinerU 輸出 Marker-compatible MarkerParseResult | Marker 因 marker-pdf 1.10.2 pin Pillow<11 與安全基線 Pillow>=12.2.0 衝突而停用；三個替代引擎（pymupdf4llm/docling/mineru）皆以 uv pip compile 驗證解析 pillow==12.3.0 相容。讓結構化引擎輸出 MarkerParseResult 可零侵入復用既有 _ingest_single_with_marker 資產管線（最小改動）；保留 document_service 的 marker_extractor slot 名稱、僅將型別泛化為 StructuredPDFExtractor Protocol，維持既有測試與 API 相容（避免破壞性重命名）；所有結構化引擎全懶加載，未安裝時 import 不炸並自動降級為 PyMuPDF 快速引擎，確保基礎安裝零額外依賴。PyMuPDF4LLM 採 Tier 1 drop-in（繼承 PyMuPDFExtractor 只覆寫 extract_text）、Docling 為 Tier 2（MIT 授權）、MinerU 為 Tier 3 最高精度（CLI + subprocess 隔離避免 OOM）。 |
+
+## 2026-09-18 — cross-format CRUD and evidence library
+
+Authoritative baseline is origin/main e612d20, published 1.0.1. Original master
+worktree remains at 0.9.0 with pre-existing user changes; do not reset it.
+Worktree: /home/eric/workspace251226/asset-aware-mcp-agent-assets;
+branch: feat/agent-asset-contracts.
+
+The latest explicit user reply confirms: MCP provides necessary source/version,
+format-preservation and operation-result checks; the agent owns complete semantic
+and visual verification and coordinates corrections. This clarification overrides
+the earlier complete-MCP-validation wording. Deterministic checks remain enforced
+on every supported write; do not claim full fidelity from structural checks alone.
+Full scope is tracked in docs/spec.md and ROADMAP.md; a milestone is not completion.
+
+Next: implement versioned citation presentation contracts in existing evidence
+and portable asset exports, then native capabilities/CRUD and inspectable operation results.
+README/Pages/GitHub metadata/labels/MEM and staged commits/push/releases are
+explicitly authorized. Full release gates remain required before tagging.
+
+Domain owns pure contracts; application binds display to evidence; infrastructure
+owns native format IO. Citation formatting never mutates source provenance.

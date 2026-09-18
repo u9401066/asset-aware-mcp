@@ -7,11 +7,24 @@
 
 ## [Unreleased]
 
+### Added
+
+- Declarative citation-format-v1 contracts with source, author/year, caller-numbered
+  and custom templates, discoverable through evidence(op="contract").
+- Optional citation formatting in evidence/Foam and portable agent asset exports;
+  canonical references and note identities survive display-style changes.
+- Contract regression coverage for metadata omissions, canonical locator override
+  rejection, bounded formatting and failure preservation of existing exports.
+
 ### Changed
 
+- Refresh the official MCP SDK lock from 2.0.0 to 2.2.0, retaining the >=2,<3
+  runtime contract and verifying real stdio exports.
+- Document cross-format CRUD, necessary MCP checks, agent-led verification and
+  wikilink evidence-library goal, with explicit current coverage and remaining work.
 - Refreshed the standalone universal lock after `v1.0.1`, including Docling
   `2.120.2`, docling-parse `7.13.0`, Ruff `0.16.3`, MyPy `2.3.1`,
-  pytest-timeout `2.5.0`, and the current compatible transitive patch releases.
+  pytest-timeout `2.4.0`, and compatible transitive patch releases.
   This is source-maintenance state on `main`; the immutable `v1.0.1` registry
   artifacts remain tied to their annotated release tag and published hashes.
 - Added a least-privilege weekly project-hygiene workflow. It rebuild-checks
@@ -23,6 +36,13 @@
 - Corrected the Traditional Chinese README feature parity, GitHub Wiki source
   status, release/tag/registry procedure, legacy-compatible Docker guidance,
   and the local-only nature and risks of Git `skip-worktree` hygiene.
+
+### Security
+
+- Raise HTTPX2, Accelerate and Transformers floors to patched versions and refresh
+  compatible locks, including Docling's platform-specific model dependencies.
+  Update affected npm transitive dependencies and replace yanked pytest-timeout
+  2.5.0 with 2.4.0. Universal Python and npm lock audits report zero known issues.
 
 ## [1.0.1] - 2026-08-13
 

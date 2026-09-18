@@ -1,8 +1,62 @@
-# Tech Spec: Medical RAG with Asset-Aware MCP
+# Asset-Aware MCP: Agent Document Collaboration Specification
 
-## 1. Project Goal
+## Agent document collaboration contract (2026-09-18)
 
-Build a local-first Model Context Protocol (MCP) server tailored for medical research. The system is designed to help an AI Agent (Copilot) write accurate reports from multiple PDFs. Instead of feeding full texts blindly, the system generates a structured "Document Manifest" (Map) allowing the Agent to precisely inspect structures and fetch specific assets (Tables, Sections, Figures) on demand.
+The goal is native cross-format document CRUD: create, read, decompose, update,
+write back and delete documents/components, preserving features outside the edit.
+Standalone table creation is first-class. Markdown and wikilinks are projections,
+not universal storage or substitutes for the editable source.
+
+An asset is an addressable, versioned unit an agent can inspect, reuse or operate
+on. Source files are root assets; paragraphs, cells, worksheets, slides, pictures,
+charts and embedded objects are children. Each carries identity, source revision,
+a native locator, typed representations, relationships, operation capabilities,
+preservation constraints and validation state. New agent-created assets record a
+creation origin without requiring a PDF. Inferred meaning is separate from source.
+
+Human handoff: register original identity → inspect native format/features →
+expose structure/previews/capabilities → stage scoped edits → necessary checks →
+agent review/correction → revision-checked atomic commit → optionally project selected assets
+into a wikilink evidence library. Source files and curated notes retain ownership.
+Deleting a projection does not mean deleting the original document.
+
+### Necessary MCP checks and agent verification
+
+MCP owns source/version preconditions, staged writes, format-preservation guards,
+structural checks and inspectable before/after operation results. Supported writes
+must fail on stale sources or failed integrity checks and publish atomically.
+It exposes locators, diffs, warnings and available previews for agent inspection.
+The agent owns complete semantic and visual verification, decides corrections and
+coordinates subsequent tool calls. MCP rechecks each resulting operation.
+Deterministic repair is appropriate only for explicitly supported mechanical rules;
+it is not a promise of complete automatic correction or layout verification.
+Verification coverage and unperformed checks must remain explicit. Structural
+validity alone must never be reported as semantic correctness or full fidelity.
+
+### Citation presentation contract
+
+Canonical identity, revision, locator and exact quote/hash are independent from
+human citation style. A versioned declarative contract defines inline/reference
+templates and required metadata, supporting source labels, author/year,
+caller-assigned numeric references and custom organizational formats. Templates
+are not full APA/Chicago/CSL implementations; standards-aware rendering remains
+in scope. Missing metadata must be reported, never invented.
+
+Allow only named scalar placeholders, no code/attribute/format expressions.
+Metadata cannot replace canonical IDs, hashes or locators. Export the contract
+and its hash alongside notes/bundles. Style changes preserve evidence identities
+and wikilink targets. Locator validity, extraction accuracy and semantic support
+are distinct concepts.
+
+### Starting coverage and completion evidence
+
+Published 1.0.1 covers PDF read/decompose/export, scoped DOCX/DFM writeback and
+independent A2T table creation/edit/export. Native spreadsheet/presentation CRUD,
+general asset registration, cross-format wiki export, per-format operation checks
+and agent review workflows, and academic/custom citation integration remain unfinished. Conversion to
+DOCX/PPTX does not prove native round-trip fidelity. ROADMAP.md tracks full scope.
+Each milestone updates README, Pages, repository metadata/labels and Memory Bank;
+reviewed commits are pushed in stages and releases require the full harness.
 
 ## 2. Core Architecture
 
@@ -144,3 +198,19 @@ asset-aware-mcp/
 2. **Job-Based ETL**: Long-running tasks must use the `JobService` to avoid timeouts.
 3. **Manifest-First**: Agents are encouraged to use `inspect_document_manifest` or `outline` resource before fetching full content.
 4. **Local-First**: All processing and storage must happen locally by default.
+
+## Upstream adoption (2026-09-18)
+
+- [Official MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk):
+  current stable v2 API, MCPServer and Client; baseline runtime uses mcp>=2,<3.
+- [Docling Core](https://github.com/docling-project/docling-core): native document
+  hierarchy and provenance; retain original structure alongside agent projections.
+- [MinerU](https://github.com/opendatalab/MinerU): compare current structured output
+  contracts and rendering; the existing held adapter is not evidence of 4.x compatibility.
+- [pikepdf](https://github.com/pikepdf/pikepdf): evaluate native PDF manipulation,
+  object preservation and validation for future PDF CRUD.
+- [GROBID](https://github.com/grobidOrg/grobid),
+  [gmft](https://github.com/conjuncts/gmft) and
+  [OmniDocBench](https://github.com/opendatalab/OmniDocBench): scholarly structures,
+  table extraction and parsing evaluation. Selection requires local real-file
+  evaluation; repository claims alone do not establish fidelity.

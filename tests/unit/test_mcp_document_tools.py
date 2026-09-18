@@ -3381,6 +3381,8 @@ class TestDocumentTools:
             index_path="",
             update_index=True,
             overwrite=False,
+            citation_contract=None,
+            citation_metadata=None,
         )
 
     async def test_evidence_op_routes_health(self) -> None:

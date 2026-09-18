@@ -14,6 +14,7 @@ EXPECTED_TOPICS = """ai
 agent-assets
 citations
 document-ai
+document-editing
 document-processing
 docx
 etl
@@ -24,14 +25,16 @@ lightrag
 llm
 mcp
 mcp-server
-medical
 ocr
 pdf
 python
-rag
-segmentation"""
+segmentation
+wikilinks"""
 
-EXPECTED_LABELS = """area:mcp\t5319e7\tMCP protocol, server, tools, resources, or clients
+EXPECTED_LABELS = """area:formats\t1d76db\tNative document format capabilities and CRUD adapters
+area:fidelity\t0e8a16\tFormat preservation, necessary checks and agent review evidence
+area:citations\t0052cc\tCitation presentation contracts and academic/custom rendering
+area:mcp\t5319e7\tMCP protocol, server, tools, resources, or clients
 area:pdf\t1d76db\tPDF extraction, OCR, layout, or preflight routing
 area:docx\t0e8a16\tDOCX, DFM, round-trip fidelity, or writeback
 area:wiki\t8250df\tFoam, LightRAG, knowledge graph, or reusable agent assets
@@ -80,7 +83,7 @@ if [[ "$1" == "api" && "$*" == *"--jq .description"* ]]; then
   if [[ "${GH_FAKE_SCENARIO:-ok}" == "metadata-drift" ]]; then
     printf '%s\\n' 'stale description'
   else
-    printf '%s\\n' 'Turn PDF, DOCX, tables, and figures into citation-ready reusable agent assets and Foam/LightRAG wikis — MCP SDK 2 server plus VS Code extension'
+    printf '%s\\n' 'Agent document collaboration: PDF assets, DOCX writeback, independent tables and wikilink evidence libraries, with provenance and citation format contracts'
   fi
 elif [[ "$1" == "api" && "$*" == *"--jq .homepage"* ]]; then
   printf '%s\\n' 'https://u9401066.github.io/asset-aware-mcp/'
@@ -184,7 +187,7 @@ def test_label_apply_preserves_unmanaged_labels_and_verifies_managed_values(
 ) -> None:
     result, calls = _run_script("gh_sync_labels.sh", "--apply", tmp_path)
     assert result.returncode == 0, result.stderr
-    assert calls.count("label create") == 14
+    assert calls.count("label create") == 17
     assert "label delete" not in calls
     assert "label list" in calls
 

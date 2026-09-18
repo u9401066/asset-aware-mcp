@@ -1,5 +1,29 @@
 # Active Context
 
+## 2026-09-18 — cross-format CRUD and evidence library
+
+Authoritative baseline is origin/main e612d20, published 1.0.1. Original master
+worktree remains at 0.9.0 with pre-existing user changes; do not reset it.
+Worktree: /home/eric/workspace251226/asset-aware-mcp-agent-assets;
+branch: feat/agent-asset-contracts.
+
+The latest explicit user reply confirms: MCP provides necessary source/version,
+format-preservation and operation-result checks; the agent owns complete semantic
+and visual verification and coordinates corrections. This clarification overrides
+the earlier complete-MCP-validation wording. Deterministic checks remain enforced
+on every supported write; do not claim full fidelity from structural checks alone.
+Full scope is tracked in docs/spec.md and ROADMAP.md; a milestone is not completion.
+
+User goal item 5 adds MCP SDK 2.0+ and current package/repository evaluation.
+The baseline used MCP 2.0.0; this milestone locks and verifies MCP 2.2.0.
+
+Citation presentation contracts are implemented in evidence/Foam and portable
+asset exports. Python 1,281 tests pass; see progress.md for gates/limitations.
+Next: stage commits and PR, then native capabilities/CRUD and inspectable results.
+README/Pages/GitHub metadata/labels/MEM and staged commits/push/releases are
+explicitly authorized. Full release gates remain required before tagging.
+
+
 ## 2026-08-13 - v1.0.1 large-PDF and Codex hardening
 
 - Release scope is a non-breaking `1.0.1` reliability/security patch on top of

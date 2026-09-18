@@ -8,6 +8,28 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
 [README.md](README.md) 和 release artifacts 為準；本頁只保留仍有效的方向，
 不再把已完成的舊版工作列為「進行中」。
 
+## 2026-09-18 active goal — not complete
+
+- [ ] Maintain MCP SDK 2.0+ compatibility, evaluate current native-format/PDF
+  libraries against official repositories and regression evidence; adopt suitable
+  updates without removing format features or bypassing release checks.
+
+- [ ] Native format capability contracts and asset registry: source/components,
+  revisions, locators, representations and relationships, including unknown formats.
+- [ ] Native read/decompose/create/update/delete/writeback across Word,
+  spreadsheets, presentations, PDF, text/web/structured documents and media.
+- [ ] Necessary MCP source/version, format and operation-result checks with
+  atomic writes; agent-led complete semantic/visual verification and correction,
+  with explicit check coverage and unsupported features.
+- [ ] Independent table creation and native/A2T round trips preserving cell
+  identities, types, formulas, styles and provenance.
+- [ ] Cross-format wikilink evidence library with stable targets, attachments,
+  provenance and protection of curated notes.
+- [ ] Versioned custom citation contracts and academic rendering independent of
+  canonical source identities, locators and hashes.
+- [ ] Real-file regressions, README/Pages/metadata/labels/MEM synchronization,
+  reviewed staged commits/pushes and fully verified releases throughout the work.
+
 ## 已完成
 
 ### v1.0.1 — PDF/Codex/網站 hardening

@@ -214,3 +214,25 @@ compact 與 legacy tool-name surfaces。
 - PyMuPDF/Docling adapters: 預設快速 extraction 與可選高精度 structured route
 - LightRAGAdapter: 實作知識圖譜索引與查詢
 - FileStorage: 處理本地檔案系統的讀寫與圖片儲存
+
+## 2026-09-18 — cross-format CRUD and evidence library
+
+Authoritative baseline is origin/main e612d20, published 1.0.1. Original master
+worktree remains at 0.9.0 with pre-existing user changes; do not reset it.
+Worktree: /home/eric/workspace251226/asset-aware-mcp-agent-assets;
+branch: feat/agent-asset-contracts.
+
+The latest explicit user reply confirms: MCP provides necessary source/version,
+format-preservation and operation-result checks; the agent owns complete semantic
+and visual verification and coordinates corrections. This clarification overrides
+the earlier complete-MCP-validation wording. Deterministic checks remain enforced
+on every supported write; do not claim full fidelity from structural checks alone.
+Full scope is tracked in docs/spec.md and ROADMAP.md; a milestone is not completion.
+
+Next: implement versioned citation presentation contracts in existing evidence
+and portable asset exports, then native capabilities/CRUD and inspectable operation results.
+README/Pages/GitHub metadata/labels/MEM and staged commits/push/releases are
+explicitly authorized. Full release gates remain required before tagging.
+
+Domain owns pure contracts; application binds display to evidence; infrastructure
+owns native format IO. Citation formatting never mutates source provenance.

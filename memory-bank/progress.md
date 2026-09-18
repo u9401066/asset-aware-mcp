@@ -1,5 +1,52 @@
 # Progress (Updated: 2026-08-13)
 
+## 2026-09-18 active goal — not complete
+
+- [ ] Maintain MCP SDK 2.0+ compatibility, evaluate current native-format/PDF
+  libraries against official repositories and regression evidence; adopt suitable
+  updates without removing format features or bypassing release checks.
+
+- [ ] Native format capability contracts and asset registry: source/components,
+  revisions, locators, representations and relationships, including unknown formats.
+- [ ] Native read/decompose/create/update/delete/writeback across Word,
+  spreadsheets, presentations, PDF, text/web/structured documents and media.
+- [ ] Necessary MCP source/version, format and operation-result checks with
+  atomic writes; agent-led complete semantic/visual verification and correction,
+  with explicit check coverage and unsupported features.
+- [ ] Independent table creation and native/A2T round trips preserving cell
+  identities, types, formulas, styles and provenance.
+- [ ] Cross-format wikilink evidence library with stable targets, attachments,
+  provenance and protection of curated notes.
+- [ ] Versioned custom citation contracts and academic rendering independent of
+  canonical source identities, locators and hashes.
+- [ ] Real-file regressions, README/Pages/metadata/labels/MEM synchronization,
+  reviewed staged commits/pushes and fully verified releases throughout the work.
+
+Baseline revalidated; isolated latest main while preserving original user edits.
+
+
+## 2026-09-18 citation contract milestone — implemented, awaiting PR/release
+
+- Added citation-format-v1 custom/source/author-year/numeric display contracts to
+  evidence bundles, Foam notes and portable asset exports. Canonical evidence,
+  source hashes, locators and note identities are unchanged by citation style.
+- Missing metadata and expression templates fail before publication; failed
+  bundle rebuilds preserve the previous managed export. Markdown output treats
+  citation content as escaped text. Presets are not full CSL/APA implementations.
+- Latest user clarification: MCP performs necessary operation checks; the agent
+  owns complete semantic/visual verification and coordinates corrections.
+- SDK lock now uses official MCP 2.2.0. Patched HTTPX2/model dependency floors,
+  compatible universal lock and npm transitives remove the scheduled audit issues.
+- Python: 1,281 passed / 30 optional skips with SDK 2.2.0, including real PDF
+  stdio/custom citation export. Ruff, format, MyPy, Bandit, workflow severity gate,
+  generated docs and release harness audits pass; both dependency audits are clean.
+- VSIX: 199 unit tests, package inventory, assistant asset sync and fresh/update
+  install smoke pass. Activation remains unverified (no Xvfb/display in this host).
+- Wheel/sdist audit, clean Python 3.10 wheel runtime/stdio and Docker build/doctor/
+  stdio pass. Browser QA, staged commits and PR are the next checkpoint.
+- Native XLSX/PPTX CRUD, generalized asset registration, cross-format wiki adapters
+  and standards-aware scholarly formatting remain open; the overall goal is active.
+
 ## v1.0.1 validation in progress
 
 - Implemented the bounded streaming MessagePack PDF worker result channel and

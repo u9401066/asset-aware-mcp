@@ -4,8 +4,13 @@ Asset-Aware MCP 是給 AI agents 使用的 citation-ready 文件工作流伺服�
 PDF、DOCX/DFM、表格、圖片、section、citation index、Foam evidence pack 與選用
 KG/RAG 串成可驗證的文件流程。
 
-這個網站改成章節式導覽：先選你正在做的任務，再進入對應的詳細頁或 reference。
-目前內容對齊 `1.0.1` 正式文件。
+章節導覽依任務整理；現行正式版本為 `1.0.1`，擴充工作另列於下方。
+
+## 進行中的產品方向
+
+目標是 Agent 跨格式文件 CRUD、獨立表格創造與 wikilink 證據庫。
+MCP 提供來源／版本、格式與操作結果的必要檢查；Agent 負責完整核對與修正。
+現有 PDF、DOCX/DFM、A2T 與可攜資產保留來源；原生試算表／簡報 CRUD 等仍在擴充。
 
 ## 1.0.1 highlights
 

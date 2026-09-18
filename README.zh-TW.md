@@ -32,33 +32,20 @@
 
 ## 🎯 為什麼需要資產感知 MCP？
 
-**只有 server-local 圖片路徑，並不是可攜式的 multimodal payload。** Agent 能否解析該路徑，
-取決於 client、sandbox 與檔案權限，不能假設兩端共用同一個檔案系統。
+Agent 需要操作原生文件、可編輯元件與可重用證據，包含獨立建立表格。
+目標是跨格式 CRUD 與格式保留。MCP 提供來源／版本、格式保護及操作結果的必要檢查；
+Agent 負責完整的語意與視覺核對，依據可檢查的結果協調修正。
 
-| 方法 | AI 能分析圖片內容嗎？ | 說明 |
-|------|:-------------------:|------|
-| ⚠️ 只提供 PNG 路徑 | 視 client 而定 | client 可能在遠端或 sandbox 內，不能安全假設 server 路徑存在於本地 |
-| ✅ **資產感知 MCP** | **相容 multimodal client 可用** | 透過 MCP 擷取具大小上限的實際圖片 bytes，再交給 vision model |
+目前覆蓋 PDF 讀取／拆解／可攜資產匯出、DOCX/DFM 局部編修與獨立 A2T 表格。
+原生試算表／簡報 CRUD、各格式必要檢查與 Agent 核對流程仍在開發；有轉檔工具不代表保真回寫。
+詳見[規格與 contract](docs/spec.md)及[路線圖](ROADMAP.md)。
 
-### 實際效果
+Asset 包含身分、版本、原生定位、表示、關係、操作能力與驗證狀態。Wiki 筆記是
+連回資產的文本投影；人類引用格式可擴充，底層證據引用保持獨立。
 
-```
-# 透過 MCP 獲取圖片後，AI 可以直接分析：
-
-使用者：這張圖在講什麼？
-
-AI：這是 Scaled Dot-Product Attention 的架構圖：
-    1. 輸入：Q (Query), K (Key), V (Value)
-    2. Q 與 K 的矩陣乘法 (MatMul)
-    3. 縮放 (Scale, 1/√dₖ)
-    4. 選用遮罩 (Mask)
-    5. SoftMax 正規化
-    6. 最後與 V 進行矩陣乘法得到輸出
-```
-
-**這就是資產感知 MCP 的價值** —— 讓 AI Agent 真正「看見」並理解你 PDF 文獻中的圖表。
-
----
+開發分支已加入引用格式 contract：支援來源標籤、作者／年份、指定編號與自訂範本，
+套用到證據與 Foam 匯出時保留原始來源資訊；完整 APA/CSL 渲染仍待實作。
+詳見[用法與限制](docs/wiki/LLM-Wiki-Knowledge-Base.md#citation-format-contracts-unreleased)。
 
 ## ✨ 特色
 

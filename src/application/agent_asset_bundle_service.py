@@ -27,8 +27,10 @@ from src.application.agent_asset_record_builder import (
     AssetRefFactory,
     SpanRefFactory,
 )
+from src.application.citation_format_service import render_citation
 from src.application.citation_index_service import CitationIndexService
 from src.application.output_paths import resolve_document_output_dir
+from src.domain.citation_format import CitationMetadata, resolve_citation_format
 
 if TYPE_CHECKING:
     from src.application.segmentation_service import SegmentationService
@@ -66,7 +68,17 @@ class AgentAssetBundleService:
         output_dir: str | None,
         span_ref_factory: SpanRefFactory,
         asset_ref_factory: AssetRefFactory,
+        citation_contract: dict[str, Any] | None = None,
+        citation_metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        contract = (
+            resolve_citation_format(citation_contract)
+            if citation_contract is not None
+            else None
+        )
+        metadata = CitationMetadata.model_validate(citation_metadata or {})
+        if citation_metadata is not None and contract is None:
+            raise ValueError("citation_metadata requires citation_contract")
         manifest = self.repository.load_manifest(doc_id)
         if manifest is None:
             return {"success": False, "doc_id": doc_id, "error": "Document not found"}
@@ -135,12 +147,38 @@ class AgentAssetBundleService:
                 stage,
                 doc_dir,
             )
+            citation_format = None
+            if contract is not None:
+                citation_format = {
+                    "contract": contract.model_dump(mode="json"),
+                    "contract_sha256": contract.contract_sha256,
+                    "metadata": metadata.model_dump(mode="json", exclude_none=True),
+                    "metadata_origin": "caller_supplied",
+                }
+                for record in records:
+                    presentation = render_citation(
+                        contract,
+                        metadata,
+                        source_id=doc_id,
+                        title=current_manifest.title
+                        or current_manifest.filename
+                        or doc_id,
+                        locator=record["locator"],
+                        asset_id=record["asset_id"],
+                    )
+                    output_budget.project(
+                        len(canonical_json(presentation).encode("utf-8"))
+                    )
+                    record["citation_presentation"] = presentation
+                    del record["record_sha256"]
+                    record["record_sha256"] = sha256_text(canonical_json(record))
             write_bundle(
                 stage,
                 current_manifest,
                 source_identity,
                 records,
                 output_budget,
+                citation_format=citation_format,
             )
             self._replace_target(stage, target)
         except Exception:

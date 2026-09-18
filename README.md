@@ -36,33 +36,25 @@
 
 ## 🎯 Why Asset-Aware MCP?
 
-**A server-local image path is not a portable multimodal payload.** Whether an agent can
-dereference that path depends on its client, sandbox, and filesystem permissions.
+Agents need native documents, editable components and reusable evidence.
+Asset-Aware supports document/asset workflows and independent table creation.
+The direction is cross-format CRUD with format preservation. MCP checks source
+versions, format constraints and operation results; the agent verifies meaning
+and visual layout and coordinates corrections using inspectable evidence.
 
-| Method | Can AI analyze image content? | Description |
-|------|:-------------------:|------|
-| ⚠️ Provide only a PNG path | Client-dependent | The client may be remote or sandboxed and cannot safely assume the server path exists locally |
-| ✅ **Asset-Aware MCP** | **Yes, for compatible multimodal clients** | Fetches bounded image bytes through MCP so the client can pass real image content to its vision model |
+Current coverage: PDF ingestion/decomposition/portable export, DOCX/DFM scoped
+editing and independent A2T tables. Native spreadsheet/presentation CRUD and
+per-format checks and agent review workflows remain ongoing; conversion is not evidence
+of a faithful round trip. See [contracts](docs/spec.md) and [roadmap](ROADMAP.md).
 
-### Real-world Effect
+Assets carry identity, revision, native locators, representations, relationships,
+capabilities and validation state. Wiki notes are linked projections; configurable
+citation display must preserve the underlying evidence references.
 
-```
-# After retrieving the image via MCP, the AI can analyze it directly:
-
-User: What is this figure about?
-
-AI: This is the architecture diagram for Scaled Dot-Product Attention:
-    1. Inputs: Q (Query), K (Key), V (Value)
-    2. MatMul of Q and K
-    3. Scale (1/√dₖ)
-    4. Optional Mask (for decoder)
-    5. SoftMax normalization
-    6. Final MatMul with V to get the output
-```
-
-**This is the value of Asset-Aware MCP** - enabling AI Agents to truly "see" and understand charts and tables in your PDF literature.
-
----
+Citation format contracts are available on the development branch: source,
+author/year, explicit numbering and custom templates for evidence/Foam exports.
+They preserve canonical provenance; full APA/CSL rendering remains future work.
+See [usage and limits](docs/wiki/LLM-Wiki-Knowledge-Base.md#citation-format-contracts-unreleased).
 
 ## ✨ Features
 

@@ -15,7 +15,7 @@ if [[ ! "$REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
   exit 2
 fi
 
-DESCRIPTION="Turn PDF, DOCX, tables, and figures into citation-ready reusable agent assets and Foam/LightRAG wikis — MCP SDK 2 server plus VS Code extension"
+DESCRIPTION="Agent document collaboration: PDF assets, DOCX writeback, independent tables and wikilink evidence libraries, with provenance and citation format contracts"
 # The repository homepage should open the redesigned product landing. README
 # documentation links intentionally deep-link to the generated reader instead.
 HOMEPAGE="https://u9401066.github.io/asset-aware-mcp/"
@@ -35,11 +35,11 @@ TOPICS=(
   llm
   mcp
   mcp-server
-  medical
+  document-editing
   ocr
   pdf
   python
-  rag
+  wikilinks
   segmentation
 )
 

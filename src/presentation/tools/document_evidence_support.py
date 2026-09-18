@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from src.application.citation_format_service import citation_markdown
 from src.presentation.tools.citation_support import (
     asset_ref_from_span,
     coerce_range,
@@ -468,6 +469,14 @@ def _format_citation_bundle(payload: dict[str, Any]) -> str:
                 f"- **Verification:** {status}",
             ]
         )
+        presentation = entry.get("citation_presentation")
+        if presentation:
+            lines.extend(
+                [
+                    f"- **Citation:** {citation_markdown(presentation['inline'])}",
+                    f"- **Reference:** {citation_markdown(presentation['reference'])}",
+                ]
+            )
         if issues:
             lines.append(f"- **Issues:** {', '.join(issues)}")
         lines.extend(
@@ -500,6 +509,8 @@ def _format_foam_evidence_pack(payload: dict[str, Any]) -> str:
         "matched_count": payload.get("matched_count", 0),
         "returned": payload.get("returned", 0),
     }
+    if payload.get("citation_format"):
+        frontmatter["citation_format"] = payload["citation_format"]
     lines = _foam_frontmatter_lines(frontmatter)
     lines.extend(
         [
@@ -532,6 +543,16 @@ def _format_foam_evidence_pack(payload: dict[str, Any]) -> str:
                 "",
             ]
         )
+        presentation = entry.get("citation_presentation")
+        if presentation:
+            lines.extend(
+                [
+                    f"Citation: {citation_markdown(presentation['inline'])}",
+                    "",
+                    f"Reference: {citation_markdown(presentation['reference'])}",
+                    "",
+                ]
+            )
         if issues:
             lines.extend([f"- `issues`: {', '.join(issues)}", ""])
         lines.extend(_foam_quote_lines(str(entry.get("quote") or "")))

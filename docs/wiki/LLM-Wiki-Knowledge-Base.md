@@ -175,3 +175,53 @@ evidence(
 
 Health check 會回查 embedded AssetRef JSON、span/table/figure locator、asset note
 和 `[[note#^anchor]]` link 是否 drift。若 drift，重新匯出 bundle，再更新 topic note。
+
+## Citation format contracts (Unreleased)
+
+Use `evidence(op="contract")` to inspect the format schema, metadata schema and
+presets. Both `evidence(op="bundle")` / `citation_bundle` and
+`document(op="export_assets")` accept `citation_contract` and `citation_metadata`.
+Omitting them preserves existing output. These options are rejected on unrelated
+operations instead of silently ignored.
+
+```text
+evidence(
+  op="bundle", doc_id="doc_policy", output_format="foam",
+  citation_contract={
+    "name": "internal-policy",
+    "inline_template": "【{source_id}／第{page}頁】",
+    "reference_template": "{title} — {source_id}"
+  }
+)
+```
+
+A selector such as `citation_contract={"preset":"author-year"}` accepts
+`citation_metadata={"authors":"Chen et al.","year":"2026"}`. Metadata is
+caller-supplied and is never presented as independently verified bibliography.
+The `source` preset uses source ID/location; `numeric` requires an explicit
+positive `reference_number` so filtering never silently renumbers references.
+These are basic templates, not full APA/Chicago/CSL renderers. Full academic
+style-engine integration remains planned.
+
+Custom placeholders: `source_id`, `asset_id`, `span_id`, `citation_key`, `title`,
+`authors`, `year`, `doi`, `url`, `reference_number`, `page`, `section`, `locator`.
+Fields unavailable in a particular export fail explicitly (for example an
+asset-level bundle has no single span ID). `{page}` and other native locators
+cannot be overridden through metadata. Missing referenced/required fields fail
+before note publication. Templates permit named scalar fields and escaped braces;
+attribute access, indexing, conversions and format expressions are rejected.
+
+The bundle records the normalized `citation-format-v1` definition, hash and
+caller metadata. Notes show inline/reference text while retaining canonical
+AssetRefs. Changing style leaves source/content hashes, locators, asset IDs and
+wikilink targets unchanged; complete record/artifact/bundle hashes change because
+the presentation bytes changed. A failed styled export preserves the previous
+complete bundle. Existing output budgets still apply.
+
+Citation-reference verification proves alignment with persisted evidence; it does
+not prove extraction accuracy, bibliographic accuracy or semantic support for a
+new claim. Those require their own checks in the agent/MCP workflow.
+
+Citation templates produce plain text. Markdown exports escape markup and flatten
+line breaks so bibliographic data cannot introduce headings or unrelated wikilinks;
+JSON records retain the original presentation strings and contract metadata.

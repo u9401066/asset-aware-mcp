@@ -16,6 +16,9 @@ if [[ ! "$REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
 fi
 
 LABELS=(
+  "area:formats|1d76db|Native document format capabilities and CRUD adapters"
+  "area:fidelity|0e8a16|Format preservation, necessary checks and agent review evidence"
+  "area:citations|0052cc|Citation presentation contracts and academic/custom rendering"
   "area:mcp|5319e7|MCP protocol, server, tools, resources, or clients"
   "area:pdf|1d76db|PDF extraction, OCR, layout, or preflight routing"
   "area:docx|0e8a16|DOCX, DFM, round-trip fidelity, or writeback"

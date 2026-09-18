@@ -387,6 +387,63 @@ async def test_production_default_stdio_exports_text_table_figure_and_foam(
             assert repeated["success"] is True
             assert _tree_hashes(bundle_root) == first_hashes
 
+            discovered = _unwrap(await client.call_tool("evidence", {"op": "contract"}))
+            assert discovered["success"] is True
+            assert "author-year" in discovered["presets"]
+            contract = {
+                "name": "內部文件",
+                "inline_template": "【{source_id}／第{page}頁】",
+                "reference_template": "{title}（{year}）",
+            }
+            styled = _unwrap(
+                await client.call_tool(
+                    "document",
+                    {
+                        "op": "export_assets",
+                        "doc_id": doc_id,
+                        "output_dir": "styled-assets",
+                        "citation_contract": contract,
+                        "citation_metadata": {"year": "2026"},
+                    },
+                    read_timeout_seconds=60,
+                )
+            )
+            assert styled["success"] is True
+            styled_root = Path(styled["output_dir"])
+            styled_manifest = json.loads((styled_root / "manifest.json").read_text())
+            _assert_bundle_integrity(styled_root, styled_manifest, before_sha256)
+            assert (
+                styled_manifest["citation_format"]["metadata_origin"]
+                == "caller_supplied"
+            )
+            original_records = [
+                json.loads(line)
+                for line in (bundle_root / "assets.jsonl").read_text().splitlines()
+            ]
+            styled_records = [
+                json.loads(line)
+                for line in (styled_root / "assets.jsonl").read_text().splitlines()
+            ]
+            assert len(original_records) == len(styled_records)
+            for original, record in zip(original_records, styled_records, strict=True):
+                for field in (
+                    "source_identity",
+                    "locator",
+                    "citation",
+                    "foam",
+                    "content_sha256",
+                ):
+                    assert original[field] == record[field]
+                assert (
+                    record["citation_presentation"]["inline"] == f"【{doc_id}／第1頁】"
+                )
+                note = (styled_root / record["foam"]["path"]).read_text()
+                assert (
+                    record["citation_presentation"]["inline"].replace("_", r"\_")
+                    in note
+                )
+            assert _tree_hashes(bundle_root) == first_hashes
+
         errlog.flush()
         errlog.seek(0)
         stderr = errlog.read()

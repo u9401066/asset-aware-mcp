@@ -26,6 +26,7 @@ from mcp.types import ImageContent, TextContent
 from pydantic import Field
 
 from src.application.agent_asset_bundle_service import AgentAssetBundleService
+from src.application.citation_format_service import format_evidence_bundle
 from src.application.document_readiness_service import (
     AI_READINESS_ARTIFACTS,
     AI_READINESS_REQUIRED_AUDITS,
@@ -34,6 +35,12 @@ from src.application.document_readiness_service import (
 from src.application.document_service import normalize_page_ranges
 from src.application.output_paths import (
     resolve_document_output_path,
+)
+from src.domain.citation_format import (
+    CitationFormatContract,
+    CitationMetadata,
+    citation_format_presets,
+    resolve_citation_format,
 )
 from src.domain.marker_errors import MarkerBackendUnavailable
 from src.domain.pdf_preflight import PDFPreflightError
@@ -795,6 +802,8 @@ async def citation_bundle(
     index_path: str = "",
     update_index: bool = True,
     overwrite: bool = False,
+    citation_contract: dict[str, Any] | None = None,
+    citation_metadata: dict[str, Any] | None = None,
 ) -> Any:
     """
     Export citation-ready evidence spans as a verified bundle.
@@ -804,6 +813,20 @@ async def citation_bundle(
     metadata. Use output_format="foam" for a Foam-compatible evidence pack.
     Pass wiki_root to write the pack and optionally update an index note.
     """
+    try:
+        contract = (
+            resolve_citation_format(citation_contract)
+            if citation_contract is not None
+            else None
+        )
+        metadata = CitationMetadata.model_validate(citation_metadata or {})
+        if citation_metadata is not None and contract is None:
+            raise ValueError("citation_metadata requires citation_contract")
+    except ValueError as exc:
+        return format_limited_json_response(
+            title="Citation format error",
+            payload={"success": False, "doc_id": doc_id, "error": str(exc)},
+        )
     spans = load_or_build_evidence_spans(repository, doc_id)
     if not spans:
         status = load_citation_status(repository, doc_id) or {}
@@ -884,6 +907,18 @@ async def citation_bundle(
         "returned": len(entries),
         "entries": entries,
     }
+    if contract is not None:
+        manifest = repository.load_manifest(doc_id)
+        source_title = getattr(manifest, "title", "")
+        if not isinstance(source_title, str) or not source_title:
+            source_title = doc_id
+        try:
+            format_evidence_bundle(payload, contract, metadata, title=source_title)
+        except ValueError as exc:
+            return format_limited_json_response(
+                title="Citation format error",
+                payload={"success": False, "doc_id": doc_id, "error": str(exc)},
+            )
     if wiki_root or output_path:
         if output_format != "foam":
             return format_limited_json_response(
@@ -2448,6 +2483,8 @@ async def document(
     criteria: str = "",
     doc_b_id: str | None = None,
     ctx: Context | None = None,
+    citation_contract: dict[str, Any] | None = None,
+    citation_metadata: dict[str, Any] | None = None,
 ) -> Any:
     """Consolidated PDF document entrypoint with explicit operation contracts.
 
@@ -2463,6 +2500,10 @@ async def document(
     even though the shared JSON schema can require only ``op`` globally.
     """
     operation = _normalize_op(op)
+    if operation not in {"export_assets", "agent_assets"} and (
+        citation_contract is not None or citation_metadata is not None
+    ):
+        return {"success": False, "error": "Citation formatting requires export_assets"}
     if operation == "auto":
         if doc_id and file_paths:
             return (
@@ -2618,6 +2659,8 @@ async def document(
                 output_dir=output_dir,
                 span_ref_factory=asset_ref_from_span,
                 asset_ref_factory=_asset_ref_from_manifest_asset,
+                citation_contract=citation_contract,
+                citation_metadata=citation_metadata,
             )
         except (OSError, ValueError) as exc:
             return {"success": False, "doc_id": doc_id, "error": str(exc)}
@@ -2859,9 +2902,48 @@ async def evidence(
     index_path: str = "",
     update_index: bool = True,
     overwrite: bool = False,
+    citation_contract: dict[str, Any] | None = None,
+    citation_metadata: dict[str, Any] | None = None,
 ) -> Any:
-    """Consolidated citation evidence entrypoint."""
+    """Evidence operations; contract describes citation formats, bundle applies them.
+
+    citation_contract accepts a preset selector or named-field inline/reference
+    templates; citation_metadata supplies bibliographic fields, never locators.
+    """
     operation = _normalize_op(op)
+    if operation == "contract":
+        try:
+            selected = (
+                resolve_citation_format(citation_contract).model_dump(mode="json")
+                if citation_contract is not None
+                else None
+            )
+        except ValueError as exc:
+            return format_limited_json_response(
+                title="Citation format contract",
+                payload={"success": False, "error": str(exc)},
+            )
+        return format_limited_json_response(
+            title="Citation format contract",
+            payload={
+                "success": True,
+                "schema": CitationFormatContract.model_json_schema(),
+                "metadata_schema": CitationMetadata.model_json_schema(),
+                "presets": citation_format_presets(),
+                "selected": selected,
+                "verification_scope": "Display formatting does not verify semantic support",
+            },
+        )
+    if operation != "bundle" and (
+        citation_contract is not None or citation_metadata is not None
+    ):
+        return format_limited_json_response(
+            title="Citation format error",
+            payload={
+                "success": False,
+                "error": "Citation formatting requires op='bundle'",
+            },
+        )
     if operation == "find":
         if not doc_id:
             return _missing_document_param("doc_id")
@@ -2893,6 +2975,8 @@ async def evidence(
             index_path=index_path,
             update_index=update_index,
             overwrite=overwrite,
+            citation_contract=citation_contract,
+            citation_metadata=citation_metadata,
         )
     if operation in {"claim_promotion", "claims", "promote_claims"}:
         if not doc_id:
@@ -3010,7 +3094,7 @@ async def evidence(
     return _unsupported_document_op(
         "evidence",
         op,
-        {"bundle", "claim_promotion", "find", "health", "locate", "verify"},
+        {"bundle", "claim_promotion", "contract", "find", "health", "locate", "verify"},
     )
 
 
