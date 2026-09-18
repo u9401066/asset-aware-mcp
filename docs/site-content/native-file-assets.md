@@ -614,3 +614,68 @@ document(op="native", native_request={
 `inline_template` 與 `reference_template` 的自訂格式。既有有效 JSON 不變。
 這是**引用顯示格式**，不能放入來源引用、驗證報告或任意轉錄資料；正規證據
 仍保存在版本、locator、hash 與 Wiki records 中，不能用格式欄位覆寫。
+
+## Native derivations (Unreleased)
+
+Agent 把掃描 PDF 轉成可編輯表格後，兩份檔案各有完整引用，仍需要明確
+記錄「產物來自哪裡」。`record_derivation` 保存這個關係；MCP 核對兩端
+的不可變版本與定位，Agent 則說明轉製活動，以及實際完成了哪些核對。
+公開版仍是 1.4.0；先查目前安裝版本是否宣告 `derivations_enabled`。
+
+對 Agent 而言，可重用的資產需要身分、版本、可讀的表示、可操作能力與
+來源關係。帳本補上最後一部分；它保存可檢查的主張，不會自行理解或證明
+內容。已有的整份檔案、XLSX 儲存格、DOCX 區塊、PPTX 形狀與 PDF 頁面
+引用都能連結；PDF 頁到 PPTX 表格使用頁／形狀粒度，尚非逐格 OCR 映射。
+
+```python
+# 先完整讀取來源與產物，再讀取帳本取得 derivations_sha256。
+document(op="native", native_request={
+    "op": "record_derivation", "asset_id": target_asset_id,
+    "expected_derivations_sha256": ledger_hash,
+    "derivation": {
+        "target": full_target_reference,
+        "sources": [full_source_page_reference],
+        "activity": "依掃描頁轉錄表格，保留前導零與原始顯示字串",
+        "agent": "my-document-agent",
+        "review": {
+            "semantic_accuracy": "passed",
+            "rendered_layout": "not_checked",
+            "formula_results": "not_applicable",
+            "notes": "已逐項對照來源影像；尚未核對簡報渲染畫面"
+        }
+    }
+})
+```
+
+核對狀態可用 `not_checked`、`passed`、`failed`、`not_applicable`。只記錄實際
+執行的核對；`agent` 與 review 都是呼叫者聲明，不是身分認證或 MCP 的語意
+背書。即使 `references_valid=true`，語意核對仍可是 `failed`。
+
+- `read_derivations(asset_id)`：完整帳本以 canonical JSON 分頁；接續使用
+  `text_offset=next_text_offset` 與同一 `derivations_sha256`，串接後核對 UTF-8
+  SHA-256。`text_limit` 上限 4,000，編碼後仍有額外大小限制。
+- `record_derivation`：使用最新帳本 hash 新增；可在 `derivation.supersedes`
+  指定同一資產的活躍紀錄 ID，以單次原子操作修訂聲明。舊紀錄保留。
+- `retract_derivation`：使用 `asset_id`、`expected_derivations_sha256` 與
+  `retraction={derivation_id, agent, reason}` 撤回。這不會刪除文件或歷史。
+- `verify_derivation(asset_id, derivation_id)`：分別回傳關係是否活躍、引用
+  完整性、是否仍是目前受管理版本與 Agent 核對狀態。來源查驗結果每頁
+  至多 10 筆，依 `next_offset`／`derivations_sha256` 接續；核對備註由完整
+  帳本讀取。外部人工作業是否改動來源，仍需另行 refresh／reconcile。
+
+每筆最多 64 個不同來源，每個帳本最多 1,000 個事件與 16 MiB。帳本使用
+原生資產相同的操作鎖、hash 比對與原子寫入，文件位元組不變。過期寫入、
+不存在的引用、重複來源、對自身的精確引用、撤回不存在／不活躍的紀錄，
+以及對已封存產物的修改都會被拒絕。舊版本引用不會自動移到新版本。
+
+`export_wiki` 可帶 `derivations_sha256` 固定此次帳本；快照身分包含帳本
+hash，因此修訂／撤回會形成新快照。完整帳本保存在 `derivations.json`；
+只針對「活躍且指向匯出版本」的主張重新查驗，附上完整來源檔案與 wikilink
+說明。Manifest 列出原始檔名、格式、版本及附件路徑；支援的原生格式保留副檔名，
+可直接重新註冊進 MCP，未知格式使用 .bin。總輸出預算仍適用。
+其他版本與已撤回紀錄留作歷史，該次匯出不重新查驗／附上它們的來源。
+舊 Wiki 與人工整理的筆記不覆寫；`citation_contract` 仍僅控制引用顯示。
+
+此設計參考 [W3C PROV-O 的衍生關係](https://www.w3.org/TR/prov-o/#Derivation)
+與 [Docling Graph 的來源帳本](https://github.com/docling-project/docling-graph/blob/main/docs/fundamentals/graph-management/provenance.md)，
+並非完整 PROV-O／RDF 格式實作。

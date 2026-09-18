@@ -27,6 +27,8 @@
   review assertions, append-only corrections/retractions and portable Wiki implemented.
   1,909 Python tests / 199 extension tests; real Codex runs 02/03 pass independent
   derivation/PPTX/source audits with 93/92 calls and zero MCP tool errors.
+  Final runtime run 04: 96 calls, zero MCP tool errors; retained initial auditor
+  restart false-positive and model-reported diagnostics; 3 restart regressions pass.
 - [ ] Commit/push derivation checkpoint and verify exact CI/Pages; public stays 1.4.0.
 
 - [x] Unreleased checkpoint: native PPTX textbox addition / existing shape deletion

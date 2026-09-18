@@ -332,3 +332,34 @@ uv run python -m tests.codex_pptx_tables.run \
 同日 run 02 使用完成型別規格修正的 runtime：66 次呼叫、零工具錯誤，
 初次轉錄完全正確；1 張實際掃描 PNG、4 份不同版本／定位的完整證據紀錄
 （重複讀取另計）。兩次的最終 PPTX／Wiki 與歷史還原稽核都通過。
+
+## Codex native derivation evaluation (Unreleased)
+
+在已登入的 Codex CLI 執行：
+
+```bash
+uv run python -m tests.codex_pptx_tables.run --codex /absolute/path/to/codex --output /tmp/native-derivation-run --derivations
+```
+
+Agent 先完成掃描頁到可編輯表格的工作，再完整讀取最終形狀與來源頁，新增
+轉製紀錄、修訂核對說明、建立並撤回暫存主張，查驗歷史及匯出含來源附件的
+Wiki。稽核以實際 MCP 回應和原生產物判斷：引用需先完整讀回，帳本須先
+完整讀取再以同一 hash 修改，最終歷史／活躍狀態／附件與快照 hash 必須一致。
+來源 PDF 不能被改寫；一般 pytest 不會啟動模型。初次辨讀、工具錯誤與恢復
+仍分開記錄。機械查驗不代表語意正確、一般 OCR 準確率或完整投影片畫面保真。
+
+2026-09-18 derivations run 02：93 次 MCP 呼叫、零 MCP 工具錯誤，初次轉錄
+完全正確；1 張實際掃描 PNG、5 份不同版本／定位的完整紀錄、4 個帳本事件
+（修訂及撤回後留下 1 個活躍主張）與精確來源 PDF 附件均通過獨立稽核。
+模型另自述修正一次本地 orchestration 語法錯誤；事件流沒有該錯誤的獨立
+工具紀錄，此自述保留在 `agent_reported_limitations`，不與零 MCP 錯誤混用。
+
+同日 run 03 重跑相同當時的 runtime：92 次 MCP 呼叫、零工具錯誤，初次轉錄
+完全正確；同樣通過 1 張 PNG、5 份完整紀錄、4 個帳本事件、1 個活躍主張
+與精確來源附件稽核。兩次均未宣稱完成投影片渲染核對。
+
+保留原生附件副檔名後的最終 runtime，run 04 完成 96 次 MCP 呼叫、零 MCP
+工具錯誤，初次轉錄正確，完整表格／帳本／來源附件稽核通過。初版稽核器曾
+把「先取預覽，再從 offset 0 完整重讀」誤判為不連續；修正後新增三個回歸
+案例，仍要求完整覆蓋與正確 hash，原始失敗報告保留。模型另自述修正過一次
+過度跳脫的字型診斷；此聲明亦獨立保留，不作為伺服器或版面正確性的證明。

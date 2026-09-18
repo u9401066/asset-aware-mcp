@@ -173,15 +173,30 @@ def audit(output):
         "Published revision differs",
     )
     validate_wiki(workspace, deck)
+    derivations = None
+    if expected.get("derivations"):
+        from tests.codex_pptx_tables.derivations import validate_derivations
+
+        derivations = validate_derivations(
+            workspace,
+            source,
+            deck,
+            calls,
+            records,
+            expected.get("source_attachment_suffix"),
+        )
     return {
         "passed": True,
         "first_transcription_exact": first_exact,
         "passed_with_recoveries": not first_exact or bool(tool_errors(events)),
+        "recovery_scope": "Observed MCP tool errors and corrected transcription only; agent-reported limitations are retained separately.",
+        "agent_reported_limitations": final.get("limitations", []),
         "mcp_calls": len(calls),
         "tool_call_attempts": len(calls) + len(tool_errors(events)),
         "complete_records": len(records),
         "images": images,
         "tool_errors": tool_errors(events),
+        "derivations": derivations,
         "scope": "Synthetic scanned first page, editable table strings/grid/merge and native package evidence; no full slide render or general OCR claim",
     }
 

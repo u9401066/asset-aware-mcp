@@ -54,8 +54,22 @@ Python wheel/sdist artifact audit and final Docker build/native wiring passed.
 Removed only completed pytest-185/188 fixtures with live root excluded; original
 files, actual Codex evidence and test logs retained. Desktop-en/mobile-zh screenshots
 of the new derivation guide were viewed and legible. Public remains 1.4.0.
-Final-source Codex run 04 is in progress; its source SHA256 is
+Final-source Codex run 04 completed 96 MCP calls, zero MCP tool errors, exact first
+transcription, one PNG/five complete records/four ledger events/one active assertion.
+Initial auditor rejected a preview followed by restart at offset zero. Actual trace
+contains the complete 25,578-character shape before any edit; corrected the auditor
+to discard incomplete prefixes on explicit restart, still requiring full hash-checked
+readback. Three regressions prove valid restarts and corrupt restart rejection;
+25 focused table/derivation auditor cases pass (16 derivation cases). Initial failure
+retained as audit-initial.json and original runner log; final audit.json passes.
+Model self-reported an over-escaped font diagnostic recovery; retain that limitation
+without treating it as an observed MCP error or independent proof. Runtime SHA256:
 dba99f0ee01452813611fd2eb18ecdf84a32e0fd240d499a873adcc7ebde3604.
+Core and SDK2 changes committed as 29369ec under u9401066 <u9401066@gap.kmu.edu.tw>.
+Remaining commit: actual Codex auditor, docs/harness/platform CI; push both commits
+then verify exact CI/Pages. Full local source suite 1,909 passed / 30 skips; final
+three added auditor regressions are covered by the focused 25-test rerun. Broader
+format CRUD, cell-level mappings and real-document corpus remain active goal work.
 
 
 ## 2026-09-18 — native editable PPTX tables verified locally; push pending

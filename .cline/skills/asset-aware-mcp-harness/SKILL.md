@@ -86,6 +86,16 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
   citation_contract is a typed display preset/custom-template union, not a place
   for source references or proof reports. Preserve canonical evidence separately.
 
+
+- When derivations_enabled is advertised, read complete read_derivations JSON
+  with derivations_sha256 before record_derivation/retract_derivation. Pin full
+  target/source references; supersedes atomically replaces an active assertion,
+  retaining history. verify_derivation separates activity, endpoint validity and
+  caller-supplied agent review; follow next_offset at the same ledger hash.
+  Record only reviews actually performed; hashes do not certify meaning. Native
+  file revisions never inherit old assertions automatically. Wiki snapshots pin
+  ledger hashes and attach sources for active assertions on the exported revision.
+
 - When advertised, native PDF supports create_pdf/read_pdf/read_pdf_page/
   render_pdf_page/add_pdf_pages/update_pdf/delete_pdf_pages/reorder_pdf_pages.
   Pin revisions, assemble complete page JSON and verify its UTF-8 hash; retrieve

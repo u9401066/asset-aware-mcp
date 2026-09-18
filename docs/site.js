@@ -296,6 +296,16 @@ Read complete tables with read_pptx_shape; update_pptx edits anchor cell runs an
 
 Native export_wiki now exposes citation_contract as a typed union: source/author-year/numeric preset, or custom inline_template and reference_template. Valid existing JSON remains compatible. Display contracts do not store source references, proof reports or arbitrary transcription data; canonical evidence remains separate.
 
+### Native derivations (Unreleased)
+
+record_derivation connects full immutable native file/cell/DOCX-block/PPTX-shape/PDF-page references. It records the activity and agent review while mechanically checking both endpoints. Agent identity and semantic/layout/formula review are caller assertions. A valid reference can coexist with a failed semantic review. Source and target versions remain explicit; new file revisions never inherit old claims automatically.
+
+Read the complete read_derivations ledger using text_offset/text_limit and one derivations_sha256; concatenate all chunks and verify UTF-8 SHA-256. record_derivation and retract_derivation require expected_derivations_sha256. A new assertion may supersede an active record atomically; corrections and withdrawals retain history. verify_derivation reports active status, reference validity and current managed revisions separately, with at most ten source results per page (next_offset plus the same ledger hash). Review notes remain in the complete ledger. External source freshness still requires refresh/reconciliation.
+
+Limits are 64 distinct source references per assertion, 1,000 ledger events and 16 MiB. The ledger shares native operation locks and atomic publication; source/document bytes stay intact. export_wiki can pin derivations_sha256, creates a distinct ledger-pinned snapshot, retains the full history and attaches exact sources for active assertions targeting that exported revision. Other revisions and withdrawn assertions remain historical metadata, without newly verified attachments. Supported native/image source formats retain their extensions for direct native registration; opaque sources use .bin with original format metadata. Existing snapshots and curated notes are preserved. citation_contract controls display only. PDF-to-PPTX links currently identify a page and whole shape, not individual OCR cell mappings.
+
+The design draws on [W3C PROV-O derivation](https://www.w3.org/TR/prov-o/#Derivation) and [Docling Graph provenance](https://github.com/docling-project/docling-graph/blob/main/docs/fundamentals/graph-management/provenance.md); it does not claim complete PROV-O/RDF conformance.
+
 See the source page for operation fields, examples, format restrictions and recovery details.`,
   "workflow-chapters": `## Choose by source and task
 Use the PDF workflow for page inspection and extraction, the DOCX workflow for reversible DFM editing, and A2T for reusable tables. Evidence, wiki, and knowledge features build on those source-specific paths.
@@ -416,6 +426,15 @@ Run \`uv run python -m tests.codex_pptx_pictures.run --codex /absolute/path/to/c
 Run \`uv run python -m tests.codex_pptx_tables.run --codex /absolute/path/to/codex --output /tmp/pptx-table-run\`. The actual CLI views a scanned first-page PNG, creates editable tables with a merged title, reads full native representations, edits/restores a cell, deletes a duplicate, verifies old/source evidence and publishes PPTX/wiki. Independent audits check exact strings, pixels, grids/merges, reference chronology and managed history. Ordinary pytest never starts a model.
 
 Run 01 on 2026-09-18 made 67 attempts / 66 successful calls, with exact initial transcription and one recovered citation-format input error. The agent initially put source proof objects into citation_contract; the typed display schema now advertises the valid selectors/templates. Recovery remains visible as passed_with_recoveries. Run 02 with the typed schema completed 66 calls with zero tool errors, exact first transcription, one actual scanned PNG and four distinct complete evidence records. Both runs pass the final PPTX/wiki/history audit. This synthetic case does not establish general OCR accuracy or complete slide visual fidelity.
+
+## Codex native derivation evaluation (Unreleased)
+Add \`--derivations\` to the scanned-table runner. The actual agent reads final table/page evidence and complete ledgers, records and supersedes a source-to-table assertion, adds/retracts a temporary assertion, verifies historical/active states and exports exact source attachments. Independent checks bind operations to prior complete readbacks, ledger hashes and actual MCP results. Ordinary tests never start a model; semantic support and full slide rendering remain agent review work.
+
+On 2026-09-18, derivations run 02 completed 93 MCP calls with zero MCP tool errors and exact first transcription. Independent checks passed for one scanned PNG, five full component records, four ledger events, one retained assertion and exact source PDF attachment. The agent separately reported correcting a local orchestration syntax error; the event stream has no independent tool record for it, so the statement remains in agent_reported_limitations rather than being counted as an observed MCP error.
+
+A second run (03) against the same initial ledger runtime completed 92 MCP calls with zero tool errors and exact first transcription. The same one-image, five-record, four-event, single-active-assertion and exact-source-attachment audits passed. Neither run claims full slide rendering verification.
+
+Run 04 against the final runtime preserving native source extensions completed 96 MCP calls with zero MCP tool errors and exact first transcription. Table/ledger/source audits passed. An initial auditor incorrectly rejected a preview followed by a fresh complete read from offset zero; three regressions now accept that restart while still rejecting gaps and wrong hashes. The original failed audit is retained. The model separately reported correcting an over-escaped font diagnostic; this remains a caller statement, not proof of slide fidelity.
 
 ## Publish in order
 Confirm built artifacts and runtime diagnostics before tagging, then verify each public registry after publication.`,

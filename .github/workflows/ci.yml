@@ -131,6 +131,11 @@ jobs:
           tests/unit/test_native_pptx_table_guards.py
           tests/unit/test_native_pptx_table_operations.py
           tests/unit/test_native_citation_schema.py
+          tests/unit/test_native_derivations.py
+          tests/unit/test_native_derivation_store.py
+          tests/unit/test_native_derivation_endpoints.py
+          tests/unit/test_native_derivation_wiki.py
+          tests/unit/test_codex_derivation_audit.py
           tests/unit/test_codex_pptx_table_audit.py
           tests/unit/test_codex_pptx_picture_audit.py
           tests/unit/test_native_pdf.py
@@ -150,6 +155,7 @@ jobs:
           tests/integration/test_native_pptx_stdio_e2e.py
           tests/integration/test_native_pptx_picture_stdio.py
           tests/integration/test_native_pptx_table_stdio.py
+          tests/integration/test_native_derivation_stdio.py
           tests/integration/test_native_pdf_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py
           tests/integration/test_native_asset_stdio_e2e.py
@@ -218,6 +224,11 @@ jobs:
           tests/unit/test_native_pptx_table_guards.py
           tests/unit/test_native_pptx_table_operations.py
           tests/unit/test_native_citation_schema.py
+          tests/unit/test_native_derivations.py
+          tests/unit/test_native_derivation_store.py
+          tests/unit/test_native_derivation_endpoints.py
+          tests/unit/test_native_derivation_wiki.py
+          tests/unit/test_codex_derivation_audit.py
           tests/unit/test_codex_pptx_table_audit.py
           tests/unit/test_codex_pptx_picture_audit.py
           tests/unit/test_native_pdf.py
@@ -237,6 +248,7 @@ jobs:
           tests/integration/test_native_pptx_stdio_e2e.py
           tests/integration/test_native_pptx_picture_stdio.py
           tests/integration/test_native_pptx_table_stdio.py
+          tests/integration/test_native_derivation_stdio.py
           tests/integration/test_native_pdf_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py
           tests/integration/test_native_asset_stdio_e2e.py -q --timeout=120
@@ -297,6 +309,11 @@ jobs:
           tests/unit/test_native_pptx_table_guards.py
           tests/unit/test_native_pptx_table_operations.py
           tests/unit/test_native_citation_schema.py
+          tests/unit/test_native_derivations.py
+          tests/unit/test_native_derivation_store.py
+          tests/unit/test_native_derivation_endpoints.py
+          tests/unit/test_native_derivation_wiki.py
+          tests/unit/test_codex_derivation_audit.py
           tests/unit/test_codex_pptx_table_audit.py
           tests/unit/test_codex_pptx_picture_audit.py
           tests/unit/test_native_pdf.py
@@ -316,6 +333,7 @@ jobs:
           tests/integration/test_native_pptx_stdio_e2e.py
           tests/integration/test_native_pptx_picture_stdio.py
           tests/integration/test_native_pptx_table_stdio.py
+          tests/integration/test_native_derivation_stdio.py
           tests/integration/test_native_pdf_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py
           tests/integration/test_native_asset_stdio_e2e.py -q --timeout=120
@@ -457,6 +475,7 @@ jobs:
             tests/integration/test_native_pdf_stdio.py \
             tests/integration/test_native_pptx_picture_stdio.py \
             tests/integration/test_native_pptx_table_stdio.py \
+            tests/integration/test_native_derivation_stdio.py \
             -v --timeout=180 --junitxml=junit-integration.xml
 
       - name: Upload Integration Test Results
