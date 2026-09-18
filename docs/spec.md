@@ -53,7 +53,10 @@ are distinct concepts.
 Published 1.0.1 covers PDF read/decompose/export, scoped DOCX/DFM writeback and
 independent A2T table creation/edit/export. Native spreadsheet/presentation CRUD,
 general asset registration, cross-format wiki export, per-format operation checks
-and agent review workflows, and academic/custom citation integration remain unfinished. Conversion to
+and agent review workflows, and standards-aware APA/Chicago/CSL rendering remain
+unfinished. The current unreleased milestone adds custom citation display contracts
+to existing PDF evidence/Foam and portable exports; it does not complete the
+remaining native-format adapters or academic style engine. Conversion to
 DOCX/PPTX does not prove native round-trip fidelity. ROADMAP.md tracks full scope.
 Each milestone updates README, Pages, repository metadata/labels and Memory Bank;
 reviewed commits are pushed in stages and releases require the full harness.

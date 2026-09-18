@@ -17,8 +17,10 @@
   identities, types, formulas, styles and provenance.
 - [ ] Cross-format wikilink evidence library with stable targets, attachments,
   provenance and protection of curated notes.
-- [ ] Versioned custom citation contracts and academic rendering independent of
-  canonical source identities, locators and hashes.
+- [x] Versioned custom citation display contracts for existing PDF evidence,
+  Foam notes and portable asset exports, independent of canonical provenance.
+- [ ] Standards-aware academic citation rendering (APA/Chicago/CSL) and citation
+  integration with the remaining native-format evidence adapters.
 - [ ] Real-file regressions, README/Pages/metadata/labels/MEM synchronization,
   reviewed staged commits/pushes and fully verified releases throughout the work.
 
