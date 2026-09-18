@@ -15,6 +15,7 @@ Document Tools - ETL + 文件管理 MCP 工具
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 from copy import deepcopy
@@ -43,6 +44,7 @@ from src.domain.citation_format import (
     resolve_citation_format,
 )
 from src.domain.marker_errors import MarkerBackendUnavailable
+from src.domain.native_assets import NativeDocumentRequest  # noqa: TC001 - MCP schema
 from src.domain.pdf_preflight import PDFPreflightError
 from src.infrastructure.structured_extractor import is_structured_engine
 from src.presentation.dependencies import (
@@ -52,6 +54,7 @@ from src.presentation.dependencies import (
     get_marker_extractor,
     job_service,
     layout_visualizer,
+    native_document_service,
     pdf_extractor,
     pdf_preflight_service,
     pdf_report_service,
@@ -2485,8 +2488,9 @@ async def document(
     ctx: Context | None = None,
     citation_contract: dict[str, Any] | None = None,
     citation_metadata: dict[str, Any] | None = None,
+    native_request: NativeDocumentRequest | None = None,
 ) -> Any:
-    """Consolidated PDF document entrypoint with explicit operation contracts.
+    """Document operations including versioned native file assets.
 
     Operation -> required parameters:
     - ``auto``: exactly one of ``file_paths`` (ingest) or ``doc_id`` (readiness).
@@ -2494,12 +2498,43 @@ async def document(
     - ``preflight``: ``pdf_path`` only; ``file_paths`` is rejected.
     - ``inspect`` / ``prepare_ai`` / audit and retrieval operations: ``doc_id``.
     - ``export_assets`` / ``agent_assets``: ``doc_id``; ``output_dir`` is optional.
+    - ``native``: ``native_request`` with its own op (contract/register/create/
+      list/inspect/read_cell/update/history/publish/writeback/refresh/archive). XLSX/XLSM cell
+      operations retain native package features; other formats expose metadata.
 
     Existing direct document tools stay registered and keep their original
     contracts. The facade descriptions make op-specific requirements visible
     even though the shared JSON schema can require only ``op`` globally.
     """
     operation = _normalize_op(op)
+    if native_request is not None and operation != "native":
+        return {"success": False, "error": "native_request requires op='native'"}
+    if operation == "native":
+        if citation_contract is not None or citation_metadata is not None:
+            return {
+                "success": False,
+                "error": "Native operations do not accept PDF citation formatting",
+            }
+        if native_request is None:
+            return {
+                "success": False,
+                "error": "native_request is required; use {'op':'contract'} for the schema",
+            }
+        try:
+            payload = await asyncio.to_thread(
+                native_document_service.execute, native_request
+            )
+        except (OSError, ValueError) as exc:
+            payload = {
+                "success": False,
+                "operation": native_request.op,
+                "error": str(exc),
+            }
+        return format_limited_json_response(
+            title="Native document asset",
+            payload=payload,
+            guidance="Use a smaller native_request.limit for inspect/history, or read_cell with text_offset/text_limit for long cell text. Re-inspect the asset after a truncated write response.",
+        )
     if operation not in {"export_assets", "agent_assets"} and (
         citation_contract is not None or citation_metadata is not None
     ):
@@ -2766,6 +2801,7 @@ async def document(
             "inspect",
             "layout",
             "list",
+            "native",
             "ocr",
             "parse",
             "pointer_index",

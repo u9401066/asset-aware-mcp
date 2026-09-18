@@ -228,4 +228,5 @@ dev = [
     "pre-commit>=4.0.0",
     "types-pyyaml>=6.0.12.20250915",
     "zizmor==1.29.0",
+    "openpyxl>=3.1.5",
 ]

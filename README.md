@@ -43,9 +43,11 @@ versions, format constraints and operation results; the agent verifies meaning
 and visual layout and coordinates corrections using inspectable evidence.
 
 Current coverage: PDF ingestion/decomposition/portable export, DOCX/DFM scoped
-editing and independent A2T tables. Native spreadsheet/presentation CRUD and
-per-format checks and agent review workflows remain ongoing; conversion is not evidence
-of a faithful round trip. See [contracts](docs/spec.md) and [roadmap](ROADMAP.md).
+editing and independent A2T tables. The development branch adds native file
+registration, immutable revisions, XLSX creation and scoped XLSX/XLSM cell edits,
+with explicit source writeback and refresh. See [native usage and limits](docs/wiki/Native-File-Assets.md).
+Broader native CRUD, per-format checks and agent review workflows remain ongoing;
+conversion is not evidence of a faithful round trip. See [contracts](docs/spec.md) and [roadmap](ROADMAP.md).
 
 Assets carry identity, revision, native locators, representations, relationships,
 capabilities and validation state. Wiki notes are linked projections; configurable

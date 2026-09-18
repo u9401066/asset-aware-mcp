@@ -5,7 +5,12 @@
 Authoritative baseline is origin/main e612d20, published 1.0.1. Original master
 worktree remains at 0.9.0 with pre-existing user changes; do not reset it.
 Worktree: /home/eric/workspace251226/asset-aware-mcp-agent-assets;
-branch: feat/agent-asset-contracts.
+branch: feat/native-document-assets, based on PR #9's 36b8cfe.
+PR #9 now has all 12 GitHub checks green. Standard merge was rejected by the
+one-review branch rule; explicit admin-merge authorization is pending. Continue
+native work independently, and never infer approval from goal continuation.
+Author remains u9401066 <u9401066@gap.kmu.edu.tw>. Merge completed work to main and
+remove merged work branches; preserve the original dirty master worktree.
 
 The latest explicit user reply confirms: MCP provides necessary source/version,
 format-preservation and operation-result checks; the agent owns complete semantic
@@ -21,13 +26,23 @@ Citation presentation contracts are implemented in evidence/Foam and portable
 asset exports. Python 1,281 tests pass; see progress.md for gates/limitations.
 The citation-contract milestone is pushed in PR #9. Automated review identified
 two ambiguous completion statements; roadmap/spec now separate implemented custom
-display contracts from remaining academic styles and native-format integration. Await CI and required review; then release
+display contracts from remaining academic styles and native-format integration. CI is green; await required review or explicit admin-merge authorization, then release
 through the normal gates. Continue native capabilities/CRUD and inspectable results
 as the next milestone. Managed labels are synchronized; description/Pages deploy
 follow merge. Browser desktop/mobile language/copy checks passed with cached exact
 CDN scripts; VSIX activation still needs the CI display-enabled runner.
 README/Pages/GitHub metadata/labels/MEM and staged commits/push/releases are
 explicitly authorized. Full release gates remain required before tagging.
+
+
+Native spreadsheet milestone is implemented in feat/native-document-assets.
+45 focused tests pass, including real SDK 2 stdio, source divergence/recovery,
+long cell provenance, formula guards, special text and crash-released locks.
+Native IO/read/guard/repair/editor modules are separated. Full regression passes
+1,326 tests (30 optional skips); 199 VSIX tests, package inventory, harness/docs
+audits and desktop/mobile bilingual reader checks pass. Commit exact paths, push,
+create a main-targeted PR (depends on PR #9) and monitor all CI checks. Keep broad
+native CRUD/wiki work active.
 
 
 ## 2026-08-13 - v1.0.1 large-PDF and Codex hardening

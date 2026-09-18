@@ -27,6 +27,31 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
+## 2026-09-18 native file assets — implemented, CI checkpoint pending
+
+- Source-independent registration, immutable revisions, typed native request
+  contract, XLSX create and scoped XLSX/XLSM read/update/clear are implemented.
+- Explicit publish/writeback/refresh/archive preserve versions, detect stale or
+  divergent human edits, retain source backups and report post-write failures.
+- Long cell reads retain canonical provenance while returning bounded excerpts;
+  literal OOXML escape sequences, formula followers/calc chains, rich text,
+  table regions and process-crash lock recovery have regression coverage.
+- Parsing, edit guards, deterministic repairs and source publication were split
+  into focused modules after regression coverage. The missing English reader mapping
+  from the first full run is fixed; the complete rerun passes 1,326 tests with
+  30 optional skips.
+- Focused native tests: 45 passed including true MCP SDK 2 stdio. Ruff/MyPy,
+  Bandit and universal dependency audit pass (213 packages, zero known issues).
+- VSIX: 199 unit tests, assistant asset synchronization and 64-file package
+  inventory pass. Generated docs/release harness audits and diff hygiene pass.
+- Desktop/mobile native reader routes, Chinese/English switching, overflow and
+  console checks pass; screenshots are outside the repository. Exact cached CDN
+  scripts were reused, so live CDN availability is not covered.
+- README bilingual, native operation guide, Pages reader, changelog, roadmap and
+  architecture are updated. No version/tag/release yet; CI/push pending.
+- Broader native structural CRUD, native wiki/academic citation integration,
+  visual verification and other formats remain in scope after this milestone.
+
 ## 2026-09-18 citation contract milestone — PR #9, release pending
 
 - Added citation-format-v1 custom/source/author-year/numeric display contracts to
@@ -50,7 +75,8 @@ Baseline revalidated; isolated latest main while preserving original user edits.
   scripts were locally replayed after browser CDN timeouts; live CDN reliability
   is outside this check. Screenshots remain in /tmp, outside source control.
 - Commit 07d7c90 is pushed; PR https://github.com/u9401066/asset-aware-mcp/pull/9
-  has passed the dependency-security workflow, with CI/review still running.
+  has all 12 GitHub checks green at 36b8cfe. Required approving review is pending;
+  ordinary merge was rejected, and admin merge authorization remains unanswered.
   Managed labels are synchronized. Description/topics and Pages deployment await
   merge so scheduled hygiene stays aligned with the authoritative default branch.
 - main requires one approving review and the Test Summary status; no tag/release

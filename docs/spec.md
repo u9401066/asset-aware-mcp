@@ -54,12 +54,49 @@ Published 1.0.1 covers PDF read/decompose/export, scoped DOCX/DFM writeback and
 independent A2T table creation/edit/export. Native spreadsheet/presentation CRUD,
 general asset registration, cross-format wiki export, per-format operation checks
 and agent review workflows, and standards-aware APA/Chicago/CSL rendering remain
-unfinished. The current unreleased milestone adds custom citation display contracts
-to existing PDF evidence/Foam and portable exports; it does not complete the
-remaining native-format adapters or academic style engine. Conversion to
+unfinished. Unreleased milestones add custom citation display contracts to existing PDF
+evidence/Foam and portable exports, plus a native file registry and scoped
+spreadsheet operations described below. Remaining native-format adapters,
+spreadsheet structural CRUD and academic style rendering are still unfinished. Conversion to
 DOCX/PPTX does not prove native round-trip fidelity. ROADMAP.md tracks full scope.
 Each milestone updates README, Pages, repository metadata/labels and Memory Bank;
 reviewed commits are pushed in stages and releases require the full harness.
+
+### Native file assets and spreadsheet operations (implemented, unreleased)
+
+A registered file receives a persistent asset ID independent of its filename and
+content hash. Immutable revisions use SHA-256. Source identity, native structure,
+capabilities and review coverage travel together; inferred meaning remains an
+agent annotation, not a fabricated extraction result. Registration supports opaque
+formats without pretending to provide a native editor for every format.
+
+The first native adapter reads XLSX/XLSM worksheet/cell locators, creates independent
+XLSX workbooks and updates/clears typed cells. It edits only the necessary OOXML
+parts, retains styles and all unrelated ZIP member bytes, and checks the resulting
+package before publishing an immutable managed revision. Shared/array formula
+regions, rich-text replacements, protected sheets and digitally signed packages
+require an explicit supported operation; unsupported edits fail without writing.
+Formula caches are not evaluated by MCP. Edits set recalculation flags and report
+cached formula values as unverified. Plain strings never become formulas implicitly.
+
+The registry provides optimistic revision checks, serialized writes and retained
+history. Updates first create managed revisions; explicit source writeback requires
+the expected source hash plus the saved source stat to prevent stale replacement.
+A source backup is retained. Removing an asset archives its registry entry; it does
+not silently erase the human's source file. `refresh` adopts human source edits
+without changing asset identity and rejects divergent unpublished edits.
+Native cell reads include `native-cell-ref-v1`; chunked text keeps its full-cell
+reference and a separate full-text hash. Native wiki/citation integration remains
+future work. See [operation details and limits](wiki/Native-File-Assets.md).
+
+Read/modify limits apply before decompression and XML parsing. XML entity expansion,
+external-resource resolution, path traversal and ambiguous package members are
+rejected. A successful structural check proves its stated preservation scope, not
+rendered fidelity or formula correctness; agent semantic/visual review stays open.
+
+Reference decisions: [openpyxl preservation limits](https://openpyxl.readthedocs.io/en/stable/tutorial.html),
+[XlsxWriter formula semantics](https://xlsxwriter.readthedocs.io/working_with_formulas.html),
+and [Microsoft worksheet structure](https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/working-with-sheets).
 
 ## 2. Core Architecture
 

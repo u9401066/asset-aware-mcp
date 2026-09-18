@@ -108,6 +108,17 @@ PAGES = [
         "先選章節，再進入對應的詳細流程與 reference。",
     ),
     Page(
+        "native-file-assets",
+        "native-file-assets",
+        "all",
+        "user",
+        "Native File Assets (Unreleased)",
+        "Versioned file registration, native spreadsheet edits and source reconciliation.",
+        "Native-File-Assets.md",
+        "原生文件資產（尚未發布）",
+        "檔案版本、原生試算表編輯與來源同步；附實際支援範圍。",
+    ),
+    Page(
         "design-ux",
         "design-ux",
         "all",

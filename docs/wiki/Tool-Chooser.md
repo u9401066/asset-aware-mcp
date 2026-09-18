@@ -19,6 +19,7 @@
 | 查 KG | `knowledge(op="consult")` | 先用 `knowledge(op="export", format="summary")` 確認 graph 有內容 |
 | 讀寫 DOCX/DFM | `docx(op="ingest|get|save|validate")` | 寫回前注意 stale source / validation |
 | DOCX table bridge | `docx_table(op="to_context|from_context|edit_plan")` / `docx_table_edit_plan` | 真正編輯 rows/cells 後進 A2T tools |
+| 原生檔案／XLSX 工作簿（尚未發布） | `document(op="native", native_request={...})` | [原生文件](Native-File-Assets)：建立、讀寫 cells、版本、來源同步 |
 | 建立 A2T table | `plan_table` + `table_manage` | rows/cells 用 `table_data` |
 | 表格引用 | `table_cite` | draft/commit 用 `table_draft` |
 | 背景任務 | `job(op="get|list|cancel")` / `get_job_status` / `list_jobs` | 長任務狀態、取消、artifact path |

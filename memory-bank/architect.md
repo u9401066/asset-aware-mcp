@@ -2,6 +2,21 @@
 
 > 📌 此檔案記錄重大架構決策，架構變更時更新。
 
+## 2026-09-18 — native files and spreadsheets (unreleased)
+
+- Domain `native_assets.py` defines strict file/revision/source identities, typed
+  edits, operation requests and repository/format ports, without filesystem IO.
+- `NativeDocumentService` composes those ports; `document(op="native")` dispatches
+  off the async event loop. The SDK 2 public tool count remains unchanged.
+- Infrastructure separates immutable registry metadata, bounded file IO/source
+  publication, OOXML packages, spreadsheet readers, edit guards, repair plans and
+  transactional editors. New source files stay below repository size limits.
+- Revisions retain full native bytes. Canonical cell representations carry native
+  locators and hashes; chunked excerpts explicitly retain complete-value identity.
+  Native wiki/citation adapters remain separate upcoming work.
+- Agent verification remains semantic/visual/formula-aware. Byte-preservation and
+  read-back checks do not claim full rendered fidelity.
+
 ## 🌐 系統架構圖
 
 ```

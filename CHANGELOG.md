@@ -9,6 +9,15 @@
 
 ### Added
 
+- Native file registry with stable IDs, immutable SHA-256 revisions, optimistic
+  updates, crash-released OS locks, explicit publish/writeback/refresh and archive.
+- Independent XLSX creation and scoped XLSX/XLSM typed cell operations through
+  `document(op="native")`, preserving unrelated OOXML parts and rejecting
+  unsupported edits. Formula caches remain unverified; agent review is explicit.
+- Native cell provenance with chunked long-text reads, source divergence checks,
+  partial-write recovery reports, and regressions for real workbook features,
+  special text, formula dependencies and process interruption.
+
 - Declarative citation-format-v1 contracts with source, author/year, caller-numbered
   and custom templates, discoverable through evidence(op="contract").
 - Optional citation formatting in evidence/Foam and portable agent asset exports;

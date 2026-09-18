@@ -32,6 +32,14 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
 - [ ] Real-file regressions, README/Pages/metadata/labels/MEM synchronization,
   reviewed staged commits/pushes and fully verified releases throughout the work.
 
+## 開發分支已實作（尚未發布）
+
+- 原生檔案 registry：固定 ID、不可變版本、能力與來源狀態；其他格式可先保留原始內容。
+- XLSX 建立、XLSX/XLSM cells 讀取／分段讀取／typed update／清空、歷史、
+  明確回寫、外部修改 refresh、保留歷史的 archive。格式限制與 Agent 核對仍明確保留。
+- 尚未完成工作表／列欄結構 CRUD、原生 wiki 引用、A2T 橋接或視覺核對自動化；
+  以上子項進展不代表跨格式總目標完成。
+
 ## 已完成
 
 ### v1.0.1 — PDF/Codex/網站 hardening

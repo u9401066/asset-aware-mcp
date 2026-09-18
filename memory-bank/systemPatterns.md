@@ -2,6 +2,15 @@
 
 > 📌 此檔案記錄專案中使用的模式和慣例，新模式出現時更新。
 
+## Native document mutation pattern (2026-09-18)
+
+Read immutable revision -> validate typed edits and unsupported features -> modify
+only planned OOXML parts -> deterministic metadata repairs -> reopen and verify ->
+CAS-publish managed revision. Explicit source writeback checks the tracked source,
+retains its original inode as backup, and reports partial publication accurately.
+OS advisory locks release on crash; human edits refresh the same asset ID only
+when they cannot discard an unpublished managed revision.
+
 ## 🏗️ 架構模式
 
 ### DDD 分層架構

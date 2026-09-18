@@ -17,6 +17,7 @@ from src.application.document_service import DocumentService
 from src.application.docx_service import DocxService
 from src.application.job_service import JobService
 from src.application.knowledge_service import KnowledgeService
+from src.application.native_document_service import NativeDocumentService
 from src.application.pdf_preflight_service import PDFPreflightService
 from src.application.pdf_report_service import PdfArtifactReportService
 from src.application.section_service import SectionService
@@ -36,6 +37,8 @@ from src.infrastructure.extractor_factory import (
 from src.infrastructure.file_storage import FileStorage
 from src.infrastructure.job_store import FileJobStore
 from src.infrastructure.layout_visualizer import LayoutVisualizer
+from src.infrastructure.native_asset_store import FileNativeAssetRepository
+from src.infrastructure.native_spreadsheet import SpreadsheetFileAdapter
 from src.infrastructure.ocr_processor import OCRProcessor
 from src.infrastructure.pymupdf_preflight import PyMuPDFPreflightInspector
 from src.infrastructure.subprocess_ingest_worker_runner import (
@@ -105,6 +108,10 @@ except (FileNotFoundError, KeyError, json.JSONDecodeError):
     etl_profile = ETLProfile.default()
 
 repository = FileStorage(settings.data_dir)
+native_document_service = NativeDocumentService(
+    FileNativeAssetRepository(settings.data_dir / "native-assets"),
+    SpreadsheetFileAdapter(),
+)
 # Engine selection (config-driven via ETL_ENGINE): the base extractor is always
 # available (PyMuPDF, or the layout-aware pymupdf4llm) and doubles as the fast
 # fallback. Docling is the only active structured engine. Held Marker/MinerU
