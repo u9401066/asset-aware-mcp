@@ -25,6 +25,10 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
 ## Citation-Ready Mindset
 - Prefer stable, verifiable spans (line/char/byte offsets + hashes) over loose “source: page 3” citations.
 - Treat CRAAP fields as a conservative scaffold: avoid claiming more confidence than you can actually verify.
+- When table_cite advertises read, use it for complete cell/value/citation JSON;
+  get remains a summary. Follow next_text_offset with one citation_sha256, assemble
+  all text_excerpt chunks and verify UTF-8 SHA-256. Inspect exact source locators;
+  stored-content integrity alone does not verify source validity or semantic support.
 
 ## Native Document Operations
 

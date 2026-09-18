@@ -1,5 +1,20 @@
 # Decision Log
 
+## 2026-09-18 — canonical A2T citation readback without conflating verification
+
+Live Codex PDF testing could inspect only citation counts/labels even though full
+locators were persisted. Add table_cite read, preserving existing get summaries.
+The canonical record binds table/row/column, current value and complete stored
+CellCitation. It omits mutable row indices, allowing stable row-ID reads across
+unrelated deletions. Hash-pinned continuation rejects content or scope mismatch.
+Pages are transport fragments; full quotes and locators are never replaced by
+previews. Cap encoded responses and complete UTF-8 representations (16 MiB).
+Hash equality checks stored content, not authenticity, source validity or meaning.
+Agent review and source verification remain separate. SDK2 and live Codex audits
+must independently reconstruct actual delivered refs and compare final state;
+historical evaluation runs retain their original check coverage. Keep this work
+unreleased on main in the 1.4.x sequence, without another immediate version bump.
+
 ## 2026-09-18 — user-directed 1.4.x release sequence
 
 The user explicitly said not to jump versions so quickly and requested 1.4.x.

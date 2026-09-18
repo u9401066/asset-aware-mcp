@@ -43,6 +43,29 @@ A2T 是 Anything to Table。它用 `TableContext` 表示可由文件、DOCX 表�
 - 移除 stale citation。
 - 將 table 轉 Markdown/HTML 時保留 footnote-like refs。
 
+### 完整引用讀回（main 開發中，尚未發布）
+
+`get` 保留原有 cell／row／table 摘要。當安裝版本的工具規格列出 `read` 時，
+可讀回完整儲存格值、來源引用、notes 與 confidence：
+
+```python
+table_cite(operation="read", table_id="tbl_...", row_id="row_...",
+           column_name="Reading", text_limit=4000)
+# Continue if next_text_offset is not null:
+table_cite(operation="read", table_id="tbl_...", row_id="row_...",
+           column_name="Reading", text_offset=next_text_offset,
+           citation_sha256=citation_sha256)
+```
+
+依序拼接 `text_excerpt`，以 UTF-8 計算 SHA-256 核對 `citation_sha256`，再解析
+完整 JSON。所有頁必須使用同一 hash；值、引用或 cell 身分不同就拒絕續讀。
+穩定 `row_id` 不受其他列刪除後的索引位移影響。完整表示最多 16 MiB，每頁最多
+4,000 字元，實際頁長還受 MCP 回應上限限制。缺少引用時 `citation` 明確為 null。
+
+回傳保留儲存的 `doc_id`、`asset_id`、頁碼、範圍、完整 quote/hash 與其他欄位；
+沒有的 locator 不會補造。分頁片段不是 canonical AssetRef，摘要也不能當完整
+引文。hash 只核對儲存內容，Agent 仍須查看來源並判斷它是否支持該儲存格。
+
 ## Large Table UX
 
 - `table_data(op="query_rows", offset=..., limit=..., search=..., filters=...)`

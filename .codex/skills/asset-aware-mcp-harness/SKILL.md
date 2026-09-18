@@ -30,6 +30,10 @@ verification.
   context text, and hashes.
 - Keep CRAAP values conservative unless the implementation can justify them.
 - Preserve aliases/backward compatibility when evolving MCP tool payloads.
+- When table_cite advertises read, use it for complete cell/value/citation JSON;
+  get remains a summary. Follow next_text_offset with one citation_sha256, assemble
+  all text_excerpt chunks and verify UTF-8 SHA-256. Inspect exact source locators;
+  stored-content integrity alone does not verify source validity or semantic support.
 
 ## Native Document Operations
 

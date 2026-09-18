@@ -9,6 +9,9 @@
 
 ## v1.4.0 原生簡報協作與規格查詢遷移
 
+`main` 開發版新增 `table_cite(operation="read")`，可分頁讀回完整引用並核對
+固定 hash；尚未包含在已發布套件。詳見 [完整引用讀回](docs/wiki/A2T-Tables.md)。
+
 1.4.0 提供 `contract.for_op` 與 `native-contract-v2`。先查看
 `schema_delivery`，需要分段時沿用 `schema_request` 與 `schema_sha256`，
 客戶端須遷移原本假設完整 schema 永遠內嵌的讀法。詳見

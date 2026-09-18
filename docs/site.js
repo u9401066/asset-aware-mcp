@@ -305,7 +305,12 @@ A bounded asset-ref-preview-v1 response is not canonical and must not be submitt
 Plan schemas, manage tables, query stable rows, attach cell citations, and use durable drafts for interrupted work. Table history records changes while render operations produce reusable artifacts.
 
 ## Keep row evidence explicit
-Use stable row identifiers and cell-level AssetRefs so every comparison can return to its source.`,
+Use stable row identifiers and cell-level AssetRefs so every comparison can return to its source.
+
+## Complete citation readback (main development; unreleased)
+When the installed tool schema advertises it, call \`table_cite(operation="read", table_id="tbl_...", row_id="row_...", column_name="Reading")\`. Keep \`get\` for summaries. The read response includes \`text_excerpt\`, \`citation_sha256\` and \`next_text_offset\`; follow subsequent pages with that hash, concatenate the excerpts, verify UTF-8 SHA-256 and parse the complete JSON. Pages contain at most 4,000 characters and adapt to the MCP response cap; a complete representation is limited to 16 MiB.
+
+The record binds stable cell identity, current value, full stored references and annotations. Missing citations are explicit null; changed content or a different cell rejects continuation. Partial excerpts are transport fragments. Stored-content integrity does not verify the cited source or its meaning.`,
   "llm-wiki": `## Export a portable wiki
 Agent asset and evidence exports can create Foam-compatible indexes, notes, anchors, tables, figures, and media. These files remain readable Markdown while retaining embedded provenance records.
 
@@ -346,6 +351,8 @@ A release candidate must pass lint, formatting, types, full tests, documentation
 Run \`uv run python -m tests.codex_pdf.run --mode scanned --output /tmp/pdf-codex-scanned\` from a checkout with a logged-in Codex CLI. The output directory must be new; use \`--codex /absolute/path/to/codex\` if needed. This explicit opt-in uses model quota. Ordinary pytest never starts Codex.
 
 The runner connects only the current checkout's MCP server to synthetic data, captures actual image/tool events, and independently checks final transcription, citations, edit/delete/restore history, source hashes, scan pixels, reopened Excel and asset bundles. Re-run the independent auditor with \`uv run python -m tests.codex_pdf.audit /tmp/pdf-codex-scanned\`.
+
+Main development adds \`citation_readback_required\`: after all corrections, Codex must use \`table_cite read\` for every final Reading cell. The independent auditor checks complete MCP pages, hash continuity, stable cell binding and equality with persisted references. \`citation_paging_required\` also requires at least one actual continuation using 200-character pages. Historical runs retain their original eight checks; they do not retroactively prove this new capability.
 
 Recovered tool errors remain visible as \`passed_with_recoveries\`; \`first_transcription_exact\` distinguishes initial extraction from a corrected final result. The three-page corpus covers digital, scanned and mixed pages, rotation/cropbox offsets, leading zeros, signs and units. It does not establish general OCR accuracy, handwriting support or PDF layout writeback fidelity.
 
@@ -422,7 +429,7 @@ const TOOLS = [
   defineTool("save_docx", "docx", "Write DFM back through stale-source and integrity guards.", "doc_id, dfm_content, output_path, force, track_changes", "Validated DOCX plus optional revision sidecar", 'save_docx(doc_id="docx_...", dfm_content=edited, output_path="/out/review.docx")', "docx_tools.py"),
 
   defineTool("table_data", "table", "Read and mutate A2T rows and cells.", "operation, table_id, row_id, column_name, value, filters", "Stable row/cell operation result", 'table_data(operation="query_rows", table_id="tbl_...")', "table_tools.py"),
-  defineTool("table_cite", "table", "Attach and inspect cell-level AssetRefs.", "operation, table_id, row_id, column_name, refs", "Citation coverage and verified cell provenance", 'table_cite(operation="add", table_id="tbl_...", row_id="row_1", column_name="outcome", refs=[ref])', "table_tools.py"),
+  defineTool("table_cite", "table", "Attach and inspect cell-level AssetRefs; main adds canonical read pages.", "operation, table_id, row_id, column_name, refs", "Stored references and citation coverage", 'table_cite(operation="add", table_id="tbl_...", row_id="row_1", column_name="outcome", refs=[ref])', "table_tools.py"),
   defineTool("table_draft", "table", "Create, resume, update, and commit durable table drafts.", "operation, draft_id, title, proposed_columns, rows", "Recoverable draft lifecycle", 'table_draft(operation="create", title="Outcome review", intent="comparison")', "table_tools.py"),
   defineTool("table_manage", "table", "Create, list, preview, render, delete, and evolve A2T tables.", "operation, intent, title, columns, table_id, format", "Table metadata or durable render artifact", 'table_manage(operation="preview", table_id="tbl_...")', "table_tools.py"),
   defineTool("table_history", "table", "Read table audit history and token accounting.", "operation, table_id, limit", "Bounded change trail", 'table_history(operation="changes", table_id="tbl_...")', "table_tools.py"),

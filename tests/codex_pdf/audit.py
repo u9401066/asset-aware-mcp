@@ -14,6 +14,7 @@ import pymupdf as fitz
 from openpyxl import load_workbook
 from PIL import Image
 
+from tests.codex_pdf.citation_readback import validate_citation_readbacks
 from tests.codex_pdf.fixtures import COLUMNS, sha256
 from tests.codex_pdf.trace import completed_calls, require, result_text, tool_errors
 
@@ -334,6 +335,10 @@ def evaluate_artifacts(
             bundle, expected["source_sha256"]
         ),
     }
+    if expected.get("citation_readback_required"):
+        steps["canonical_citation_readbacks"] = lambda: validate_citation_readbacks(
+            table, calls, require_paging=expected.get("citation_paging_required", False)
+        )
     for name, step in steps.items():
         try:
             step()

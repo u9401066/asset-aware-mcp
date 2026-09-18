@@ -48,6 +48,35 @@ and its hash alongside notes/bundles. Style changes preserve evidence identities
 and wikilink targets. Locator validity, extraction accuracy and semantic support
 are distinct concepts.
 
+### Canonical A2T citation readback (1.4.x development)
+
+Keep table_cite get as the compatible cell/row/table summary. Add read for one
+cell selected by table_id, column_name and row_id (preferred) or row_index.
+Return the full persisted CellCitation, including every AssetRef locator, exact
+quote/hash, CRAAP metadata, notes and confidence, alongside the current cell value
+and stable table/row/column binding. A missing citation is explicit null. Unknown
+rows/columns are errors. Do not invent missing source locators or quality scores.
+
+Serialize the a2t-cell-citation-v1 record as sorted compact UTF-8 JSON, preserving
+Unicode exactly. The SHA-256 binds the value, citation and cell identity, excluding
+the mutable row index. The a2t-citation-page-v1 envelope carries citation_sha256,
+text_excerpt, total character length, half-open character range and next offset.
+text_limit is 1..4000 (default 4000); the encoded envelope must fit the configured
+MCP response cap. Reject a cap too small for any progress. Bound each complete
+representation to 16 MiB UTF-8 and reject unsupported non-JSON/non-finite values.
+For text_offset > 0, require citation_sha256 from the first page; reject mismatched
+hashes, out-of-range offsets or a different cell. Agents concatenate all excerpts
+at one hash, verify UTF-8 SHA-256, then parse the complete JSON. Partial excerpts
+are transport fragments, never shortened canonical AssetRefs.
+
+Reads do not change table/source artifacts. Hash equality proves consistent stored
+content, not source validity, authenticity, extraction accuracy or semantic support.
+Source verification and rendered/semantic review remain separate. Tests must cover
+long/multiple refs, Unicode/control characters, small response caps, stale paging,
+row deletion/reindexing, nonexistent addresses, absent citations and unchanged
+artifacts. Real SDK2 and opt-in Codex PDF workflows must read every final Reading
+cell's references through MCP, with independent audit of returned locators/content.
+
 ### Starting coverage and completion evidence
 
 Published 1.0.1 covers PDF read/decompose/export, scoped DOCX/DFM writeback and

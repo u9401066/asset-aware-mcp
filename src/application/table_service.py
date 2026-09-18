@@ -14,6 +14,7 @@ from html import escape
 from pathlib import Path
 from typing import Any, Literal
 
+from src.application.table_citation_read import read_citation_page
 from src.domain.repositories import TableRendererInterface
 from src.domain.table_entities import (
     CellCitation,
@@ -848,6 +849,32 @@ class TableService:
                 context.get_citation(row_index, column_name).refs  # type: ignore[union-attr]
             ),
         }
+
+    def read_citation(
+        self,
+        table_id: str,
+        row_index: int,
+        column_name: str,
+        *,
+        row_id: str = "",
+        text_offset: int = 0,
+        text_limit: int = 4000,
+        citation_sha256: str = "",
+        max_response_chars: int = 12_000,
+    ) -> dict[str, Any]:
+        """Read one exact cell/citation snapshot without changing persisted data."""
+        context = self._get_context(table_id)
+        row_index = self._resolve_row_index(context, row_index, row_id)
+        self._validate_cell_address(context, row_index, column_name)
+        return read_citation_page(
+            context,
+            row_index,
+            column_name,
+            text_offset=text_offset,
+            text_limit=text_limit,
+            citation_sha256=citation_sha256,
+            max_response_chars=max_response_chars,
+        )
 
     def get_citations(
         self,

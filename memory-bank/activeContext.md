@@ -203,11 +203,10 @@ do not test live CDN availability. Rebuilt docs include commands and limits;
 English Pages has corresponding evaluation guidance. No general OCR accuracy,
 handwriting/complex-table coverage or PDF source-layout writeback is claimed.
 
-Next priority from live Codex evidence: table_cite get currently summarizes refs
-without their full doc_id/asset_id/page and precise locators. Persisted refs pass
-the independent auditor, but the agent needs bounded canonical reference readback
-to complete its own review. Add suitable paging/hash integrity without truncating
-canonical quotes or inventing locators. Expand the real-document evaluation corpus.
+The citation readback gap found in live Codex testing is now implemented on main's
+development line, pending commit/CI below: table_cite read exposes full stored
+doc_id/asset_id/page and precise locators. get summaries remain compatible. Expand
+the real-document evaluation corpus and address the remaining workflow gaps.
 
 Further implementation work remains active: native structural CRUD (slide/shape
 addition/removal and equivalent operations for other formats), independent table/
@@ -221,6 +220,54 @@ MCP SDK stays >=2,<3, locked to 2.2.0. Docling/pdfplumber/pikepdf/pypdf roles we
 rechecked against official repositories; no new dependency was added in 1.3.0.
 MinerU/Marker security holds remain. A release is a milestone, not completion of
 the broad goal in docs/spec.md and ROADMAP.md.
+
+Completed 1.4.x development milestone: canonical A2T citation readback, specified
+before code in docs/spec.md. table_cite read returns complete stable cell/value/
+citation JSON with pinned SHA-256, 1..4000-character pages, encoded-response budget,
+16 MiB full-representation cap, and explicit non-verification of source/meaning.
+Invalid addresses, stale/cross-cell pins, missing continuation pins, non-finite or
+non-UTF-8 JSON fail closed. Source/table artifacts are untouched. Stable row IDs
+survive unrelated row reindexing; old get remains a summary with read guidance.
+
+Modules: src/application/table_citation_read.py, TableService.read_citation and
+the existing table_cite facade. Added 38 regressions in
+tests/unit/test_table_citation_readback.py and test_codex_citation_readback.py;
+the real SDK2 three-mode PDF matrix reconstructs every final Reading citation.
+tests/codex_pdf/citation_readback.py independently verifies delivered pages and
+final persisted values/refs, without trusting agent success prose. New runs opt
+into citation_readback_required and citation_paging_required; historical eight-check
+runs retain their original coverage and previous strict Unicode failure evidence.
+
+Live Codex evidence (CLI/default-model policy unchanged):
+- /tmp/asset-aware-codex-citation-scanned-01: 47 successful MCP calls, two recovered
+  tool errors, first transcription exact, all nine final checks passed.
+- /tmp/asset-aware-codex-citation-mixed-01: 46 successful calls, two recoveries,
+  first transcription exact, all nine final checks passed.
+- /tmp/asset-aware-codex-citation-paged-01: 48 successful calls, one recovery;
+  nine canonical read calls include two hash-pinned continuations for a three-page
+  record. Two count transcription errors were corrected; first_transcription_exact
+  remains false. All nine final checks passed, including the explicit paging gate.
+Every run retains source hash/mtime, actual images, exact final 35 cells, citations,
+CRUD/readbacks, independently reopened Excel and exact bundle artifacts. No general
+OCR accuracy or source-PDF layout editing is claimed. Agent reports cannot prove
+hash verification; the independent auditor computes it from actual MCP responses.
+
+Validation: 1,584 Python passed / 30 optional skips, 199 VSIX tests and 64-file
+package check; lint/format, mypy (136 files), Bandit, docs generation/check,
+harness/18-skills/metadata audits, sync parity and diff hygiene passed. Repository
+metadata and all 17 managed labels match. Logs:
+/tmp/asset-aware-citation-readback-final-tests.log and
+/tmp/asset-aware-citation-readback-extension-tests.log. Desktop/mobile zh/en reader
+QA passed; screenshots /tmp/citation-readback-{desktop,mobile}-{zh,en}.png use pinned
+cached CDN assets and do not establish live CDN availability.
+README/CHANGELOG/Pages and source/bundled skills explicitly mark this as unreleased.
+No immediate version bump/tag: public release stays v1.4.0. Exact new-commit CI/Pages
+must be checked after push. Further native CRUD/citation standards remain active.
+Live Codex also observed old A2T row-ID response messages displaying input index -1;
+data operations were correct, but resolved target display needs a regression fix.
+
+Previous turn made progress: public v1.4.0 verification and checkpoint 6e61163;
+its CI 35337926020 (all ten jobs) and Pages 35337924993 passed.
 
 
 ## 2026-08-13 - v1.0.1 large-PDF and Codex hardening

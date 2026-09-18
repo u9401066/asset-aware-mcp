@@ -27,7 +27,11 @@ from src.presentation.dependencies import (
 from src.presentation.markdown_utils import escape_table_cell
 from src.presentation.mcp_app import mcp
 from src.presentation.mcp_context import log_message, report_progress
-from src.presentation.response_limits import format_limited_text_response, text_sha256
+from src.presentation.response_limits import (
+    format_limited_text_response,
+    max_text_response_chars,
+    text_sha256,
+)
 from src.presentation.tools.citation_support import asset_ref_for_mcp_response
 
 if TYPE_CHECKING:
@@ -870,7 +874,7 @@ def _data_clear_cell(
 
 @mcp.tool()
 async def table_cite(
-    operation: Literal["add", "get", "remove", "cell_history", "coverage"],
+    operation: Literal["add", "get", "read", "remove", "cell_history", "coverage"],
     table_id: str,
     row_index: int = -1,
     row_id: str = "",
@@ -883,6 +887,10 @@ async def table_cite(
     notes: str = "",
     # remove
     ref_index: int | None = None,
+    # read: exact cell/value/citation JSON pages
+    text_offset: int = 0,
+    text_limit: int = 4000,
+    citation_sha256: str = "",
 ) -> str:
     """
     📎 表格引用管理：為儲存格附加、查詢、移除來源引用。
@@ -892,7 +900,8 @@ async def table_cite(
 
     Operations:
     - **add**: 新增引用到儲存格
-    - **get**: 查詢引用（cell / row / table）
+    - **get**: 查詢引用摘要（cell / row / table）；完整引用用 read
+    - **read**: 完整 cell/value/citation JSON 分頁，不截斷 canonical quote/locator
     - **remove**: 移除引用
     - **cell_history**: 查看儲存格變更歷史
 
@@ -908,6 +917,13 @@ async def table_cite(
         confidence: [add] Agent 信心度 0.0~1.0
         notes: [add] 備註
         ref_index: [remove] 移除特定引用索引（不指定則移除整個 cell 引用）
+        text_offset: [read] 字元起點；後續頁必須保留 citation_sha256
+        text_limit: [read] 每頁 1..4000 字元，可能因回應上限縮短
+        citation_sha256: [read] 首頁回傳的 hash，拒絕混接不同 cell/value/citation
+
+    read requires a row_id (preferred) or row_index and column_name. Concatenate
+    text_excerpt pages at one hash, verify UTF-8 SHA-256, then parse the full JSON.
+    Follow next_text_offset until null. Readback does not verify source or meaning.
 
     Examples:
         table_cite("add", "tbl_xxx", row_index=0, column_name="Drug",
@@ -931,6 +947,20 @@ async def table_cite(
             )
         elif operation == "get":
             return _cite_get(table_id, row_index, column_name, row_id=row_id)
+        elif operation == "read":
+            return json.dumps(
+                table_service.read_citation(
+                    table_id,
+                    row_index,
+                    column_name,
+                    row_id=row_id,
+                    text_offset=text_offset,
+                    text_limit=text_limit,
+                    citation_sha256=citation_sha256,
+                    max_response_chars=max_text_response_chars(),
+                ),
+                ensure_ascii=False,
+            )
         elif operation == "remove":
             return _cite_remove(
                 table_id,
@@ -988,7 +1018,12 @@ def _cite_get(
         if cite is None:
             return f"No citation for {result['cell']}."
         refs = cite.get("refs", [])
-        lines = [f"## Citation: {result['cell']}", ""]
+        lines = [
+            f"## Citation: {result['cell']}",
+            'Summary only. For exact refs use table_cite(operation="read") '
+            "with the same table, row and column.",
+            "",
+        ]
         visible_refs = refs[:50]
         for i, ref in enumerate(visible_refs):
             lines.append(

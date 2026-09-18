@@ -33,6 +33,19 @@
 
 Baseline revalidated; isolated latest main while preserving original user edits.
 
+- [x] 1.4.x development: bounded canonical A2T citation readback with cell/value/hash
+  binding, compatible get summaries, and explicit source/meaning review boundary.
+  Added 38 regressions plus actual paged readback in the three-mode SDK2 matrix.
+  Three live Codex runs pass all nine final checks; the forced-paging run includes
+  two continuations and corrected two initial count transcription errors. Preserve
+  first-pass failures/recoveries separately. Evidence paths are in activeContext.md.
+- [x] 1,584 Python tests / 30 optional skips, 199 VSIX tests/package audit, static
+  checks, docs/harness/skills/metadata audits, sync parity and bilingual browser QA
+  passed. README/Pages/CHANGELOG mark main development as unreleased; version1.4.0
+  remains unchanged. Exact commit CI/Pages must be verified after push.
+- [ ] Fix A2T row-ID operation result messages that still display input index -1;
+  continue native structural CRUD, cross-format table bridges and real corpus work.
+
 
 ## 2026-09-18 v1.4.0 published and verified
 

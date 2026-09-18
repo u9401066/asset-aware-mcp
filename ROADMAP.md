@@ -34,6 +34,13 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
 - [ ] Real-file regressions, README/Pages/metadata/labels/MEM synchronization,
   reviewed staged commits/pushes and fully verified releases throughout the work.
 
+## 1.4.x 開發中（尚未發布）
+
+- `table_cite read` 已提供完整 cell/value/citation 的固定 hash 分頁讀取；Agent
+  可檢查保存的來源定位，`get` 維持摘要。內容一致不等於來源或語意正確。
+- SDK2 與實際 Codex PDF 測試已加入最後修正後的完整引用讀回稽核；真實複雜
+  文件 corpus、格式結構 CRUD 與學術引用引擎仍在進行。
+
 ## v1.4.0 已發布階段成果
 
 - 原生 PPTX 建立、投影片／備註形狀讀取、既有文字 run 更新、版本引用與
@@ -121,10 +128,11 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
 
 ## 下一階段
 
-### Agent 證據核對的近期缺口
+### Agent 證據核對
 
-- 讓 `table_cite get` 可有界地讀回完整來源識別、頁碼與精確 locator，讓 Agent
-  能核對已保存的引用；canonical quote 與 hash 不可用截斷摘要取代。
+- 完整來源定位讀回已在 main 實作為 `table_cite read`，保留原有 `get` 摘要。
+  下一步補齊穩定 row ID 操作的結果顯示（目前部分訊息顯示未解析的 -1 索引），
+  以及跨格式表格／原生檔案橋接，讓 Agent 核對實際修改目標與輸出。
 - 擴充真實掃描／複雜表格 corpus，分別記錄初次轉錄、Agent 修正及最終
   artifact 稽核結果；MCP 的機械完整性檢查與語意／視覺核對維持明確分工。
 

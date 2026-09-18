@@ -48,6 +48,11 @@ Agent 工作目錄之外，禁止用 shell 或讀取 fixture 程式取得答案�
 35 個欄位值、實際影像傳遞、掃描像素、各列引用、修改／刪除／還原歷史、Excel
 重新開啟與 Wiki 資產包 hash。`run.json` 記錄程序結果，`expected.json` 記錄測資與
 伺服器程式／lock hash。程序 exit 0 或 Agent 宣告成功，均不足以通過稽核。
+main 開發版新增 `citation_readback_required`：最後一次修正後，Agent 必須透過
+`table_cite read` 讀回所有 Reading cells 的完整引用。新增稽核逐頁核對範圍／hash、
+穩定 cell 身分及完整定位與最終保存內容；只看摘要或未讀完分頁會失敗。
+`citation_paging_required` 另要求至少一列使用 200 字元頁，實際完成帶 hash 的續讀。
+舊測試紀錄維持原有八項檢查，不會被回溯描述為已測過這項新增能力。
 可修復的工具錯誤保留在報告，完成後標示 `passed_with_recoveries`。
 `first_transcription_exact` 另記初次轉錄是否完全正確，不把 Agent 事後修正
 當成第一次就讀對；第二輪純掃描實測曾有兩個前導零缺漏，重新看圖後修正。

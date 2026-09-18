@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import re
 import time
@@ -117,6 +118,39 @@ async def cite_rows(
         )
 
 
+async def read_citation(client: Client, table: dict, row_id: str) -> dict:
+    offset, digest, chunks = 0, "", []
+    while True:
+        raw = await call(
+            client,
+            "table_cite",
+            operation="read",
+            table_id=table["id"],
+            row_id=row_id,
+            column_name="Reading",
+            text_offset=offset,
+            text_limit=200,
+            citation_sha256=digest,
+        )
+        page = json.loads(raw) if isinstance(raw, str) else raw
+        digest = digest or page["citation_sha256"]
+        assert page["citation_sha256"] == digest
+        assert page["excerpt_char_range"][0] == offset
+        chunks.append(page["text_excerpt"])
+        next_offset = page["next_text_offset"]
+        if next_offset is None:
+            break
+        assert next_offset > offset
+        offset = next_offset
+    text = "".join(chunks)
+    assert hashlib.sha256(text.encode("utf-8")).hexdigest() == digest
+    record = json.loads(text)
+    assert record["table_id"] == table["id"] and record["row_id"] == row_id
+    assert record["value"] == table["rows"][table["row_ids"].index(row_id)]["Reading"]
+    assert record["citation"] == table["citations"][f"rid:{row_id}:Reading"]
+    return record
+
+
 async def edit_and_restore(client: Client, directory: Path, table_id: str) -> None:
     table = load_table(directory, table_id)
     row_id = table["row_ids"][3]
@@ -171,6 +205,9 @@ async def exercise_tables(
     await delete_and_restore(client, directory, table_id)
     await cite_rows(client, load_table(directory, table_id), manifest)
     await call(client, "table_cite", operation="get", table_id=table_id)
+    final_table = load_table(directory, table_id)
+    for row_id in final_table["row_ids"]:
+        await read_citation(client, final_table, row_id)
     await call(
         client,
         "table_manage",

@@ -9,6 +9,10 @@
 
 ## v1.4.0 native presentations and discovery migration
 
+Development on `main` adds complete, hash-pinned A2T citation readback through
+`table_cite(operation="read")`; this is not yet in a published package. See
+[canonical readback](docs/wiki/A2T-Tables.md) for paging and verification boundaries.
+
 `native/contract` now supports `for_op`; `native-contract-v2` declares whether the
 schema is inline or paged. Follow `schema_request` and preserve `schema_sha256`
 across pages. Clients must migrate from assuming an inline schema; see the

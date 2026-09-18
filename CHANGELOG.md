@@ -7,6 +7,17 @@
 
 ## [Unreleased]
 
+### Added
+
+- `table_cite(operation="read")` returns complete cell/value/citation snapshots in
+  bounded, hash-pinned JSON pages. Stable row identity and current value bind every
+  full locator, quote/hash and annotation; stale or mixed-cell pages are rejected.
+  Existing `get` summaries remain compatible and point to exact readback. Stored
+  content integrity does not establish source validity or semantic support.
+- SDK2 PDF workflows now reconstruct citations through MCP. Opt-in Codex runs
+  additionally require independently audited canonical readbacks for every final
+  Reading cell after the last correction, retaining prior evaluation evidence.
+
 ## [1.4.0] - 2026-09-18
 
 ### Added
