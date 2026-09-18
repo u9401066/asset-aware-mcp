@@ -109,11 +109,24 @@ the current managed head separately from reference validity. This verifies nativ
 representation integrity, not formula evaluation, rendered layout or claim support.
 Old valid references remain verifiable after updates or archival.
 
-Portable native wiki exports will retain these references independently of custom
-citation display. Stable note targets must survive display/metadata changes;
-publication must detect and preserve manually changed notes or unexpected files.
-Native reference verification is the first implementation step; native wiki export
-and standards-aware academic formatting remain separate work.
+Portable native wiki exports retain these references independently of custom
+citation display. `native/export_wiki` creates an immutable revision snapshot under
+the caller's wiki directory, with a source attachment, canonical JSONL cell records,
+one index and revision-pinned cell notes. Note names derive from asset/revision/native
+locator, never display metadata. Native worksheet/cell locators feed citation display;
+caller metadata cannot override them. XLSX/XLSM expose stored cells, while other
+formats export an explicitly opaque source without fabricated semantic notes.
+
+New revisions create separate snapshots, preserving old links and adjacent curated
+notes. Repeating an export verifies its complete inventory and exact bytes. Modified,
+unexpected or symlink entries fail closed without overwriting them. A different
+citation presentation for the same revision requires a separate output directory;
+this first version does not rewrite existing notes. Output has explicit cell/byte
+limits and never silently truncates. Publication reserves a new directory exclusively
+and writes the manifest last as its completion marker. Interrupted exports retain
+their files and report reconciliation rather than claiming atomic directory visibility.
+Source/store overlap is rejected. Formula, semantic and rendered review remain agent
+responsibilities. Standards-aware academic formatting remains separate work.
 
 ### 2.1 DDD (Domain-Driven Design) 分層架構
 

@@ -69,8 +69,10 @@ author/year, explicit numbering and custom templates for evidence/Foam exports.
 They preserve canonical provenance; full APA/CSL rendering remains future work.
 See [usage and limits](docs/wiki/LLM-Wiki-Knowledge-Base.md#citation-format-contracts).
 
-Development after 1.1.0 adds native cell-reference verification against immutable
-revisions. Native wiki export remains in progress; see the native operation guide.
+Development after 1.1.0 adds native reference verification and `native/export_wiki`:
+revision-pinned notes, original attachments, full cell evidence and custom citation
+display. Exports preserve old snapshots and reject modified files. These additions
+are on main, not in the 1.1.0 packages; see the native operation guide.
 
 ## ✨ Features
 

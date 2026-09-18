@@ -21,13 +21,21 @@ checked local artifacts. The downloaded Marketplace VSIX hash matches the GitHub
 Release asset digest; version, publisher, native harness and absence of compiled
 tests are verified. Repository metadata/labels and Pages are synchronized.
 
+Native wiki implementation is now complete locally (unreleased): immutable revision snapshots,
+revision-pinned links, source/JSONL evidence, custom citation display and no-overwrite
+publication. Exact existing inventory/bytes must match for idempotent reuse; new
+revisions preserve prior notes. Manifest-last publication reports interrupted output.
+Full regression: 1,356 passed, 30 optional skips; types/lint/configured security gate,
+asset sync and desktop/mobile bilingual reader checks pass. Push and CI are next.
+Latest documentation checkpoint 977c75f passed CI 35315597500 and Pages.
+
 Development after 1.1.0 adds native cell-reference verification (not in v1.1.0):
 NativeCellReference/Locator models, NativeEvidenceService, strict native locator
 resolution and document native op=verify. Full current regression: 1,335 passed,
 30 optional skips, including 9 new integrity tests plus real SDK 2 calls. CI
-35315203866 is fully green at e2fa020. Native
-wiki export is next; protect manually edited notes and unexpected files rather
-than copying the existing marker-only bundle replacement behavior. Documentation
+35315203866 is fully green at e2fa020. Native wiki export now preserves manually
+edited notes and unexpected files by rejecting replacement, rather than copying
+the existing marker-only PDF bundle replacement behavior. Documentation
 explicitly separates current release coverage from this unreleased addition.
 
 The latest explicit user reply confirms: MCP provides necessary source/version,
@@ -40,7 +48,7 @@ Full scope is tracked in docs/spec.md and ROADMAP.md; a milestone is not complet
 User goal item 5 adds MCP SDK 2.0+ and current package/repository evaluation.
 The baseline used MCP 2.0.0; this milestone locks and verifies MCP 2.2.0.
 
-Broader structural CRUD, DOCX/PPTX/general native adapters, native wiki publication,
+Broader structural CRUD, DOCX/PPTX/general native adapters, curated wiki integration,
 standards-aware academic citations and agent review workflows remain active work.
 A milestone or release does not complete the overall goal.
 

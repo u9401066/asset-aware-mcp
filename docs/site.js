@@ -234,7 +234,12 @@ Use the document tool with op="native" and a typed native_request. Start with na
 - Publish a new file, explicitly write back to the original, or refresh human edits under the same asset ID.
 - Divergent human and agent edits are preserved for reconciliation. Archive retains history and the human source.
 
-MCP checks source versions, locators, saved values and unchanged package parts. Agents still review meaning, rendered layout and recalculated formulas. Protected sheets, rich text and special formula/table regions require supported operations. Broader native CRUD and native wiki/citation integration remain unfinished.
+MCP checks source versions, locators, saved values and unchanged package parts. Agents still review meaning, rendered layout and recalculated formulas. Protected sheets, rich text and special formula/table regions require supported operations. Broader native CRUD remains unfinished.
+
+## Development after 1.1.0: native evidence wiki
+Current main adds verify and export_wiki, not yet included in 1.1.0 packages. Export a revision-pinned Foam index and cell notes, original attachment, manifest and full JSONL references. Native citation_contract and citation_metadata go inside native_request; sheet/cell locators come from the source. Opaque formats export attachments without fabricated interpretation.
+
+New revisions create new snapshots. Existing notes are verified and never replaced; modified or unexpected files stop reuse. Put human synthesis in adjacent notes. A new citation style for the same revision requires a separate wiki directory. The 20,000-cell and 128 MiB limits reject incomplete exports. Interrupted publication retains files and reports reconciliation_required. Full academic CSL formatting and rendered verification remain separate work.
 
 See the source page for operation fields, examples, format restrictions and recovery details.`,
   "workflow-chapters": `## Choose by source and task

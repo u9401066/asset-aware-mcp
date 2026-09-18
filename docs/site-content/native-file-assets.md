@@ -101,7 +101,8 @@ shared formula follower 尚未解析時回傳 `formula_resolved=false`，不捏�
 
 `inspect` 的 cell 含 `native-cell-ref-v1`：asset ID、不可變版本、sheet ID／part／cell
 locator，以及完整原生 cell 表示的 SHA-256。它與 PDF 的 AssetRef 是不同契約，
-目前不能交給 PDF `verify_citation_ref`，也尚未串入原生文件的 wiki／引用格式匯出。
+不能交給 PDF `verify_citation_ref`；1.1.0 套件尚未提供原生 wiki／引用格式匯出，
+main 的後續實作請見本頁「開發中」章節。
 
 大型工具回應會明確標示截短。降低 `limit`，或逐一使用 `read_cell`：
 
@@ -139,4 +140,44 @@ including carriage returns and literal escape-looking underscores.
 
 This development addition verifies native references against their immutable
 revision, including references obtained with a short excerpt. It is separate from
-PDF reference verification and does not yet provide native wiki export.
+PDF reference verification; native wiki export is described below.
+
+## 開發中：版本固定的 Wiki 匯出（未包含於 1.1.0）
+
+```python
+document(op="native", native_request={
+    "op": "export_wiki",
+    "asset_id": asset_id,
+    "output_dir": "/absolute/path/wiki/evidence",
+    # 可指定舊的 revision；省略時使用目前受管理版本
+    "citation_contract": {"preset": "author-year"},
+    "citation_metadata": {"authors": "Lin", "year": "2026"}
+})
+```
+
+回傳的 `output_dir` 是 wiki 目錄內的新快照，`index_note` 是閱讀入口。快照包含
+原始附件、`manifest.json` 檔案 hash 清單、`records.jsonl` 完整 cell 表示及引用，
+以及可直接連結的 Foam 儲存格筆記。使用 `verify` 可核對每筆 `evidence`。
+其他格式會匯出原始附件及 metadata，明確標記 `opaque_binary`。
+
+每個引用固定 asset ID、revision 與 worksheet／cell 定位。更新原檔或受管理版本後，
+再次匯出會建立另一份快照；舊 wikilink 不會偷偷指向新的內容。Agent 可在相鄰的人工
+筆記撰寫跨版本比較與語意整合，MCP 不會改寫這些筆記。
+
+同一版本重複匯出必須通過完整檔案清單與內容核對；遇到人工修改、額外檔案、缺檔或
+symlink 會拒絕覆蓋。若要用不同引用格式重新呈現同一版本，請指定另一個匯出目錄，
+將其當作另一份 wiki 使用；目前沒有原地重寫快照或自動合併人工筆記的操作。
+筆記名稱與 canonical reference 不受顯示格式影響；引用定位如 `'Budget'!B2`
+由來源產生，不能透過 citation metadata 覆寫。這不是完整 APA／CSL 排版引擎。
+
+上限為 20,000 個已儲存 cell、128 MiB 匯出內容，超過時整次拒絕，不會靜默截斷。
+尚未儲存的空白座標及 chart／dialog sheets 不產生儲存格筆記。公式快取未重新計算；
+數字是原生表示，尚未套用日期或貨幣顯示格式。
+
+建立快照使用排他新增，最後寫入 manifest 作為完成標記。中斷時保留已寫入的檔案，
+回傳 `success=false` 與 `reconciliation_required=true`；Agent 應檢查保留內容，
+再選新目錄匯出或協助使用者處理。這不保證整個目錄一次出現，也不鎖住外部編輯器。
+
+Native exports preserve immutable source bytes and full cell references, while
+custom citation templates only affect presentation. Existing snapshots are never
+replaced. Agents retain responsibility for semantic, rendered and formula review.

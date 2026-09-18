@@ -11,6 +11,8 @@ from src.infrastructure.native_spreadsheet_editor import NativeSpreadsheetEditor
 from src.infrastructure.native_spreadsheet_reader import NativeSpreadsheetReader
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from src.domain.native_assets import (
         NativeCellEdit,
         NativeCellLocator,
@@ -43,6 +45,9 @@ def create_native_workbook(request: NativeWorkbookCreate) -> bytes:
 
 class SpreadsheetFileAdapter:
     """Format port used by the application layer; parsing remains infrastructure."""
+
+    def iter_cells(self, data: bytes) -> Iterator[dict[str, Any]]:
+        yield from NativeSpreadsheet(data).iter_cells()
 
     def read_cell_by_locator(
         self, data: bytes, locator: NativeCellLocator

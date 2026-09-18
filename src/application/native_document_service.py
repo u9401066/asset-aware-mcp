@@ -9,6 +9,7 @@ from src.application.native_evidence_service import (
     NativeEvidenceService,
     attach_native_evidence,
 )
+from src.application.native_wiki_service import NativeWikiService
 from src.domain.native_assets import NativeDocumentRequest
 
 if TYPE_CHECKING:
@@ -17,15 +18,24 @@ if TYPE_CHECKING:
         NativeFileAsset,
         NativeSpreadsheetAdapter,
     )
+    from src.domain.native_wiki import NativeWikiPublisher
 
 
 class NativeDocumentService:
     def __init__(
-        self, repository: NativeAssetRepository, spreadsheets: NativeSpreadsheetAdapter
+        self,
+        repository: NativeAssetRepository,
+        spreadsheets: NativeSpreadsheetAdapter,
+        wiki_publisher: NativeWikiPublisher | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.evidence = NativeEvidenceService(repository, spreadsheets)
+        self.wiki = (
+            NativeWikiService(repository, spreadsheets, wiki_publisher)
+            if wiki_publisher is not None
+            else None
+        )
 
     @staticmethod
     def _summary(asset: NativeFileAsset) -> dict[str, Any]:
@@ -67,6 +77,7 @@ class NativeDocumentService:
             "history": self._history,
             "read_cell": self._read_cell,
             "verify": self._verify,
+            "export_wiki": self._export_wiki,
             "inspect": self._inspect,
             "refresh": self._refresh,
             "archive": self._archive,
@@ -75,6 +86,11 @@ class NativeDocumentService:
             "update": self._update,
         }
         return handlers[request.op](request)
+
+    def _export_wiki(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        if self.wiki is None:
+            raise ValueError("Native wiki publisher is not configured")
+        return self.wiki.export(request)
 
     def _verify(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.reference is not None
@@ -98,6 +114,7 @@ class NativeDocumentService:
             },
             "verification": "Package/locator/source checks are mechanical; agents verify semantics and rendered layout.",
             "archive_policy": "Archive preserves revisions and never deletes the human source file.",
+            "wiki_policy": "export_wiki creates immutable revision snapshots; existing notes are verified, never replaced. Native citation fields belong inside native_request.",
         }
 
     def _list(self, request: NativeDocumentRequest) -> dict[str, Any]:

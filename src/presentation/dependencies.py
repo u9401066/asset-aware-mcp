@@ -39,6 +39,7 @@ from src.infrastructure.job_store import FileJobStore
 from src.infrastructure.layout_visualizer import LayoutVisualizer
 from src.infrastructure.native_asset_store import FileNativeAssetRepository
 from src.infrastructure.native_spreadsheet import SpreadsheetFileAdapter
+from src.infrastructure.native_wiki_publisher import FileNativeWikiPublisher
 from src.infrastructure.ocr_processor import OCRProcessor
 from src.infrastructure.pymupdf_preflight import PyMuPDFPreflightInspector
 from src.infrastructure.subprocess_ingest_worker_runner import (
@@ -111,6 +112,7 @@ repository = FileStorage(settings.data_dir)
 native_document_service = NativeDocumentService(
     FileNativeAssetRepository(settings.data_dir / "native-assets"),
     SpreadsheetFileAdapter(),
+    FileNativeWikiPublisher((settings.data_dir / "native-assets",)),
 )
 # Engine selection (config-driven via ETL_ENGINE): the base extractor is always
 # available (PyMuPDF, or the layout-aware pymupdf4llm) and doubles as the fast

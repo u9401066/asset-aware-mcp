@@ -27,6 +27,30 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
+## 2026-09-18 native wiki snapshot checkpoint (unreleased)
+
+- Added native/export_wiki through the existing document facade: immutable source
+  attachment, complete JSONL cell records/references, a Foam index and cell notes.
+  Note identity uses asset/revision/native locator and ignores citation display.
+  Other formats export explicitly opaque attachments without invented semantics.
+- Native sheet/cell locators drive source/author-year/numeric/custom citation
+  display. Agent semantic/rendered/formula review remains explicit. Export limits
+  reject entire oversized requests rather than silently truncating evidence.
+- New revisions add snapshots and retain old links. Exact repeated exports reuse
+  unchanged files; edited/missing/unexpected/symlink entries reject reuse. Source
+  and store overlap are rejected. Exclusive new writes plus a manifest-last marker
+  report retained partial output; there is no claim of atomic directory visibility.
+  Different citation displays for the same revision require separate wiki roots.
+- 21 new unit regressions plus the expanded real SDK 2 stdio flow pass. Full
+  regression: 1,356 passed, 30 optional skips. Ruff/format/MyPy and the configured
+  medium-severity Bandit gate pass; the broader scan lists 17 existing low-severity
+  subprocess advisories. No new native-code findings. Assistant asset sync and
+  generated docs checks pass; desktop/mobile zh/en reader checks pass using cached
+  exact CDN scripts (not a live CDN availability test).
+- README/guide/spec/roadmap/Pages and bundled harness distinguish main from v1.1.0.
+  Focused native wiki/reference tests now run on Python 3.10, macOS and Windows CI.
+  Direct main commit/push and its CI verification follow; no self-PR is created.
+
 ## 2026-09-18 release and native reference checkpoint
 
 - v1.1.0 is annotated at 0e71b4c. Complete local release.sh gates and main CI

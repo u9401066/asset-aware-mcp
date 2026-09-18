@@ -57,6 +57,7 @@ async def test_native_workbook_creation_and_edit_over_sdk2_stdio(
 
         contract = await native(op="contract")
         assert contract["success"]
+        assert "export_wiki" in contract["schema"]["properties"]["op"]["enum"]
         created = await native(
             op="create",
             workbook={
@@ -100,6 +101,30 @@ async def test_native_workbook_creation_and_edit_over_sdk2_stdio(
         assert verified["is_current_managed_revision"] is True
         tampered = dict(excerpt["cell"]["evidence"], value_sha256="f" * 64)
         assert (await native(op="verify", reference=tampered))["valid"] is False
+        exported = await native(
+            op="export_wiki",
+            asset_id=current["asset_id"],
+            output_dir=str(tmp_path / "wiki"),
+            citation_contract={"preset": "author-year"},
+            citation_metadata={"authors": "Lin", "year": "2026"},
+        )
+        assert exported["success"], exported
+        wiki = Path(exported["output_dir"])
+        records = [
+            json.loads(line)
+            for line in (wiki / "records.jsonl").read_text().splitlines()
+        ]
+        assert records[0]["evidence"] == cells[0]["evidence"]
+        assert "Lin, 2026" in records[0]["citation_presentation"]["inline"]
+        assert (await native(op="verify", reference=records[1]["evidence"]))["valid"]
+        (wiki / exported["index_note"]).write_text("Human edit", encoding="utf-8")
+        conflict = await native(
+            op="export_wiki",
+            asset_id=current["asset_id"],
+            output_dir=str(tmp_path / "wiki"),
+        )
+        assert conflict["success"] is False
+        assert (wiki / exported["index_note"]).read_text() == "Human edit"
         rejected = await native(
             op="update",
             asset_id=current["asset_id"],

@@ -2499,8 +2499,9 @@ async def document(
     - ``inspect`` / ``prepare_ai`` / audit and retrieval operations: ``doc_id``.
     - ``export_assets`` / ``agent_assets``: ``doc_id``; ``output_dir`` is optional.
     - ``native``: ``native_request`` with its own op (contract/register/create/
-      list/inspect/read_cell/verify/update/history/publish/writeback/refresh/archive). XLSX/XLSM cell
-      operations retain native package features; other formats expose metadata.
+      list/inspect/read_cell/verify/export_wiki/update/history/publish/writeback/refresh/archive).
+      XLSX/XLSM expose cells; other formats expose metadata and opaque wiki attachments.
+      Native wiki citation_contract/citation_metadata belong inside native_request.
 
     Existing direct document tools stay registered and keep their original
     contracts. The facade descriptions make op-specific requirements visible

@@ -16,6 +16,8 @@ from src.infrastructure.native_ooxml import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from lxml import etree
 
 NS = {"s": SHEET_NS}
@@ -152,6 +154,21 @@ class NativeSpreadsheetReader:
             "locator": {**self.sheets[sheet], "cell": address},
             **self._value(matches[0] if matches else None),
         }
+
+    def iter_cells(self) -> Iterator[dict[str, Any]]:
+        """Read each worksheet once; export stored cells without pagination loss."""
+        for name, info in self.sheets.items():
+            if info["kind"] != f"{DOC_REL_NS}/worksheet":
+                continue
+            root = self._sheet(name)
+            for cell in root.findall("s:sheetData/s:row/s:c", NS):
+                address = cell.get("r", "")
+                yield {
+                    "sheet": name,
+                    "cell": address,
+                    "locator": {**info, "cell": address},
+                    **self._value(cell),
+                }
 
     def inspect(
         self, *, sheet: str | None = None, offset: int = 0, limit: int = 200

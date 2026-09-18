@@ -12,6 +12,10 @@
 - Native cell reference verification against immutable revision bytes, native
   worksheet/cell locators and complete representation hashes. Old references remain
   valid after updates or archival; managed-head freshness is reported separately.
+- Native wiki snapshots with original attachments, full cell JSONL evidence,
+  revision-pinned Foam notes and native sheet/cell citation display. Publication
+  verifies existing inventories/bytes, never overwrites notes and reports retained
+  partial output. Opaque formats export attachments without invented cell content.
 
 ## [1.1.0] - 2026-09-18
 

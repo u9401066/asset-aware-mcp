@@ -4,9 +4,16 @@ from __future__ import annotations
 
 import math
 import re
-from typing import Any, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from src.domain.citation_format import (
+    CitationMetadata,  # noqa: TC001 -- Pydantic runtime schema
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 SHA256_PATTERN = r"^[a-f0-9]{64}$"
 ASSET_ID_PATTERN = r"^file_[a-f0-9]{32}$"
@@ -215,6 +222,8 @@ class NativeCellReference(NativeModel):
 
 
 class NativeSpreadsheetAdapter(Protocol):
+    def iter_cells(self, data: bytes) -> Iterator[dict[str, Any]]: ...
+
     def read_cell_by_locator(
         self, data: bytes, locator: NativeCellLocator
     ) -> dict[str, Any]: ...
@@ -238,6 +247,7 @@ class NativeDocumentRequest(NativeModel):
         "inspect",
         "read_cell",
         "verify",
+        "export_wiki",
         "update",
         "history",
         "publish",
@@ -251,6 +261,9 @@ class NativeDocumentRequest(NativeModel):
     expected_revision: str | None = Field(default=None, pattern=SHA256_PATTERN)
     expected_source_sha256: str | None = Field(default=None, pattern=SHA256_PATTERN)
     output_path: str | None = Field(default=None, min_length=1, max_length=4096)
+    output_dir: str | None = Field(default=None, min_length=1, max_length=4096)
+    citation_contract: dict[str, Any] | None = None
+    citation_metadata: CitationMetadata | None = None
     workbook: NativeWorkbookCreate | None = None
     reference: NativeCellReference | None = None
     edits: list[NativeCellEdit] = Field(
@@ -278,6 +291,7 @@ class NativeDocumentRequest(NativeModel):
             "inspect": {"asset_id"},
             "read_cell": {"asset_id", "sheet", "cell"},
             "verify": {"reference"},
+            "export_wiki": {"asset_id", "output_dir"},
             "history": {"asset_id"},
             "update": {"asset_id", "expected_revision", "edits"},
             "publish": {"asset_id", "expected_revision", "output_path"},
@@ -295,6 +309,7 @@ class NativeDocumentRequest(NativeModel):
             "history": {"offset", "limit"},
             "inspect": {"sheet", "offset", "limit", "revision"},
             "read_cell": {"revision", "text_offset", "text_limit"},
+            "export_wiki": {"revision", "citation_contract", "citation_metadata"},
         }.get(self.op, set())
         unused = self.model_fields_set - required - optional - {"op"}
         if unused:

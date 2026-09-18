@@ -36,6 +36,10 @@ def render_citation(
         location.append(f"p. {page}")
     if section:
         location.append(section)
+    sheet, cell = locator.get("sheet"), locator.get("cell")
+    if sheet is not None and cell is not None:
+        escaped_sheet = str(sheet).replace("'", "''")
+        location.append(f"'{escaped_sheet}'!{cell}")
     line_range = locator.get("line_range")
     if line_range and all(x is not None for x in line_range):
         location.append(f"lines {line_range[0] + 1}-{line_range[1]}")
