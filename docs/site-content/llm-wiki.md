@@ -88,11 +88,11 @@ byte-stable JSON/Markdown/hash 產物；bundle 內容不嵌入匯出目錄的絕
 - 輸出必須是文件資料目錄的嚴格子目錄；`..`、外部絕對路徑與文件根目錄會被拒絕。
 - 不覆寫來源 PDF、canonical Markdown、manifest、citation index 或原始圖片。
 - 既有目標必須是同一 `doc_id`、同一 bundle schema；任意目錄、來源 `images/`
-  或不相符 bundle 都會 fail closed。main 的未發布修正另外核對 manifest 自身 hash、
+  或不相符 bundle 都會 fail closed。1.2.0另外核對 manifest 自身 hash、
   完整檔案／目錄清單、每個 artifact 的大小及 hash；人工修改、額外檔案、缺檔或
   symlink 會拒絕替換，保留現場內容。
 - 先在同一文件目錄建立 staging bundle，再以 rename-based replacement 發布；
-  失敗時清理 staging，替換失敗時會嘗試還原原本的 bundle。main 的未發布修正會在
+  失敗時清理 staging，替換失敗時會嘗試還原原本的 bundle。1.2.0會在
   OS lock 內重查原先觀察到的版本；完全相同的匯出回傳 `reused=true`，不改檔案。
   實際更新會保留舊目錄，並在 `backup_path` 回傳位置。外部編輯器的既有檔案 handle
   仍可能寫入備份，Agent 應檢查後再協助處理；MCP 不會自動刪除這份備份。

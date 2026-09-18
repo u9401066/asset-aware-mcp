@@ -1,6 +1,6 @@
 <!-- Generated from Native-File-Assets.md by scripts/build_docs_site.py -->
 
-# Native File Assets（v1.1.0）
+# Native File Assets（v1.2.0）
 
 Agent 可以登錄人類交付的檔案，也可以直接建立 XLSX 工作簿。每份檔案都有固定
 `asset_id`、不可變的 SHA-256 版本與操作能力；PDF、DOCX 等既有工作流程仍使用
@@ -9,7 +9,8 @@ Agent 可以登錄人類交付的檔案，也可以直接建立 XLSX 工作簿�
 Native file assets have stable IDs, immutable revisions and explicit format
 capabilities. Version 1.1.0 adds XLSX creation and scoped XLSX/XLSM
 cell reads/edits through the existing `document` tool. It does not complete
-cross-format CRUD, native wiki export or visual fidelity verification.
+cross-format CRUD or visual fidelity verification. Version 1.2.0 adds native
+reference verification and immutable wiki snapshots, described below.
 
 ## 開始使用
 
@@ -101,8 +102,7 @@ shared formula follower 尚未解析時回傳 `formula_resolved=false`，不捏�
 
 `inspect` 的 cell 含 `native-cell-ref-v1`：asset ID、不可變版本、sheet ID／part／cell
 locator，以及完整原生 cell 表示的 SHA-256。它與 PDF 的 AssetRef 是不同契約，
-不能交給 PDF `verify_citation_ref`；1.1.0 套件尚未提供原生 wiki／引用格式匯出，
-main 的後續實作請見本頁「開發中」章節。
+不能交給 PDF `verify_citation_ref`；請使用本頁的原生引用驗證與 wiki 匯出操作。
 
 大型工具回應會明確標示截短。降低 `limit`，或逐一使用 `read_cell`：
 
@@ -130,19 +130,19 @@ features; they do not substitute for visual review or prove every escape/renderi
 Text escaping follows [Microsoft's ST_Xstring implementation notes](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oe376/bd0aa042-434a-4ca7-b25f-4e1fd25a954d),
 including carriage returns and literal escape-looking underscores.
 
-## 開發中：原生引用驗證（未包含於 1.1.0）
+## 1.2.0：原生引用驗證
 
-目前 main 新增 `document(op="native", native_request={"op":"verify", "reference": ref})`，
+1.2.0 新增 `document(op="native", native_request={"op":"verify", "reference": ref})`，
 其中 `ref` 為 `inspect` 或 `read_cell` 回傳的 `evidence` 物件。它核對不可變版本的
 檔案 hash、worksheet／cell 定位與完整 cell 表示 hash，回傳 `valid`；另外以
 `is_current_managed_revision` 標示是否仍是目前受管理版本。舊引用及已封存資產仍可驗證。
 來源人類檔案的新鮮度、語意、視覺與公式計算不在這項完整性核對之內。
 
-This development addition verifies native references against their immutable
+Version 1.2.0 verifies native references against their immutable
 revision, including references obtained with a short excerpt. It is separate from
 PDF reference verification; native wiki export is described below.
 
-## 開發中：版本固定的 Wiki 匯出（未包含於 1.1.0）
+## 1.2.0：版本固定的 Wiki 匯出
 
 ```python
 document(op="native", native_request={

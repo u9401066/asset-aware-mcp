@@ -34,7 +34,7 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
 - Keep source backups and report divergent edits for agent reconciliation.
   MCP performs mechanical checks and supported deterministic repairs; the agent
   verifies semantics, rendered layout and formula results.
-- Native cell refs are not PDF AssetRefs. Current main adds native `verify` and
+- Native cell refs are not PDF AssetRefs. Version 1.2.0 adds native `verify` and
   `export_wiki`: immutable revision snapshots and full references with citation
   display. Existing notes are verified, never replaced; curate synthesis adjacent.
   Broader native CRUD remains separate; do not invent unsupported operations.

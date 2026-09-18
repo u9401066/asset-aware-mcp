@@ -47,7 +47,7 @@ and LightRAG knowledge graph outputs.
   Agents verify semantics, rendered layout and recalculated formulas. Read-back or
   byte preservation alone does not prove full visual fidelity.
 - Use `read_cell` with text offsets for long cells. Native cell references differ
-  from PDF AssetRefs. On current main, `verify` checks native refs and `export_wiki`
+  from PDF AssetRefs. Since 1.2.0, `verify` checks native refs and `export_wiki`
   creates immutable snapshots; preserve existing notes and keep synthesis adjacent.
 
 ## PDF -> Asset Engine Selection

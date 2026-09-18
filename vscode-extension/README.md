@@ -6,17 +6,17 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v1.1.0/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v1.2.0/resources/banner.png)
 
-## What's New in v1.1.0
+## What's New in v1.2.0
 
-- Native file registration with stable asset IDs and immutable revisions.
-- Independent XLSX creation and scoped XLSX/XLSM typed cell reads/edits through
-  `document(op="native")`, with source version checks and retained backups.
-- Source refresh preserves human edits and reports divergence for agent reconciliation.
-- Citation display contracts for PDF evidence/Foam exports retain canonical provenance.
-- MCP SDK 2.2.0 and cross-platform native-operation regressions. Agents still verify
-  semantic correctness, rendered layout and recalculated formulas.
+- Verify native cell references against immutable revisions, including older versions.
+- Export XLSX/XLSM evidence as revision-pinned Foam notes, original attachments and
+  complete JSONL references, with configurable citation display.
+- Native snapshots preserve existing notes; other formats export opaque attachments.
+- PDF bundle refresh verifies complete inventories/hashes, rejects human edits and
+  retains old directories on actual updates. Identical exports reuse files.
+- MCP performs mechanical checks; agents verify semantics, rendered layout and formulas.
 
 ## What's New in v1.0.1
 

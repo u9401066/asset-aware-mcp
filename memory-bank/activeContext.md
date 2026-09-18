@@ -2,7 +2,7 @@
 
 ## 2026-09-18 — cross-format CRUD and evidence library
 
-Native reference code checkpoint is main@e2fa020; v1.1.0 is tagged at 0e71b4c. Worktree:
+Current code checkpoint is main@7225a58; v1.1.0 is tagged at 0e71b4c. Preparing 1.2.0. Worktree:
 /home/eric/workspace251226/asset-aware-mcp-agent-assets, branch main.
 User explicitly requests direct code changes without self-PRs. Check locally,
 commit/push main using the owner's allowed protection bypass, then monitor CI.
@@ -32,7 +32,10 @@ succeeded. Windows CI 35317000129 found three new test-reader locale assumptions
 Existing PDF bundle publication is now hardened locally: verify inventory/hash,
 reject curated edits, recheck under a lock and retain backups on actual replacement.
 Full suite: 1,374 passed, 30 optional skips, with 18 new preservation regressions.
-Commit/push and cross-platform CI verification are next for this bounded change.
+Checkpoint 7225a58 passed every job in CI 35318171828. Preparing 1.2.0 now includes
+one extra reuse-boundary race check/test and aligned Python/VSIX/Docker/docs/harness
+metadata. Full current regression: 1,375 passed, 30 optional skips. Commit/push,
+exact-head CI, full release.sh, annotated tag and registry verification are pending.
 Read-only DOCX review confirmed the existing DFM save path already performs
 stale-session and unedited-block checks; future native identity/version integration
 must reuse those checks rather than introducing an independent editor.

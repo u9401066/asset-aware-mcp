@@ -7,16 +7,15 @@
 
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
-## v1.1.0 原生資產與引用格式
+## v1.2.0 原生證據 Wiki 與筆記保護
 
-- 原生檔案具有固定 ID 與不可變版本；可獨立建立 XLSX，並讀取、編輯、清空
-  XLSX/XLSM 儲存格，附明確的格式保留檢查。
-- 支援明確匯出、來源回寫及外部修改同步，保留歷史並偵測人類／Agent 修改衝突。
-  語意、畫面與公式結果仍由 Agent 核對。
-- PDF 證據／Foam 匯出的引用格式可自訂，底層來源定位與 hash 保持獨立。
-  完整 CSL 與原生文件 wiki adapter 仍待實作。
-- 使用官方 MCP SDK 2.2.0 與修補後套件，原生操作已有 Windows、macOS、Linux
-  和 Python 3.10 回歸驗證。
+- 原生儲存格引用可對不可變來源版本驗證，舊版本引用仍可核對。
+- XLSX/XLSM 可匯出為固定版本的 Foam 筆記、原始附件及完整 JSONL 證據；
+  自訂引用顯示與 canonical reference 保持獨立。
+- 保留既有原生快照，PDF bundle 遇到人工修改會拒絕替換；通過核對的更新保留備份，
+  相同內容直接重用。
+- 延續固定資產 ID、XLSX 建立、局部儲存格編輯與 MCP SDK 2.2.0。
+  語意、畫面、公式結果仍由 Agent 核對；完整 CSL 仍待實作。
 
 ## v1.0.1 可靠性翻新
 
@@ -60,10 +59,9 @@ v1.1.0 已加入引用格式 contract：支援來源標籤、作者／年份、�
 套用到證據與 Foam 匯出時保留原始來源資訊；完整 APA/CSL 渲染仍待實作。
 詳見[用法與限制](docs/wiki/LLM-Wiki-Knowledge-Base.md#citation-format-contracts)。
 
-1.1.0 之後的 main 已新增原生引用驗證與 `native/export_wiki`：版本固定的筆記、
+1.2.0 新增原生引用驗證與 `native/export_wiki`：版本固定的筆記、
 原始附件、完整儲存格證據及自訂引用格式。新版本保留舊快照，遇到人工修改會拒絕覆蓋。
-這些新增功能尚未包含於 1.1.0 套件，詳見原生文件操作指南。
-main 也補上既有 PDF bundle 的清單／hash 核對；人工修改會拒絕替換，通過核對的
+詳見原生文件操作指南。1.2.0 也補上既有 PDF bundle 的清單／hash 核對；人工修改會拒絕替換，通過核對的
 產生內容若需更新則保留舊目錄備份。
 
 ## ✨ 特色

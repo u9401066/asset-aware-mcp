@@ -27,7 +27,20 @@
 Baseline revalidated; isolated latest main while preserving original user edits.
 
 
-## 2026-09-18 existing PDF bundle protection (unreleased)
+## 2026-09-18 v1.2.0 release preparation
+
+- Native wiki checkpoint 6407d31 passed CI 35317215411; PDF bundle protection
+  7225a58 passed CI 35318171828. Repository metadata and managed labels are in sync.
+- Preparing 1.2.0: native reference verification, immutable native wiki snapshots,
+  custom native citation display and protection for refreshed PDF bundle notes.
+  Python/VSIX/Docker/lock metadata, README/Pages and bundled harness are aligned.
+- Added a final reuse-boundary race regression: recheck the existing target after
+  staged output verification, even for an otherwise identical export. Full versioned
+  regression: 1,375 passed, 30 optional skips. Types/lint/docs/harness checks pass.
+- Full release.sh gates, exact-head CI, annotated tag, registry publication and
+  public artifact verification remain pending. Do not treat preparation as publication.
+
+## 2026-09-18 existing PDF bundle protection (included in 1.2.0 preparation)
 
 - Replaced marker-only directory replacement with an injected domain publication
   port and infrastructure inventory/publisher implementations. Verify manifest

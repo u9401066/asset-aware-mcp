@@ -229,3 +229,22 @@ async def test_stale_manifest_token_and_busy_lock_reject_publication(
         publisher.publish(tmp_path / "unused-stage", root, policy, "f" * 64)
     with operation_lock(root.parent), pytest.raises(ValueError, match="busy"):
         publisher.publish(tmp_path / "unused-stage", root, policy, token)
+
+
+async def test_identical_export_rechecks_target_after_staging_verification(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    service, _, doc_id = _fixture(tmp_path)
+    initial = await _export(service, doc_id, "bundle")
+    root = Path(initial["output_dir"])
+
+    def race(target: Path, policy: BundlePublicationPolicy) -> str | None:
+        token = inspect_bundle(target, policy)
+        if target.name.startswith(".bundle.staging-"):
+            (root / "index.md").write_bytes(b"Human edit during stage verification")
+        return token
+
+    monkeypatch.setattr("src.infrastructure.bundle_publisher.inspect_bundle", race)
+    with pytest.raises(ValueError):
+        await _export(service, doc_id, "bundle")
+    assert (root / "index.md").read_bytes() == b"Human edit during stage verification"

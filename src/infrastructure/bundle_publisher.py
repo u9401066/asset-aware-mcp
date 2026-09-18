@@ -36,6 +36,8 @@ class FileBundlePublisher:
             if staged is None:
                 raise ValueError("Bundle stage is missing")
             if current == staged:
+                if inspect_bundle(target, policy) != current:
+                    raise ValueError("Bundle changed before identical export reuse")
                 shutil.rmtree(stage)
                 return {"reused": True, "backup_path": None}
             return self._replace(stage, target, policy, expected_token, staged)

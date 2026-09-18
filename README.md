@@ -7,16 +7,15 @@
 
 🌐 [繁體中文](README.zh-TW.md) · [Docs Site](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
-## v1.1.0 native assets and citation contracts
+## v1.2.0 native evidence wikis and note preservation
 
-- Register native files with stable IDs and immutable revisions; create XLSX
-  workbooks and read/update/clear XLSX/XLSM cells with explicit preservation checks.
-- Publish, write back or refresh sources while retaining history and detecting
-  divergent human/agent edits. Semantic, visual and formula review stays agent-owned.
-- Customize citation display in PDF evidence/Foam exports without replacing
-  canonical source locators or hashes. Full CSL and native wiki adapters remain planned.
-- Official MCP SDK 2.2.0, patched dependencies and native operation regressions
-  on Windows, macOS, Linux and Python 3.10.
+- Verify native cell references against immutable source revisions, including old versions.
+- Export XLSX/XLSM evidence as revision-pinned Foam notes, original attachments and
+  complete JSONL references. Citation display stays separate from canonical evidence.
+- Preserve existing native snapshots and detect manually changed PDF bundle notes;
+  verified PDF bundle updates retain backups, while identical exports reuse files.
+- Builds on stable native file IDs, XLSX creation and scoped cell edits with MCP SDK 2.2.0.
+  Agents still review semantics, rendered layout and formulas; full CSL remains planned.
 
 ## v1.0.1 reliability refresh
 
@@ -69,11 +68,10 @@ author/year, explicit numbering and custom templates for evidence/Foam exports.
 They preserve canonical provenance; full APA/CSL rendering remains future work.
 See [usage and limits](docs/wiki/LLM-Wiki-Knowledge-Base.md#citation-format-contracts).
 
-Development after 1.1.0 adds native reference verification and `native/export_wiki`:
+Version 1.2.0 adds native reference verification and `native/export_wiki`:
 revision-pinned notes, original attachments, full cell evidence and custom citation
-display. Exports preserve old snapshots and reject modified files. These additions
-are on main, not in the 1.1.0 packages; see the native operation guide.
-Main also protects existing PDF bundle notes with inventory/hash checks and retained
+display. Exports preserve old snapshots and reject modified files; see the native
+operation guide. Version 1.2.0 also protects PDF bundle notes with inventory/hash checks and retained
 backups when a verified generated bundle is replaced.
 
 ## ✨ Features

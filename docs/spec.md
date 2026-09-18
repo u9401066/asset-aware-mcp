@@ -86,8 +86,8 @@ A source backup is retained. Removing an asset archives its registry entry; it d
 not silently erase the human's source file. `refresh` adopts human source edits
 without changing asset identity and rejects divergent unpublished edits.
 Native cell reads include `native-cell-ref-v1`; chunked text keeps its full-cell
-reference and a separate full-text hash. Native wiki/citation integration remains
-future work. See [operation details and limits](wiki/Native-File-Assets.md).
+reference and a separate full-text hash. Version 1.2.0 adds the native wiki and
+citation integration described below. See [operation details and limits](wiki/Native-File-Assets.md).
 
 Read/modify limits apply before decompression and XML parsing. XML entity expansion,
 external-resource resolution, path traversal and ambiguous package members are
@@ -100,7 +100,7 @@ and [Microsoft worksheet structure](https://learn.microsoft.com/en-us/office/ope
 
 ## 2. Core Architecture
 
-### Next milestone: native evidence verification and wiki publication
+### Native evidence verification and wiki publication (v1.2.0)
 
 Native cell references must be independently checkable against the immutable
 registered revision: verify blob hash, worksheet identity/part/kind, cell address

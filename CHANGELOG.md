@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-18
+
 ### Added
 
 - Native cell reference verification against immutable revision bytes, native

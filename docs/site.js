@@ -225,7 +225,7 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 
 ## Verify preservation
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
-  "native-file-assets": `## Native spreadsheets and versioned files — v1.1.0
+  "native-file-assets": `## Native spreadsheets and versioned files — v1.2.0
 
 Use the document tool with op="native" and a typed native_request. Start with native_request={"op":"contract"} to discover the schema.
 
@@ -236,8 +236,8 @@ Use the document tool with op="native" and a typed native_request. Start with na
 
 MCP checks source versions, locators, saved values and unchanged package parts. Agents still review meaning, rendered layout and recalculated formulas. Protected sheets, rich text and special formula/table regions require supported operations. Broader native CRUD remains unfinished.
 
-## Development after 1.1.0: native evidence wiki
-Current main adds verify and export_wiki, not yet included in 1.1.0 packages. Export a revision-pinned Foam index and cell notes, original attachment, manifest and full JSONL references. Native citation_contract and citation_metadata go inside native_request; sheet/cell locators come from the source. Opaque formats export attachments without fabricated interpretation.
+## v1.2.0: native evidence wiki
+Version 1.2.0 adds verify and export_wiki. Export a revision-pinned Foam index and cell notes, original attachment, manifest and full JSONL references. Native citation_contract and citation_metadata go inside native_request; sheet/cell locators come from the source. Opaque formats export attachments without fabricated interpretation.
 
 New revisions create new snapshots. Existing notes are verified and never replaced; modified or unexpected files stop reuse. Put human synthesis in adjacent notes. A new citation style for the same revision requires a separate wiki directory. The 20,000-cell and 128 MiB limits reject incomplete exports. Interrupted publication retains files and reports reconciliation_required. Full academic CSL formatting and rendered verification remain separate work.
 
@@ -303,8 +303,8 @@ Agent asset and evidence exports can create Foam-compatible indexes, notes, anch
 ## Check evidence health
 Run wiki health checks before promoting claims, and keep unresolved or stale references visible for review.
 
-## Development after 1.1.0: preserve human notes
-Current main verifies the complete existing PDF bundle inventory and hashes before refreshing it. Changed, missing, extra or symlink entries stop replacement. Identical exports reuse files; actual replacements retain the previous directory and return backup_path. Publication rechecks the observed version under an OS lock, while external editors still require coordination. These changes are not in 1.1.0 packages.`,
+## v1.2.0: preserve human notes
+Version 1.2.0 verifies the complete existing PDF bundle inventory and hashes before refreshing it. Changed, missing, extra or symlink entries stop replacement. Identical exports reuse files; actual replacements retain the previous directory and return backup_path. Publication rechecks the observed version under an OS lock, while external editors still require coordination.`,
   "knowledge-graph": `## Use discovery as optional context
 LightRAG is opt-in and can support consultation or graph export when its backend is configured. Knowledge responses help discovery but do not replace canonical document evidence.
 
@@ -385,7 +385,7 @@ function defineTool(name, category, summary, inputs, outcome, example, module) {
 }
 
 const TOOLS = [
-  defineTool("document", "document", "Document facade for PDF workflows and versioned native spreadsheet operations (v1.1.0).", "op, pdf_path, doc_id, file_paths, output_dir, native_request", "PDF assets or native file revisions with explicit preservation checks", 'document(op="export_assets", doc_id="doc_...", output_dir="agent-assets")', "document_tools.py"),
+  defineTool("document", "document", "Document facade for PDF workflows, native file versions and evidence wiki snapshots (v1.2.0).", "op, pdf_path, doc_id, file_paths, output_dir, native_request", "PDF assets or native file revisions with explicit preservation checks", 'document(op="export_assets", doc_id="doc_...", output_dir="agent-assets")', "document_tools.py"),
   defineTool("document_asset", "document", "Fetch document assets, navigate sections, and write table or figure Foam notes.", "op, doc_id, asset_type, asset_id, path", "Bounded asset content or provenance-rich Foam notes", 'document_asset(op="foam_notes", doc_id="doc_...", asset_type="all")', "document_tools.py"),
   defineTool("section", "document", "Browse, search, and read a document section tree.", "op, doc_id, path, query, limit", "Section hierarchy, detail, content, or bounded blocks", 'section(op="tree", doc_id="doc_...", max_depth=3)', "section_tools.py"),
   defineTool("ingest_documents", "document", "High-frequency PDF ingest shortcut with background-job semantics.", "file_paths, async_mode, use_marker, ocr_enabled, ocr_language", "Job id and per-file progress without blocking stdio", 'ingest_documents(file_paths=["/papers/source.pdf"])', "document_tools.py"),
