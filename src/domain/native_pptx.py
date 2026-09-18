@@ -17,6 +17,7 @@ if TYPE_CHECKING:
         NativePptxPictureCreate,
         NativePptxPictureReplace,
     )
+    from src.domain.native_pptx_table import NativePptxTableAddition
 
 PPTX_MEDIA_TYPE = (
     "application/vnd.openxmlformats-officedocument.presentationml.presentation"
@@ -190,6 +191,10 @@ class NativePptxReference(PptxModel):
 
 
 class NativePresentationAdapter(Protocol):
+    def add_tables(
+        self, data: bytes, items: list[NativePptxTableAddition]
+    ) -> tuple[bytes, NativeEditResult]: ...
+
     def add_pictures(
         self,
         data: bytes,

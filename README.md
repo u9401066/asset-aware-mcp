@@ -20,6 +20,11 @@ preview embedded images through MCP, and extract them as independent versioned f
 Shared media remains intact; source references persist in history. See
 [picture assets](docs/wiki/Native-File-Assets.md#pptx-picture-assets-unreleased).
 
+Unreleased native tables can be inserted with explicit grids, merged cells and
+rich text, then read/edited/deleted through existing native shape operations.
+Citation display presets/templates now have typed discovery. See
+[native tables](docs/wiki/Native-File-Assets.md#native-pptx-tables-unreleased).
+
 Native PDF page collaboration is also **Unreleased**: read/render pages, compose
 new PDFs, insert/copy/delete/reorder pages, and change rotation/crop in managed
 revisions. Page evidence and wiki previews retain exact source attachments.

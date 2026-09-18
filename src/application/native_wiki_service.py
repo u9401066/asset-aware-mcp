@@ -49,7 +49,7 @@ class NativeWikiService:
         revision = request.revision or asset.revision
         data = self.repository.read(asset.asset_id, revision)
         contract = resolve_citation_format(
-            request.citation_contract
+            request.citation_contract.model_dump(mode="json")
             if request.citation_contract is not None
             else {"preset": "source"}
         )

@@ -43,6 +43,13 @@ class CitationMetadata(BaseModel):
     reference_number: int | None = Field(None, ge=1, strict=True)
 
 
+class CitationFormatPreset(BaseModel):
+    """A display-only preset selector, with no provenance or template overrides."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    preset: Literal["source", "author-year", "numeric"]
+
+
 class CitationFormatContract(BaseModel):
     """A bounded named-field template, not a programming language or CSL engine."""
 

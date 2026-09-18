@@ -15,7 +15,13 @@
   1,790 Python tests / 199 extension tests; two real Codex picture runs each 38 calls,
   zero errors, three actual image deliveries and independent package/shape audits.
   Source hashes match the evaluated runtime. Public remains 1.4.0 / Unreleased.
-- [ ] Commit/push picture checkpoint and verify its exact CI/Pages deployment.
+- [x] d46fdce picture checkpoint: exact CI 35353663631 and Pages 35353662373 passed.
+- [x] Native editable PPTX table creation, grid sizes/direct formatting/merges,
+  existing run edits/deletion/evidence/wiki and guarded source writes implemented.
+  Typed citation preset/template schema added after an actual Codex input failure.
+  Scanned PDF -> native table run 02: 66 calls, zero errors, exact first transcription;
+  run 01 recovery retained. 1,857 Python tests / 199 extension tests pass.
+- [ ] Commit/push table checkpoint and verify exact CI/Pages; public stays 1.4.0.
 
 - [x] Unreleased checkpoint: native PPTX textbox addition / existing shape deletion
   with reference, dependency, version and XML preservation guards; truthful A2T

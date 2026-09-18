@@ -612,3 +612,45 @@ MCP necessary checks distinct from the agent's complete semantic/visual review.
   blob, content type, dimensions and digest. Pillow provides verification and
   decompression-bomb limits. Use these libraries behind native ports, not a
   load-and-save of the user's whole presentation.
+
+### Native PPTX table creation (Unreleased, 1.4.x)
+
+`add_pptx_tables` accepts asset_id, expected_revision and 1–100 `pptx_tables`.
+Each item identifies an existing slide/notes/nonzero-group container and a table
+with local EMU left/top, explicit column_widths/row_heights, a rectangular cells
+matrix, nonoverlapping inclusive merge rectangles, name and description. Width
+and height equal the sums of column/row dimensions. Cells contain structured
+paragraphs/runs, horizontal/vertical alignment, margins, optional RGB fill/text
+colors. Numbers and formulas are literal display text, never recalculated.
+
+The destination tableStyles relationship and default style GUID are resolved and
+explicitly applied to the new table. Without that relationship no style ID is
+invented. No foreign style/media relationships or parts are imported. Explicit first/last
+row/column and banding switches control theme roles. Merges are established before
+writing cell content. Covered cells must use the empty/default cell request so
+content/formatting cannot silently disappear. Every new table is read back against
+its requested grid, text, direct formatting and merge map. Scoped shape-tree
+insertion retains exact existing package parts and reverses new nodes to verify
+unmodified XML. MCP stages immutable versions with CAS; source writeback is explicit.
+
+Read full tables through read_pptx_shape, edit native cell runs with update_pptx,
+delete whole tables with full current shape refs via delete_pptx_shapes, and retain
+historical evidence/wiki snapshots. Individual grid row/column insertion/deletion
+and edits to existing merge maps remain follow-up work. Agent reviews actual slide
+rendering, inherited table style, overflow, data interpretation and accessibility.
+Budget: at most 100 rows/columns per table; 10,000 cells, 20,000 runs and 4 MiB UTF-8
+text per batch. Per dimension and summed table extent stay within 100,000,000 EMU.
+
+Implementation references: [python-pptx table concepts](https://python-pptx.readthedocs.io/en/latest/user/table.html)
+and [public table API](https://python-pptx.readthedocs.io/en/latest/api/table.html).
+
+#### Native citation display schema discovery
+
+Actual Codex scanned-table run 01 correctly transcribed the image but tried to put
+source proof objects into citation_contract. The runtime rejected those fields and
+the agent recovered. NativeDocumentRequest now must expose a typed union of a
+preset selector (`source`, `author-year`, `numeric`) and CitationFormatContract,
+including required inline_template/reference_template and bounded allowed template
+fields. Valid existing JSON inputs remain accepted; native wiki passes the typed
+model's JSON representation to the existing resolver. Canonical source references
+are separate from display contracts and cannot be overridden by formatting input.

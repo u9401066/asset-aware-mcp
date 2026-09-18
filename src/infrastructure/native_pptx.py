@@ -20,6 +20,7 @@ from src.infrastructure.native_pptx_pictures import (
 )
 from src.infrastructure.native_pptx_records import shape_record, text_body
 from src.infrastructure.native_pptx_shape_edit import add_shapes, delete_shapes
+from src.infrastructure.native_pptx_tables import add_tables
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -87,6 +88,7 @@ def _verify_parts(
 
 
 class NativePresentation:
+    add_tables = staticmethod(add_tables)
     add_pictures = staticmethod(add_pictures)
     replace_pictures = staticmethod(replace_pictures)
     read_picture = staticmethod(read_picture)

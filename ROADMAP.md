@@ -36,6 +36,13 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
 
 ## 1.4.x 開發中（尚未發布）
 
+- 已加入原生 PDF 頁面操作、PPTX 文字框／圖片／表格新增、既有形狀刪除，
+  以及圖片替換／拆出與來源歷程；使用不可變版本與明確回寫。
+- 原生表格可指定尺寸、合併與直接文字格式，沿用完整形狀引用與 Wiki；
+  既有格網列欄插刪、A2T 自動橋接和完整渲染核對仍未完成。
+- 實際 Codex 掃描頁到 PPTX 表格的實測與獨立稽核已加入，初次辨讀及恢復
+  分開記錄；citation display 預設／模板有 typed schema，來源證據另行保存。
+
 - `table_cite read` 已提供完整 cell/value/citation 的固定 hash 分頁讀取；Agent
   可檢查保存的來源定位，`get` 維持摘要。內容一致不等於來源或語意正確。
 - SDK2 與實際 Codex PDF 測試已加入最後修正後的完整引用讀回稽核；真實複雜
@@ -44,7 +51,7 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
 ## v1.4.0 已發布階段成果
 
 - 原生 PPTX 建立、投影片／備註形狀讀取、既有文字 run 更新、版本引用與
-  完整 package Wiki 已發布；新增／刪除形狀等結構操作仍待實作。
+  完整 package Wiki 已發布；後續結構操作見上方尚未發布的 1.4.x 內容。
 - `native-contract-v2` 提供按操作查詢與 hash 固定的完整 schema 分頁；
   已說明舊版 inline response 的遷移方式，專案後續小幅更新沿用 1.4.x。
 - Codex 實際 MCP 測試涵蓋圖像讀取、35 cells 轉錄、引用、更新／刪除／還原，

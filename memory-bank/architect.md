@@ -1,5 +1,17 @@
 # System Architect
 
+## 2026-09-18 — native table composition and citation schema
+
+Domain native_pptx_table models define EMU grids, cells, merges and aggregate budgets.
+Infrastructure builds scratch table nodes, resolves destination default style and
+independently compares serialized grids/text/direct formatting/merge maps to input.
+Reuse scoped shape insertion/deletion guards; table creation never resaves the original
+presentation with python-pptx or imports foreign parts. Application shares existing
+managed PPTX CAS/backup boundaries; full shape evidence/wiki remains compatible.
+Native citation_contract now uses CitationFormatPreset | CitationFormatContract;
+NativeWikiService resolves its JSON projection. Formatting never stores source proofs.
+
+
 ## 2026-09-18 — native picture composition and extraction
 
 Domain: native file references and typed picture create/replace requests.

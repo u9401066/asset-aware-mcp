@@ -73,6 +73,7 @@ class NativePptxOperations:
             "read_pptx": self._read,
             "read_pptx_shape": self._read_shape,
             "update_pptx": self._update,
+            "add_pptx_tables": self._update,
             "add_pptx_shapes": self._update,
             "delete_pptx_shapes": self._update,
         }[request.op](request)
@@ -164,7 +165,9 @@ class NativePptxOperations:
                     "Presentation deletion reference has a different asset or revision"
                 )
         data = self.repository.read(asset.asset_id, request.expected_revision)
-        if request.op == "add_pptx_shapes":
+        if request.op == "add_pptx_tables":
+            updated, checks = self.presentations.add_tables(data, request.pptx_tables)
+        elif request.op == "add_pptx_shapes":
             updated, checks = self.presentations.add_shapes(data, request.pptx_shapes)
         elif request.op == "delete_pptx_shapes":
             updated, checks = self.presentations.delete_shapes(

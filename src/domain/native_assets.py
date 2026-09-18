@@ -8,8 +8,10 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from src.domain.citation_format import (
-    CitationMetadata,  # noqa: TC001 -- Pydantic runtime schema
+from src.domain.citation_format import (  # noqa: TC001 -- Pydantic runtime schema
+    CitationFormatContract,
+    CitationFormatPreset,
+    CitationMetadata,
 )
 from src.domain.native_docx import NativeDocxEdit  # noqa: TC001 -- Pydantic schema
 from src.domain.native_file_reference import (
@@ -37,6 +39,10 @@ from src.domain.native_pptx import (
 from src.domain.native_pptx_picture import (  # noqa: TC001 -- Pydantic schema
     NativePptxPictureCreate,
     NativePptxPictureReplace,
+)
+from src.domain.native_pptx_table import (
+    NativePptxTableAddition,
+    validate_table_additions,
 )
 
 if TYPE_CHECKING:
@@ -298,7 +304,10 @@ class NativeDocumentRequest(NativeModel):
     expected_source_sha256: str | None = Field(default=None, pattern=SHA256_PATTERN)
     output_path: str | None = Field(default=None, min_length=1, max_length=4096)
     output_dir: str | None = Field(default=None, min_length=1, max_length=4096)
-    citation_contract: dict[str, Any] | None = None
+    citation_contract: CitationFormatContract | CitationFormatPreset | None = Field(
+        default=None,
+        description="Citation display only: select a preset or supply inline/reference templates. Source references and proof objects are not formatting fields.",
+    )
     citation_metadata: CitationMetadata | None = None
     workbook: NativeWorkbookCreate | None = None
     docx_edit: NativeDocxEdit | None = None
@@ -312,6 +321,9 @@ class NativeDocumentRequest(NativeModel):
     )
     pdf_order: list[NativePdfReference] = Field(default_factory=list, max_length=2000)
     render_size: int = Field(default=1024, ge=64, le=2048)
+    pptx_tables: list[NativePptxTableAddition] = Field(
+        default_factory=list, max_length=100
+    )
     pptx_locator: NativePptxShapeLocator | None = None
     pptx_pictures: list[NativePptxPictureCreate] = Field(
         default_factory=list, max_length=100
@@ -350,6 +362,14 @@ class NativeDocumentRequest(NativeModel):
     def validate_optional_cell(cls, value: str | None) -> str | None:
         if value is not None:
             cell_position(value)
+        return value
+
+    @field_validator("pptx_tables")
+    @classmethod
+    def bounded_tables(
+        cls, value: list[NativePptxTableAddition]
+    ) -> list[NativePptxTableAddition]:
+        validate_table_additions(value)
         return value
 
     @field_validator("pptx_shapes")

@@ -47,6 +47,9 @@ def native_asset_summary(
             and pptx_enabled
             and not asset.archived,
             "edit_pptx": asset.format == "pptx" and pptx_enabled and not asset.archived,
+            "add_pptx_tables": asset.format == "pptx"
+            and pptx_enabled
+            and not asset.archived,
             "add_pptx_shapes": asset.format == "pptx"
             and pptx_enabled
             and not asset.archived,
@@ -81,6 +84,7 @@ def native_document_contract(
         "operations": list(NATIVE_OPERATIONS),
         **schema_discovery(for_op),
         "identity": "Stable asset IDs, SHA-256 revisions and revision-scoped locators.",
+        "citation_policy": "citation_contract selects a display preset or custom inline/reference templates; it does not store source references or verification reports.",
         "file_reference_policy": "file_reference identifies exact immutable file bytes; verify does not assert source freshness or semantic meaning.",
         "formats": _formats(docx_enabled, pptx_enabled, pdf_enabled),
         "verification": "MCP checks integrity; agents verify semantics, layout and calculated results.",
@@ -122,7 +126,7 @@ def _edit_constraints(format_name: str) -> list[str]:
             "digital_signatures",
             "document_protection",
             "slide_structure",
-            "non_picture_non_text_shape_creation",
+            "non_table_non_picture_non_text_shape_creation",
             "linked_or_alternate_picture_representations",
             "shape_reference_dependencies",
             "zero_extent_group_insertion",
@@ -159,6 +163,7 @@ def _formats(
             "read_pptx",
             "read_pptx_shape",
             "update_pptx",
+            "add_pptx_tables",
             "add_pptx_shapes",
             "delete_pptx_shapes",
             "verify",

@@ -96,6 +96,7 @@ class NativeDocumentService:
             "read_pptx": self._pptx_operation,
             "read_pptx_shape": self._pptx_operation,
             "update_pptx": self._pptx_operation,
+            "add_pptx_tables": self._pptx_operation,
             "add_pptx_shapes": self._pptx_operation,
             "delete_pptx_shapes": self._pptx_operation,
             "read_docx": self._docx_operation,

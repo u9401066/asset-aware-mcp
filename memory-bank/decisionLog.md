@@ -1,5 +1,17 @@
 # Decision Log
 
+## 2026-09-18 — editable native tables and typed citation display
+
+Create DrawingML tables from explicit grid/cell/merge input using scratch python-pptx;
+apply the destination tableStyles default GUID, and compare readback to input plus
+preserve package/XML outside additions. Covered cells must be empty/default so merge
+operations cannot discard caller content. Existing native shape CRUD/evidence applies.
+Actual Codex run 01 exposed citation_contract as an underspecified object. Advertise
+preset/custom format models and keep source proof objects separate; valid JSON remains
+accepted. Preserve first-run recovery evidence and rerun actual MCP with current schema.
+No minor-version increase: public 1.4.0, work remains Unreleased for 1.4.x.
+
+
 ## 2026-09-18 — native picture assets preserve exact image bytes
 
 Add four bounded PPTX picture operations and native-file-ref-v1. Use python-pptx

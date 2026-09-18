@@ -9,6 +9,15 @@
 
 ### Added
 
+- Add native PPTX table insertion with explicit row/column dimensions, rich cell
+  text, direct formatting, destination default style, checked merges and atomic
+  revisions. Existing shape read/edit/delete/evidence/wiki operations apply.
+- Expose native citation display as a typed preset/custom-template union after a
+  real Codex run confused display formatting with source evidence. Valid JSON
+  inputs remain compatible; source proof objects are rejected by the schema.
+- Add actual SDK2 table CRUD/writeback and opt-in Codex scanned PDF to editable
+  PPTX table evaluation, retaining transcription/recovery and independent audits.
+
 - Native-file references identify complete immutable bytes across formats. PPTX
   picture operations add exact PNG/JPEG assets with explicit contain/cover/stretch
   fitting, replace one picture while preserving its existing mapping and shared

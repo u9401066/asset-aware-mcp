@@ -1,5 +1,58 @@
 # Active Context
 
+## 2026-09-18 — native editable PPTX tables verified locally; push pending
+
+Previous turn is verified progress: d46fdce/e220434 implements picture assets;
+exact CI 35353663631 (ten jobs) and Pages 35353662373 both revalidated successful.
+Main is clean at start; public still 1.4.0 and all new work is Unreleased / 1.4.x.
+Original user worktree remains untouched. Next scope is add_pptx_tables, closing
+native table creation while using existing shape reads, cell-run edits, deletion,
+immutable verification/wiki and guarded source writes. Explicit grid sizes, rich
+text, direct cell colors/alignment/margins, merge rectangles and destination style
+inheritance. Reject content in covered cells, overlapping/out-of-range merges and
+resource budget violations. Scratch python-pptx only creates new table nodes;
+package edits remain scoped and read back against the typed request. Specification
+written first; source table concepts/API checked 2026-09-18. Native row/column edits,
+slide operations, broader formats and real-document corpus remain active goal work.
+
+Implemented table creation, public schema/dispatch/capabilities, destination style
+GUID resolution and generic named shape insertion. New src/domain/native_pptx_table.py
+and infrastructure native_pptx_table_builder/checks/tables.py. Tables preserve exact
+unrelated parts and reverse new shapes before XML comparison; raw readback verifies
+request geometry/text/styles/merge map. Forty backend/guard tests (14+26) cover notes,
+groups, numeric-looking strings, rich runs, merge rectangles, source signature/style
+relationships, data loss/resource limits and builder corruption. Six managed tests
+and real SDK2 table CRUD/wiki/backup-writeback passed. Existing shape-v1 unchanged.
+
+Actual Codex scanned-table run 01 passed final checks with exact initial transcription,
+but one recovered misuse of untyped citation_contract. Evidence retained at
+/tmp/asset-aware-codex-pptx-tables-01: 67 attempts, 66 successful calls, one tool error.
+Fixed the discovery gap: CitationFormatPreset/custom CitationFormatContract typed
+union in native requests; JSON selectors/templates retain compatibility; source
+proofs are not display settings. Ten schema regression cases plus native schema/wiki/
+SDK2 focused matrix: 72 passed. Separate existing provenance claims remain untouched.
+Run 02 /tmp/asset-aware-codex-pptx-tables-02: 66 calls, zero errors, first transcription
+exact, one actual MCP PNG, four distinct complete records; same native source/lock
+hash as current runtime. Codex 0.154.0-alpha.6.1 default model, not pinned.
+Runtime source SHA256 3096077f38a15d48c9c646ea509532d2cab6554193a5c7ab027e2c6af3dde995
+Lock SHA256 abfaddf3d7d964ace1e210b1fd584e1717775a70f8ccdc98ad9b669b61f1bcd3
+Auditor checks actual page pixels, complete records before edits/deletes, exact grid/
+merge/text and temporary change/restoration in all managed revisions, historical
+proofs, source bytes/mtime and PPTX/wiki attachments. Initial mistakes/recoveries are
+retained, never relabeled as first-pass success. Nine auditor regressions passed.
+
+Final full tests: 1,857 passed / 30 optional skips; the final SDK2 test refactor
+also passed its focused rerun (one integration test).
+Ruff/format/mypy (162 source files), Bandit, docs/harness/18-skill audits and VSIX
+199 tests/64-file package passed. Final gates and browser/build audits are recorded
+below; commit/push and exact
+final CI/Pages verification remain pending. Docs/README/ROADMAP/harness/CI
+are synchronized; no new dependency/version/tag. Original user worktree untouched.
+Next goal gap after this checkpoint: explicit cross-asset semantic derivation links
+(PDF page -> new table) separate from citation display. Those links are NOT supplied
+by merely matching table text or exporting native source evidence. Broader grid/slide
+CRUD, real-document corpus and remaining formats also stay in the original scope.
+
 ## 2026-09-18 — native PPTX image assets, local verification in progress
 
 Public version remains 1.4.0; all current work is Unreleased for the 1.4.x line.
@@ -932,3 +985,18 @@ all artifact audits (metadata, wheel/sdist and VSIX). Exact post-push CI/Pages p
 Runtime/backend/managed/SDK changes committed as e220434 under
 u9401066 <u9401066@gap.kmu.edu.tw>. Final documentation, harness, Codex auditor and
 platform CI commit is being prepared before a single main push; no release tag.
+
+Final release-check attempt hit an actual full filesystem (43 MiB free) and exited
+120 while creating DOCX wiki/test artifacts; it is not counted as a pass. Earlier
+full run passed 1,854 tests. Removed only this work's verified Docker check images
+(pptx-pictures-check, pptx-tables-check) and completed pytest-176/178 fixture roots
+after checking their unique scanned-table tests and excluding live pytest-current.
+Source worktrees, Codex run evidence, user files and unrelated images/caches retained.
+Recovered ~0.8 GiB; retry /tmp/asset-aware-pptx-tables-release-retry.log completed
+successfully: 1,857 passed / 30 optional skips in 56.18s. Failed log retained.
+Browser QA passed zh/en desktop/mobile with no errors/overflow; screenshots at
+/tmp/native-pptx-tables-{desktop,mobile}-{zh,en}.png, desktop-en/mobile-zh inspected.
+Browser plugin unavailable; Playwright 1.63.0 and cached CDN scripts used.
+Docker build/import, Python wheel/sdist+VSIX artifact audits, VSIX install/update,
+metadata/17 labels and dependency audits passed. Local GUI activation was skipped
+(no xvfb-run); CI will enforce it. Public version remains 1.4.0.

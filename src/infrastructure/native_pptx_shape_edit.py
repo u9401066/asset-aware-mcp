@@ -33,6 +33,7 @@ if TYPE_CHECKING:
         NativePptxShapeContainer,
         NativePptxShapeCreate,
     )
+    from src.domain.native_pptx_table import NativePptxTableAddition
 
 
 @dataclass
@@ -108,14 +109,18 @@ def _next_id(root: etree._Element) -> str:
 
 
 def _append_shape(
-    package: NativePptxPackage, item: NativePptxShapeCreate, node: etree._Element
+    package: NativePptxPackage,
+    item: NativePptxShapeCreate | NativePptxTableAddition,
+    node: etree._Element,
+    *,
+    name: str | None = None,
 ) -> ShapeChange:
     parent = _container(package, item.container)
     root = package.roots[item.container.part]
     identity = _next_id(root)
     props = shape_identity(node)
     props.set("id", identity)
-    props.set("name", f"TextBox {identity}")
+    props.set("name", name if name is not None else f"TextBox {identity}")
     extension = parent.find("p:extLst", NS)
     index = parent.index(extension) if extension is not None else len(parent)
     parent.insert(index, node)
