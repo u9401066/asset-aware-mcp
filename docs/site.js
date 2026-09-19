@@ -248,7 +248,7 @@ Version 1.3.0 adds read_docx and update_docx using the existing DFM checks. Read
 
 render_docx_page requires asset_id, an explicit revision and zero-based docx_page_index. Optional LibreOffice Writer converts exact original DOCX bytes and returns an actual MCP PNG plus page count/geometry, continuation, renderer identity and image/PDF hashes. Start at page 0 and follow next_page_index; compare current and historical pages with complete DFM content. LIBREOFFICE_BIN can select the executable; missing Writer fails explicitly.
 
-Each request converts the complete document in a fresh private profile, retaining blank pages and static form appearance. Fields can recalculate, so page indices belong to that rendition; they are not stable DOCX evidence locators. Installed fonts and Writer pagination may differ from Microsoft Word. Agents review text, tables, headers/footers, clipping and page flow. Previews do not certify Word fidelity or semantic correctness.
+Each request converts the complete document in a fresh private profile, retaining blank pages and static form appearance. Fields can recalculate, so page indices belong to that rendition; they are not stable DOCX evidence locators. Installed fonts and Writer pagination may differ from Microsoft Word. Agents review text, tables, headers/footers, clipping and page flow. Previews do not certify Word fidelity or semantic correctness. A private Linux font fixture reproduces and corrects missing Chinese glyphs without changing DOCX bytes or global settings; see [CJK evaluation](#/release-testing).
 
 Known external resource relationships, resource-loading fields, embedded OLE/chunks, linked VML and SVG fail before conversion. Macro-disabled profiles, process/output budgets and source-copy checks protect the operation; this is not an OS sandbox. Sources and managed revisions stay intact. Limits: 2,000 pages, 64 MiB converted PDF, 64–2,048 pixel previews. See [LibreOffice PDF export](https://help.libreoffice.org/latest/en-US/text/shared/guide/pdf_params.html) and [actual evaluation](#/release-testing).
 
@@ -502,6 +502,55 @@ Add --merges to tests.codex_pptx_tables.run, optionally with --grid and --deriva
 
 Merge run 01 on 2026-09-19 (--grid --merges) completed 180 MCP calls with zero tool errors, exact first transcription, one actual PNG and thirteen complete records. Five grid and six merge/split intermediate revisions passed independent audits of paragraph XML, original strings/styles, source, published files and wiki. No full-slide rendering was performed. Full pytest passed 2,015 tests with 30 optional skips; one subsequent absent-anchor-body regression passed within an 18-test focused run, with production source unchanged. VSIX tests passed 199.
 
+## CJK font correction evaluation (Unreleased)
+
+The first Writer evaluation found boxes for 「研究」. No Chinese font was available;
+Arial resolved to Liberation Sans. Even those boxes had nonzero PDF glyph IDs and
+misleading Unicode mappings, so text extraction alone could not prove appearance.
+The opt-in Linux fixture below supplies pinned Noto Sans TC Regular/Bold and copied
+local Liberation Sans faces. It retains both licenses, hashes all font/configuration
+bytes and includes only those font directories; global settings and DOCX run fonts
+remain unchanged. A changed or unexpected font file causes the audit to fail.
+
+\`\`\`bash
+# Requires Linux, Fontconfig, Liberation Sans and LibreOffice Writer.
+uv run python -m tests.codex_docx_structure.fonts --output /tmp/docx-review-fonts
+NATIVE_DOCX_FONT_FIXTURE=/tmp/docx-review-fonts uv run pytest tests/integration/test_native_docx_cjk_stdio.py -q
+LIBREOFFICE_BIN=/usr/bin/libreoffice uv run python -m tests.codex_docx_structure.run --render --font-fixture /tmp/docx-review-fonts --output /tmp/docx-codex-cjk
+uv run python -m tests.codex_docx_structure.audit /tmp/docx-codex-cjk
+\`\`\`
+
+The setup command explicitly downloads about 11 MiB from the official
+[Noto Sans 2.004 source](https://github.com/notofonts/noto-cjk/tree/523d033d6cb47f4a80c58a35753646f5c3608a78/Sans/SubsetOTF/TC),
+verifies fixed hashes and copies installed Latin fonts. Keep the generated directory
+for replay; choose a new directory to rebuild. No fonts are bundled in this project,
+and ordinary pytest never downloads them. The runner forwards the private
+[Fontconfig configuration](https://fontconfig.pages.freedesktop.org/fontconfig/fontconfig-user.html)
+to its MCP process; the auditor restores the same recorded environment and checks
+its hashes before and after rendering. Fontconfig cache UUIDs are permitted without
+relaxing font-content checks. This does not standardize other platforms or scripts.
+
+CJK run 01 on 2026-09-19 completed **49 MCP calls with zero tool errors**, one scan
+PNG and two Word page PNGs at current/historical revisions. Codex reported readable
+Chinese glyphs in both images; it preserved exact table values and saw no clipping.
+Independent rendering matched every delivered RGB pixel and confirmed both Chinese
+codepoints using distinct glyphs from the supplied Noto face. The separate SDK2
+regression compares missing-font and corrected renderings of **identical DOCX bytes**
+and preserves source bytes/mtime. Native content, five complete DFM revisions,
+historical references, publication and wiki attachments also passed the model audit.
+
+These are complementary checks: parsed text/font identities are mechanical evidence;
+actual appearance is reviewed by the Agent. Word compatibility, different installed
+fonts, repeated-header pagination and real-corpus coverage still require evaluation.
+The original missing-glyph run below is retained as historical evidence; the private
+fixture corrects that case without changing the machine's default font environment.
+Public remains **1.4.0**, with new work Unreleased for **1.4.x**.
+
+Local CJK gates passed **2,221 Python tests** (33 optional skips), the **37-test**
+focused run including actual CJK SDK2 images, **199 extension tests**, lint/type,
+workflow/dependency/harness checks and desktop/mobile zh/en browser review. Runtime
+source and dependencies are unchanged from the previously verified page renderer.
+
 ## DOCX page rendering evaluation (Unreleased)
 
 Add \`--render\` to \`tests.codex_docx_structure.run\` to make Codex view every page
@@ -523,7 +572,7 @@ with complete DFM reads for all five managed revisions. All delivered Word pixel
 matched independent rendering. Table strings, merged title/grid, \`007\` versus
 \`008\`, source integrity, published bytes and wiki attachments passed the audits.
 Agent review detected **missing Chinese heading glyphs** on this machine; both
-Writer previews showed boxes for \`研究\` while the stored text was correct. This
+Writer previews showed boxes for 「研究」 while the stored text was correct. This
 is an unresolved local font limitation, not a Word fidelity pass. Install suitable
 fonts in the rendering environment and repeat visual review before relying on
 those glyphs. The separate real SDK2 test covers two pages, headers/footers and

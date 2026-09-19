@@ -230,6 +230,9 @@ document(op="native", native_request={
 表單採靜態列印外觀。欄位可能重算，所以頁索引只屬於該次 rendition，不能當成
 原生 DOCX 的固定證據 locator。字型與 LibreOffice／Microsoft Word 的分頁可能不同；
 預覽不等於 Word 保真或語意核對通過。批註、修訂顯示及互動內容需另行檢查。
+若出現中文字方框，先核對渲染環境的字型。已有固定來源／雜湊的獨立 Linux
+測試字型環境，可在不改 DOCX 或全域設定的情況下重現並修正此案例；見
+[中文字型核對](Release-And-Testing#cjk-font-correction-evaluation-unreleased)。
 
 轉換採獨立 profile、停用巨集並限制執行時間／輸出，核對暫存來源未變；不修改
 受管理版本或人類來源。已知外部載入關係、INCLUDE／DDE／DATABASE 欄位、OLE、

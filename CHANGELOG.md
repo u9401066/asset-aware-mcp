@@ -9,6 +9,12 @@
 
 ### Added
 
+- Opt-in Linux Fontconfig evaluation fixture pins Noto Sans TC downloads, copies
+  and hashes local Liberation fonts, retains licenses and leaves global settings
+  unchanged. Codex MCP and independent replay share the recorded environment;
+  changed fixtures fail audit. Same-source SDK2 tests reproduce missing CJK glyphs
+  and verify corrected images. Nonzero glyph IDs alone cannot certify appearance.
+
 - Optional `render_docx_page` converts exact managed DOCX revisions with LibreOffice
   Writer and returns actual MCP PNGs, page geometry/count, renderer identity and
   image/PDF hashes. Whole-document conversion retains blank pages and static form

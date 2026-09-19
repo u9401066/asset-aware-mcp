@@ -10,6 +10,8 @@
 Unreleased 新增 DOCX 整頁預覽：另裝 LibreOffice Writer 後，可將固定版本的原始
 文件轉為實際 MCP PNG，讓 Agent 逐頁核對並比較歷史版本。頁碼以每次轉換為準，
 不等於 Microsoft Word 保真驗證。詳見 [DOCX 頁面預覽](docs/wiki/Native-File-Assets.md#docx-page-previews-unreleased)。
+獨立 Linux 字型環境已重現並修正中文字缺字，保留 DOCX 原始位元組；Codex 實際
+看圖與獨立像素比對涵蓋此修正。詳見 [中文字型核對](docs/wiki/Release-And-Testing.md#cjk-font-correction-evaluation-unreleased)。
 
 ## v1.4.0 原生簡報協作與規格查詢遷移
 

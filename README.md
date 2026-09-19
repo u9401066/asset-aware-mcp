@@ -11,6 +11,9 @@ Unreleased DOCX page previews now return actual MCP PNGs from exact stored revis
 using optional LibreOffice Writer. Agents can review every page and compare history;
 page numbering belongs to each rendition, and Word fidelity still requires review.
 See [DOCX page previews](docs/wiki/Native-File-Assets.md#docx-page-previews-unreleased).
+A private Linux font fixture reproduces and corrects missing Chinese glyphs without
+changing DOCX bytes. Actual Codex images and independent pixel checks cover the
+correction; see [CJK font review](docs/wiki/Release-And-Testing.md#cjk-font-correction-evaluation-unreleased).
 
 ## v1.4.0 native presentations and discovery migration
 
