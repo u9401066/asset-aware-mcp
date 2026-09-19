@@ -2,6 +2,36 @@
 
 # Release And Testing
 
+## Native Word pagination evaluation (Unreleased)
+
+實際 Codex 預設模型接收一份列高裁字、未設定重複標題的原生 Word 表格，先查看
+完整資料及一張實際頁面，再調整標題前綴、內容列自動高度與列跨頁策略。
+**74 次成功 MCP 呼叫、1 次恢復的輸入錯誤、200.83 秒**；未覆寫模型設定。
+錯誤為 schema 讀取要求 `text_limit=12000`，超過 4000 上限；Agent 修正後完成流程，
+原始錯誤及回應保留，沒有為清除錯誤而重跑模型。
+
+修正後為 **4 頁**，每頁都有兩列標題；14 列中的每個 `END`／`CONFIRMED`、
+`007`、`-0.50 mg/L`、`1,234.50` 與 `µg` 都完整呈現。
+Agent 讀取兩版本完整 DFM／格網 XML／操作紀錄、查看全部 **5 張實際 PNG**，
+核對舊引用、發布 DOCX 並建立兩份歷史 Wiki。獨立檢查逐像素重繪、每列頁面歸屬、
+每頁標題、原生儲存格／樣式 XML、其他 package parts、來源 bytes／mtime 及所有 Wiki 附件。
+
+這是 14 列的合成 Word 案例，證明此案例中的跨頁修正；未涵蓋超長單列、所有繼承樣式、
+任意真實文件或 Microsoft Word 顯示。MCP 設定並核對屬性；完整語意與視覺判斷仍由 Agent 負責。
+
+```bash
+uv run pytest tests/unit/test_native_docx_table_layout.py tests/unit/test_codex_docx_layout_audit.py tests/integration/test_native_docx_layout_stdio.py
+uv run python -m tests.codex_docx_layout.run --output /absolute/new-word-layout-run --font-fixture /absolute/pinned-font-fixture
+uv run python -m tests.codex_docx_layout.audit /absolute/new-word-layout-run
+```
+
+一般 pytest 不啟動模型；實測須已登入 Codex、選配 Writer 與固定雜湊的私有字體環境。
+最終程式完整測試 **3,218 通過、33 個選配項目跳過（305.27 秒）**，包含真實
+Writer 頁面、中英文字形與 NIST／NASA PDF。新分頁／稽核／SDK2 群組 **34 通過**；
+Python 3.10 **33 通過、1 個選配渲染項目跳過**。VSIX **199 項**測試、64 檔套件
+檢查及安裝／更新通過；本地 activation 跳過，由 CI 執行。
+公開版 **1.4.0**，開發累積於 **Unreleased／1.4.x**。
+
 ## Native Word grid evaluation (Unreleased)
 
 最終程式包含可分頁讀回的完整修改紀錄。初次模型執行的 61 次成功呼叫／174.05 秒

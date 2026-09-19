@@ -227,6 +227,16 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
   "native-file-assets": `## Native documents and versioned files — v1.4.0
 
+### Native Word table pagination (Unreleased)
+
+Exact row heights can hide text that remains in the native file. Discover docx_table_layout_enabled, read the complete table and actual pages, then use update_docx_table_grid with the full reference, expected_revision and sequential edits.
+
+set_header_rows takes count: a contiguous prefix from the first row, with zero disabling repetition. A boundary cannot cut through an existing vertical merge. set_row_layout takes zero-based index/count and at least height or split. height.rule is auto, at_least, exact or inherit; only at_least/exact require value_twips. split is allow, prevent or inherit.
+
+Omitted settings stay intact; inherit removes a direct property so styles/defaults apply. auto requests content-driven height. Exact heights can still clip text; prevent keeps a row together when it fits, but oversized rows can span pages. Read row_layout and repeat_header_prefix_length; repeat_header_rows also retains noncontiguous declarations, which do not extend the repeating prefix. Unknown split values remain unknown.
+
+MCP verifies requested property readback and unchanged native content, other properties, versions and package bytes before an atomic commit. Full before/after operation_result is paged through review_request. Relevant tracked row properties require a revision-aware workflow; pure layout edits retain fields, while structural dependency checks remain in place. Review every new actual page. Historical refs, source files and Wiki snapshots stay intact. This does not establish Microsoft Word rendering parity. Public1.4.0 / Unreleased1.4.x.
+
 ### Native Word table grids (Unreleased)
 
 Discover docx_table_grid_enabled. read_docx_table requires asset_id, revision and a complete docx_table_reference from read_docx. Follow every next_text_offset at one text_sha256 to inspect the layout grid, physical cells, omitted positions, merges and full native XML. This is a table block reference, not a new cell evidence type; DFM character offsets are not grid coordinates.
@@ -623,6 +633,18 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Native Word pagination evaluation (Unreleased)
+
+Actual default-model Codex received a native Word table with clipped rows and missing repeated headers. It read complete records and the initial page, then set the two-row header prefix, automatic body heights and prevent-split policy. The run completed 74 successful MCP calls with one recovered input error in 200.83 seconds, without a model override. A schema read requested text_limit12000 above the4000 limit; the Agent corrected it. Original errors remain retained, with no model rerun to erase them.
+
+The corrected document spans four pages, repeating both headers. All14 rows retain visible END/CONFIRMED lines, 007, -0.50 mg/L, 1,234.50 and µg. Complete DFM/table XML/receipts for both revisions, five actual PNGs, historical verification, published DOCX and two historical Wikis were inspected. Independent audit checks every pixel, each row's page membership, repeated headings, unchanged native cell/style XML and other package parts, source bytes/mtime and every Wiki attachment.
+
+This synthetic14-row case establishes that particular multi-page correction. Oversized single rows, all inherited styles, arbitrary real documents and Microsoft Word rendering remain unverified. MCP sets and checks native properties; Agent owns full semantic/visual judgment.
+
+Opt in with python -m tests.codex_docx_layout.run --output /absolute/new-word-layout-run --font-fixture /absolute/pinned-font-fixture; audit with python -m tests.codex_docx_layout.audit /absolute/new-word-layout-run. Ordinary pytest never invokes a model. Actual runs require authenticated Codex, optional Writer and the pinned private font fixture.
+
+Final full suite: 3,218 passed, 33 optional skips in 305.27 seconds, including actual Writer pages, CJK glyphs and NIST/NASA PDFs. New pagination/audit/SDK2 group: 34 passed; Python 3.10: 33 passed and one optional rendering skip. VSIX: 199 tests, 64-file package check and install/update passed; local activation was skipped and is required in CI. Public 1.4.0 / Unreleased 1.4.x.
 
 ### Native Word grid evaluation (Unreleased)
 

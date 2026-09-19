@@ -7,6 +7,13 @@
 
 ## [Unreleased]
 
+- Added native Word table pagination controls: contiguous repeated header prefixes,
+  explicit automatic/minimum/exact/inherited row heights and allow/prevent/inherit
+  split policies. Full before/after receipts and native content/property checks
+  support Agent correction of clipped text across actual pages. Historical sources
+  and Wikis stay intact; oversized rows and inherited styles require visual review.
+  Public1.4.0 / Unreleased1.4.x, no per-feature bump.
+
 - Added full revision-bound DOCX table grid reads and atomic row/column
   insert/delete/resize/merge/split. Explicit merge content policies preserve native
   paragraphs and nested tables; omitted positions, merged-anchor promotion,

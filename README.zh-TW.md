@@ -1,5 +1,10 @@
 # asset-aware-mcp
 
+Unreleased 的 Word 表格排版控制讓 Agent 修正固定列高裁字、設定跨頁標題及列分頁方式；
+保留原生儲存格與樣式，完整讀回修改前後紀錄，再核對實際頁面。
+詳見 [Word 表格分頁](docs/wiki/Native-File-Assets.md#native-word-table-pagination-unreleased)。
+公開版維持 **1.4.0**，功能累積於 **1.4.x**。
+
 Unreleased 的 DOCX 原生表格可完整讀取格網、插刪列欄、調整尺寸及合併／拆分。
 合併須明確指定內容處理方式；既有富文字、巢狀表格、來源檔與歷史引用保留，
 Agent 使用實際頁面預覽核對版面。詳見

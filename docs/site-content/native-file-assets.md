@@ -2,6 +2,33 @@
 
 # Native File Assets（v1.4.0）
 
+## Native Word table pagination (Unreleased)
+
+固定列高可能把儲存格文字裁掉，檔案內容仍存在卻無法在頁面上完整看見。
+Agent 可先讀完整表格與實際頁面，再修改原生列高、跨頁標題及列分頁策略。
+查詢 `docx_table_layout_enabled`，沿用 `update_docx_table_grid` 的完整表格引用、
+`expected_revision` 與依序執行的 `edits`：
+
+- `set_header_rows` 的 `count` 指定從第一列起連續重複的標題列數，0 代表停用。
+  新標題／本文界線不得切過既有垂直合併格。
+- `set_row_layout` 的 `index`／`count` 選取從 0 起算的連續列；至少指定 `height` 或 `split`。
+  `height.rule` 可為 `auto`、`at_least`、`exact` 或 `inherit`，只有最低／固定高度需要 `value_twips`。
+  `split` 可為 `allow`、`prevent` 或 `inherit`。
+
+省略的設定保持原樣；`inherit` 會移除直接設定，重新沿用樣式或預設值。
+`auto` 明確採用內容高度，`exact` 仍可能裁字。`prevent` 要求可放入單頁的列保持完整；
+超過一頁高度的列仍可能跨頁，必須看實際結果。
+
+完整表格紀錄新增 `row_layout` 及 `repeat_header_prefix_length`，呈現直接設定；
+`repeat_header_rows` 保留檔案宣告的列，不連續的宣告不會延長重複前綴。
+未知的列拆分值呈現為 `unknown`，不推測為允許或禁止。
+MCP 核對指定屬性讀回、未修改的原生內容／其他屬性、版本與套件位元組，再一次提交。
+完整 `operation_result` 在分頁 `review_request` 中，包含修改前後設定。
+相關列屬性有追蹤修訂時需專門處理；純排版操作保留欄位內容，結構編輯仍保留原有相依檢查。
+
+修正後讀取所有新版本資料並查看每張 `render_docx_page` PNG；舊引用、來源檔及 Wiki
+保留各自歷史。這些檢查不代表 Microsoft Word 渲染一致性。公開版 **1.4.0**，開發 **1.4.x**。
+
 ## Native Word table grids (Unreleased)
 
 Word 的「表格格網」與實際儲存格數量可能不同：合併格可跨數欄／列，一列也可能

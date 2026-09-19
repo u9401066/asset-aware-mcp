@@ -1,5 +1,10 @@
 # Roadmap
 
+- [x] Unreleased / 1.4.x: direct Word table pagination controls, contiguous repeated
+  headers, explicit row height/split policies and source-preserving page review.
+  Computed style effects, oversized-row pagination and Microsoft Word parity
+  remain Agent review responsibilities and require wider real-file evidence.
+
 - [x] Unreleased / 1.4.x: native DOCX table grid read/insert/delete/resize/merge/split,
   full block references, explicit content policies, omitted/merged/nested cells,
   native XML preservation and actual Agent preview workflow. Unextracted stories,

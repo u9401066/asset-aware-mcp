@@ -18,6 +18,16 @@
 
 ### 核心功能
 
+- When docx_table_layout_enabled is advertised, update_docx_table_grid accepts
+  set_header_rows(count) and set_row_layout(index,count,height,split). Header rows
+  form a contiguous prefix; do not cut a vertical merge. Height rule auto/inherit
+  has no value; at_least/exact requires value_twips. Split allow/prevent/inherit
+  changes direct properties; omitted fields stay intact. Read full before/after
+  operation_result and all current row_layout/native XML pages, then EVERY actual
+  Word page PNG. Exact heights can clip; oversized rows can still span pages.
+  Inherited styles and Microsoft Word parity require Agent review. Source bytes,
+  historical references and Wikis remain intact. Public1.4.0 / Unreleased1.4.x.
+
 - When docx_table_grid_enabled is advertised, read_docx_table requires a full
   docx_table_reference, asset_id and revision. Read all grid/native XML chunks at
   one text_sha256; omitted positions and merged coverage are not empty cells.

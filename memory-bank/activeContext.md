@@ -1,5 +1,18 @@
 # Active Context
 
+## Native Word pagination docs — ready for publication
+
+Runtime/spec/tests committed as12e2230 (16 counted files plus2MEM), authored by
+u9401066. This separate segment publishes bilingual pagination behavior/evaluation,
+README/CHANGELOG/ROADMAP and five synchronized source/bundled assistant harness
+pairs. Actual74success/1recoverederror/200.83s, all5PNGs and 1-to-4-page synthetic
+correction are stated with limits. Final full3218/33/305.27, Python3.10, installed
+wheel/Docker source parity and browser evidence are unchanged. Docs25pass after
+metrics update; build_docs_site/harness/artifacts/diff/sync clean. All temporary
+staging restored and owned browser server stopped. Original checkout untouched.
+Pushmain next; exact-head CI/Pages and six deployed byte comparisons pending.
+Public1.4.0, next consolidated1.4.1; no version bump/tag. Broad goal remains active.
+
 ## Native Word table pagination — validated runtime/spec/test segment
 
 Final source f5abe76ba927967af4b568eb688804eae31f57a0ae0549307a4216df928a50ad

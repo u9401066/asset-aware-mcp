@@ -1,5 +1,12 @@
 # asset-aware-mcp
 
+Unreleased Word table layout controls let Agents correct clipped text, set repeated
+header rows and control row splitting after viewing actual pages. Edits retain
+native cells/styles and expose complete before/after receipts; source files and
+historical Wiki snapshots stay intact. See
+[Word table pagination](docs/wiki/Native-File-Assets.md#native-word-table-pagination-unreleased).
+Public **1.4.0**; changes accumulate within **1.4.x**.
+
 Unreleased native Word table operations read complete grids and insert/delete/resize
 rows or columns, merge cells with an explicit content policy, and split merges.
 Rich paragraphs, nested tables, historical references and source files are retained
