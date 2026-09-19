@@ -1,5 +1,15 @@
 # Progress (Updated: 2026-09-19)
 
+## Native delimited publication checkpoint
+
+Source commit b8d4fb46fc27257c0abdc3850a30cea28f26087c contains26 counted source/spec/test files plus4 MEM.
+This documentation commit updates CSV/TSV guides, both READMEs, bilingual Pages,
+release evidence, roadmap/changelog, canonical GitHub description and five synchronized
+assistant harness assets. Full gates and actual default Codex proof are recorded above.
+Public remains1.4.0; changes accumulate within Unreleased1.4.x without a new tag.
+Push both scoped commits directly to main, then verify exact-head CI/Pages/public bytes.
+The broader goal remains active; no blanket all-format or arbitrary-document guarantee.
+
 ## Native delimited files — release gates passed
 
 CSV/TSV implementation and docs are ready for two scoped direct-main commits.

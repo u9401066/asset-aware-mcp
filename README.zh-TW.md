@@ -1,5 +1,10 @@
 # asset-aware-mcp
 
+Unreleased 的 CSV／TSV 可獨立建立、完整讀取逐格內容、修改與插刪列欄；
+以原生位元組局部修改，保留未變動內容的編碼、引號與換行。逐格來源引用可連結
+PDF 轉錄及 Wiki 證據。詳見 [CSV／TSV 原生操作](docs/wiki/Native-File-Assets.md#native-csvtsv-files-unreleased)。
+公開版 **1.4.0**，功能累積在 **1.4.x**，不逐項功能跳版。
+
 Unreleased 的 `read_pdf_region` 把掃描表格中的明確區域，連到轉錄後的儲存格：
 回傳實際 PNG、完整頁面／區域引用，並由驗證、轉製帳本與 Wiki 保留精確來源。
 MCP 檢查版本與座標，Agent 核對轉錄及語意。詳見

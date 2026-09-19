@@ -1,5 +1,72 @@
 # Native File Assets（v1.4.0）
 
+## Native CSV/TSV files (Unreleased)
+
+CSV／TSV 檔案現在可成為有穩定身分、版本與逐格證據的原生資產。先查詢
+`delimited_enabled` 及各操作的 `contract.for_op`；公開版仍為 **1.4.0**，
+此功能累積於 **Unreleased／1.4.x**。
+
+| 操作 | 用途與條件 |
+| --- | --- |
+| `register` | 接收人類交付的 `.csv`／`.tsv`，保留完整來源檔 |
+| `create_delimited` | `delimited_create.rows` 為依序排列的字串陣列；可獨立建立表格 |
+| `read_delimited` | 固定 `asset_id`／`revision`，完整讀取結構、dialect、BOM、每列欄數／換行及最後一筆相符版本的操作紀錄 |
+| `read_delimited_cell` | 固定版本與 `delimited_row`／`delimited_column`，兩者皆由 0 起算 |
+| `update_delimited` | 固定 `expected_revision`，以 `delimited_update.operation` 選擇逐格修改或列欄增刪 |
+
+例如可建立：
+
+```json
+{
+  "op": "create_delimited",
+  "delimited_create": {
+    "name": "measurements.csv",
+    "rows": [["Count", "Reading", "Unit"], ["007", "-0.50", "mg/L"]],
+    "bom": true,
+    "record_separator": "\r\n",
+    "final_separator": true
+  }
+}
+```
+
+讀取回傳完整 JSON 的 `text_excerpt` 分頁；沿 `next_text_offset` 讀完，保持同一
+`text_sha256`，組合後核對 UTF-8 SHA-256。值全部保留字串，不推定標題、數值或
+公式。`007`、`-0.50`、空字串及前後空白均有意義；欄位內換行不是新的邏輯資料列。
+逐格 JSON 包含 value、raw、原檔 byte／decoded char／實際行位置、相鄰文字及
+完整 `native-delimited-cell-ref-v1`；原檔 byte 位移包含 BOM，char 位移不含 BOM。
+
+`set_cells` 接受 `cells:[{reference:完整逐格引用,value:字串}]`。
+`insert_rows` 需 index、rows 及明確 record_separator；`delete_rows` 需 index／count。
+`insert_column` 需 index 及每列一個 values 值；`delete_columns` 需 index／count，
+必要的最後換行可用 record_separator 指定。插入欄每次一欄；列增刪與欄刪除至多
+1,024 個，逐格修改至多 1,000 格。索引皆是當次操作前的邏輯位置。
+不等長資料列可以讀取／逐格修改，欄位操作須在每一列都有效，不會自動補齊。
+
+MCP 只替換指定原檔 byte 範圍，保留其他引號／跳脫寫法、編碼及混合 CRLF／LF／CR。
+新增列採明確換行；在未換行的最後一列追加資料，會補上分隔並記錄修復。
+刪光欄位仍保留零欄位列；刪欄後只剩一個未加引號的空字串，會補上必要引號，
+避免變成空白列。重新解析全部字串與列欄對應後才提交一次新版本；讀完整
+`review_request` 與 operation_result。沒有位元組變更時不新增歷史，回傳完整
+no-change 紀錄。相同檔案 SHA 可在較晚歷史再次出現；完整紀錄 hash 改變時重新讀取。
+
+CSV 預設逗號、TSV 預設 tab、雙引號 quoting；也可指定 `delimited_dialect` 的
+單字元 delimiter／quotechar／escapechar、doublequote 與 encoding。先偵測 UTF BOM，
+否則 UTF-8；另支援 UTF-16 LE／BE、CP950、CP1252、Latin-1。自訂編碼與分隔規則
+須在後續讀寫／Wiki 明確提供；`review_request` 會帶入解析後的規則。
+不猜測 dialect、不用替代字元掩蓋解碼錯誤。檔案上限 16 MiB、20,000 格／列，
+解析在有時間／記憶體／結果大小限制的子程序執行，不改變 MCP 的全域 csv 設定。
+
+`verify`、`read_selection` 與轉製帳本接受完整逐格引用。從 PDF 轉錄時，Agent
+先看實際區域 PNG，再明確建立逐格來源關係。Wiki 保留原始 `.csv`／`.tsv`、
+結構與 dialect、完整 JSONL、欄位筆記及自訂引用；不同 dialect 產生不同快照。
+舊引用與主張不因列欄移動而自動遷移，既有筆記及人類整理的內容保留。
+來源更新／發布／備份回寫沿用 revision／source hash 檢查。
+Agent 負責表頭與型別解讀、語意及下游試算表顯示／公式行為；CSV 本身只有字串。
+
+底層參考 [Python csv](https://docs.python.org/3/library/csv.html) 的正式解析器；
+[CleverCSV](https://github.com/alan-turing-institute/CleverCSV) 可參考其 dialect
+探索方式，但猜測結果不作為寫入契約。逐格 byte 定位與版本證據由本專案串接。
+
 ## PDF region evidence (Unreleased)
 
 掃描表格中的單一格，可透過 `read_pdf_region` 連到轉錄結果的完整原生引用。

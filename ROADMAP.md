@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Unreleased / 1.4.x: native CSV/TSV string-field and row/column CRUD, exact byte/encoding preservation, field evidence and dialect-bound Wiki; Agent reviews interpretation.
+
 - [x] Unreleased / 1.4.x: source-bound PDF regions with actual PNGs, displayed-page fraction coordinates, version/geometry checks, derivation endpoints and portable Wiki previews/source attachments. Agent supplies cell correspondence and semantic review; broad real-document coverage remains open.
 
 

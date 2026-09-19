@@ -37,6 +37,18 @@ verification.
 
 ## Native Document Operations
 
+- When delimited_enabled is advertised, create_delimited creates independent CSV/TSV
+  string tables. Pin revisions for read_delimited/read_delimited_cell; logical row/
+  column indices are zero-based. Assemble complete JSON at one text_sha256. Explicit
+  delimited_dialect binds delimiter/quote/escape/encoding; custom settings must follow
+  all reads, edits and Wiki. No header/type inference. update_delimited uses full refs
+  for set_cells or explicit row/column positions. Native byte splices retain untouched
+  spelling/EOL/BOM; required empty-field/row-separator repairs are recorded. Read the
+  complete review_request receipt; no-op updates create no history entry. Same file
+  SHA may recur with a newer receipt. verify/selections/derivations/Wiki bind exact
+  fields/dialects; old refs never migrate. Agent reviews meaning and downstream
+  rendering/formula interpretation. Public1.4.0 / Unreleased1.4.x; no per-feature bump.
+
 - When pdf_regions_enabled is advertised, read_pdf_region takes a full PDF page
   reference plus pdf_region.rect in displayed CropBox fractions (0–1, top-left,
   after rotation), or a full existing region reference without selector override.

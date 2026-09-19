@@ -7,6 +7,13 @@
 
 ## [Unreleased]
 
+- Added native CSV/TSV creation, complete string-field reads, byte-preserving cell
+  and row/column CRUD, dialect-bound evidence, selections, derivations and Wiki.
+  Preserve encoding/BOM/quotes/mixed line endings; record required empty-field and
+  row-separator repairs. Mechanical checks stay in MCP; Agent reviews interpretation.
+  Compact discovery keeps every enabled operation/schema within the response budget.
+  Public remains 1.4.0; changes accumulate on 1.4.x without a per-feature version bump.
+
 - Added revision-bound PDF region reads with actual MCP PNGs, displayed CropBox
   fraction coordinates, renderer metadata and resolution-independent references.
   Verification, parsed selections and per-cell derivations retain exact regions;

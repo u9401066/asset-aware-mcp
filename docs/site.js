@@ -227,6 +227,18 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
   "native-file-assets": `## Native documents and versioned files — v1.4.0
 
+### Native CSV/TSV files (Unreleased)
+
+Register human CSV/TSV files or create independent string tables with create_delimited. Query delimited_enabled and contract.for_op. read_delimited and read_delimited_cell require asset_id/revision; delimited_row/column are zero-based logical coordinates. Assemble all text_excerpt chunks at one text_sha256 and verify UTF-8 SHA-256. Fields retain values, raw spelling, byte/character/physical-line spans, context and full native-delimited-cell-ref-v1 references. No header, number or formula inference.
+
+update_delimited pins expected_revision. set_cells uses full field references; insert_rows requires index/rows/record_separator; delete_rows uses index/count. insert_column takes one value per existing row; delete_columns uses index/count. Ragged rows remain ragged; positions must exist in every affected row. One column may be inserted per call; row edits/column deletion allow up to 1,024 positions, with 1,000 replacements and a 16 MiB / 20,000 field-row budget.
+
+Byte splices preserve untouched encoding, quoting, escape spelling and mixed CRLF/LF/CR. New rows use explicit separators. Appending after an unterminated row records a separator repair. Deleting every column retains zero-field rows; a surviving sole empty field receives required quoting. Reparse all values and row correspondence before one commit. Follow review_request for the full receipt. Byte-identical updates return complete no-change receipts without a history entry; recurring file SHAs may have newer receipts, so restart if text_sha256 changes.
+
+CSV defaults comma, TSV tab, with double-quote quoting. delimited_dialect explicitly controls delimiter/quotechar/escapechar/doublequote/encoding. UTF BOMs are detected, otherwise UTF-8; UTF-16 LE/BE, CP950, CP1252 and Latin-1 are available. Custom dialects/encodings must accompany later reads, edits and Wiki export; review_request includes the resolved dialect. No sniffing or replacement decoding. Bounded child processes isolate csv.field_size_limit.
+
+verify, parsed selections and derivations accept full fields. Wiki binds its projection to the resolved dialect and keeps exact CSV/TSV bytes, structure, JSONL, notes and custom citations. Historical refs never migrate; curated notes remain. Agent chooses PDF regions, views actual PNGs, transcribes strings and checks downstream meaning/rendering. Source refresh, publish and backed-up writeback retain their existing checks. Based on [Python csv](https://docs.python.org/3/library/csv.html); [CleverCSV](https://github.com/alan-turing-institute/CleverCSV) informs dialect discovery, not authoritative writes. Public1.4.0 / Unreleased1.4.x.
+
 ### PDF region evidence (Unreleased)
 
 read_pdf_region connects an explicitly selected scanned cell to its typed target value. Query pdf_regions_enabled and contract.for_op, read the complete PDF page record, then pass its full reference and pdf_region={rect:[0.2,0.25,0.4,0.3]}. Fractions address the displayed CropBox AFTER rotation, from the top-left, right/down positive, within 0–1. This differs from native bottom-left PDF crop coordinates and unrotated text-block coordinates.
@@ -572,6 +584,16 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Native CSV/TSV evaluation (Unreleased)
+
+The actual default Codex model completed 101 successful MCP calls, zero tool errors, 179.79 seconds and four actual region PNGs. It independently selected Count/Reading/Unit in an image-only synthetic PDF, reviewed two detail levels for Count, created a UTF-8-BOM/CRLF CSV with exact strings 007, -0.50 and mg/L, and recorded three region-to-field derivations.
+
+Five native updates changed Count to 008, inserted a row, inserted a column, then deleted the added row and column. Independent audit checks all six history events against exact expected bytes, including LF for the temporary Unicode row, retained BOM/CRLF, every original/final field, full operation receipts/ledger, actual source pixels/glyph coverage, historical evidence, two Wikis and the published CSV. The final content SHA recurs from the first correction; operation history stays distinct. Human PDF bytes/mtime remain unchanged and assertions never migrate.
+
+Regressions cover strict UTF-8/BOM/UTF-16/CP950/CP1252/Latin-1, mixed EOL/multiline/empty/ragged records, byte splices, source refresh/backed-up writeback, dialect-bound snapshots and long paged fields. Sole surviving empty fields retain required quoting. Rehashed wrong spans or numeric coercion still fail the independent auditor. All-enabled schema discovery remains within its existing response cap.
+
+Full suite: 3,009 passed, 35 optional skips, 127.59 seconds. SDK2 plus its focused unit group: 33 passed in12.55 seconds. Reproduce with uv run python -m tests.codex_delimited.run --output /absolute/new/run-dir; ordinary pytest never starts a model. This synthetic scan/CSV fixture establishes no arbitrary OCR or spreadsheet rendering guarantee. Agent owns meaning and downstream interpretation. Public1.4.0 / Unreleased1.4.x.
 
 ### PDF region evidence evaluation (Unreleased)
 

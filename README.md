@@ -1,5 +1,12 @@
 # asset-aware-mcp
 
+Unreleased CSV/TSV assets now support independent creation, complete field reads,
+cell edits and row/column insertion/deletion. Edits preserve original encoding,
+quotes and line endings outside checked byte patches; field references connect
+PDF transcriptions to portable Wiki evidence. See
+[native CSV/TSV](docs/wiki/Native-File-Assets.md#native-csvtsv-files-unreleased).
+Public **1.4.0**; changes accumulate within **1.4.x**, without a feature-by-feature bump.
+
 Unreleased PDF regions connect a visible scanned cell to a typed target value:
 `read_pdf_region` returns an actual PNG and an immutable page/rectangle reference.
 Verification, derivation ledgers and Wiki exports retain that precise source.
