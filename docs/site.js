@@ -106,7 +106,7 @@ const UI_COPY = {
     releaseSequence: "Release sequence (evidence-oriented)",
     securityPosture: "Current security posture",
     largeSpanTitle: "Large-span transport contract",
-    largeSpanCopy: "Large spans use an explicit asset-ref-preview-v1 over MCP with canonical_asset_ref=false. The exact quote and self-verifying AssetRef remain in the persisted citation or agent-asset bundle.",
+    largeSpanCopy: "Large spans use an explicit asset-ref-preview-v1 over MCP with canonical_asset_ref=false. The exact quote and self-verifying AssetRef remain in persisted bundles; Unreleased inspect_etl_source also reads complete references through hash paging without exporting.",
     githubBand: "Code, issues, and releases live on GitHub",
     openGithub: "Open GitHub",
     viewReleases: "View releases",
@@ -192,7 +192,7 @@ const UI_COPY = {
     releaseSequence: "發布序列（證據導向）",
     securityPosture: "目前安全策略",
     largeSpanTitle: "Large-span transport contract",
-    largeSpanCopy: "大型 span 的 MCP 回應只提供 asset-ref-preview-v1，且 canonical_asset_ref=false；完整 exact quote 與可自我驗證 AssetRef 留在持久化 citation / agent-asset bundle。",
+    largeSpanCopy: "大型 span 的 MCP 回應只提供 asset-ref-preview-v1，且 canonical_asset_ref=false；完整 exact quote 與可自我驗證 AssetRef 留在持久化 bundle；Unreleased 另可用 inspect_etl_source 分頁讀取，不必先匯出。",
     githubBand: "程式碼、issue 與 release 都在 GitHub",
     openGithub: "開啟 GitHub",
     viewReleases: "查看 Releases",
@@ -488,7 +488,17 @@ DOCX ingest creates a DFM representation with Word-origin block and run metadata
 
 ## Respect format boundaries
 Use validation and conversion tools for supported round trips, and review structural table edits before writeback.`,
-  "citation-provenance": `## CSL citation documents (Unreleased)
+  "citation-provenance": `## Captured ETL evidence (Unreleased)
+
+Legacy PDF extraction references bind mutable ETL files. First inspect_etl_source using ref={doc_id,source_type,source_id}, where source_type is span, table or figure. Read all hash-pinned result pages to obtain the full current asset_ref without writing a snapshot. Pass that complete reference to capture_etl_source and retain its full etl-citation-ref-v1. Previews, partial/stale refs and mismatched expected hashes are rejected before publication.
+
+read_etl_source verifies every captured artifact and returns the complete original record after the ETL directory changes or is deleted. view_etl_source returns an actual MCP PNG of the captured original PDF page; render_size is the longest edge, 64–2048 pixels. Missing pages fail explicitly. Use text_offset/text_limit/expected_text_sha256 for inspect/capture/read, following next_text_offset to null and checking assembled UTF-8 SHA-256; image views do not use text paging.
+
+Put captured references alongside native references in a CSL document's sources and bind each cite with source_keys. Raw mutable ETL refs require capture first. Wiki exports include all original bytes, extraction artifacts, selected images, complete evidence JSON and citation-note links. Historical paths in captured manifests are descriptive, never used to resolve immutable readbacks. Existing native DOCX refs remain the route for Word; DOCX DFM is a separate pipeline.
+
+Snapshots check source bytes, hashes and locator consistency. Agents compare full extraction content, tables, actual source-page images and bibliographic data before citing or correcting. Raw bytes and decoded/BOM-stripped/LF-normalized text hashes remain distinct. Limits: 128 MiB per snapshot, 20 MiB per metadata/image file, 2 MiB per complete evidence record. Public stays 1.4.0; this work is Unreleased within 1.4.x.
+
+## CSL citation documents (Unreleased)
 Render a complete document through evidence(op="render_citations", citation_document=...). Discover the hash-paged csl_contract first. Pinned citeproc-js and official styles support APA7, Chicago18 author-date/notes and Vancouver-NLM citation sequence. Document context handles retroactive year suffixes, repeat citations and bibliography ordering; sorting within a group follows the selected style. Existing citation-format-v1 custom templates remain available.
 
 Provide structured CSL-JSON items, ordered clusters and optional uncited_ids. Chicago notes require positive ordered note_index values; in-text styles use zero. locales are en-US and zh-TW, with bundled zh-CN base fallback. Missing author/date/title fields are reported; no bibliographic data is invented. Optional local Node.js >=20 is required only for this operation (use a supported Node24 LTS). No runtime network downloads or installs. The bundled npm release is 2.4.63; its internal processor version is 1.4.61, recorded separately with exact resource hashes and upstream licenses.
@@ -601,6 +611,14 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Captured ETL citation evaluation (Unreleased)
+
+Actual default-model Codex on 2026-09-19 completed 52 successful MCP calls, two recovered input errors and 223.68 seconds. A fictional one-page PDF produced full span/table/figure snapshots, an XLSX string cell preserving 007 and one mixed-source APA Wiki. All three sources were read and viewed again after ETL deletion; six actual PNGs match independent original-page pixels. Source bytes/mtime, every portable attachment, full hash-paged readback, bibliography and unchanged Wiki reuse pass independent audit. The Agent visually identified the raster reading -0.50 mg/L; general extraction and semantic correctness are not established.
+
+The two rejected calls supplied text_limit to native contract; complete schema discovery recovered. Initial auditing used mime_type instead of the actual MCP wire key mimeType and omitted read-only schema discovery. Both auditor assumptions were corrected with regressions, then the same retained trace passed; no model rerun erased the initial failure.
+
+Reproduce with uv run python -m tests.codex_etl_csl.run --output /absolute/new-etl-run and replay tests.codex_etl_csl.audit. Ordinary pytest never starts a model. scripts/smoke_etl_snapshot_runtime.py replays retained evidence with an installed runtime outside checkout. Unit snapshots: 34 passed; real SDK2 ingestion/history: one passed in 38.65s. Full suite with NIST/NASA: 3,110 passed / 35 optional skipped in 289.41s, followed by seven passing auditor regressions. Public stays 1.4.0 / Unreleased1.4.x. Clean Python3.10 wheel and Docker replay all three historical images and the byte-identical Wiki outside checkout; source fingerprints match actual Codex. Docker uses read-only evidence, matching UID and optional Node without changing source permissions. VSIX199 tests, 64-file packaging and install/update pass; activation remains a CI check. Desktop/mobile zh/en guides and APA preview pass six retained browser screens.
 
 ### CSL citation document evaluation (Unreleased)
 

@@ -1,5 +1,11 @@
 # asset-aware-mcp
 
+Unreleased PDF evidence snapshots preserve full text, table and figure references,
+original source bytes and extraction artifacts. Read and view saved evidence after
+ETL data changes or deletion, then combine it with native references in a citation
+Wiki. Agents review extraction accuracy, meaning and the actual original page.
+See [captured ETL evidence](docs/wiki/Citation-Provenance.md#captured-etl-evidence-unreleased).
+
 Unreleased CSL citation documents now render APA 7, Chicago 18 and Vancouver/NLM
 with complete document context, including disambiguation and repeated citations.
 Portable Wiki snapshots retain exact native sources and a typography preview;

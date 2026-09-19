@@ -1,5 +1,10 @@
 # Roadmap
 
+- [x] Unreleased / 1.4.x: immutable legacy PDF ETL evidence snapshots, complete
+  inspection/readback, captured original-page PNGs and mixed native/ETL CSL Wiki
+  attachments. Historical evidence survives ETL changes/deletion; Agent reviews
+  extraction accuracy, semantics and bibliographic data.
+
 - [x] Unreleased / 1.4.x: native CSV/TSV string-field and row/column CRUD, exact byte/encoding preservation, field evidence and dialect-bound Wiki; Agent reviews interpretation.
 
 - [x] Unreleased / 1.4.x: source-bound PDF regions with actual PNGs, displayed-page fraction coordinates, version/geometry checks, derivation endpoints and portable Wiki previews/source attachments. Agent supplies cell correspondence and semantic review; broad real-document coverage remains open.
@@ -52,8 +57,9 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
 - [ ] Standards-aware academic citation rendering (APA/Chicago/CSL) and citation
   integration with the remaining native-format evidence adapters. Unreleased CSL
   citation documents now connect complete native references to APA7/Chicago18/
-  Vancouver-NLM and portable Wiki snapshots; broad publication/style coverage and
-  integration with legacy ETL evidence remain ongoing.
+  Vancouver-NLM and portable Wiki snapshots, including captured legacy PDF ETL
+  spans/tables/figures. Broad publication/style and remaining format coverage
+  remain ongoing.
 - [ ] Real-file regressions, README/Pages/metadata/labels/MEM synchronization,
   reviewed staged commits/pushes and fully verified releases throughout the work.
 

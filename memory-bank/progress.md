@@ -1,5 +1,18 @@
 # Progress (Updated: 2026-09-19)
 
+## ETL snapshot docs — pre-push checkpoint
+
+Runtime/spec/tests committed as ddfafde (18 counted files plus5MEM), authored by
+u9401066. This separate docs/harness segment explains full inspection/capture/read/
+view, mixed CSL sources, complete attachments, historical behavior and Agent review.
+README/CHANGELOG/ROADMAP and bilingual generated Pages match; five assistant sources
+match five VSIX bundled copies. Actual proof remains52successful/2recovered errors,
+6images/3captures/1Wiki; source296dc68a…72da86 is unchanged after wheel/Docker replay.
+Final browser desktop/mobile zh/en+APA checks pass; privatewheel env removed and all
+11 staged directories restored exactly. GitHub metadata/managed labels already match.
+No version bump/tag: public1.4.0, Unreleased1.4.x. Next pushmain, await exact-head CI/
+Pages and compare publicbytes. No selfPR/extra branch; broadgoal remains active.
+
 ## ETL evidence snapshots — validated, publication pending
 
 Immutable legacy PDF ETL capture/read/view plus complete no-write inspection now

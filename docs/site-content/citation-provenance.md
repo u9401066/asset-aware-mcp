@@ -2,6 +2,52 @@
 
 # Citation Provenance
 
+## Captured ETL evidence (Unreleased)
+
+PDF 擷取後的文字、表格與圖片原本指向可變動的 ETL 目錄。需要長期保存或加入
+CSL 文稿時，先明確建立不可變的證據快照；原始 PDF、擷取文字、blocks、manifest
+及所選圖片都會保留。刪除或重新擷取 ETL 資料後，已保存的證據仍可讀取與檢視。
+公開版維持 **1.4.0**；此功能累積於 **Unreleased／1.4.x**。
+
+先讀完 `evidence(op="csl_contract")` 的分頁契約，再依序操作：
+
+| 操作 | `ref` 內容 | 結果 |
+| --- | --- | --- |
+| `inspect_etl_source` | `doc_id`、`source_type`、`source_id` | 完整 `asset_ref` 與證據紀錄，不建立快照 |
+| `capture_etl_source` | 上一步完整 `asset_ref` | 不可變 `etl-citation-ref-v1` 及完整證據 |
+| `read_etl_source` | 完整快照引用 | 重新核對所有附件並讀回原證據 |
+| `view_etl_source` | 完整快照引用 | 來源 PDF 整頁的實際 MCP PNG |
+
+`source_type` 為 `span`／`table`／`figure`；`source_id` 使用工具回傳的 span 或
+asset ID。文字可用 `evidence(op="find")` 探索，表格與圖片可用 `document(op="inspect")`
+探索。即使探索結果只有長文字預覽，也能透過 `inspect_etl_source` 取得完整引用：
+
+```json
+{
+  "op": "inspect_etl_source",
+  "ref": {"doc_id": "doc_...", "source_type": "span", "source_id": "spn_..."},
+  "text_limit": 4000
+}
+```
+
+前三種操作都要以同一個 `text_sha256`，透過 `text_offset` 與
+`expected_text_sha256` 讀到 `next_text_offset=null`，串接並核對 UTF-8 hash 後
+才解析 JSON。擷取拒絕部分引用、舊引用、錯誤定位或預覽；expected hash 不符時
+不建立快照。`view_etl_source` 使用 `render_size=64..2048`（最長邊像素），不使用
+文字分頁參數；沒有已知頁碼時會明確失敗，不猜測頁面。
+
+將回傳的完整快照引用放進 CSL 文稿 `sources`，再用 cite 的 `source_keys`
+連結。可混用既有原生 cell／DOCX block／PPTX shape／PDF 等引用；不要直接把
+仍指向 ETL 目錄的舊 AssetRef 放入 CSL。指定 `wiki_root` 後，Wiki 會帶走原始
+來源、完整證據 JSON 與所有快照附件，引用 note 提供證據連結。原始 manifest
+可能保留歷史路徑作紀錄，但讀取快照不依賴那些路徑。
+
+快照核對 bytes、hash 與 locator 一致性，**不代表擷取內容或引用主張正確**。
+Agent 必須比較全文、表格、實際來源頁影像及書目資料，再決定是否引用與如何
+修正。原始文字位元組與正規化文字 hash 分開保留；引用文字沿用既有 BOM／編碼
+解碼及 LF 換行規則。單份快照最多 128 MiB，單個 metadata／圖片最多 20 MiB，
+完整證據紀錄最多 2 MiB。DOCX DFM 是另一條管線，CSL 使用既有原生 DOCX 引用。
+
 ## CSL citation documents (Unreleased)
 
 公開版維持 **1.4.0**，新功能累積於 **Unreleased／1.4.x**。
@@ -127,8 +173,9 @@ A2T table cell 可掛 citation refs。當 cited cell 或 row 被更新時，舊 
 實務上可先用 `find_evidence_spans` 尋找候選。短 quote 會 inline 完整、可交給
 `verify_citation_ref` 的 canonical AssetRef；超過 1,000 字元的 span 為了守住 MCP
 response cap，只回 `asset-ref-preview-v1`（`canonical_asset_ref=false`），沒有 canonical
-locator／range，也不能拿去 verify。長 span 的完整 exact quote、hash 與 locator 只保存於
-寫入磁碟的 citation／agent-asset bundle。若要給人類文件、KG answer 或外部審查使用，
+locator／range，也不能拿去 verify。公開版的完整 exact quote、hash 與 locator 保存於
+寫入磁碟的 citation／agent-asset bundle；Unreleased 另可用上述
+`inspect_etl_source` 分頁讀取完整引用，不必先匯出。若要給人類文件、KG answer 或外部審查使用，
 建議用 `citation_bundle(output_format="json")` 或 `evidence(op="bundle")` 取得有界回應，
 需要完整引用則指定 `wiki_root`／`output_path` 寫入 persisted bundle 後再驗證其中 AssetRef。
 若要 promotion 到 Foam note，使用 `citation_bundle(output_format="foam", citation_key="paper-key")`

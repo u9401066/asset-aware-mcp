@@ -2,6 +2,39 @@
 
 # Release And Testing
 
+## Captured ETL citation evaluation (Unreleased)
+
+2026-09-19 真實 Codex 預設模型完成一頁虛構書目 PDF 的文字／表格／圖片擷取、
+三份完整證據快照、字串 `007` 的原生 Excel 儲存格，以及混合來源 APA Wiki。
+**52 次成功 MCP 呼叫、2 次恢復的輸入錯誤、223.68 秒**。錯誤是在 native
+`contract` 多傳了不適用的 `text_limit`；重取契約後使用 `schema` 分頁，沒有
+變更模型。原始呼叫與失敗均保留，不宣稱零錯誤。
+
+Agent 在 ETL 刪除前後共查看 **6 張實際 MCP PNG**，辨讀圖片中的 `-0.50 mg/L`，
+完整讀回三類證據與書目結果；原始 PDF 的 bytes／mtime 不變。獨立稽核比較原頁
+像素、前導零與儲存格型態、hash 分頁、完整快照清單、全部 Wiki 附件及重用結果。
+初始稽核誤用圖像欄位 `mime_type`，且漏列唯讀 `schema` 探索；修正為實際 wire
+欄位 `mimeType` 並加入回歸測試後，同一份操作紀錄通過，不重跑模型消除失敗。
+
+```bash
+uv run pytest tests/unit/test_etl_evidence.py tests/unit/test_codex_etl_csl_audit.py tests/integration/test_etl_citations_stdio.py
+uv run python -m tests.codex_etl_csl.run --output /absolute/new-etl-csl-run
+uv run python -m tests.codex_etl_csl.audit /absolute/new-etl-csl-run
+python /path/to/scripts/smoke_etl_snapshot_runtime.py /absolute/new-etl-csl-run/workspace
+```
+
+一般 pytest 不啟動模型。快照單元 **34 passed**、真實 SDK2 擷取／歷史影像整合
+**1 passed（38.65 秒）**；完整套件含 NIST／NASA corpus 為 **3,110 passed／35
+optional skipped（289.41 秒）**，後補的 **7 項稽核回歸**另行通過。此合成案例
+不證明任意 PDF 擷取正確性、學術書目真實性或語意支持。MCP 做必要內容／來源
+檢查，完整語意及視覺核對仍由 Agent 負責。公開版維持 **1.4.0／後續 1.4.x**。
+
+乾淨 Python 3.10 wheel 與 Docker 的已安裝程式，在 checkout 外重播相同證據，
+三張歷史來源頁及整份 Wiki 位元組一致，原始碼指紋也與 Codex 實測一致。
+容器以唯讀來源掛載、對應的使用者 UID 及選配 Node 執行；未放寬原檔權限。
+VSIX **199 項**測試、64 檔套件檢查及安裝／更新通過，activation 留待 CI。
+中英指南與 APA 預覽在桌面及手機尺寸通過瀏覽器檢查，保留六張截圖。
+
 ## CSL citation document evaluation (Unreleased)
 
 2026-09-19 的真實 **Codex 預設模型**透過 MCP 完成 APA／Vancouver 引用文件與

@@ -38,6 +38,15 @@ and LightRAG knowledge graph outputs.
 
 ## Native Files and Agent Review
 
+- For legacy PDF ETL evidence, discover inspect_etl_source/capture_etl_source/
+  read_etl_source/view_etl_source through evidence csl_contract. Inspect selectors
+  return complete current AssetRefs without writing; capture requires the whole
+  verified ref. Read all hash-pinned pages, then retain etl-citation-ref-v1 and view
+  actual captured original PDF pages. Mixed CSL sources accept captured/native
+  refs; Wiki retains all snapshot artifacts. ETL deletion cannot change snapshots.
+  Hash/locator checks do not prove extraction, semantics or bibliographic truth;
+  Agent reviews those and coordinates corrections. Public1.4.0 / Unreleased1.4.x.
+
 - For document-context academic citations, discover evidence(op="csl_contract")
   completely, then render_citations with structured CSL-JSON items and ordered
   clusters. Read every text page at one text_sha256. sources holds full native

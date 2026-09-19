@@ -7,6 +7,14 @@
 
 ## [Unreleased]
 
+- Added complete, hash-paged inspection and immutable capture/read/view of legacy
+  PDF ETL span/table/figure evidence. Snapshots retain original source bytes,
+  canonical extraction artifacts and selected images; CSL accepts mixed native
+  and captured ETL references and exports every evidence attachment. Historical
+  reads and actual original-page PNGs survive ETL deletion. Source/hash/locator
+  checks stay in MCP; Agent reviews extraction, semantics and bibliographic truth.
+  Public stays 1.4.0; changes accumulate within 1.4.x without a per-feature bump.
+
 - Added document-context CSL citation rendering through `evidence` with pinned
   citeproc-js, official APA7/Chicago18/Vancouver-NLM styles and locales. Full
   hash-paged results retain structured bibliographic data, retroactive citation
