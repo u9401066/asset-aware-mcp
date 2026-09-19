@@ -9,6 +9,7 @@ import os
 import subprocess
 from pathlib import Path
 
+from tests.codex_docx_structure.fonts import environment, snapshot
 from tests.codex_pdf.fixtures import build_pdf, sha256
 from tests.codex_pdf.run import command, execute
 
@@ -74,7 +75,11 @@ def main():
     parser.add_argument("--codex", default="codex")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--render", action="store_true")
+    parser.add_argument("--font-fixture", type=Path)
     args = parser.parse_args()
+    if args.font_fixture and not args.render:
+        parser.error("--font-fixture requires --render")
+    fonts = snapshot(args.font_fixture) if args.font_fixture else None
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     workspace = output / "workspace"
@@ -97,6 +102,7 @@ def main():
         ).strip(),
         "model_selection": "Codex default; not pinned by runner",
         "render": args.render,
+        "font_environment": fonts,
     }
     (output / "expected.json").write_text(
         json.dumps(metadata, indent=2), encoding="utf-8"
@@ -111,7 +117,14 @@ def main():
             "mcp_servers.asset_aware_under_test.env.LIBREOFFICE_BIN="
             + json.dumps(binary),
         ]
-    status = execute(cli, text, output, 900)
+    if fonts:
+        cli[-1:-1] = [
+            "-c",
+            "mcp_servers.asset_aware_under_test.env.FONTCONFIG_FILE="
+            + json.dumps(str(Path(fonts["root"]) / "with-cjk.conf")),
+        ]
+    with environment(fonts):
+        status = execute(cli, text, output, 900)
     from tests.codex_docx_structure.audit import write_audit
 
     report = write_audit(output)

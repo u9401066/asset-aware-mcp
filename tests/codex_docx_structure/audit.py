@@ -195,6 +195,7 @@ def audit(output):
     )
     renders = None
     if expected.get("render"):
+        from tests.codex_docx_structure.fonts import environment
         from tests.codex_docx_structure.renders import validate_renders
 
         revision_root = (
@@ -205,7 +206,15 @@ def audit(output):
             for stage in target["history"]
             if validate_docx(revision_root / stage["sha256"]) == ("008", False)
         }
-        renders = validate_renders(workspace, target, calls, final, historical)
+        with environment(expected.get("font_environment")):
+            renders = validate_renders(
+                workspace,
+                target,
+                calls,
+                final,
+                historical,
+                require_cjk=bool(expected.get("font_environment")),
+            )
     return {
         "passed": True,
         "tool_calls": len(calls),

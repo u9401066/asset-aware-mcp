@@ -1,5 +1,65 @@
 # Progress (Updated: 2026-09-19)
 
+## 2026-09-19 — CJK font correction verified locally; push pending
+
+Controlled Linux Fontconfig fixture now retains pinned Noto Sans TC Regular/Bold
+and license at upstream523d033d6cb47f4a80c58a35753646f5c3608a78, copies/hashes local
+Liberation Sans and license, and leaves global fonts/DOCX bytes unchanged. Explicit
+--font-fixture forwards FONTCONFIG_FILE to actual Codex MCP; independent audit
+restores that same recorded environment and rejects changed files/configuration.
+Fontconfig2.13 .uuid cache files are validated/permitted; no font-content exception.
+A first audit check assumed PDF paint order matched text order; Writer paints a
+Latin space before the CJK run. Scoped CJK checks now require the two actual Chinese
+codepoints in their run plus distinct Noto glyphs, with whole-image pixel equality;
+complete native readback still checks the full heading. Added negative regressions.
+
+`/tmp/asset-aware-codex-docx-cjk-01`: **49 calls, zero errors**,139.22 seconds,
+actual one scan PNG and two Writer PNGs, five complete DFM revisions. Codex found
+readable Chinese heading in both final/historical previews; table values, merged
+grid and 007/008 changes remained correct. Independent complete RGB pixels, CJK
+font/codepoints, source/history/publication/wiki checks passed. Agent did not claim
+font-family identification or Microsoft Word fidelity; native run still says Arial.
+SDK2 same-source regression renders identical bytes with Latin-only/with-CJK fixture,
+rejects missing CJK evidence and checks unchanged source bytes/mtime after both.
+Saved same-source before/after files: `/tmp/asset-aware-docx-font-review` and
+`/tmp/asset-aware-docx-font-review-fixed`; private fonts `/tmp/asset-aware-docx-cjk-fonts`.
+
+Full suite **2,221 passed,33skipped in78.27seconds**; focused37passed7.57seconds
+including actual SDK2. Ruff411files/mypy186sources, high zizmor, lock/dependency
+(214Python/npmzero), harness/skills/docs and GitHub metadata/labels checks passed.
+Extension199tests/64filecontentsguard passed. zh/en desktop/mobile browser screenshots
+passed; changed new prose Chinese literals out of code styling so readers see glyphs.
+Source/dependency runtime hash remains7a4ba4128eb6e237f9dde0f47630af3f8370d0abc6ce816f40f5a85533f44df5,
+matching both actual Codex runs and prior Docker/clean-wheel/VSIX-install gates.
+No runtime/package/version changes. CI now prepares pinned fonts explicitly and runs
+real before/after test; ordinary pytest never downloads/fonts or starts Codex.
+Next: segmented commits/main push, exact CI/Pages/public-byte verification. Public
+1.4.0 and future1.4.x; no new tag. Broader cross-format/evidence goal remains active.
+
+
+## 2026-09-19 — CJK rendering correction in progress
+
+Previous goal turn is **progress**: DOCX whole-page renderer committed/pushed as
+main d12d6670a1a00ee32131dc275472b11104c2c214 (coree2e3847), exact CI35385711787
+all10 jobs and Pages35385711608 passed. Revalidated clean main and CI this turn.
+Public remains1.4.0, no new tag; future1.4.x. Original worktree remains untouched.
+
+Actual Codex detected missing Chinese glyphs in the prior Writer preview. fc-list
+:lang=zh returns empty; Arial resolves to LiberationSans. Independent conversion
+of the exact saved DOCX reproduces boxes. PyMuPDF texttrace misleadingly maps both
+boxes to U+7814 with nonzero glyph1, so nonzero glyph IDs/readback alone cannot
+prove glyph fidelity. Keep semantic/visual judgment with the Agent.
+
+Next: optional private Linux Fontconfig fixture with hash-pinned Noto Sans TC
+Regular/Bold from notofonts/noto-cjk Sans2.004 commit523d033d6cb47f4a80c58a35753646f5c3608a78,
+copy and hash local Liberation Sans, preserve licenses, and avoid global font/source
+changes. Forward explicit fixture only to evaluated MCP process and independent
+replay, retain exact environment hashes. Test same-source before/after images,
+repeat actual Codex visual review, and document remaining Word/real-corpus limits.
+Primary references: official Noto Sans README, Fontconfig user manual, PyMuPDF
+get_texttrace/Font.has_glyph docs. No runtime font guessing or automatic font installs.
+
+
 ## 2026-09-19 — DOCX page preview local gates complete; push pending
 
 Core committed as **e2e3847b46f247d28176be6b72b07c86e770fa35** by

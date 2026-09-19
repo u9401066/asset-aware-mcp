@@ -33,6 +33,19 @@ it is not a promise of complete automatic correction or layout verification.
 Verification coverage and unperformed checks must remain explicit. Structural
 validity alone must never be reported as semantic correctness or full fidelity.
 
+### CJK preview environment correction (Unreleased, 1.4.x)
+
+Provide an opt-in, private Linux Fontconfig evaluation fixture with exact upstream
+Noto font hashes, original font licenses and hashes of copied local Latin fonts.
+Do not modify global font configuration, source DOCX bytes or requested run fonts.
+Forward the explicit environment to both actual Codex MCP and independent replay;
+record configuration/font identities and reject changed fixtures before reuse.
+Compare before/after rendering of identical DOCX bytes and require expected CJK
+text/font evidence as a mechanical check, alongside actual Agent image review.
+Nonzero glyph IDs or extracted Unicode alone do not certify correct appearance.
+Ordinary tests never download fonts or start a model. Document this bounded Linux
+fixture without claiming Microsoft Word fidelity or universal script coverage.
+
 ### Native DOCX page previews (Unreleased, 1.4.x)
 
 `render_docx_page` requires an asset ID, explicit immutable revision and zero-based

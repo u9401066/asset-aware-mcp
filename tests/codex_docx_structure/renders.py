@@ -17,7 +17,7 @@ from tests.codex_native_pdf.trace import digest, payload
 from tests.codex_pdf.trace import require
 
 
-def replay(data, index, size):
+def replay(data, index, size, require_cjk=False):
     binary = os.environ.get("LIBREOFFICE_BIN") or shutil.which("libreoffice")
     require(binary, "Independent Word preview audit requires LibreOffice")
     with tempfile.TemporaryDirectory(prefix="codex-word-audit-") as temp:
@@ -60,12 +60,39 @@ def replay(data, index, size):
         require(source.read_bytes() == data, "Independent renderer changed source")
         with pymupdf.open(root / "independent.pdf") as pdf:
             page = pdf[index]
+            if require_cjk:
+                check_cjk(page)
             scale = size / max(page.rect.width, page.rect.height)
             image = page.get_pixmap(matrix=pymupdf.Matrix(scale, scale), alpha=False)
             return len(pdf), image.width, image.height, bytes(image.samples)
 
 
-def validate_renders(workspace, asset, calls, final, historical_revisions):
+def check_cjk(page):
+    """Mechanical signals accompany image review; they are not a visual verdict."""
+    spans = page.get_texttrace()
+    if page.number != 0:
+        return
+    text = "".join(chr(char[0]) for span in spans for char in span["chars"])
+    # Painting order may put the Latin space before the CJK run. Native readback
+    # checks the full heading; this check concerns its two Chinese codepoints.
+    require("研究" in text, "Rendered Chinese heading differs or is missing")
+    glyphs = [
+        (span["font"], char[1])
+        for span in spans
+        for char in span["chars"]
+        if char[0] in map(ord, "研究")
+    ]
+    require(
+        len(glyphs) == 2
+        and all("NotoSansTC" in font and glyph > 0 for font, glyph in glyphs)
+        and glyphs[0] != glyphs[1],
+        "Expected distinct CJK glyphs in the supplied Noto face",
+    )
+
+
+def validate_renders(
+    workspace, asset, calls, final, historical_revisions, require_cjk=False
+):
     seen, counts = set(), {}
     root = workspace / "data/native-assets" / asset["asset_id"] / "revisions"
     for call in calls:
@@ -89,7 +116,7 @@ def validate_renders(workspace, asset, calls, final, historical_revisions):
         png = base64.b64decode(blocks[0]["data"], validate=True)
         require(digest(png) == result["image_sha256"], "Word PNG hash differs")
         count, width, height, pixels = replay(
-            data, index, args.get("render_size", 1024)
+            data, index, args.get("render_size", 1024), require_cjk
         )
         with Image.open(io.BytesIO(png)) as image:
             require(
@@ -148,6 +175,7 @@ def validate_renders(workspace, asset, calls, final, historical_revisions):
         "images": len(seen),
         "revisions": len(counts),
         "independent_pixels_match": True,
+        "cjk_text_and_font_checked": require_cjk,
         "agent_review": review,
         "scope": "Synthetic static Writer page review; meaning remains agent judgment",
     }
