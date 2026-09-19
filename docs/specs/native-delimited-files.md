@@ -73,7 +73,8 @@ Native byte preservation outside edits, strict round-trip values, stale CAS,
 malformed dialect/input, zero-field row retention and exact evidence spans.
 Actual SDK2 CRUD/derivation/Wiki/source refresh and default Codex PDF-region→CSV
 transcription/row-column CRUD→historical evidence/Wiki/publish with independent
-raw-byte, csv reader and trace audit. Full release checks before direct-main push.
+raw-byte, csv reader and trace audit. Full release checks before direct-main push. Native delimited unit/service cases
+also run in the explicit Python3.10/macOS/Windows native-format smoke inventories.
 
 References considered:
 - Python csv: https://docs.python.org/3/library/csv.html

@@ -1,5 +1,26 @@
 # Progress (Updated: 2026-09-19)
 
+## Native delimited final-state recheck
+
+Corrected metadata fixture plus explicit CSV cross-platform inventories pass the
+full local suite:3,009 passed/35 optional skips126.46s. Focused hygiene7pass;
+workflow/static/harness checks and live GitHub metadata/labels pass. Runtime source
+is unchanged from the actual Codex/wheel/container proof. Release docs now disclose
+the first CI fixture failure and final full run. Push the scoped correction, then
+require fresh exact-head CI/Pages and public-byte proofs. Version remains1.4.0/1.4.x.
+
+## Native delimited CI correction — canonical metadata fixture
+
+Exact head2dde288 CI35429278596 exposed3 GitHub hygiene test failures: after the
+local full suite, the docs commit added CSV/TSV to the canonical description but
+its fake-gh fixture still returned the previous description. Runtime/CSV code is
+unchanged. Synchronize the explicit fixture and retain real metadata drift/read-only
+assertions; focused hygiene7tests pass. Add CSV unit/service cases to the explicit
+Python3.10/macOS/Windows format inventories. The final combined full suite is running.
+Preserve source/actual/wheel/container SHA361a1a78…0f92c9. No new model run needed.
+Pages35429278048 and five public files matched2dde288; final-head CI/Pages/public
+proof must be renewed after correction. Public1.4.0/1.4.x, no tag; goal stays active.
+
 ## Native delimited publication checkpoint
 
 Source commit b8d4fb46fc27257c0abdc3850a30cea28f26087c contains26 counted source/spec/test files plus4 MEM.

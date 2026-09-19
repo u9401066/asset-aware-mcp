@@ -593,7 +593,7 @@ Five native updates changed Count to 008, inserted a row, inserted a column, the
 
 Regressions cover strict UTF-8/BOM/UTF-16/CP950/CP1252/Latin-1, mixed EOL/multiline/empty/ragged records, byte splices, source refresh/backed-up writeback, dialect-bound snapshots and long paged fields. Sole surviving empty fields retain required quoting. Rehashed wrong spans or numeric coercion still fail the independent auditor. All-enabled schema discovery remains within its existing response cap.
 
-Full suite: 3,009 passed, 35 optional skips, 127.59 seconds. SDK2 plus its focused unit group: 33 passed in12.55 seconds. Reproduce with uv run python -m tests.codex_delimited.run --output /absolute/new/run-dir; ordinary pytest never starts a model. This synthetic scan/CSV fixture establishes no arbitrary OCR or spreadsheet rendering guarantee. Agent owns meaning and downstream interpretation. Public1.4.0 / Unreleased1.4.x.
+Full suite: 3,009 passed, 35 optional skips, 126.46 seconds. SDK2 plus its focused unit group: 33 passed in12.55 seconds. Reproduce with uv run python -m tests.codex_delimited.run --output /absolute/new/run-dir; ordinary pytest never starts a model. The first remote CI exposed an outdated fake GitHub description after the documentation update; the fixture was synchronized and the final full suite passed. CSV regressions also join the explicit Python3.10/macOS/Windows inventories. This synthetic scan/CSV fixture establishes no arbitrary OCR or spreadsheet rendering guarantee. Agent owns meaning and downstream interpretation. Public1.4.0 / Unreleased1.4.x.
 
 ### PDF region evidence evaluation (Unreleased)
 

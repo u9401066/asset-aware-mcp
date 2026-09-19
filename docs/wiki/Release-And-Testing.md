@@ -20,12 +20,15 @@ BOM、其餘 CRLF、字串與欄位位置；每次完整讀回操作紀錄。最
 錯誤欄位位移或把 `007` 轉成 `7` 仍會被獨立稽核拒絕。全功能 contract／schema
 探索也驗證不受回應長度截斷。
 
-完整套件 **3,009 passed／35 optional skipped（127.59 秒）**；SDK2 與當時相關
+完整套件 **3,009 passed／35 optional skipped（126.46 秒）**；SDK2 與當時相關
 單元測試 **33 passed（12.55 秒）**。重現真實 Agent 流程：
 
 ```bash
 uv run python -m tests.codex_delimited.run --output /absolute/new/run-dir
 ```
+
+首輪遠端 CI 發現 GitHub 描述測試仍模擬舊文案；已同步 fixture 並重新通過完整
+測試。CSV 回歸也加入 Python 3.10、macOS 與 Windows 的明確測試清單。
 
 一般 pytest 不會啟動模型。此測試是合成掃描／CSV fixture，不能推論任意文件 OCR
 或試算表顯示保真；語意審核欄位仍是 Agent 聲明，MCP 檢查可機械驗證的部分。

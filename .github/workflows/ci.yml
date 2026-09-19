@@ -120,6 +120,8 @@ jobs:
           uv run --python 3.10 pytest tests/test_mcp_tools.py
           tests/unit/test_native_document_assets.py
           tests/unit/test_native_spreadsheet_edges.py
+          tests/unit/test_native_delimited.py
+          tests/unit/test_native_delimited_service.py
           tests/unit/test_native_schema.py
           tests/unit/test_native_pptx.py
           tests/unit/test_native_pptx_operations.py
@@ -236,6 +238,8 @@ jobs:
         run: >-
           uv run --frozen pytest tests/unit/test_native_document_assets.py
           tests/unit/test_native_spreadsheet_edges.py
+          tests/unit/test_native_delimited.py
+          tests/unit/test_native_delimited_service.py
           tests/unit/test_native_schema.py
           tests/unit/test_native_pptx.py
           tests/unit/test_native_pptx_operations.py
@@ -344,6 +348,8 @@ jobs:
         run: >-
           uv run --frozen pytest tests/unit/test_native_document_assets.py
           tests/unit/test_native_spreadsheet_edges.py
+          tests/unit/test_native_delimited.py
+          tests/unit/test_native_delimited_service.py
           tests/unit/test_native_schema.py
           tests/unit/test_native_pptx.py
           tests/unit/test_native_pptx_operations.py
