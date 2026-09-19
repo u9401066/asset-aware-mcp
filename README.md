@@ -22,6 +22,8 @@ Shared media remains intact; source references persist in history. See
 
 Unreleased table grids support revision-bound row/column insertion, deletion and
 resizing, including merge expansion/shrinkage and checked anchor promotion.
+Cells can also be merged with an explicit empty-only or paragraph-migration policy;
+splitting keeps migrated text at the anchor. Rich paragraph XML remains intact.
 Unreleased native tables can be inserted with explicit grids, merged cells and
 rich text, then read/edited/deleted through existing native shape operations.
 Citation display presets/templates now have typed discovery. See

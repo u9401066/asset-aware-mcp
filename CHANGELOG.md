@@ -9,6 +9,12 @@
 
 ### Added
 
+- Native PPTX table merge/split uses an explicit content policy: require empty
+  non-anchor cells or migrate their complete paragraphs in row-major order.
+  Rich text, fields, links and paragraph identity survive; split retains content
+  at the anchor without guessing redistribution. Partial existing-merge overlap,
+  malformed text bodies and stale references fail atomically.
+
 - Native PPTX table grids support sequential row/column insertion, deletion and
   resizing using complete shape references. Existing cell XML and styles survive;
   merges expand/shrink, deleted anchors retain their content, and hidden-content

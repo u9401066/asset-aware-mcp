@@ -9,7 +9,9 @@ from lxml import etree
 
 from src.domain.native_assets import NativeEditResult
 from src.domain.native_pptx import shape_representation_sha256
+from src.domain.native_pptx_grid import NativePptxGridMerge, NativePptxGridSplit
 from src.infrastructure.native_ooxml import xml_bytes
+from src.infrastructure.native_pptx_grid_merges import merge_cells, split_cells
 from src.infrastructure.native_pptx_grid_model import TableGrid, sizes
 from src.infrastructure.native_pptx_grid_mutations import apply_grid_edit
 from src.infrastructure.native_pptx_package import NS, NativePptxPackage
@@ -87,11 +89,19 @@ def edit_table_grid(
     extent = _extent(shape)
     old_extents = int(extent.get("cx")), int(extent.get("cy"))
     inserted = promoted = 0
+    merged = split = paragraphs_moved = 0
     before_dimensions = len(grid.rows), len(grid.columns)
     for edit in request.edits:
-        count, moved = apply_grid_edit(grid, edit)
-        inserted += count
-        promoted += moved
+        if isinstance(edit, NativePptxGridMerge):
+            paragraphs_moved += merge_cells(grid, edit)
+            merged += 1
+        elif isinstance(edit, NativePptxGridSplit):
+            split_cells(grid, edit)
+            split += 1
+        else:
+            count, moved = apply_grid_edit(grid, edit)
+            inserted += count
+            promoted += moved
         if inserted > 10_000:
             raise ValueError("Grid edit batch exceeds 10,000 inserted cells")
         grid.write()
@@ -120,11 +130,15 @@ def edit_table_grid(
                 "edit_count": len(request.edits),
                 "inserted_cells": inserted,
                 "promoted_merge_anchors": promoted,
+                "merged_regions": merged,
+                "split_regions": split,
+                "migrated_paragraphs": paragraphs_moved,
             }
         ],
         checks=[
             "shape_reference_hash",
             "bounded_grid_and_merge_topology",
+            "explicit_merge_content_policy",
             "requested_cell_creation_read_back",
             "scaled_frame_extent",
             "serialized_shape_read_back",

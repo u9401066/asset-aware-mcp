@@ -1,4 +1,4 @@
-# Progress (Updated: 2026-09-18)
+# Progress (Updated: 2026-09-19)
 
 ## 2026-09-18 active goal — not complete
 
@@ -35,7 +35,13 @@
   rebasing implemented. 1,971 Python / 199 extension tests pass. Actual Codex grid
   run 01: 123 calls, zero tool errors, five independently verified intermediate
   revisions and unchanged source/package evidence. Full slide rendering not claimed.
-- [ ] Commit/push grid checkpoint and verify exact CI/Pages; version stays 1.4.0.
+- [x] Grid checkpoint 6cb054b pushed; exact CI 35366326974 (ten jobs) and Pages
+  35366597637 pass, public bytes match. Public remains 1.4.0.
+- [x] Native table merge/split with explicit content policy and paragraph XML
+  preservation implemented. Full 2,015 tests / 30 skips plus additional regression
+  pass; 199 extension tests pass. Codex --grid --merges: 180 calls, zero errors,
+  exact first transcription, 13 full records and 11 independently audited stages.
+- [ ] Merge checkpoint release gates / commit / push / exact CI and Pages pending.
 
 - [x] Unreleased checkpoint: native PPTX textbox addition / existing shape deletion
   with reference, dependency, version and XML preservation guards; truthful A2T

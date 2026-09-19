@@ -19,6 +19,8 @@
 詳見 [圖片資產操作](docs/wiki/Native-File-Assets.md#pptx-picture-assets-unreleased)。
 
 未發布的表格格網已支援固定版本的列欄插刪與尺寸調整，並檢查合併區擴縮與起點移動。
+合併儲存格須明確選擇「其他格為空」或「依序搬移段落」；拆分保留左上角
+已搬移的內容，文字格式、欄位與連結的段落 XML 持續保留。
 未發布的原生表格可指定列欄尺寸、合併格與文字格式，再沿用讀取／修改／刪除。
 引用顯示的預設／模板也有 typed 規格可查。詳見
 [原生表格](docs/wiki/Native-File-Assets.md#native-pptx-tables-unreleased)。

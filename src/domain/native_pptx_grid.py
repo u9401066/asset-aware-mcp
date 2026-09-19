@@ -7,9 +7,10 @@ from typing import Annotated, Literal
 from pydantic import Field, model_validator
 
 from src.domain.native_pptx import NativePptxReference, PptxModel
-from src.domain.native_pptx_table import (  # noqa: TC001 -- Pydantic runtime schema
+from src.domain.native_pptx_table import (
     Dimension,
     NativePptxTableCellCreate,
+    NativePptxTableMerge,
 )
 
 
@@ -41,8 +42,28 @@ class NativePptxGridResize(GridPosition):
     sizes: list[Dimension] = Field(min_length=1, max_length=100)
 
 
+class NativePptxGridMerge(NativePptxTableMerge):
+    op: Literal["merge"]
+    content_policy: Literal["require_empty", "append_paragraphs"]
+
+    @model_validator(mode="after")
+    def ordered_rectangle(self) -> NativePptxGridMerge:
+        if self.end_row < self.row or self.end_column < self.column:
+            raise ValueError("Merge rectangle must be ordered top-left to bottom-right")
+        if (self.row, self.column) == (self.end_row, self.end_column):
+            raise ValueError("Merge rectangle must contain at least two cells")
+        return self
+
+
+class NativePptxGridSplit(PptxModel):
+    op: Literal["split"]
+    row: int = Field(ge=0, le=99)
+    column: int = Field(ge=0, le=99)
+
+
+GridAxisEdit = NativePptxGridInsert | NativePptxGridDelete | NativePptxGridResize
 GridEdit = Annotated[
-    NativePptxGridInsert | NativePptxGridDelete | NativePptxGridResize,
+    GridAxisEdit | NativePptxGridMerge | NativePptxGridSplit,
     Field(discriminator="op"),
 ]
 

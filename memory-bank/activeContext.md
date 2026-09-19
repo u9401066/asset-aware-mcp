@@ -1,5 +1,50 @@
 # Active Context
 
+## 2026-09-19 — native table merge/split in progress
+
+Previous goal turn made verified progress: a9739eb/6cb054b pushed. Exact CI
+35366326974 (ten jobs) and Pages 35366597637 revalidated successful at 6cb054b;
+public bytes matched. Automatic Pages initially redeployed cea4870; explicit
+rebuild corrected that and was independently verified. Main clean at start,
+public still 1.4.0/Unreleased for 1.4.x; original worktree remains untouched.
+Next scope: explicit-content-policy merge and split in existing native grid edits.
+Preserve paragraph XML/format/relationships, reject partial merge intersections,
+and avoid automatic content redistribution. Specification written first; primary
+python-pptx merge/split docs checked. Full cross-format goal remains active.
+
+Implemented explicit merge/split policies, rich paragraph migration and partial-overlap
+rejection with atomic managed revisions. Full pytest passed 2,015 / 30 optional skips
+(65.42s), /tmp/asset-aware-merge-full.log. One additional absent-anchor-body regression
+plus positive/auditor tests passed afterward (18 focused); production source unchanged.
+Completed task-owned /dev/shm/asset-aware-merge-pytest removed after terminal proof,
+all logs retained. Actual Codex --grid --merges run 01 started at
+/tmp/asset-aware-codex-pptx-merge-01; result pending. Public remains 1.4.0/Unreleased.
+
+
+Actual merge run 01 passed: 180 calls, zero MCP errors, exact first transcription,
+1 PNG/13 complete records, five grid and six merge revisions independently audited.
+Source SHA256 cc9a0391f7c275b6627481c0e7ea3792de87b6e4a7fc5f86c443a8e0df51f358;
+lock unchanged. No full slide render claim. 199 VSIX tests/64-file contents guard,
+fresh/update installation pass; activation unavailable locally, enforced in CI.
+Ruff/format/mypy 172 source files/Bandit/docs/harness pass. Python 214 packages/npm
+lock zero known vulnerabilities; GitHub metadata/labels match. Browser fallback
+Playwright 1.63.0 (no Browser tool available) zh/en desktop/mobile passed, no console
+errors or page overflow; /tmp/native-merge-{desktop,mobile}-{zh,en}.png viewed.
+Disk exhaustion caused Docker import / final VSIX repack / initial browser script
+creation to fail; original logs retained, Codex run unaffected and audited passed.
+Removed only this task's failed image a99323074f85 and prior completed task builder
+images 85a406633cb0 / 45a3ff1f8a79 identified by retained grid/derivation build logs.
+No broad prune, no source/evidence deletion. Docker/packaging reruns pending.
+
+Docker retry ba071331d2e3 passed import/native merge wiring, doctor/list-tools and
+actual SDK2 stdio. VSIX retry packaged 66 entries and all-artifact audit passed.
+Initial clean-wheel install also exhausted disk; retained failure log. Removed only
+completed task Docker runtime/builder (ba071331d2e3 / c216733ce610), then clean-venv
+built-wheel retry passed help/doctor/list-tools/SDK2 stdio. Dedicated RAM pip cache
+removed after terminal proof. Logs: /tmp/asset-aware-merge-{docker-retry,package-retry,
+wheel-smoke-retry}.log. Runtime fingerprint still matches actual Codex run. Ready for
+scoped main commits, then exact CI/Pages verification; no version bump/tag.
+
 ## 2026-09-19 — native PPTX table grid CRUD in progress
 
 Previous goal turn made verified progress: cea4870 / 29369ec pushed; exact CI

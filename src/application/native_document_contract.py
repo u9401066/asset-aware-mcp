@@ -91,7 +91,7 @@ def native_document_contract(
         "citation_policy": "citation_contract selects a display preset or custom inline/reference templates; it does not store source references or verification reports.",
         "derivations_enabled": derivations_enabled,
         "derivation_policy": "Read complete hash-pinned ledger before record/retract; endpoint integrity and caller-supplied agent review are separate. New file revisions never inherit old assertions automatically.",
-        "pptx_grid_policy": "Sequential row/column insert/delete/resize; merges expand or shrink and deleted anchors promote their content. Pin full shape references and review complete updated shapes/rendering.",
+        "pptx_grid_policy": "Sequential insert/delete/resize/merge/split with full shape references. Merge requires explicit content_policy; split retains anchor text. Read complete updated shapes and review rendering.",
         "file_reference_policy": "file_reference identifies exact immutable file bytes; verify does not assert source freshness or semantic meaning.",
         "formats": _formats(docx_enabled, pptx_enabled, pdf_enabled),
         "verification": "MCP checks integrity; agents verify semantics, layout and calculated results.",

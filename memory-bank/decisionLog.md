@@ -1,5 +1,16 @@
 # Decision Log
 
+## 2026-09-19 — explicit merge content policy, no inferred split redistribution
+
+Extend existing table-grid edits with merge/split instead of introducing another native
+operation. Require an explicit empty-only or paragraph-migration policy. Move original
+paragraph XML so rich text, fields, links, identities and unknown descendants survive;
+retain internal/anchor empty paragraphs and per-cell properties. Reject partial merge
+intersections and ambiguous bodies. Split restores the existing grid while leaving
+content at the anchor; any redistribution requires a separate agent decision. MCP
+checks structure, hashes and readback; Agents review meaning and actual presentation.
+Continue public 1.4.0/Unreleased for 1.4.x, with no tag or automatic version increase.
+
 ## 2026-09-18 — provenance assertions separate from citation display and byte revisions
 
 Record source-to-target derivation explicitly using existing native file/component

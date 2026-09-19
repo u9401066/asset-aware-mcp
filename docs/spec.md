@@ -727,3 +727,37 @@ remain Agent review. Package retention/deletion is not secure erasure.
 
 Reference design: [python-pptx merge grid semantics](https://python-pptx.readthedocs.io/en/latest/user/table.html)
 and [DrawingML row structure](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.tablerow).
+
+
+### Native PPTX merge/split edits (Unreleased, 1.4.x)
+
+Extend `update_pptx_table_grid.pptx_table_grid.edits` with two discriminated edits:
+
+- `merge`: inclusive zero-based `row`, `column`, `end_row`, `end_column`, and
+  required `content_policy` (`require_empty` or `append_paragraphs`). The rectangle
+  must contain at least two cells and may wholly contain existing merges. Partial
+  intersections are rejected; explicitly split those merges first.
+- `split`: `row` and `column` identify an existing merge origin. Restore underlying
+  cells without changing row/column dimensions or redistributing anchor paragraphs.
+
+`require_empty` refuses meaningful content in any non-anchor cell, including fields,
+breaks, links, extension/foreign content and paragraph identities. Original XML is
+retained except merge flags. `append_paragraphs` retains the anchor's paragraphs and
+appends the complete paragraph sequences of nonempty cells in row-major order,
+including their internal empty paragraphs and any stored hidden text. Original
+paragraph XML (run formats, fields, IDs, hyperlinks and unknown descendants) moves
+within the same package part. Each moved-from body receives one empty paragraph;
+its cell properties, body properties and list styles remain in place. Empty-only
+cells remain unchanged. Empty anchor paragraphs are retained, without guessing
+which formatting or blank lines are disposable. Unsupported text-body structure
+blocks migration rather than concealing content. Existing relationships/parts stay
+unchanged. Splitting does not reverse paragraph migration; historical references
+and source versions retain the old positions.
+
+Sequential insert/delete/resize/merge/split can be composed in one atomic request.
+Existing shape hash, CAS, resource, package and readback checks remain mandatory.
+Report counts for merged/split regions and migrated paragraphs. MCP verifies native
+structure and literal XML; Agent checks meaning, inherited formats, overflow and
+rendered output. No arbitrary finer grid is invented by split; insert rows/columns
+explicitly when additional subdivisions are needed. Reference:
+https://python-pptx.readthedocs.io/en/latest/user/table.html#un-merging-a-cell .

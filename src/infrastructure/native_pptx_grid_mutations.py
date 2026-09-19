@@ -16,7 +16,7 @@ from src.infrastructure.native_pptx_table_builder import build_table
 from src.infrastructure.native_pptx_table_checks import verify_table
 
 if TYPE_CHECKING:
-    from src.domain.native_pptx_grid import GridEdit, NativePptxGridInsert
+    from src.domain.native_pptx_grid import GridAxisEdit, NativePptxGridInsert
     from src.infrastructure.native_pptx_grid_model import Rectangle, TableGrid
 
 
@@ -95,7 +95,7 @@ def _remap_merges(
     return promoted
 
 
-def apply_grid_edit(grid: TableGrid, edit: GridEdit) -> tuple[int, int]:
+def apply_grid_edit(grid: TableGrid, edit: GridAxisEdit) -> tuple[int, int]:
     nodes = grid.rows if edit.axis == "row" else grid.columns
     attribute = "h" if edit.axis == "row" else "w"
     count = edit.count if edit.op == "delete" else len(edit.sizes)

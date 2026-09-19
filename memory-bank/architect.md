@@ -1,5 +1,15 @@
 # System Architect
 
+## 2026-09-19 — native table merge/split
+
+Domain native_pptx_grid adds typed merge/split to the existing discriminated edit union.
+Infrastructure native_pptx_grid_merges validates body/content/merge topology and moves
+exact paragraphs within the same package part, retaining relationship IDs. Existing
+grid orchestration performs per-step budget/topology checks and independent serialized
+shape/package checks before managed CAS publication. No new dependencies or top-level
+MCP operations. The opt-in Codex harness independently opens each intermediate PPTX
+and checks source cells, rich paragraph XML, merge/frame geometry and full references.
+
 ## 2026-09-18 — native derivation ledger
 
 Extract stable file/cell/DOCX model definitions into native_asset_models; native_assets
