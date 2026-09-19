@@ -1,5 +1,87 @@
 # Active Context
 
+## Native Word story lifecycle — validated runtime/spec/tests
+
+Final production70aef46664a3127832c0e2e26333b01a9d582483ae33fa76b1e833fab6f42ad9
+passes full3315/33optional skips/357.08s with Writer/CJK and real NIST/NASA PDFs.
+Actual default Codex98success/0tool errors/222.28s verifies10story/3structure/2contract
+records,3managed revisions,2historical Wikis and8actual PNGs. Source bytes/mtime,
+complete receipts, native preservation and deleted-story evidence remain intact.
+Pages1/2/4 unchanged; longer page3 header intentionally wraps. No Word parity claim.
+Auditor9-versus9.0 mismatch fixed with regression; same model trace replayed.
+Private Python3.10 36pass/1optional skip11.76s; installed wheel and Docker both
+reproduce10story/3structure records plus2byte-identical Wikis at the exact source.
+Standard pip wheel smoke, import/doctor/tools/SDK2 and all local gates pass.
+Final docs28pass; Ruff686/mypy290, security, dependency audits, artifact/harness/sync
+and GitHub metadata/labels pass. VSIX199tests/64files/install-update pass; GUI
+activation delegated to CI. Final browser8desktop/mobile zh/en states pass.
+Owned Docker b631a01e2473 and builderf90bfe1b86cc removed after successful replay;
+all11staged temporary runs restored with exact hashes/mtimes. Browser8884 remains
+until final publication. Failed attempts retained in logs and local proof, including
+root/RAM ENOSPC and absent Impress/Calc gates; transient full03 scan inputs were
+not archived. Full04 cleans passing tmp_path fixtures immediately, keeps failures.
+Authoritative local proof: /tmp/asset-aware-story-lifecycle-local-proof.json.
+Stage27runtime/spec/test files plus2MEM, then10legacy-audit compatibility files
+plus2MEM, then20documentation/harness files plus2MEM. Directmain, authoru9401066;
+no PR/branch/tag/version bump. Public1.4.0, next consolidated1.4.1. Exact-head
+CI/Pages/public-file verification follows push. Broad all-format goal stays active.
+
+
+## Native Word story lifecycle — validation checkpoint
+
+Implemented whole-definition create/clone/bind/delete and first/even options with
+catalog/revision/hash checks, dependency protection, complete paged receipts and
+historical story/Wiki preservation. Contract metadata now has its own hash-pinned
+pagination; all capability flags/schema continuations survive the compact index.
+Production source remains 70aef46664a3127832c0e2e26333b01a9d582483ae33fa76b1e833fab6f42ad9.
+Actual default Codex run01: 98 calls, zero tool errors, 222.28s; independent audit
+passes 10 story records, 3 structure records, 2 contracts, 3 revisions, 2 Wikis and
+8 actual PNGs. Pages 1/2/4 unchanged; page3 intentionally wraps a longer header.
+Original audit 9-versus-9.0 intent comparison failed; corrected with regression,
+same trace replayed, no model rerun. /tmp/asset-aware-story-lifecycle-local-proof.json.
+Private Python3.10 36pass/1optional skip11.76s; installed wheel outside checkout
+replays all 10+3 records and exact two Wikis at the same production fingerprint.
+Standard pip wheel smoke passed with RAM TMPDIR after retained root ENOSPC failure.
+VSIX199tests/64files/install-update passed, local GUI activation unavailable;
+security/dependency, lint686/mypy290, harness/sync and GitHub metadata/labels pass.
+Browser eight feature/evaluation desktop/mobile zh/en states pass; actual screenshots
+inspected. Browser plugin unavailable, existing Playwright fallback; localhost8884
+still active. Full04 currently running with Writer/CJK and real NIST/NASA corpus.
+Full03 reached RAM ENOSPC at93%, exit120; two scan failures occurred. Original
+partial log retained, but those transient scan inputs were removed during cleanup.
+Full04 uses pytest tmp_path_retention_policy=failed to remove each passing fixture
+immediately while preserving failures, preventing accumulated RAM exhaustion.
+Full01: legacy contract test plus expired corpus path; full02: one PDF false result
+during pip ENOSPC plus three unavailable Impress/Calc cases. Failure logs/fixtures
+retained, successful terminal full fixtures removed only. PDF isolated recheck1pass.
+Nine legacy evaluation auditors accept optional read-only contract_details; four
+new regressions preserve missing-step and unauthorized-writeback rejection.
+Pending full04, Docker, final docs metrics/build checks and segmented commits/push.
+No version/tag/model override, no subagents, no original-checkout edits. Public1.4.0,
+next consolidated1.4.1; broad all-format goal remains active.
+
+
+## Native Word story definition lifecycle — active
+
+Previous goal turn made substantive progress: existing story content CRUD and
+complete evidence fully published at b5c7483a4b93120c53258a0bea3c62246b283381.
+CI35448665822 all10success, Pages35448665507 all3success; six deployed files exact.
+Integration199pass387.11s including both new story SDK2 cases. Authoritative proof:
+/tmp/asset-aware-docx-stories-publication-proof.json (fully_published true).
+All staging restored, owned browser stopped, private Python3.10 env removed after
+CI; source92fe28 unchanged. Public1.4.0; next consolidated1.4.1; no tag/bump.
+
+Current verified gap: contents can be edited but entire definitions cannot yet be
+created/cloned/bound/unlinked/deleted. Build explicit sequential story lifecycle
+operations with source/revision/catalog preconditions, full native preservation,
+section inheritance receipts and Agent actual-page review. Preserve source/history
+and existing evidence/Wiki semantics. First/even flags affect both headers/footers;
+unlink means inherit, not blank. Detached media retained, not secure erasure.
+Continue tests-first implementation, SDK2, actual default Codex and release harness,
+then bilingual docs/MEM and separate runtime/docs author-u9401066 commits/pushmain.
+No model override, subagents, extra branch/PR, version bump or original-checkout edit.
+Broader all-format goal remains active. Temporary prefix: asset-aware-story-lifecycle.
+
 ## Native Word header/footer documentation — ready for publication
 
 Runtime/spec/tests committed as f3ccf0d (27 counted files plus2MEM), author u9401066.

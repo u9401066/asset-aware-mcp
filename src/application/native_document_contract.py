@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
+from src.application.native_contract_delivery import deliver_contract
 from src.application.native_schema import schema_discovery
 from src.domain.native_file_reference import NativeFileReference
 from src.domain.native_operations import NATIVE_OPERATIONS
@@ -196,6 +197,8 @@ def native_document_contract(
         ),
         "verification": "MCP checks structure/integrity and deterministic repairs. Read full operation receipts. Agents verify semantics, rendered layout, dynamic references and calculated results; sources/history stay intact.",
         "docx_stories_enabled": docx_stories_enabled,
+        "docx_story_structure_enabled": docx_stories_enabled,
+        "docx_story_structure_policy": "Read the complete read_docx_story_structure catalog and receipt at one text_sha256. update_docx_story_structure pins expected_revision and expected_catalog_sha256, explicit sections_and_following_inheritors scope, and sequential create/clone/bind/delete/first_page/even_pages edits. bind part:null resumes inheritance, not blank. Create a blank definition to suppress inherited content. Clone/delete require full part hash; known identity/incoming dependencies are checked. Read the complete new receipt and each affected story, then review all actual pages. Removed story dependencies remain as orphan media; no secure erasure. Source/history remain unchanged.",
         "docx_stories_policy": "Read full header/footer catalog and story JSON at a pinned revision. Bindings follow actual relationships and inheritance, including dormant/shared parts. update_docx_story requires full story ref and all_sections_using_part scope. Read complete receipts and review every affected actual page. Legacy DFM header/footer fields are abbreviated; use stories for exact content and bindings.",
         "docx_policy": "Pin revision; assemble all DFM chunks with frontmatter/markers. Updates stage versions; writeback is explicit.",
         "docx_structure_enabled": docx_structure_enabled,
@@ -215,7 +218,7 @@ def native_document_contract(
     ):
         result.pop("schema")
         result["schema_delivery"] = "paged"
-    return result
+    return deliver_contract(result, request)
 
 
 def _edit_constraints(format_name: str) -> list[str]:
@@ -359,7 +362,13 @@ def _formats(
         if pptx_enabled
         else [],
         "docx": (
-            ["read_docx_stories", "read_docx_story", "update_docx_story"]
+            [
+                "read_docx_stories",
+                "read_docx_story",
+                "update_docx_story",
+                "read_docx_story_structure",
+                "update_docx_story_structure",
+            ]
             if docx_stories_enabled
             else []
         )

@@ -50,6 +50,9 @@ from src.domain.native_docx_stories import (  # noqa: TC001 -- schema
     DocxStoryReference,
     DocxStoryUpdate,
 )
+from src.domain.native_docx_story_lifecycle import (
+    DocxStoryStructure,  # noqa: TC001 -- schema
+)
 from src.domain.native_docx_structure import (  # noqa: TC001 -- Pydantic schema
     NativeDocxCreate,
     NativeDocxInsert,
@@ -143,6 +146,7 @@ __all__ = [
 class NativeDocumentRequest(NativeModel):
     op: NativeOperation = "contract"
     for_op: NativeOperation | None = None
+    contract_sha256: str | None = Field(default=None, pattern=SHA256_PATTERN)
     schema_sha256: str | None = Field(default=None, pattern=SHA256_PATTERN)
     source_path: str | None = Field(default=None, min_length=1, max_length=4096)
     asset_id: str | None = Field(default=None, pattern=ASSET_ID_PATTERN)
@@ -194,6 +198,7 @@ class NativeDocumentRequest(NativeModel):
     docx_story_part: str | None = Field(default=None, min_length=1, max_length=1024)
     docx_story_reference: DocxStoryReference | None = None
     docx_story_update: DocxStoryUpdate | None = None
+    docx_story_structure: DocxStoryStructure | None = None
     docx_edit: NativeDocxEdit | None = None
     docx_create: NativeDocxCreate | None = None
     docx_page_index: int | None = Field(default=None, ge=0, lt=2000, strict=True)

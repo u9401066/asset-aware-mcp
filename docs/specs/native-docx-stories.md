@@ -31,10 +31,10 @@ derivations and custom/CSL citations. Wiki snapshots containing stories use a
 distinct projection identity and include every full story record and source part.
 Legacy snapshots and references remain available without reinterpretation.
 
-Creating/deleting whole header/footer definitions, changing section links and
-editing footnote/endnote stories remain further work toward full Word CRUD.
-This increment completes native content CRUD inside existing header/footer parts;
-it does not establish arbitrary Word or Microsoft Word rendering fidelity.
+Whole-definition creation/deletion and explicit section links are now described in
+[the lifecycle contract](native-docx-story-lifecycle.md). Footnote/endnote editing
+and identity-aware cloning of the remaining dependencies require further work.
+These increments do not establish arbitrary Word or Microsoft Word rendering fidelity.
 
 References:
 - https://python-docx.readthedocs.io/en/latest/dev/analysis/features/header.html

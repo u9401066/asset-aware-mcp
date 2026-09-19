@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
     from src.domain.native_asset_models import NativeEditResult
     from src.domain.native_docx_stories import DocxStoryUpdate
+    from src.domain.native_docx_story_lifecycle import DocxStoryStructure
     from src.infrastructure.native_ooxml import NativeOOXMLPackage
 
 W, R = "{" + WORD_NS + "}", "{" + DOC_REL_NS + "}"
@@ -224,3 +225,10 @@ class NativeDocxStories:
         from src.infrastructure.native_docx_story_edits import edit_story
 
         return edit_story(data, request)
+
+    def change_structure(
+        self, data: bytes, request: DocxStoryStructure
+    ) -> tuple[bytes, NativeEditResult]:
+        from src.infrastructure.native_docx_story_lifecycle import change_structure
+
+        return change_structure(data, request)

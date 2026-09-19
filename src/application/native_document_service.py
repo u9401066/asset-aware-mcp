@@ -13,6 +13,9 @@ from src.application.native_document_contract import (
 )
 from src.application.native_docx_operations import NativeDocxOperations
 from src.application.native_docx_story_operations import NativeDocxStoryOperations
+from src.application.native_docx_story_structure_operations import (
+    NativeDocxStoryStructureOperations,
+)
 from src.application.native_evidence_service import (
     NativeEvidenceService,
     attach_native_evidence,
@@ -187,6 +190,7 @@ class NativeDocumentService:
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
         handlers = {
             "contract": self._contract,
+            "contract_details": self._contract,
             "schema": read_schema,
             "list": self._list,
             "register": self._register,
@@ -242,6 +246,8 @@ class NativeDocumentService:
             "read_docx_stories": self._story_operation,
             "read_docx_story": self._story_operation,
             "update_docx_story": self._story_operation,
+            "read_docx_story_structure": self._story_structure_operation,
+            "update_docx_story_structure": self._story_structure_operation,
             "read_docx": self._docx_operation,
             "render_docx_page": self._docx_operation,
             "create_docx": self._docx_operation,
@@ -509,6 +515,15 @@ class NativeDocumentService:
         return NativeDocxStoryOperations(self.repository, self.docx_stories).execute(
             request
         )
+
+    def _story_structure_operation(
+        self, request: NativeDocumentRequest
+    ) -> dict[str, Any]:
+        if self.docx_stories is None:
+            raise ValueError("Native Word stories are not configured")
+        return NativeDocxStoryStructureOperations(
+            self.repository, self.docx_stories
+        ).execute(request)
 
     def _docx_operation(self, request: NativeDocumentRequest) -> dict[str, Any]:
         if self.docx_operations is None:

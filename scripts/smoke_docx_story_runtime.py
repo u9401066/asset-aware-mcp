@@ -40,7 +40,11 @@ def main():
         if event["type"] != "item.completed" or item.get("type") != "mcp_tool_call":
             continue
         fields = item["arguments"].get("native_request", {})
-        if fields.get("op") not in {"read_docx_story", "read_docx_stories"}:
+        if fields.get("op") not in {
+            "read_docx_story",
+            "read_docx_stories",
+            "read_docx_story_structure",
+        }:
             continue
         content = "".join(
             b.get("text", "")
@@ -56,8 +60,13 @@ def main():
         result = result.get("result", result)
         if not result.get("success"):
             continue
+        key = (
+            "story_structure"
+            if fields["op"] == "read_docx_story_structure"
+            else "story"
+        )
         snapshots[fields["op"], fields["revision"], fields.get("docx_story_part")] = (
-            result["story"]["text_sha256"]
+            result[key]["text_sha256"]
         )
     story_keys = {key for key in snapshots if key[0] == "read_docx_story"}
     assert len(story_keys) >= 8
@@ -72,7 +81,8 @@ def main():
                     {**fields, "text_offset": offset, "text_limit": 4000}
                 )
             )
-            page = result["story"]
+            key = "story_structure" if op == "read_docx_story_structure" else "story"
+            page = result[key]
             assert page["text_sha256"] == digest
             chunks.append(page["text_excerpt"])
             offset = page["next_text_offset"]

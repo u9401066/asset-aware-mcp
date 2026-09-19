@@ -1,5 +1,7 @@
 """Real SDK2 merge/split, source backup, immutable evidence and wiki preservation."""
 
+import hashlib
+import json
 import os
 import sys
 
@@ -31,6 +33,25 @@ async def test_merge_split_evidence_and_writeback_sdk2(tmp_path):
     )
     async with Client(stdio_client(params)) as client:
         contract = await native(client, op="contract", for_op="update_pptx_table_grid")
+        assert "response_truncated" not in contract, contract
+        if contract["contract_delivery"] == "paged":
+            chunks, offset = [], 0
+            while True:
+                page = await native(
+                    client, **contract["contract_request"], text_offset=offset
+                )
+                assert page["success"] and "response_truncated" not in page, page
+                assert page["excerpt_char_range"][0] == offset
+                assert page["text_sha256"] == contract["contract_sha256"]
+                chunks.append(page["text_excerpt"])
+                offset = page["next_text_offset"]
+                if offset is None:
+                    break
+            text = "".join(chunks)
+            assert (
+                hashlib.sha256(text.encode()).hexdigest() == contract["contract_sha256"]
+            )
+            contract = json.loads(text)
         assert "content_policy" in contract["pptx_grid_policy"]
         asset = (await native(client, op="register", source_path=str(source)))["asset"]
         old = await read_complete(client, asset, ref["locator"])

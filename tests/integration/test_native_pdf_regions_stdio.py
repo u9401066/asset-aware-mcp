@@ -146,7 +146,7 @@ async def test_scanned_regions_to_structured_cells_over_sdk2(tmp_path):
             expected_revision=asset["revision"],
             pdf_edits=[{"reference": parent, "rotation": 90}],
         )
-        assert changed["success"]
+        assert changed["success"], changed
         proof = await native(client, op="verify", reference=reference)
         assert proof["valid"] and not proof["is_current_managed_revision"]
         historical = await native(

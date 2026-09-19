@@ -7,6 +7,7 @@ from typing import Literal
 
 NativeOperation = Literal[
     "contract",
+    "contract_details",
     "schema",
     "register",
     "create",
@@ -63,6 +64,8 @@ NativeOperation = Literal[
     "read_docx_stories",
     "read_docx_story",
     "update_docx_story",
+    "read_docx_story_structure",
+    "update_docx_story_structure",
     "render_docx_page",
     "create_docx",
     "add_docx_blocks",
@@ -101,6 +104,7 @@ def _fields(required: str = "", optional: str = "") -> NativeOperationFields:
 
 NATIVE_OPERATIONS = {
     "contract": _fields(optional="for_op"),
+    "contract_details": _fields("contract_sha256", "for_op text_offset text_limit"),
     "schema": _fields(optional="for_op schema_sha256 text_offset text_limit"),
     "register": _fields("source_path"),
     "create": _fields("workbook"),
@@ -182,6 +186,10 @@ NATIVE_OPERATIONS = {
     ),
     "update_docx_story": _fields(
         "asset_id expected_revision docx_story_reference docx_story_update"
+    ),
+    "read_docx_story_structure": _fields("asset_id revision", "text_offset text_limit"),
+    "update_docx_story_structure": _fields(
+        "asset_id expected_revision docx_story_structure"
     ),
     "read_docx": _fields("asset_id", "revision text_offset text_limit offset limit"),
     "render_docx_page": _fields("asset_id revision docx_page_index", "render_size"),

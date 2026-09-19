@@ -19,6 +19,7 @@ from src.domain.native_docx_structure import (
 
 if TYPE_CHECKING:
     from src.domain.native_asset_models import NativeEditResult
+    from src.domain.native_docx_story_lifecycle import DocxStoryStructure
 
 STORY_REVIEW = [
     "semantic_accuracy",
@@ -91,4 +92,7 @@ class NativeDocxStoryAdapter(Protocol):
     def read(self, data: bytes, part: str) -> dict[str, Any]: ...
     def edit(
         self, data: bytes, request: DocxStoryUpdate
+    ) -> tuple[bytes, NativeEditResult]: ...
+    def change_structure(
+        self, data: bytes, request: DocxStoryStructure
     ) -> tuple[bytes, NativeEditResult]: ...
