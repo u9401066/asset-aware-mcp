@@ -1,5 +1,17 @@
 # Decision Log
 
+## 2026-09-19 — destination layouts and stable slide identities
+
+Insert slides with explicitly discovered destination layouts, using ordinary empty
+placeholders and inherited styles, without copying master prompt text into content.
+Preserve existing IDs/part bytes; keys and mutations are bound to the file revision.
+Reordering does not rewrite custom-show order. Deletion rejects incoming dependencies
+and retains parts rather than guessing how to rewrite hyperlinks or securely erase
+shared content. Sections/index ranges need explicit future structure support. Repair
+known count properties deterministically; Agent reviews viewer caches and rendering.
+Full source fidelity remains a broader goal, with cross-deck import/notes structure
+and real-corpus coverage still open. Public version remains 1.4.0 / future 1.4.x.
+
 ## 2026-09-19 — explicit merge content policy, no inferred split redistribution
 
 Extend existing table-grid edits with merge/split instead of introducing another native

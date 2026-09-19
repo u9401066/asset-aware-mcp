@@ -9,6 +9,13 @@
 
 ### Added
 
+- Native PPTX slide layout discovery, insertion, reordering and deletion preserve
+  stable surviving slide identities and original parts. New slides use explicit
+  destination layouts and empty inherited placeholders with optional rich textboxes.
+  Incoming links/custom shows, sections, index-based ranges, stale/CAS conflicts and
+  malformed layouts fail without partial publication. Slide/notes count properties
+  receive deterministic updates; agents review rendering and remaining viewer caches.
+
 - Native PPTX table merge/split uses an explicit content policy: require empty
   non-anchor cells or migrate their complete paragraphs in row-major order.
   Rich text, fields, links and paragraph identity survive; split retains content

@@ -65,6 +65,10 @@ class NativePptxOperations:
 
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
         return {
+            "read_pptx_layouts": self._read_layouts,
+            "add_pptx_slides": self._update,
+            "delete_pptx_slides": self._update,
+            "reorder_pptx_slides": self._update,
             "create_pptx": self._create,
             "add_pptx_pictures": self.pictures.execute,
             "replace_pptx_pictures": self.pictures.execute,
@@ -104,7 +108,7 @@ class NativePptxOperations:
         data, asset_id, revision = self._source(request)
         metadata = self.presentations.inspect(data)
         slides = metadata.pop("slides")
-        selected = []
+        selected: list[dict[str, Any]] = []
         count = metadata["shape_count"]
         for record in self.presentations.iter_shapes(
             data, offset=request.offset, limit=request.limit
@@ -134,6 +138,28 @@ class NativePptxOperations:
             if request.offset + request.limit < count
             else None,
             "locator_scope": "immutable_revision; shape IDs may change in later revisions",
+            "review_required": REVIEW_REQUIRED,
+        }
+
+    def _read_layouts(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        data, asset_id, revision = self._source(request)
+        layouts = self.presentations.read_layouts(data)
+        selected: list[dict[str, Any]] = []
+        for layout in layouts[request.offset : request.offset + request.limit]:
+            if (
+                selected
+                and len(json.dumps([*selected, layout], ensure_ascii=False)) > 6000
+            ):
+                break
+            selected.append(layout)
+        end = min(request.offset + len(selected), len(layouts))
+        return {
+            "success": True,
+            "asset_id": asset_id,
+            "inspected_revision": revision,
+            "layouts": selected,
+            "layout_count": len(layouts),
+            "next_offset": end if end < len(layouts) else None,
             "review_required": REVIEW_REQUIRED,
         }
 
@@ -169,7 +195,20 @@ class NativePptxOperations:
                     "Presentation edit reference has a different asset or revision"
                 )
         data = self.repository.read(asset.asset_id, request.expected_revision)
-        if request.op == "update_pptx_table_grid":
+        if request.op == "add_pptx_slides":
+            assert request.pptx_slide_insert is not None
+            updated, checks = self.presentations.add_slides(
+                data, request.pptx_slide_insert
+            )
+        elif request.op == "delete_pptx_slides":
+            updated, checks = self.presentations.delete_slides(
+                data, request.pptx_slide_keys
+            )
+        elif request.op == "reorder_pptx_slides":
+            updated, checks = self.presentations.reorder_slides(
+                data, request.pptx_slide_order
+            )
+        elif request.op == "update_pptx_table_grid":
             assert request.pptx_table_grid is not None
             updated, checks = self.presentations.edit_table_grid(
                 data, request.pptx_table_grid

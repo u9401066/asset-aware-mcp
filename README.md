@@ -20,6 +20,11 @@ preview embedded images through MCP, and extract them as independent versioned f
 Shared media remains intact; source references persist in history. See
 [picture assets](docs/wiki/Native-File-Assets.md#pptx-picture-assets-unreleased).
 
+Unreleased slide operations discover layouts across masters, insert slides with
+empty inherited placeholders and formatted textboxes, reorder stable slide IDs,
+and delete slides after dependency checks. Original parts remain available. See
+[slide structure](docs/wiki/Native-File-Assets.md#pptx-slide-structure-unreleased).
+
 Unreleased table grids support revision-bound row/column insertion, deletion and
 resizing, including merge expansion/shrinkage and checked anchor promotion.
 Cells can also be merged with an explicit empty-only or paragraph-migration policy;

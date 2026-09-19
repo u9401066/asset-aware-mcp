@@ -41,6 +41,9 @@ def native_asset_summary(
             "immutable_history": True,
             "refresh_source": asset.source is not None and not asset.archived,
             "read_pptx": asset.format == "pptx" and pptx_enabled,
+            "edit_pptx_slides": asset.format == "pptx"
+            and pptx_enabled
+            and not asset.archived,
             "verify_pptx_shapes": asset.format == "pptx" and pptx_enabled,
             "read_pptx_pictures": asset.format == "pptx" and pptx_enabled,
             "edit_pptx_pictures": asset.format == "pptx"
@@ -91,6 +94,7 @@ def native_document_contract(
         "citation_policy": "citation_contract selects a display preset or custom inline/reference templates; it does not store source references or verification reports.",
         "derivations_enabled": derivations_enabled,
         "derivation_policy": "Read complete hash-pinned ledger before record/retract; endpoint integrity and caller-supplied agent review are separate. New file revisions never inherit old assertions automatically.",
+        "pptx_slide_policy": "Discover destination layouts; insert, reorder or delete slides with current revision and exact slide IDs/parts. Dependencies may block edits. Deleted parts remain retained, not securely erased; review rendering and cached properties.",
         "pptx_grid_policy": "Sequential insert/delete/resize/merge/split with full shape references. Merge requires explicit content_policy; split retains anchor text. Read complete updated shapes and review rendering.",
         "file_reference_policy": "file_reference identifies exact immutable file bytes; verify does not assert source freshness or semantic meaning.",
         "formats": _formats(docx_enabled, pptx_enabled, pdf_enabled),
@@ -162,6 +166,10 @@ def _formats(
         if pdf_enabled
         else [],
         "pptx": [
+            "read_pptx_layouts",
+            "add_pptx_slides",
+            "delete_pptx_slides",
+            "reorder_pptx_slides",
             "add_pptx_pictures",
             "replace_pptx_pictures",
             "read_pptx_picture",

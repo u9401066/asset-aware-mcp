@@ -761,3 +761,44 @@ structure and literal XML; Agent checks meaning, inherited formats, overflow and
 rendered output. No arbitrary finer grid is invented by split; insert rows/columns
 explicitly when additional subdivisions are needed. Reference:
 https://python-pptx.readthedocs.io/en/latest/user/table.html#un-merging-a-cell .
+
+
+### Native PPTX slide structure (Unreleased, 1.4.x)
+
+`read_pptx_layouts` returns revision-pinned, paged layout identities discovered via
+all presentation masters, including names, type and placeholder counts. New slides
+use an explicit existing layout part, never a hard-coded layout index. The layout's
+ordinary shape placeholders are instantiated empty using public python-pptx layout
+semantics (date/footer/slide-number placeholders remain inherited). Layout styles
+stay in their original parts; master prompt text is not copied into slide content.
+Optional textboxes use existing typed run/EMU models. The loaded source presentation
+is never resaved by python-pptx; only new slide nodes are extracted.
+
+`add_pptx_slides` takes `pptx_slide_insert={index,slides:[{layout_part,textboxes}]}`
+with a zero-based insertion boundary and 1..100 slides. `delete_pptx_slides` takes
+`pptx_slide_keys=[{slide_id,part},...]` (1..100); `reorder_pptx_slides` takes a complete
+`pptx_slide_order` permutation using the same keys. All require `asset_id` and
+`expected_revision`; keys must resolve in that exact file revision. IDs and part
+names of surviving slides stay intact. The slide limit for these operations is
+2,000; input textbox budgets remain 20,000 runs / 4 MiB UTF-8. Empty decks are valid.
+
+Deletion removes slide-list entries and their presentation relationships while
+retaining original slide/notes/media bytes as detached parts (not secure erasure).
+Incoming references from retained slides, custom shows, view settings or other parts
+block deletion. Notes backreferences belonging exclusively to removed slides are
+allowed. Reorder preserves independent custom-show ordering. Section lists and
+index-based show ranges require a structure-aware workflow and block these edits.
+Known extended-property slide/notes counts are updated; other cached document
+properties stay intact and may need viewer refresh. Agents review unmodeled behavior.
+
+Validate source protection/signatures, exact identities/permutation, slide/layout
+relationships, unique new IDs/part names, resource limits, serialized slide ordering,
+new placeholders/textboxes, and package bytes/XML outside the explicit plan. Failed
+operations never commit partial revisions; old shape/file evidence and wiki package
+attachments remain available. Existing source writeback requires CAS/source checks
+and backups. MCP verifies mechanical preservation; Agent reviews inherited styles,
+actual rendering, slide order meaning and interactions. Copy/import across decks,
+new speaker-note structures and full visual validation remain additional work.
+
+References: [python-pptx slides](https://python-pptx.readthedocs.io/en/latest/user/slides.html),
+[Microsoft slide deletion](https://learn.microsoft.com/en-us/office/open-xml/presentation/how-to-delete-a-slide-from-a-presentation).

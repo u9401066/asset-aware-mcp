@@ -1,5 +1,45 @@
 # Active Context
 
+## 2026-09-19 — native slide structure in progress
+
+Previous goal turn classified progress: 796656c/68153e3 pushed; exact CI 35369646303
+(ten jobs) and Pages 35369645315 revalidated successful at 68153e3. Public bytes
+matched, main clean, only main branch. Public stays 1.4.0 / Unreleased for 1.4.x.
+Original user worktree remains untouched. Next scope: revision-pinned native slide
+layout discovery, insertion with inherited layouts/placeholders, ordering and deletion
+with dependency guards, exact untouched package bytes and independent readback.
+Primary python-pptx slide and Microsoft slide deletion docs reviewed. Broader goal
+remains active: copying/import, notes structure, other formats, A2T, real corpus,
+cell derivations and standard academic citations still require work.
+
+Implemented four native slide operations, destination-master layout discovery,
+empty placeholder generation, ID/part-preserving insertion/order/deletion,
+dependency checks and count-property repairs. 38 focused structure/guard tests,
+89 SDK2/discovery/guard tests passed. Independent auditor's first reorder test
+failed because python-pptx renames parts in memory; changed auditor to original ZIP
+relationships, then all nine corruption/order regressions pass. No production issue.
+Full suite: 2,068 passed / 30 optional skipped (68.34s), log
+/tmp/asset-aware-slides-full.log. Removed only completed task-owned RAM fixtures
+/dev/shm/asset-aware-slides-pytest after terminal proof. Source fingerprint
+1ef64237a6b976ebb60f20fed506e61c7d8f2fb39226d96d75c071d98c067f44;
+actual Codex --slides run 01 in progress at /tmp/asset-aware-codex-pptx-slides-01.
+Ruff/format/mypy 177 source files and Bandit passed. Public 1.4.0/Unreleased unchanged.
+
+Actual Codex slides run 01 passed: 96 calls, zero MCP errors, exact first transcription,
+1 PNG/8 complete records, three intermediate presentation revisions independently
+audited; historical deleted-shape evidence and published-file/wiki checks pass. No
+full presentation rendering claim. 199 VSIX tests/64-file guard, fresh/update installs
+pass; local activation unavailable, CI requires it. Final VSIX 66 entries and all
+artifact audit pass. Docker ec829d25a895 passed native slide wiring, doctor/list-tools
+and SDK2 stdio. Removed only completed task runtime/builder images ec829d25a895 /
+198218c65132 before clean-wheel smoke to avoid disk exhaustion; build log retained.
+Browser Playwright 1.63.0 fallback (no Browser tool available), zh/en desktop/mobile
+passes with no console errors/overflow. Screenshots /tmp/native-slides-{desktop,mobile}
+-{zh,en}.png viewed. GitHub metadata/labels synchronized; Python 214 packages/npm
+lock zero known vulnerabilities. Clean-wheel smoke passed (help/doctor/list-tools/SDK2 stdio); dedicated RAM pip cache
+removed after terminal proof. Runtime source/lock hashes still match the actual Codex
+run. Local gates complete, pending scoped commits/push and exact CI/Pages. Public 1.4.0.
+
 ## 2026-09-19 — native table merge/split in progress
 
 Previous goal turn made verified progress: a9739eb/6cb054b pushed. Exact CI

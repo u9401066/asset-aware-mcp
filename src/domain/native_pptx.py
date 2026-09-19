@@ -18,6 +18,7 @@ if TYPE_CHECKING:
         NativePptxPictureCreate,
         NativePptxPictureReplace,
     )
+    from src.domain.native_pptx_slides import NativePptxSlideInsert, NativePptxSlideKey
     from src.domain.native_pptx_table import NativePptxTableAddition
 
 PPTX_MEDIA_TYPE = (
@@ -192,6 +193,17 @@ class NativePptxReference(PptxModel):
 
 
 class NativePresentationAdapter(Protocol):
+    def read_layouts(self, data: bytes) -> list[dict[str, Any]]: ...
+    def add_slides(
+        self, data: bytes, request: NativePptxSlideInsert
+    ) -> tuple[bytes, NativeEditResult]: ...
+    def delete_slides(
+        self, data: bytes, keys: list[NativePptxSlideKey]
+    ) -> tuple[bytes, NativeEditResult]: ...
+    def reorder_slides(
+        self, data: bytes, keys: list[NativePptxSlideKey]
+    ) -> tuple[bytes, NativeEditResult]: ...
+
     def edit_table_grid(
         self, data: bytes, request: NativePptxTableGridEdit
     ) -> tuple[bytes, NativeEditResult]: ...

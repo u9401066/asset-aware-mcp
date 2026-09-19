@@ -13,6 +13,7 @@ from pptx.util import Emu, Pt
 from src.domain.native_assets import NativeEditResult
 from src.infrastructure.native_ooxml import xml_bytes
 from src.infrastructure.native_pptx_grid import edit_table_grid
+from src.infrastructure.native_pptx_layouts import read_layouts
 from src.infrastructure.native_pptx_package import NS, NativePptxPackage
 from src.infrastructure.native_pptx_pictures import (
     add_pictures,
@@ -21,6 +22,11 @@ from src.infrastructure.native_pptx_pictures import (
 )
 from src.infrastructure.native_pptx_records import shape_record, text_body
 from src.infrastructure.native_pptx_shape_edit import add_shapes, delete_shapes
+from src.infrastructure.native_pptx_slides import (
+    add_slides,
+    delete_slides,
+    reorder_slides,
+)
 from src.infrastructure.native_pptx_tables import add_tables
 
 if TYPE_CHECKING:
@@ -89,6 +95,10 @@ def _verify_parts(
 
 
 class NativePresentation:
+    read_layouts = staticmethod(read_layouts)
+    add_slides = staticmethod(add_slides)
+    delete_slides = staticmethod(delete_slides)
+    reorder_slides = staticmethod(reorder_slides)
     edit_table_grid = staticmethod(edit_table_grid)
     add_tables = staticmethod(add_tables)
     add_pictures = staticmethod(add_pictures)

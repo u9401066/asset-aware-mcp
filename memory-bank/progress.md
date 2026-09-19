@@ -43,7 +43,14 @@
   exact first transcription, 13 full records and 11 independently audited stages.
 - [x] Merge checkpoint local release gates pass (including Docker, VSIX, clean wheel
   and browser QA); initial disk-exhaustion failures retained and successfully rerun.
-- [ ] Merge checkpoint 796656c + companion: push / exact CI and Pages pending.
+- [x] Merge checkpoint 68153e3: exact CI 35369646303 (ten jobs), Pages 35369645315
+  and public bytes verified; clean main and public 1.4.0.
+- [x] Native PPTX slide layout discovery, insertion, ordering and deletion implemented.
+  Full 2,068 Python / 199 extension tests pass. Actual Codex --slides: 96 calls,
+  zero errors, exact first transcription, eight full records, three independently
+  audited intermediate revisions. Source/publication/wiki/historical evidence pass.
+- [x] Slide checkpoint local release gates, Docker, clean-wheel, installs and browser QA pass.
+- [ ] Slide checkpoint: commits, push, exact CI/Pages pending.
 
 - [x] Unreleased checkpoint: native PPTX textbox addition / existing shape deletion
   with reference, dependency, version and XML preservation guards; truthful A2T

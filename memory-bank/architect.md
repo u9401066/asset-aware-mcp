@@ -1,5 +1,18 @@
 # System Architect
 
+## 2026-09-19 — native slide structure
+
+Domain slide keys and insertion models bind stable slide IDs/parts and explicit layouts.
+Layout discovery traverses all presentation masters. The builder uses public python-pptx
+layout/placeholder APIs but returns only new slide nodes, never a resaved source deck.
+Infrastructure applies narrow slide-list/relationship/content-type deltas, reserves all
+existing/detached relationship targets and overrides, repairs known count properties,
+and independently reopens the result. Deletion retains orphan parts and rejects known
+incoming references, sections and index ranges. Application shares native revision CAS,
+historical evidence, wiki and guarded source writeback. No new top-level MCP tool or
+dependency. Actual Codex audits read original ZIP identities independently of python-pptx
+in-memory renaming and compare all intermediate artifacts and prior complete readbacks.
+
 ## 2026-09-19 — native table merge/split
 
 Domain native_pptx_grid adds typed merge/split to the existing discriminated edit union.

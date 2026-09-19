@@ -18,6 +18,10 @@
 圖片，再拆出為獨立版本資產。共用圖片不被覆寫，來源引用保留在歷程。
 詳見 [圖片資產操作](docs/wiki/Native-File-Assets.md#pptx-picture-assets-unreleased)。
 
+未發布的投影片操作可探索各母片版型、新增空白繼承預留位置與格式化文字框、
+依固定 ID 重排及檢查相依後刪頁；既有套件內容持續保留。詳見
+[投影片結構操作](docs/wiki/Native-File-Assets.md#pptx-slide-structure-unreleased)。
+
 未發布的表格格網已支援固定版本的列欄插刪與尺寸調整，並檢查合併區擴縮與起點移動。
 合併儲存格須明確選擇「其他格為空」或「依序搬移段落」；拆分保留左上角
 已搬移的內容，文字格式、欄位與連結的段落 XML 持續保留。
