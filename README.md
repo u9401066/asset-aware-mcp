@@ -1,5 +1,11 @@
 # asset-aware-mcp
 
+Unreleased native Table totals can be added, removed and restored with explicit
+clear/keep content and style policies. MCP checks revisions, structure and sources;
+agents review meaning, formula results and rendered layout. See
+[totals lifecycle](docs/wiki/A2T-Tables.md#native-table-totals-lifecycle-unreleased).
+Public remains **1.4.0**, with work accumulating within **1.4.x**.
+
 > Citation-ready document infrastructure for AI agents: turn PDFs, DOCX/PPTX files,
 > tables, figures, and evidence spans into reusable assets and Foam/LightRAG wikis.
 

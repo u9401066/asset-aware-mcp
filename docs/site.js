@@ -465,6 +465,14 @@ After table_data/table_manage edits, read the COMPLETE workspace again. Review s
 
 Unchanged source cells follow native relocation, preserving supported formulas, rich text and styles. Edited/new formulas use destination coordinates; missing new values mean blank. Plans move WHOLE worksheet rows/columns, including content outside the projection, and discard deleted merged anchors. Reordering existing identities requires native move support. Native Table headers/calculated columns, partial arrays and unmodeled structures retain their checks; table-boundary membership requires explicit expand_tables as described below. Agent review covers membership, dynamic references, calculated results and actual rendering.
 
+### Native Table totals lifecycle (Unreleased)
+
+When table_totals_lifecycle_enabled is advertised, update_workbook_table accepts table_update.totals_row with exact revision, worksheet key, Table part and expected_ref. columns may be omitted for a totals-only transition. Add uses {action:"add",reuse_definitions:true,cell_styles:"preserve"}; it requires blank cells directly below the Table and restores hidden totals definitions. Set reuse_definitions:false for blanks, or override columns[].totals. Optional cell_styles:"last_data_row" copies direct cell styles only.
+
+Remove uses {action:"remove",cells:"clear"|"keep_cells",retain_definitions:true}. Clear removes contents while retaining styles; keep retains text/runs and freezes only the retained cells' own Table references to absolute pre-removal ranges. Other workbook formulas keep structured references, including #Totals. Set retain_definitions:false to discard hidden definitions. Neither transition moves worksheet rows; compose update_worksheet_grid explicitly if physical space must change.
+
+Data membership and filter/sort ranges remain stable. Overlaps, special formulas, protection and source dependencies retain checks, including pivots over detached totals cells. Current-row selectors (#This Row / [@Column]) in kept totals formulas require explicit correction because they have no data-row intersection. Shared strings retain content/runs while reference counts may be recomputed. Read the complete operation receipt and updated references. Agent review covers future formula membership, results and rendering; historical evidence never migrates. Public stays 1.4.0 / Unreleased within 1.4.x.
+
 ### Native Table creation (Unreleased)
 
 When workbook_table_creation_enabled is advertised, add_workbook_table turns an explicit worksheet range into a native Excel Table. Use create for an independent workbook or register an existing XLSX. Pin expected_revision and the worksheet key from complete read_workbook references. table_create provides ref, unique name, ordered columns, header_row, totals_row, autofilter and style.
@@ -532,6 +540,14 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Native Table totals lifecycle evaluation (Unreleased)
+
+Actual default-model Codex completed 201 successful MCP calls with zero tool errors in 181.76 seconds. It viewed a synthetic scanned PDF through an MCP PNG, created an independent workbook/Table, removed and cleared totals, restored retained definitions, then removed totals while keeping cells.
+
+Independent openpyxl/ZIP/trace audits checked five history entries, complete reference/receipt reads between mutations, ten exact source strings/types, column IDs, filter ranges, formulas and styles. The retained totals formula uses absolute pre-removal data coordinates. Historical 007 evidence, original PDF bytes/mtime, final XLSX and two immutable Wiki attachments all passed. The suite passed 2,834 tests with 33 optional skips, including SDK2, CAS conflicts and public readback budget rejection.
+
+This actual Codex fixture uses default direct cell styles; richer styles have separate unit coverage. Excel rendering and calculated results were not verified. Reproduce with uv run python -m tests.codex_table_totals.run --output /absolute/new/run-dir. Ordinary pytest never launches a model. Public stays 1.4.0 / Unreleased within 1.4.x.
 
 ### Native Table creation evaluation (Unreleased)
 

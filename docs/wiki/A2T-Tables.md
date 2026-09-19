@@ -1,5 +1,36 @@
 # A2T Tables
 
+## Native Table totals lifecycle (Unreleased)
+
+`table_totals_lifecycle_enabled` 啟用時，以 `update_workbook_table` 的
+`table_update.totals_row` 明確新增或移除合計列。仍須提供目前版本、worksheet key、
+Table part 及 `expected_ref`；若只有合計列轉換，可省略 `columns`。
+
+| 意圖 | 行為 |
+|---|---|
+| `{action:"add",reuse_definitions:true,cell_styles:"preserve"}` | Table 向下延伸一列；目標格須空白，重用保留的標籤／函式／自訂公式 |
+| `reuse_definitions:false` | 新合計列先使用空白定義；同次 columns[].totals 可明確覆寫 |
+| `cell_styles:"last_data_row"` | 從最後資料列複製直接儲存格樣式；列高及列／欄預設格式不變 |
+| `{action:"remove",cells:"clear",retain_definitions:true}` | 移除合計角色並清空原列內容，保留儲存格樣式及可重用定義 |
+| `cells:"keep_cells"` | 保留文字／富文字；留下公式對此 Table 的引用改為移除前的絕對座標 |
+| `retain_definitions:false` | 一併丟棄保留的合計定義 |
+
+兩種轉換都保留既有資料列，沒有插入或刪除整張工作表的列。需要騰出空間時，
+Agent 先明確使用 `update_worksheet_grid`，再讀回新版本執行合計操作。移除後選擇
+保留的公式固定原範圍，不再隨未來 Table 增長；工作簿其他位置的 Table 引用保持
+結構化形式，包含移除後不再有可用列的 `[#Totals]`。
+
+MCP 檢查空間、合併格、特殊公式、保護與來源依賴；篩選／排序維持原資料範圍，
+樞紐來源檢查包含新增或卸離的合計列。引用字串以解析結果轉換，保留字面字串及
+外部工作簿引用；不明確的混合範圍需要先修改公式。合計列中的 `#This Row`／
+`[@欄名]` 沒有資料列交集，保留公式前必須先明確處理，不能轉成有效座標。
+共享字串內容與 runs 保留，
+引用計數可隨清除操作重新計算。操作紀錄含原始 before 值、範圍與明確選項。
+
+完整讀回新 references、儲存格及 operation_result 後，Agent 核對語意、未來公式
+範圍、篩選、計算結果及實際畫面。舊證據與 Wiki 不自動遷移；公開版維持
+**1.4.0**，這些變更累積於 **Unreleased／1.4.x**。
+
 ## Native Table creation (Unreleased)
 
 `workbook_table_creation_enabled` 啟用時，可先用 `create` 建立獨立 XLSX，

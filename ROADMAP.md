@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Unreleased / 1.4.x: independent native Table creation, identity-preserving column edits, and explicit totals add/remove/reuse. Retained formulas use pre-removal ranges; Agent still reviews formula results and rendered layout. Whole worksheet moves use the existing explicit grid operation.
+
 - [x] Unreleased / 1.4.x: native range ↔ A2T cell-value correspondence, typed edits, source-cell evidence, immutable input snapshots and independent workbook creation. Applying structural row/column changes with formula, merge and style relocation remains open.
 
 - [x] Unreleased / 1.4.x: native worksheet read/add/rename/reorder/delete with stable keys, explicit reference repair, deletion and 3D membership checks, complete read-back and historical evidence. Full workbook rendering, dynamic references and general grid edits remain open.

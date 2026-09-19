@@ -1,5 +1,10 @@
 # Native File Assets（v1.4.0）
 
+Unreleased 的原生 Table 合計列現在可新增、移除及重用定義。透過
+`table_update.totals_row` 明確選擇清空或保留儲存格，保留既有資料與樣式；完整讀回
+操作紀錄，再由 Agent 核對公式範圍、結果與畫面。詳見 [合計列流程](A2T-Tables)。
+公開版維持 **1.4.0／後續 1.4.x**。
+
 `add_workbook_table` 將明確範圍建立為原生 Excel Table；可搭配 `create`
 獨立建立工作簿，或使用既有檔案。欄名、計算欄、合計列與樣式都有明確契約，
 並保留歷史證據。詳見 [原生 Table 建立](A2T-Tables)。

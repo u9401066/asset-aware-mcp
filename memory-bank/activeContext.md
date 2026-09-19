@@ -1,6 +1,6 @@
 # Active Context
 
-## Native Table totals lifecycle — locally verified; publication pending
+## Native Table totals lifecycle — source committed; docs/publication pending
 
 Explicit add/remove/reuse landed in the private Table edit path, retaining typed
 row intent, data/filter membership, style choices, original receipts and source
@@ -22,7 +22,9 @@ were restored with exact hashes/mtimes; original dirty user worktree unchanged.
 
 Proofs: /tmp/asset-aware-table-totals-local-proof.json and source-proof.json.
 Previous main2882ade CI35418513200 all10, Pages35418512785 all3/public5 files verified.
-Next: segmented direct-main source/docs commits (21/22 counted files), then exact-head
+Source commit b28e35a2e6791ae00605eabdb03da90c1c9dbe4b (21 counted files +4MEM) complete.
+Docs/site/harness changes cover22 counted files +2MEM, including explicit1.4.x policy.
+Next: push both direct-main commits, then exact-head
 CI/Pages/public-byte verification. Public1.4.0 / Unreleased1.4.x; no bump/tag.
 Overall cross-format CRUD/evidence/real-Codex goal remains ACTIVE; not complete.
 

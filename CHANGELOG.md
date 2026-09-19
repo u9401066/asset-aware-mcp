@@ -7,6 +7,15 @@
 
 ## [Unreleased]
 
+- Added `table_update.totals_row` for native Table add/remove/reuse with blank-space
+  checks, explicit clear/keep contents, optional direct cell-style inheritance and
+  retained definitions. Kept formulas freeze only their own Table references;
+  other workbook references remain structured. Detached-row pivot dependencies,
+  original-value receipts and combined public readback remain checked before CAS.
+  Quoted worksheet references after `@` retain exact tokenizer spans. SDK2 and
+  actual Codex fixtures cover lifecycle and historical evidence. Public stays
+  1.4.0, with development Unreleased for 1.4.x.
+
 - Added `add_workbook_table` over exact native worksheet ranges, with typed ordered
   columns, matching/rich headers or explicit blank-header filling, calculated
   columns, reserved blank totals rows and built-in/existing Table styles. One CAS

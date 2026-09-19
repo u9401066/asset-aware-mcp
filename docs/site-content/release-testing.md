@@ -2,6 +2,28 @@
 
 # Release And Testing
 
+## Native Table totals lifecycle evaluation (Unreleased)
+
+實際預設模型 Codex 完成 **201 次成功 MCP 呼叫、零工具錯誤**，耗時
+**181.76 秒**。透過 MCP PNG 閱讀合成掃描 PDF，建立獨立 XLSX 與原生 Table，
+依序移除並清空合計列、重用保留定義新增合計列、再次移除但保留儲存格。
+
+獨立 openpyxl／ZIP／trace 稽核核對五次歷史紀錄、每次變更之間完整的引用與
+操作讀回、10 個來源資料字串／型別、欄位 ID、篩選範圍、公式及樣式。
+留下的合計公式固定到移除前的絕對資料範圍，歷史 007 引用可重讀與驗證；
+原始 PDF 位元組／mtime、最終 XLSX 及兩份 Wiki 的精確附件均核對通過。
+
+最後依 Microsoft 規則修正合計列 `#This Row`／`[@欄名]` 的處理：
+這些引用沒有資料列交集，保留前明確拒絕，避免把原本錯誤轉成有效座標；
+最終程式碼已重新執行完整測試及實際 Codex。
+
+全套測試 **2,834 項通過、33 項選配略過**，包含 SDK2 流程及版本衝突／
+讀回容量的提交前拒絕。字型與格式的單元案例另行驗證；此次實際 Codex 流程的
+直接樣式繼承只使用預設樣式，沒有驗證 Excel 畫面或公式計算結果。
+
+重現：`uv run python -m tests.codex_table_totals.run --output /absolute/new/run-dir`。
+普通 pytest 不啟動模型。公開版維持 **1.4.0**，開發累積 **Unreleased／1.4.x**。
+
 ## Native Table creation evaluation (Unreleased)
 
 實際 Codex CLI 從 MCP PNG 閱讀合成掃描 PDF，透過 `create` 自行建立 XLSX，

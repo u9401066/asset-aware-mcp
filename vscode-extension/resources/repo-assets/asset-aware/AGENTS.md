@@ -38,6 +38,17 @@ and LightRAG knowledge graph outputs.
 
 ## Native Files and Agent Review
 
+- When table_totals_lifecycle_enabled is advertised, update_workbook_table accepts
+  table_update.totals_row with the exact revision, worksheet key, Table part/ref.
+  Add requires blank cells below the Table; reuse_definitions restores hidden
+  labels/functions/formulas, and cell_styles:last_data_row copies direct styles.
+  Remove requires cells:clear or keep_cells; retain_definitions defaults true.
+  Kept formulas freeze own Table references to pre-removal absolute ranges; other
+  workbook references stay structured. No worksheet rows move. Compose explicit
+  grid operations for space, read full receipts/references and review future
+  formula membership/results/layout. Historical evidence stays unchanged.
+  Public stays 1.4.0 / Unreleased within 1.4.x.
+
 - When workbook_table_creation_enabled is advertised, add_workbook_table creates
   native Tables over explicit worksheet ranges in existing or independent workbooks.
   Pin file revision and worksheet key; supply ref, unique name and ordered columns.

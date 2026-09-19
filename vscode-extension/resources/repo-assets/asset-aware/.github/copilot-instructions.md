@@ -18,6 +18,8 @@
 
 ### 核心功能
 
+- **原生 Table 合計列（Unreleased／1.4.x）** — `table_totals_lifecycle_enabled` 啟用時，以 `table_update.totals_row` 新增、移除或重用合計定義；新增前檢查空白範圍，移除明確選擇 clear／keep_cells。保留公式固定原 Table 範圍，其他引用保持結構化形式。完整讀回操作紀錄，由 Agent 核對公式結果及版面；公開版維持 1.4.0。
+
 - **原生 Table 建立（main 未發布／1.4.x）** — `workbook_table_creation_enabled` 啟用時，`add_workbook_table` 在固定 worksheet key／ref／revision 建立 Table。可搭配 `create` 獨立建立 XLSX；既有標題須相符或明確填空，合計列須先為空白，計算欄覆寫須明確。保留資料、格式與歷史證據；讀回完整 created_table／header_cells／operation_result，再由 Agent 核對公式結果與畫面。公開版仍 1.4.0。
 - **Table 專用編輯（main 未發布／1.4.x）** — `workbook_table_edit_enabled` 啟用時，以 `update_workbook_table` 同步修改欄名／富文字標題／計算欄／既有總計列。先完整讀取 references 與 header_cells XML，固定版本、Table part／ref 與 column_id／expected_name；header_runs 保留段格式，公式例外值須明確處理。新公式使用新欄名，既有引用依身分更新；Agent 核對語意、公式與畫面，舊證據及 A2T 綁定不遷移。公開版仍為 1.4.0。
 

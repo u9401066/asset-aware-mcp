@@ -1,5 +1,10 @@
 # asset-aware-mcp
 
+Unreleased 的原生 Table 合計列可新增、移除及重用；明確選擇清空或保留內容，
+保留資料與樣式。MCP 提供版本、結構及來源檢查，Agent 核對語意、公式結果與畫面。
+詳見 [合計列流程](docs/wiki/A2T-Tables.md#native-table-totals-lifecycle-unreleased)。
+公開版維持 **1.4.0**，後續累積 **1.4.x**，不逐功能升版。
+
 Unreleased 新增 `add_workbook_table`：在既有或獨立建立的 XLSX 指定範圍建立
 原生 Excel Table，包含標題、計算欄、合計列與表格樣式，保留既有資料及儲存格格式。
 讀回完整建立紀錄後，Agent 核對語意、公式結果與實際畫面。詳見
