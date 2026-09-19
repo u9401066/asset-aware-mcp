@@ -1,5 +1,39 @@
 # Release And Testing
 
+## DOCX page rendering evaluation (Unreleased)
+
+Add `--render` to `tests.codex_docx_structure.run` to make Codex view every page
+of the final DOCX and the historical revision with the temporary `008` Count.
+The isolated MCP server receives an explicit `LIBREOFFICE_BIN` when set. The
+independent auditor reconverts exact stored bytes, checks every delivered RGB
+pixel and verifies complete page coverage, revision identity, PNG hashes,
+continuation, renderer metadata and the Agent's stated review scope.
+
+```bash
+NATIVE_DOCX_RENDER_TEST=1 uv run pytest tests/integration/test_native_docx_render_stdio.py -q
+LIBREOFFICE_BIN=/usr/bin/libreoffice uv run python -m tests.codex_docx_structure.run --render --output /tmp/docx-codex-render
+uv run python -m tests.codex_docx_structure.audit /tmp/docx-codex-render
+```
+
+Rendering run 01 on 2026-09-19 completed **47 MCP calls with zero tool errors**:
+one source scan PNG and two Writer page PNGs across final/historical revisions,
+with complete DFM reads for all five managed revisions. All delivered Word pixels
+matched independent rendering. Table strings, merged title/grid, `007` versus
+`008`, source integrity, published bytes and wiki attachments passed the audits.
+Agent review detected **missing Chinese heading glyphs** on this machine; both
+Writer previews showed boxes for `研究` while the stored text was correct. This
+is an unresolved local font limitation, not a Word fidelity pass. Install suitable
+fonts in the rendering environment and repeat visual review before relying on
+those glyphs. The separate real SDK2 test covers two pages, headers/footers and
+historical/current previews; the synthetic Codex document was one page per revision.
+Neither check establishes Microsoft Word fidelity or real-corpus coverage.
+
+Final page-preview gates on 2026-09-19 passed **2,210 Python tests** (32 optional
+skips; Writer and Impress SDK2 image tests also passed separately), **199 extension
+tests**, source/type/security/dependency checks, clean-wheel CLI/SDK2, Docker
+CLI/SDK2, artifact audits and fresh/update VSIX install. Local GUI activation was
+unavailable; remote CI covers that check. Public remains 1.4.0, with no new tag.
+
 ## Native DOCX structure evaluation (Unreleased)
 
 The real Codex CLI can transcribe a synthetic scanned PDF page into a newly created,

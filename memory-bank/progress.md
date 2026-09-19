@@ -1,5 +1,24 @@
 # Progress (Updated: 2026-09-19)
 
+## 2026-09-19 — DOCX page preview local gates complete; push pending
+
+Core committed as **e2e3847b46f247d28176be6b72b07c86e770fa35** by
+u9401066 <u9401066@gap.kmu.edu.tw>. Final full suite **2,210 passed, 32 skipped
+in 78.04 seconds** (`/tmp/asset-aware-docx-render-final-full.log`). Real Writer and
+Impress SDK2 tests passed separately. Docker runtime **3aef184d8a99** passed doctor,
+list-tools and SDK2 stdio; removed only that smoke image and its builder
+**57cdb0fe291b** after terminal success, recovering ~350 MiB. Clean-wheel and VSIX
+checks passed; package audit identifies1.4.0 consistently. Extension199 tests,
+64-file contents guard and66-file VSIX. All other gates and actual47-call Codex
+pixel audit recorded below. No runtime changes after model run.
+
+README/zh, Unreleased changelog/roadmap, Wiki/spec, bilingual website and assistant
+harness bundles now describe actual DOCX page preview scope and local Chinese-font
+limitation. Original worktree remains at6ad9a5c with its preexisting edits unchanged.
+Latest public release remainsv1.4.0. Next: commit docs/assets, push main, await exact
+HEAD CI/Pages and check public bytes. Broader goal remains active; no new tag.
+
+
 ## 2026-09-19 — DOCX page previews implemented; final gates in progress
 
 Public stays **1.4.0**; user reaffirmed the **1.4.x** line. No tag or package-version

@@ -26,6 +26,7 @@
 - 📝 **Native DOCX（1.3.0）** — `read_docx`／`update_docx` 將不可變版本接到 DFM 檢查，更新先建立受管理版本，來源回寫仍明確指定；先查安裝版本 contract。元件引用可用 `read_docx_block`／`verify`，Wiki 使用獨立 projection 保留完整區塊與原始 package parts；完整性不代表抽取完整。
 - 📽️ **Native PPTX（1.4.0）** — 原生建立、投影片／備註形狀讀取、精確文字 run 更新、版本引用與完整 package Wiki；先查安裝版本 contract，完整語意／版面／文字溢出由 Agent 核對。`native-contract-v2` 支援 for_op 與 schema_sha256 分段規格。
 - 📽️ **PPTX 形狀操作（main 未發布）** — 先查 contract；`add_pptx_shapes` 新增文字框，`delete_pptx_shapes` 使用目前版本完整引用刪除形狀。已知相依會阻擋刪除，附件仍保留；Agent 核對版面與未涵蓋相依，來源回寫仍明確指定。公開版維持 1.4.0／後續 1.4.x。
+- 🖼️ **DOCX 整頁預覽（main 未發布）** — `render_docx_page` 以明確 revision／零起算 `docx_page_index` 回傳真實 MCP PNG；需另裝 LibreOffice Writer，依 `next_page_index` 看完目前與歷史版本。每次重新轉換，頁碼屬於該次輸出；Agent 核對語意／版面，不能宣稱已驗證 Microsoft Word 保真。
 - 📝 **DOCX 建立與結構（main 未發布）** — `create_docx` 獨立建立段落／表格；`add_docx_blocks`／`delete_docx_blocks` 以目前完整引用操作主本文。合併格、富文字與未修改 parts 會核對；已知範圍／欄位等相依阻擋不支援的刪除，Agent 核對分頁／版面，公開版仍 1.4.0／後續 1.4.x。
 - 📽️ **整張投影片預覽（main 未發布）** — `render_pptx_slide` 使用選配 LibreOffice Impress，以 revision／pptx_slide_key 回傳實際 PNG。Agent 比較遮擋、溢出與版面；回報渲染器與已做核對，不能宣稱 PowerPoint 保真驗證。公開版仍 1.4.0。
 - 📽️ **PPTX 投影片結構（main 未發布）** — `read_pptx_layouts` 探索版型，`add_pptx_slides` 插頁並建立空白繼承預留位置／文字框；重排與刪頁使用目前版本完整 slide_id／part 清單。保留原 parts，檢查相依／章節／播放範圍；Agent 核對畫面與檢視器快取，仍為 1.4.x 開發。

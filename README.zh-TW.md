@@ -7,6 +7,10 @@
 
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+Unreleased 新增 DOCX 整頁預覽：另裝 LibreOffice Writer 後，可將固定版本的原始
+文件轉為實際 MCP PNG，讓 Agent 逐頁核對並比較歷史版本。頁碼以每次轉換為準，
+不等於 Microsoft Word 保真驗證。詳見 [DOCX 頁面預覽](docs/wiki/Native-File-Assets.md#docx-page-previews-unreleased)。
+
 ## v1.4.0 原生簡報協作與規格查詢遷移
 
 Unreleased 新增整張投影片預覽：使用另行安裝的 LibreOffice Impress，回傳固定版本與

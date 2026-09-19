@@ -7,6 +7,11 @@
 
 🌐 [繁體中文](README.zh-TW.md) · [Docs Site](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+Unreleased DOCX page previews now return actual MCP PNGs from exact stored revisions
+using optional LibreOffice Writer. Agents can review every page and compare history;
+page numbering belongs to each rendition, and Word fidelity still requires review.
+See [DOCX page previews](docs/wiki/Native-File-Assets.md#docx-page-previews-unreleased).
+
 ## v1.4.0 native presentations and discovery migration
 
 Unreleased whole-slide previews use optional LibreOffice Impress and return actual

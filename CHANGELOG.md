@@ -9,6 +9,13 @@
 
 ### Added
 
+- Optional `render_docx_page` converts exact managed DOCX revisions with LibreOffice
+  Writer and returns actual MCP PNGs, page geometry/count, renderer identity and
+  image/PDF hashes. Whole-document conversion retains blank pages and static form
+  appearances. Resource guards, private macro-disabled profiles, process budgets
+  and source-copy checks protect the operation. Page indices are rendition-local;
+  Agent semantic/visual review and Word fidelity claims remain separate.
+
 - Native DOCX creation and body paragraph/table insertion/deletion, with rich runs,
   explicit twip grids, merged cells and serialized formatting checks. Structural
   edits use current full block references and preserve unrelated XML/package bytes.

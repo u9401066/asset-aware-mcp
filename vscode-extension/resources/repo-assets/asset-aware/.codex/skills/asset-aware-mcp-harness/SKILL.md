@@ -81,7 +81,12 @@ verification.
   Covered merged cells must be default empty. Known section/range/field/revision/
   embedded dependencies block unsupported deletion. Original parts/history remain.
   MCP checks serialized structure and untouched XML/bytes; Agent reviews page flow,
-  inherited formatting, fields and rendering. Native DOCX page preview remains open.
+  inherited formatting, fields and rendering. When configured, render_docx_page
+  returns actual whole-page MCP PNGs at an explicit revision/docx_page_index. Follow
+  next_page_index and compare current/historical pages with full native content.
+  Optional LibreOffice Writer uses exact source bytes; record renderer, page count
+  and limitations. Fresh conversions can repaginate fields; indices belong to that
+  rendition. Static previews do not certify Microsoft Word fidelity.
   Source publication/writeback is explicit; public stays 1.4.0 / Unreleased for 1.4.x.
 
 - When configured, render_pptx_slide returns a whole-slide MCP PNG using optional

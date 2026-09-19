@@ -1,6 +1,7 @@
 # Roadmap
 
-- [x] Unreleased / 1.4.x: independent DOCX creation and reference-bound body paragraph/table insertion/deletion; merged grids, rich text, serialized readback and dependency guards. Full rendered page review and general Word structure editing remain open.
+- [x] Unreleased / 1.4.x: optional native DOCX whole-page MCP PNG previews from exact revisions, Writer pagination metadata and resource/process guards. Agents perform visual review; general Word fidelity and real-corpus coverage remain open.
+- [x] Unreleased / 1.4.x: independent DOCX creation and reference-bound body paragraph/table insertion/deletion; merged grids, rich text, serialized readback and dependency guards. General Word structure editing and Microsoft Word fidelity review remain open.
 
 - [x] Unreleased / 1.4.x: revision-pinned whole-slide previews through optional LibreOffice Impress; hidden/reordered/history SDK2 checks and actual Codex visual review with independent pixel audits. PowerPoint fidelity and dynamic playback remain separate.
 

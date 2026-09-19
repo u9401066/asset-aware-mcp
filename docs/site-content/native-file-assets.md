@@ -209,6 +209,39 @@ custom citation templates only affect presentation. Existing snapshots are never
 replaced. Agents retain responsibility for semantic, rendered and formula review.
 
 
+## DOCX page previews (Unreleased)
+
+公開版仍為 **1.4.0**；此功能在 main 累積，後續沿用 **1.4.x**。
+先查 `contract(for_op="render_docx_page")` 的 `docx_rendering`。需另外安裝
+LibreOffice Writer；可用 `LIBREOFFICE_BIN` 指定可執行檔。缺少 Writer 或未產生
+有效 PDF 會明確失敗，`configured` 只表示已接上 renderer，不保證本機安裝完整。
+
+```python
+document(op="native", native_request={
+    "op": "render_docx_page", "asset_id": asset_id, "revision": revision,
+    "docx_page_index": 0, "render_size": 1400
+})
+```
+
+回傳實際 MCP PNG、`image_sha256`、`rendered_pdf_sha256`、renderer 名稱／版本、
+`page_count`、`page_geometry` 與 `next_page_index`。頁索引零起算；沿用明確版本，
+依續頁欄位看完文件，並比較目前與歷史版本。Agent 核對文字、合併表格、頁首頁尾、
+裁切、分頁與字型顯示，再决定是否修正。完整 DFM 仍用於內容／引用核對。
+
+每次使用原始 DOCX 位元組的暫存副本重新轉換整份文件，不經 DFM 重建；保留空白頁，
+表單採靜態列印外觀。欄位可能重算，所以頁索引只屬於該次 rendition，不能當成
+原生 DOCX 的固定證據 locator。字型與 LibreOffice／Microsoft Word 的分頁可能不同；
+預覽不等於 Word 保真或語意核對通過。批註、修訂顯示及互動內容需另行檢查。
+
+轉換採獨立 profile、停用巨集並限制執行時間／輸出，核對暫存來源未變；不修改
+受管理版本或人類來源。已知外部載入關係、INCLUDE／DDE／DATABASE 欄位、OLE、
+altChunk、外連 VML、SVG 等會拒絕，普通超連結可保留。這些是機械保護，並非 OS
+沙箱。上限為 2,000 頁、64 MiB 轉換 PDF、64–2,048 像素預覽長邊。
+
+轉換選項參考 [LibreOffice PDF export](https://help.libreoffice.org/latest/en-US/text/shared/guide/pdf_params.html)
+與 [啟動參數](https://help.libreoffice.org/latest/en-US/text/shared/guide/start_parameters.html)。
+實際 Codex 看圖及獨立像素比對方式見 [驗證流程](Release-And-Testing#docx-page-rendering-evaluation-unreleased)。
+
 ## DOCX creation and body structure (Unreleased)
 
 公開版仍維持 **1.4.0**；以下累積在 main，供後續 **1.4.x**。先用
@@ -247,8 +280,8 @@ MCP 讀回新區塊的文字、格式、欄寬與合併狀態，並核對未修�
 
 所有變更先建立受管理版本；`publish`／`writeback` 仍明確執行。舊區塊引用可作
 歷史證據，不能拿來修改新版本。完整 DFM 讀回與 package checks 不代表畫面相同；
-Agent 仍需核對語意、分頁、繼承格式、Word 欄位／檢視器快取。此階段尚未提供
-原生 DOCX 整頁 MCP 預覽、樣式庫設計或任意 Word 物件結構編輯。
+Agent 仍需核對語意、分頁、繼承格式、Word 欄位／檢視器快取。可使用下述
+DOCX 整頁 MCP 預覽；樣式庫設計與任意 Word 物件結構編輯仍待擴充。
 
 底層建立參考 [python-docx Document API](https://python-docx.readthedocs.io/en/latest/api/document.html)
 與 [合併格模型](https://python-docx.readthedocs.io/en/latest/dev/analysis/features/table/cell-merge.html)；

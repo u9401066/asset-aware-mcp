@@ -244,13 +244,21 @@ New revisions create new snapshots. Existing notes are verified and never replac
 ## v1.3.0: native DOCX
 Version 1.3.0 adds read_docx and update_docx using the existing DFM checks. Read all excerpts at a fixed revision, preserve frontmatter and block markers, then submit complete edits to create a managed revision. Untouched OOXML parts are checked byte for byte; source writeback stays explicit. DOCX block references now support bounded read_docx_block and native verification. A distinct docx-blocks-v1 wiki projection includes full parsed block records, the original DOCX and exact package-part attachments, preserving previous snapshots. Integrity does not prove extraction completeness. Unreleased body creation and insertion/deletion are described below. Document-wide styles and full layout verification remain separate work.
 
+### DOCX page previews (Unreleased)
+
+render_docx_page requires asset_id, an explicit revision and zero-based docx_page_index. Optional LibreOffice Writer converts exact original DOCX bytes and returns an actual MCP PNG plus page count/geometry, continuation, renderer identity and image/PDF hashes. Start at page 0 and follow next_page_index; compare current and historical pages with complete DFM content. LIBREOFFICE_BIN can select the executable; missing Writer fails explicitly.
+
+Each request converts the complete document in a fresh private profile, retaining blank pages and static form appearance. Fields can recalculate, so page indices belong to that rendition; they are not stable DOCX evidence locators. Installed fonts and Writer pagination may differ from Microsoft Word. Agents review text, tables, headers/footers, clipping and page flow. Previews do not certify Word fidelity or semantic correctness.
+
+Known external resource relationships, resource-loading fields, embedded OLE/chunks, linked VML and SVG fail before conversion. Macro-disabled profiles, process/output budgets and source-copy checks protect the operation; this is not an OS sandbox. Sources and managed revisions stay intact. Limits: 2,000 pages, 64 MiB converted PDF, 64–2,048 pixel previews. See [LibreOffice PDF export](https://help.libreoffice.org/latest/en-US/text/shared/guide/pdf_params.html) and [actual evaluation](#/release-testing).
+
 ### DOCX creation and body structure (Unreleased)
 
 Public version stays 1.4.0; this work is on main for 1.4.x. Query contract(for_op="create_docx") for docx_structure_enabled. create_docx creates independent native Word paragraphs and editable tables, with rich runs, half-point sizes, explicit twip grids, merged cells, shading and repeating headers. Covered merged cells must be default/empty.
 
 add_docx_blocks inserts at start/end or before/after a current full block reference. delete_docx_blocks takes docx_block_refs for complete top-level body paragraphs/tables. Pin expected_revision; read all DFM chunks and block listings after each mutation. update_docx still edits existing blocks using complete DFM and original markers.
 
-Known section, range, field, revision and embedded-content dependencies block unsupported deletion. New blocks are checked after serialization; untouched main XML and other package-part bytes are preserved. History and attachments remain after deletion. Agent reviews meaning, page flow, inherited styles and fields/viewer caches. Native whole-page DOCX rendering and general Word object/style design remain open. Source publication/writeback remains explicit.
+Known section, range, field, revision and embedded-content dependencies block unsupported deletion. New blocks are checked after serialization; untouched main XML and other package-part bytes are preserved. History and attachments remain after deletion. Agent reviews meaning, page flow, inherited styles and fields/viewer caches. Use the optional page renderer below for actual images; general Word object/style design remains open. Source publication/writeback remains explicit.
 
 ### v1.4.0: native PPTX and schema discovery
 
@@ -494,11 +502,45 @@ Add --merges to tests.codex_pptx_tables.run, optionally with --grid and --deriva
 
 Merge run 01 on 2026-09-19 (--grid --merges) completed 180 MCP calls with zero tool errors, exact first transcription, one actual PNG and thirteen complete records. Five grid and six merge/split intermediate revisions passed independent audits of paragraph XML, original strings/styles, source, published files and wiki. No full-slide rendering was performed. Full pytest passed 2,015 tests with 30 optional skips; one subsequent absent-anchor-body regression passed within an 18-test focused run, with production source unchanged. VSIX tests passed 199.
 
+## DOCX page rendering evaluation (Unreleased)
+
+Add \`--render\` to \`tests.codex_docx_structure.run\` to make Codex view every page
+of the final DOCX and the historical revision with the temporary \`008\` Count.
+The isolated MCP server receives an explicit \`LIBREOFFICE_BIN\` when set. The
+independent auditor reconverts exact stored bytes, checks every delivered RGB
+pixel and verifies complete page coverage, revision identity, PNG hashes,
+continuation, renderer metadata and the Agent's stated review scope.
+
+\`\`\`bash
+NATIVE_DOCX_RENDER_TEST=1 uv run pytest tests/integration/test_native_docx_render_stdio.py -q
+LIBREOFFICE_BIN=/usr/bin/libreoffice uv run python -m tests.codex_docx_structure.run --render --output /tmp/docx-codex-render
+uv run python -m tests.codex_docx_structure.audit /tmp/docx-codex-render
+\`\`\`
+
+Rendering run 01 on 2026-09-19 completed **47 MCP calls with zero tool errors**:
+one source scan PNG and two Writer page PNGs across final/historical revisions,
+with complete DFM reads for all five managed revisions. All delivered Word pixels
+matched independent rendering. Table strings, merged title/grid, \`007\` versus
+\`008\`, source integrity, published bytes and wiki attachments passed the audits.
+Agent review detected **missing Chinese heading glyphs** on this machine; both
+Writer previews showed boxes for \`研究\` while the stored text was correct. This
+is an unresolved local font limitation, not a Word fidelity pass. Install suitable
+fonts in the rendering environment and repeat visual review before relying on
+those glyphs. The separate real SDK2 test covers two pages, headers/footers and
+historical/current previews; the synthetic Codex document was one page per revision.
+Neither check establishes Microsoft Word fidelity or real-corpus coverage.
+
+Final page-preview gates on 2026-09-19 passed **2,210 Python tests** (32 optional
+skips; Writer and Impress SDK2 image tests also passed separately), **199 extension
+tests**, source/type/security/dependency checks, clean-wheel CLI/SDK2, Docker
+CLI/SDK2, artifact audits and fresh/update VSIX install. Local GUI activation was
+unavailable; remote CI covers that check. Public remains 1.4.0, with no new tag.
+
 ## Native DOCX structure evaluation (Unreleased)
 
 Run tests.codex_docx_structure.run with a new --output directory to have the logged-in Codex CLI transcribe a synthetic scanned PDF page into a new editable DOCX table. It changes/restores a cell, inserts/deletes disposable body blocks, verifies old evidence and exports a wiki. Only native document MCP access is enabled; ordinary pytest never invokes Codex.
 
-The independent tests.codex_docx_structure.audit checks actual source PNG pixels, exact strings, rich formatting, grids, merges, every managed revision, complete DFM reads before edits, full references, published bytes and wiki attachments. DOCX page rendering and real-corpus coverage remain outside this evaluation. Public stays 1.4.0 / Unreleased for 1.4.x.
+The independent tests.codex_docx_structure.audit checks actual source PNG pixels, exact strings, rich formatting, grids, merges, every managed revision, complete DFM reads before edits, full references, published bytes and wiki attachments. Add --render for the page review described below; real-corpus coverage remains open. Public stays 1.4.0 / Unreleased for 1.4.x.
 
 Run 01 on 2026-09-19 completed **45 MCP calls with zero tool errors**, one actual
 source PNG and complete DFM readback for all five managed DOCX revisions. Exact
