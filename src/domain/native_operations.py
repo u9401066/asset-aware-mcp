@@ -18,6 +18,7 @@ NativeOperation = Literal[
     "create_workbook_from_table",
     "read_workbook",
     "update_worksheet_grid",
+    "update_workbook_table",
     "add_worksheets",
     "rename_worksheet",
     "reorder_worksheets",
@@ -105,6 +106,7 @@ NATIVE_OPERATIONS = {
         "asset_id", "revision workbook_view text_offset text_limit"
     ),
     "update_worksheet_grid": _fields("asset_id expected_revision worksheet_grid"),
+    "update_workbook_table": _fields("asset_id expected_revision table_update"),
     "add_worksheets": _fields(
         "asset_id expected_revision worksheet_insert", "allow_3d_membership_change"
     ),

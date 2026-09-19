@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any
 
 from src.application.native_document_contract import native_asset_summary
 
+MAX_WORKBOOK_READ_BYTES = 16 * 1024 * 1024
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -17,6 +19,7 @@ if TYPE_CHECKING:
         NativeFileAsset,
     )
     from src.domain.native_grid import NativeGridAdapter
+    from src.domain.native_table_edit import NativeTableEditAdapter
     from src.domain.native_workbook import NativeWorkbookStructureAdapter
 
 
@@ -27,16 +30,19 @@ class NativeWorkbookOperations:
         adapter: NativeWorkbookStructureAdapter,
         grid: NativeGridAdapter | None = None,
         *,
+        tables: NativeTableEditAdapter | None = None,
         summarize: Callable[[NativeFileAsset], dict[str, Any]] | None = None,
     ):
         self.repository = repository
         self.adapter = adapter
         self.grid = grid
+        self.tables = tables
         self.summarize = summarize or (
             lambda asset: native_asset_summary(
                 asset,
                 workbook_structure_enabled=True,
                 workbook_grid_enabled=grid is not None,
+                workbook_table_edit_enabled=tables is not None,
             )
         )
 
@@ -66,7 +72,22 @@ class NativeWorkbookOperations:
         if asset.archived or asset.revision != request.expected_revision:
             raise ValueError("Archived or stale native asset; inspect before editing")
         data = self.repository.read(asset.asset_id, request.expected_revision)
-        if request.op == "update_worksheet_grid":
+        if request.op == "update_workbook_table":
+            if self.tables is None:
+                raise ValueError("Native Table editing adapter is not configured")
+            assert request.table_update is not None
+            updated, checks = self.tables.update(data, request.table_update)
+            # Separate cell/reference budgets do not bound the combined public
+            # representation. Reject before CAS if complete review is impossible.
+            _record_text(
+                {
+                    **self.adapter.read(updated, references=True),
+                    "asset_id": asset.asset_id,
+                    "revision": hashlib.sha256(updated).hexdigest(),
+                    "operation_result": checks.model_dump(),
+                }
+            )
+        elif request.op == "update_worksheet_grid":
             if self.grid is None:
                 raise ValueError("Native workbook grid adapter is not configured")
             assert request.worksheet_grid is not None
@@ -83,8 +104,10 @@ class NativeWorkbookOperations:
             updated, checks = self.adapter.reorder(
                 data, request.worksheet_order, request.allow_3d_membership_change
             )
-        else:
+        elif request.op == "delete_worksheets":
             updated, checks = self.adapter.delete(data, request.worksheet_keys)
+        else:
+            raise ValueError("Unsupported native workbook operation")
         committed = self.repository.commit(
             asset.asset_id, request.expected_revision, updated, checks
         )
@@ -109,9 +132,7 @@ class NativeWorkbookOperations:
         }
 
 
-def _read_page(
-    record: dict[str, Any], request: NativeDocumentRequest, revision: str
-) -> dict[str, Any]:
+def _record_text(record: dict[str, Any]) -> str:
     text = json.dumps(
         record,
         ensure_ascii=False,
@@ -119,9 +140,16 @@ def _read_page(
         separators=(",", ":"),
         allow_nan=False,
     )
-    encoded = text.encode("utf-8")
-    if len(encoded) > 16 * 1024 * 1024:
+    if len(text.encode("utf-8")) > MAX_WORKBOOK_READ_BYTES:
         raise ValueError("Workbook structure exceeds the read-back budget")
+    return text
+
+
+def _read_page(
+    record: dict[str, Any], request: NativeDocumentRequest, revision: str
+) -> dict[str, Any]:
+    text = _record_text(record)
+    encoded = text.encode("utf-8")
     start = min(request.text_offset, len(text))
     end = min(start + request.text_limit, len(text))
     result: dict[str, Any] = {

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from lxml import etree
 
+from src.infrastructure.native_grid_xml import Rectangle, address, cell_map
 from src.infrastructure.native_ooxml import DOC_REL_NS, relationships_path
 from src.infrastructure.native_spreadsheet_reader import NS
 from src.infrastructure.native_workbook_package import WORKSHEET_REL
@@ -22,6 +23,7 @@ def table_inventory(book: NativeWorkbookPackage) -> list[dict[str, Any]]:
             continue
         part = sheet["key"]["part"]
         root = book.package.xml(part)
+        cells = cell_map(root)
         relations = (
             book.package.relationships(part)
             if relationships_path(part) in book.package.parts
@@ -44,6 +46,7 @@ def table_inventory(book: NativeWorkbookPackage) -> list[dict[str, Any]]:
                         dict(col.attrib)
                         for col in table.findall("s:tableColumns/s:tableColumn", NS)
                     ],
+                    "header_cells": _headers(book, table, cells),
                     "sha256": hashlib.sha256(raw).hexdigest(),
                     "xml": etree.tostring(table, encoding="unicode"),
                     "xml_scope": "Complete parsed table XML; sha256 pins the original package part bytes.",
@@ -51,4 +54,34 @@ def table_inventory(book: NativeWorkbookPackage) -> list[dict[str, Any]]:
             )
             if len(result) > 1024:
                 raise ValueError("Native Table inventory exceeds the inspection budget")
+    return result
+
+
+def _headers(
+    book: NativeWorkbookPackage,
+    table: etree._Element,
+    cells: dict[str, etree._Element],
+) -> list[dict[str, Any]]:
+    if table.get("headerRowCount", "1") == "0":
+        return []
+    bounds = Rectangle.parse(table.get("ref", ""))
+    result = []
+    for index, column in enumerate(
+        table.findall("s:tableColumns/s:tableColumn", NS), bounds.first_column
+    ):
+        location = address(bounds.first_row, index)
+        cell = cells.get(location)
+        record = {
+            "column_id": column.get("id"),
+            "cell": location,
+            "value": book._value(cell),
+            "cell_xml": etree.tostring(cell, encoding="unicode")
+            if cell is not None
+            else None,
+            "shared_string_xml": None,
+        }
+        if cell is not None and cell.get("t") == "s":
+            item = book.shared_strings[int(cell.findtext("s:v", namespaces=NS))]
+            record["shared_string_xml"] = etree.tostring(item, encoding="unicode")
+        result.append(record)
     return result

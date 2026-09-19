@@ -52,6 +52,7 @@ from src.infrastructure.native_wiki_publisher import FileNativeWikiPublisher
 from src.infrastructure.native_workbook_grid import NativeWorkbookGrid
 from src.infrastructure.native_workbook_range import NativeWorkbookRange
 from src.infrastructure.native_workbook_structure import NativeWorkbookStructure
+from src.infrastructure.native_workbook_table_edit import NativeWorkbookTableEdit
 from src.infrastructure.ocr_processor import OCRProcessor
 from src.infrastructure.pymupdf_preflight import PyMuPDFPreflightInspector
 from src.infrastructure.subprocess_ingest_worker_runner import (
@@ -193,6 +194,7 @@ native_document_service = NativeDocumentService(
     docx_renderer=LibreOfficeWordRenderer(),
     workbook_structure=NativeWorkbookStructure(),
     workbook_grid=NativeWorkbookGrid(),
+    workbook_tables=NativeWorkbookTableEdit(),
     workbook_ranges=NativeWorkbookRange(),
     table_workspaces=table_service,
 )

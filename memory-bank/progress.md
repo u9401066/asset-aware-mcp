@@ -1,5 +1,29 @@
 # Progress (Updated: 2026-09-19)
 
+## Native Table column editing — verified locally, publication pending
+
+Done: exact native Table column/header/calculated/totals edits, preserved rich runs
+and original parts, stable IDs/structured references, source-schema guards, combined
+readback budget before CAS and original-revision before receipts. Generic guards
+remain. Final pytest05:2716passed33skipped99.21sec; actual Codex03:66success/0errors,
+132.75sec, independent scan/native/history/Wiki audit passed. Source SHA07e8fcbe8627f93cded1a89af22dbd2423b203f210ba792bd3f3dd13e360edcc
+matches wheel and Docker. Local quality/security/extension/artifact/runtime and
+browser checks passed. No local VSIX activation or Excel render/recalculation claim.
+Earlier capacity/Wiki/audit/receipt defects were reproduced and corrected; prior
+successful audits without the new receipt check do not certify the final behavior.
+Doing: scoped main commits/push and exact CI/Pages/public verification.
+Public1.4.0 / Unreleased1.4.x. Independent native Table creation, totals-row lifecycle,
+axis moves and wider cross-format real-corpus/fidelity goal remain active.
+
+## Native Table column editing — in progress
+
+Revalidated main0d0e65b clean; previous version-policy-only turn was no progress.
+Table expansion is already published/verified (CI35413821293, Pages35413820003,
+five public byte checks), superseding historical pending entries below.
+Implement exact Table header/column rename, calculated-column policy and totals
+edits; preserve native styles/references and evidence. Tests and actual Codex
+verification precede publication. Public1.4.0 / Unreleased1.4.x; whole goal active.
+
 Core native Table expansion committed as b4e797e; the accompanying documentation,
 bilingual site and synchronized assistant assets form the next scoped commit. All
 local checks and actual Codex proof passed; push and exact CI/Pages checks follow.

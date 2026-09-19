@@ -29,6 +29,15 @@ class NativeCellGuards:
         cell: etree._Element | None,
         sheet_name: str,
     ) -> None:
+        self.check_structure(root, address, sheet_name)
+        self._load_tables(root, sheet_name)
+        self._check_tables(sheet_name, address)
+        self._check_cell_features(cell)
+
+    def check_structure(
+        self, root: etree._Element, address: str, sheet_name: str
+    ) -> None:
+        """Shared geometry/protection guards for dedicated Table-aware writers."""
         if root.find("s:sheetProtection", NS) is not None:
             raise ValueError("Protected worksheets require an explicit unlock workflow")
         if sheet_name not in self._guard_cache:
@@ -51,9 +60,6 @@ class NativeCellGuards:
                     raise ValueError(
                         "Shared/array/data-table formula ranges require a range-aware edit"
                     )
-        self._load_tables(root, sheet_name)
-        self._check_tables(sheet_name, address)
-        self._check_cell_features(cell)
 
     def _load_tables(self, root: etree._Element, sheet_name: str) -> None:
         if sheet_name not in self._table_cache:

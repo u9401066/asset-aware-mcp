@@ -83,6 +83,7 @@ from src.domain.native_selection import (  # noqa: TC001 -- Pydantic schema
     NativeSelectionReference,
     NativeSelectionSelector,
 )
+from src.domain.native_table_edit import NativeTableUpdate  # noqa: TC001 -- schema
 from src.domain.native_table_workspace import (  # noqa: TC001 -- Pydantic schema
     NativeTableProjection,
     NativeTableWorkbookCreate,
@@ -150,6 +151,7 @@ class NativeDocumentRequest(NativeModel):
     workbook_view: Literal["structure", "references"] = "structure"
     worksheet_insert: NativeWorksheetInsert | None = None
     worksheet_grid: NativeGridUpdate | None = None
+    table_update: NativeTableUpdate | None = None
     worksheet_rename: NativeWorksheetRename | None = None
     worksheet_keys: list[NativeWorksheetKey] = Field(
         default_factory=list, max_length=32

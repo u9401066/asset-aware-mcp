@@ -1,5 +1,17 @@
 # System Architect
 
+## 2026-09-19 — Native Table specialized edit port
+
+NativeTableUpdate/NativeTableEditAdapter live in domain. NativeWorkbookOperations
+dispatches the configured port under existing repository CAS and complete paged
+readback; capabilities advertise actual adapter availability. Infrastructure
+NativeWorkbookTableEdit coordinates TableCellWriter, column metadata and source
+checks through WorkbookPlan. GridTables accepts explicit identity changes for
+structured-reference reuse. Header inventory exposes cell/resolved shared-string
+XML separately from historical cell evidence. No dependency or version changes.
+The application checks combined reference inventory/receipt capacity before CAS;
+the infrastructure keeps original cell roots for truthful before-state receipts.
+
 ## 2026-09-19 — Explicit Table expansion composition
 
 NativeGridEdit owns typed optional NativeTableExpansion part/expected_ref intent.

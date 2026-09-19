@@ -1,5 +1,48 @@
 # Active Context
 
+## Native Table column editing — final local verification passed
+
+Final source SHA07e8fcbe8627f93cded1a89af22dbd2423b203f210ba792bd3f3dd13e360edcc
+matches actual Codex03, built wheel03 and Docker9175c4e212dd. Actual03 completed
+66successfulcalls/zeroerrors/132.75sec; one real MCP scan PNG, ten exact strings,
+rich header rename, calculated/totals edits, complete original/current references,
+original before-formula receipts, historical Count/007 and two Wikis independently
+verified. No Excel rendering or formula evaluation claim; supplied Table template.
+Final pytest05:2716passed33skipped99.21sec. Ruff531files, mypy237sources, Bandit,
+lock/security/workflow audits, extension199tests/VSIXinstall-update, artifact/wheel/
+Dockerstdio, 18skills/assets, metadata/labels and zh/en desktop/mobile browser pass.
+No local VSIX activation (no display/Xvfb). Final site statistics/navigation/version
+terms and console checks passed after moving browser temp storage to private SHM;
+the preceding run reported ERR_INSUFFICIENT_RESOURCES and is not counted as passing.
+
+The full combined reference+receipt16MiB budget is checked before CAS. Receipt
+before values come from original package cells, not renamed intermediate formulas.
+Regression reproduced the old receipt defect; strengthened audit rejects actual02.
+Earlier audit reports are retained as audit.before-receipt-check.json. Actual01 also
+needed the schema allowlist correction. Only actual03 proves the final source.
+pytest02exit120 came from temporary Docker disk pressure;03 caught a Wiki-link
+suffix, both corrected. Removed only completed own builder/runtime/pytest artifacts.
+Keep final Docker, actual evidence and original detached user worktree intact.
+
+Next: source/docs scoped main commits and push, exact CI/Pages/public validation.
+Public stays1.4.0 / Unreleased1.4.x. Native Table object creation, totals-row lifecycle,
+surviving-axis moves and broader cross-format real-corpus/fidelity remain open.
+The overall goal is active; this is a Table editing milestone.
+
+## 2026-09-19 — native Table column editing
+
+Previous turn only reconfirmed version policy (no feature progress). Revalidated
+clean main/origin at 0d0e65b. Table expansion publication completed: CI35413821293
+all10 jobs, Pages35413820003 all3, five public files byte-identical; proof retained
+at /tmp/asset-aware-table-expansion-publication-proof.json. Older pending entries
+below are historical. Original detached user worktree stays untouched.
+
+Doing: specialized Table column/header, scalar calculated-column and existing
+totals editing, with exact metadata/cell/reference correspondence and preserved
+formatting. Spec precedes code. Add regressions, SDK2 and actual Codex evidence.
+Public remains 1.4.0; all new work is Unreleased/future 1.4.x, no task-based bump.
+The broad cross-format CRUD/fidelity/evidence/real-corpus goal remains active.
+
 Core native Table expansion committed as b4e797e; the accompanying documentation,
 bilingual site and synchronized assistant assets form the next scoped commit. All
 local checks and actual Codex proof passed; push and exact CI/Pages checks follow.

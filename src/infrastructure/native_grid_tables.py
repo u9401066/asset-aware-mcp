@@ -188,8 +188,10 @@ class GridTables:
                     return state.name
         return None
 
-    def rewrite_references(self) -> dict[str, int]:
-        changes = []
+    def rewrite_references(
+        self, explicit_changes: list[GridTableChange] | None = None
+    ) -> dict[str, int]:
+        changes = list(explicit_changes or [])
         for edit in self.edits:
             if edit.change.before == edit.change.after:
                 continue

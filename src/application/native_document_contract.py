@@ -21,6 +21,7 @@ def native_asset_summary(
     pdf_enabled: bool = False,
     workbook_structure_enabled: bool = False,
     workbook_grid_enabled: bool = False,
+    workbook_table_edit_enabled: bool = False,
     table_workspaces_enabled: bool = False,
 ) -> dict[str, Any]:
     return {
@@ -77,6 +78,9 @@ def native_asset_summary(
             "update_worksheet_grid": asset.format in {"xlsx", "xlsm"}
             and workbook_grid_enabled
             and not asset.archived,
+            "update_workbook_table": asset.format in {"xlsx", "xlsm"}
+            and workbook_table_edit_enabled
+            and not asset.archived,
             "project_workbook_table": asset.format in {"xlsx", "xlsm"}
             and table_workspaces_enabled,
             "inspect_cells": asset.format in {"xlsx", "xlsm"},
@@ -98,6 +102,7 @@ def native_document_contract(
     pdf_enabled: bool = False,
     workbook_structure_enabled: bool = False,
     workbook_grid_enabled: bool = False,
+    workbook_table_edit_enabled: bool = False,
     table_workspaces_enabled: bool = False,
     derivations_enabled: bool = False,
     pptx_rendering_configured: bool = False,
@@ -112,6 +117,8 @@ def native_document_contract(
         **schema_discovery(for_op),
         "workbook_structure_enabled": workbook_structure_enabled,
         "workbook_grid_enabled": workbook_grid_enabled,
+        "workbook_table_edit_enabled": workbook_table_edit_enabled,
+        "workbook_table_edit_policy": "update_workbook_table pins worksheet/part/ref, file revision and column IDs/expected names. Rename headers and existing structured references together; rich headers require exact header_runs. New formulas use final names. Calculated require_matching preserves exceptions by rejecting; replace_all explicitly replaces ordinary values; null/keep_cells removes metadata only. Totals edits require an existing totals row. Read complete current references and operation receipt. Source schema dependencies may block edits. Agent reviews meaning, formula results and rendered formatting; old evidence and A2T bindings never migrate.",
         "workbook_grid_policy": "Sequential row/column insert/delete uses exact worksheet keys and revisions. Preserve native payloads, styles and modeled dependencies; read the complete operation receipt. Geometry uses declared metrics. Dynamic sources, rendered layout and recalculated results need Agent review; historical references never migrate.",
         "table_expansion_enabled": workbook_grid_enabled,
         "table_workspaces_enabled": table_workspaces_enabled,
@@ -146,6 +153,7 @@ def native_document_contract(
             workbook_structure_enabled,
             table_workspaces_enabled,
             workbook_grid_enabled,
+            workbook_table_edit_enabled,
         ),
         "verification": "MCP checks integrity; agents verify semantics, layout and calculated results.",
         "docx_policy": "Pin revision; assemble all DFM chunks with frontmatter/markers. Updates stage versions; writeback is explicit.",
@@ -217,6 +225,7 @@ def _formats(
     workbook_structure_enabled: bool = False,
     table_workspaces_enabled: bool = False,
     workbook_grid_enabled: bool = False,
+    workbook_table_edit_enabled: bool = False,
 ) -> dict[str, list[str]]:
     workbook_ops = (
         [
@@ -240,6 +249,8 @@ def _formats(
         )
     if workbook_structure_enabled and workbook_grid_enabled:
         workbook_ops.append("update_worksheet_grid")
+    if workbook_structure_enabled and workbook_table_edit_enabled:
+        workbook_ops.append("update_workbook_table")
     return {
         "pdf": [
             "create_pdf",

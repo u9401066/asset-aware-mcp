@@ -1,5 +1,14 @@
 # System Patterns
 
+## Native Table plans retain both original and intermediate cell state (2026-09-19)
+
+Dedicated Table edits share generic geometry/protection guards, then coordinate
+metadata and cell content in a private WorkbookPlan. Formula matching uses the
+current intermediate names; public before receipts read original package cells.
+These states must not be conflated. Rich header runs clone shared strings and retain
+formatting. The application checks the combined complete reference/receipt budget
+before the repository CAS, then exposes hash-pinned readback for Agent review.
+
 ## Native run preservation and complete schema pages (2026-09-18)
 
 PPTX updates resolve revision-scoped slide/notes/shape/paragraph/run locators and

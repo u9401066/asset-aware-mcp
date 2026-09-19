@@ -217,6 +217,45 @@ Native Table edge insertion requires explicit expand_tables to extend membership
 calculated columns and partial array structures retain their dedicated edit boundaries.
 No structural preview claims semantic, recalculation or visual completeness.
 
+### Native Table column edits (Unreleased, 1.4.x)
+
+`update_workbook_table` selects one exact worksheet key, active Table part and
+`expected_ref`, with the normal file `expected_revision`. Each column edit uses
+its current numeric `column_id` and `expected_name`. A request changes metadata
+and worksheet cells in one private package plan and one repository CAS.
+
+- `name` renames the column and header together. Existing formulas, defined names
+  and modeled structured references follow the original column identity. Supplied
+  new formulas use the final names. Rich headers require explicit `header_runs`
+  matching the existing runs and concatenating to the new name. Complete
+  `read_workbook.tables[].header_cells` exposes original cell/resolved shared-string
+  XML for this inspection without changing historical read_cell representations. Retain run formats
+  and clone shared strings so other cells are unaffected.
+- `calculated` sets a scalar formula anchored at the first data row. Its policy
+  `require_matching` accepts blank cells or formulas matching the previous column
+  formula; exceptions reject. `replace_all` explicitly replaces ordinary data
+  values/formulas. Formula removal uses null plus `keep_cells`, retaining cell
+  contents while removing future automatic-fill metadata.
+- `totals` edits an existing totals row: blank, literal label, scalar formula or
+  an explicit supported SUBTOTAL function. It never inserts or consumes a data
+  row implicitly. Bounds/filters/column IDs and existing styles remain intact.
+- Preserve generic cell guards. Protected, merged, metadata-bearing, array/shared
+  formula and unsupported rich/phonetic edits require their own workflows. Mapped
+  or query schemas are not silently renamed; pivot source header changes need
+  coordinated field identities and therefore reject. Invalidate affected caches,
+  request recalculation, and expose the complete receipt and reference readback.
+
+MCP checks exact package/cell readback and untouched parts. Before commit it also
+checks the complete public reference inventory plus receipt fits the 16 MiB read
+budget; separate component budgets do not prove a readable combined result.
+Receipt cell `before` values come from the original revision, even when existing
+formulas were renamed during a private intermediate stage before formula edits.
+Agent checks meaning,
+rendered headers, filter visibility, formula results and totals semantics. Old
+evidence and A2T bindings stay revision-scoped; public stays 1.4.0.
+Primary references: [SpreadsheetML tableColumn](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.tablecolumn)
+and [XlsxWriter tables](https://xlsxwriter.readthedocs.io/working_with_tables.html).
+
 ### Explicit native Table expansion (Unreleased, 1.4.x)
 
 read_workbook.tables exposes worksheet/part identity, attributes, column IDs, raw

@@ -1,5 +1,17 @@
 # Decision Log
 
+## 2026-09-19 — Native Table metadata and cells share one explicit operation
+
+Generic cell edits retain their Table guards. A separate typed update selects
+worksheet/part/ref and column IDs/names, coordinates rich headers/formulas/totals,
+rewrites existing references by identity and commits once. New formulas use final
+names. require_matching protects calculated exceptions; replace_all is explicit;
+null/keep_cells removes future-fill metadata without clearing existing cells.
+Read-only header XML enables run inspection without changing historical read_cell
+representations. Shared strings are cloned, styles retained, pivot/query schema
+dependencies checked. Mechanical readback is distinct from Agent semantic/visual
+and recalculated-result review. Public remains 1.4.0 / Unreleased within 1.4.x.
+
 ## 2026-09-19 — Table membership and generated values require explicit intent
 
 A worksheet insertion and logical native Table membership are separate operations.
