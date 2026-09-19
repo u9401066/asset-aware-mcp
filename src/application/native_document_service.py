@@ -16,6 +16,7 @@ from src.application.native_evidence_service import (
     attach_native_evidence,
 )
 from src.application.native_pdf_operations import NativePdfOperations
+from src.application.native_pdf_region_service import NativePdfRegionService
 from src.application.native_pptx_operations import NativePptxOperations
 from src.application.native_rendition_operations import NativeRenditionOperations
 from src.application.native_schema import read_schema
@@ -193,6 +194,7 @@ class NativeDocumentService:
             "create_pdf": self._pdf_operation,
             "read_pdf": self._pdf_operation,
             "read_pdf_page": self._pdf_operation,
+            "read_pdf_region": NativePdfRegionService(self.evidence).read,
             "render_pdf_page": self._pdf_operation,
             "add_pdf_pages": self._pdf_operation,
             "update_pdf": self._pdf_operation,

@@ -7,11 +7,13 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from src.application.native_pdf_operations import PDF_REVIEW, attach_pdf_evidence
+from src.application.native_pdf_region_service import NativePdfRegionService
 from src.application.native_pptx_operations import attach_pptx_evidence
 from src.application.native_selection_service import NativeSelectionService
 from src.domain.native_assets import NativeCellReference, NativeDocxBlockReference
 from src.domain.native_file_reference import NativeFileReference
 from src.domain.native_pdf import NativePdfReference
+from src.domain.native_pdf_region import NativePdfRegionReference
 from src.domain.native_pptx import NativePptxReference
 from src.domain.native_selection import NativeSelectionReference
 
@@ -56,6 +58,8 @@ class NativeEvidenceService:
         self.pdfs = pdfs
 
     def read_parent_record(self, reference: NativeSelectionParent) -> dict[str, Any]:
+        if isinstance(reference, NativePdfRegionReference):
+            return NativePdfRegionService(self).record(reference)
         asset = self.repository.load(reference.asset_id)
         data = self.repository.read(reference.asset_id, reference.revision)
         if isinstance(reference, NativeCellReference) and asset.format in {
@@ -100,11 +104,14 @@ class NativeEvidenceService:
         | NativeDocxBlockReference
         | NativePptxReference
         | NativePdfReference
+        | NativePdfRegionReference
         | NativeFileReference
         | NativeSelectionReference,
     ) -> dict[str, Any]:
         if isinstance(reference, NativeSelectionReference):
             return NativeSelectionService(self).verify(reference)
+        if isinstance(reference, NativePdfRegionReference):
+            return NativePdfRegionService(self).verify(reference)
         if isinstance(reference, NativeFileReference):
             return self._verify_file(reference)
         if isinstance(reference, NativePdfReference):

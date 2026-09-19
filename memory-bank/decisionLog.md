@@ -1,5 +1,18 @@
 # Decision Log
 
+## 2026-09-19 — Displayed-page PDF region evidence
+
+Choose explicit fractions of the displayed CropBox after rotation, avoiding implicit
+mixing of PDF bottom-left units, unrotated text geometry and preview pixels. Preserve
+full parent references and source geometry; render detail does not change identity.
+Use existing PyMuPDF rendering and pikepdf page identity rather than adding another
+parser. Direct scan crops can differ slightly from full-page raster crops through
+partial resampling; exact source/coordinate checks do not imply universal pixel
+identity. Agent remains responsible for glyph coverage and semantic mapping.
+Selected Wiki citation contracts never reuse target bibliographic metadata for an
+external source; unavailable fields are explicit without losing canonical evidence.
+Version preference reaffirmed: public1.4.0, Unreleased1.4.x, no per-milestone tags.
+
 ## Worksheet sizes are explicit Agent corrections
 
 Expose point heights and raw OOXML widths, with independent reset/visibility intent.

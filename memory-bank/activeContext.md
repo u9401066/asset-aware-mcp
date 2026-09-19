@@ -1,5 +1,39 @@
 # Active Context
 
+## Native PDF regions — verified locally, publication pending
+
+Implemented read_pdf_region with full source/page/geometry-bound references,
+displayed CropBox fractions and actual bounded process-rendered PNGs. Preview
+resolution is not identity. Native verify, parsed selections, derivation endpoints
+and portable Wiki preserve exact region records, PNGs, renderer metadata and PDFs.
+External-source citations never inherit target bibliographic metadata; missing
+fields are explicit. MCP checks mechanics; Agent chooses regions/transcription.
+
+Full pytest2967 passed/35 optional skips114.02s; SDK2 scan/region/Wiki/history passed
+6.95s. Actual default Codex82 successful calls/0 tool errors218.02s,5 region PNGs,
+three distinct cells and per-cell assertions; historical PDF/workbook evidence and
+two Wiki snapshots passed independent audit. Initial scan pixel-equality assumption
+was corrected in the auditor: exact fresh direct-render replay plus full-page crop
+geometry/mean-error comparison. Shifted-PNG-with-rehashed-digest regression passes.
+Vector geometry matrix remains pixel-exact. No broad real-file fidelity claim.
+
+SourceSHA66238a84dc4ced0c30f64c2aedd64d2da86ed24f3b28aa0386a8a307a62f575d
+matches actual Codex, built wheel and Docker e2170ffc6e86be08beb8df4ac7bf307832f1a4e0d6c03eabf5e3bff40370c434.
+Ruff590/mypy257, Bandit/zizmor, Python214-package and npm audits pass. Extension199,
+package66/install/update, clean wheel runtime/SDK2, Docker runtime/doctor/tools/SDK2,
+zh/en desktop/mobile browser and docs/harness/metadata/labels pass. Local activation
+not run without display. Wheel first hit temporary-space exhaustion; after cleaning
+only owned terminal scratch and restoring staged evidence, retry passed. Eleven
+older evidence directories restored with identical hashes/mtimes; other work untouched.
+
+Proof:/tmp/asset-aware-regions-local-proof.json. Source/spec/tests and human docs/
+website/harness are separate scoped main commits, followed by exact CI/Pages/public
+byte checks. Refresh stale roadmap and original narrow project brief from current
+scope. Public1.4.0 / Unreleased1.4.x, no bump/tag, no subagents; broad goal active.
+Previous layout milestone c1f9bed4f92325fb70ef013f7f248cdc3be328d7 fully published:
+CI35424758902 all10, Pages35424758353 all3, public5 exact. Older pending entries below
+are historical. Original dirty detached user worktree remains untouched.
+
 ## Worksheet layout publication checkpoint
 
 Source commit 94c0fbbd59fa36721c297cd18496ea909159f486 contains25 counted files plus5 MEM.

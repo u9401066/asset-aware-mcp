@@ -2542,10 +2542,17 @@ async def document(
                 "operation": native_request.op,
                 "error": str(exc),
             }
-        if native_request.op == "render_pdf_page" and payload.get("success"):
+        if native_request.op in {"render_pdf_page", "read_pdf_region"} and payload.get(
+            "success"
+        ):
             from src.presentation.native_pdf_response import native_pdf_image_response
 
-            return native_pdf_image_response(payload)
+            return native_pdf_image_response(
+                payload,
+                title="Native PDF region preview"
+                if native_request.op == "read_pdf_region"
+                else "Native PDF page preview",
+            )
         if native_request.op == "read_pptx_picture" and payload.get("success"):
             from src.presentation.native_pdf_response import native_pdf_image_response
 

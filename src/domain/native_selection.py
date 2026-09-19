@@ -17,6 +17,7 @@ from src.domain.native_asset_models import (
     NativeModel,
 )
 from src.domain.native_pdf import NativePdfReference
+from src.domain.native_pdf_region import NativePdfRegionReference
 from src.domain.native_pptx import NativePptxReference
 
 NativeSelectionParent = (
@@ -24,6 +25,7 @@ NativeSelectionParent = (
     | NativeDocxBlockReference
     | NativePptxReference
     | NativePdfReference
+    | NativePdfRegionReference
 )
 MAX_SELECTION_BYTES = 16 * 1024 * 1024
 

@@ -6,8 +6,10 @@ from typing import TYPE_CHECKING, Any
 
 from src.application.citation_format_service import citation_markdown
 from src.application.native_derivation_service import REVIEW_BOUNDARY
+from src.application.native_pdf_region_wiki import add_region
 from src.application.native_selection_service import NativeSelectionService
 from src.domain.native_derivation import canonical, fingerprint
+from src.domain.native_pdf_region import NativePdfRegionReference
 from src.domain.native_selection import NativeSelectionReference, canonical_selection
 
 SOURCE_SUFFIXES = {"pdf", "docx", "pptx", "xlsx", "xlsm", "png", "jpg", "jpeg"}
@@ -37,6 +39,7 @@ def add_derivations(
     ]
     attachments: dict[str, Any] = {}
     selections: dict[str, Any] = {}
+    regions: dict[str, Any] = {}
     for record in records:
         service.require_valid(record.derivation.target)
         links = []
@@ -72,6 +75,28 @@ def add_derivations(
             links.append(
                 f"- [{citation_markdown(attachments[key]['name'])}]({attachments[key]['attachment']})"
             )
+        for ref in [record.derivation.target, *record.derivation.sources]:
+            region = ref.parent if isinstance(ref, NativeSelectionReference) else ref
+            if isinstance(region, NativePdfRegionReference):
+                key = fingerprint(region)
+                if key not in regions:
+                    same_source = (region.asset_id, region.revision) == (
+                        content.identity["asset_id"],
+                        content.identity["revision"],
+                    )
+                    attachment = (
+                        content.source_name
+                        if same_source
+                        else attachments[f"{region.asset_id}:{region.revision}"][
+                            "attachment"
+                        ]
+                    )
+                    regions[key] = add_region(
+                        content, region, service.evidence, attachment
+                    )
+                links.append(
+                    f"- [[{regions[key]['note'][:-3]}|Source region {key[:12]}]]"
+                )
         _add_note(content, record, links)
     content.add_file("derivations.json", canonical(ledger) + b"\n")
     content.extra_manifest["derivations"] = {
@@ -80,6 +105,7 @@ def add_derivations(
         "active_ids_for_revision": [r.derivation_id for r in records],
         "source_attachments": attachments,
         **({"selection_records": selections} if selections else {}),
+        **({"region_records": regions} if regions else {}),
         "verification_scope": "immutable_endpoint_references; active records for exported revision only",
         "review_boundary": REVIEW_BOUNDARY,
     }

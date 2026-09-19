@@ -59,6 +59,10 @@ from src.domain.native_pdf import (  # noqa: TC001 -- Pydantic runtime models
     NativePdfPageLocator,
     NativePdfReference,
 )
+from src.domain.native_pdf_region import (  # noqa: TC001 -- Pydantic runtime models
+    NativePdfRegionReference,
+    NativePdfRegionSelector,
+)
 from src.domain.native_pptx import (
     NativePptxReference,
     NativePptxShapeCreate,
@@ -185,6 +189,7 @@ class NativeDocumentRequest(NativeModel):
         default_factory=list, max_length=100
     )
     pdf_order: list[NativePdfReference] = Field(default_factory=list, max_length=2000)
+    pdf_region: NativePdfRegionSelector | None = None
     render_size: int = Field(default=1024, ge=64, le=2048)
     pptx_tables: list[NativePptxTableAddition] = Field(
         default_factory=list, max_length=100
@@ -217,6 +222,7 @@ class NativeDocumentRequest(NativeModel):
         | NativeDocxBlockReference
         | NativePptxReference
         | NativePdfReference
+        | NativePdfRegionReference
         | NativeFileReference
         | NativeSelectionReference
         | None

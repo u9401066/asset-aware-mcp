@@ -12,6 +12,7 @@ from src.infrastructure.native_pdf_checks import verify_reference
 from src.infrastructure.native_pdf_graph import canonical
 from src.infrastructure.native_pdf_mutation import PdfMutation, insert_pages
 from src.infrastructure.native_pdf_package import NativePdfPackage
+from src.infrastructure.native_pdf_region import render_region
 
 if TYPE_CHECKING:
     from src.domain.native_assets import NativeEditResult
@@ -38,6 +39,8 @@ def _targets(
 
 
 class NativePdf:
+    render_region = staticmethod(render_region)
+
     def decompose(self, data: bytes) -> list[dict[str, Any]]:
         from src.domain.native_pdf import NativePdfPageLocator
 

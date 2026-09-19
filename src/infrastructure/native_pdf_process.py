@@ -27,6 +27,7 @@ PDF_OPERATIONS = frozenset(
         "delete",
         "reorder",
         "render",
+        "render_region",
         "decompose",
     }
 )
@@ -124,3 +125,8 @@ class ProcessNativePdf:
 
     def render(self, data: bytes, locator: Any, width: int) -> Any:
         return self._run("render", data, locator, width)
+
+    def render_region(
+        self, data: bytes, locator: Any, selector: Any, width: int
+    ) -> Any:
+        return self._run("render_region", data, locator, selector, width)

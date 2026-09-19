@@ -34,6 +34,11 @@ def render_citation(
     location: list[str] = []
     if page is not None:
         location.append(f"p. {page}")
+    region = locator.get("pdf_region")
+    if region is not None:
+        location.append(
+            "displayed CropBox fractions [" + ", ".join(str(v) for v in region) + "]"
+        )
     if section:
         location.append(section)
     sheet, cell = locator.get("sheet"), locator.get("cell")

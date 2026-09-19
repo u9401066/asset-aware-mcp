@@ -1,5 +1,18 @@
 # System Patterns
 
+## Native PDF regions (Unreleased / 1.4.x)
+
+Domain region references bind a full native page reference, explicit displayed
+CropBox fractions and canonical source geometry. Application verifies parents,
+serves complete records and delegates previews through the bounded PDF process.
+PyMuPDF clips the displayed page; identity is independent of resolution/renderer.
+Region refs participate in native verify, parsed selections and derivation ledgers.
+Wiki attaches complete JSON, PNG, renderer metadata and exact source PDFs, with
+selected citation display and explicit missing external bibliographic fields.
+MCP verifies source/geometry only; Agent supplies transcription/meaning review.
+Tests compare full-page raster crops, SDK2 actual images, history and Wiki integrity.
+No version bump; public1.4.0 / Unreleased1.4.x; broad goal remains active.
+
 ## Workbook rendition architecture (Unreleased / 1.4.x)
 
 NativeWorkbookRendition supplies explicit rendering intent; NativeWorkbookRenderer

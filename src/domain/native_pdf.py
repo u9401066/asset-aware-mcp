@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 if TYPE_CHECKING:
     from src.domain.native_assets import NativeEditResult
+    from src.domain.native_pdf_region import NativePdfRegionSelector
 
 MAX_PDF_PAGES = 2000
 MAX_PDF_BATCH = 100
@@ -144,3 +145,10 @@ class NativePdfAdapter(Protocol):
     def render(
         self, data: bytes, locator: NativePdfPageLocator, width: int
     ) -> bytes: ...
+    def render_region(
+        self,
+        data: bytes,
+        locator: NativePdfPageLocator,
+        selector: NativePdfRegionSelector,
+        width: int,
+    ) -> dict[str, Any]: ...
