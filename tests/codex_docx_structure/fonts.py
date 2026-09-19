@@ -100,7 +100,7 @@ def setup(root):
         for enabled, name in ((True, "with-cjk.conf"), (False, "latin-only.conf")):
             (root / name).write_text(configuration(root, enabled), encoding="utf-8")
         files = {
-            str(path.relative_to(root)): digest(path)
+            path.relative_to(root).as_posix(): digest(path)
             for path in sorted(root.rglob("*"))
             if path.is_file()
         }
@@ -147,7 +147,7 @@ def snapshot(root):
                 raise ValueError("Invalid Fontconfig cache identity")
             uuid.UUID(cache_id.read_text(encoding="ascii").strip())
         actual = {
-            str(path.relative_to(root))
+            path.relative_to(root).as_posix()
             for path in (root / folder).iterdir()
             if path.name != ".uuid"
         }

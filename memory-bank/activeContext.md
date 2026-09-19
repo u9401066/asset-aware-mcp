@@ -1,5 +1,16 @@
 # Active Context
 
+## 2026-09-19 — portable font manifest paths
+
+CJK changes pushed as2b3fba9 (core53024f5); initial exact CI35387712309 and
+Pages35387711381 started. Final portability review found font manifest inventories
+used str(relative_path), which yields backslashes on Windows while the protocol
+uses slash-delimited names. Use as_posix for both fixture generation/inventory and
+synthetic test fixtures. Existing cross-platform font tests cover the correction;
+production runtime and saved Linux Codex/font hashes remain unchanged. Push this
+test-harness correction and verify the superseding exact HEAD CI/Pages.
+
+
 ## 2026-09-19 — CJK font correction verified locally; push pending
 
 Controlled Linux Fontconfig fixture now retains pinned Noto Sans TC Regular/Bold

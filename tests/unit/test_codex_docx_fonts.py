@@ -33,7 +33,7 @@ def font_fixture(tmp_path, monkeypatch):
     for enabled, name in ((True, "with-cjk.conf"), (False, "latin-only.conf")):
         (root / name).write_text(fonts.configuration(root, enabled), encoding="utf-8")
     files = {
-        str(p.relative_to(root)): fonts.digest(p)
+        p.relative_to(root).as_posix(): fonts.digest(p)
         for p in root.rglob("*")
         if p.is_file()
     }
