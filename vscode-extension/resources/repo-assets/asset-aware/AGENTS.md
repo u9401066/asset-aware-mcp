@@ -38,6 +38,15 @@ and LightRAG knowledge graph outputs.
 
 ## Native Files and Agent Review
 
+- When worksheet_layout_enabled is advertised, read_worksheet_layout requires
+  asset_id/revision/worksheet_key; read every chunk at one text_sha256. Update with
+  expected_revision and worksheet_layout. Use explicit height_points/width_ooxml,
+  reset_size or hidden; widths are raw OOXML, not Excel UI character counts.
+  Native cells/styles stay intact; object anchors follow authored policies and
+  recorded metrics. Formula/chart caches invalidate. Read complete review_request,
+  render a new recalculated PDF, and inspect actual images/results. No AutoFit or
+  visual verdict is inferred; history/source/evidence stay fixed. Public1.4.0 / 1.4.x.
+
 - When workbook_rendering.configured is true, create_workbook_rendition pins XLSX
   asset_id/revision and requires workbook_rendition.mode (print/whole_sheet) plus
   calculation (recalculate/prefer_cache). Optional Calc creates a separate PDF.

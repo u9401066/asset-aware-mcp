@@ -1,8 +1,8 @@
 # asset-aware-mcp
 
-Unreleased 的工作簿預覽將指定版本 XLSX 保存成獨立 PDF 資產。明確選擇列印或
-整張工作表及重算政策，再由 Agent 看實際頁面；Wiki 保留轉換紀錄與原始 XLSX。
-詳見 [工作簿版面核對](docs/wiki/Native-File-Assets.md#workbook-renditions-unreleased)。
+Unreleased 的工作表尺寸操作讓 Agent 讀取原生欄寬／列高，依實際 PDF 畫面調整後
+重新預覽，保留儲存格內容與格式、歷史 PDF 及證據。詳見
+[工作表版面修正](docs/wiki/Native-File-Assets.md#worksheet-layout-correction-unreleased)。
 公開版維持 **1.4.0**，功能累積於 **Unreleased／1.4.x**。
 
 

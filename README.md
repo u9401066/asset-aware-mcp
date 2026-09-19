@@ -1,10 +1,10 @@
 # asset-aware-mcp
 
-Unreleased workbook previews preserve one exact XLSX revision as an independent
-PDF asset. Choose print or whole-sheet output and a calculation policy, then
-review actual pages and export their source receipt to a Wiki. See
-[workbook visual review](docs/wiki/Native-File-Assets.md#workbook-renditions-unreleased).
-Public remains **1.4.0**; development stays **Unreleased within 1.4.x**.
+Unreleased worksheet layout operations let Agents read native dimensions, adjust
+row heights or column widths, and review a new immutable PDF. Cell content/styles,
+historical previews and evidence stay intact. See
+[layout correction](docs/wiki/Native-File-Assets.md#worksheet-layout-correction-unreleased).
+Public remains **1.4.0**; development accumulates **Unreleased within 1.4.x**.
 
 
 > Citation-ready document infrastructure for AI agents: turn PDFs, DOCX/PPTX files,

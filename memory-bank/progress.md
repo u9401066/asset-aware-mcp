@@ -1,5 +1,13 @@
 # Progress (Updated: 2026-09-19)
 
+## Worksheet layout publication checkpoint
+
+Source commit 94c0fbbd59fa36721c297cd18496ea909159f486 contains25 counted files plus5 MEM.
+Final fullpytest2931/35skipped105.17s and actual Codex125/0/9PNG194.47s pass.
+This documentation commit updates README/wiki/bilingual site and synchronized
+assistant assets, retaining public1.4.0 / Unreleased1.4.x. Both scoped commits go
+directly to main; exact CI/Pages/public-byte verification follows. Goal stays active.
+
 ## Worksheet layout correction — verified locally, publication pending
 
 Implemented read_worksheet_layout/update_worksheet_layout with explicit dimensions,

@@ -2,6 +2,44 @@
 
 # Native File Assets（v1.4.0）
 
+## Worksheet layout correction (Unreleased)
+
+Agent 可先看工作簿 PDF，找出文字截斷，再調整原生欄寬或列高，建立新版預覽。
+先查 `worksheet_layout_enabled`，以 `read_worksheet_layout` 固定 `asset_id`、
+`revision` 與 `worksheet_key`，完整分頁讀取尺寸及操作紀錄並核對 `text_sha256`。
+
+```json
+{
+  "op": "update_worksheet_layout",
+  "asset_id": "file_…",
+  "expected_revision": "目前完整 SHA-256",
+  "worksheet_layout": {
+    "worksheet": {"sheet_id": "1", "part": "xl/worksheets/sheet1.xml"},
+    "edits": [
+      {"axis": "row", "at": 1, "height_points": 36},
+      {"axis": "column", "at": 1, "width_ooxml": 30}
+    ]
+  }
+}
+```
+
+每次 1–32 個循序編輯；`at` 從 1 起算，`count` 預設 1、最多 1024。
+列高以點數表示；`width_ooxml` 是含字型 padding 的原始 OOXML 值，與 Excel
+介面顯示的字元數不完全相同。`reset_size: true` 移除手動尺寸；`hidden` 明確
+指定隱藏或顯示。重設不會替文字計算 AutoFit 尺寸。
+
+儲存格內容、座標、樣式、Table 與合併範圍保持；圖片和舊式註解依原本錨點的
+移動／縮放規則調整，完整紀錄幾何變化及字型量測依據。非預設字型需要明確
+幾何參數；物件縮至零時預設拒絕，可明確指定 `collapsed_objects: preserve_size`。
+保護中的工作表必須允許相應列欄格式操作；既有工作簿及未支援物件的檢查仍適用。
+
+寬度與隱藏狀態可能影響公式，故清除公式／圖表快取並要求重算。依回傳
+`review_request` 完整讀回，再以 `create_workbook_rendition` 的 `recalculate`
+建立新的獨立 PDF。Agent 核對文字、物件與結果；來源檔、舊 revision、PDF 及
+證據引用保持不變。這些機械檢查不代替實際畫面核對。
+[OOXML 欄寬定義](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.column?view=openxml-3.0.1)。
+公開版維持 **1.4.0**，開發累積 **Unreleased／1.4.x**。
+
 ## Workbook renditions (Unreleased)
 
 `create_workbook_rendition` 將固定 `asset_id`／`revision` 的 XLSX 經由選配
@@ -38,7 +76,7 @@ LibreOffice Calc 轉為獨立 PDF。`workbook_rendition` 必須明確指定 `mod
 需另裝 LibreOffice Calc，必要時設定 `LIBREOFFICE_BIN`。目前接受 1–100 張普通
 工作表的 transitional XLSX；連結資源、巨集、OLE 等需要另外的工作流程。
 整張工作表模式仍可能截斷溢出文字；Agent 應比較原儲存格及列印模式，檢查字型、
-物件和公式結果。這不是 Microsoft Excel 保真認證，欄寬／列高修正仍屬後續工作。
+物件和公式結果。這不是 Microsoft Excel 保真認證，欄寬／列高可透過上述原生尺寸操作修正後重新預覽。
 參考 [LibreOffice 官方 PDF 參數](https://help.libreoffice.org/latest/en-US/text/shared/guide/pdf_params.html)。
 公開版 **1.4.0**，本功能列於 **Unreleased／1.4.x**。
 

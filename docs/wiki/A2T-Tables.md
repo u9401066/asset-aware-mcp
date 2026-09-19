@@ -1,5 +1,9 @@
 # A2T Tables
 
+投影內容套回 XLSX 後，Agent 可用 `read_worksheet_layout`／`update_worksheet_layout`
+修正欄寬或列高，再產生新的獨立 PDF 核對，歷史證據不遷移。
+詳見 [工作表版面修正](Native-File-Assets)。
+
 原生 XLSX 套用 A2T 修改後，可用 `create_workbook_rendition` 將該版本固定成
 PDF，完整讀取 `read_rendition`，再以實際頁面核對公式與版面。列印範圍、隱藏
 工作表及快取政策會影響結果；詳見 [工作簿版面核對](Native-File-Assets)。

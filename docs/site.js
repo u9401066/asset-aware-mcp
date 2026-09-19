@@ -227,6 +227,16 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
   "native-file-assets": `## Native documents and versioned files — v1.4.0
 
+### Worksheet layout correction (Unreleased)
+
+Read an actual workbook PDF, identify clipping, then correct native dimensions and render a new revision. When worksheet_layout_enabled is advertised, read_worksheet_layout requires asset_id, revision and worksheet_key. Assemble every JSON chunk at one text_sha256.
+
+update_worksheet_layout requires expected_revision and worksheet_layout with worksheet plus 1–32 sequential edits. Each edit has axis (row/column), one-based at and count (default1, maximum1024). Choose height_points or width_ooxml, reset_size, and/or hidden. Raw OOXML column width includes font padding and differs from Excel's displayed character count. Reset removes manual dimensions; it does not calculate text AutoFit. For example, row1 height_points36 and column1 width_ooxml30 are explicit choices for Agent review.
+
+Cell identities, content, styles, merged ranges and Tables stay intact. DrawingML and legacy notes follow authored move/resize anchoring with complete geometry receipts. Nondefault font geometry needs explicit calibration; collapsed objects reject unless preserve_size is requested. Worksheet protection must permit formatting the affected axes. Existing workbook and unsupported-object checks still apply.
+
+Width or visibility changes can affect formulas, so formula/chart caches are invalidated and recalculation requested. Follow the complete review_request, then create_workbook_rendition with recalculate and inspect actual pages. Source files, historical PDFs and evidence remain unchanged. MCP mechanical checks do not certify layout or Excel fidelity. Public1.4.0 / Unreleased1.4.x.
+
 ### Workbook renditions (Unreleased)
 
 create_workbook_rendition converts an exact XLSX asset_id/revision into a separate native PDF using optional LibreOffice Calc. workbook_rendition requires mode (print or whole_sheet) and calculation (recalculate or prefer_cache); name defaults to workbook-preview.pdf. Original workbook bytes, formula caches and history stay unchanged.
@@ -235,7 +245,7 @@ Follow review_request and read complete read_rendition chunks at one PDF revisio
 
 Print honors print ranges and paper settings, so hidden/blank sheets or out-of-range cells may be absent; no guessed page-to-sheet mapping. Whole-sheet ignores those settings and includes hidden sheets, requiring one page per source worksheet before mapping. Blank pages may be tiny and overflowing text or objects can still be clipped. Compare native cells with actual print and whole-sheet views. Requested recalculation is not a formula correctness verdict; missing caches, volatile formulas and unsupported functions need review.
 
-export_wiki includes rendition.json, the exact input XLSX and PDF page evidence. This is mechanical conversion provenance, without invented Agent review. Install Calc separately and optionally set LIBREOFFICE_BIN. Initially supports 1–100 ordinary worksheets in transitional XLSX; linked resources, macros and embedded OLE need dedicated workflows. Agent reviews semantics, fonts, layout and results. Column-width/row-height correction remains further work. This is not Microsoft Excel fidelity certification. Public1.4.0 / Unreleased1.4.x.
+export_wiki includes rendition.json, the exact input XLSX and PDF page evidence. This is mechanical conversion provenance, without invented Agent review. Install Calc separately and optionally set LIBREOFFICE_BIN. Initially supports 1–100 ordinary worksheets in transitional XLSX; linked resources, macros and embedded OLE need dedicated workflows. Agent reviews semantics, fonts, layout and results. Use the native dimension operations above to correct widths/heights and review a fresh PDF. This is not Microsoft Excel fidelity certification. Public1.4.0 / Unreleased1.4.x.
 
 
 ### Native table workspaces (Unreleased)
@@ -552,13 +562,23 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
 
+### Worksheet layout correction evaluation (Unreleased)
+
+Optional real Calc/SDK2 testing compares before/after PDFs, delivered MCP PNGs, exact source revisions and historical images. Set NATIVE_WORKBOOK_RENDER_TEST=1 and run tests/integration/test_native_worksheet_layout_stdio.py, with Calc installed or LIBREOFFICE_BIN set. Separate unit cases cover rich text, Tables, merges, styles, authored picture/note anchors, protection permissions and default-hidden rows.
+
+Actual default-model Codex on the final source completed **125 successful MCP calls with zero tool errors in194.47 seconds**, viewing **9 actual MCP PNGs**. It chose36-point first rows on First/Last and raw OOXML width24 for Hidden columnA. Corrected images show the full colored titles and HIDDEN CONTENT. Independent audit checks four workbook versions, complete layout receipts/pages, unchanged cell contents/styles, historical PNGs, both PDFs and exact Wiki source attachments. Colored title pixels increased at the same PDF rendering scale.
+
+An earlier run completed136 successful calls in170.34 seconds with **14 rejected schema requests** using text_limit12000. The limit is4000; contract schema_request supplies2000. Codex corrected the arguments and completed the workflow; the audit retains every failed call. After improving sparse row lookup, final-source testing produced the125-call zero-error result above. Neither run certifies Excel fidelity. Visual coverage is limited to this synthetic workbook; picture/note geometry is covered by separate unit cases.
+
+Full pytest passed2,931 tests with35 optional skips; real Calc/SDK2 testing passed separately. Run uv run python -m tests.codex_workbook_layout.run --output /absolute/new/run-dir. Ordinary pytest never starts a model. Human sources and old PDFs remain unchanged. Public1.4.0 / Unreleased1.4.x.
+
 ### Workbook rendition evaluation (Unreleased)
 
 The optional real Calc/SDK2 test covers all four print/whole-sheet and prefer-cache/recalculate combinations, actual PNG pixels, print areas, hidden/blank sheets, source bytes/mtime, historical revisions and portable Wiki provenance. Set NATIVE_WORKBOOK_RENDER_TEST=1 and run tests/integration/test_native_workbook_rendition_stdio.py with Calc installed; optionally set LIBREOFFICE_BIN.
 
 On 2026-09-19 actual default-model Codex completed **232 successful MCP calls with zero tool errors in184.70 seconds**, receiving **11 actual MCP PNGs** across ten pages and one historical reread. It created cached print, recalculated whole-sheet and updated-formula PDFs, checked displayed999/3/5, complete source receipts/page records and historical cell evidence, then published three PDFs, one XLSX and a PDF Wiki retaining exact conversion inputs. Independent audit checks source immutability, both workbook revisions, PDF bytes, complete page records, delivered pixels and Wiki attachments.
 
-Codex identified top-edge heading clipping and right-edge hidden-sheet text clipping in whole-sheet output. This remains visible and uncorrected; complete page counts do not certify visual fidelity. Column-width/row-height correction and broader corpus coverage remain open. Run uv run python -m tests.codex_workbook_rendition.run --output /absolute/new/run-dir. Ordinary pytest never starts a model. Public1.4.0 / Unreleased1.4.x.
+Codex identified top-edge heading clipping and right-edge hidden-sheet text clipping in whole-sheet output. That earlier run left clipping uncorrected; the subsequent layout evaluation above now corrects this sample. Complete page counts do not certify visual fidelity, and broader corpus coverage remains open. Run uv run python -m tests.codex_workbook_rendition.run --output /absolute/new/run-dir. Ordinary pytest never starts a model. Public1.4.0 / Unreleased1.4.x.
 
 ### Native Table totals lifecycle evaluation (Unreleased)
 

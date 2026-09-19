@@ -7,6 +7,12 @@
 
 ## [Unreleased]
 
+- Native worksheet layout read/update pins revisions and exact sheet keys. Set
+  point heights/raw OOXML widths, reset sizes or change visibility; preserve cells,
+  styles, interval metadata and authored object anchor behavior. Complete receipts,
+  cache invalidation and immutable before/after PDF review support Agent correction.
+  Source files/history stay intact; public remains 1.4.0, development stays 1.4.x.
+
 - Immutable workbook PDF renditions: explicit source revision, print/whole-sheet
   scope and recalculate/prefer-cache policy through optional LibreOffice Calc.
   Complete `read_rendition` receipts, native PDF page PNGs and Wiki attachments

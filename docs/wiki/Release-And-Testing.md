@@ -1,5 +1,30 @@
 # Release And Testing
 
+## Worksheet layout correction evaluation (Unreleased)
+
+選配 Calc／SDK2 測試已核對尺寸修改前後的 PDF、實際 MCP PNG、來源版本與
+歷史影像。以 `NATIVE_WORKBOOK_RENDER_TEST=1` 執行
+`tests/integration/test_native_worksheet_layout_stdio.py`，需安裝 Calc 或設定
+`LIBREOFFICE_BIN`。固定寬高的單元測試另涵蓋富文字、Table、合併格、欄位樣式、
+圖片／註解錨點、受保護工作表及預設隱藏列。
+
+最終程式碼的真實 Codex 預設模型完成 **125 次成功 MCP 呼叫、零工具錯誤、194.47 秒、9 張實際 MCP PNG**。
+它依預覽把 First／Last 的第 1 列調為 36 點，Hidden 的 A 欄設為原始 OOXML
+寬度 24。重新預覽後，兩個彩色標題上緣及 Hidden 文字右緣截斷均已改善，文字完整。
+獨立稽核核對四個工作簿版本、完整尺寸紀錄、所有頁面、原始儲存格及樣式、
+歷史 PNG、兩份 PDF 與 Wiki 的精確來源附件；同解析度的標題彩色像素也增加。
+
+較早一輪完成 136 次成功呼叫、170.34 秒，另有 **14 次**把 schema 分頁
+`text_limit` 設為 12000 的請求被拒絕；
+允許上限為 4000，contract 提供的 schema_request 為 2000。Codex 修正參數後
+完成流程，稽核保留全部失敗請求。完成大量空白列查找效率修正後，以最終程式碼
+重新測試得到上述 125 次零工具錯誤結果。這些測試不是 Excel 保真認證；
+此次實際畫面限於這份合成工作簿，圖片／註解位置由其他單元案例驗證。
+
+重現：`uv run python -m tests.codex_workbook_layout.run --output /absolute/new/run-dir`。
+完整測試 2,931 項通過、35 項選配略過；Calc／SDK2 測試另外啟用並通過。
+普通 pytest 不啟動模型。來源檔及舊 PDF 保持不變，公開版仍 **1.4.0／Unreleased 1.4.x**。
+
 ## Workbook rendition evaluation (Unreleased)
 
 選配真實 Calc／SDK2 測試通過：四種列印／整張工作表與快取／重算組合，
@@ -15,8 +40,8 @@
 獨立稽核核對來源檔未變、兩個工作簿版本、PDF 位元組、所有頁面紀錄、影像像素與 Wiki 附件。
 
 Agent 實際指出整張工作表的標題上緣與隱藏頁文字右緣截斷；測試沒有假稱已修正。
-完整頁數不等於版面保真，Calc 結果也不是 Excel 認證。欄寬／列高調整與更廣語料核對
-仍待完成。重現：`uv run python -m tests.codex_workbook_rendition.run --output /absolute/new/run-dir`。
+完整頁數不等於版面保真，Calc 結果也不是 Excel 認證。上述後續尺寸修正測試已
+補上這份樣本的截斷修正；更廣語料核對仍待完成。重現：`uv run python -m tests.codex_workbook_rendition.run --output /absolute/new/run-dir`。
 普通 pytest 不會啟動模型。公開版 **1.4.0**，此項為 **Unreleased／1.4.x**。
 
 ## Native Table totals lifecycle evaluation (Unreleased)
