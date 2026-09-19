@@ -103,6 +103,12 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up Node.js for CSL
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
       - name: Install uv
         uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
@@ -157,6 +163,9 @@ jobs:
           tests/unit/test_native_pdf_guards.py
           tests/unit/test_native_pdf_lengths.py
           tests/unit/test_real_pdf_corpus.py
+          tests/unit/test_csl_processor.py
+          tests/unit/test_csl_citation_service.py
+          tests/unit/test_codex_csl_audit.py
           tests/unit/test_native_pdf_operations.py
           tests/unit/test_native_pdf_worker.py
           tests/unit/test_native_docx.py
@@ -183,6 +192,7 @@ jobs:
           tests/integration/test_native_pptx_slide_stdio.py
           tests/integration/test_native_derivation_stdio.py
           tests/integration/test_native_pdf_stdio.py
+          tests/integration/test_csl_citations_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py
           tests/integration/test_native_docx_structure_stdio.py
           tests/integration/test_native_asset_stdio_e2e.py
@@ -212,6 +222,10 @@ jobs:
       - name: Audit locked npm dependencies
         run: npm audit --package-lock-only --audit-level=low
 
+      - name: Audit bundled CSL processor dependency
+        working-directory: .
+        run: npm --prefix src/infrastructure/csl_resources audit --package-lock-only --audit-level=low
+
   # ==========================================
   # macOS 安裝/Extension Smoke Test
   # ==========================================
@@ -223,6 +237,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+
+      - name: Set up Node.js for CSL
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
 
       - name: Install uv
         uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
@@ -277,6 +297,9 @@ jobs:
           tests/unit/test_native_pdf_guards.py
           tests/unit/test_native_pdf_lengths.py
           tests/unit/test_real_pdf_corpus.py
+          tests/unit/test_csl_processor.py
+          tests/unit/test_csl_citation_service.py
+          tests/unit/test_codex_csl_audit.py
           tests/unit/test_native_pdf_operations.py
           tests/unit/test_native_pdf_worker.py
           tests/unit/test_native_docx.py
@@ -303,6 +326,7 @@ jobs:
           tests/integration/test_native_pptx_slide_stdio.py
           tests/integration/test_native_derivation_stdio.py
           tests/integration/test_native_pdf_stdio.py
+          tests/integration/test_csl_citations_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py
           tests/integration/test_native_docx_structure_stdio.py
           tests/integration/test_native_asset_stdio_e2e.py -q --timeout=120
@@ -336,6 +360,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+
+      - name: Set up Node.js for CSL
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
 
       - name: Install uv
         uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
@@ -389,6 +419,9 @@ jobs:
           tests/unit/test_native_pdf_guards.py
           tests/unit/test_native_pdf_lengths.py
           tests/unit/test_real_pdf_corpus.py
+          tests/unit/test_csl_processor.py
+          tests/unit/test_csl_citation_service.py
+          tests/unit/test_codex_csl_audit.py
           tests/unit/test_native_pdf_operations.py
           tests/unit/test_native_pdf_worker.py
           tests/unit/test_native_docx.py
@@ -415,6 +448,7 @@ jobs:
           tests/integration/test_native_pptx_slide_stdio.py
           tests/integration/test_native_derivation_stdio.py
           tests/integration/test_native_pdf_stdio.py
+          tests/integration/test_csl_citations_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py
           tests/integration/test_native_docx_structure_stdio.py
           tests/integration/test_native_asset_stdio_e2e.py -q --timeout=120
@@ -489,6 +523,12 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up Node.js for CSL
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
       - name: Install uv
         uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
@@ -531,6 +571,12 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up Node.js for CSL
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
       - name: Install uv
         uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
@@ -571,6 +617,7 @@ jobs:
             tests/integration/test_native_pdf_regions_stdio.py \
             tests/integration/test_native_delimited_stdio.py \
             tests/integration/test_real_pdf_corpus_stdio.py \
+            tests/integration/test_csl_citations_stdio.py \
             tests/integration/test_native_pptx_picture_stdio.py \
             tests/integration/test_native_pptx_table_stdio.py \
             tests/integration/test_native_pptx_grid_stdio.py \

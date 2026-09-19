@@ -1,5 +1,20 @@
 # Decision Log
 
+## CSL runtime — pre-publication checkpoint
+
+Resources/spec committed as6ad8ab5 with21countedfiles plus3MEM. This commit adds
+domain citation-document validation, optional offline Node processor, full-document
+retroactive cluster updates, safe typography, verified native source bindings and
+immutable citation Wiki via existing publisher. Existing template contract/tool count
+unchanged. SDK2 typed paging rejects invalid limits/hash formats before side effects.
+Direct jsonschema>=4.26,<5 dependency is already in the lock; no runtime npm install.
+CI adds Node before CSL tests and audits bundled npm lock. Source remains5b4d74bc…10c0ef;
+all final local/actual/wheel/Docker proofs in preceding checkpoint still apply.
+Latest docs/hygiene35passed0.35s, final lint/format/harness/assets pass; metadata and
+managed GitHub labels synchronized, actual02 audit replay passes38successful/1error.
+Next commit human-facing docs/harness separately, then pushmain and verify exact-head
+CI/Pages/public bytes. Public1.4.0/Unreleased1.4.x; no tag; broad goal remains active.
+
 ## CSL resources — final local validation checkpoint
 
 Pinned upstream citeproc-js2.4.63 (internal1.4.61), official CSL styles/locales and

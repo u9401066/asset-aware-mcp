@@ -12,6 +12,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from src.application.asset_service import AssetService
+from src.application.csl_citation_service import CslCitationService
 from src.application.dfm_table_bridge import DfmTableBridge
 from src.application.document_service import DocumentService
 from src.application.docx_service import DocxService
@@ -29,6 +30,7 @@ from src.domain.etl_profile import ETLProfile
 from src.domain.marker_errors import MARKER_INSTALL_HINT, MarkerBackendUnavailable
 from src.infrastructure.bundle_publisher import FileBundlePublisher
 from src.infrastructure.config import settings
+from src.infrastructure.csl_processor import NodeCslProcessor
 from src.infrastructure.excel_renderer import ExcelRenderer
 from src.infrastructure.extractor_factory import (
     HELD_STRUCTURED_ENGINES,
@@ -203,6 +205,13 @@ native_document_service = NativeDocumentService(
     workbook_ranges=NativeWorkbookRange(),
     table_workspaces=table_service,
     delimited=ProcessNativeDelimited(),
+)
+
+
+csl_citation_service = CslCitationService(
+    NodeCslProcessor(),
+    native_document_service.evidence,
+    FileNativeWikiPublisher((settings.data_dir,)),
 )
 
 

@@ -1,5 +1,19 @@
 # System Architect
 
+## CSL citation document architecture (Unreleased / 1.4.x)
+
+CslDocument and CslProcessor live in domain with bounded structured bibliographic
+items, ordered clusters and explicit native source bindings. NodeCslProcessor in
+infrastructure verifies pinned resources/schema, strips Node preload environment,
+and runs an offline bounded worker. Real processCitationCluster updates prior
+clusters; makeBibliography preserves item mapping. Application CslCitationService
+verifies complete native references, retains immutable verification only, sanitizes
+CSL typography and builds citation snapshots through the existing manifest-last
+NativeWikiPublisher. Preview/export hashes agree; mutable current-source status
+is excluded from the immutable result. Presentation exposes two operations through
+evidence with typed bounded hash paging. No source writeback or auto-evidence update.
+Printed citation locators remain caller data; Agent checks meaning and typography.
+
 ## Native PDF regions (Unreleased / 1.4.x)
 
 Domain region references bind a full native page reference, explicit displayed

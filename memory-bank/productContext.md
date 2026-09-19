@@ -1,5 +1,18 @@
 # Product Context
 
+## Document-context citations with inspectable source evidence
+
+The evidence facade now renders ordered citation clusters and bibliographies with
+pinned citeproc-js2.4.63, official APA7/Chicago18/NLM styles and en-US/zh-TW locales.
+Optional local Node.js>=20 serves only this operation; no runtime installs/network.
+Direct jsonschema>=4.26,<5 validates caller CSL-JSON against a bundled official schema.
+Existing custom citation display remains available. Exact native references and
+source attachments accompany immutable portable Wiki snapshots and HTML typography.
+Bibliographic truth, semantic support and printed locator correspondence belong to
+Agent review; MCP validates mechanical structure/source/version/resource integrity.
+Legacy ETL evidence bindings and broader style/corpus coverage remain ongoing.
+Public1.4.0 / Unreleased1.4.x; this feature does not trigger a version bump.
+
 ## Agent-owned visual correction with durable asset history
 
 A document asset includes exact source versions, native locators, inspectable edits

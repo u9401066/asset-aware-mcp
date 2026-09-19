@@ -2981,13 +2981,53 @@ async def evidence(
     overwrite: bool = False,
     citation_contract: dict[str, Any] | None = None,
     citation_metadata: dict[str, Any] | None = None,
+    citation_document: dict[str, Any] | None = None,
+    text_offset: Annotated[int, Field(ge=0)] = 0,
+    text_limit: Annotated[int, Field(ge=1, le=8000)] = 4000,
+    expected_text_sha256: Annotated[
+        str | None, Field(pattern=r"^[0-9a-f]{64}$")
+    ] = None,
 ) -> Any:
     """Evidence operations; contract describes citation formats, bundle applies them.
 
     citation_contract accepts a preset selector or named-field inline/reference
     templates; citation_metadata supplies bibliographic fields, never locators.
+    csl_contract returns the complete hash-paged CSL document schema.
+    render_citations accepts citation_document for document-context APA/Chicago/
+    Vancouver processing; read every text page at one text_sha256. Optional
+    wiki_root exports an immutable citation snapshot with exact native sources.
+    CSL text_limit is 1..8000 characters; stop paging when next_text_offset is null.
     """
     operation = _normalize_op(op)
+    if operation in {"csl_contract", "render_citations"}:
+        from src.presentation.tools.csl_support import csl_operation
+
+        if citation_contract is not None or citation_metadata is not None:
+            return {
+                "success": False,
+                "error": "CSL uses citation_document, not template citation_contract/citation_metadata",
+            }
+        return format_limited_json_response(
+            title="CSL citation document",
+            payload=await csl_operation(
+                operation,
+                citation_document,
+                wiki_root,
+                text_offset,
+                text_limit,
+                expected_text_sha256,
+            ),
+        )
+    if (
+        citation_document is not None
+        or text_offset
+        or text_limit != 4000
+        or expected_text_sha256 is not None
+    ):
+        return {
+            "success": False,
+            "error": "Citation document/paging requires csl_contract or render_citations",
+        }
     if operation == "contract":
         try:
             selected = (
@@ -3007,6 +3047,12 @@ async def evidence(
                 "schema": CitationFormatContract.model_json_schema(),
                 "metadata_schema": CitationMetadata.model_json_schema(),
                 "presets": citation_format_presets(),
+                "academic_citations": {
+                    "contract_op": "csl_contract",
+                    "render_op": "render_citations",
+                    "input": "citation_document",
+                    "runtime": "optional Node.js >=20",
+                },
                 "selected": selected,
                 "verification_scope": "Display formatting does not verify semantic support",
             },
