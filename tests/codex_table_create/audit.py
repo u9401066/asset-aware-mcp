@@ -49,7 +49,7 @@ def calls_from(events):
     ops = {c["arguments"]["native_request"]["op"] for c in calls}
     require(required <= ops, "Incomplete Table creation workflow")
     require(
-        ops <= required | {"schema", "read_pdf", "inspect"},
+        ops <= required | {"schema", "contract_details", "read_pdf", "inspect"},
         "Unexpected native operation",
     )
     return calls

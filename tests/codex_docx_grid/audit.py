@@ -65,7 +65,15 @@ def calls_from(events):
     require(required <= operations, "Missing native grid workflow operations")
     require(
         operations
-        <= required | {"schema", "inspect", "read_pdf", "list", "read_docx_block"},
+        <= required
+        | {
+            "schema",
+            "contract_details",
+            "inspect",
+            "read_pdf",
+            "list",
+            "read_docx_block",
+        },
         "Unexpected mutation/workflow",
     )
     return calls

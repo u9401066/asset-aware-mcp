@@ -26,6 +26,7 @@ def calls_from(events):
     allowed = {
         "contract",
         "schema",
+        "contract_details",
         "inspect",
         "register",
         "read_workbook",
@@ -64,7 +65,7 @@ def calls_from(events):
         if not call_failed(item):
             calls.append(item)
     require(
-        allowed - {"schema", "inspect"}
+        allowed - {"schema", "contract_details", "inspect"}
         <= {c["arguments"]["native_request"]["op"] for c in calls},
         "Incomplete layout workflow",
     )

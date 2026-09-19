@@ -19,7 +19,8 @@ from tests.codex_pdf.trace import call_failed, require, tool_errors
 def native_arguments(args):
     request = args["native_request"]
     require(
-        request["op"] in {"contract", "schema", "create", "read_cell"},
+        request["op"]
+        in {"contract", "schema", "contract_details", "create", "read_cell"},
         "Unexpected native mutation",
     )
     return request

@@ -51,7 +51,9 @@ def calls_from(events):
     }
     actual = {c["arguments"]["native_request"]["op"] for c in calls}
     require(
-        required <= actual <= required | {"schema", "read_pdf", "inspect"},
+        required
+        <= actual
+        <= required | {"schema", "contract_details", "read_pdf", "inspect"},
         "Incomplete/unexpected totals workflow",
     )
     return calls

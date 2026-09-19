@@ -31,7 +31,7 @@ REQUIRED = {
     "export_wiki",
     "history",
 }
-OPTIONAL = {"schema", "inspect", "list", "read_docx_block"}
+OPTIONAL = {"schema", "contract_details", "inspect", "list", "read_docx_block"}
 
 
 def calls_from(events):

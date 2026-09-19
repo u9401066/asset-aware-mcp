@@ -1,5 +1,16 @@
 # Active Context
 
+## Native contract discovery — legacy evaluation compatibility
+
+Runtime/spec/tests committed as412ee00,27counted files plus2MEM. This separate
+10-file segment permits optional read-only contract_details in nine retained
+Codex auditors; original required actions and forbidden-writeback checks stay.
+Four new regressions pass, included in final full3315/33/357.08s. Production
+fingerprint70aef and actual98-call trace remain unchanged; no new model run.
+Bilingual documentation/harness segment follows before one pushmain. Public1.4.0,
+next consolidated1.4.1; no tag/bump, broad goal active. Local proof retained.
+
+
 ## Native Word story lifecycle — validated runtime/spec/tests
 
 Final production70aef46664a3127832c0e2e26333b01a9d582483ae33fa76b1e833fab6f42ad9

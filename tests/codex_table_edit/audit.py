@@ -63,6 +63,7 @@ def calls_from(events):
             "register",
             "contract",
             "schema",
+            "contract_details",
             "read_pdf",
             "read_pdf_page",
             "render_pdf_page",
