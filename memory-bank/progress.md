@@ -1,5 +1,31 @@
 # Progress (Updated: 2026-09-19)
 
+## Workbook renditions — final local verification
+
+Pytest2896passed34skipped103.89s; optional real Calc/SDK2 passed10.83s. Actual
+Codex232 calls/0 errors/11 PNGs184.70s; independent PDF/workbook/Wiki audit passes.
+Source, wheel and Docker hashes match. Full release gates passed; proof retained
+at /tmp/asset-aware-rendition-local-proof.json. Source/docs main commits and exact
+CI/Pages/public validation follow. Public remains1.4.0 / Unreleased1.4.x. Whole
+goal active; actual whole-sheet clipping identifies the next Agent correction task.
+
+## Workbook PDF renditions — in development
+
+Version policy reconfirmed: public1.4.0, Unreleased/future1.4.x; no task-based bump.
+Previous Table totals milestone fully published at8d4949550f7ff1bb1c349c60825c8fadaf2c629a:
+CI35420519911 all10 and Pages35420519468 all3 passed; five public files exact.
+Proof:/tmp/asset-aware-table-totals-publication-proof.json. Earlier pending entries
+below are historical; original dirty detached user worktree remains untouched.
+
+Doing: revision-pinned immutable XLSX-to-PDF renditions using optional Calc, with
+explicit print/whole_sheet and recalculate/prefer_cache choices, complete source
+receipt and existing PDF page PNG/evidence/Wiki reuse. Spec:native-workbook-renditions.
+Private Calc7.3.7 probe shows print2 versus whole4 pages (blank+hidden included),
+print-area differences and real text overflow clipping. OOXMLRecalcMode0 renders3
+for=1+2 while cached mode renders999. Source bytes remain exact. These probes are
+not a cross-version Excel fidelity verdict. Add regressions, real SDK2 and actual
+Codex review before publication; overall cross-format goal remains active.
+
 ## Native Table totals lifecycle — source committed; docs/publication pending
 
 Explicit add/remove/reuse landed in the private Table edit path, retaining typed

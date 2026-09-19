@@ -79,6 +79,7 @@ from src.domain.native_pptx_table import (
     NativePptxTableAddition,
     validate_table_additions,
 )
+from src.domain.native_rendition import NativeWorkbookRendition  # noqa: TC001 -- schema
 from src.domain.native_selection import (  # noqa: TC001 -- Pydantic schema
     NativeSelectionReference,
     NativeSelectionSelector,
@@ -149,6 +150,7 @@ class NativeDocumentRequest(NativeModel):
     table_workbook: NativeTableWorkbookCreate | None = None
     workspace_reference: NativeFileReference | None = None
     workbook: NativeWorkbookCreate | None = None
+    workbook_rendition: NativeWorkbookRendition | None = None
     workbook_view: Literal["structure", "references"] = "structure"
     worksheet_insert: NativeWorksheetInsert | None = None
     worksheet_grid: NativeGridUpdate | None = None

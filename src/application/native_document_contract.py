@@ -113,6 +113,7 @@ def native_document_contract(
     pptx_rendering_configured: bool = False,
     docx_structure_enabled: bool = False,
     docx_rendering_configured: bool = False,
+    workbook_rendering_configured: bool = False,
 ) -> dict[str, Any]:
     for_op = request.for_op if request is not None else None
     result = {
@@ -121,6 +122,11 @@ def native_document_contract(
         "operations": list(NATIVE_OPERATIONS),
         **schema_discovery(for_op),
         "workbook_structure_enabled": workbook_structure_enabled,
+        "workbook_rendering": {
+            "configured": workbook_rendering_configured,
+            "availability": "Checked per request; requires LibreOffice Calc and optional LIBREOFFICE_BIN.",
+            "policy": "create_workbook_rendition pins XLSX revision, explicit print/whole_sheet and recalculate/prefer_cache policies. New immutable PDF; read complete read_rendition receipt then existing PDF page PNGs. Agent reviews layout/results; source bytes stay unchanged.",
+        },
         "workbook_grid_enabled": workbook_grid_enabled,
         "workbook_table_edit_enabled": workbook_table_edit_enabled,
         "table_totals_lifecycle_enabled": workbook_table_edit_enabled,
@@ -164,6 +170,7 @@ def native_document_contract(
             workbook_grid_enabled,
             workbook_table_edit_enabled,
             workbook_table_creation_enabled,
+            workbook_rendering_configured,
         ),
         "verification": "MCP checks integrity; agents verify semantics, layout and calculated results.",
         "docx_policy": "Pin revision; assemble all DFM chunks with frontmatter/markers. Updates stage versions; writeback is explicit.",
@@ -237,6 +244,7 @@ def _formats(
     workbook_grid_enabled: bool = False,
     workbook_table_edit_enabled: bool = False,
     workbook_table_creation_enabled: bool = False,
+    workbook_rendering_configured: bool = False,
 ) -> dict[str, list[str]]:
     workbook_ops = (
         [
@@ -266,6 +274,7 @@ def _formats(
         workbook_ops.append("add_workbook_table")
     return {
         "pdf": [
+            "read_rendition",
             "create_pdf",
             "read_pdf",
             "read_pdf_page",
@@ -326,6 +335,7 @@ def _formats(
             "edit_cells",
             "read_selection",
             *workbook_ops,
+            *(["create_workbook_rendition"] if workbook_rendering_configured else []),
         ],
         "xlsm": ["inspect_cells", "edit_cells", "read_selection", *workbook_ops],
         "other": [

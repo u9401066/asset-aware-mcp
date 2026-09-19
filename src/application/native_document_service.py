@@ -17,6 +17,7 @@ from src.application.native_evidence_service import (
 )
 from src.application.native_pdf_operations import NativePdfOperations
 from src.application.native_pptx_operations import NativePptxOperations
+from src.application.native_rendition_operations import NativeRenditionOperations
 from src.application.native_schema import read_schema
 from src.application.native_selection_service import NativeSelectionService
 from src.application.native_table_operations import NativeTableOperations
@@ -40,6 +41,7 @@ if TYPE_CHECKING:
         NativePresentationRenderer,
         NativeWordRenderer,
     )
+    from src.domain.native_rendition import NativeWorkbookRenderer
     from src.domain.native_table_create import NativeTableCreateAdapter
     from src.domain.native_table_edit import NativeTableEditAdapter
     from src.domain.native_table_workspace import (
@@ -69,9 +71,15 @@ class NativeDocumentService:
         workbook_grid: NativeGridAdapter | None = None,
         workbook_tables: NativeTableEditAdapter | None = None,
         workbook_table_creation: NativeTableCreateAdapter | None = None,
+        workbook_renderer: NativeWorkbookRenderer | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
+        if workbook_renderer is not None and pdfs is None:
+            raise ValueError("Workbook rendering requires native PDF read-back support")
+        self.rendition_operations = NativeRenditionOperations(
+            repository, workbook_renderer
+        )
         if workbook_grid is not None and workbook_structure is None:
             raise ValueError("Native grid editing requires workbook read-back support")
         self.workbook_grid = workbook_grid
@@ -171,6 +179,8 @@ class NativeDocumentService:
             "apply_table_workspace": self._table_operation,
             "create_workbook_from_table": self._table_operation,
             "read_workbook": self._workbook_operation,
+            "create_workbook_rendition": self.rendition_operations.execute,
+            "read_rendition": self.rendition_operations.execute,
             "update_worksheet_grid": self._workbook_operation,
             "update_workbook_table": self._workbook_operation,
             "add_workbook_table": self._workbook_operation,
@@ -248,6 +258,8 @@ class NativeDocumentService:
     def _contract(self, request: NativeDocumentRequest) -> dict[str, Any]:
         return native_document_contract(
             request,
+            workbook_rendering_configured=self.rendition_operations.renderer
+            is not None,
             docx_enabled=self.docx is not None,
             pptx_enabled=self.presentations is not None,
             pdf_enabled=self.pdfs is not None,

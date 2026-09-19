@@ -1,5 +1,53 @@
 # Active Context
 
+## Workbook renditions — verified locally, publication pending
+
+Implemented create_workbook_rendition/read_rendition with explicit mode/calculation,
+exact source revisions, immutable PDF receipts, native page images and portable
+Wiki conversion source attachments. Source XLSX is never resaved or advanced.
+Real private Calc7.3.7 SDK2 test passed10.83s across four policies, actual PNGs,
+blank/hidden/print scopes and cached999/recalculated3. Official current Calc config
+and importer still use OOXMLRecalcMode0/1; cache preference can still recalculate.
+
+Actual default-model Codex232 successful MCP calls/0 errors/184.70s,11 PNGs,
+three PDFs and two workbook revisions; independent audit passes after strengthening
+complete receipts, unchanged parts and all PDF verifications. Evidence:
+/dev/shm/asset-aware-codex-workbook-rendition-01. Agent identified top/right text
+clipping in whole-sheet output; no claimed correction or Excel fidelity verdict.
+Next functional gap is explicit column width/row height control and Agent rerender.
+
+Source SHA81defa2d1206e24186100a03b57cb872c962316ba05cc313b6ef58c3d67830ef
+matches actual Codex, wheel and Docker311ae04c4a863880308e4c924d31e10cb5b3d235eb3a0a4a17867a8a4285c709.
+Ruff570/mypy250/Bandit/locked audit214zero/npmzero/zizmorhigh passed.
+Extension199/package64/install-update, clean wheel and Docker import/doctor/list/
+SDK2 smoke passed. No local activation without display. Browser plugin unavailable;
+Playwright zh/en desktop/mobile terms, navigation, nooverflow/console gates passed.
+Mobile-zh screenshot inspected. Fullpytest01:2890passed34skipped105.42s; final
+fullpytest02 passed2896/34skipped103.89s, including Wiki provenance/audit regressions.
+Metadata/labels synchronized. README/wiki/site/harness updated; public1.4.0 with
+all development Unreleased/future1.4.x, no tag/bump. All11 staged owned completed
+runs fully restored with exact hashes/mtimes; only own obsolete builder/runtime
+removed, current Docker and real-Codex evidence retained. Original dirty detached
+user worktree unchanged. Scoped source/docs commits and CI/Pages proof pending.
+Overall cross-format CRUD/evidence/real-Codex goal stays active.
+
+## Workbook PDF renditions — in development
+
+Version policy reconfirmed: public1.4.0, Unreleased/future1.4.x; no task-based bump.
+Previous Table totals milestone fully published at8d4949550f7ff1bb1c349c60825c8fadaf2c629a:
+CI35420519911 all10 and Pages35420519468 all3 passed; five public files exact.
+Proof:/tmp/asset-aware-table-totals-publication-proof.json. Earlier pending entries
+below are historical; original dirty detached user worktree remains untouched.
+
+Doing: revision-pinned immutable XLSX-to-PDF renditions using optional Calc, with
+explicit print/whole_sheet and recalculate/prefer_cache choices, complete source
+receipt and existing PDF page PNG/evidence/Wiki reuse. Spec:native-workbook-renditions.
+Private Calc7.3.7 probe shows print2 versus whole4 pages (blank+hidden included),
+print-area differences and real text overflow clipping. OOXMLRecalcMode0 renders3
+for=1+2 while cached mode renders999. Source bytes remain exact. These probes are
+not a cross-version Excel fidelity verdict. Add regressions, real SDK2 and actual
+Codex review before publication; overall cross-format goal remains active.
+
 ## Native Table totals lifecycle — source committed; docs/publication pending
 
 Explicit add/remove/reuse landed in the private Table edit path, retaining typed

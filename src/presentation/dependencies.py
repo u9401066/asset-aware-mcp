@@ -51,6 +51,7 @@ from src.infrastructure.native_spreadsheet import SpreadsheetFileAdapter
 from src.infrastructure.native_wiki_publisher import FileNativeWikiPublisher
 from src.infrastructure.native_workbook_grid import NativeWorkbookGrid
 from src.infrastructure.native_workbook_range import NativeWorkbookRange
+from src.infrastructure.native_workbook_render import LibreOfficeWorkbookRenderer
 from src.infrastructure.native_workbook_structure import NativeWorkbookStructure
 from src.infrastructure.native_workbook_table_create import NativeWorkbookTableCreate
 from src.infrastructure.native_workbook_table_edit import NativeWorkbookTableEdit
@@ -194,6 +195,7 @@ native_document_service = NativeDocumentService(
     docx_structure=NativeDocxStructure(),
     docx_renderer=LibreOfficeWordRenderer(),
     workbook_structure=NativeWorkbookStructure(),
+    workbook_renderer=LibreOfficeWorkbookRenderer(),
     workbook_grid=NativeWorkbookGrid(),
     workbook_tables=NativeWorkbookTableEdit(),
     workbook_table_creation=NativeWorkbookTableCreate(),

@@ -1,5 +1,17 @@
 # System Patterns
 
+## Workbook rendition architecture (Unreleased / 1.4.x)
+
+NativeWorkbookRendition supplies explicit rendering intent; NativeWorkbookRenderer
+is an optional domain port. LibreOfficeWorkbookRenderer checks source/package
+resources, uses a private Calc profile and bounded converter, and validates the
+PDF through ProcessNativePdf. NativeRenditionOperations creates a separate native
+PDF with an immutable creation receipt and exact source file reference. Paged
+read_rendition works without the converter and never migrates maps to edited PDF
+bytes. Existing PDF image/evidence/CRUD APIs reuse this frozen output. Native Wiki
+adds exact input XLSX and receipt as mechanical lineage, separate from Agent
+review or the derivation ledger. Source workbook caches/history remain unchanged.
+
 ## 2026-09-19 — Create native structures without flattening data
 
 Table creation annotates an explicit range with new OOXML Table/relationship/type records. Existing cell payloads and styles survive; blank header fill/calculated replacement/totals are explicit. Read complete revision-pinned operation receipts and exact header XML; native/A2T historical evidence never auto-migrates. Agent reviews actual rendering and formula results.

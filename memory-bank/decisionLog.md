@@ -1,5 +1,12 @@
 # Decision Log
 
+## Immutable workbook visual review
+
+Persist each Calc PDF with exact input revision and explicit mode/calculation settings.
+Use existing native PDF image/evidence operations; avoid rerendering and repagination
+on each page request. Mechanical provenance is separate from Agent review. Keep
+public1.4.0 with this work Unreleased in1.4.x.
+
 ## 2026-09-19 — Totals roles and physical worksheet rows stay explicit
 
 Add extends the Table over blank cells; remove shrinks only the role and requires

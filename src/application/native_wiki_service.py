@@ -11,6 +11,7 @@ from src.application.native_pdf_operations import attach_pdf_evidence
 from src.application.native_pdf_wiki import NativePdfWikiContent
 from src.application.native_pptx_operations import attach_pptx_evidence
 from src.application.native_pptx_wiki import NativePptxWikiContent
+from src.application.native_rendition_wiki import add_rendition
 from src.application.native_wiki_format import NativeWikiContent
 from src.domain.citation_format import CitationMetadata, resolve_citation_format
 from src.domain.native_derivation import fingerprint
@@ -63,6 +64,7 @@ class NativeWikiService:
         )
         data = self.repository.read(asset.asset_id, revision)
         content = self._content(request, asset, revision, ledger)
+        add_rendition(content, asset, self.repository)
         self._populate(content, data)
         if ledger is not None and self.derivations is not None:
             add_derivations(content, ledger, self.derivations, self.repository)

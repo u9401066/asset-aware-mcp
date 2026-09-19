@@ -1,5 +1,17 @@
 # System Architect
 
+## Workbook rendition architecture (Unreleased / 1.4.x)
+
+NativeWorkbookRendition supplies explicit rendering intent; NativeWorkbookRenderer
+is an optional domain port. LibreOfficeWorkbookRenderer checks source/package
+resources, uses a private Calc profile and bounded converter, and validates the
+PDF through ProcessNativePdf. NativeRenditionOperations creates a separate native
+PDF with an immutable creation receipt and exact source file reference. Paged
+read_rendition works without the converter and never migrates maps to edited PDF
+bytes. Existing PDF image/evidence/CRUD APIs reuse this frozen output. Native Wiki
+adds exact input XLSX and receipt as mechanical lineage, separate from Agent
+review or the derivation ledger. Source workbook caches/history remain unchanged.
+
 ## 2026-09-19 — Native Table totals lifecycle
 
 Domain NativeTotalsRowChange is a discriminated add/remove intent on NativeTableUpdate.
