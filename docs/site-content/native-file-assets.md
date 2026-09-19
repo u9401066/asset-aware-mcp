@@ -2,6 +2,40 @@
 
 # Native File Assets（v1.4.0）
 
+## Native selections (Unreleased)
+
+`read_selection` 將完整原生儲存格、DOCX 區塊、PPTX 形狀或 PDF 頁面引用，
+細化為解析資料中的值或文字範圍。先以空 `selection` 讀回完整父記錄，再選擇
+實際存在的路徑。根記錄不包含額外的 `evidence` 欄位；DOCX 表格目前的文字投影
+不能視為完整原生儲存格幾何。
+
+```python
+document(op="native", native_request={
+    "op": "read_selection",
+    "reference": full_cell_reference,
+    "selection": {"pointer": "/value", "char_range": {"start": 0, "end": 3}},
+    "text_limit": 4000
+})
+```
+
+沿 `next_text_offset` 讀完 `text_excerpt`，保留相同 `text_sha256`，組合後核對
+UTF-8 SHA-256。`native-selection-ref-v1` 綁定完整父引用、版本、路徑、值與
+文字上下文；同樣的字串在不同位置不能互換。`char_range` 是零起算、左閉右開的
+Unicode codepoint 範圍，回傳的 UTF-8 byte 範圍也只對應解析字串，不是原檔位置。
+字串可以不指定範圍而完整選取；false、0、null、空字串均保留原型別。
+
+路徑採 [RFC 6901 JSON Pointer](https://www.rfc-editor.org/rfc/rfc6901)，
+使用 `~0`／`~1` 表示鍵中的 `~`／`/`；不做 Unicode 正規化、URI fragment
+解碼或 JSONPath 搜尋。陣列索引不得有前導零；找不到位置、越界或型別不符會失敗。
+上限為 2,048 路徑字元、64 層與 16 MiB 選取記錄；不支援 opaque file 或巢狀選取父引用。
+
+`verify` 與轉製帳本可使用完整選取引用；重新讀取該引用時不能覆寫 selector。
+Wiki 將活躍主張的完整選取另存 JSON，於 `manifest.derivations.selection_records`
+列出引用與檔案，與來源附件一起保留。新版本不繼承舊主張；歷史引用仍可驗證。
+Agent 指定範圍並核對語意／畫面，MCP 檢查位置與內容一致性；掃描頁來源不會
+因此取得 OCR 文字或像素區域定位。文字範圍與上下文設計參考
+[W3C selectors](https://www.w3.org/TR/annotation-model/#selectors)，不宣稱 JSON-LD 相容。
+
 Agent 可以登錄人類交付的檔案，也可以直接建立 XLSX 工作簿。每份檔案都有固定
 `asset_id`、不可變的 SHA-256 版本與操作能力；PDF、DOCX 等既有工作流程仍使用
 各自的工具。登錄其他格式會保留原始內容，不代表已具備該格式的編輯器。

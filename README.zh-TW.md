@@ -7,6 +7,11 @@
 
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+Unreleased 的 `read_selection` 可將原生值或文字範圍綁定到來源版本，驗證、
+轉製帳本與 Wiki 附件均保留完整選取證據；更新文件不會自動遷移舊主張。
+詳見 [精確選取引用](docs/wiki/Native-File-Assets.md#native-selections-unreleased)。
+公開版維持 **1.4.0**，後續沿用 **1.4.x**。
+
 Unreleased 新增 DOCX 整頁預覽：另裝 LibreOffice Writer 後，可將固定版本的原始
 文件轉為實際 MCP PNG，讓 Agent 逐頁核對並比較歷史版本。頁碼以每次轉換為準，
 不等於 Microsoft Word 保真驗證。詳見 [DOCX 頁面預覽](docs/wiki/Native-File-Assets.md#docx-page-previews-unreleased)。

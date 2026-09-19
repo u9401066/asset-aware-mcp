@@ -154,6 +154,15 @@ and LightRAG knowledge graph outputs.
   semantics, full-resolution layout, forms, scripts, reading order and accessibility.
   Stage managed revisions before explicit writeback with source checks and backups.
 
+
+- When advertised, read_selection accepts full native cell/block/shape/page refs.
+  Read the complete parent with an empty selector, then select an actual RFC6901
+  pointer and optional half-open Unicode character range. Assemble all pages at
+  one text_sha256. Spans address parsed strings, never source-file bytes. verify
+  and derivations accept selection refs; Wiki retains active selection records.
+  Do not override an existing selection or infer native DOCX cell geometry from
+  table text. New revisions never migrate assertions; Agent reviews meaning/layout.
+
 ## PDF -> Asset Engine Selection
 
 The core goal is turning documents into complete, agent-friendly figure/table/

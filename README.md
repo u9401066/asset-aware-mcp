@@ -7,6 +7,12 @@
 
 🌐 [繁體中文](README.zh-TW.md) · [Docs Site](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+Unreleased `read_selection` binds exact native values or text spans to their source
+revision. Verification, derivation ledgers and Wiki attachments retain the full
+selection evidence; edits do not migrate old assertions. See
+[precise selections](docs/wiki/Native-File-Assets.md#native-selections-unreleased).
+Public version stays **1.4.0**, with development on **1.4.x**.
+
 Unreleased DOCX page previews now return actual MCP PNGs from exact stored revisions
 using optional LibreOffice Writer. Agents can review every page and compare history;
 page numbering belongs to each rendition, and Word fidelity still requires review.

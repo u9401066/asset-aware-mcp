@@ -1,5 +1,6 @@
 # Roadmap
 
+- [x] Unreleased / 1.4.x: immutable JSON-value and Unicode-span selections inside native cells/blocks/shapes/pages, verified derivation endpoints and portable Wiki selection evidence. Pixel-region evidence, automatic cell correspondence and semantic alignment remain open.
 - [x] Unreleased / 1.4.x: private CJK font environment, same-source before/after SDK2 image regression and actual Codex visual correction review. Global font installation and Microsoft Word fidelity remain outside this fixture.
 - [x] Unreleased / 1.4.x: optional native DOCX whole-page MCP PNG previews from exact revisions, Writer pagination metadata and resource/process guards. Agents perform visual review; general Word fidelity and real-corpus coverage remain open.
 - [x] Unreleased / 1.4.x: independent DOCX creation and reference-bound body paragraph/table insertion/deletion; merged grids, rich text, serialized readback and dependency guards. General Word structure editing and Microsoft Word fidelity review remain open.

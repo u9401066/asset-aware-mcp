@@ -9,6 +9,14 @@
 
 ### Added
 
+- `read_selection` exposes complete parsed native cell/block/shape/page records
+  or exact JSON values and Unicode text spans, with parent/selector/context hashes.
+  Existing verification and derivation ledgers accept immutable selection refs;
+  Wiki exports retain selected records and native source attachments. Historical
+  evidence never migrates automatically. SDK2 and actual Codex scanned-PDF-to-XLSX
+  evaluation cover literal values, historical selection proofs and wiki separation.
+  Public version remains 1.4.0; development stays Unreleased on the 1.4.x line.
+
 - Opt-in Linux Fontconfig evaluation fixture pins Noto Sans TC downloads, copies
   and hashes local Liberation fonts, retains licenses and leaves global settings
   unchanged. Codex MCP and independent replay share the recorded environment;

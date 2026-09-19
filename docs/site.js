@@ -227,6 +227,16 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
   "native-file-assets": `## Native documents and versioned files — v1.4.0
 
+### Native selections (Unreleased)
+
+read_selection identifies exact JSON values or Unicode text spans inside full native cell, DOCX block, PPTX shape or PDF page references. Start with an empty selector to discover the complete parsed parent record without added evidence metadata. Then supply an actual RFC6901 pointer, such as /value for a cell, and optionally char_range={start:0,end:3}. DOCX table text is a projection, not a complete native cell geometry model.
+
+Follow next_text_offset and retain one text_sha256 while assembling the complete JSON. Each native-selection-ref-v1 binds parent identity, revision, selector, selected value and nearby text context. Ranges count zero-based Unicode codepoints with an exclusive end; UTF-8 byte ranges belong to that parsed string, not to source-file bytes. Equal values at different locations are not interchangeable. False, zero, null and empty strings retain their types.
+
+verify and derivation ledgers accept complete selection references. Wiki exports attach active selection records under manifest.derivations.selection_records, alongside original source files. New revisions do not inherit assertions; historical evidence remains verifiable. Re-reading a selection cannot override its selector. No opaque-file or nested selection parents. Limits: 2,048 pointer characters, 64 levels, 16 MiB record; missing keys, bad types and out-of-range spans fail explicitly.
+
+Agents choose spans and review semantic support and rendering. Selection checks do not infer OCR, scan pixel regions or cell correspondence. See [RFC6901](https://www.rfc-editor.org/rfc/rfc6901) for pointer syntax and [W3C selectors](https://www.w3.org/TR/annotation-model/#selectors) for conceptual guidance; this is not a JSON-LD implementation. Public stays 1.4.0; future work remains 1.4.x.
+
 Use the document tool with op="native" and a typed native_request. Start with native_request={"op":"contract"} to discover the schema.
 
 - Register a human file or create an independent XLSX workbook.
@@ -455,6 +465,15 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+
+### Native selection evaluation (Unreleased)
+
+Run tests/unit/test_native_selection.py, tests/unit/test_native_selection_service.py, tests/unit/test_codex_selection_audit.py and tests/integration/test_native_selection_stdio.py. Explicitly opt into a real model with uv run python -m tests.codex_native_selection.run --output /tmp/selection-codex; replay with tests.codex_native_selection.audit. Ordinary pytest never starts Codex.
+
+Run 01 on 2026-09-19 completed **58 MCP calls, zero tool errors, 130.45 seconds**. Codex viewed a real scan PNG, transcribed all 15 literal XLSX cells, selected B2's original count and changed B2 to 008. The old 007 selection remained historical. Independent audits checked complete PNG pixels, every native string, source bytes/mtime, paged parent/selection/ledger reads, context hashes, published output and two revision-specific Wiki snapshots. The historical Wiki retains selection JSON and the exact source PDF; the current Wiki inherits no old assertion. Rehashed forged values, locators and context fail the auditor's regression tests.
+
+SDK2 separately exercises precise text in a merged-title PPTX table, edits, historical proof and source preservation. All four parent formats and Unicode/UTF-8 spans have regressions. Codex CLI 0.154.0-alpha.6.1 used its default model, not a pinned model. Synthetic coverage does not establish general OCR, pixel-region evidence, automatic cell alignment or Excel visual fidelity. Public remains 1.4.0 / future 1.4.x.
 A release candidate must pass lint, formatting, types, full tests, documentation checks, security audits, package audits, VSIX tests, and artifact verification. Install and activation smoke tests validate the production extension path.
 
 ## Codex PDF evaluation

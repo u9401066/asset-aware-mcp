@@ -2,6 +2,27 @@
 
 # Release And Testing
 
+## Native selection evaluation (Unreleased)
+
+```bash
+uv run pytest tests/unit/test_native_selection.py tests/unit/test_native_selection_service.py tests/unit/test_codex_selection_audit.py tests/integration/test_native_selection_stdio.py -q
+uv run python -m tests.codex_native_selection.run --output /tmp/selection-codex
+uv run python -m tests.codex_native_selection.audit /tmp/selection-codex
+```
+
+2026-09-19 實際 Codex run 01：**58 次 MCP 呼叫、零工具錯誤、130.45 秒**。
+Codex 看見真實掃描 PNG，轉錄完整 15 格 XLSX 表格，保留字串型別與前導零；
+建立 B2 的精確文字引用，再改為 008。舊引用仍保留 007 並驗證為歷史資料，
+歷史 Wiki 帶有選取 JSON、完整來源 PDF 與帳本；新版 Wiki 不繼承舊主張。
+獨立稽核比對完整像素、每格值、來源 bytes／mtime、分頁讀回雜湊、版本與附件。
+另以重算雜湊的偽造位置／上下文／值測試稽核器，確保不只相信 Agent 的結語。
+
+SDK2 測試以合併標題的 PPTX 表格核對精確 run 選取、修改後歷史引用與來源不變。
+四種父格式、Unicode codepoint／UTF-8 範圍、空值型別、錯誤位置、分頁大小、
+帳本與不可變 Wiki 均有回歸測試。CLI 使用現有登入狀態及預設模型，未固定模型；
+一般 pytest 不啟動模型。本評估為合成資料，不代表一般 OCR、像素區域證據、
+Excel 視覺保真或跨儲存格自動對應已完成。公開版仍 1.4.0／後續 1.4.x。
+
 ## CJK font correction evaluation (Unreleased)
 
 The first Writer evaluation found boxes for 「研究」. No Chinese font was available;

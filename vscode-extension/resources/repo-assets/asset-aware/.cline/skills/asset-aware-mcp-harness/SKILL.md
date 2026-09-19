@@ -32,6 +32,15 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
 
 ## Native Document Operations
 
+- When advertised, read_selection accepts full native cell/block/shape/page refs.
+  Read the complete parent with an empty selector, then select an actual RFC6901
+  pointer and optional half-open Unicode character range. Assemble all pages at
+  one text_sha256. Spans address parsed strings, never source-file bytes. verify
+  and derivations accept selection refs; Wiki retains active selection records.
+  Do not override an existing selection or infer native DOCX cell geometry from
+  table text. New revisions never migrate assertions; Agent reviews meaning/layout.
+
+
 - Discover the typed contract with `document(op="native", native_request={"op":"contract"})`.
   For native-contract-v2 (1.4.0+), check schema_delivery. Use for_op
   for one operation or follow schema_request, retaining schema_sha256/for_op across
