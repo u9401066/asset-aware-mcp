@@ -27,6 +27,7 @@ from src.infrastructure.native_workbook_package import (
 )
 from src.infrastructure.native_workbook_plan import WorkbookPlan
 from src.infrastructure.native_workbook_references import NativeWorkbookReferences
+from src.infrastructure.native_workbook_tables import table_inventory
 
 if TYPE_CHECKING:
     from src.domain.native_asset_models import NativeEditResult
@@ -54,6 +55,7 @@ class NativeWorkbookStructure:
                 )
             ],
             "cell_read_operation": "read_cell",
+            "tables": table_inventory(book),
         }
         if references:
             result["references"] = [

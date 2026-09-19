@@ -1,5 +1,69 @@
 # Active Context
 
+Final verification: pytest04 passed **2678 tests,33 skipped in96.90sec**;
+Docker import/doctor/list/stdio and clean wheel02 installation/runtime/stdio passed.
+GitHub metadata/managed labels and all artifact gates passed. Local proof:
+/tmp/asset-aware-table-expansion-local-proof.json. Exact CI/Pages/public proof still
+awaits the scoped commits/push; overall goal remains active.
+
+## 2026-09-19 — native Table expansion verified by actual Codex, publication pending
+
+Public remains 1.4.0 / Unreleased within 1.4.x; no new tag or version-file changes.
+Base main/origin is 3e9d6ee. Original detached user worktree remains untouched.
+Per-step expand_tables uses exact active table part and expected_ref, supports
+first/last data and left/right column boundaries, extends before totals, retains
+column IDs and generates unique headers/calculated cells. Table filters and sort
+extents include inserted data; sort keys retain their original column identity.
+Mapped/pivot schema guards remain. read_workbook.tables exposes complete parsed
+XML, raw part hash and attributes/column identities, including non-UTF-8 definitions.
+A2T native_generated null intent resolves only new generated native Table cells;
+missing/blank still mean blank, existing-cell/independent-export misuse rejects.
+Final generated coordinates survive sequential grid changes; receipts expose values.
+
+Actual Codex /tmp/asset-aware-codex-table-expansion-01 completed82 successful calls,
+zeroerrors,150.48sec and one actual scan PNG. It filled10 literal data cells into a
+supplied six-column native Inventory template, then A2T changed007 to008 and added
+one row/column with generated F4 formula and G1 Column7. Final A1:G4 membership,
+20 literal strings/types, formulas, column IDs, complete original/baseline/current
+reads, frozen/live A2T, historical007 proof, sourcePDF/XLSX bytes/mtimes and two
+native Wikis pass independent audit. Template creation is not MCP table creation;
+Excel rendering/recalculated results remain unverified. Runtime source hash
+ dda6223ec8f8f23d82cf1fd7deccfabb44e73252a1f2f103c1bb1690180cb3c6
+matches the current checkout and built wheel code. Lock hash unchanged.
+
+Full pytest02 passed2667/33skipped;11 later audit regressions passed. Final full
+pytest04 is running after disk pressure interrupted pytest03 (exit120). Docker
+built4e7328a73a86; initial import also hit full disk. Removed only own completed
+builder8ab950ae332c and old completed smoke288e73dc, retaining current runtime and
+actual-Codex evidence. Docker import/doctor/list/stdio now pass. Wheel02 clean install
+and runtime/stdio pass using private SHM with pip cache disabled; wheel01 exit120 is
+not counted. Own completed pytest01/02/03 fixtures removed; logs retained.
+
+Ruff518files, mypy232sources, Bandit, lock/Python/npm/workflow audits, docs/harness/
+18skills/assets, extension tests/package/install-update and metadata checks pass.
+No local VSIX activation (no display/Xvfb). Browser plugin unavailable; Playwright
+fallback passed zh/en desktop/mobile terms, navigation, overflow and console gates;
+/tmp/table-expansion-{desktop,mobile}-{zh,en}.png inspected desktop-en/mobile-zh.
+README/zh, Wiki, spec, changelog, bilingual site and bundled harness updated.
+Next: final suite result, artifact/metadata-label proof, scoped source/docs commits
+with MEM, push main and exact CI/Pages/public-byte verification. Specialized Table
+header/calculated/totals edits, native moves and broader cross-format real-corpus
+coverage remain open. Whole goal stays active.
+
+## 2026-09-19 — explicit native Table expansion in development
+
+Previous turn was progress: main 3e9d6ee equals origin, CI35411992629 all10 jobs and
+Pages35411992117 all3 passed; five public files match. Evidence is retained at
+/tmp/asset-aware-a2t-grid-publication-proof.json. Original user worktree is untouched.
+Public stays 1.4.0; development is Unreleased within 1.4.x, no automatic tag/bump.
+
+Doing: explicit per-grid-insertion Table membership, matched by exact part and
+intermediate expected_ref. Extend table/filter/sort extents, retain column identities
+and generate header/calculated cells. A2T needs explicit native_generated intent;
+missing and blank retain their current meaning. Test full packages, stale requests,
+SDK2 and actual Codex. Specialized table header/formula/totals edits, source-axis
+moves, richer cross-format fidelity and real-corpus evidence remain open.
+
 ## 2026-09-19 — structural A2T application and actual Codex audit in development
 
 Previous goal turn was progress: four native-grid commits reached clean main/origin

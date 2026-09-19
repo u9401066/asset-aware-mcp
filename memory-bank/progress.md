@@ -1,5 +1,45 @@
 # Progress (Updated: 2026-09-19)
 
+Final verification: pytest04 passed **2678 tests,33 skipped in96.90sec**;
+Docker import/doctor/list/stdio and clean wheel02 installation/runtime/stdio passed.
+GitHub metadata/managed labels and all artifact gates passed. Local proof:
+/tmp/asset-aware-table-expansion-local-proof.json. Exact CI/Pages/public proof still
+awaits the scoped commits/push; overall goal remains active.
+
+## 2026-09-19 — explicit native Table expansion and generated A2T intent
+
+Done locally: Table boundary selection at exact intermediate part/ref, stable native
+columns, generated headers/calculated cells, synchronized Table/filter/sort extents,
+complete read_workbook Table inventory and A2T native_generated resolution in one
+native CAS. Original and frozen evidence retain their source revisions.
+Actual Codex82calls/zeroerrors/150.48sec audit passes, including real scan PNG,
+20 final literal cells, native formulas/IDs/membership, complete reads, frozen/live
+workspaces, historical007, untouched PDF/XLSX and two revision-specific Wikis.
+No native Excel rendering/formula evaluation claim; template was supplied.
+Source hash dda6223ec8f8f23d82cf1fd7deccfabb44e73252a1f2f103c1bb1690180cb3c6.
+Full suite02 passed2667+33skips;11 audit regressions added and pass. Final04 pending
+following resource-only exit120 in03. Docker and wheel retries pass after removing
+only own completed builder/smoke/pytest temporary artifacts; original worktree and
+actual evidence preserved. Docs/browser/harness, extension/package/install-update,
+source/security checks passed. No local VSIX activation; CI must cover it.
+Doing: finish publication gates, segmented main commits/push and exact CI/Pages.
+Public1.4.0; Unreleased/future1.4.x. Native special Table edits/moves and broad goal
+remain unfinished.
+
+## 2026-09-19 — explicit native Table expansion in development
+
+Previous turn was progress: main 3e9d6ee equals origin, CI35411992629 all10 jobs and
+Pages35411992117 all3 passed; five public files match. Evidence is retained at
+/tmp/asset-aware-a2t-grid-publication-proof.json. Original user worktree is untouched.
+Public stays 1.4.0; development is Unreleased within 1.4.x, no automatic tag/bump.
+
+Doing: explicit per-grid-insertion Table membership, matched by exact part and
+intermediate expected_ref. Extend table/filter/sort extents, retain column identities
+and generate header/calculated cells. A2T needs explicit native_generated intent;
+missing and blank retain their current meaning. Test full packages, stale requests,
+SDK2 and actual Codex. Specialized table header/formula/totals edits, source-axis
+moves, richer cross-format fidelity and real-corpus evidence remain open.
+
 ## 2026-09-19 — A2T structural bridge verified locally and by actual Codex
 
 Native-grid publication is complete at df1f26a; CI35409819540 all10 and

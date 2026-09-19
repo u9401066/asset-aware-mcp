@@ -128,6 +128,10 @@ def projection_edits(
     for row, original in zip(context.rows, records, strict=True):
         for column, source in zip(context.columns, original, strict=True):
             value = native_value(row.get(column.name))
+            if value.kind == "native_generated":
+                raise ValueError(
+                    "native_generated requires structural native table generation"
+                )
             if value == NativeTableCellValue.from_record(source):
                 continue
             edits.append(
@@ -179,6 +183,10 @@ def workbook_from_context(
             else:
                 raise ValueError(
                     "Native workbook export requires scalar or explicitly tagged cell values"
+                )
+            if value.kind == "native_generated":
+                raise ValueError(
+                    "Resolve native_generated against a structural native table before export"
                 )
             edits.append(
                 NativeCellEdit.model_validate(

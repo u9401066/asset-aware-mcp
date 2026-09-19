@@ -25,14 +25,25 @@ if TYPE_CHECKING:
 
 
 class NativeTableCellValue(NativeModel):
-    kind: Literal["string", "number", "boolean", "formula", "blank", "source_only"]
+    kind: Literal[
+        "string",
+        "number",
+        "boolean",
+        "formula",
+        "blank",
+        "source_only",
+        "native_generated",
+    ]
     value: str | int | float | bool | None
 
     @model_validator(mode="after")
     def checked_value(self) -> NativeTableCellValue:
         if isinstance(self.value, float) and not math.isfinite(self.value):
             raise ValueError("Native table numbers must be finite")
-        if self.kind != "source_only":
+        if self.kind == "native_generated":
+            if self.value is not None:
+                raise ValueError("native_generated must have a null value")
+        elif self.kind != "source_only":
             NativeCellEdit(
                 sheet="Projection", cell="A1", kind=self.kind, value=self.value
             )

@@ -8,13 +8,16 @@ from typing import TYPE_CHECKING, Any
 from lxml import etree
 
 from src.domain.native_grid_tables import GridTableChange
-from src.infrastructure.native_grid_filters import shift_filters
 from src.infrastructure.native_grid_formulas import translate_shared_formula
+from src.infrastructure.native_grid_table_expansion import (
+    shift_table_filters,
+    table_destination,
+)
 from src.infrastructure.native_grid_xml import address, tag
 from src.infrastructure.native_spreadsheet_reader import NS
 
 if TYPE_CHECKING:
-    from src.domain.native_grid import GridTransform
+    from src.domain.native_grid import GridTransform, NativeTableExpansion
     from src.infrastructure.native_grid_table_state import GridTableState
 
 
@@ -22,6 +25,7 @@ if TYPE_CHECKING:
 class TableGridEdit:
     state: GridTableState
     transform: GridTransform
+    expansion: NativeTableExpansion | None = None
     change: GridTableChange = field(init=False)
     headers_to_write: list[tuple[str, str]] = field(default_factory=list)
     calculated: list[tuple[etree._Element, int, int, list[int]]] = field(
@@ -32,13 +36,15 @@ class TableGridEdit:
     def prepare(self) -> None:
         state, transform = self.state, self.transform
         bounds, columns = state.bounds, state.columns
-        after = bounds.shift(transform)
+        after = table_destination(state, transform, self.expansion)
         self.receipt = {
             "table": state.name,
             "part": state.part,
             "before": bounds.text,
             "after": after.text if after else None,
         }
+        if self.expansion is not None:
+            self.receipt["explicit_expansion"] = self.expansion.model_dump()
         if after is None:
             self.change = GridTableChange(state.name, columns, None)
             return
@@ -93,7 +99,7 @@ class TableGridEdit:
         ]
         column_list.set("count", str(len(positioned)))
         root.set("ref", after.text)
-        shift_filters(root, transform)
+        shift_table_filters(state, transform, bounds)
         state.validate()
         self.change = GridTableChange(state.name, columns, state.columns)
         self.receipt["columns_before"] = [

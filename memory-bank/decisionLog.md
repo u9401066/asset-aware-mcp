@@ -1,5 +1,22 @@
 # Decision Log
 
+## 2026-09-19 — Table membership and generated values require explicit intent
+
+A worksheet insertion and logical native Table membership are separate operations.
+Default coordinate relocation remains; callers select edge expansion with part and
+expected_ref on each insert. This avoids guessing adjacent Table membership and
+preserves checked pivot/query schema constraints. Insert before totals; sort key
+column identities survive while filter/data extents grow.
+
+A2T missing values cannot implicitly mean both blank and generated formulas. The
+explicit native_generated/null tag preserves only cells created by this structural
+operation. Track generated coordinates through subsequent grid edits, freeze input
+intent and record actual resolved values. Do not relax generic header/calculated-cell
+edit guards. Complete Table inventory is needed for the Agent to choose an exact
+part/range without guessing; parsed XML retains all definition details and raw-part
+SHA binds original bytes. Microsoft SpreadsheetML and XlsxWriter primary docs were
+reviewed; links are in docs/spec.md and the A2T guide.
+
 ## 2026-09-19: explicit stable identity correspondence for structural A2T writes
 
 Column names are labels, not durable identity: rename retains column_ids, while

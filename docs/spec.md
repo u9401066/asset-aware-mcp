@@ -213,9 +213,34 @@ new or changed typed values. Unchanged formulas/rich text follow the native relo
 new/edited formulas address the destination. Missing new values are blank. Read every
 destination value back and compare unedited representations/styles, retain the frozen
 A2T input and commit once under the original file CAS. Old evidence remains historical.
-Native Table edge insertion does not imply membership expansion; table headers,
+Native Table edge insertion requires explicit expand_tables to extend membership; table headers,
 calculated columns and partial array structures retain their dedicated edit boundaries.
 No structural preview claims semantic, recalculation or visual completeness.
+
+### Explicit native Table expansion (Unreleased, 1.4.x)
+
+read_workbook.tables exposes worksheet/part identity, attributes, column IDs, raw
+part SHA-256 and complete parsed XML even for non-UTF-8 source definitions.
+Each insert edit may supply expand_tables with exact table part and expected_ref
+in that intermediate worksheet grid. Row insertion at the first/last data boundary
+or column insertion at the left/right boundary can explicitly include new cells.
+Insert before totals to extend data; insertion after totals cannot move the totals
+meaning implicitly. No expansion is inferred for adjacent tables. Existing IDs,
+column metadata, styles and structured references survive; new columns get fresh
+IDs and unique headers. Extend table-owned filters/sort ranges consistently, retain
+criteria and record generated headers/calculated formulas. Query/XML-mapped and
+pivot source schema changes still require coordinated mapping.
+
+A2T native_generated with null value explicitly preserves only a header/calculated
+cell generated during this structural operation. Replay all grid steps to track its
+final position. Reject placeholders on ordinary/surviving cells and nonstructural
+exports; missing/blank remain blank. Freeze the input intent, record resolved values,
+verify the native result and commit once. This does not certify recalculated results,
+filter visibility, sorting or rendered layout; Agent completes those reviews.
+
+Reference designs: [Microsoft SpreadsheetML tables](https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/working-with-tables)
+and [XlsxWriter tables](https://xlsxwriter.readthedocs.io/working_with_tables.html).
+Table definitions and sheet cells are distinct package parts; both must agree.
 
 ### Native workbook sheet structure (Unreleased, 1.4.x)
 

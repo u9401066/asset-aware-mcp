@@ -1,5 +1,20 @@
 # System Architect
 
+## 2026-09-19 — Explicit Table expansion composition
+
+NativeGridEdit owns typed optional NativeTableExpansion part/expected_ref intent.
+NativeWorkbookGrid delegates selected membership to native_grid_table_expansion;
+TableGridEdit coordinates table column metadata, filters and formula generation.
+GridTables tracks final generated-cell coordinates across all sequential transforms.
+Existing reference/dependency/cache/package checks and original native CAS remain.
+NativeWorkbookStructure adds a read-only inventory adapter for complete Table parts;
+it does not require enabling edits or rewriting XML encoding.
+NativeTableGridApply resolves native_generated values only against this operation's
+new generated-cell map, compares every final typed value and unedited format, and
+stores resolved values beside immutable A2T intent. Generic cell edit guards remain.
+SDK2 and actual-Codex fixtures independently inspect native packages, full paged
+reads, historical references, frozen/live snapshots and Wiki bytes.
+
 ## 2026-09-19 structural A2T application
 
 Domain native_table_grid computes identity-based insert/delete proposals and validates

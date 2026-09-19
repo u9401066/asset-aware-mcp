@@ -12,8 +12,9 @@ from src.infrastructure.native_grid_formulas import translate_shared_formula
 from src.infrastructure.native_grid_references import formula_fields
 from src.infrastructure.native_grid_structured import rewrite_structured_formula
 from src.infrastructure.native_grid_table_edit import TableGridEdit
+from src.infrastructure.native_grid_table_expansion import table_destination
 from src.infrastructure.native_grid_table_state import table_states
-from src.infrastructure.native_grid_xml import Rectangle, address, tag
+from src.infrastructure.native_grid_xml import Rectangle, address, shift_cell, tag
 from src.infrastructure.native_ooxml import DOC_REL_NS, relationships_path
 from src.infrastructure.native_spreadsheet_reader import NS, XML_SPACE, _encode_text
 
@@ -29,24 +30,41 @@ class GridTables:
         self.plan = plan
         self.states = table_states(plan)
         self.edits: list[TableGridEdit] = []
+        self.generated: dict[str, str] = {}
 
     def prepare(self, worksheet: str, transform: GridTransform) -> None:
         self.edits = []
+        expansions = {item.part: item for item in transform.edit.expand_tables or []}
+        matched = {
+            state.part
+            for state in self.states
+            if not state.deleted and state.worksheet == worksheet
+        }
+        if not expansions.keys() <= matched:
+            raise ValueError(
+                "Table expansion must match an active table in the selected worksheet"
+            )
+        self.generated = {
+            moved: kind
+            for cell, kind in self.generated.items()
+            if (moved := shift_cell(cell, transform)) is not None
+        }
         for state in self.states:
             if state.deleted or state.worksheet != worksheet:
                 continue
-            self._check_bound_structures(state, transform)
-            edit = TableGridEdit(state, transform)
+            expansion = expansions.get(state.part)
+            after = table_destination(state, transform, expansion)
+            self._check_bound_structures(state, after)
+            edit = TableGridEdit(state, transform, expansion)
             edit.prepare()
             if edit.change.after is None:
                 self._detach(state)
             self.edits.append(edit)
 
     def _check_bound_structures(
-        self, state: GridTableState, transform: GridTransform
+        self, state: GridTableState, after: Rectangle | None
     ) -> None:
         before = state.bounds
-        after = before.shift(transform)
         columns_change = (
             after is None
             or after.last_column - after.first_column
@@ -226,6 +244,7 @@ class GridTables:
                 text.set(XML_SPACE, "preserve")
                 text.text = _encode_text(name)
                 writer.put(cell)
+                self.generated[location] = "header"
             generated = 0
             first = state.bounds.first_row + state.headers
             for formula, column, delta, rows in edit.calculated:
@@ -240,6 +259,7 @@ class GridTables:
                         formula.text or "", row - first, 0
                     )
                     writer.put(cell)
+                    self.generated[address(row, column)] = "calculated"
                     generated += 1
             edit.receipt["generated_headers"] = len(edit.headers_to_write)
             edit.receipt["generated_calculated_cells"] = generated

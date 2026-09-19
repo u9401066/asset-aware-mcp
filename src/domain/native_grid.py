@@ -11,6 +11,11 @@ from src.domain.native_asset_models import NativeEditResult, NativeModel
 from src.domain.native_workbook import NativeWorksheetKey  # noqa: TC001 -- schema
 
 
+class NativeTableExpansion(NativeModel):
+    part: str = Field(min_length=1, max_length=1024)
+    expected_ref: str = Field(min_length=2, max_length=21)
+
+
 class NativeGridEdit(NativeModel):
     axis: Literal["row", "column"]
     operation: Literal["insert", "delete"]
@@ -19,6 +24,9 @@ class NativeGridEdit(NativeModel):
     inherit_format: Literal["before", "after", "none"] | None = None
     merged_anchor: Literal["preserve", "delete"] | None = None
     collapsed_objects: Literal["preserve_size", "reject"] | None = None
+    expand_tables: list[NativeTableExpansion] | None = Field(
+        default=None, min_length=1, max_length=32
+    )
 
     @property
     def limit(self) -> int:
@@ -26,6 +34,13 @@ class NativeGridEdit(NativeModel):
 
     @model_validator(mode="after")
     def valid_bounds(self) -> NativeGridEdit:
+        if self.expand_tables is not None:
+            if self.operation != "insert":
+                raise ValueError("Table expansion is only used for insertion")
+            if len({item.part for item in self.expand_tables}) != len(
+                self.expand_tables
+            ):
+                raise ValueError("Duplicate table expansion identities")
         if self.at + self.count - 1 > self.limit:
             raise ValueError("Native grid operation exceeds worksheet bounds")
         if self.operation == "delete" and self.inherit_format is not None:

@@ -113,6 +113,7 @@ class NativeWorkbookGrid:
             "expanded_shared_formulas": expanded,
             "cleared_formula_values": caches,
             "cleared_remaining_chart_caches": chart_caches,
+            "generated_table_cells": tables.generated,
         }
         updated, result = plan.finish(change)
         check_grid_package(plan, updated, result)

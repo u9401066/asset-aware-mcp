@@ -144,6 +144,6 @@ def grid_plan_record(context: TableContext) -> dict[str, Any]:
         "status": "required" if grid else "unchanged",
         "worksheet_grid": grid.model_dump(exclude_none=True) if grid else None,
         "destination": destination.model_dump() if destination else None,
-        "scope": "Whole worksheet rows/columns move, including content outside the projection. Deleted identities discard their merged anchors. Native table membership follows explicit grid coordinates; insertion beyond a table edge does not expand that table. Review references, table membership and geometry before applying.",
-        "formula_policy": "Unchanged source cells follow native grid relocation. Edited/new formulas are expressed in destination coordinates. Missing new values are blank; historical references never migrate.",
+        "scope": "Whole worksheet rows/columns move, including content outside the projection. Deleted identities discard their merged anchors. Native table membership follows grid coordinates. Add expand_tables with exact part/expected_ref to an insert edit to explicitly include a table boundary; insert before totals. Review references, table membership and geometry before applying.",
+        "formula_policy": "Unchanged source cells follow native grid relocation. Edited/new formulas are expressed in destination coordinates. Missing new values are blank; native_generated with null value explicitly requests a new native header/calculated cell. Historical references never migrate.",
     }

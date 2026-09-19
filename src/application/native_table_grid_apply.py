@@ -20,6 +20,7 @@ def _intent(
     context: TableContext,
     source: list[list[dict[str, Any]]],
     relocated: list[list[dict[str, Any]]],
+    generated: dict[str, str],
 ) -> tuple[list[NativeCellEdit], list[list[NativeTableCellValue]]]:
     binding = context.native_binding
     assert binding is not None
@@ -45,6 +46,15 @@ def _intent(
                 == NativeTableCellValue.from_record(source[old_row][old_column])
             )
             value = actual if inherited else requested
+            if requested.kind == "native_generated":
+                cell = relocated[row_index][column_index]["cell"]
+                if cell not in generated or (
+                    old_row is not None and old_column is not None
+                ):
+                    raise ValueError(
+                        "native_generated requires a newly generated native table cell"
+                    )
+                value = actual
             values.append(value)
             if value != actual:
                 record = relocated[row_index][column_index]
@@ -88,7 +98,8 @@ class NativeTableGridApply:
         if destination is None:
             return updated, result, 0
         relocated = self.ranges.read_range(updated, destination)
-        edits, expected = _intent(context, source, relocated)
+        generated = result.changes[0].get("generated_table_cells", {})
+        edits, expected = _intent(context, source, relocated, generated)
         if edits:
             updated, values = self.cells.edit(updated, edits)
             result = _combined(result, values)
@@ -111,6 +122,20 @@ class NativeTableGridApply:
                         "Structural cell formatting changed during value editing"
                     )
         result.checks.append("complete_structural_workspace_values_read_back")
+        result.changes.append(
+            {
+                "operation": "resolve_native_generated_values",
+                "cells": [
+                    {
+                        "cell": record["cell"],
+                        **NativeTableCellValue.from_record(record).model_dump(),
+                    }
+                    for row in final
+                    for record in row
+                    if record["cell"] in generated
+                ],
+            }
+        )
         result.review_required.append("projected_range_and_native_table_membership")
         return updated, result, len(edits)
 
