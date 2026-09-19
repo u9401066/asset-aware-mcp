@@ -2,6 +2,35 @@
 
 # A2T Tables
 
+## Native Table creation (Unreleased)
+
+`workbook_table_creation_enabled` 啟用時，可先用 `create` 建立獨立 XLSX，
+或註冊既有工作簿，再以 `add_workbook_table` 將指定範圍建立成原生 Excel Table。
+先讀完 `read_workbook(workbook_view="references")`，固定 asset_id、
+expected_revision 與 worksheet 的 sheet_id／part。
+
+`table_create` 指定 ref、工作簿內唯一的 name，以及依順序排列的 columns。
+每欄含 name，可選 calculated 與 totals，使用下節相同的公式／合計格式。
+ref 包含標題、至少一筆資料及選用合計列；操作不插入工作表列。
+
+| 選項 | 行為 |
+|---|---|
+| `header_policy="require_matching"` | 保留與欄名完全相同的字串標題，含富文字／共享字串 |
+| `header_policy="fill_blank"` | 另允許填入空白標題；既有值仍須完全相同 |
+| `header_row=false, autofilter=false` | 建立沒有標題列的 Table，第一列仍是資料 |
+| `totals_row=true` | 指定範圍的最後一列須先為空白，避免誤吞資料 |
+| `calculated.policy="require_matching"` | 新計算欄填入空白格；既有值須明確使用 replace_all |
+| `style` | 預設 TableStyleMedium2 與列條紋；可指定內建或工作簿已有樣式及條紋選項 |
+
+一般資料、前導零、儲存格樣式和未修改 package parts 保留。名稱、重疊 Table、
+合併格、工作表篩選、特殊公式及保護條件會先檢查；已卸離的 Table parts 也保留
+名稱／ID，避免重用。空的或明確未啟用的 workbookProtection 不再誤判為已上鎖。
+
+一次提交後，完整讀回 created_table、欄位 ID、header_cells、before／after
+及機械檢查紀錄，再核對語意、篩選、公式結果與實際畫面。MCP 請求重算，
+不宣稱已執行 Excel 計算。歷史引用、Wiki 與 A2T 綁定不會自動轉成新版。
+公開版維持 **1.4.0**，此項累積於 **Unreleased／1.4.x**。
+
 ## Native Table column edits (Unreleased)
 
 `workbook_table_edit_enabled` 啟用時，先完整讀取目前版本的

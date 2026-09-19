@@ -7,6 +7,14 @@
 
 ## [Unreleased]
 
+- Added `add_workbook_table` over exact native worksheet ranges, with typed ordered
+  columns, matching/rich headers or explicit blank-header filling, calculated
+  columns, reserved blank totals rows and built-in/existing Table styles. One CAS
+  preserves ordinary data/styles/history, allocates native package identities and
+  requires complete bounded readback. Empty/disabled workbookProtection is no longer
+  mistaken for an active lock; active/unknown protection remains guarded.
+  Public stays 1.4.0; this work accumulates Unreleased for 1.4.x.
+
 - Native `update_workbook_table` coordinates column names/rich headers, scalar
   calculated-column formulas and existing totals in one revision-checked commit.
   Complete Table header cell/shared-string XML supports run-aware inspection.

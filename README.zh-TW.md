@@ -1,5 +1,11 @@
 # asset-aware-mcp
 
+Unreleased 新增 `add_workbook_table`：在既有或獨立建立的 XLSX 指定範圍建立
+原生 Excel Table，包含標題、計算欄、合計列與表格樣式，保留既有資料及儲存格格式。
+讀回完整建立紀錄後，Agent 核對語意、公式結果與實際畫面。詳見
+[原生 Table 建立](docs/wiki/A2T-Tables.md#native-table-creation-unreleased)。
+公開版仍 **1.4.0**，持續累積 **1.4.x**。
+
 Unreleased 新增 `update_workbook_table`：同步修改原生 Table 欄名、富文字標題、
 計算欄與既有總計列，保留欄位 ID／樣式並更新結構化引用。Agent 可完整讀回標題
 XML；計算欄的例外值需明確指定覆寫，公式結果與畫面仍由 Agent 核對。

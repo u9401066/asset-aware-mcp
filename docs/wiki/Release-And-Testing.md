@@ -1,5 +1,23 @@
 # Release And Testing
 
+## Native Table creation evaluation (Unreleased)
+
+實際 Codex CLI 從 MCP PNG 閱讀合成掃描 PDF，透過 `create` 自行建立 XLSX，
+再以 `add_workbook_table` 建立原生 Inventory Table。共 **73 次成功 MCP 呼叫、
+零工具錯誤**，耗時 **109.47 秒**；沒有使用預先建立的 Table 範本。
+
+獨立 openpyxl／ZIP 稽核核對 10 個來源資料字串與型別、前導零、六個欄位 ID、
+Table／filter 範圍、計算欄、合計列與樣式；另核對完整分頁及操作紀錄、歷史
+007 引用、原始 PDF 位元組與 mtime、兩份 Wiki 的版本與精確附件。
+全套測試 **2,764 項通過、33 項選配略過**，包含 SDK2 建立／歷史流程。
+
+建立測試也發現並修正 openpyxl 空 workbookProtection 被誤判為啟用保護；
+空值／明確 false 保留，實際鎖定、密碼及未知保護仍會拒絕。沒有停用保護檢查。
+此次只驗證合成掃描第一頁及建立工作流，Excel 畫面與公式計算結果尚未驗證。
+重現：`uv run python -m tests.codex_table_create.run --output /absolute/new/run-dir`。
+普通 pytest 不啟動模型；runner 使用預設 Codex 模型，audit 獨立核對證據。
+公開版仍為 **1.4.0**，此項累積於 **Unreleased／1.4.x**。
+
 ## Native Table column editing evaluation (Unreleased)
 
 實際 Codex CLI 完成 **66 次成功 MCP 呼叫、零工具錯誤**，耗時 **132.75 秒**。

@@ -2,6 +2,10 @@
 
 # Native File Assets（v1.4.0）
 
+`add_workbook_table` 將明確範圍建立為原生 Excel Table；可搭配 `create`
+獨立建立工作簿，或使用既有檔案。欄名、計算欄、合計列與樣式都有明確契約，
+並保留歷史證據。詳見 [原生 Table 建立](#/a2t-tables)。
+
 Unreleased 的 `update_workbook_table` 可同步修改欄名、富文字標題、計算欄與
 既有總計列。先讀完整 Table／header_cells 與引用，固定版本、part、範圍和欄位 ID，
 核對回傳操作紀錄及新版內容；詳見 [原生 Table 編輯](#/a2t-tables)。

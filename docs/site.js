@@ -465,6 +465,14 @@ After table_data/table_manage edits, read the COMPLETE workspace again. Review s
 
 Unchanged source cells follow native relocation, preserving supported formulas, rich text and styles. Edited/new formulas use destination coordinates; missing new values mean blank. Plans move WHOLE worksheet rows/columns, including content outside the projection, and discard deleted merged anchors. Reordering existing identities requires native move support. Native Table headers/calculated columns, partial arrays and unmodeled structures retain their checks; table-boundary membership requires explicit expand_tables as described below. Agent review covers membership, dynamic references, calculated results and actual rendering.
 
+### Native Table creation (Unreleased)
+
+When workbook_table_creation_enabled is advertised, add_workbook_table turns an explicit worksheet range into a native Excel Table. Use create for an independent workbook or register an existing XLSX. Pin expected_revision and the worksheet key from complete read_workbook references. table_create provides ref, unique name, ordered columns, header_row, totals_row, autofilter and style.
+
+Matching headers retain rich/shared strings. header_policy=fill_blank additionally fills blank headers, never silently renaming existing values. Headerless Tables require autofilter=false. Ranges include at least one data row and any explicit totals row; totals must start blank and no worksheet rows are inserted. New calculated columns use require_matching for blanks or explicit replace_all. Choose built-in/existing Table styles; ordinary data, leading zeros, cell formats and untouched package parts remain intact.
+
+Read the complete created_table identity, header_cells and operation receipt. Name/ID/relationship allocation reserves retained detached Table parts. Overlaps, special formulas and active protection retain checks; empty/disabled workbookProtection is accepted. Historical evidence and A2T bindings never migrate. Agent review covers meaning, actual layout, filter behavior and recalculated results. Public stays 1.4.0 / Unreleased on 1.4.x.
+
 ### Native Table column edits (Unreleased)
 
 When workbook_table_edit_enabled is advertised, update_workbook_table pins the exact worksheet key, Table part, expected_ref and file expected_revision. Each column edit identifies column_id and expected_name. name updates the header and existing structured references by original identity. Complete read_workbook.tables[].header_cells exposes native cell and resolved shared-string XML. Rich headers require header_runs matching the original run count and concatenating to the new name; run formatting survives and shared strings are cloned.
@@ -524,6 +532,14 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Native Table creation evaluation (Unreleased)
+
+Actual default-model Codex viewed a synthetic scanned PDF through an MCP PNG, created an independent XLSX and added a native Inventory Table through add_workbook_table. The run completed 73 successful MCP calls with zero tool errors in 109.47 seconds. No prebuilt Table template was supplied.
+
+Independent openpyxl/ZIP and trace audits checked ten exact source strings and types, leading zeros, six column IDs, Table/filter ranges, calculated/totals formulas, Table style and preserved cell formats/parts. Complete paged reads, the original historical 007 reference, source PDF bytes/mtime and both revision Wikis with exact attachments passed. The full suite passed 2,764 tests with 33 optional skips. An openpyxl empty workbookProtection compatibility failure was reproduced and fixed while retaining active/password/unknown protection guards.
+
+This synthetic first-page workflow does not establish general OCR accuracy, Excel rendering or recalculated results. Reproduce with uv run python -m tests.codex_table_create.run --output /absolute/new/run-dir. Ordinary pytest never launches a model. Public remains 1.4.0 / Unreleased within 1.4.x.
 
 ### Native Table column editing evaluation (Unreleased)
 

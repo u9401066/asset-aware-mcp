@@ -7,6 +7,13 @@
 
 🌐 [繁體中文](README.zh-TW.md) · [Docs Site](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+Unreleased `add_workbook_table` creates native Excel Tables in existing or
+independently created workbooks, with explicit headers, calculated columns, totals
+and Table styles. Existing typed data and cell formats survive; read the complete
+creation receipt and review actual layout and formula results. See
+[native Table creation](docs/wiki/A2T-Tables.md#native-table-creation-unreleased).
+Public stays **1.4.0**, with development on **1.4.x**.
+
 Unreleased native Excel/A2T workspaces preserve typed values and exact source-cell
 references. Edit projected cells in A2T, then apply them to the original workbook at
 checked table/file revisions; each applied input remains an immutable snapshot.

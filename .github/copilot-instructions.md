@@ -18,6 +18,7 @@
 
 ### 核心功能
 
+- **原生 Table 建立（main 未發布／1.4.x）** — `workbook_table_creation_enabled` 啟用時，`add_workbook_table` 在固定 worksheet key／ref／revision 建立 Table。可搭配 `create` 獨立建立 XLSX；既有標題須相符或明確填空，合計列須先為空白，計算欄覆寫須明確。保留資料、格式與歷史證據；讀回完整 created_table／header_cells／operation_result，再由 Agent 核對公式結果與畫面。公開版仍 1.4.0。
 - **Table 專用編輯（main 未發布／1.4.x）** — `workbook_table_edit_enabled` 啟用時，以 `update_workbook_table` 同步修改欄名／富文字標題／計算欄／既有總計列。先完整讀取 references 與 header_cells XML，固定版本、Table part／ref 與 column_id／expected_name；header_runs 保留段格式，公式例外值須明確處理。新公式使用新欄名，既有引用依身分更新；Agent 核對語意、公式與畫面，舊證據及 A2T 綁定不遷移。公開版仍為 1.4.0。
 
 - **原生 A2T（main 未發布／1.4.x）** — 指定工作簿範圍投影為帶型別的表格，完整讀回固定 hash 與原始格引用。`table_grid_apply_enabled` 啟用時，列欄增刪用 structural_plan 的明確 worksheet_grid 與 table/file revision 一次套回原檔；穩定 column_ids 區分改名與重建。整列欄搬移會影響投影外內容，Table 邊界可用 expand_tables 的 part／當步 expected_ref 明確擴展；native_generated 只保留本次新生成標題／公式。完整 read_workbook.tables 可查原生定義；特殊計算欄編輯與重排另有範圍；Agent 核對語意、公式及版面。完整讀回操作紀錄與不可變快照，來源綁定不自動前進。native contract.for_op 只接受原生操作；table_data/table_manage 使用其 MCP schema。公開版仍 1.4.0。

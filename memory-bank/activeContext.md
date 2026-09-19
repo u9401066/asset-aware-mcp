@@ -1,5 +1,10 @@
 # Active Context
 
+Native Table creation core committed as 685279b; documentation, bilingual site and
+assistant parity form the next scoped commit. Local proof and actual Codex audit
+passed on the final source; exact remote CI/Pages/public checks follow push.
+Public remains1.4.0 / Unreleased1.4.x; broader goal active.
+
 ## Native Table creation — verified locally, publication pending
 
 Implemented add_workbook_table over exact worksheet/range/revision: ordered columns,

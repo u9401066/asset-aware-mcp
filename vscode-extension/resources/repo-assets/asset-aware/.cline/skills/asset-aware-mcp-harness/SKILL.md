@@ -47,6 +47,18 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
   not semantic support for changed data. Agent reviews meaning/results/layout.
   Public stays 1.4.0; new work is Unreleased within 1.4.x.
 
+- When workbook_table_creation_enabled is advertised, add_workbook_table creates
+  native Tables over explicit worksheet ranges in existing or independent workbooks.
+  Pin file revision and worksheet key; supply ref, unique name and ordered columns.
+  Matching headers preserve rich/shared strings; fill_blank only adds blank headers.
+  Headerless Tables disable autofilter. Explicit totals rows must start blank; no
+  worksheet rows are inserted. New calculated columns need blanks or replace_all.
+  Choose built-in/existing Table styles; preserve ordinary data and cell formats.
+  Read complete created_table, header_cells and operation_result after one commit.
+  Active protection/overlap/source-schema checks remain. Agent checks meaning,
+  rendered layout and recalculated results; old references/A2T bindings stay historical.
+  Public stays 1.4.0 / Unreleased within 1.4.x.
+
 - When workbook_table_edit_enabled is advertised, update_workbook_table pins the
   worksheet key, active Table part/ref, file revision and column IDs/expected names.
   Read complete references and header_cells XML first. Rich header_runs must match
