@@ -7,6 +7,10 @@
 
 ## [Unreleased]
 
+- Preserve CSV NUL values and exact native offsets across Python3.10/newer runtimes.
+  Reversible parser-only masking avoids legacy csv errors without altering source
+  bytes or dropping characters; regressions include marker/dialect collisions.
+
 - Added native CSV/TSV creation, complete string-field reads, byte-preserving cell
   and row/column CRUD, dialect-bound evidence, selections, derivations and Wiki.
   Preserve encoding/BOM/quotes/mixed line endings; record required empty-field and

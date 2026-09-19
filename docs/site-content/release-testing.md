@@ -4,13 +4,13 @@
 
 ## Native CSV/TSV evaluation (Unreleased)
 
-真實 Codex **預設模型**於 2026-09-19 完成 **101 次成功 MCP 呼叫、零工具錯誤、
-179.79 秒、4 張實際區域 PNG**。它自行從合成掃描 PDF 選取 Count、Reading、Unit，
+真實 Codex **預設模型**於 2026-09-19 完成 **103 次成功 MCP 呼叫、零工具錯誤、
+210.09 秒、4 張實際區域 PNG**。它自行從合成掃描 PDF 選取 Count、Reading、Unit，
 建立含 UTF-8 BOM／CRLF 的 CSV，逐格保留 `007`、`-0.50`、`mg/L`，再建立三筆
 區域到欄位的轉製關係。Count 區域以兩個解析度查看，來源引用保持相同。
 
 接著完成五次原生操作：Count 改為 `008`、插入一列、插入一欄、刪除新增列與欄。
-獨立稽核核對六個歷史事件的精確位元組，包含暫存列的 LF、中文以外 Unicode 單位、
+獨立稽核核對六個歷史事件的精確位元組，包含暫存列的 LF、Unicode 單位、
 BOM、其餘 CRLF、字串與欄位位置；每次完整讀回操作紀錄。最後檔案 SHA 會重現
 第一次修正後的內容，但保留不同操作歷史。另核對全部原始／最後六格、來源區域
 實際像素與字形範圍、完整來源帳本、歷史引用、兩份 Wiki、自訂引用及精確發布 CSV。
@@ -22,8 +22,8 @@ BOM、其餘 CRLF、字串與欄位位置；每次完整讀回操作紀錄。最
 錯誤欄位位移或把 `007` 轉成 `7` 仍會被獨立稽核拒絕。全功能 contract／schema
 探索也驗證不受回應長度截斷。
 
-完整套件 **3,009 passed／35 optional skipped（126.46 秒）**；SDK2 與當時相關
-單元測試 **33 passed（12.55 秒）**。重現真實 Agent 流程：
+完整套件 **3,012 passed／35 optional skipped（126.86 秒）**；乾淨 Python 3.10
+環境的 SDK2 與相關單元測試 **37 passed（13.91 秒）**。重現真實 Agent 流程：
 
 ```bash
 uv run python -m tests.codex_delimited.run --output /absolute/new/run-dir
@@ -31,6 +31,9 @@ uv run python -m tests.codex_delimited.run --output /absolute/new/run-dir
 
 首輪遠端 CI 發現 GitHub 描述測試仍模擬舊文案；已同步 fixture 並重新通過完整
 測試。CSV 回歸也加入 Python 3.10、macOS 與 Windows 的明確測試清單。
+該跨版本檢查發現 Python 3.10 的 [CSV NUL 限制](https://github.com/python/cpython/issues/97503)；
+現在僅在解析器呼叫期間使用不衝突的同長度字元映射，立即還原，原始位元組、
+值及定位不變。實際標記字元碰撞／不同 dialect 有回歸案例，已重跑 Codex 與封裝驗證。
 
 一般 pytest 不會啟動模型。此測試是合成掃描／CSV fixture，不能推論任意文件 OCR
 或試算表顯示保真；語意審核欄位仍是 Agent 聲明，MCP 檢查可機械驗證的部分。

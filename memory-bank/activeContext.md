@@ -1,5 +1,15 @@
 # Active Context
 
+## Native delimited compatibility publication checkpoint
+
+NUL source correction e16a971cc70c5a295bc6eb0de9a20e5b50e9b1c3 preserves exact CSV strings/positions across Python3.10
+and newer. Docs/changelog now record final3012/35 full tests, clean Python3.10 SDK2
+37pass, default Codex103/0/4regionPNG210.09s, and both earlier CI findings/corrections.
+Runtime source/wheel/actual/container share SHA0f9c93de…20a0a24; all local gates pass.
+This doc commit keeps source code unchanged. Push both scoped commits and require
+new exact-head CI/Pages/public byte proofs before closing the milestone. No version
+bump or tag: public1.4.0/Unreleased1.4.x. Original broad goal remains active.
+
 ## Native delimited NUL fix — all local gates revalidated
 
 Current source SHA0f9c93deb1f56031bce79b3aeeca373c4cf2e0b429e2173b2afa08fbf20a0a24

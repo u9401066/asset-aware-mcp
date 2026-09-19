@@ -55,6 +55,7 @@ CSV 預設逗號、TSV 預設 tab、雙引號 quoting；也可指定 `delimited_
 單字元 delimiter／quotechar／escapechar、doublequote 與 encoding。先偵測 UTF BOM，
 否則 UTF-8；另支援 UTF-16 LE／BE、CP950、CP1252、Latin-1。自訂編碼與分隔規則
 須在後續讀寫／Wiki 明確提供；`review_request` 會帶入解析後的規則。
+NUL 字元跨 Python 3.10／較新版本保留，原始位元組與定位不變。
 不猜測 dialect、不用替代字元掩蓋解碼錯誤。檔案上限 16 MiB、20,000 格／列，
 解析在有時間／記憶體／結果大小限制的子程序執行，不改變 MCP 的全域 csv 設定。
 
