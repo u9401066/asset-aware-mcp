@@ -87,6 +87,13 @@ and LightRAG knowledge graph outputs.
   for source references or proof reports. Preserve canonical evidence separately.
 
 
+- When advertised, update_pptx_table_grid applies 1..32 sequential row/column
+  insert/delete/resize edits using a full current table reference. Indices address
+  each intermediate grid. Merges expand/shrink; deleted anchors promote content
+  only when covered-cell data will not be lost. Read complete updated shapes and
+  review rendering, style banding and overflow. Old evidence remains historical;
+  coordinates and derivation assertions do not automatically migrate.
+
 - When derivations_enabled is advertised, read complete read_derivations JSON
   with derivations_sha256 before record_derivation/retract_derivation. Pin full
   target/source references; supersedes atomically replaces an active assertion,

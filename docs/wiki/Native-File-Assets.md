@@ -598,12 +598,51 @@ document(op="native", native_request={
 `update_pptx` 修改指定格子的 run（合併格只能改左上角），
 `delete_pptx_shapes` 使用完整目前版本引用刪除整個表格。
 `verify` 和 `export_wiki` 保留歷史表示與完整 PPTX／parts。來源回寫仍須明確
-操作並保留來源檢查和備份。既有表格的列欄插刪、合併範圍重排、A2T 自動橋接
-與 PDF 到表格的語意來源連結仍是後續工作，不因新增表格而自動成立。
+操作並保留來源檢查和備份。列欄結構操作見下一節；A2T 自動橋接與逐格語意來源映射仍待完成。
+轉製帳本可連結 PDF 頁面與整個表格的版本引用。
 
 每批 1–100 個表格，每表最多 100 列／100 欄；合計最多 10,000 格、20,000 runs
 與 4 MiB UTF-8 文字。每個尺寸及合計寬／高最多 100,000,000 EMU。超界、
 來源版本過期、並行更新或任一表格失敗時，不提交部分版本。
+
+### Table grid CRUD (Unreleased)
+
+`update_pptx_table_grid` 可插入、刪除列欄與調整尺寸。先完整讀取目標表格的
+`read_pptx_shape` JSON，使用目前完整引用和 `expected_revision`：
+
+```python
+document(op="native", native_request={
+    "op": "update_pptx_table_grid", "asset_id": deck_id,
+    "expected_revision": revision,
+    "pptx_table_grid": {
+        "reference": full_table_reference,
+        "edits": [
+            {"op": "insert", "axis": "column", "index": 1, "sizes": [500000]},
+            {"op": "resize", "axis": "row", "index": 0, "sizes": [700000]},
+            {"op": "delete", "axis": "row", "index": 3, "count": 1}
+        ]
+    }
+})
+```
+
+每次接受一個表格與 1–32 個依序執行的操作，`index` 為從 0 開始的當下位置。
+`axis` 為 `row` 或 `column`；`sizes` 使用 EMU，刪除使用 `count`。
+插入可省略 `cells` 建立空格，或使用與新增表格相同的文字／格式規格，提供
+row-major 矩陣：插列為「新增列數 × 現有欄數」，插欄為「現有列數 × 新增欄數」。
+
+插在合併區內部會擴張範圍，插在起點之前會移動範圍；刪除部分列欄會縮小。
+若刪到合併起點而仍有格子留下，原起點的內容與格式會移到新左上角；目的格
+若含隱藏文字、欄位、關聯、擴充或身分資訊，則拒絕操作。完全刪除的合併區
+隨之消失，剩一格則解除合併。新插入的被覆蓋格必須保持預設／空白。
+
+保留其他儲存格 XML、樣式、列欄 metadata、關聯與未修改套件成員；起點移動
+會取代目的被覆蓋格的格式。位置不變，外框按新格網合計尺寸及原縮放比例調整。
+每個中間格網都須維持 1–100 列／欄、最多 10,000 格、20,000 runs、4 MiB 文字，
+合計尺寸及外框最多 100,000,000 EMU；每批最多插入 10,000 格。任何步驟失敗
+皆不提交部分版本。舊引用仍可驗證，新版本的格子位置與轉製關係需重新核對。
+
+MCP 核對引用、合併拓樸、尺寸與序列化結果；Agent 仍需核對實際畫面、文字溢出、
+主題／條紋樣式及內容意義。這不等同任意合併／拆分或安全抹除。
 
 ### Citation display schema (Unreleased)
 

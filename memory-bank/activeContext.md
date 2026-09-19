@@ -33,7 +33,12 @@ task-owned /dev/shm/asset-aware-grid-pytest after terminal full-suite result; rm
 command was rejected before execution, scoped Python cleanup succeeded. Prior
 Docker task-only derivations-check image removed after recorded success, no broad
 prune. All actual Codex evidence and logs retained. Public remains 1.4.0/Unreleased.
-Remaining: final wheel smoke, two scoped commits/push, exact-head CI/Pages/byte checks.
+Clean-venv built-wheel smoke passed (help/doctor/list-tools/real SDK2 stdio); log
+/tmp/asset-aware-grid-wheel-smoke.log. Removed only task-owned grid-check image
+after its completed smoke to recover disk, retained Docker log/image ID; dedicated
+pip cache was /dev/shm/asset-aware-grid-pip-cache. Core committed as a9739eb.
+Remaining: commit actual Codex/CI/docs/harness, push both and verify exact CI/Pages
+and public bytes. No source changes since full tests or the successful Codex run.
 
 ## 2026-09-18 — cross-asset derivation ledger in progress
 

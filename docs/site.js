@@ -292,9 +292,17 @@ add_pptx_tables takes asset_id, expected_revision and pptx_tables. Each item has
 
 Inclusive, zero-based merge rectangles cannot overlap or exceed the grid; covered cells must remain empty/default to avoid hidden data loss. Merges are built before text is populated. Existing destination tableStyles/default GUID is used, with no invented style ID when absent. First/last row/column and banding flags select style roles. MCP checks the requested geometry, strings, direct formatting, merge map, untouched parts and XML. Agents review actual rendering, themes, overflow and meaning.
 
-Read complete tables with read_pptx_shape; update_pptx edits anchor cell runs and delete_pptx_shapes deletes whole tables using full current references. Historical verification, wiki snapshots and guarded source writeback remain available. Existing-grid row/column operations, automatic A2T bridging and semantic PDF-to-cell lineage remain follow-up work. Limits: 100 tables per batch, 100 rows/columns per table, 10,000 cells, 20,000 runs and 4 MiB UTF-8 text per batch; dimensions and summed extents are bounded to 100,000,000 EMU.
+Read complete tables with read_pptx_shape; update_pptx edits anchor cell runs and delete_pptx_shapes deletes whole tables using full current references. Historical verification, wiki snapshots and guarded source writeback remain available. Existing-grid row/column operations are described below; automatic A2T bridging and semantic PDF-to-cell lineage remain follow-up work. Limits: 100 tables per batch, 100 rows/columns per table, 10,000 cells, 20,000 runs and 4 MiB UTF-8 text per batch; dimensions and summed extents are bounded to 100,000,000 EMU.
 
 Native export_wiki now exposes citation_contract as a typed union: source/author-year/numeric preset, or custom inline_template and reference_template. Valid existing JSON remains compatible. Display contracts do not store source references, proof reports or arbitrary transcription data; canonical evidence remains separate.
+
+### Table grid CRUD (Unreleased)
+
+update_pptx_table_grid takes asset_id, expected_revision and pptx_table_grid={reference, edits}. Supply the complete current shape reference and 1–32 sequential edits. Each uses op insert/delete/resize, axis row/column and a zero-based index in the current intermediate grid. Insert/resize use EMU sizes; delete uses count. Optional inserted cells use the existing typed cell contract in row-major order, matching the inserted slice. Omitted cells are blank.
+
+Insertions inside merges expand them; insertion at the start shifts them. Partial deletion shrinks merges. When deleting a surviving merge's anchor, its content and formatting move to the new top-left cell; hidden content, fields, relationships, extensions or identity at that destination block promotion. A surviving single cell becomes unmerged. New covered cells must be default/empty. Source signatures, stale references, malformed grids, bounds and concurrent writes fail before commit.
+
+Existing cell XML, row/column metadata, styles and untouched package parts are retained, except explicit deletion, changed merge flags and anchor promotion replacing covered-cell formatting. Position stays fixed; frame extents follow grid totals at the existing scale. Limits apply at every intermediate step: 1–100 rows/columns, 10,000 cells, 20,000 runs, 4 MiB text and 100,000,000 EMU dimensions/frame; at most 10,000 cells inserted per batch. Old evidence remains valid; coordinates and derivation assertions do not migrate automatically. Agents review rendering, overflow, banding and semantics. Arbitrary merge/split operations remain separate.
 
 ### Native derivations (Unreleased)
 
@@ -435,6 +443,12 @@ On 2026-09-18, derivations run 02 completed 93 MCP calls with zero MCP tool erro
 A second run (03) against the same initial ledger runtime completed 92 MCP calls with zero tool errors and exact first transcription. The same one-image, five-record, four-event, single-active-assertion and exact-source-attachment audits passed. Neither run claims full slide rendering verification.
 
 Run 04 against the final runtime preserving native source extensions completed 96 MCP calls with zero MCP tool errors and exact first transcription. Table/ledger/source audits passed. An initial auditor incorrectly rejected a preview followed by a fresh complete read from offset zero; three regressions now accept that restart while still rejecting gaps and wrong hashes. The original failed audit is retained. The model separately reported correcting an over-escaped font diagnostic; this remains a caller statement, not proof of slide fidelity.
+
+## Native table grid exercise (Unreleased)
+
+Add --grid to tests.codex_pptx_tables.run for five actual Codex mutations after scanned-table creation: insert a column, insert a temporary row, resize both dimensions, delete the row and delete the column. Every mutation uses a current full reference and complete readback. Independent checks open all five intermediate PPTX revisions and compare literal strings, merged title coverage, dimensions, surviving cell XML/formatting, surrounding XML and untouched parts. Final source/history/wiki checks still apply. It can be combined with --derivations. This synthetic scan does not establish full slide rendering or real-corpus coverage.
+
+Grid run 01 on 2026-09-19 completed 123 MCP calls with zero tool errors, exact first transcription, one actual PNG and nine complete records. All five intermediate grids passed independent content, merge, geometry and preserved-XML audits, together with source/history/published-file/wiki checks. The full Python suite passed 1,971 tests with 30 optional skips; extension tests passed 199. No full-slide rendering claim is made.
 
 ## Publish in order
 Confirm built artifacts and runtime diagnostics before tagging, then verify each public registry after publication.`,

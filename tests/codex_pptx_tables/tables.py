@@ -61,8 +61,16 @@ def exact(path, *, changed=False):
     return True
 
 
-def validate_revisions(root, deck):
+def validate_revisions(root, deck, *, grid=False):
     stages = [r for r in deck["history"] if r.get("result") and r["result"]["changes"]]
+    if grid:
+        stages = [
+            r
+            for r in stages
+            if not any(
+                c.get("operation") == "edit_table_grid" for c in r["result"]["changes"]
+            )
+        ]
     require(len(stages) >= 4, "Missing add/edit/restore/delete stages")
     require(
         all(c.get("operation") == "add_table" for c in stages[0]["result"]["changes"]),
