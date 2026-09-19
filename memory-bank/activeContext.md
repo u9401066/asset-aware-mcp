@@ -1,5 +1,18 @@
 # Active Context
 
+## Real PDF final pre-push checkpoint
+
+Portable corpus correction96b480ea442ac70edc7a6c2531d72423612a8800 changes only test
+IO: explicitUTF-8 and non-UTF-8subprocess regression. Final full04 passes3044/35
+198.26s with real corpus enabled;15focused oracle tests pass0.43s. Replayed both
+retained actual Agent audits with updated UTF-8 reader and obtained identical
+reports. Runtime source remains fae31e15…509c4300, matching installed wheel/Docker/
+actualNIST02+NASA01. Docs links fixed, docs35pass, source lint/format still pass.
+GitHub DNS recovered and ls-remote confirms origin/main c8874795; first failedpush
+changed no remote state. Push all scoped commits, await exact-head CI/Pages and
+public file bytes. Public1.4.0/Unreleased1.4.x,no tag; broad goal active.
+
+
 ## Portable corpus text — pre-push correction
 
 First push of9031f4a+6999d2d failed terminally before connection: GitHub DNS resolution.

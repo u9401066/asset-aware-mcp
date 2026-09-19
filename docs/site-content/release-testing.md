@@ -47,8 +47,9 @@ uv run python -m tests.real_pdf.run --corpus /absolute/corpus --case apollo11 --
 CI 明確下載並核對固定來源，執行 SDK2 真實文件回歸；Python 3.10、macOS、Windows
 另納入不需網路的 parser／oracle 邊界測試。局部 parser／oracle／實際 SDK2 共
 **31 passed（72.10 秒）**，包含 NASA 原始頁面複製後消除重複 Length 的檢查。
-完整回歸 **3,043 passed／35 optional skipped（197.35 秒）**；乾淨 Python 3.10
-環境同批 **31 passed（74.86 秒）**，另通過安裝 wheel 的 CLI／SDK2 smoke。
+完整回歸 **3,044 passed／35 optional skipped（198.26 秒）**；乾淨 Python 3.10
+環境的 parser／oracle／SDK2 **31 passed（74.86 秒）**，另通過安裝 wheel 的 CLI／SDK2 smoke。
+Corpus／trace／報告均明確使用 UTF-8，另新增預設非 UTF-8 環境的子程序回歸。
 VSIX 199 項測試、安裝／更新與 Docker SDK2 smoke 均通過；原始碼、wheel、
 實際 Agent 與容器的來源雜湊一致。
 兩份文件仍不足以證明任意 PDF 的 OCR、語意、版面或回寫忠實度；跨格式總目標
