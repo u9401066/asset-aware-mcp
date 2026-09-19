@@ -1,5 +1,36 @@
 # Release And Testing
 
+## Native Word grid evaluation (Unreleased)
+
+最終程式包含可分頁讀回的完整修改紀錄。初次模型執行的 61 次成功呼叫／174.05 秒
+仍保留；之後長紀錄回歸測試重現截斷問題，修正後才重新執行下列驗證，沒有隱藏原始失敗。
+
+2026-09-19 使用真正的 Codex 預設模型，從掃描 PDF 首頁辨讀表格，建立原生 DOCX，
+完成列欄插刪、尺寸調整、搬移完整段落的合併、拆分及欄寬還原。
+**70 次成功 MCP 呼叫、0 次工具錯誤、162.73 秒**；模型設定未覆寫。
+三個 DOCX 版本均完整讀取 DFM 與格網 XML；來源 PDF bytes／mtime、歷史引用、
+未修改 package parts、前導零／正負號／千分位、富文字及 Wiki 附件通過獨立稽核。
+
+Agent 查看一張原始掃描 PNG，以及中間／最終版本的兩張實際 Writer 頁面 PNG。
+獨立重繪比較每個 RGB 像素，並檢查中文標題字形及指定字體；Agent 檢視確認最終五欄等寬、
+`007`、`-0.50`、`1,234.50` 與 `mg/L` 均可見，沒有殘留暫存列欄。
+此案例為單頁合成資料，未涵蓋跨頁重複標題、任意真實 Word 文件或 Microsoft Word 渲染。
+
+```bash
+uv run pytest tests/unit/test_native_docx_grid.py tests/unit/test_native_docx_grid_service.py tests/integration/test_native_docx_grid_stdio.py
+uv run python -m tests.codex_docx_grid.run --output /absolute/new-word-grid-run --font-fixture /absolute/pinned-font-fixture
+uv run python -m tests.codex_docx_grid.audit /absolute/new-word-grid-run
+```
+
+最終程式完整測試 **3,184 通過、33 個選配項目跳過（290.27 秒）**，包含真實
+Writer 頁面、中英文字形與 NIST／NASA PDF 案例；Python 3.10 重點群組 **59 通過**。
+長操作紀錄、重複檔案 SHA 的新紀錄，以及提交前讀回大小超限均有回歸測試。
+
+一般 pytest 不啟動模型；實測要求已登入的 Codex 與選配 LibreOffice Writer。
+`--font-fixture` 沿用受固定 hash 檢查的私有中英文字體，不更改系統字體設定。
+MCP 負責來源／版本／結構檢查，完整語意與視覺核對由 Agent 協調。
+公開版 **1.4.0**，改動累積於 **Unreleased／1.4.x**。
+
 ## Captured ETL citation evaluation (Unreleased)
 
 2026-09-19 真實 Codex 預設模型完成一頁虛構書目 PDF 的文字／表格／圖片擷取、

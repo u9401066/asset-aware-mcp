@@ -1,5 +1,10 @@
 # Roadmap
 
+- [x] Unreleased / 1.4.x: native DOCX table grid read/insert/delete/resize/merge/split,
+  full block references, explicit content policies, omitted/merged/nested cells,
+  native XML preservation and actual Agent preview workflow. Unextracted stories,
+  dependency-aware fields/revisions and general Microsoft Word fidelity remain open.
+
 - [x] Unreleased / 1.4.x: immutable legacy PDF ETL evidence snapshots, complete
   inspection/readback, captured original-page PNGs and mixed native/ETL CSL Wiki
   attachments. Historical evidence survives ETL changes/deletion; Agent reviews

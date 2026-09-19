@@ -7,6 +7,15 @@
 
 ## [Unreleased]
 
+- Added full revision-bound DOCX table grid reads and atomic row/column
+  insert/delete/resize/merge/split. Explicit merge content policies preserve native
+  paragraphs and nested tables; omitted positions, merged-anchor promotion,
+  package integrity and historical references have mechanical checks. Agents
+  inspect complete paged receipts and actual rendered pages. Long receipts are
+  bounded before commit; recurring file hashes use the latest matching history
+  receipt, and no-op updates add no history entry. Public remains 1.4.0;
+  changes accumulate within 1.4.x without a per-feature version bump.
+
 - Added complete, hash-paged inspection and immutable capture/read/view of legacy
   PDF ETL span/table/figure evidence. Snapshots retain original source bytes,
   canonical extraction artifacts and selected images; CSL accepts mixed native

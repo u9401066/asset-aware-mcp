@@ -1,5 +1,12 @@
 # asset-aware-mcp
 
+Unreleased native Word table operations read complete grids and insert/delete/resize
+rows or columns, merge cells with an explicit content policy, and split merges.
+Rich paragraphs, nested tables, historical references and source files are retained
+through checked native edits. Agents review actual page previews. See
+[Word table grids](docs/wiki/Native-File-Assets.md#native-word-table-grids-unreleased).
+Public **1.4.0**; development remains **Unreleased / 1.4.x**.
+
 Unreleased PDF evidence snapshots preserve full text, table and figure references,
 original source bytes and extraction artifacts. Read and view saved evidence after
 ETL data changes or deletion, then combine it with native references in a citation

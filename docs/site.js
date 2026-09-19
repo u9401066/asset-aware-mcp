@@ -227,6 +227,18 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
   "native-file-assets": `## Native documents and versioned files — v1.4.0
 
+### Native Word table grids (Unreleased)
+
+Discover docx_table_grid_enabled. read_docx_table requires asset_id, revision and a complete docx_table_reference from read_docx. Follow every next_text_offset at one text_sha256 to inspect the layout grid, physical cells, omitted positions, merges and full native XML. This is a table block reference, not a new cell evidence type; DFM character offsets are not grid coordinates.
+
+update_docx_table_grid pins expected_revision and docx_table_grid.reference. Supply 1–32 sequential edits using zero-based coordinates in each intermediate grid. insert/resize use axis, index and sizes_twips; row heights are minimums and columns become fixed widths (20 twips per point). Inserted cells use the existing rich Word cell schema. delete uses axis/index/count and must retain a row and column. merge uses an inclusive rectangle plus require_empty or append_blocks: the latter moves complete paragraphs and nested tables in physical row-major order. split addresses the merge anchor; content stays there and exposed cells are blank.
+
+Insertion inside merges expands them; covered input positions must be default empty. Omitted positions remain omitted. Deleting a surviving vertical merge's anchor promotes its full content. New rows are not repeated headers; merges cannot cross header/body boundaries. Column edits set grid/cell/table widths; inherited styles, nested-table overflow and pagination still require actual page review.
+
+Mutation summaries are bounded; full operation_result is in paged table reads. The latest matching history entry supplies the receipt; repeated file SHAs may have newer receipts, so verify complete text_sha256. No-op changes add no history or receipt.
+
+One batch commits atomically after structural, serialized XML and untouched-part checks. Follow the complete review_request, then render_docx_page through all actual pages. Historical references, source bytes and Wiki snapshots remain unchanged. Coverage follows tables exposed by the current extractor: body/nested tables and ordinary unlocked body controls. Bound controls, range/field/revision dependencies and unextracted stories need dedicated handling. MCP checks mechanics; Agent checks meaning and visual layout. No Microsoft Word fidelity claim. Public1.4.0 / Unreleased1.4.x.
+
 ### Checked historical PDF syntax (Unreleased)
 
 Some historical scans contain duplicate stream Length declarations. Native PDF reads accept this case only after independently checking every original dictionary value is the same direct integer and matches the raw stream bytes and boundaries. Listings and complete page records retain parser_checks with policy, counts and proof digest; source bytes remain unchanged. Conflicting/indirect lengths, other parser warnings and unsupported dictionaries still require separate handling.
@@ -611,6 +623,18 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Native Word grid evaluation (Unreleased)
+
+The final source includes complete paged mutation receipts. Initial run01 (61 successful calls / 174.05 seconds) remains retained. A long-receipt regression then exposed truncated delivery; the production fix justified the new run below, with the original failure preserved.
+
+Actual default-model Codex on 2026-09-19 completed 70 successful MCP calls, zero tool errors and 162.73 seconds without a model override. It visually transcribed a scanned PDF page into native DOCX, inserted/deleted rows and columns, resized dimensions, merged complete paragraphs, split cells and restored widths. All three managed revisions had complete DFM/grid XML reads. Independent checks retained exact source bytes/mtime, historical references, untouched package parts, literal strings, rich formatting and every Wiki attachment.
+
+One original scan PNG and two intermediate/final Writer page PNGs were delivered. Independent rendering matched every RGB pixel and checked Chinese glyphs in the pinned font fixture. Agent inspection found equal final columns, visible 007/-0.50/1,234.50/mg/L and no temporary row or column. This is a synthetic one-page case; cross-page repeated headers, arbitrary real Word documents and Microsoft Word rendering are not established.
+
+The final full suite passed 3,184 tests with 33 optional skips in 290.27 seconds, including actual Writer/CJK and NIST/NASA PDF cases. The Python 3.10 focused group passed 59 tests. Regressions cover long receipts, recurring file hashes with newer receipts and rejection before committing an oversized complete review.
+
+Opt in with python -m tests.codex_docx_grid.run --output /absolute/new-word-grid-run --font-fixture /absolute/pinned-font-fixture; audit with python -m tests.codex_docx_grid.audit /absolute/new-word-grid-run. Ordinary pytest never launches a model. Actual runs require authenticated Codex and optional LibreOffice Writer; the private font fixture changes no system settings. MCP checks mechanics; Agent coordinates full semantic/visual review. Public1.4.0 / Unreleased1.4.x.
 
 ### Captured ETL citation evaluation (Unreleased)
 

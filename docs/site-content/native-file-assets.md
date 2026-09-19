@@ -2,6 +2,41 @@
 
 # Native File Assets（v1.4.0）
 
+## Native Word table grids (Unreleased)
+
+Word 的「表格格網」與實際儲存格數量可能不同：合併格可跨數欄／列，一列也可能
+省略前後位置。`read_docx_table` 固定 `asset_id`、`revision` 與完整
+`docx_table_reference`，回傳格網、實體儲存格、合併區、省略位置及完整原生 XML。
+依 `next_text_offset` 讀到結束，核對同一 `text_sha256`。這仍是整個表格的區塊引用，
+不是新增的逐格證據類型；不要把 DFM 字元位置當作原生格網座標。
+
+先查 `docx_table_grid_enabled` 及 `contract.for_op`。修改使用
+`update_docx_table_grid`、`expected_revision` 和 `docx_table_grid`，其中 `reference`
+放目前完整表格引用，`edits` 放 1–32 個依序操作；位置皆從 0 起算，每步依上一步結果。
+
+- **插入列欄 `insert`**：指定 `axis`、`index`、`sizes_twips`；可提供新增矩形的 `cells`，沿用建立 DOCX 的富文字儲存格格式。
+- **刪除列欄 `delete`**：指定 `axis`、`index`、`count`；至少留一列一欄，刪除整個合併區會刪去其內容。
+- **調整尺寸 `resize`**：指定 `axis`、`index`、`sizes_twips`；列為最低高度，欄為固定寬度，1 點 = 20 twips。
+- **合併 `merge`**：從 `row`／`column` 到含尾端的 `end_row`／`end_column`；`require_empty` 檢查其他格為空，`append_blocks` 按順序搬移完整段落及巢狀表格。
+- **拆分 `split`**：指定合併起點的 `row`／`column`；內容留在起點，其他新格留白，不猜測原來的分配。
+
+在合併區內插列欄會擴展合併區；被覆蓋位置只接受預設空格。刪除垂直合併起點後，
+若合併區仍存在，完整起點內容移到第一個保留位置。省略位置保持省略；合併不得跨越
+重複標題列與本文界線。插入的新列預設不是重複標題列。調欄寬會明確設定固定版面、
+表格總寬與各實體格的寬度；原生巢狀表格仍保留，須看圖確認是否溢出。
+
+修改回應只帶有界限的摘要；完整 `operation_result` 包含在分頁表格紀錄中。
+相同檔案 SHA 再次出現時會讀取最後一筆相符歷史紀錄，操作紀錄可能不同；
+因此必須核對完整 `text_sha256`。無變更操作不新增歷史或操作紀錄。
+
+整批操作先核對再一次提交；任一步失敗不產生新版本。成功後完整讀取 `review_request`
+和操作紀錄，再以 `render_docx_page` 查看所有新頁面。舊引用、Wiki 快照與人類來源檔
+不自動改寫。支援目前抽取器能提供完整引用的本文表格、巢狀表格及一般未鎖定內容控制項；
+欄位／範圍／追蹤修訂相依及尚未抽出的故事區域仍需專門流程。MCP 的 XML 與版本檢查
+不等於 Microsoft Word 保真；語意、繼承樣式、標題重複及分頁由 Agent 核對。
+
+公開版仍 **1.4.0**，功能累積於 **Unreleased／1.4.x**。
+
 ## Checked historical PDF syntax (Unreleased)
 
 部分歷史 PDF 的串流字典會重複宣告同一個 `/Length`。原生讀取現在會從原始

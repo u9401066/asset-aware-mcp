@@ -1,5 +1,19 @@
 # Active Context
 
+## Native DOCX grid docs — ready for publication
+
+Runtime/spec/tests committed as d22bac4 (22 counted files plus2MEM), authored by
+u9401066. This separate segment updates README/CHANGELOG/ROADMAP, bilingual site,
+native table guide, evaluation evidence and five source/bundled assistant harness
+pairs. Full receipts/latest matching history/no-op behavior and Agent review are
+explicit. Final test3184/33, default Codex70/0/162.73, sourcef55fcb83 and installed
+wheel/Docker replay remain unchanged; no new model run or version bump.
+All temporary staging restored; final task-only Docker image/builder removed after
+verification. Public1.4.0 / Unreleased1.4.x. Next pushmain, verify exact-head CI and
+Pages plus six live files, store /tmp/asset-aware-docx-grid-publication-proof.json.
+Broad all-format goal remains active; cross-page/Microsoft Word fidelity and
+unextracted Word stories remain open. No PR or extra branch created.
+
 ## Native DOCX grid — validated runtime/spec/test segment
 
 Final source f55fcb83b05302698080b1a081e482ed15d9d199ef2248df3f8c7a51e3ae9ff7

@@ -18,6 +18,20 @@
 
 ### 核心功能
 
+- When docx_table_grid_enabled is advertised, read_docx_table requires a full
+  docx_table_reference, asset_id and revision. Read all grid/native XML chunks at
+  one text_sha256; omitted positions and merged coverage are not empty cells.
+  update_docx_table_grid pins expected_revision and full reference; 1..32 sequential
+  zero-based insert/delete/resize/merge/split edits use each intermediate grid.
+  sizes_twips means minimum row height or fixed column width. merge requires
+  require_empty/append_blocks; split keeps anchor content, other cells blank.
+  Mutation summaries are bounded; full operation_result is in paged table reads.
+  Repeated file SHAs can have newer receipts: verify complete text_sha256.
+  Read complete review_request and current references, then all actual Word page
+  PNGs. Sources/history/Wiki remain unchanged; table refs are not new cell refs.
+  MCP checks native structure/bytes; Agent reviews meaning, inherited styles,
+  repeated headers, nested overflow and page flow. Public1.4.0 / Unreleased1.4.x.
+
 - For legacy PDF ETL evidence, discover inspect_etl_source/capture_etl_source/
   read_etl_source/view_etl_source through evidence csl_contract. Inspect selectors
   return complete current AssetRefs without writing; capture requires the whole

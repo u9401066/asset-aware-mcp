@@ -1,5 +1,11 @@
 # asset-aware-mcp
 
+Unreleased 的 DOCX 原生表格可完整讀取格網、插刪列欄、調整尺寸及合併／拆分。
+合併須明確指定內容處理方式；既有富文字、巢狀表格、來源檔與歷史引用保留，
+Agent 使用實際頁面預覽核對版面。詳見
+[Word 表格格網](docs/wiki/Native-File-Assets.md#native-word-table-grids-unreleased)。
+公開版仍為 **1.4.0**，變更累積於 **Unreleased／1.4.x**。
+
 Unreleased 已加入完整文稿的 CSL 引用：APA 7、Chicago 18 與 Vancouver／NLM，
 處理同作者年份消歧、重複引用及參考文獻；Wiki 保留精確來源附件與排版預覽，
 原有自訂模板仍可使用。詳見
