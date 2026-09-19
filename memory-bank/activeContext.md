@@ -1,5 +1,40 @@
 # Active Context
 
+## 2026-09-19 — native PPTX table grid CRUD in progress
+
+Previous goal turn made verified progress: cea4870 / 29369ec pushed; exact CI
+35363142564 (ten jobs) and Pages 35363141517 revalidated successful. Public bytes
+matched, main clean and only main branch. Public version stays 1.4.0 / Unreleased
+for 1.4.x. Original user worktree remains untouched. Next scope is table row/column
+insertion, deletion and resizing, preserving existing XML/styles and rebasing
+merged rectangles with explicit anchor promotion. Specification written before
+implementation; reviewed primary python-pptx and Microsoft DrawingML references.
+Full goal remains active; slide CRUD, other formats, real corpus and citations remain.
+
+Implemented update_pptx_table_grid with typed insert/delete/resize, merge rebasing,
+anchor promotion guards, frame-scale retention and package readback verification.
+Full suite passed 1,971 / 30 optional skips in 62.28s; log
+/tmp/asset-aware-grid-full.log. Ruff/format/mypy 171 source files/Bandit pass.
+Full suite fixtures used dedicated /dev/shm/asset-aware-grid-pytest due low disk.
+Live Codex run /tmp/asset-aware-codex-pptx-grid-01 started with --grid; evidence retained.
+Actual Codex grid run 01 passed: 123 MCP calls, zero errors, exact first
+transcription, one PNG and nine full records. Five intermediate revisions audited,
+including surviving cell XML/format and unrelated package parts. Runtime SHA256
+fc259ab32c056c1a82666a7d81e3ccea59dd6856bf936cc1b7304f0ad12ff2c5; lock unchanged.
+199 VSIX tests/64-file contents guard, fresh/update install (activation unavailable
+locally), Docker grid-check 6fa05ebe762c and Python build passed. Initial artifact
+audit ran while install smoke removed the VSIX; explicit sequential package and
+--require all audit then passed (66 packaged entries). Browser fallback Playwright
+1.63.0 passed zh/en desktop/mobile with no console errors/overflow; screenshots
+/tmp/native-grid-{desktop,mobile}-{zh,en}.png viewed. No Browser plugin available;
+used existing local libraries/cached CDN. GitHub metadata and labels synchronized;
+Python 214 packages/npm lock zero known vulnerabilities. Removed only completed
+task-owned /dev/shm/asset-aware-grid-pytest after terminal full-suite result; rm-style
+command was rejected before execution, scoped Python cleanup succeeded. Prior
+Docker task-only derivations-check image removed after recorded success, no broad
+prune. All actual Codex evidence and logs retained. Public remains 1.4.0/Unreleased.
+Remaining: final wheel smoke, two scoped commits/push, exact-head CI/Pages/byte checks.
+
 ## 2026-09-18 — cross-asset derivation ledger in progress
 
 Previous turn made verified progress: 19dfb3f/8c7548b pushed; CI 35358045055 (ten

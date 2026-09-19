@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from src.domain.native_assets import NativeEditResult
+    from src.domain.native_pptx_grid import NativePptxTableGridEdit
     from src.domain.native_pptx_picture import (
         NativePptxPictureCreate,
         NativePptxPictureReplace,
@@ -191,6 +192,10 @@ class NativePptxReference(PptxModel):
 
 
 class NativePresentationAdapter(Protocol):
+    def edit_table_grid(
+        self, data: bytes, request: NativePptxTableGridEdit
+    ) -> tuple[bytes, NativeEditResult]: ...
+
     def add_tables(
         self, data: bytes, items: list[NativePptxTableAddition]
     ) -> tuple[bytes, NativeEditResult]: ...

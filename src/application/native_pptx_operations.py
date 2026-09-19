@@ -74,6 +74,7 @@ class NativePptxOperations:
             "read_pptx_shape": self._read_shape,
             "update_pptx": self._update,
             "add_pptx_tables": self._update,
+            "update_pptx_table_grid": self._update,
             "add_pptx_shapes": self._update,
             "delete_pptx_shapes": self._update,
         }[request.op](request)
@@ -156,16 +157,24 @@ class NativePptxOperations:
             raise ValueError("This format has no native PPTX editor")
         if asset.archived or asset.revision != request.expected_revision:
             raise ValueError("Archived or stale native asset; inspect before editing")
-        for reference in request.pptx_shape_refs:
+        references = list(request.pptx_shape_refs)
+        if request.pptx_table_grid is not None:
+            references.append(request.pptx_table_grid.reference)
+        for reference in references:
             if (
                 reference.asset_id != asset.asset_id
                 or reference.revision != request.expected_revision
             ):
                 raise ValueError(
-                    "Presentation deletion reference has a different asset or revision"
+                    "Presentation edit reference has a different asset or revision"
                 )
         data = self.repository.read(asset.asset_id, request.expected_revision)
-        if request.op == "add_pptx_tables":
+        if request.op == "update_pptx_table_grid":
+            assert request.pptx_table_grid is not None
+            updated, checks = self.presentations.edit_table_grid(
+                data, request.pptx_table_grid
+            )
+        elif request.op == "add_pptx_tables":
             updated, checks = self.presentations.add_tables(data, request.pptx_tables)
         elif request.op == "add_pptx_shapes":
             updated, checks = self.presentations.add_shapes(data, request.pptx_shapes)

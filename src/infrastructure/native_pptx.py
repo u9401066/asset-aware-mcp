@@ -12,6 +12,7 @@ from pptx.util import Emu, Pt
 
 from src.domain.native_assets import NativeEditResult
 from src.infrastructure.native_ooxml import xml_bytes
+from src.infrastructure.native_pptx_grid import edit_table_grid
 from src.infrastructure.native_pptx_package import NS, NativePptxPackage
 from src.infrastructure.native_pptx_pictures import (
     add_pictures,
@@ -88,6 +89,7 @@ def _verify_parts(
 
 
 class NativePresentation:
+    edit_table_grid = staticmethod(edit_table_grid)
     add_tables = staticmethod(add_tables)
     add_pictures = staticmethod(add_pictures)
     replace_pictures = staticmethod(replace_pictures)

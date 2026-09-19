@@ -20,6 +20,8 @@ preview embedded images through MCP, and extract them as independent versioned f
 Shared media remains intact; source references persist in history. See
 [picture assets](docs/wiki/Native-File-Assets.md#pptx-picture-assets-unreleased).
 
+Unreleased table grids support revision-bound row/column insertion, deletion and
+resizing, including merge expansion/shrinkage and checked anchor promotion.
 Unreleased native tables can be inserted with explicit grids, merged cells and
 rich text, then read/edited/deleted through existing native shape operations.
 Citation display presets/templates now have typed discovery. See

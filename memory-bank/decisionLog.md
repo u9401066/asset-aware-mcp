@@ -362,3 +362,14 @@ coordinate documentation: https://pymupdf.readthedocs.io/en/latest/page.html.
 Codex launch follows https://learn.chatgpt.com/docs/non-interactive-mode and
 https://learn.chatgpt.com/docs/extend/mcp?surface=cli. Synthetic workflow results
 are not general OCR, handwriting, arbitrary table or PDF writeback benchmarks.
+
+
+## 2026-09-19 — preserve native table XML during grid edits
+
+Use typed sequential row/column edits on one reference-pinned native table. Keep
+existing cell/row/column XML and destination styles; use scratch python-pptx only
+for new cells. Rebase merged rectangles deterministically, retaining deleted
+anchor content when a merge survives; reject hidden destination data/identity.
+Frame scale is preserved and surrounding XML/untouched package bytes are checked
+after serialization. Full rendering/meaning stay with Agent. Do not automatically
+move revision-bound citations or derivation assertions to new grid coordinates.

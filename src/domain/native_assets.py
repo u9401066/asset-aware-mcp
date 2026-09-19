@@ -57,6 +57,9 @@ from src.domain.native_pptx import (
     NativePresentationCreate,
     validate_shape_additions,
 )
+from src.domain.native_pptx_grid import (
+    NativePptxTableGridEdit,  # noqa: TC001 -- Pydantic schema
+)
 from src.domain.native_pptx_picture import (  # noqa: TC001 -- Pydantic schema
     NativePptxPictureCreate,
     NativePptxPictureReplace,
@@ -128,6 +131,7 @@ class NativeDocumentRequest(NativeModel):
     pptx_tables: list[NativePptxTableAddition] = Field(
         default_factory=list, max_length=100
     )
+    pptx_table_grid: NativePptxTableGridEdit | None = None
     pptx_locator: NativePptxShapeLocator | None = None
     pptx_pictures: list[NativePptxPictureCreate] = Field(
         default_factory=list, max_length=100

@@ -353,3 +353,16 @@ explicitly authorized. Full release gates remain required before tagging.
 
 Domain owns pure contracts; application binds display to evidence; infrastructure
 owns native format IO. Citation formatting never mutates source provenance.
+
+
+## 2026-09-19 — native PPTX table grid edits
+
+- Domain: native_pptx_grid typed sequential insert/delete/resize with full shape refs.
+- Infrastructure: native_pptx_grid_model validates/retains DrawingML nodes;
+  native_pptx_grid_mutations transforms dimensions/cells/merged rectangles;
+  native_pptx_grid scopes writes and verifies immutable evidence, exact package
+  inventory, unchanged surrounding XML and serialized planned shape.
+- Application: NativePptxOperations enforces asset/revision/archive checks before
+  the existing atomic repository commit; source writeback remains separate.
+- Tests: native and real SDK2 checks plus opt-in Codex --grid scans/table flow;
+  independent auditor checks all five intermediate grids and surviving cell XML.

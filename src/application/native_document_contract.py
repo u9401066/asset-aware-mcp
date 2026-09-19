@@ -47,6 +47,9 @@ def native_asset_summary(
             and pptx_enabled
             and not asset.archived,
             "edit_pptx": asset.format == "pptx" and pptx_enabled and not asset.archived,
+            "update_pptx_table_grid": asset.format == "pptx"
+            and pptx_enabled
+            and not asset.archived,
             "add_pptx_tables": asset.format == "pptx"
             and pptx_enabled
             and not asset.archived,
@@ -88,6 +91,7 @@ def native_document_contract(
         "citation_policy": "citation_contract selects a display preset or custom inline/reference templates; it does not store source references or verification reports.",
         "derivations_enabled": derivations_enabled,
         "derivation_policy": "Read complete hash-pinned ledger before record/retract; endpoint integrity and caller-supplied agent review are separate. New file revisions never inherit old assertions automatically.",
+        "pptx_grid_policy": "Sequential row/column insert/delete/resize; merges expand or shrink and deleted anchors promote their content. Pin full shape references and review complete updated shapes/rendering.",
         "file_reference_policy": "file_reference identifies exact immutable file bytes; verify does not assert source freshness or semantic meaning.",
         "formats": _formats(docx_enabled, pptx_enabled, pdf_enabled),
         "verification": "MCP checks integrity; agents verify semantics, layout and calculated results.",
@@ -167,6 +171,7 @@ def _formats(
             "read_pptx_shape",
             "update_pptx",
             "add_pptx_tables",
+            "update_pptx_table_grid",
             "add_pptx_shapes",
             "delete_pptx_shapes",
             "verify",

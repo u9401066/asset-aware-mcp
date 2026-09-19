@@ -9,6 +9,12 @@
 
 ### Added
 
+- Native PPTX table grids support sequential row/column insertion, deletion and
+  resizing using complete shape references. Existing cell XML and styles survive;
+  merges expand/shrink, deleted anchors retain their content, and hidden-content
+  conflicts fail without publishing a partial revision. Frame scale, package bytes,
+  surrounding XML and serialized grids are checked; Agents review rendering.
+
 - Native derivation ledgers connect verified file/cell/DOCX/PPTX/PDF references,
   preserve attributed agent review, and support hash-pinned reads, atomic
   supersession, retraction and historical verification. Exact source attachments

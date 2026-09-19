@@ -29,7 +29,13 @@
   derivation/PPTX/source audits with 93/92 calls and zero MCP tool errors.
   Final runtime run 04: 96 calls, zero MCP tool errors; retained initial auditor
   restart false-positive and model-reported diagnostics; 3 restart regressions pass.
-- [ ] Commit/push derivation checkpoint and verify exact CI/Pages; public stays 1.4.0.
+- [x] Derivation checkpoint cea4870 pushed; CI 35363142564 (ten jobs) and Pages
+  35363141517 pass at exact HEAD; public bytes match. Public stays 1.4.0.
+- [x] Native PPTX table row/column insertion, deletion, resizing and merged-cell
+  rebasing implemented. 1,971 Python / 199 extension tests pass. Actual Codex grid
+  run 01: 123 calls, zero tool errors, five independently verified intermediate
+  revisions and unchanged source/package evidence. Full slide rendering not claimed.
+- [ ] Commit/push grid checkpoint and verify exact CI/Pages; version stays 1.4.0.
 
 - [x] Unreleased checkpoint: native PPTX textbox addition / existing shape deletion
   with reference, dependency, version and XML preservation guards; truthful A2T

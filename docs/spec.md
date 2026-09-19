@@ -692,3 +692,38 @@ retain their identities and byte format. Output byte/artifact budgets still appl
 References: [W3C PROV-O derivation](https://www.w3.org/TR/prov-o/#Derivation) and
 [Docling Graph provenance ledger](https://github.com/docling-project/docling-graph/blob/main/docs/fundamentals/graph-management/provenance.md).
 This API uses those concepts; it does not claim complete PROV-O/RDF conformance.
+
+
+### Native PPTX table grid editing (Unreleased, 1.4.x)
+
+`update_pptx_table_grid` accepts `asset_id`, `expected_revision` and
+`pptx_table_grid`: one full current shape `reference` plus 1..32 sequential
+`edits`. Each edit is `insert`, `delete` or `resize`, with `axis` (`row` or
+`column`) and zero-based `index`. Insert/resize specify EMU `sizes`; delete
+specifies `count`. Insert may specify a row-major `cells` matrix (same typed
+cell creation contract); omitted cells are blank. Indices apply to the result
+of the preceding edit. No dimension may become empty or exceed 100 entries,
+10,000 grid cells, 100,000,000 EMU total or the existing text/run budgets.
+
+Insertions inside an existing merged rectangle extend it; insertions at its
+start move it. New covered cells must be default/empty. Deletion shrinks a
+partially surviving merge; if its anchor is deleted, retain the original
+anchor content/format at the new top-left cell. Hidden content in a promoted
+covered cell is rejected instead of discarded. Fully deleted merges disappear.
+Resize preserves content and merge topology. Existing cell XML, row/column
+metadata, table style, relationships and unrelated package bytes are retained
+except requested deletion, merge flags and explicit anchor promotion. Shape
+position remains fixed; its local extent follows the new grid totals, preserving
+any existing grid-to-frame scale. Full shape hash, source revision/CAS and
+archive/signature/protection checks precede mutation. Independently check final
+grid dimensions/merges and serialized shape, restore the old shape to verify
+unchanged surrounding XML, and compare every untouched package member.
+
+References remain revision scoped; old evidence still verifies, but cell
+coordinates and derivation assertions do not automatically migrate. Return
+compact edit/promotion counts and a current-revision read request. Rendering,
+banding/inherited styles, text overflow, semantics and unmodeled dependencies
+remain Agent review. Package retention/deletion is not secure erasure.
+
+Reference design: [python-pptx merge grid semantics](https://python-pptx.readthedocs.io/en/latest/user/table.html)
+and [DrawingML row structure](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.tablerow).
