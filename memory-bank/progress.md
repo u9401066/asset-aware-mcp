@@ -1,5 +1,81 @@
 # Progress (Updated: 2026-09-19)
 
+## 2026-09-19 — native/A2T workspaces verified; commit/push pending
+
+Implemented exact native range projection, tagged A2T cells, complete hash-pinned
+workspace/source-cell readback, guarded same-grid application and independent XLSX
+creation. Stable row IDs and source binding survive persistence. Applied/exported
+inputs remain immutable `workspace_reference` assets, re-readable after mutable
+table changes/deletion. No-op apply creates no revision/snapshot; native/source
+revision guards and rich-text/merge/table-header protections remain active. Native
+updates patch original parts; independent creation retains scalar/formula values
+without copying layout or relocating formulas. Binding never auto-advances.
+
+Shared table codec stays domain-only; FileTableWorkspaceReader reads fresh bounded
+atomic JSON snapshots, avoiding mutable TableService caches. Composition root wires
+range/workspace ports; table_data.update_cell now accepts typed JSON (old string-only
+MCP signature would reject native objects). Optional services report truthful
+capabilities. Original user worktree is untouched; public remains1.4.0, all work
+Unreleased/future1.4.x, no version bump or tag.
+
+Actual Codex /tmp/asset-aware-codex-a2t-01:90calls (89successful,1recovered invalid
+schema text_limit=20000),145.14sec,1actualscanPNG. Independent audit checks all15literal
+cells, exact007→008 typed A2T edit, source refs, complete reads before writes, pinned
+snapshots, native histories/parts, independent workbook, sourcePDF bytes/mtime and
+two revision-specific Wikis. Original007 assertion never migrates. Audit regressions
+reject missing prior reads/snapshot proofs and forged hashes. CLI0.154.0-alpha.6.1
+uses its default model; no OCR/general Excel rendering/formula evaluation claim.
+Runtime SHA7f345b8116e4e86089e43b726d59f56b7374eade11b372ea43bf2394d4f01674;
+lock27749305b83ccda9c265d5ae7f2b02d004ed5500fbc0fbed143d039c7dfc0739.
+Wheel source bytes exactly match actual-Codex runtime.
+
+Full pytest2356passed33optional-skips87.82sec; Ruff452files/mypy202sources passed.
+Bandit/highzizmor, lock/audit214Python/npmzero, harness/skills/docs, extension199tests,
+VSIXcontents/fresh+updateinstall/package, Dockerdoctor/listtools/SDK2 passed. Wheel
+console/doctor/listtools/SDK2 passed in executable /dev/shm temporary env after root
+space exhausted an earlier attempt. All artifact audit passed (wheel/sdist/VSIX).
+An initial fullsuite docs-link failure was corrected; browser then caught an anchor
+route not rewritten by the site, now linked via the supported page route. A second
+fullsuite was interrupted by disk exhaustion; the final fullsuite above passed.
+Only this phase's completed Docker builder4229c39101a5/runtime0c37c1dbd2c3 and own
+pytest temp were removed. No global prune or user-source cleanup.
+
+Browser zh/en desktop/mobile content, navigation, overflow and screenshots passed;
+private Noto Fontconfig and cachedCDN fixtures used, not a liveCDNavailability test.
+GUIactivation unavailable locally; remote CI must cover platforms. README/spec/
+CHANGELOG/ROADMAP/wiki/zh+en site/harness and bundled assets updated. GHmetadata/
+managedlabels checked synchronized. Next: final review, segmented main commits,
+push, exact CI/Pages completion and public JS byte verification.
+
+Broader goal remains active: native grid structural relocation, cross-format CRUD
+and fidelity, full CSL semantics and real-corpus coverage still require work. This
+phase completes a cell-value correspondence workflow, not universal native/A2T
+round trips or the overall user goal.
+
+## 2026-09-19 — native/A2T workbook correspondence in progress
+
+Previous turn is progress: worksheet corec74758a/docs287f9cb4cd91a6360de832016d493b0156510280
+are clean onmain; exactCI35396286563(all10jobs)andPages35396285366 passed. ActualCodex
+115calls/zeroerrors and publicJS byte verification passed. Public1.4.0, future1.4.x,
+no tag; original userworktree unchanged. These remote states were revalidated.
+
+Current gap: A2T has stable rows and PDF/DFM evidence, but no native workbook binding;
+ordinary Excel render builds a different layout. Implement explicit native-range
+projection into A2T, complete hash-pinned workspace/source-cell readback, independent
+native workbook creation from table data, and guarded application to the bound
+workbook using original package edits. Preserve scalar types/formula-vs-string,
+blank cells/raw baseline/style and full native source references. Do not infer headers
+or column types. Applying changed cell data requires exact source revision, unchanged
+row/column correspondence and a pinned table snapshot. Structural A2T edits can create
+an independent workbook; applying row/column structural edits with formula/merge/style
+relocation remains explicit future work, not claimed complete native/A2T round trips.
+
+Need domain/format adapters/application ports, durable bindings through existing
+TableService saves/reloads, native contract/discovery, end-to-end SDK2 and actual
+Codex scan→XLSX→A2T→managed XLSX checks, docs/harness/site/MEM and all release gates.
+Keep goal's full structural editing, CSL and real-corpus requirements open.
+
+
 ## 2026-09-19 — workbook core committed, documentation prepared
 
 Core c74758a contains worksheet operations, contracts, source-preserving repairs,

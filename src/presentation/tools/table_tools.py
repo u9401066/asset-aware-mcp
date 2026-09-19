@@ -635,7 +635,7 @@ async def table_data(
     selected_columns: list[str] | None = None,
     # cell operations
     column_name: str = "",
-    value: str | None = None,
+    value: Any = None,
 ) -> str:
     """
     📝 表格資料操作：新增/取得/更新/刪除 列 & 儲存格。
@@ -656,7 +656,7 @@ async def table_data(
         row: [update_row] 新的列資料
         row_index: [get/update/delete_row, cell ops] 列索引 (0-based)
         column_name: [cell ops] 欄位名
-        value: [update_cell] 新的值
+        value: [update_cell] JSON 值；native 欄位使用 {kind, value} 保留型別
 
     Examples:
         table_data("add_rows", "tbl_xxx", rows=[{"Drug":"A","Dose":1}])

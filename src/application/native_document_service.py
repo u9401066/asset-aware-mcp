@@ -19,6 +19,7 @@ from src.application.native_pdf_operations import NativePdfOperations
 from src.application.native_pptx_operations import NativePptxOperations
 from src.application.native_schema import read_schema
 from src.application.native_selection_service import NativeSelectionService
+from src.application.native_table_operations import NativeTableOperations
 from src.application.native_wiki_service import NativeWikiService
 from src.application.native_workbook_operations import NativeWorkbookOperations
 
@@ -38,6 +39,10 @@ if TYPE_CHECKING:
         NativePresentationRenderer,
         NativeWordRenderer,
     )
+    from src.domain.native_table_workspace import (
+        NativeTableRangeReader,
+        NativeTableWorkspaces,
+    )
     from src.domain.native_wiki import NativeWikiPublisher
     from src.domain.native_workbook import NativeWorkbookStructureAdapter
 
@@ -56,12 +61,25 @@ class NativeDocumentService:
         docx_structure: NativeDocxStructureAdapter | None = None,
         docx_renderer: NativeWordRenderer | None = None,
         workbook_structure: NativeWorkbookStructureAdapter | None = None,
+        workbook_ranges: NativeTableRangeReader | None = None,
+        table_workspaces: NativeTableWorkspaces | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.workbook_operations = (
             NativeWorkbookOperations(repository, workbook_structure)
             if workbook_structure
+            else None
+        )
+        self.table_operations = (
+            NativeTableOperations(
+                repository,
+                spreadsheets,
+                workbook_ranges,
+                table_workspaces,
+                summarize=self._summary,
+            )
+            if workbook_ranges and table_workspaces
             else None
         )
         self.docx = docx
@@ -108,6 +126,7 @@ class NativeDocumentService:
             pptx_enabled=self.presentations is not None,
             pdf_enabled=self.pdfs is not None,
             workbook_structure_enabled=self.workbook_operations is not None,
+            table_workspaces_enabled=self.table_operations is not None,
         )
 
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
@@ -119,6 +138,10 @@ class NativeDocumentService:
             "create": self._create,
             "history": self._history,
             "read_cell": self._read_cell,
+            "project_workbook_table": self._table_operation,
+            "read_table_workspace": self._table_operation,
+            "apply_table_workspace": self._table_operation,
+            "create_workbook_from_table": self._table_operation,
             "read_workbook": self._workbook_operation,
             "add_worksheets": self._workbook_operation,
             "rename_worksheet": self._workbook_operation,
@@ -198,6 +221,7 @@ class NativeDocumentService:
             pptx_enabled=self.presentations is not None,
             pdf_enabled=self.pdfs is not None,
             workbook_structure_enabled=self.workbook_operations is not None,
+            table_workspaces_enabled=self.table_operations is not None,
             derivations_enabled=self.derivations is not None,
             docx_structure_enabled=self.docx is not None
             and self.docx_structure is not None,
@@ -403,3 +427,8 @@ class NativeDocumentService:
         if self.workbook_operations is None:
             raise ValueError("Native workbook structure adapter is not configured")
         return self.workbook_operations.execute(request)
+
+    def _table_operation(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        if self.table_operations is None:
+            raise ValueError("Native table workspace adapters are not configured")
+        return self.table_operations.execute(request)

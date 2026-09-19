@@ -18,6 +18,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from src.domain.native_table_workspace import NativeTableBinding, NativeTableCellValue
+
 from .value_objects import AssetRef
 
 ROW_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
@@ -31,7 +33,7 @@ class ColumnDef(BaseModel):
     """Definition of a table column."""
 
     name: str
-    type: Literal["text", "number", "date", "enum", "url"]
+    type: Literal["text", "number", "date", "enum", "url", "native"]
     required: bool = True
     enum_values: list[str] | None = None  # Only used when type="enum"
 
@@ -348,6 +350,7 @@ class TableContext(BaseModel):
     source_block_id: str = ""
     source_revision_id: str = ""
     source_block_hash: str = ""
+    native_binding: NativeTableBinding | None = None
     created_at: datetime = Field(default_factory=datetime.now)
     # 平行引用層 — key: "row_index:column_name"
     citations: dict[str, CellCitation] = Field(default_factory=dict)
@@ -598,6 +601,13 @@ class TableContext(BaseModel):
                 continue
 
             # Check type
+            if col.type == "native":
+                try:
+                    NativeTableCellValue.model_validate(val)
+                except ValueError as exc:
+                    errors.append(
+                        f"Column '{col.name}' requires a tagged native cell: {exc}"
+                    )
             if col.type == "number" and not isinstance(val, int | float):
                 errors.append(
                     f"Column '{col.name}' must be a number, got {type(val).__name__}"

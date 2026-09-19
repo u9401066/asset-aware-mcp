@@ -19,6 +19,7 @@ def native_asset_summary(
     pptx_enabled: bool = False,
     pdf_enabled: bool = False,
     workbook_structure_enabled: bool = False,
+    table_workspaces_enabled: bool = False,
 ) -> dict[str, Any]:
     return {
         "asset_id": asset.asset_id,
@@ -71,6 +72,8 @@ def native_asset_summary(
             "edit_worksheets": asset.format in {"xlsx", "xlsm"}
             and workbook_structure_enabled
             and not asset.archived,
+            "project_workbook_table": asset.format in {"xlsx", "xlsm"}
+            and table_workspaces_enabled,
             "inspect_cells": asset.format in {"xlsx", "xlsm"},
             "verify_cells": asset.format in {"xlsx", "xlsm"},
             "edit_cells": asset.format in {"xlsx", "xlsm"} and not asset.archived,
@@ -89,6 +92,7 @@ def native_document_contract(
     pptx_enabled: bool = False,
     pdf_enabled: bool = False,
     workbook_structure_enabled: bool = False,
+    table_workspaces_enabled: bool = False,
     derivations_enabled: bool = False,
     pptx_rendering_configured: bool = False,
     docx_structure_enabled: bool = False,
@@ -101,6 +105,8 @@ def native_document_contract(
         "operations": list(NATIVE_OPERATIONS),
         **schema_discovery(for_op),
         "workbook_structure_enabled": workbook_structure_enabled,
+        "table_workspaces_enabled": table_workspaces_enabled,
+        "table_workspace_policy": "Project exact worksheet ranges into tagged A2T cells without header/type inference. Read complete hash-pinned workspaces/source records; preserve source bindings. Apply only unchanged row/column correspondence with exact table hash and native revision. Independent creation is a new workbook. Applied/exported A2T snapshots are retained as workspace_reference; Agent reviews meaning, formula results and layout.",
         "workbook_policy": "Read complete hash-pinned read_workbook JSON. Sheet changes need current revision and sheetId/part keys. Preserve explicit references, views and scopes; reject surviving deletion dependencies and default 3D membership changes. Dynamic strings, calculation results and rendering need Agent review. Detached parts remain; no secure erasure.",
         "identity": "Stable asset IDs, SHA-256 revisions and revision-scoped locators.",
         "citation_policy": "citation_contract selects a display preset or custom inline/reference templates; it does not store source references or verification reports.",
@@ -128,6 +134,7 @@ def native_document_contract(
             docx_structure_enabled,
             docx_rendering_configured,
             workbook_structure_enabled,
+            table_workspaces_enabled,
         ),
         "verification": "MCP checks integrity; agents verify semantics, layout and calculated results.",
         "docx_policy": "Pin revision; assemble all DFM chunks with frontmatter/markers. Updates stage versions; writeback is explicit.",
@@ -188,6 +195,7 @@ def _formats(
     docx_structure_enabled: bool = False,
     docx_rendering_configured: bool = False,
     workbook_structure_enabled: bool = False,
+    table_workspaces_enabled: bool = False,
 ) -> dict[str, list[str]]:
     workbook_ops = (
         [
@@ -200,6 +208,15 @@ def _formats(
         if workbook_structure_enabled
         else []
     )
+    if table_workspaces_enabled:
+        workbook_ops.extend(
+            [
+                "project_workbook_table",
+                "read_table_workspace",
+                "apply_table_workspace",
+                "create_workbook_from_table",
+            ]
+        )
     return {
         "pdf": [
             "create_pdf",

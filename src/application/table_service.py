@@ -5,17 +5,18 @@ Orchestrates table creation, data accumulation, rendering,
 citation management, audit trail, and schema evolution.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import os
 import uuid
 from datetime import datetime
 from html import escape
-from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from src.application.table_citation_read import read_citation_page
-from src.domain.repositories import TableRendererInterface
+from src.domain.native_table_workspace import NativeTableCellValue
 from src.domain.table_entities import (
     CellCitation,
     ChangeEntry,
@@ -25,7 +26,14 @@ from src.domain.table_entities import (
     TableDraft,
     TableTemplate,
 )
+from src.domain.table_state import table_from_state, table_state
 from src.domain.value_objects import AssetRef
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from src.domain.native_table_workspace import NativeTableSnapshotReader
+    from src.domain.repositories import TableRendererInterface
 
 logger = logging.getLogger(__name__)
 TABLE_STARTUP_LOAD_MAX_BYTES_ENV = "ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES"
@@ -69,6 +77,7 @@ class TableService:
         self,
         table_output_dir: Path,
         table_renderer: TableRendererInterface,
+        workspace_reader: NativeTableSnapshotReader | None = None,
     ) -> None:
         """
         Initialize table service with dependencies.
@@ -82,6 +91,7 @@ class TableService:
         self.draft_dir = self.storage_dir / "drafts"
         self.draft_dir.mkdir(parents=True, exist_ok=True)
         # In-memory cache
+        self._workspace_reader = workspace_reader
         self._tables: dict[str, TableContext] = {}
         self._skipped_tables: dict[str, dict[str, Any]] = {}
         self._drafts: dict[str, TableDraft] = {}
@@ -108,34 +118,7 @@ class TableService:
                     continue
                 with json_file.open(encoding="utf-8") as f:
                     data = json.load(f)
-                    # Reconstruct TableContext
-                    col_defs = [ColumnDef(**c) for c in data["columns"]]
-                    # Reconstruct citations
-                    citations: dict[str, CellCitation] = {}
-                    for key, cite_data in data.get("citations", {}).items():
-                        citations[key] = CellCitation.from_dict(cite_data)
-                    # Reconstruct change log
-                    change_log = None
-                    if "change_log" in data:
-                        change_log = TableChangeLog.from_dict(data["change_log"])
-                    context = TableContext(
-                        id=data["id"],
-                        schema_version=data.get("schema_version", "a2t-table-v2"),
-                        intent=data["intent"],
-                        title=data["title"],
-                        columns=col_defs,
-                        rows=data["rows"],
-                        row_ids=data.get("row_ids", []),
-                        row_provenance=data.get("row_provenance", {}),
-                        source_description=data.get("source_description", ""),
-                        source_doc_id=data.get("source_doc_id", ""),
-                        source_block_id=data.get("source_block_id", ""),
-                        source_revision_id=data.get("source_revision_id", ""),
-                        source_block_hash=data.get("source_block_hash", ""),
-                        created_at=data.get("created_at", ""),
-                        citations=citations,
-                        change_log=change_log,
-                    )
+                    context = table_from_state(data)
                     self._tables[context.id] = context
                     self._skipped_tables.pop(context.id, None)
             except Exception:
@@ -146,40 +129,7 @@ class TableService:
         """Persist table state to JSON and Markdown."""
         # Save JSON state
         json_path = self.storage_dir / f"{context.id}.json"
-        state: dict[str, Any] = {
-            "id": context.id,
-            "schema_version": context.schema_version,
-            "intent": context.intent,
-            "title": context.title,
-            "columns": [
-                {
-                    "name": c.name,
-                    "type": c.type,
-                    "required": c.required,
-                    "enum_values": c.enum_values,
-                }
-                for c in context.columns
-            ],
-            "rows": context.rows,
-            "row_ids": context.row_ids,
-            "row_provenance": context.row_provenance,
-            "source_description": context.source_description,
-            "source_doc_id": context.source_doc_id,
-            "source_block_id": context.source_block_id,
-            "source_revision_id": context.source_revision_id,
-            "source_block_hash": context.source_block_hash,
-            "created_at": str(context.created_at)
-            if isinstance(context.created_at, datetime)
-            else context.created_at,
-        }
-        # Persist citations
-        if context.citations:
-            state["citations"] = {
-                key: cite.to_dict() for key, cite in context.citations.items()
-            }
-        # Persist change log
-        if context.change_log and context.change_log.entries:
-            state["change_log"] = context.change_log.to_dict()
+        state = table_state(context)
 
         md_path = self.storage_dir / f"{context.id}.md"
         manifest_path = self.storage_dir / f"{context.id}.manifest.json"
@@ -204,6 +154,32 @@ class TableService:
         finally:
             for tmp_path in tmp_paths:
                 tmp_path.unlink(missing_ok=True)
+
+    def create_workspace(self, context: TableContext) -> None:
+        """Register one complete projection, rolling cache publication back on failure."""
+        from src.domain.table_entities import ROW_ID_PATTERN
+
+        if not ROW_ID_PATTERN.fullmatch(context.id) or context.id in {".", ".."}:
+            raise ValueError("Invalid table workspace ID")
+        if (
+            context.id in self._tables
+            or context.id in self._skipped_tables
+            or (self.storage_dir / f"{context.id}.json").exists()
+        ):
+            raise ValueError("Table workspace ID already exists")
+        copied = context.model_copy(deep=True)
+        self._tables[copied.id] = copied
+        try:
+            self._save_table(copied)
+        except Exception:
+            self._tables.pop(copied.id, None)
+            raise
+
+    def read_workspace(self, table_id: str) -> TableContext:
+        """Copy a complete persisted snapshot; native writes pin its content hash."""
+        if self._workspace_reader is not None:
+            return self._workspace_reader.read_workspace(table_id)
+        return self._get_context(table_id).model_copy(deep=True)
 
     def create_table(
         self,
@@ -531,6 +507,10 @@ class TableService:
             raise ValueError("Cannot render an empty table. Add rows first.")
 
         if format == "excel":
+            if any(column.type == "native" for column in context.columns):
+                raise ValueError(
+                    "Use native create_workbook_from_table for typed native cells; ordinary render does not preserve their native representation"
+                )
             file_path = self._table_renderer.render(context, filename)
             if artifact_only:
                 return {
@@ -1367,6 +1347,8 @@ class TableService:
         column = next(c for c in context.columns if c.name == column_name)
         if value is None:
             return
+        if column.type == "native":
+            NativeTableCellValue.model_validate(value)
         if column.type == "number" and not isinstance(value, int | float):
             raise ValueError(
                 f"Column '{column.name}' must be a number, got {type(value).__name__}"

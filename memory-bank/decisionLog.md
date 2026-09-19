@@ -1,5 +1,18 @@
 # Decision Log
 
+## 2026-09-19: explicit typed correspondence and frozen A2T inputs
+
+Keep each projected row including headers; label columns with native Excel letters.
+Tagged values avoid guessing leading zeros, literal equals signs and formula types.
+Source binding pins original stable row IDs, columns, range and native revision.
+Only unchanged correspondence applies cell values back to the original package.
+Structural A2T changes may create an independent workbook; source-grid relocation
+remains an open requirement. Read complete fresh snapshots and pin their hash before
+writes. Retain immutable canonical A2T JSON for applied/exported input; mutable table
+IDs/hashes alone are insufficient historical evidence. Late native CAS failure may
+leave an unreferenced snapshot but cannot advance the target. Existing PDF/DFM cell
+citations remain separate; source origin is not support for edited semantic claims.
+
 ## 2026-09-19 — Whole-deck conversion for exact slide previews
 
 Use a temporary full-deck LibreOffice Impress export, including hidden slides and

@@ -1,5 +1,17 @@
 # System Architect
 
+## 2026-09-19 native/A2T bridge
+
+Domain native_table_workspace defines typed values, exact worksheet/range binding
+and range/workspace ports. Shared table_state codec preserves legacy persistence
+fields plus native binding. Infrastructure NativeWorkbookRange returns dense native
+records; FileTableWorkspaceReader reads fresh bounded regular files. Application
+NativeTableOperations orchestrates projection/read/apply/create and immutable input
+snapshots through native repository CAS. Existing TableService retains persistence
+ownership; the composition root injects it and the fresh reader. MCP table_data
+accepts JSON typed values. Editing original worksheets uses the existing checked
+package editor; separate XLSX creation does not claim source layout preservation.
+
 ## 2026-09-19 — Optional native presentation rendering port
 
 NativePresentationRenderer is separate from editing adapters. The application binds

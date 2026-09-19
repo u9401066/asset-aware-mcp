@@ -78,7 +78,7 @@ def audit(output):
         for line in (output / "events.jsonl").read_text(encoding="utf-8").splitlines()
     ]
     require(any(e["type"] == "turn.completed" for e in events), "Incomplete Codex turn")
-    calls = []
+    calls, table_calls, ordered_calls = [], [], []
     for event in events:
         if event["type"] != "item.completed":
             continue
@@ -91,12 +91,15 @@ def audit(output):
             continue
         require(
             item["server"] == "asset_aware_under_test"
-            and item["tool"] == "document"
-            and item["arguments"]["op"] == "native",
+            and (
+                (item["tool"] == "document" and item["arguments"]["op"] == "native")
+                or (expected.get("tables") and item["tool"] == "table_data")
+            ),
             "Unexpected server/tool",
         )
         if not call_failed(item):
-            calls.append(item)
+            ordered_calls.append(item)
+            (table_calls if item["tool"] == "table_data" else calls).append(item)
     ops = {c["arguments"]["native_request"]["op"] for c in calls}
     require(
         {
@@ -106,7 +109,7 @@ def audit(output):
             "read_selection",
             "record_derivation",
             "verify_derivation",
-            "update",
+            "apply_table_workspace" if expected.get("tables") else "update",
             "verify",
             "publish",
             "export_wiki",
@@ -195,15 +198,20 @@ def audit(output):
     )
     validate_ledger_trace(calls, ledger)
     validate_wikis(workspace, target, source, ledger, records)
+    if expected.get("tables"):
+        from tests.codex_native_table.audit import validate_table_workflow
+
+        validate_table_workflow(ordered_calls, workspace, target)
     return {
         "passed": True,
-        "mcp_calls": len(calls),
+        "mcp_calls": len(calls) + len(table_calls),
         "tool_errors": tool_errors(events),
         "images": images,
         "selection_records": len(records),
         "agent_reported_limitations": final.get("limitations", []),
         "scope": "Synthetic scan page to literal XLSX table; precise historical value evidence and two revision-specific wikis. No OCR or Excel rendering guarantee.",
         "worksheet_structure_evaluated": bool(expected.get("worksheets")),
+        "native_table_workspaces_evaluated": bool(expected.get("tables")),
     }
 
 

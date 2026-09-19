@@ -33,6 +33,49 @@ it is not a promise of complete automatic correction or layout verification.
 Verification coverage and unperformed checks must remain explicit. Structural
 validity alone must never be reported as semantic correctness or full fidelity.
 
+### Native workbook/A2T correspondence (Unreleased, 1.4.x)
+
+Expose project_workbook_table, read_table_workspace, apply_table_workspace and
+create_workbook_from_table through native_request. Projection requires an exact
+asset/revision, worksheet sheetId/part and bounded rectangular A1 range. Every row
+including any header remains data; column labels use native column letters. Never
+infer numeric strings, formulas, headers or dates. Tagged scalar cells distinguish
+literal strings, booleans, numbers, formulas and blanks; preserve read-only source
+representations when no supported editor exists. Existing ordinary A2T tables remain
+compatible and can create independent native XLSX workbooks with explicit options.
+
+A durable native binding pins source revision/range and stable A2T row/column
+correspondence. Complete workspace JSON includes current values and complete native
+source-cell references/representations; page at one table_sha256. Imported style/raw
+numeric/formula metadata remains in the original immutable file and read-back, not
+flattened into Markdown. The binding describes extraction origin, not semantic
+support for later edited values. Existing PDF-style CellCitation remains separate.
+
+Applying uses a copied table snapshot with expected_table_sha256 plus the exact bound
+workbook expected_revision. Reconstruct source records and compare tagged values;
+unchanged native cells are never rewritten. Apply only typed changed cells through
+the checked original-package adapter, preserving styles and all untouched parts.
+Reject changed row/column correspondence, unsupported edits, stale bindings, archives
+and malformed type payloads before native commit. The operation result records the
+applied snapshot hash and table/source identity. Before committing a native update
+or independent creation, retain canonical A2T JSON as a managed immutable file with
+format `a2t`, media type `application/vnd.asset-aware.a2t+json`, and a full
+`workspace_reference`. Read this reference after the mutable table changes or is
+deleted; `verify` checks exact file bytes. A late workbook CAS failure may retain an
+unreferenced input snapshot while leaving the target revision unchanged. No-op
+application creates neither snapshot nor revision. It does not mutate the A2T binding or
+advance assertions: re-project the new native revision for subsequent synchronized
+work. Source publication/writeback remains an explicit existing operation.
+
+Independent creation from A2T handles the current rows/columns, including structural
+A2T edits, using explicit destination filename/sheet/header choices. It creates a new
+native asset and returns the mapping; it is not a format-preserving source writeback.
+Applying row/column structural transformations to existing workbooks still requires
+native grid/reference/merge/style relocation work under the broader goal. Agent
+reviews meaning, dynamic references, formula results and rendered layout. Regressions,
+SDK2 and actual Codex must verify literal scan data, typed edits, original bytes,
+source and table preconditions, complete readback and persistent historical evidence.
+
 ### Native workbook sheet structure (Unreleased, 1.4.x)
 
 Provide revision-pinned read_workbook structure/reference inventories and managed

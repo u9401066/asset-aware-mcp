@@ -12,6 +12,10 @@ NativeOperation = Literal[
     "create",
     "list",
     "inspect",
+    "project_workbook_table",
+    "read_table_workspace",
+    "apply_table_workspace",
+    "create_workbook_from_table",
     "read_workbook",
     "add_worksheets",
     "rename_worksheet",
@@ -86,6 +90,16 @@ NATIVE_OPERATIONS = {
     "list": _fields(optional="offset limit"),
     "inspect": _fields("asset_id", "sheet offset limit revision"),
     "read_cell": _fields("asset_id sheet cell", "revision text_offset text_limit"),
+    "project_workbook_table": _fields("asset_id revision table_projection"),
+    "read_table_workspace": _fields(
+        "table_id", "table_sha256 workspace_reference text_offset text_limit"
+    ),
+    "apply_table_workspace": _fields(
+        "asset_id expected_revision table_id expected_table_sha256"
+    ),
+    "create_workbook_from_table": _fields(
+        "table_id expected_table_sha256 table_workbook", "workspace_reference"
+    ),
     "read_workbook": _fields(
         "asset_id", "revision workbook_view text_offset text_limit"
     ),

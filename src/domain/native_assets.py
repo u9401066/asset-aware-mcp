@@ -82,6 +82,10 @@ from src.domain.native_selection import (  # noqa: TC001 -- Pydantic schema
     NativeSelectionReference,
     NativeSelectionSelector,
 )
+from src.domain.native_table_workspace import (  # noqa: TC001 -- Pydantic schema
+    NativeTableProjection,
+    NativeTableWorkbookCreate,
+)
 from src.domain.native_workbook import (  # noqa: TC001 -- Pydantic schema
     NativeWorksheetInsert,
     NativeWorksheetKey,
@@ -135,6 +139,12 @@ class NativeDocumentRequest(NativeModel):
         description="Citation display only: select a preset or supply inline/reference templates. Source references and proof objects are not formatting fields.",
     )
     citation_metadata: CitationMetadata | None = None
+    table_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_.-]{1,128}$")
+    table_sha256: str | None = Field(default=None, pattern=SHA256_PATTERN)
+    expected_table_sha256: str | None = Field(default=None, pattern=SHA256_PATTERN)
+    table_projection: NativeTableProjection | None = None
+    table_workbook: NativeTableWorkbookCreate | None = None
+    workspace_reference: NativeFileReference | None = None
     workbook: NativeWorkbookCreate | None = None
     workbook_view: Literal["structure", "references"] = "structure"
     worksheet_insert: NativeWorksheetInsert | None = None
@@ -251,6 +261,12 @@ class NativeDocumentRequest(NativeModel):
             raise ValueError(
                 "Fields not used by this native operation: " + ", ".join(sorted(unused))
             )
+        if (
+            self.op == "read_table_workspace"
+            and self.text_offset
+            and not self.table_sha256
+        ):
+            raise ValueError("Workspace continuation requires table_sha256")
         if self.op == "schema" and self.text_offset and not self.schema_sha256:
             raise ValueError(
                 "Schema continuation requires schema_sha256 from the first page"

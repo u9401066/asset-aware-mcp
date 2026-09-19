@@ -49,12 +49,14 @@ from src.infrastructure.native_pptx import NativePresentation
 from src.infrastructure.native_pptx_render import LibreOfficePresentationRenderer
 from src.infrastructure.native_spreadsheet import SpreadsheetFileAdapter
 from src.infrastructure.native_wiki_publisher import FileNativeWikiPublisher
+from src.infrastructure.native_workbook_range import NativeWorkbookRange
 from src.infrastructure.native_workbook_structure import NativeWorkbookStructure
 from src.infrastructure.ocr_processor import OCRProcessor
 from src.infrastructure.pymupdf_preflight import PyMuPDFPreflightInspector
 from src.infrastructure.subprocess_ingest_worker_runner import (
     SubprocessIngestWorkerRunner,
 )
+from src.infrastructure.table_workspace_reader import FileTableWorkspaceReader
 
 if TYPE_CHECKING:
     from src.domain.repositories import KnowledgeGraphInterface
@@ -121,21 +123,6 @@ except (FileNotFoundError, KeyError, json.JSONDecodeError):
 repository = FileStorage(settings.data_dir)
 bundle_publisher = FileBundlePublisher()
 native_repository = FileNativeAssetRepository(settings.data_dir / "native-assets")
-native_document_service = NativeDocumentService(
-    native_repository,
-    SpreadsheetFileAdapter(),
-    FileNativeWikiPublisher((settings.data_dir / "native-assets",)),
-    NativeDocxBridge(FileNativeDocxWorkspaces()),
-    NativePresentation(),
-    ProcessNativePdf(),
-    FileNativeDerivationRepository(
-        settings.data_dir / "native-assets", native_repository
-    ),
-    pptx_renderer=LibreOfficePresentationRenderer(),
-    docx_structure=NativeDocxStructure(),
-    docx_renderer=LibreOfficeWordRenderer(),
-    workbook_structure=NativeWorkbookStructure(),
-)
 # Engine selection (config-driven via ETL_ENGINE): the base extractor is always
 # available (PyMuPDF, or the layout-aware pymupdf4llm) and doubles as the fast
 # fallback. Docling is the only active structured engine. Held Marker/MinerU
@@ -185,9 +172,29 @@ structural_pointer_service = StructuralPointerService(
 table_service = TableService(
     table_output_dir=settings.table_output_dir,
     table_renderer=excel_renderer,
+    workspace_reader=FileTableWorkspaceReader(settings.table_output_dir),
 )
 docx_service = DocxService(repository=repository)
 dfm_table_bridge = DfmTableBridge()
+
+native_document_service = NativeDocumentService(
+    native_repository,
+    SpreadsheetFileAdapter(),
+    FileNativeWikiPublisher((settings.data_dir / "native-assets",)),
+    NativeDocxBridge(FileNativeDocxWorkspaces()),
+    NativePresentation(),
+    ProcessNativePdf(),
+    FileNativeDerivationRepository(
+        settings.data_dir / "native-assets", native_repository
+    ),
+    pptx_renderer=LibreOfficePresentationRenderer(),
+    docx_structure=NativeDocxStructure(),
+    docx_renderer=LibreOfficeWordRenderer(),
+    workbook_structure=NativeWorkbookStructure(),
+    workbook_ranges=NativeWorkbookRange(),
+    table_workspaces=table_service,
+)
+
 
 # Docx round-trip validator
 from src.infrastructure.docx_validator import DocxValidator  # noqa: E402

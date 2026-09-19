@@ -9,6 +9,15 @@
 
 ### Added
 
+- Native workbook/A2T workspaces: exact range projection, typed cells, complete
+  hash-pinned readback with original cell evidence, guarded application to the
+  source workbook and independent XLSX creation. Applied/exported table inputs
+  remain available as immutable `workspace_reference` snapshots. Cell updates
+  preserve original styles and untouched parts; structural A2T edits require
+  independent creation. `table_data.update_cell` accepts typed JSON values.
+  Source bindings do not auto-advance; Agent reviews meaning, formulas and layout.
+  Public version remains 1.4.0; all development stays Unreleased for 1.4.x.
+
 - Native workbook structure CRUD: hash-pinned `read_workbook` JSON, worksheet
   insertion, renaming, reordering and dependency-checked deletion. Stable sheet
   identities, explicit local formula/name/chart/pivot references, view indices
