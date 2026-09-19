@@ -19,6 +19,14 @@ matched localbytes. Public remainsv1.4.0, onlymain, originalworktreeuntouched.
 Next: push the test-only locale fix, await exact newHEAD CI/Pages, preserve active goal.
 
 
+
+The same locale review found the shared Codex runner passed Unicode prompt stdin
+through the platform-default subprocess encoding. It now explicitly uses UTF-8;
+a real child-process echo regression forces cp1252 defaults and checks exact UTF-8
+bytes. **47 focused DOCX-auditor/PDF-evaluation tests passed**, including13 DOCX
+audit cases. This changes evaluation tooling only, not the native runtime or actual
+saved evaluation results. Exact remote CI will run on the final correction commit.
+
 ## 2026-09-19 — native DOCX structure local gates passed; exact remote proof next
 
 Core committed as `235b89b` (26 counted files +2 MEM) with author u9401066.

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -13,10 +15,26 @@ from docx.shared import Pt, RGBColor, Twips
 
 from tests.codex_docx_structure.audit import validate_docx, validate_wiki
 from tests.codex_pdf.fixtures import COLUMNS, PAGE_ROWS
+from tests.codex_pdf.run import execute
 from tests.native_docx_helpers import call
 from tests.native_docx_helpers import native_docx as native_docx
 from tests.native_docx_structure_helpers import creation
 from tests.unit.test_native_docx_structure_operations import structured as structured
+
+
+def test_codex_prompt_reaches_process_as_utf8_under_windows_locale(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(subprocess, "_text_encoding", lambda: "cp1252")
+    prompt = "研究 007 µg"
+    command = [
+        sys.executable,
+        "-c",
+        "import sys; sys.stdout.buffer.write(sys.stdin.buffer.read())",
+    ]
+    result = execute(command, prompt, tmp_path, 10)
+    assert result["returncode"] == 0 and not result["timed_out"]
+    assert (tmp_path / "events.jsonl").read_bytes() == prompt.encode("utf-8")
 
 
 @pytest.mark.parametrize("fault", [None, "zero", "grid", "merge", "size", "heading"])

@@ -186,6 +186,7 @@ def execute(args: list[str], text: str, output: Path, timeout: int) -> dict:
                 args,
                 input=text,
                 text=True,
+                encoding="utf-8",
                 stdout=events,
                 stderr=errors,
                 timeout=timeout,
