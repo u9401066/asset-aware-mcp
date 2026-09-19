@@ -1,5 +1,12 @@
 # asset-aware-mcp
 
+Unreleased 的 `read_pdf_region` 把掃描表格中的明確區域，連到轉錄後的儲存格：
+回傳實際 PNG、完整頁面／區域引用，並由驗證、轉製帳本與 Wiki 保留精確來源。
+MCP 檢查版本與座標，Agent 核對轉錄及語意。詳見
+[PDF 區域證據](docs/wiki/Native-File-Assets.md#pdf-region-evidence-unreleased)。
+公開版維持 **1.4.0**，累積 **Unreleased／1.4.x**。
+
+
 Unreleased 的工作表尺寸操作讓 Agent 讀取原生欄寬／列高，依實際 PDF 畫面調整後
 重新預覽，保留儲存格內容與格式、歷史 PDF 及證據。詳見
 [工作表版面修正](docs/wiki/Native-File-Assets.md#worksheet-layout-correction-unreleased)。

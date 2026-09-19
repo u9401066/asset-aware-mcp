@@ -1,5 +1,13 @@
 # asset-aware-mcp
 
+Unreleased PDF regions connect a visible scanned cell to a typed target value:
+`read_pdf_region` returns an actual PNG and an immutable page/rectangle reference.
+Verification, derivation ledgers and Wiki exports retain that precise source.
+MCP checks identity and geometry; Agent reviews transcription and meaning.
+See [PDF region evidence](docs/wiki/Native-File-Assets.md#pdf-region-evidence-unreleased).
+Public stays **1.4.0**; development stays **Unreleased / 1.4.x**.
+
+
 Unreleased worksheet layout operations let Agents read native dimensions, adjust
 row heights or column widths, and review a new immutable PDF. Cell content/styles,
 historical previews and evidence stay intact. See

@@ -37,6 +37,17 @@ verification.
 
 ## Native Document Operations
 
+- When pdf_regions_enabled is advertised, read_pdf_region takes a full PDF page
+  reference plus pdf_region.rect in displayed CropBox fractions (0–1, top-left,
+  after rotation), or a full existing region reference without selector override.
+  Read the complete record and actual PNG; render_size changes detail, not identity.
+  Agent checks glyph coverage/transcription and records explicit region-to-cell
+  derivations. verify checks geometry/source only; read_selection selects region JSON.
+  Wiki retains region JSON/PNG/render metadata and source PDFs. Missing external
+  citation metadata is reported, never borrowed from target authors/year. Historical
+  assertions do not migrate; sources/history stay unchanged. Public1.4.0 / 1.4.x.
+
+
 - When table_workspaces_enabled is advertised, project_workbook_table pins an exact
   revision, worksheet key and range. Headers remain data; native columns hold
   tagged {kind,value} cells. Read the complete read_table_workspace JSON with one

@@ -38,6 +38,17 @@ and LightRAG knowledge graph outputs.
 
 ## Native Files and Agent Review
 
+- When pdf_regions_enabled is advertised, read_pdf_region takes a full PDF page
+  reference plus pdf_region.rect in displayed CropBox fractions (0–1, top-left,
+  after rotation), or a full existing region reference without selector override.
+  Read the complete record and actual PNG; render_size changes detail, not identity.
+  Agent checks glyph coverage/transcription and records explicit region-to-cell
+  derivations. verify checks geometry/source only; read_selection selects region JSON.
+  Wiki retains region JSON/PNG/render metadata and source PDFs. Missing external
+  citation metadata is reported, never borrowed from target authors/year. Historical
+  assertions do not migrate; sources/history stay unchanged. Public1.4.0 / 1.4.x.
+
+
 - When worksheet_layout_enabled is advertised, read_worksheet_layout requires
   asset_id/revision/worksheet_key; read every chunk at one text_sha256. Update with
   expected_revision and worksheet_layout. Use explicit height_points/width_ooxml,

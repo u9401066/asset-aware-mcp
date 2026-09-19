@@ -2,6 +2,37 @@
 
 # Release And Testing
 
+## PDF region evidence evaluation (Unreleased)
+
+真實 Codex **預設模型**於 2026-09-19 完成 **82 次成功 MCP 呼叫、零工具錯誤、
+218.02 秒、5 張實際區域 PNG**。它從合成掃描 PDF 第一資料列自行選取 Count、
+Reading、Unit 三格，建立字串 `007`、`-0.50`、`mg/L`，保留前導零與符號，
+並建立三筆區域到儲存格的轉製來源關係。
+
+Codex 將 Count 區域放大後確認引用不變，把工作簿 A2 更新成 `008`，並把受管理
+PDF 第 0 頁旋轉為 90 度；來源檔未改寫。舊區域／儲存格引用仍可重讀與驗證。
+兩份 Wiki 分別保留原始主張及沒有繼承主張的新版，附精確 PDF／XLSX、區域 JSON、
+PNG、渲染器資訊與自訂引用。獨立稽核核對完整頁面／六格原值及新版格／帳本、
+來源位元組與 mtime、三格字形涵蓋範圍、歷史、發布檔案及所有 Wiki 區域附件。
+
+像素驗證分兩層：16 組旋轉／偏移 MediaBox-CropBox／UserUnit 案例使用整頁
+raster 再裁切，比對精確向量像素；實際 Agent 的 PNG 另以獨立直接渲染精確重播，
+並與整頁裁切比對尺寸及平均色差。MuPDF 對嵌入掃描影像的局部取樣／邊界抗鋸齒
+可產生差異，不能把所有像素必須相同當成幾何正確的唯一條件。初版稽核因這個
+假設拒絕已完成的執行，修正稽核後重審同一原始 trace 通過；回歸測試確認即使
+同步重算 PNG hash，平移一個像素仍會被獨立直接重播檢查拒絕。
+
+SDK2 整合測試直接傳輸實際 PNG，核對來源格、轉製帳本、Wiki 及 PDF 歷史；
+此固定掃描格的整頁對照最大色差限制為 2／255、平均小於 0.1／255。
+語意核對欄位仍是 Agent 的聲明，MCP hash 不認證語意或通用 PDF／Excel 保真。
+本次是合成掃描樣本；廣泛真實文件覆蓋仍未完成。
+
+完整測試 **2,967 項通過、35 項選配略過**，另以真實 SDK2 驗證上述流程。
+
+重現：`uv run python -m tests.codex_pdf_regions.run --output /absolute/new/run-dir`；
+普通 pytest 不啟動模型。公開版 **1.4.0**，變更累積 **Unreleased／1.4.x**。
+
+
 ## Worksheet layout correction evaluation (Unreleased)
 
 選配 Calc／SDK2 測試已核對尺寸修改前後的 PDF、實際 MCP PNG、來源版本與

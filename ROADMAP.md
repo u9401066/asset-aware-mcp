@@ -1,12 +1,15 @@
 # Roadmap
 
+- [x] Unreleased / 1.4.x: source-bound PDF regions with actual PNGs, displayed-page fraction coordinates, version/geometry checks, derivation endpoints and portable Wiki previews/source attachments. Agent supplies cell correspondence and semantic review; broad real-document coverage remains open.
+
+
 - [x] Unreleased / 1.4.x: independent native Table creation, identity-preserving column edits, and explicit totals add/remove/reuse. Retained formulas use pre-removal ranges; Agent still reviews formula results and rendered layout. Whole worksheet moves use the existing explicit grid operation.
 
-- [x] Unreleased / 1.4.x: native range ↔ A2T cell-value correspondence, typed edits, source-cell evidence, immutable input snapshots and independent workbook creation. Applying structural row/column changes with formula, merge and style relocation remains open.
+- [x] Unreleased / 1.4.x: native range ↔ A2T cell-value correspondence, typed edits, source-cell evidence, immutable input snapshots and independent workbook creation. Explicit structural plans now apply row/column changes with formula, merge and style relocation; automatic correspondence remains open.
 
-- [x] Unreleased / 1.4.x: native worksheet read/add/rename/reorder/delete with stable keys, explicit reference repair, deletion and 3D membership checks, complete read-back and historical evidence. Full workbook rendering, dynamic references and general grid edits remain open.
+- [x] Unreleased / 1.4.x: native worksheet read/add/rename/reorder/delete with stable keys, explicit reference repair, deletion and 3D membership checks, complete read-back and historical evidence. Explicit grid/layout edits and optional immutable Calc PDF renditions are implemented; dynamic references and general Excel fidelity remain open.
 
-- [x] Unreleased / 1.4.x: immutable JSON-value and Unicode-span selections inside native cells/blocks/shapes/pages, verified derivation endpoints and portable Wiki selection evidence. Pixel-region evidence, automatic cell correspondence and semantic alignment remain open.
+- [x] Unreleased / 1.4.x: immutable JSON-value and Unicode-span selections inside native cells/blocks/shapes/pages, verified derivation endpoints and portable Wiki selection evidence. Explicit PDF region evidence now complements parsed selections; automatic cell correspondence and semantic alignment remain open.
 - [x] Unreleased / 1.4.x: private CJK font environment, same-source before/after SDK2 image regression and actual Codex visual correction review. Global font installation and Microsoft Word fidelity remain outside this fixture.
 - [x] Unreleased / 1.4.x: optional native DOCX whole-page MCP PNG previews from exact revisions, Writer pagination metadata and resource/process guards. Agents perform visual review; general Word fidelity and real-corpus coverage remain open.
 - [x] Unreleased / 1.4.x: independent DOCX creation and reference-bound body paragraph/table insertion/deletion; merged grids, rich text, serialized readback and dependency guards. General Word structure editing and Microsoft Word fidelity review remain open.
@@ -54,7 +57,7 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
   結構仍需擴充。投影片完整視覺核對仍由 Agent 負責。
 - 跨資產轉製帳本連結既有完整原生引用，保留修訂／撤回、hash 分頁與
   Agent 核對聲明；Wiki 帶走活躍關係的來源附件，舊快照仍保留。
-  PDF 頁到 PPTX 表格是頁／形狀粒度；逐格語意映射與自動判讀仍是後續工作。
+  PDF 區域及原生文字選取可明確連到逐格引用；自動逐格對應與語意判讀仍由 Agent 協調。
 - 已加入原生 PDF 頁面操作、PPTX 文字框／圖片／表格新增、既有形狀刪除，
   以及圖片替換／拆出與來源歷程；使用不可變版本與明確回寫。
 - 原生表格可指定尺寸、合併與直接文字格式，沿用完整形狀引用與 Wiki；

@@ -2,6 +2,57 @@
 
 # Native File Assets（v1.4.0）
 
+## PDF region evidence (Unreleased)
+
+掃描表格中的單一格，可透過 `read_pdf_region` 連到轉錄結果的完整原生引用。
+先查 `pdf_regions_enabled` 與 `contract.for_op`，讀完整 `read_pdf_page` JSON，
+再以頁面引用及 `pdf_region` 指定區域：
+
+```json
+{
+  "op": "read_pdf_region",
+  "reference": "完整 native-pdf-page-ref-v1 物件",
+  "pdf_region": {
+    "coordinate_system": "displayed_crop_fraction",
+    "rect": [0.2, 0.25, 0.4, 0.3]
+  },
+  "render_size": 1024
+}
+```
+
+`reference` 上面的字串僅為說明，實際必須傳完整引用物件。
+座標是**已旋轉、裁切後顯示頁面**的比例，左上為原點、向右／下增加，範圍 0–1。
+例如在 1000×800 預覽中選取 x=200–400、y=200–240，就得到上述矩形。
+它與 `update_pdf.crop_box` 的原生 PDF 左下角座標，以及文字區塊的未旋轉座標不同。
+必須是非空且完全在頁內的矩形；MCP 不替使用者猜測或截短超出範圍的座標。
+
+回傳完整 `region` JSON、實際 MCP PNG、`image_sha256` 與渲染器／座標／像素尺寸。
+`region.evidence` 是 `native-pdf-region-ref-v1`，固定完整父頁引用、來源版本、
+選取範圍及頁面幾何。之後可只傳這個完整區域引用重讀；不能同時覆寫 selector。
+`render_size` 為 64–2048，只改預覽細節，證據身分不變。操作不修改 PDF CropBox、
+旋轉、來源檔或受管理歷史。極小區域造成過大渲染座標時會拒絕，避免無界放大。
+
+`verify` 檢查頁面與幾何身分，`read_selection` 可選區域 JSON 內的值；這不是 OCR。
+Agent 查看 PNG、確認字形涵蓋完整後，建立帶型別的目標儲存格，再透過
+`record_derivation` 連結目標引用與對應區域引用。逐格主張須由 Agent 明確建立；
+後來的 PDF 旋轉或工作簿修改不會把舊主張自動搬到新版本。
+
+Wiki 匯出會附區域 JSON、PNG、渲染資訊與完整來源 PDF，並建立穩定 wikilink。
+區域註記沿用選定 citation contract，`locator` 包含頁碼及比例矩形。外部來源只有
+其檔名與來源定位，**不繼承目標文件的作者／年份／參考文獻編號**；若模板需要缺少
+的欄位，`citation_unavailable` 明確記錄原因，完整證據及選定模板仍保留。
+已有註記與歷史快照保持保護；整理性筆記請放在相鄰檔案。
+
+PNG 屬於當次渲染，字型／渲染器更新或掃描圖片的局部取樣可能改變少量像素；
+引用身分不宣稱跨渲染器像素恆等。MCP 不判定內容真假或語意支持，Agent 負責
+轉錄、語意、版面及公式結果。範例與實測見 [Release And Testing](#/release-testing)。
+公開版 **1.4.0**，此功能屬 **Unreleased／1.4.x**。
+
+底層沿用 [PyMuPDF 區域渲染](https://pymupdf.readthedocs.io/en/latest/recipes-images.html)
+與 [pikepdf 頁面操作](https://pikepdf.readthedocs.io/en/latest/topics/pages.html)：
+前者提供畫面，後者處理物件／頁面；本專案再保留版本、證據及 Agent 操作結果。
+
+
 ## Worksheet layout correction (Unreleased)
 
 Agent 可先看工作簿 PDF，找出文字截斷，再調整原生欄寬或列高，建立新版預覽。

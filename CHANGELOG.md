@@ -7,6 +7,15 @@
 
 ## [Unreleased]
 
+- Added revision-bound PDF region reads with actual MCP PNGs, displayed CropBox
+  fraction coordinates, renderer metadata and resolution-independent references.
+  Verification, parsed selections and per-cell derivations retain exact regions;
+  Wiki includes region records, previews, custom citations and original PDFs.
+  External sources never borrow target bibliographic metadata; missing citation
+  fields are reported. Source bytes/history stay intact; Agent reviews OCR/meaning.
+  Public remains 1.4.0; this work accumulates within Unreleased / 1.4.x.
+
+
 - Native worksheet layout read/update pins revisions and exact sheet keys. Set
   point heights/raw OOXML widths, reset sizes or change visibility; preserve cells,
   styles, interval metadata and authored object anchor behavior. Complete receipts,

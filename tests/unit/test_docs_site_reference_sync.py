@@ -628,7 +628,7 @@ def test_docs_links_point_to_known_pages_and_assets() -> None:
 
     for path in pages_and_shell:
         text = path.read_text(encoding="utf-8")
-        for slug in re.findall(r'href="#/([^"#]+)"|\]\(#/([^"#]+)\)', text):
+        for slug in re.findall(r'href="#/([^"#\s]+)"|\]\(#/([^"#)\s]+)\)', text):
             target = next(part for part in slug if part)
             assert target in known_slugs, (path, target)
 

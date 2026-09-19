@@ -18,6 +18,17 @@
 
 ### 核心功能
 
+- When pdf_regions_enabled is advertised, read_pdf_region takes a full PDF page
+  reference plus pdf_region.rect in displayed CropBox fractions (0–1, top-left,
+  after rotation), or a full existing region reference without selector override.
+  Read the complete record and actual PNG; render_size changes detail, not identity.
+  Agent checks glyph coverage/transcription and records explicit region-to-cell
+  derivations. verify checks geometry/source only; read_selection selects region JSON.
+  Wiki retains region JSON/PNG/render metadata and source PDFs. Missing external
+  citation metadata is reported, never borrowed from target authors/year. Historical
+  assertions do not migrate; sources/history stay unchanged. Public1.4.0 / 1.4.x.
+
+
 - **工作表尺寸修正（Unreleased／1.4.x）** — `read_worksheet_layout` 固定 revision／worksheet_key，完整讀回尺寸；`update_worksheet_layout` 明確指定點數列高、原始 OOXML 欄寬、重設或隱藏。保留儲存格／樣式，物件沿原錨點規則調整；清除公式及圖表快取。完整讀回紀錄，再由 Agent 產生新 PDF 核對畫面與結果，來源及歷史證據保持；公開版仍 1.4.0。
 
 - **工作簿版面核對（Unreleased／1.4.x）** — `create_workbook_rendition` 固定 XLSX revision，明確指定 print／whole_sheet 與 recalculate／prefer_cache，使用選配 Calc 建立獨立 PDF。完整讀取 `read_rendition` 與所有頁面 PNG；Wiki 附來源 XLSX 及轉換紀錄。隱藏、空白頁、溢出文字及公式結果由 Agent 核對，來源不改寫；公開版仍 1.4.0。

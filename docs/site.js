@@ -227,6 +227,17 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
   "native-file-assets": `## Native documents and versioned files — v1.4.0
 
+### PDF region evidence (Unreleased)
+
+read_pdf_region connects an explicitly selected scanned cell to its typed target value. Query pdf_regions_enabled and contract.for_op, read the complete PDF page record, then pass its full reference and pdf_region={rect:[0.2,0.25,0.4,0.3]}. Fractions address the displayed CropBox AFTER rotation, from the top-left, right/down positive, within 0–1. This differs from native bottom-left PDF crop coordinates and unrotated text-block coordinates.
+
+The response contains a complete region record, actual MCP PNG, image hash and renderer/geometry metadata. Re-read using the full native-pdf-region-ref-v1 without overriding its selector. render_size64–2048 changes image detail without changing evidence identity. Empty/out-of-page rectangles and unbounded zoom fail explicitly. Source bytes, crop/rotation and managed history stay unchanged.
+
+verify checks source/geometry; read_selection can select region JSON values. Agent views the image, checks glyph coverage, transcribes typed cells and records an explicit derivation per region/cell. Later edits never migrate assertions. Wiki retains region JSON/PNG/render metadata, source PDFs and wikilinks. The chosen citation contract receives page and rectangle in locator. External sources do not borrow target authors/year/reference numbers; missing fields produce citation_unavailable while preserving the full reference and selected contract.
+
+Partial scan resampling, renderer/fonts and preview detail may change pixels; region identity is not a universal pixel identity or OCR verdict. Agent reviews meaning, layout and results. See [evaluation](#/release-testing). Public1.4.0 / Unreleased1.4.x.
+
+
 ### Worksheet layout correction (Unreleased)
 
 Read an actual workbook PDF, identify clipping, then correct native dimensions and render a new revision. When worksheet_layout_enabled is advertised, read_worksheet_layout requires asset_id, revision and worksheet_key. Assemble every JSON chunk at one text_sha256.
@@ -561,6 +572,15 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### PDF region evidence evaluation (Unreleased)
+
+Actual default-model Codex completed 82 successful MCP calls, zero tool errors, 218.02 seconds and 5 actual region PNGs. It selected three scanned cells, preserved strings 007, -0.50 and mg/L in a new workbook, and recorded three region-to-cell derivations. Higher-detail previews retained region identity. Changing A2 to 008 and rotating the managed PDF preserved the human source and historical evidence. Two Wiki snapshots retained original assertions without inheriting them into the new workbook revision.
+
+Independent audits check complete page/cell/ledger readbacks, source bytes/mtime, glyph coverage, published XLSX and Wiki JSON/PNG/source attachments. Sixteen vector geometry cases compare exact full-page raster crops. Actual scan PNGs require exact independent direct-render replay plus full-page crop dimensions/mean-error comparison; partial embedded-image resampling and edge antialiasing can differ. The first audit rejected the completed run because it assumed universal pixel equality; the corrected audit rechecked the same raw trace. A regression rejects a one-pixel image shift even with an updated PNG hash. SDK2 additionally checks a fixed scan crop within 2/255 maximum and 0.1/255 mean error.
+
+Full suite: 2,967 passed and 35 optional skips. Reproduce with uv run python -m tests.codex_pdf_regions.run --output /absolute/new/run-dir. Ordinary pytest never starts a model. This synthetic fixture does not certify arbitrary PDF or Excel fidelity; broad real-file coverage remains open. Public1.4.0 / Unreleased1.4.x.
+
 
 ### Worksheet layout correction evaluation (Unreleased)
 

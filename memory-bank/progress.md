@@ -1,5 +1,16 @@
 # Progress (Updated: 2026-09-19)
 
+## Native PDF region publication checkpoint
+
+Source commit 1b62c4ed61e351821f0c3a4f1a29cb667f2d015c contains23 counted files plus5 MEM.
+Final fullpytest2967/35skipped114.02s and actual default Codex82/0/5regionPNG218.02s
+pass; source/actual/wheel/Docker SHA match. This documentation commit updates both
+READMEs, Wiki/bilingual Pages, roadmap/current project brief and synchronized
+assistant harness. The docs link checker now stops at the actual closing parenthesis
+instead of consuming later external links; complete docs/full tests pass.
+Public1.4.0 / Unreleased1.4.x, no new version/tag. Both scoped commits go directly
+to main; exact-head CI/Pages/public-byte verification follows. Goal stays active.
+
 ## Native PDF regions — verified locally, publication pending
 
 Implemented read_pdf_region with full source/page/geometry-bound references,
