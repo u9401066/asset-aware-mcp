@@ -43,6 +43,9 @@ from src.domain.native_derivation import (  # noqa: TC001 -- Pydantic schema
     NativeDerivationRetraction,
 )
 from src.domain.native_docx import NativeDocxEdit  # noqa: TC001 -- Pydantic schema
+from src.domain.native_docx_grid import (
+    NativeDocxTableGridEdit,  # noqa: TC001 -- Pydantic schema
+)
 from src.domain.native_docx_structure import (  # noqa: TC001 -- Pydantic schema
     NativeDocxCreate,
     NativeDocxInsert,
@@ -188,6 +191,8 @@ class NativeDocumentRequest(NativeModel):
     docx_create: NativeDocxCreate | None = None
     docx_page_index: int | None = Field(default=None, ge=0, lt=2000, strict=True)
     docx_insert: NativeDocxInsert | None = None
+    docx_table_reference: NativeDocxBlockReference | None = None
+    docx_table_grid: NativeDocxTableGridEdit | None = None
     docx_block_refs: list[NativeDocxBlockReference] = Field(
         default_factory=list, max_length=100
     )

@@ -198,6 +198,7 @@ jobs:
           tests/integration/test_etl_citations_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py
           tests/integration/test_native_docx_structure_stdio.py
+          tests/integration/test_native_docx_grid_stdio.py
           tests/integration/test_native_asset_stdio_e2e.py
           -q --timeout=120
 
@@ -335,6 +336,7 @@ jobs:
           tests/integration/test_etl_citations_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py
           tests/integration/test_native_docx_structure_stdio.py
+          tests/integration/test_native_docx_grid_stdio.py
           tests/integration/test_native_asset_stdio_e2e.py -q --timeout=120
 
       - name: Set up Node.js
@@ -460,6 +462,7 @@ jobs:
           tests/integration/test_etl_citations_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py
           tests/integration/test_native_docx_structure_stdio.py
+          tests/integration/test_native_docx_grid_stdio.py
           tests/integration/test_native_asset_stdio_e2e.py -q --timeout=120
 
       - name: Set up Node.js
@@ -635,6 +638,7 @@ jobs:
             tests/integration/test_native_pptx_slide_stdio.py \
             tests/integration/test_native_pptx_render_stdio.py \
             tests/integration/test_native_docx_render_stdio.py \
+            tests/integration/test_native_docx_grid_stdio.py \
             tests/integration/test_native_docx_cjk_stdio.py \
             tests/integration/test_native_derivation_stdio.py \
             -v --timeout=180 --junitxml=junit-integration.xml

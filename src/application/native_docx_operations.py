@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from src.application.native_document_contract import native_asset_summary
 from src.application.native_docx_records import docx_block_excerpt
+from src.application.native_docx_table_operations import NativeDocxTableOperations
 from src.domain.native_docx_structure import DOCX_MEDIA_TYPE
 
 if TYPE_CHECKING:
@@ -34,6 +35,12 @@ class NativeDocxOperations:
         self.renderer = renderer
 
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        if request.op in {"read_docx_table", "update_docx_table_grid"}:
+            if self.structure is None:
+                raise ValueError("Native DOCX structure adapter is not configured")
+            return NativeDocxTableOperations(
+                self.repository, self.docx, self.structure
+            ).execute(request)
         return {
             "render_docx_page": self._render,
             "create_docx": self._create,

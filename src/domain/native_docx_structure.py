@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Annotated, Literal, Protocol
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -13,6 +13,7 @@ from src.domain.native_asset_models import (
 
 if TYPE_CHECKING:
     from src.domain.native_asset_models import NativeEditResult
+    from src.domain.native_docx_grid import NativeDocxTableGridEdit
 
 DOCX_MEDIA_TYPE = (
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -212,6 +213,12 @@ class NativeDocxInsert(DocxModel):
 
 
 class NativeDocxStructureAdapter(Protocol):
+    def read_table(
+        self, data: bytes, chain: list[dict[str, Any]]
+    ) -> dict[str, Any]: ...
+    def edit_table(
+        self, data: bytes, chain: list[dict[str, Any]], request: NativeDocxTableGridEdit
+    ) -> tuple[bytes, NativeEditResult]: ...
     def create(self, request: NativeDocxCreate) -> bytes: ...
     def insert(
         self,

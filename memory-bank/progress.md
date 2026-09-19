@@ -1,5 +1,86 @@
 # Progress (Updated: 2026-09-19)
 
+## Native DOCX grid — validated runtime/spec/test segment
+
+Final source f55fcb83b05302698080b1a081e482ed15d9d199ef2248df3f8c7a51e3ae9ff7
+passed3184 tests /33 optional skips /290.27s, including actual Writer/CJK and
+NIST/NASA PDFs. Python3.10 focused59pass12.61s; docs25pass0.18s; Ruff649/mypy279,
+release harness/artifacts/security clean. Final default Codex02 passed70 MCP calls,
+zero errors,162.73s;3 complete revisions and receipts,1original scan +2actual Word
+PNGs. Independent pixels/CJK/native XML/source bytes/mtime/historical refs/fullWiki
+pass; Agent inspected both Writer pages. Initial61call run and reproduced long
+receipt regression remain preserved. One-page synthetic scope; no MicrosoftWord
+or cross-page repeated-header fidelity claim.
+
+Final wheel (clean locked Python3.10 runtime) and Docker95559c66c9fd replay all3
+complete table records and exact Wiki, matching final source SHA. Doctor/import/
+SDK2stdio30tools pass. VSIX199tests/64files/install-update pass; activation skipped
+locally and required in CI. Browser4desktop/mobile zh/en states pass, no overflow
+or console warnings; existing Playwright used because Browser plugin absent.
+GitHub description/topics/managed labels remain synchronized.
+
+All11 owned terminal run directories restored exactly after final Docker replay;
+/tmp/asset-aware-docx-grid-final-staging.json allrestoredtrue. Final smoke image
+95559c66c9fd and terminal builder7d4e91c186ad removed only after successful replay
+to reclaim constrained disk space; evidence/logs retained. No outstanding staging.
+Original dirty checkout untouched. Public1.4.0 / Unreleased1.4.x, no version/tag.
+This commit is runtime/spec/tests/CI, with separate docs/harness commit next; then
+pushmain and verify exacthead CI/Pages/publicbytes. Goal stays active.
+
+## Native DOCX grid — final validation in progress
+
+Public version remains 1.4.0; accumulate Unreleased work within 1.4.x, next
+consolidated patch 1.4.1. User reaffirmed no rapid minor/major bumps. MCP provides
+mechanical checks; Agent owns complete semantic/visual review and correction.
+Initial implementation passed 3158 tests / 35 optional skips, and actual default
+Codex run01 passed 61 calls / 0 errors / 174.05s. Final audit found long mutation
+receipts could be truncated: retained failing regression, added complete paged
+operation_result and before-commit combined 16MiB review limit. Recurring file
+hashes use the latest matching receipt; full text_sha256 must stay consistent.
+
+Final source f55fcb83b05302698080b1a081e482ed15d9d199ef2248df3f8c7a51e3ae9ff7.
+Focused SDK2/grid group55 passed8.93s; Python3.10 group including four new receipt
+assertion tests59 passed12.61s. Ruff649/mypy279 and security checks pass (uv214
+packages/npm0 vulnerabilities, Bandit medium+ clean, zizmor no high findings).
+Full02 and actual default Codex02 are running against this final source. Initial
+run01 retained; rerun is justified by production receipt delivery change, not to
+hide an evaluation failure. VSIX199 unit tests/64 package files/install-update and
+four desktop/mobile zh/en browser states pass. Local VS Code activation is not
+available; CI remains required. Wheel rebuilt/reinstalled; final replay pending.
+
+Disk-full interrupted restoration of owned terminal test evidence and left the
+untracked grid spec empty. Verified complete staged copies, removed only partial
+restore duplicate and superseded task Docker6348, restored all11 exact hashes and
+mtimes, and reconstructed/reviewed the spec. Original checkout untouched. Staging
+manifest /tmp/asset-aware-docx-grid-staging.json now all restored. Final Docker,
+runtime replay, final docs/MEM commits, main push and exact-head CI/Pages remain.
+Broad document/asset goal stays active; this milestone is substantive progress.
+
+## Native DOCX table grids — implementation and focused validation
+
+Previous ETL snapshot milestone is fully published at 1ae66a5: exact-head CI
+35439649309 (10 successful jobs), Pages35439649128 (3 successful jobs), six live
+files byte-identical. Authoritative proof: /tmp/asset-aware-etl-csl-publication-proof.json.
+Previous version-only turn made no new feature progress; revalidated main clean and
+all version sources1.4.0. This turn implements native Word table grid CRUD, preserving
+full table references, native rich/nested content, omissions and historical evidence.
+New spec: docs/specs/native-docx-table-grid.md. MCP mechanical integrity; Agent full
+semantic/visual review. Public1.4.0 / Unreleased1.4.x, no per-feature bump or tag.
+
+Implemented read_docx_table and update_docx_table_grid (sequential insert/delete/
+resize/merge/split), source CAS, complete paged native XML/grid, package invariants,
+merge-anchor promotion and explicit append_blocks/require_empty. Tests include
+nested/omitted/merged tables, rich text, rollback, no-op history, stale/tampered refs,
+source bytes/mtime, old proofs and Wiki. Focused Python3.13 + actual SDK2 stdio:
+60passed7.27s. Ruff passes; mypy279 passed before last minor read-record extension.
+Initial type-check errors were loop-variable reuse and missing list annotation;
+fixed, no production bypass. First 27 infrastructure tests passed; service group34
+also passed before broad focus60. Actual default Codex, additional dependency cases,
+full harness, docs/site/MEM segments and publication remain. No source commit yet.
+Root filesystem tight (~12MiB); all new test workspaces/mypy cache under private
+/run/user/1000/asset-aware-docx-grid-*. No staging currently. Original dirty checkout
+untouched. Only work in /home/eric/workspace251226/asset-aware-mcp-agent-assets.
+
 ## CI correction docs — ready for retry
 
 Test-only fix 1b7ded8 is paired with updated bilingual evaluation docs;

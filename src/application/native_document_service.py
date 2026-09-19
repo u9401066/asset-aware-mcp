@@ -238,6 +238,8 @@ class NativeDocumentService:
             "add_docx_blocks": self._docx_operation,
             "delete_docx_blocks": self._docx_operation,
             "read_docx_block": self._docx_operation,
+            "read_docx_table": self._docx_operation,
+            "update_docx_table_grid": self._docx_operation,
             "update_docx": self._docx_operation,
             "verify": self._verify,
             "read_selection": NativeSelectionService(self.evidence).read,

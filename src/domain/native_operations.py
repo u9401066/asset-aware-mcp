@@ -65,6 +65,8 @@ NativeOperation = Literal[
     "add_docx_blocks",
     "delete_docx_blocks",
     "read_docx_block",
+    "read_docx_table",
+    "update_docx_table_grid",
     "update_docx",
     "verify",
     "read_selection",
@@ -177,6 +179,10 @@ NATIVE_OPERATIONS = {
     "add_docx_blocks": _fields("asset_id expected_revision docx_insert"),
     "delete_docx_blocks": _fields("asset_id expected_revision docx_block_refs"),
     "read_docx_block": _fields("asset_id block_id", "revision text_offset text_limit"),
+    "read_docx_table": _fields(
+        "asset_id revision docx_table_reference", "text_offset text_limit"
+    ),
+    "update_docx_table_grid": _fields("asset_id expected_revision docx_table_grid"),
     "update_docx": _fields("asset_id expected_revision docx_edit"),
     "verify": _fields("reference"),
     "read_selection": _fields("reference", "selection text_offset text_limit"),

@@ -195,6 +195,8 @@ def native_document_contract(
         "verification": "MCP checks structure/integrity and deterministic repairs. Read full operation receipts. Agents verify semantics, rendered layout, dynamic references and calculated results; sources/history stay intact.",
         "docx_policy": "Pin revision; assemble all DFM chunks with frontmatter/markers. Updates stage versions; writeback is explicit.",
         "docx_structure_enabled": docx_structure_enabled,
+        "docx_table_grid_enabled": docx_enabled and docx_structure_enabled,
+        "docx_table_grid_policy": "Read full hash-pinned grid JSON at an exact revision. Sequential insert/delete/resize/merge/split requires full table refs. Merge needs explicit content_policy; retain native content and omitted positions. Read new refs and render for Agent review.",
         "docx_structure_policy": "Create typed paragraphs/tables; insert at body boundaries/current block refs. Delete complete blocks with dependency checks. Block IDs are revision-scoped; read back and render for review.",
         "archive_policy": "Archive retains history and the human source.",
         "wiki_policy": "Immutable snapshots; never replace existing notes. Citation fields go inside native_request.",
@@ -351,7 +353,13 @@ def _formats(
         else [],
         "docx": (["render_docx_page"] if docx_rendering_configured else [])
         + (
-            ["create_docx", "add_docx_blocks", "delete_docx_blocks"]
+            [
+                "create_docx",
+                "add_docx_blocks",
+                "delete_docx_blocks",
+                "read_docx_table",
+                "update_docx_table_grid",
+            ]
             if docx_structure_enabled
             else []
         )

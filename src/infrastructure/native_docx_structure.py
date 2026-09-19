@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import io
 from copy import deepcopy
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from docx import Document
 from lxml import etree
@@ -17,6 +17,7 @@ from src.infrastructure.native_docx_workspace import MAIN_PART, WORD_NS, checked
 from src.infrastructure.native_ooxml import DOC_REL_NS, xml_bytes
 
 if TYPE_CHECKING:
+    from src.domain.native_docx_grid import NativeDocxTableGridEdit
     from src.domain.native_docx_structure import NativeDocxBlock, NativeDocxCreate
     from src.infrastructure.native_ooxml import NativeOOXMLPackage
 
@@ -168,6 +169,18 @@ def finish(
 
 
 class NativeDocxStructure:
+    def read_table(self, data: bytes, chain: list[dict[str, Any]]) -> dict[str, Any]:
+        from src.infrastructure.native_docx_grid import read_table
+
+        return read_table(data, chain)
+
+    def edit_table(
+        self, data: bytes, chain: list[dict[str, Any]], request: NativeDocxTableGridEdit
+    ) -> tuple[bytes, NativeEditResult]:
+        from src.infrastructure.native_docx_grid import edit_table
+
+        return edit_table(data, chain, request)
+
     def create(self, request: NativeDocxCreate) -> bytes:
         data = build_document(request)
         package = checked_docx(data, for_edit=True)
