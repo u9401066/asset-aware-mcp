@@ -19,6 +19,7 @@ def native_asset_summary(
     docx_enabled: bool = False,
     pptx_enabled: bool = False,
     pdf_enabled: bool = False,
+    delimited_enabled: bool = False,
     workbook_structure_enabled: bool = False,
     workbook_grid_enabled: bool = False,
     workbook_table_edit_enabled: bool = False,
@@ -39,6 +40,12 @@ def native_asset_summary(
         "revision_count": len(asset.history),
         "capabilities": {
             "verify_file_bytes": True,
+            "read_delimited": asset.format in {"csv", "tsv"} and delimited_enabled,
+            "edit_delimited": asset.format in {"csv", "tsv"}
+            and delimited_enabled
+            and not asset.archived,
+            "verify_delimited_fields": asset.format in {"csv", "tsv"}
+            and delimited_enabled,
             "read_pdf": asset.format == "pdf" and pdf_enabled,
             "edit_pdf_pages": asset.format == "pdf"
             and pdf_enabled
@@ -109,6 +116,7 @@ def native_document_contract(
     docx_enabled: bool = False,
     pptx_enabled: bool = False,
     pdf_enabled: bool = False,
+    delimited_enabled: bool = False,
     workbook_structure_enabled: bool = False,
     workbook_grid_enabled: bool = False,
     workbook_table_edit_enabled: bool = False,
@@ -124,8 +132,10 @@ def native_document_contract(
     result = {
         "success": True,
         "contract_version": "native-contract-v2",
+        "delimited_enabled": delimited_enabled,
+        "delimited_policy": "CSV/TSV strings; explicit dialect/encoding, no inferred headers/types. Pin revisions; assemble full JSON at one text_sha256. Cell edits need full refs; row/column edits preserve untouched bytes. Evidence/Wiki bind dialects.",
         "pdf_regions_enabled": pdf_enabled,
-        "pdf_region_policy": "read_pdf_region takes a full PDF page reference plus pdf_region.rect [x0,y0,x1,y1] in displayed CropBox fractions (0..1, top-left, after rotation), or an existing region ref. Returns full source-bound record and PNG. render_size changes detail, not identity. Agent reviews coverage/transcription; verify/derivations/wiki retain regions.",
+        "pdf_region_policy": "Full page ref + displayed CropBox fractions [x0,y0,x1,y1] (0..1, top-left, after rotation), or existing region ref. Actual PNG + source record; render_size changes detail, not identity. Agent checks coverage/transcription.",
         "operations": list(NATIVE_OPERATIONS),
         **schema_discovery(for_op),
         "workbook_structure_enabled": workbook_structure_enabled,
@@ -136,24 +146,24 @@ def native_document_contract(
         },
         "workbook_grid_enabled": workbook_grid_enabled,
         "worksheet_layout_enabled": workbook_grid_enabled,
-        "worksheet_layout_policy": "Pin revision/worksheet_key; read complete dimensions. Set height_points/width_ooxml, reset_size or hidden. Anchors follow authored policies with recorded metrics. Invalidate formula/chart caches; render a new PDF for Agent review. Sources/history stay intact.",
+        "worksheet_layout_policy": "Pin revision/worksheet_key; read full dimensions. Set point heights/raw OOXML widths, reset_size or hidden. Anchors follow recorded metrics. Caches invalidate; render a new PDF for review.",
         "workbook_table_edit_enabled": workbook_table_edit_enabled,
         "table_totals_lifecycle_enabled": workbook_table_edit_enabled,
-        "table_totals_lifecycle_policy": "update_workbook_table.totals_row adds/removes totals without moving rows. Add needs blanks; optionally reuse definitions/copy last-data-row styles. Remove clears or keeps cells; kept own-Table refs freeze to old ranges, while other formulas stay structured. Kept current-row selectors need correction. Read full receipts/source checks; Agent reviews meaning, future membership and rendering.",
+        "table_totals_lifecycle_policy": "Add needs blank reserved cells; optionally reuse definitions/styles. Remove clears or keeps cells; kept own-Table refs freeze old ranges. Correct kept current-row selectors; no worksheet rows move.",
         "workbook_table_creation_enabled": workbook_table_creation_enabled,
-        "workbook_table_creation_policy": "Pin revision/worksheet/range and ordered unique columns. Match rich headers or explicitly fill blanks. Headerless Tables disable autofilter; totals require blank reserved cells. No row insertion. Calculated columns require blanks or replace_all. Use built-in/existing styles. Read full receipt/references; Agent reviews results/layout; history stays fixed.",
-        "workbook_table_edit_policy": "Pin worksheet/part/ref, revision and column IDs/expected names. Rich headers require exact header_runs; renamed references follow identity. New formulas use final names. require_matching rejects exceptions; replace_all replaces cells; null/keep_cells removes metadata only. Existing totals row required. Read full references/receipt; schema dependencies may block edits. Agent reviews formulas/layout; old evidence stays fixed.",
-        "workbook_grid_policy": "Sequential row/column insert/delete uses exact worksheet keys and revisions. Preserve native payloads, styles and modeled dependencies; read the complete operation receipt. Geometry uses declared metrics. Dynamic sources, rendered layout and recalculated results need Agent review; historical references never migrate.",
+        "workbook_table_creation_policy": "Pin worksheet/range/unique columns. Match rich headers or fill blanks explicitly. Headerless Tables disable autofilter; totals need blanks. Calculated columns require blanks or replace_all; use built-in/existing styles.",
+        "workbook_table_edit_policy": "Pin worksheet/part/ref/column IDs/names. Rich headers need matching header_runs; references follow renames. New formulas use final names; require_matching checks exceptions, replace_all replaces cells. Totals must exist.",
+        "workbook_grid_policy": "Sequential edits use intermediate worksheet coordinates and exact sheet keys. Preserve modeled dependencies; read full operation receipt and geometry assumptions. Historical refs never migrate.",
         "table_expansion_enabled": workbook_grid_enabled,
         "table_workspaces_enabled": table_workspaces_enabled,
         "table_grid_apply_enabled": table_workspaces_enabled and workbook_grid_enabled,
-        "table_workspace_policy": "Project exact ranges into tagged A2T cells; no header/type inference. Read full hash-pinned workspace/source records. Apply at exact table/file revisions. Changed correspondence requires explicit structural_plan.worksheet_grid and stable row/column IDs; whole axes move. expand_tables needs part/expected_ref at each intermediate boundary; insert before totals. native_generated/null keeps only newly generated cells; missing/blank stays blank. Read generated_table_cells/resolved values. Unchanged formulas relocate; new/edited ones use destination coordinates. Independent creation makes a new workbook. Frozen snapshots/bindings stay historical. Agent reviews table membership/results/layout.",
-        "workbook_policy": "Read complete hash-pinned read_workbook JSON. Sheet changes need current revision and sheetId/part keys. Preserve explicit references, views and scopes; reject surviving deletion dependencies and default 3D membership changes. Dynamic strings, calculation results and rendering need Agent review. Detached parts remain; no secure erasure.",
+        "table_workspace_policy": "Project exact ranges into tagged cells; no inferred headers/types. Pin table/file hashes. Changed correspondence needs structural_plan.worksheet_grid and stable row/column IDs; whole axes move. expand_tables selects part/expected_ref at each step. native_generated/null retains newly generated cells only. Unchanged formulas relocate; edited formulas use destination coordinates. Frozen inputs/bindings stay historical.",
+        "workbook_policy": "Assemble full read_workbook JSON. Sheet edits need sheetId/part and revision. Preserve scopes/views; dependencies and default 3D membership changes may block edits. Detached parts remain; no secure erasure.",
         "identity": "Stable asset IDs, SHA-256 revisions and revision-scoped locators.",
-        "citation_policy": "citation_contract selects a display preset or custom inline/reference templates; it does not store source references or verification reports.",
+        "citation_policy": "citation_contract is display only: presets/custom templates, not source refs or proof reports.",
         "derivations_enabled": derivations_enabled,
-        "derivation_policy": "Read complete hash-pinned ledger before record/retract; endpoint integrity and caller-supplied agent review are separate. New file revisions never inherit old assertions automatically.",
-        "pptx_slide_policy": "Discover destination layouts; insert, reorder or delete slides with current revision and exact slide IDs/parts. Dependencies may block edits. Deleted parts remain retained, not securely erased; review rendering and cached properties.",
+        "derivation_policy": "Read hash-pinned ledger before record/retract. Endpoint integrity and caller review are separate; new revisions never inherit assertions.",
+        "pptx_slide_policy": "Discover layouts; use exact slide IDs/parts and revision. Dependencies may block edits. Deleted parts remain, not securely erased.",
         "pptx_rendering": {
             "configured": pptx_rendering_configured,
             "availability": "Checked per request; requires LibreOffice with Impress. Set LIBREOFFICE_BIN if needed.",
@@ -164,9 +174,9 @@ def native_document_contract(
             "availability": "Checked per request; requires LibreOffice with Writer. Set LIBREOFFICE_BIN if needed.",
             "policy": "render_docx_page needs revision and zero-based docx_page_index. Returns an actual MCP PNG and rendered page count. Page indices belong to this rendition, not native DOCX block locators or Microsoft Word pagination.",
         },
-        "pptx_grid_policy": "Sequential insert/delete/resize/merge/split with full shape references. Merge requires explicit content_policy; split retains anchor text. Read complete updated shapes and review rendering.",
-        "file_reference_policy": "file_reference identifies exact immutable file bytes; verify does not assert source freshness or semantic meaning.",
-        "selection_policy": "read_selection takes a full parsed cell/block/shape/page/region reference, RFC6901 pointer (empty=full record), optional half-open Unicode string range. Read all pages at one text_sha256. verify/derivations/wiki retain selections. Parsed offsets are not source-file bytes; no nested/opaque-file selections or automatic remapping.",
+        "pptx_grid_policy": "Sequential insert/delete/resize/merge/split uses full shape refs. Merge requires content_policy; split keeps anchor text. Read back and render.",
+        "file_reference_policy": "Exact immutable bytes only; no semantic or live-source freshness verdict.",
+        "selection_policy": "Full parsed reference + RFC6901 pointer (empty=whole record), optional Unicode range. Assemble at one text_sha256. Parsed offsets are not file bytes. No nested/opaque selections or automatic remapping.",
         "formats": _formats(
             docx_enabled,
             pptx_enabled,
@@ -180,11 +190,12 @@ def native_document_contract(
             workbook_table_edit_enabled,
             workbook_table_creation_enabled,
             workbook_rendering_configured,
+            delimited_enabled,
         ),
-        "verification": "MCP checks integrity; agents verify semantics, layout and calculated results.",
+        "verification": "MCP checks structure/integrity and deterministic repairs. Read full operation receipts. Agents verify semantics, rendered layout, dynamic references and calculated results; sources/history stay intact.",
         "docx_policy": "Pin revision; assemble all DFM chunks with frontmatter/markers. Updates stage versions; writeback is explicit.",
         "docx_structure_enabled": docx_structure_enabled,
-        "docx_structure_policy": "Create typed paragraphs/tables independently. Insert at body start/end or a full current block reference; delete complete body blocks with dependency checks. New block IDs are revision-scoped; old refs stay historical. Agents review page flow, styles, fields and rendering.",
+        "docx_structure_policy": "Create typed paragraphs/tables; insert at body boundaries/current block refs. Delete complete blocks with dependency checks. Block IDs are revision-scoped; read back and render for review.",
         "archive_policy": "Archive retains history and the human source.",
         "wiki_policy": "Immutable snapshots; never replace existing notes. Citation fields go inside native_request.",
     }
@@ -200,6 +211,14 @@ def native_document_contract(
 
 
 def _edit_constraints(format_name: str) -> list[str]:
+    if format_name in {"csv", "tsv"}:
+        return [
+            "explicit dialect and strict encoding",
+            "strings only; logical rows/columns are zero-based",
+            "full references for cell updates",
+            "ragged rows never padded",
+            "Agent reviews meaning and downstream interpretation",
+        ]
     if format_name == "pdf":
         return [
             "encrypted_or_signed_documents",
@@ -254,6 +273,7 @@ def _formats(
     workbook_table_edit_enabled: bool = False,
     workbook_table_creation_enabled: bool = False,
     workbook_rendering_configured: bool = False,
+    delimited_enabled: bool = False,
 ) -> dict[str, list[str]]:
     workbook_ops = (
         [
@@ -354,6 +374,22 @@ def _formats(
             *(["create_workbook_rendition"] if workbook_rendering_configured else []),
         ],
         "xlsm": ["inspect_cells", "edit_cells", "read_selection", *workbook_ops],
+        **{
+            kind: (
+                [
+                    "create_delimited",
+                    "read_delimited",
+                    "read_delimited_cell",
+                    "update_delimited",
+                    "read_selection",
+                    "verify",
+                    "export_wiki",
+                ]
+                if delimited_enabled
+                else []
+            )
+            for kind in ("csv", "tsv")
+        },
         "other": [
             "register",
             "inspect_metadata",

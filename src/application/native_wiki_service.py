@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from src.application.native_delimited_operations import dialect_for
+from src.application.native_delimited_wiki import NativeDelimitedWikiContent
 from src.application.native_derivation_wiki import add_derivations
 from src.application.native_docx_wiki import NativeDocxWikiContent
 from src.application.native_evidence_service import attach_native_evidence
@@ -14,6 +16,7 @@ from src.application.native_pptx_wiki import NativePptxWikiContent
 from src.application.native_rendition_wiki import add_rendition
 from src.application.native_wiki_format import NativeWikiContent
 from src.domain.citation_format import CitationMetadata, resolve_citation_format
+from src.domain.native_delimited import attach_delimited_evidence
 from src.domain.native_derivation import fingerprint
 from src.domain.native_wiki import MAX_WIKI_CELLS
 
@@ -25,6 +28,7 @@ if TYPE_CHECKING:
         NativeFileAsset,
         NativeSpreadsheetAdapter,
     )
+    from src.domain.native_delimited import NativeDelimitedAdapter
     from src.domain.native_derivation import NativeDerivationLedger
     from src.domain.native_docx import NativeDocxAdapter
     from src.domain.native_pdf import NativePdfAdapter
@@ -42,6 +46,7 @@ class NativeWikiService:
         presentations: NativePresentationAdapter | None = None,
         pdfs: NativePdfAdapter | None = None,
         derivations: NativeDerivationService | None = None,
+        delimited: NativeDelimitedAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
@@ -50,6 +55,7 @@ class NativeWikiService:
         self.presentations = presentations
         self.pdfs = pdfs
         self.derivations = derivations
+        self.delimited = delimited
 
     def export(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.asset_id is not None and request.output_dir is not None
@@ -63,7 +69,20 @@ class NativeWikiService:
             else None
         )
         data = self.repository.read(asset.asset_id, revision)
-        content = self._content(request, asset, revision, ledger)
+        if request.delimited_dialect is not None and (
+            asset.format not in {"csv", "tsv"} or self.delimited is None
+        ):
+            raise ValueError(
+                "Delimited dialect requires a configured CSV/TSV projection"
+            )
+        structure = (
+            self.delimited.inspect(
+                data, dialect_for(asset.format, request.delimited_dialect)
+            )
+            if asset.format in {"csv", "tsv"} and self.delimited
+            else None
+        )
+        content = self._content(request, asset, revision, ledger, structure)
         add_rendition(content, asset, self.repository)
         self._populate(content, data)
         if ledger is not None and self.derivations is not None:
@@ -89,6 +108,7 @@ class NativeWikiService:
         asset: NativeFileAsset,
         revision: str,
         ledger: NativeDerivationLedger | None,
+        delimited_structure: dict[str, Any] | None = None,
     ) -> NativeWikiContent:
         contract = resolve_citation_format(
             request.citation_contract.model_dump(mode="json")
@@ -104,22 +124,24 @@ class NativeWikiService:
             if asset.format == "pptx" and self.presentations
             else NativeWikiContent
         )
-        return builder(
-            {
-                "asset_id": asset.asset_id,
-                "revision": revision,
-                "name": asset.name,
-                "format": asset.format,
-                "media_type": asset.media_type,
-                **(
-                    {"derivations_sha256": fingerprint(ledger)}
-                    if ledger and ledger.events
-                    else {}
-                ),
-            },
-            contract,
-            request.citation_metadata or CitationMetadata(),
-        )
+        identity = {
+            "asset_id": asset.asset_id,
+            "revision": revision,
+            "name": asset.name,
+            "format": asset.format,
+            "media_type": asset.media_type,
+            **(
+                {"derivations_sha256": fingerprint(ledger)}
+                if ledger and ledger.events
+                else {}
+            ),
+        }
+        metadata = request.citation_metadata or CitationMetadata()
+        if delimited_structure is not None:
+            return NativeDelimitedWikiContent(
+                identity, contract, metadata, delimited_structure
+            )
+        return builder(identity, contract, metadata)
 
     def _populate(self, content: NativeWikiContent, data: bytes) -> None:
         identity = content.identity
@@ -129,6 +151,12 @@ class NativeWikiService:
                     item["record"], identity["asset_id"], identity["revision"]
                 )
                 content.add_page(item["record"], item["png"])
+        elif isinstance(content, NativeDelimitedWikiContent) and self.delimited:
+            for field in self.delimited.decompose(data, content.dialect):
+                attach_delimited_evidence(
+                    field, identity["asset_id"], identity["revision"]
+                )
+                content.add_field(field)
         elif identity["format"] in {"xlsx", "xlsm"}:
             for count, cell in enumerate(self.spreadsheets.iter_cells(data), start=1):
                 if count > MAX_WIKI_CELLS:

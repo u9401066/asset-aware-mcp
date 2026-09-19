@@ -32,6 +32,12 @@ from src.domain.native_asset_models import (
     cell_position,
     validate_sheet_name,
 )
+from src.domain.native_delimited import (  # noqa: TC001 -- Pydantic runtime models
+    NativeDelimitedCreate,
+    NativeDelimitedDialect,
+    NativeDelimitedReference,
+    NativeDelimitedUpdate,
+)
 from src.domain.native_derivation import (  # noqa: TC001 -- Pydantic schema
     NativeDerivation,
     NativeDerivationRetraction,
@@ -173,6 +179,11 @@ class NativeDocumentRequest(NativeModel):
         default_factory=list, max_length=256
     )
     allow_3d_membership_change: bool = Field(default=False, strict=True)
+    delimited_create: NativeDelimitedCreate | None = None
+    delimited_dialect: NativeDelimitedDialect | None = None
+    delimited_row: int | None = Field(default=None, ge=0, lt=20_000, strict=True)
+    delimited_column: int | None = Field(default=None, ge=0, lt=20_000, strict=True)
+    delimited_update: NativeDelimitedUpdate | None = None
     docx_edit: NativeDocxEdit | None = None
     docx_create: NativeDocxCreate | None = None
     docx_page_index: int | None = Field(default=None, ge=0, lt=2000, strict=True)
@@ -223,6 +234,7 @@ class NativeDocumentRequest(NativeModel):
         | NativePptxReference
         | NativePdfReference
         | NativePdfRegionReference
+        | NativeDelimitedReference
         | NativeFileReference
         | NativeSelectionReference
         | None

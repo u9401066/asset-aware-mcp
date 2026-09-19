@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 from typing import TYPE_CHECKING, Any
 
+from src.application.native_delimited_operations import NativeDelimitedOperations
 from src.application.native_derivation_service import NativeDerivationService
 from src.application.native_document_contract import (
     native_asset_summary,
@@ -32,6 +33,7 @@ if TYPE_CHECKING:
         NativeFileAsset,
         NativeSpreadsheetAdapter,
     )
+    from src.domain.native_delimited import NativeDelimitedAdapter
     from src.domain.native_derivation import NativeDerivationRepository
     from src.domain.native_docx import NativeDocxAdapter
     from src.domain.native_docx_structure import NativeDocxStructureAdapter
@@ -73,6 +75,7 @@ class NativeDocumentService:
         workbook_tables: NativeTableEditAdapter | None = None,
         workbook_table_creation: NativeTableCreateAdapter | None = None,
         workbook_renderer: NativeWorkbookRenderer | None = None,
+        delimited: NativeDelimitedAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
@@ -122,6 +125,12 @@ class NativeDocumentService:
         self.presentations = presentations
         self.pptx_renderer = pptx_renderer
         self.pdfs = pdfs
+        self.delimited = delimited
+        self.delimited_operations = (
+            NativeDelimitedOperations(repository, delimited, self._summary)
+            if delimited
+            else None
+        )
         self.pdf_operations = NativePdfOperations(repository, pdfs) if pdfs else None
         self.pptx_operations = (
             NativePptxOperations(repository, presentations, pptx_renderer)
@@ -129,7 +138,7 @@ class NativeDocumentService:
             else None
         )
         self.evidence = NativeEvidenceService(
-            repository, spreadsheets, docx, presentations, pdfs
+            repository, spreadsheets, docx, presentations, pdfs, delimited
         )
         self.derivations = (
             NativeDerivationService(derivations, self.evidence) if derivations else None
@@ -148,6 +157,7 @@ class NativeDocumentService:
                 presentations,
                 pdfs,
                 self.derivations,
+                delimited,
             )
             if wiki_publisher is not None
             else None
@@ -159,6 +169,7 @@ class NativeDocumentService:
             docx_enabled=self.docx is not None,
             pptx_enabled=self.presentations is not None,
             pdf_enabled=self.pdfs is not None,
+            delimited_enabled=self.delimited is not None,
             workbook_structure_enabled=self.workbook_operations is not None,
             workbook_grid_enabled=self.workbook_grid is not None,
             workbook_table_edit_enabled=self.workbook_tables is not None,
@@ -191,6 +202,10 @@ class NativeDocumentService:
             "rename_worksheet": self._workbook_operation,
             "reorder_worksheets": self._workbook_operation,
             "delete_worksheets": self._workbook_operation,
+            "create_delimited": self._delimited_operation,
+            "read_delimited": self._delimited_operation,
+            "read_delimited_cell": self._delimited_operation,
+            "update_delimited": self._delimited_operation,
             "create_pdf": self._pdf_operation,
             "read_pdf": self._pdf_operation,
             "read_pdf_page": self._pdf_operation,
@@ -250,6 +265,11 @@ class NativeDocumentService:
             raise ValueError("Native derivation repository is not configured")
         return self.derivations.execute(request)
 
+    def _delimited_operation(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        if self.delimited_operations is None:
+            raise ValueError("Native delimited adapter is not configured")
+        return self.delimited_operations.execute(request)
+
     def _pdf_operation(self, request: NativeDocumentRequest) -> dict[str, Any]:
         if self.pdf_operations is None:
             raise ValueError("Native PDF adapter is not configured")
@@ -267,6 +287,7 @@ class NativeDocumentService:
             docx_enabled=self.docx is not None,
             pptx_enabled=self.presentations is not None,
             pdf_enabled=self.pdfs is not None,
+            delimited_enabled=self.delimited is not None,
             workbook_structure_enabled=self.workbook_operations is not None,
             workbook_grid_enabled=self.workbook_grid is not None,
             workbook_table_edit_enabled=self.workbook_tables is not None,
@@ -374,6 +395,12 @@ class NativeDocumentService:
             )
             for cell in result["content"]["cells"]:
                 attach_native_evidence(cell, asset_id, revision)
+        elif asset.format in {"csv", "tsv"} and self.delimited is not None:
+            result["content"] = {
+                "representation": "delimited_table",
+                "size_bytes": len(data),
+                "read_operation": "read_delimited",
+            }
         elif asset.format == "pptx" and self.presentations is not None:
             result["content"] = {
                 "representation": "pptx_package",

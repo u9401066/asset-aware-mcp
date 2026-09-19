@@ -11,6 +11,11 @@ from src.application.native_pdf_region_service import NativePdfRegionService
 from src.application.native_pptx_operations import attach_pptx_evidence
 from src.application.native_selection_service import NativeSelectionService
 from src.domain.native_assets import NativeCellReference, NativeDocxBlockReference
+from src.domain.native_delimited import (
+    DELIMITED_REVIEW,
+    NativeDelimitedReference,
+    attach_delimited_evidence,
+)
 from src.domain.native_file_reference import NativeFileReference
 from src.domain.native_pdf import NativePdfReference
 from src.domain.native_pdf_region import NativePdfRegionReference
@@ -22,6 +27,7 @@ if TYPE_CHECKING:
         NativeAssetRepository,
         NativeSpreadsheetAdapter,
     )
+    from src.domain.native_delimited import NativeDelimitedAdapter
     from src.domain.native_docx import NativeDocxAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
@@ -50,12 +56,14 @@ class NativeEvidenceService:
         docx: NativeDocxAdapter | None = None,
         presentations: NativePresentationAdapter | None = None,
         pdfs: NativePdfAdapter | None = None,
+        delimited: NativeDelimitedAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.docx = docx
         self.presentations = presentations
         self.pdfs = pdfs
+        self.delimited = delimited
 
     def read_parent_record(self, reference: NativeSelectionParent) -> dict[str, Any]:
         if isinstance(reference, NativePdfRegionReference):
@@ -94,6 +102,15 @@ class NativeEvidenceService:
         ):
             record = self.pdfs.read_page(data, reference.locator)
             attach_pdf_evidence(record, asset.asset_id, reference.revision)
+        elif (
+            isinstance(reference, NativeDelimitedReference)
+            and asset.format in {"csv", "tsv"}
+            and self.delimited
+        ):
+            record = self.delimited.read_cell(
+                data, reference.dialect, reference.locator.row, reference.locator.column
+            )
+            attach_delimited_evidence(record, asset.asset_id, reference.revision)
         else:
             raise ValueError("This format has no configured native selection reader")
         return record
@@ -105,6 +122,7 @@ class NativeEvidenceService:
         | NativePptxReference
         | NativePdfReference
         | NativePdfRegionReference
+        | NativeDelimitedReference
         | NativeFileReference
         | NativeSelectionReference,
     ) -> dict[str, Any]:
@@ -112,6 +130,8 @@ class NativeEvidenceService:
             return NativeSelectionService(self).verify(reference)
         if isinstance(reference, NativePdfRegionReference):
             return NativePdfRegionService(self).verify(reference)
+        if isinstance(reference, NativeDelimitedReference):
+            return self._verify_delimited(reference)
         if isinstance(reference, NativeFileReference):
             return self._verify_file(reference)
         if isinstance(reference, NativePdfReference):
@@ -146,6 +166,29 @@ class NativeEvidenceService:
                 "rendered_layout",
                 "formula_results",
             ],
+        }
+
+    def _verify_delimited(self, reference: NativeDelimitedReference) -> dict[str, Any]:
+        asset = self.repository.load(reference.asset_id)
+        record = self.read_parent_record(reference)
+        valid = record["evidence"] == reference.model_dump(mode="json")
+        return {
+            "success": True,
+            "valid": valid,
+            "asset_id": asset.asset_id,
+            "revision": reference.revision,
+            "is_current_managed_revision": asset.revision == reference.revision,
+            "archived": asset.archived,
+            "verification_scope": "immutable_delimited_field",
+            "checks": {
+                "revision_hash": True,
+                "dialect_and_locator": record["locator"]
+                == reference.locator.model_dump()
+                and record["dialect"] == reference.dialect.model_dump(),
+                "field_representation_hash": valid,
+            },
+            "source_freshness": "not_checked; refresh tracks external human edits",
+            "review_required": DELIMITED_REVIEW,
         }
 
     def _verify_docx(self, reference: NativeDocxBlockReference) -> dict[str, Any]:

@@ -12,7 +12,18 @@ from src.domain.native_derivation import canonical, fingerprint
 from src.domain.native_pdf_region import NativePdfRegionReference
 from src.domain.native_selection import NativeSelectionReference, canonical_selection
 
-SOURCE_SUFFIXES = {"pdf", "docx", "pptx", "xlsx", "xlsm", "png", "jpg", "jpeg"}
+SOURCE_SUFFIXES = {
+    "pdf",
+    "docx",
+    "pptx",
+    "xlsx",
+    "xlsm",
+    "png",
+    "jpg",
+    "jpeg",
+    "csv",
+    "tsv",
+}
 
 if TYPE_CHECKING:
     from src.application.native_derivation_service import NativeDerivationService

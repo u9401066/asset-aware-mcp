@@ -1,5 +1,15 @@
 # Decision Log
 
+## 2026-09-19 — Native delimited file semantics
+
+Use maintained Python csv for values and a separate source-boundary scanner for
+absolute original byte locations. Explicit dialect/strict encoding are part of field
+identity; do not infer headers/types or normalize unchanged lexical spelling. Child
+process owns csv.field_size_limit. Local byte splices plus full decoded readback
+preserve strings and row correspondence. Empty-field/row grammar repairs are explicit;
+Agent checks meaning/downstream spreadsheet interpretation. Wiki projections bind
+resolved dialect; old refs/assertions never migrate. Public1.4.0/future1.4.x persists.
+
 ## 2026-09-19 — Displayed-page PDF region evidence
 
 Choose explicit fractions of the displayed CropBox after rotation, avoiding implicit

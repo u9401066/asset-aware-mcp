@@ -40,6 +40,7 @@ from src.infrastructure.file_storage import FileStorage
 from src.infrastructure.job_store import FileJobStore
 from src.infrastructure.layout_visualizer import LayoutVisualizer
 from src.infrastructure.native_asset_store import FileNativeAssetRepository
+from src.infrastructure.native_delimited_process import ProcessNativeDelimited
 from src.infrastructure.native_derivation_store import FileNativeDerivationRepository
 from src.infrastructure.native_docx_render import LibreOfficeWordRenderer
 from src.infrastructure.native_docx_structure import NativeDocxStructure
@@ -201,6 +202,7 @@ native_document_service = NativeDocumentService(
     workbook_table_creation=NativeWorkbookTableCreate(),
     workbook_ranges=NativeWorkbookRange(),
     table_workspaces=table_service,
+    delimited=ProcessNativeDelimited(),
 )
 
 

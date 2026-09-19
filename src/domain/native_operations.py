@@ -29,6 +29,10 @@ NativeOperation = Literal[
     "reorder_worksheets",
     "delete_worksheets",
     "read_cell",
+    "create_delimited",
+    "read_delimited",
+    "read_delimited_cell",
+    "update_delimited",
     "create_pdf",
     "read_pdf",
     "read_pdf_page",
@@ -108,6 +112,17 @@ NATIVE_OPERATIONS = {
     "create_workbook_from_table": _fields(
         "table_id expected_table_sha256 table_workbook", "workspace_reference"
     ),
+    "create_delimited": _fields("delimited_create"),
+    "read_delimited": _fields(
+        "asset_id revision", "delimited_dialect text_offset text_limit"
+    ),
+    "read_delimited_cell": _fields(
+        "asset_id revision delimited_row delimited_column",
+        "delimited_dialect text_offset text_limit",
+    ),
+    "update_delimited": _fields(
+        "asset_id expected_revision delimited_update", "delimited_dialect"
+    ),
     "read_workbook": _fields(
         "asset_id", "revision workbook_view text_offset text_limit"
     ),
@@ -175,7 +190,7 @@ NATIVE_OPERATIONS = {
     ),
     "export_wiki": _fields(
         "asset_id output_dir",
-        "revision citation_contract citation_metadata derivations_sha256",
+        "revision citation_contract citation_metadata derivations_sha256 delimited_dialect",
     ),
     "update": _fields("asset_id expected_revision edits"),
     "history": _fields("asset_id", "offset limit"),

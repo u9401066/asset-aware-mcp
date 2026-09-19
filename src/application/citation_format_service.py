@@ -56,6 +56,10 @@ def render_citation(
         location.append(
             f"slide ID {locator['slide_id']}, {part}#shape-{locator['shape_id']}"
         )
+    if "row" in locator and "column" in locator and "byte_start" in locator:
+        location.append(
+            f"row {locator['row'] + 1}, column {locator['column'] + 1}; bytes [{locator['byte_start']},{locator['byte_end']})"
+        )
     line_range = locator.get("line_range")
     if line_range and all(x is not None for x in line_range):
         location.append(f"lines {line_range[0] + 1}-{line_range[1]}")

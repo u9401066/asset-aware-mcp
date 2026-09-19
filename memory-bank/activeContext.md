@@ -1,5 +1,57 @@
 # Active Context
 
+## Native delimited files — release gates passed
+
+CSV/TSV implementation and docs are ready for two scoped direct-main commits.
+Full pytest: 3,009 passed / 35 optional skips in 127.59s; actual default Codex:
+101 successful calls / 0 errors / 4 region PNGs in 179.79s. Exact byte histories,
+complete reads, three region-to-field assertions and both Wikis pass independent audit.
+Ruff/format (603 files), mypy (264 source files), Bandit/zizmor, uv audit (214 packages)
+and npm audit pass. Extension: 199 tests, 64 package-content files / 66 VSCE files,
+fresh/update install pass; local activation remains unavailable without a display.
+Clean Python 3.10 wheel install/doctor/tools/SDK2 and Docker runtime/doctor/tools/SDK2
+pass. Source/actual/wheel/container SHA:
+361a1a78d28ffd453af75d7051e50083de3c347b7ea280229719aee8520f92c9.
+Docker: cb7d5ffe9e551a6f83f24dd456c761aaac35b27df833f0bb11378d6925a44bad.
+Browser zh/en desktop/mobile, navigation/overflow/console, docs25tests, generated site
+and bundled harness sync pass. GitHub description includes CSV/TSV; labels synchronized.
+Owned temporary Docker staging is restored with exact hashes/mtimes. Terminal full-test
+scratch and replaced owned image/builder were removed; unrelated project artifacts retained.
+Public version1.4.0 and future1.4.x remain; no tag. Exact-head CI/Pages/public proof follows
+push. Broad original goal is active; JSON/text/web/media and real corpus remain open.
+
+## Native delimited files — runtime and actual Agent verified, publication pending
+
+Native CSV/TSV now supports exact string creation/read/cell/row/column CRUD, source
+byte/char/line evidence, explicit dialect/encoding, process isolation, selections,
+derivations and dialect-bound Wiki. Required row separators/sole empty-field quotes
+are deterministic recorded repairs. No-op reports are complete without history.
+Identical bytes may recur with newer receipts; complete reads check text hashes.
+
+Focused SDK2/unit33passed12.55s; fullpytest3009passed35optional-skips127.59s.
+Actual default Codex101successful/0errors179.79s,4regionPNGs,3per-fieldclaims,
+6historyevents and2Wiki snapshots passed independent CSV-byte/raster/readback audit.
+Artifacts:/dev/shm/asset-aware-codex-delimited-01; audit.json retains proof.
+SourceSHA361a1a78d28ffd453af75d7051e50083de3c347b7ea280229719aee8520f92c9.
+The all-enabled contract initially exceeded its response cap; repeated overview
+prose was compacted without dropping operations/schema fields,159discovery tests pass.
+Public1.4.0 / Unreleased1.4.x; no feature bump/tag. Packaging/container/browser and
+exact-head CI/Pages proofs are pending. Broad original goal remains active.
+
+## Native delimited files — in development
+
+Previous PDF-region milestone3ccc559e4191c681ed9d3201956e46d12a8c99de is fully
+published:CI35426746738 all10,Pages35426746411 all3,public5exact; proof at
+/tmp/asset-aware-regions-publication-proof.json. Prior pending entries are historical.
+
+Authoritative audit: CSV/TSV assets currently retain whole-file bytes but have no
+native cell/row/column CRUD or field evidence. Implement the complete delimited-file
+workflow in docs/specs/native-delimited-files.md, preserving encoding/quotes/EOL and
+splicing exact native bytes. Python csv supplies values in a bounded worker; explicit
+dialect avoids unverifiable sniffing. References/derivations/Wiki extend across the
+new format; Agent owns meaning and rendered review. JSON/text/web/media and real
+corpus remain part of the original active goal. Public1.4.0 / Unreleased1.4.x; no tag.
+
 ## Native PDF region publication checkpoint
 
 Source commit 1b62c4ed61e351821f0c3a4f1a29cb667f2d015c contains23 counted files plus5 MEM.

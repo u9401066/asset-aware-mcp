@@ -1,5 +1,15 @@
 # System Patterns
 
+## Native delimited file boundary
+
+Domain native_delimited defines explicit CSV/TSV dialects, string mutations and exact
+field refs. Infrastructure native_text_encoding maps decoded chars to source bytes;
+native_delimited_document parses/scans, native_delimited performs checked splices,
+native_delimited_process isolates limits. Application operations coordinate one CAS;
+evidence/selections/derivations/Wiki preserve revision and dialect. Presentation injects
+the bounded adapter. No-op updates do not fabricate history; current receipt hash can
+change when identical file bytes recur. Complete operation reads make this visible.
+
 ## Native PDF regions (Unreleased / 1.4.x)
 
 Domain region references bind a full native page reference, explicit displayed
