@@ -127,6 +127,7 @@ class NativeDocumentRequest(NativeModel):
     workbook: NativeWorkbookCreate | None = None
     docx_edit: NativeDocxEdit | None = None
     docx_create: NativeDocxCreate | None = None
+    docx_page_index: int | None = Field(default=None, ge=0, lt=2000, strict=True)
     docx_insert: NativeDocxInsert | None = None
     docx_block_refs: list[NativeDocxBlockReference] = Field(
         default_factory=list, max_length=100
@@ -212,7 +213,12 @@ class NativeDocumentRequest(NativeModel):
     def validate_operation(self) -> NativeDocumentRequest:
         fields = operation_fields(self.op)
         required, optional = fields.required, fields.optional
-        missing = [name for name in required if not getattr(self, name)]
+        missing = [
+            name
+            for name in required
+            if (value := getattr(self, name)) is None
+            or (isinstance(value, (str, list, dict)) and not value)
+        ]
         if missing:
             raise ValueError(
                 "Missing native operation fields: " + ", ".join(sorted(missing))

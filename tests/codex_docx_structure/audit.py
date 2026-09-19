@@ -193,6 +193,19 @@ def audit(output):
         isinstance(final.get("limitations"), list) and final["limitations"],
         "Review limitations missing",
     )
+    renders = None
+    if expected.get("render"):
+        from tests.codex_docx_structure.renders import validate_renders
+
+        revision_root = (
+            workspace / "data/native-assets" / target["asset_id"] / "revisions"
+        )
+        historical = {
+            stage["sha256"]
+            for stage in target["history"]
+            if validate_docx(revision_root / stage["sha256"]) == ("008", False)
+        }
+        renders = validate_renders(workspace, target, calls, final, historical)
     return {
         "passed": True,
         "tool_calls": len(calls),
@@ -200,6 +213,7 @@ def audit(output):
         "source_images": images,
         "complete_dfm_revisions": reads,
         "managed_revisions": revisions,
+        "renders": renders,
         "limitations": final["limitations"],
     }
 

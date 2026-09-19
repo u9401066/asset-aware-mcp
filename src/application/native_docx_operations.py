@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     )
     from src.domain.native_docx import NativeDocxAdapter
     from src.domain.native_docx_structure import NativeDocxStructureAdapter
+    from src.domain.native_rendering import NativeWordRenderer
 
 
 class NativeDocxOperations:
@@ -25,13 +26,16 @@ class NativeDocxOperations:
         repository: NativeAssetRepository,
         docx: NativeDocxAdapter,
         structure: NativeDocxStructureAdapter | None = None,
+        renderer: NativeWordRenderer | None = None,
     ):
         self.repository = repository
         self.docx = docx
         self.structure = structure
+        self.renderer = renderer
 
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
         return {
+            "render_docx_page": self._render,
             "create_docx": self._create,
             "add_docx_blocks": self._structure,
             "delete_docx_blocks": self._structure,
@@ -39,6 +43,31 @@ class NativeDocxOperations:
             "update_docx": self._update,
             "read_docx_block": self._read_block,
         }[request.op](request)
+
+    def _render(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        if self.renderer is None:
+            raise ValueError("Native DOCX renderer is not configured")
+        assert request.asset_id is not None and request.revision is not None
+        assert request.docx_page_index is not None
+        asset = self.repository.load(request.asset_id)
+        if asset.format != "docx":
+            raise ValueError("This format has no native DOCX page renderer")
+        data = self.repository.read(asset.asset_id, request.revision)
+        return {
+            **self.renderer.render(data, request.docx_page_index, request.render_size),
+            "success": True,
+            "asset_id": asset.asset_id,
+            "inspected_revision": request.revision,
+            "docx_page_index": request.docx_page_index,
+            "source_written": False,
+            "review_required": [
+                "semantic_accuracy",
+                "rendered_layout",
+                "page_flow",
+                "inherited_formatting",
+                "fields_and_revisions",
+            ],
+        }
 
     def _create(self, request: NativeDocumentRequest) -> dict[str, Any]:
         if self.structure is None:

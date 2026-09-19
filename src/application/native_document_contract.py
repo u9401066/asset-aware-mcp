@@ -85,6 +85,7 @@ def native_document_contract(
     derivations_enabled: bool = False,
     pptx_rendering_configured: bool = False,
     docx_structure_enabled: bool = False,
+    docx_rendering_configured: bool = False,
 ) -> dict[str, Any]:
     for_op = request.for_op if request is not None else None
     return {
@@ -102,6 +103,11 @@ def native_document_contract(
             "availability": "Checked per request; requires LibreOffice with Impress. Set LIBREOFFICE_BIN if needed.",
             "policy": "render_pptx_slide needs revision and exact pptx_slide_key. Returns an actual PNG of the whole slide. Static LibreOffice output is not a PowerPoint fidelity verdict.",
         },
+        "docx_rendering": {
+            "configured": docx_rendering_configured,
+            "availability": "Checked per request; requires LibreOffice with Writer. Set LIBREOFFICE_BIN if needed.",
+            "policy": "render_docx_page needs revision and zero-based docx_page_index. Returns an actual MCP PNG and rendered page count. Page indices belong to this rendition, not native DOCX block locators or Microsoft Word pagination.",
+        },
         "pptx_grid_policy": "Sequential insert/delete/resize/merge/split with full shape references. Merge requires explicit content_policy; split retains anchor text. Read complete updated shapes and review rendering.",
         "file_reference_policy": "file_reference identifies exact immutable file bytes; verify does not assert source freshness or semantic meaning.",
         "formats": _formats(
@@ -110,6 +116,7 @@ def native_document_contract(
             pdf_enabled,
             pptx_rendering_configured,
             docx_structure_enabled,
+            docx_rendering_configured,
         ),
         "verification": "MCP checks integrity; agents verify semantics, layout and calculated results.",
         "docx_policy": "Pin revision; assemble all DFM chunks with frontmatter/markers. Updates stage versions; writeback is explicit.",
@@ -168,6 +175,7 @@ def _formats(
     pdf_enabled: bool,
     pptx_rendering_configured: bool = False,
     docx_structure_enabled: bool = False,
+    docx_rendering_configured: bool = False,
 ) -> dict[str, list[str]]:
     return {
         "pdf": [
@@ -207,7 +215,8 @@ def _formats(
         ]
         if pptx_enabled
         else [],
-        "docx": (
+        "docx": (["render_docx_page"] if docx_rendering_configured else [])
+        + (
             ["create_docx", "add_docx_blocks", "delete_docx_blocks"]
             if docx_structure_enabled
             else []

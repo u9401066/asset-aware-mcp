@@ -33,6 +33,34 @@ it is not a promise of complete automatic correction or layout verification.
 Verification coverage and unperformed checks must remain explicit. Structural
 validity alone must never be reported as semantic correctness or full fidelity.
 
+### Native DOCX page previews (Unreleased, 1.4.x)
+
+`render_docx_page` requires an asset ID, explicit immutable revision and zero-based
+`docx_page_index`. A separate renderer port returns an actual MCP PNG, image hash,
+rendered PDF hash, page dimensions/count, renderer/version and review limitations.
+Page identity belongs to this rendered revision/environment, not to native block
+locators or a promise of Microsoft Word pagination. Agents can start at index0,
+then inspect every page through the returned count/next_page_index.
+
+The optional LibreOffice Writer adapter receives an untouched temporary copy of
+the stored DOCX bytes, never a DFM reconstruction. Export the entire document with
+blank pages retained and form fields as their static print representation. Verify
+actual bounded PDF output and unchanged temporary source; use isolated native PDF
+workers for page inspection and PNG rendering. Preserve time/output/process-group
+limits and private profiles with macros disabled; this is not an OS sandbox.
+Reject known external resource relationships, include/DDE/database fields,
+alternative chunks, linked VML resources, SVG and embedded OLE packages before
+starting Writer. Ordinary hyperlinks, internal images, tables, headers/footers,
+sections and common display fields remain within the preview workflow.
+
+Require a valid rendered page index; up to 2,000 pages, 64 MiB PDF and 64..2048 px previews.
+No managed/source revision changes occur. Report installed-font/viewer differences,
+recalculated fields, annotations/revisions and dynamic-content limitations. A PNG
+is review evidence, never an automated semantic or visual-fidelity verdict.
+Test real SDK2 images across multiple pages and historical revisions, page bounds,
+resource guards, unavailable Writer/missing output, source integrity and actual
+Codex scan-to-DOCX visual review with independent pixel comparison.
+
 ### Native DOCX creation and body structure (Unreleased, 1.4.x)
 
 Provide create_docx from typed rich paragraphs and rectangular/merged tables, with

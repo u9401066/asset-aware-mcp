@@ -1,5 +1,67 @@
 # Progress (Updated: 2026-09-19)
 
+## 2026-09-19 — DOCX page previews implemented; final gates in progress
+
+Public stays **1.4.0**; user reaffirmed the **1.4.x** line. No tag or package-version
+change. New render_docx_page converts exact immutable DOCX bytes through optional
+Writer, returns actual MCP PNG plus rendition-local pagination/geometry/hashes,
+and retains source bytes. Shared Office process/profile guards now cover Writer.
+Known resource-loading fields/relationships, OLE/chunks, SVG and VML links reject.
+MCP mechanical checks remain separate from Agent semantic/visual judgments.
+
+Actual Codex `/tmp/asset-aware-codex-docx-render-01`: CLI 0, 157.96 seconds,
+**47 MCP calls, zero errors**, one scan PNG, two Writer PNGs at final/historical
+revisions, five complete DFM revision reads. Independent exact RGB replay, 007/008,
+rich table/native structures, source/published/wiki checks passed. Renderer 7.3.7.2;
+Codex detected missing Chinese heading glyphs (boxes) on this machine. Native text
+is correct; font availability and Microsoft Word fidelity remain unverified.
+Runtime SHA256 `7a4ba4128eb6e237f9dde0f47630af3f8370d0abc6ce816f40f5a85533f44df5`;
+lock `abfaddf3d7d964ace1e210b1fd584e1717775a70f8ccdc98ad9b669b61f1bcd3`.
+CLI 0.154.0-alpha.6.1; model uses CLI default. Production fingerprint still matches.
+
+49 focused renderer/auditor tests passed; actual Writer multi-page SDK2 test passed
+(8.17 seconds with earlier 28 unit tests), plus real Impress SDK2 regression passed.
+First full suite: 2,209 passed, 32 skipped, one docs-link convention failure. Fixed
+that Wiki link and all 25 docs tests passed; final full suite is running. Ruff (408
+files), mypy (186 sources), medium/high Bandit, high zizmor, lock/dependency audits
+(214 Python packages; npm zero vulnerabilities), harness/skills/assets/artifact
+audits passed. Extension 199 tests passed, 64-file contents guard; fresh/update
+VSIX and clean-wheel CLI/SDK2 passed. Local GUI activation unavailable; remote CI
+checks it. Desktop/mobile zh/en browser checks and screenshots passed with cached
+CDN JS, not a live CDN reachability claim. GH metadata and managed labels match.
+
+Docker 3aef184d8a99 built; CLI/SDK2 smoke pending, then remove only this turn's
+smoke images to recover disk. Older native PDF scanned run 01 is now preserved at
+`/tmp/asset-aware-codex-native-pdf-scanned-01.tar.gz`: all member file hashes verified
+before removing its unpacked directory. Current audit evidence remains unpacked.
+Original user worktree untouched. Next: complete gates, segmented main commits,
+push and wait for exact HEAD CI/Pages; broader goal stays active.
+
+
+## 2026-09-19 — native DOCX page rendering in progress
+
+Previous goal turn is **progress**: native DOCX creation/body CRUD committed and
+pushed; authoritative HEAD50fdc05544d9cca97503845235742aab5928c430 is clean/main,
+CI35381844909 all10 jobs passed and Pages35381844084 succeeded. Revalidated CI
+at this turn start. Includes Windows UTF-8 evaluator/child-stdin fixes and47focused
+regressions; native runtime fingerprint unchanged after the actual45-call Codex run.
+Public remains1.4.0, new work Unreleased for1.4.x; originalworktree untouched.
+
+Next: render_docx_page at explicit revision/index using original DOCX bytes and
+optional LibreOffice Writer, full-document pagination and actual MCP PNGs. Separate
+renderer port; use existing private process/timeout/output infrastructure and PDF
+workers. Report renderer/page count/dimensions/hashes and no Word-fidelity verdict.
+Spec added before implementation. Primary references reviewed:
+https://help.libreoffice.org/latest/en-US/text/shared/guide/pdf_params.html
+https://help.libreoffice.org/latest/en-US/text/shared/guide/start_parameters.html
+
+Need focused/resource/SDK2 tests and actual Codex visual review; then README/site/
+harness/MEM and complete release gates before main push. Broader cross-format CRUD,
+source-to-cell mapping, general Word objects/styles and full academic CSL remain
+in the active goal. Disk only286MiB free at start; use dedicated shm for full tests,
+and inspect task-owned build artifacts before Docker gates, never broad prune.
+
+
 ## 2026-09-19 — Windows audit locale fix; remote checks rerun required
 
 `5e3f89b` (core235b89b) was pushed; CI35380567397 passed all substantive jobs except

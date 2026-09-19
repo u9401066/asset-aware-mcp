@@ -41,6 +41,7 @@ from src.infrastructure.job_store import FileJobStore
 from src.infrastructure.layout_visualizer import LayoutVisualizer
 from src.infrastructure.native_asset_store import FileNativeAssetRepository
 from src.infrastructure.native_derivation_store import FileNativeDerivationRepository
+from src.infrastructure.native_docx_render import LibreOfficeWordRenderer
 from src.infrastructure.native_docx_structure import NativeDocxStructure
 from src.infrastructure.native_docx_workspace import FileNativeDocxWorkspaces
 from src.infrastructure.native_pdf_process import ProcessNativePdf
@@ -131,6 +132,7 @@ native_document_service = NativeDocumentService(
     ),
     pptx_renderer=LibreOfficePresentationRenderer(),
     docx_structure=NativeDocxStructure(),
+    docx_renderer=LibreOfficeWordRenderer(),
 )
 # Engine selection (config-driven via ETL_ENGINE): the base extractor is always
 # available (PyMuPDF, or the layout-aware pymupdf4llm) and doubles as the fast

@@ -2558,6 +2558,10 @@ async def document(
             return native_pdf_image_response(
                 payload, title="Native presentation slide preview"
             )
+        if native_request.op == "render_docx_page" and payload.get("success"):
+            from src.presentation.native_pdf_response import native_pdf_image_response
+
+            return native_pdf_image_response(payload, title="Native Word page preview")
         return format_limited_json_response(
             title="Native document asset",
             payload=payload,

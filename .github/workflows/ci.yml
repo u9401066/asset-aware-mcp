@@ -163,6 +163,8 @@ jobs:
           tests/unit/test_native_docx_structure_guards.py
           tests/unit/test_native_docx_structure_operations.py
           tests/unit/test_codex_docx_structure_audit.py
+          tests/unit/test_native_docx_render.py
+          tests/unit/test_codex_docx_render_audit.py
           tests/unit/test_native_wiki_compatibility.py
           tests/unit/test_native_evidence.py
           tests/unit/test_native_wiki.py
@@ -276,6 +278,8 @@ jobs:
           tests/unit/test_native_docx_structure_guards.py
           tests/unit/test_native_docx_structure_operations.py
           tests/unit/test_codex_docx_structure_audit.py
+          tests/unit/test_native_docx_render.py
+          tests/unit/test_codex_docx_render_audit.py
           tests/unit/test_native_wiki_compatibility.py
           tests/unit/test_native_evidence.py
           tests/unit/test_native_wiki.py
@@ -381,6 +385,8 @@ jobs:
           tests/unit/test_native_docx_structure_guards.py
           tests/unit/test_native_docx_structure_operations.py
           tests/unit/test_codex_docx_structure_audit.py
+          tests/unit/test_native_docx_render.py
+          tests/unit/test_codex_docx_render_audit.py
           tests/unit/test_native_wiki_compatibility.py
           tests/unit/test_native_evidence.py
           tests/unit/test_native_wiki.py
@@ -522,12 +528,13 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
 
-      - name: Install optional Impress renderer for real slide image tests
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-impress
+      - name: Install optional Writer and Impress renderers for real image tests
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-impress libreoffice-writer
 
       - name: Run DFM + MCP Integration Tests
         env:
           NATIVE_PPTX_RENDER_TEST: "1"
+          NATIVE_DOCX_RENDER_TEST: "1"
         run: |
           uv run pytest \
             tests/test_dfm.py \
@@ -544,6 +551,7 @@ jobs:
             tests/integration/test_native_pptx_merge_stdio.py \
             tests/integration/test_native_pptx_slide_stdio.py \
             tests/integration/test_native_pptx_render_stdio.py \
+            tests/integration/test_native_docx_render_stdio.py \
             tests/integration/test_native_derivation_stdio.py \
             -v --timeout=180 --junitxml=junit-integration.xml
 

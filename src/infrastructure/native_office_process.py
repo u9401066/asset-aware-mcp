@@ -30,7 +30,7 @@ PROFILE = """<?xml version="1.0" encoding="UTF-8"?>
 """
 
 
-def office_binary() -> str:
+def office_binary(component: str = "Impress") -> str:
     configured = os.environ.get("LIBREOFFICE_BIN")
     if configured:
         binary = shutil.which(configured)
@@ -48,14 +48,24 @@ def office_binary() -> str:
         if binary := shutil.which(candidate):
             return binary
     raise ValueError(
-        "Slide previews require LibreOffice with Impress; install it and optionally set LIBREOFFICE_BIN"
+        f"Document previews require LibreOffice with {component}; install it and optionally set LIBREOFFICE_BIN"
     )
 
 
-def prepare_profile(directory: Path) -> str:
+def prepare_profile(directory: Path, *, writer: bool = False) -> str:
     profile = directory / "profile"
     (profile / "user").mkdir(parents=True)
-    (profile / "user/registrymodifications.xcu").write_text(PROFILE, encoding="utf-8")
+    settings = PROFILE
+    if writer:
+        settings = settings.replace(
+            "</oor:items>",
+            """<item oor:path="/org.openoffice.Office.Common/Filter/PDF/Export">
+<prop oor:name="IsSkipEmptyPages" oor:op="fuse"><value>false</value></prop>
+<prop oor:name="ExportFormFields" oor:op="fuse"><value>false</value></prop>
+<prop oor:name="ExportNotesInMargin" oor:op="fuse"><value>false</value></prop>
+</item></oor:items>""",
+        )
+    (profile / "user/registrymodifications.xcu").write_text(settings, encoding="utf-8")
     return f"-env:UserInstallation={profile.as_uri()}"
 
 
@@ -79,7 +89,7 @@ def _stop(process: subprocess.Popen) -> None:
 
 def run_office(command: list[str], directory: Path, timeout: float) -> str:
     if not math.isfinite(timeout) or timeout <= 0:
-        raise ValueError("Presentation rendering exceeded its time limit")
+        raise ValueError("Office rendering exceeded its time limit")
     # Output goes to a private file, never a PIPE that could deadlock or grow RAM.
     # This process boundary is not an OS filesystem/network sandbox.
     with (directory / "office.log").open("w+b") as log:
@@ -102,7 +112,7 @@ def run_office(command: list[str], directory: Path, timeout: float) -> str:
                     )
                 pdf = directory / "source.pdf"
                 if pdf.is_file() and pdf.stat().st_size > MAX_NATIVE_BYTES:
-                    raise ValueError("Rendered presentation PDF exceeds the byte limit")
+                    raise ValueError("Rendered office PDF exceeds the byte limit")
                 if process.poll() is not None:
                     break
                 remaining = deadline - time.monotonic()
@@ -112,11 +122,11 @@ def run_office(command: list[str], directory: Path, timeout: float) -> str:
                     process.wait(timeout=min(remaining, 0.1))
             if process.returncode:
                 raise ValueError(
-                    "LibreOffice exited unsuccessfully during slide rendering"
+                    "LibreOffice exited unsuccessfully during document rendering"
                 )
             log.seek(0)
             return log.read(512).decode("utf-8", errors="replace").strip()
         except subprocess.TimeoutExpired as exc:
-            raise ValueError("Presentation rendering exceeded its time limit") from exc
+            raise ValueError("Office rendering exceeded its time limit") from exc
         finally:
             _stop(process)

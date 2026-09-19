@@ -12,3 +12,9 @@ class NativePresentationRenderer(Protocol):
     def render(
         self, data: bytes, slide: NativePptxSlideKey, render_size: int
     ) -> dict[str, Any]: ...
+
+
+class NativeWordRenderer(Protocol):
+    def render(
+        self, data: bytes, page_index: int, render_size: int
+    ) -> dict[str, Any]: ...
