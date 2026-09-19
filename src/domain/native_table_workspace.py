@@ -12,6 +12,7 @@ from src.domain.native_asset_models import (
     NativeCellEdit,
     NativeModel,
     cell_position,
+    column_letters,
     validate_sheet_name,
 )
 from src.domain.native_file_reference import (
@@ -21,16 +22,6 @@ from src.domain.native_workbook import NativeWorksheetKey  # noqa: TC001 -- sche
 
 if TYPE_CHECKING:
     from src.domain.table_entities import TableContext
-
-
-def column_letters(index: int) -> str:
-    if not 1 <= index <= 16_384:
-        raise ValueError("Native column index is outside worksheet bounds")
-    letters = ""
-    while index:
-        index, remainder = divmod(index - 1, 26)
-        letters = chr(65 + remainder) + letters
-    return letters
 
 
 class NativeTableCellValue(NativeModel):

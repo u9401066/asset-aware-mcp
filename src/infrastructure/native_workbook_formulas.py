@@ -38,6 +38,14 @@ def _spill_shadow(text: str) -> str:
                     continue
                 quote = None
         elif brackets:
+            if char == "'" and index + 1 < len(text) and text[index + 1] in "[]#'@":
+                # Structured column names escape bracket delimiters with an
+                # apostrophe. Shadow only the escaped delimiter for the lexer;
+                # otherwise a header such as [A'] B2] exposes B2 as a reference.
+                if text[index + 1] in "[]":
+                    output[index + 1] = "_"
+                index += 2
+                continue
             if char == "[":
                 brackets += 1
             elif char == "]":
@@ -108,6 +116,9 @@ def _qualifier_spans(value: str) -> list[tuple[int, int]]:
                     continue
                 quoted = False
         elif brackets:
+            if char == "'" and index + 1 < len(value) and value[index + 1] in "[]#'@":
+                index += 2
+                continue
             if char == "[":
                 brackets += 1
             elif char == "]":
@@ -180,15 +191,55 @@ def table_references(text: str) -> set[str]:
     for _start, _end, value, kind, subtype in formula_tokens(text):
         if kind != Token.OPERAND or subtype != Token.RANGE:
             continue
-        spans = _qualifier_spans(value)
-        if spans:
-            start, end = spans[-1]
-            if "[" in value[start:end] or "]" in value[start:end]:
+        external_context = False
+        for operand in _range_operands(value):
+            spans = _qualifier_spans(operand)
+            if spans:
+                start, end = spans[-1]
+                external_context = (
+                    "[" in operand[start:end] or "]" in operand[start:end]
+                )
+                operand = operand[end + 1 :]
+            if external_context:
                 continue
-            value = value[end + 1 :]
-        if "[" in value and not value.startswith("["):
-            names.add(value.split("[", 1)[0].removeprefix("@").casefold())
-        elif re.fullmatch(r"[\w.\\]+", value.removeprefix("@")):
-            # A whole table is also a valid operand: SUM(Table1).
-            names.add(value.removeprefix("@").casefold())
+            if "[" in operand and not operand.startswith("["):
+                names.add(operand.split("[", 1)[0].removeprefix("@").casefold())
+            elif re.fullmatch(r"[\w.\\]+", operand.removeprefix("@")):
+                # A whole table is also a valid operand: SUM(Table1).
+                names.add(operand.removeprefix("@").casefold())
     return names
+
+
+def _range_operands(value: str) -> Iterator[str]:
+    """Split range endpoints without splitting 3D qualifiers or column headers."""
+    qualifiers = _qualifier_spans(value)
+    bracket_depth = 0
+    quoted = False
+    index = start = 0
+    while index < len(value):
+        char = value[index]
+        if quoted:
+            if char == "'":
+                if index + 1 < len(value) and value[index + 1] == "'":
+                    index += 2
+                    continue
+                quoted = False
+        elif bracket_depth:
+            if char == "'" and index + 1 < len(value) and value[index + 1] in "[]#'@":
+                index += 2
+                continue
+            if char == "[":
+                bracket_depth += 1
+            elif char == "]":
+                bracket_depth -= 1
+        elif char == "'":
+            quoted = True
+        elif char == "[":
+            bracket_depth = 1
+        elif char == ":" and not any(
+            left <= index < right for left, right in qualifiers
+        ):
+            yield value[start:index].strip()
+            start = index + 1
+        index += 1
+    yield value[start:].strip()

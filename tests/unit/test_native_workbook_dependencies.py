@@ -93,7 +93,13 @@ def test_consolidation_reference_is_renamed_and_blocks_deletion():
 
 
 @pytest.mark.parametrize(
-    "formula", ["SUM(Table1[First])", "SUM(Table1)", "Table1[#All]"]
+    "formula",
+    [
+        "SUM(Table1[First])",
+        "SUM(Table1)",
+        "Table1[#All]",
+        "SUM(OtherTable[First]:Table1[Second])",
+    ],
 )
 def test_whole_table_and_column_dependencies_block_deletion(formula):
     source = build_workbook()

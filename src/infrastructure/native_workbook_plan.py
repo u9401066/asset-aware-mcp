@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from src.domain.native_asset_models import NativeEditResult
 from src.infrastructure.native_ooxml import SHEET_NS, relationships_path, xml_bytes
@@ -17,6 +17,9 @@ from src.infrastructure.native_workbook_repairs import (
     repair_calculation,
     repair_indices,
 )
+
+if TYPE_CHECKING:
+    from lxml import etree
 
 
 class WorkbookPlan:
@@ -52,6 +55,14 @@ class WorkbookPlan:
         ]
         self.repairs: list[str] = []
 
+    def part(self, path: str) -> etree._Element:
+        """Load an existing XML part into the private patch with its baseline."""
+        if path not in self.roots:
+            root = self.book.package.xml(path)
+            self.roots[path] = root
+            self.before_xml[path] = xml_bytes(root)
+        return self.roots[path]
+
     def finish(self, change: dict[str, Any]) -> tuple[bytes, NativeEditResult]:
         book = self.book
         if not any(
@@ -73,7 +84,12 @@ class WorkbookPlan:
         children.extend(iterator)
         book.sheet_list[:] = children
         self.repairs.extend(repair_indices(book, self.after, self.roots))
-        self.repairs.extend(repair_caches(book, self.after, self.roots))
+        titles_changed = [(item["key"], item["name"]) for item in book.entries] != [
+            (item["key"], item["name"]) for item in self.after
+        ]
+        self.repairs.extend(
+            repair_caches(book, self.after, self.roots, titles_changed=titles_changed)
+        )
         chains = repair_calculation(book, self.roots[self.rel_path])
         self.repairs.append("formula_recalculation_requested")
         if chains:

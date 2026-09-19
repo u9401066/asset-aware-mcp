@@ -17,6 +17,8 @@ from src.infrastructure.native_workbook_formulas import (
         ("SUM(Data!A1:Data!B2)", "SUM('研究表'!A1:'研究表'!B2)", 2),
         ("Data!Table1[Other!Name]", "'研究表'!Table1[Other!Name]", 1),
         ("Table1[Data!Name]", "Table1[Data!Name]", 0),
+        ("Table1[[A'] Data!A2]]+Data!B2", "Table1[[A'] Data!A2]]+'研究表'!B2", 1),
+        ("Table1[[A'[ B2]]+Data!B2", "Table1[[A'[ B2]]+'研究表'!B2", 1),
         ("Data!A1 +  1", "'研究表'!A1 +  1", 1),
         ("Data!A1\t+\r\nOther!B1", "'研究表'!A1\t+\r\nOther!B1", 1),
         ("Table1[O'Brien]+Data!A1", "Table1[O'Brien]+'研究表'!A1", 1),
@@ -49,6 +51,23 @@ def test_table_dependency_names_exclude_external_book_references():
     assert table_references(
         "Table1[Count]+@Table2[Count]+'Data'!Table3[Count]+[1]Data!Table4[Count]"
     ) == {"table1", "table2", "table3"}
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("SUM(Table1[A]:Table2[B])", {"table1", "table2"}),
+        ("SUM(Data!Table1[A]:Other!Table2[B])", {"table1", "table2"}),
+        ("SUM([1]Data!Table1[A]:Other!Table2[B])", {"table2"}),
+        ("SUM([1]Data!Table1[A]:Table2[B])", set()),
+        ("SUM(Data:Other!Table1[A])", {"table1"}),
+        ("SUM(Table1[[A'] :Table2[X]]])", {"table1"}),
+        ("SUM(Table1[[First]:[Last]])", {"table1"}),
+        ('SUM(Table1[A],"Table2[B]")', {"table1"}),
+    ],
+)
+def test_both_structured_range_endpoints_are_dependencies(text, expected):
+    assert table_references(text) == expected
 
 
 @pytest.mark.parametrize(

@@ -1,5 +1,62 @@
 # Decision Log
 
+## 2026-09-19: pin operation history as well as content revisions
+
+A reversible grid insertion/deletion can return byte-for-byte to an earlier XLSX
+revision. Content hashes identify immutable bytes, while operation receipts belong
+to the current history event. Actual-Codex audits therefore require a complete
+pinned pre-edit read and the complete current receipt at each operation stage;
+earlier proof for identical bytes cannot substitute. Exploratory unpinned reads
+are allowed but never satisfy those requirements. Independent tests enforce this.
+
+Resolve static named internal source ranges before/after edits using proper local
+and workbook name scopes and table identities. Reject sources requiring formula
+evaluation rather than guessing their dependency bounds. Invalidate affected pivot
+caches while preserving their schema/header constraints. This is MCP mechanical
+checking; semantic, rendered and recalculated verification remains Agent work.
+
+Native grid CRUD can be exposed independently of structural A2T writeback, whose
+explicit row/column correspondence is still unfinished. Documentation must separate
+the two capabilities. Keep public 1.4.0 and Unreleased/future 1.4.x; no per-task bump.
+
+## 2026-09-19: preserve native object geometry and keep cache review explicit
+
+Use sparse row/column metrics to reconstruct native DrawingML/VML coordinates;
+do not enumerate a million rows or reinterpret VML pixel offsets as fractions.
+Honor move-and-resize, move-only and fixed object policies, recording known Calibri
+96-DPI assumptions or explicit caller calibration. Deletion that would collapse
+an object has a preserve-size/reject policy. Note text, source cell and display
+shape must move/delete in one private package operation; retain author definitions
+and historical source bytes. Empty note parts are retained rather than rewriting
+unrelated package relationships.
+
+Keep original-package XML and media. Check surviving cell relocation separately
+from serialization; exclusive cell canonicalization avoids false differences from
+unused inherited namespace declarations. Complete final part readback remains exact.
+Invalidate chart caches even when a table-backed formula text stays unchanged.
+Direct named-table pivot sources need cache refresh and column schema protection;
+indirect named source resolution remains required before public grid exposure.
+These checks do not prove formula evaluation, rendering or semantic correctness.
+Version policy stays public 1.4.0, Unreleased/future 1.4.x; no automatic bump per task.
+
+## 2026-09-19: preserve native grid structure and make reference context explicit
+
+Row/column edits use original OOXML and deterministic coordinate transforms, not an
+openpyxl workbook resave. Its documented insertion/deletion boundary excludes
+dependent formulas/tables/charts. Materialize shared formulas with relative copy
+semantics before removing master cells; preserve individual overrides and enforce
+bounded expansion. Use worksheet ownership for unqualified formulas and defined
+name scopes, rejecting ambiguous contexts. Surviving rule origins must be rebased
+when deletion changes the first sqref cell. Do not call cached numeric array outputs
+newly verified values just because they lack a formula node.
+
+Structured-header apostrophe escapes protect literal brackets, and range endpoints
+both contribute dependencies. Pane split dimensions are points unless frozen;
+page-break IDs/extents are zero-based. Internal modules remain unadvertised until
+table/drawing/package/application/A2T integration and real workflow checks finish.
+MCP performs necessary mechanics; Agent reviews meaning, rendered layout and actual
+recalculated results. Keep the user-requested public 1.4.0/future 1.4.x version line.
+
 ## 2026-09-19: explicit typed correspondence and frozen A2T inputs
 
 Keep each projected row including headers; label columns with native Excel letters.

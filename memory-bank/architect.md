@@ -1,5 +1,18 @@
 # System Architect
 
+## 2026-09-19 native worksheet grid editing
+
+Domain NativeGridUpdate and NativeGridAdapter define sequential typed row/column
+edits, one-based coordinates and explicit inheritance/merge/object policies.
+NativeWorkbookGrid edits original OOXML parts; focused modules own address/formula
+transforms, tables and filters, sparse geometry, drawing/note objects, named source
+resolution and serialized invariants. NativeWorkbookOperations coordinates exact
+revision checks and repository CAS; the composition root injects the adapter.
+The contract advertises workbook_grid_enabled and pages complete schemas when
+response overhead would exceed the transport budget. Native content revisions
+remain immutable; current operation receipts are also required when identical
+bytes recur. Structural A2T mapping and Agent semantic/visual review stay separate.
+
 ## 2026-09-19 native/A2T bridge
 
 Domain native_table_workspace defines typed values, exact worksheet/range binding

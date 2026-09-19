@@ -138,6 +138,8 @@ def repair_caches(
     book: NativeWorkbookPackage,
     after: list[dict[str, Any]],
     roots: dict[str, etree._Element],
+    *,
+    titles_changed: bool = True,
 ) -> list[str]:
     repairs = []
     path = book.shared_string_path
@@ -158,7 +160,7 @@ def repair_caches(
         "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"
     )
     for root in roots.values():
-        if root.tag == f"{{{namespace}}}Properties":
+        if titles_changed and root.tag == f"{{{namespace}}}Properties":
             for name in ("HeadingPairs", "TitlesOfParts"):
                 for node in root.findall(f"{{{namespace}}}{name}"):
                     root.remove(node)

@@ -1,5 +1,170 @@
 # Active Context
 
+## 2026-09-19 — native grid MCP workflow and actual Codex audit passed
+
+Public versions remain 1.4.0; this work accumulates Unreleased within 1.4.x.
+The original detached user worktree is unchanged. Grid changes are being committed
+in four dependency-ordered groups from working main 11ddd92; no tag or version bump.
+
+update_worksheet_grid now has typed contract/schema discovery, configured native
+adapter, exact revision checks, repository CAS and complete operation readback.
+Named pivot/consolidation sources resolve static A1 ranges, table selectors and
+scoped defined-name chains before and after changes. Dynamic, cyclic or ambiguous
+internal dependencies fail explicitly. Source checks and cache repair do not
+certify visual fidelity, semantics or recalculated results; those remain Agent work.
+SDK2 discovery now pages schemas when the complete contract would exceed its
+transport budget, including capability and policy overhead.
+
+Full pytest: 2623 passed, 33 optional skips in 93.13 seconds; log
+/tmp/asset-aware-grid-pytest-04.log. Ruff 498 files, mypy 228 sources and Bandit
+passed; extension test:ci passed 199 tests plus 64-file package contents. Lock,
+Python/npm vulnerability audits and high-severity workflow audit passed.
+
+Actual Codex /tmp/asset-aware-codex-native-grid-01 completed 126 successful MCP
+calls, zero tool errors and one scanned-page PNG. It checked 15 literal cells,
+007-to-008 editing, row/column insertion then deletion, old selection/derivation
+preservation, source bytes and two revision-specific Wikis. Independent audit
+passed after correcting the auditor: exploratory unpinned reads do not count as
+proof, while every mutation still requires a complete pinned read. Operation
+history must distinguish revisited identical file hashes; regression tests reject
+missing current receipts or pre-edit reads even when the bytes repeat. Original
+runner log records the earlier auditor failure; audit.json records the corrected
+successful audit. Excel rendering/formula evaluation were not exercised here.
+
+Artifact audit, wheel fresh-install/runtime/stdio, Docker import/stdio, VSIX fresh
+install/update, zh/en desktop/mobile browser checks and GitHub metadata/labels all
+pass. No local activation test: this environment lacks a display/Xvfb; CI owns
+that gate. Browser uses cached pinned CDN scripts and private shared libraries.
+Wheel source bytes and actual-Codex runtime hash match the current source.
+Full local proof: /tmp/asset-aware-grid-local-proof.json. Removed only task-owned
+temporary pytest/wheel directories and obsolete local smoke Docker images.
+
+Remaining: publish segmented main commits with exact CI/Pages verification. Structural A2T
+correspondence back to the original file, richer object fidelity and the broader
+cross-format/real-corpus objective remain open; this grid milestone is not goal
+completion. No automatic version bump or tag.
+
+## 2026-09-19 — private native grid package adapter and object geometry verified
+
+Public Python/MCP/VSIX versions remain 1.4.0; future work is Unreleased/1.4.x as
+requested. Working main stays 11ddd92; original detached user worktree is unchanged.
+No new public native operation, tag, version bump, commit or push in this phase.
+
+Added native table identity/selector/filter/calculated-row integration, sparse
+96-DPI row/column metrics, DrawingML move/resize/fixed anchors and top transforms,
+VML note locator/anchor/style relocation and exact note/shape deletion. Private
+NativeWorkbookGrid now combines sequential transforms, table/reference edits,
+merges, views, comments/drawings, watches/outline summaries, pivot result location
+movement and derived-cache invalidation. It checks cell payload/style relocation
+and reparses complete planned XML plus table identities and untouched member bytes.
+Real packages are independently read with openpyxl without resaving their sources.
+
+217 focused grid/workbook tests passed before five new metadata dependency tests;
+all five added tests pass too. Ruff 489 files, mypy 226 sources and Bandit pass.
+Full pytest passed 2525 tests with 33 optional skips in 87.71 seconds, using
+task-owned /dev/shm/asset-aware-grid-pytest-02; log is
+/tmp/asset-aware-grid-pytest-02.log. Docs-site check, release-harness audit and
+git diff hygiene pass. This is current private adapter evidence, not release or
+actual-Codex grid workflow proof. The earlier 2440 passes described the foundations.
+
+Integration fixes: worksheets without resources legitimately lack .rels; cell
+canonical comparison must ignore unused inherited namespace declarations while
+preserving actual namespaced payload. Fixed-position boxes may require different
+marker offsets after row metrics move. In a sequential insertion then deletion,
+structured intervals include columns inserted within their earlier endpoints.
+Named-table pivot caches and unchanged-text chart references still become stale;
+direct source dependencies are handled, external same-name sources stay untouched.
+
+Remaining before public grid exposure: indirect named pivot/consolidation sources
+(defined-name chains, named A1 ranges and dynamic formulas) need explicit dependency
+handling; review geometry for rotated/grouped objects and richer controls. Reduce
+repeated table-bound parsing for large formula inventories. Finish application/
+contract/revision-CAS wiring, structural A2T mapping, SDK2 and actual Codex scanned
+PDF→native→A2T workflow, then complete release/docs/segmented Git publication gates.
+Do not equate passing private adapter tests with the complete user goal.
+
+## 2026-09-19 — native table/grid integration advancing; drawing work next
+
+The preceding turn was progress: 2440 full-suite passes and the uncommitted grid
+foundations were revalidated at main base 11ddd92. This continuation adds stable
+table column identity changes, escaped/bracketed/bare structured selectors, shrinking
+column intervals and explicit deleted-column/table errors; same-name new columns
+cannot capture old references. Native table XML, header creation, filter/sort IDs,
+calculated-column templates/new row formulas, hidden deleted headers, disabled
+deleted totals and whole-table detachment now work in private package integration.
+Tests also read the result with openpyxl, without resaving the original package.
+
+Real fixtures revealed XlsxWriter's [[#This Row],Column] stored shorthand and its
+literal copying of A1 formulas to every table row. The parser handles the shorthand;
+tests separately cover explicit per-row source formulas and literal repeated A1
+dependencies. Do not infer a source formula was relative when its stored text is not.
+Workbook cache repair now retains valid title properties when sheet names/order do
+not change. Shared GridCellWriter prevents repeated whole-sheet scans for fills.
+
+175 focused grid/table/workbook tests and mypy 218 sources pass. The prior 2440 full
+suite is evidence for the preceding state only; newer full gates remain pending.
+Drawing/notes geometry, package adapter/read-back invariants, native application/API,
+A2T structural mapping and actual SDK2/Codex workflow are still incomplete. Continue
+the complete feature rather than exposing these helpers alone. No version bump,
+tag, commit/push or original-user-worktree changes; public remains 1.4.0/1.4.x.
+
+## 2026-09-19 — native grid internals under development; no public operation yet
+
+Working main remains 11ddd92; the grid phase is uncommitted. Python and extension
+versions were rechecked as 1.4.0 in response to the user's 1.4.x constraint. No bump,
+tag, source publication or original-user-worktree mutation occurred.
+
+Implemented typed sequential grid edits, strict coordinate/range transforms,
+lossless A1 formula edits, original row/cell/column XML relocation and format-only
+inheritance, merge anchor preservation, rule-origin rebasing, sparse shared formula
+materialization, whole array/data-table block handling, scoped/cross-part formula
+ownership, cache invalidation, selection/freeze and zero-based page-break repair.
+Shared group followers ignore their own text; nonshared overrides remain intact.
+Array result cells without formula nodes have their cached values invalidated too.
+
+The existing workbook formula tokenizer now shadows escaped structured-header
+brackets, so header text resembling B2 or Data!A2 cannot be rewritten. Existing
+worksheet-deletion dependencies now inspect both structured range endpoints and
+retain external qualifier scope. A targeted real-package regression confirms
+the second endpoint blocks deletion. The first attempt at an explicitly qualified
+integration fixture correctly hit the earlier sheet-reference guard; that redundant
+case was removed, retaining the unqualified second-endpoint regression.
+
+127 focused grid/workbook formula/dependency cases pass; mypy 211 sources, Ruff
+465 files and Bandit pass. Full pytest passed 2440 tests with 33 optional skips in
+87.48 seconds, using its own /dev/shm basetemp; log /tmp/asset-aware-grid-pytest-01.log.
+No new full workflow or actual-Codex grid proof is claimed yet. Tables/filter/sort metadata,
+structured column deletion/rename, comments/VML/drawing geometry, full package
+orchestration and preservation read-back, native contracts/application wiring,
+structural A2T mapping, SDK2/actual Codex and all publication gates remain ahead.
+
+Intended orchestration order: expand shared formulas; shift array/data-table blocks;
+rebase rule origins and shift rule ranges; plan merges; relocate cells/columns and
+restore surviving merge anchors; transform table/view/drawing metadata; rewrite
+formulas on surviving nodes; invalidate caches and serialize/read back. Rewriting
+after cell deletion avoids blocking or reporting references in removed cells. Do not
+substitute these internal helpers or unsupported-case rejection for the complete
+requested native workflow. The broader goal remains active.
+
+## 2026-09-19 — native worksheet grid work in progress
+
+Previous goal turn made progress: native/A2T corea1f84cb and docs11ddd92b7debb4c2aa47205f372131dd92d12c90
+are clean onmain/origin. Exact CI35400517335(all10jobs) and Pages35400516632(all3jobs)
+passed; public JS bytes matched. Revalidated current clean head and both remote runs.
+The90-call Codex audit,2356pytest passes and package/SDK2/browser gates remain evidence
+for that phase only. Public1.4.0/future1.4.x; original user worktree untouched.
+
+Next real gap is native row/column structure with formula, merge, table, comments,
+drawing and format relocation, then structural A2T correspondence. Specification
+records intended complete workflow before code. Official openpyxl docs explicitly
+exclude formula/table/chart dependency management for insert/delete; retain original
+OOXML patches and use tokens only. Microsoft column metric rules and XlsxWriter
+object placement explain why drawings must honor move/resize behavior and digit
+metrics. No new dependency is justified yet. Implement typed sequential edits,
+coordinate/reference transforms, native package orchestration/readback, contracts,
+regressions/SDK2/actual Codex and all publication gates. Do not claim completion from
+coordinate scaffolding or unsupported-case rejection alone. Full broad goal active.
+
 ## 2026-09-19 — native/A2T core committed; documentation ready
 
 Core a1f84cbceace18a0292aa336f9ac4a95da1fb122 contains the guarded native/A2T bridge,

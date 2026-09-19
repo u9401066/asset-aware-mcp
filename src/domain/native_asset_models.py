@@ -31,6 +31,16 @@ def cell_position(address: str) -> tuple[int, int]:
     return row, column
 
 
+def column_letters(index: int) -> str:
+    if not 1 <= index <= 16_384:
+        raise ValueError("Native column index is outside worksheet bounds")
+    letters = ""
+    while index:
+        index, remainder = divmod(index - 1, 26)
+        letters = chr(65 + remainder) + letters
+    return letters
+
+
 def validate_sheet_name(name: str) -> str:
     if (
         not name.strip()
