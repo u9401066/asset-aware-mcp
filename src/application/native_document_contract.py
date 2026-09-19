@@ -84,6 +84,7 @@ def native_document_contract(
     pdf_enabled: bool = False,
     derivations_enabled: bool = False,
     pptx_rendering_configured: bool = False,
+    docx_structure_enabled: bool = False,
 ) -> dict[str, Any]:
     for_op = request.for_op if request is not None else None
     return {
@@ -104,10 +105,16 @@ def native_document_contract(
         "pptx_grid_policy": "Sequential insert/delete/resize/merge/split with full shape references. Merge requires explicit content_policy; split retains anchor text. Read complete updated shapes and review rendering.",
         "file_reference_policy": "file_reference identifies exact immutable file bytes; verify does not assert source freshness or semantic meaning.",
         "formats": _formats(
-            docx_enabled, pptx_enabled, pdf_enabled, pptx_rendering_configured
+            docx_enabled,
+            pptx_enabled,
+            pdf_enabled,
+            pptx_rendering_configured,
+            docx_structure_enabled,
         ),
         "verification": "MCP checks integrity; agents verify semantics, layout and calculated results.",
         "docx_policy": "Pin revision; assemble all DFM chunks with frontmatter/markers. Updates stage versions; writeback is explicit.",
+        "docx_structure_enabled": docx_structure_enabled,
+        "docx_structure_policy": "Create typed paragraphs/tables independently. Insert at body start/end or a full current block reference; delete complete body blocks with dependency checks. New block IDs are revision-scoped; old refs stay historical. Agents review page flow, styles, fields and rendering.",
         "archive_policy": "Archive retains history and the human source.",
         "wiki_policy": "Immutable snapshots; never replace existing notes. Citation fields go inside native_request.",
     }
@@ -160,6 +167,7 @@ def _formats(
     pptx_enabled: bool,
     pdf_enabled: bool,
     pptx_rendering_configured: bool = False,
+    docx_structure_enabled: bool = False,
 ) -> dict[str, list[str]]:
     return {
         "pdf": [
@@ -199,7 +207,12 @@ def _formats(
         ]
         if pptx_enabled
         else [],
-        "docx": [
+        "docx": (
+            ["create_docx", "add_docx_blocks", "delete_docx_blocks"]
+            if docx_structure_enabled
+            else []
+        )
+        + [
             "read_docx",
             "read_docx_block",
             "update_docx",

@@ -35,6 +35,10 @@ from src.domain.native_derivation import (  # noqa: TC001 -- Pydantic schema
     NativeDerivationRetraction,
 )
 from src.domain.native_docx import NativeDocxEdit  # noqa: TC001 -- Pydantic schema
+from src.domain.native_docx_structure import (  # noqa: TC001 -- Pydantic schema
+    NativeDocxCreate,
+    NativeDocxInsert,
+)
 from src.domain.native_file_reference import (
     NativeFileReference,  # noqa: TC001 -- Pydantic schema
 )
@@ -122,6 +126,11 @@ class NativeDocumentRequest(NativeModel):
     citation_metadata: CitationMetadata | None = None
     workbook: NativeWorkbookCreate | None = None
     docx_edit: NativeDocxEdit | None = None
+    docx_create: NativeDocxCreate | None = None
+    docx_insert: NativeDocxInsert | None = None
+    docx_block_refs: list[NativeDocxBlockReference] = Field(
+        default_factory=list, max_length=100
+    )
     presentation: NativePresentationCreate | None = None
     pdf_create: NativePdfCreate | None = None
     pdf_insert: NativePdfInsert | None = None

@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     )
     from src.domain.native_derivation import NativeDerivationRepository
     from src.domain.native_docx import NativeDocxAdapter
+    from src.domain.native_docx_structure import NativeDocxStructureAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_rendering import NativePresentationRenderer
@@ -46,10 +47,12 @@ class NativeDocumentService:
         pdfs: NativePdfAdapter | None = None,
         derivations: NativeDerivationRepository | None = None,
         pptx_renderer: NativePresentationRenderer | None = None,
+        docx_structure: NativeDocxStructureAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.docx = docx
+        self.docx_structure = docx_structure
         self.presentations = presentations
         self.pptx_renderer = pptx_renderer
         self.pdfs = pdfs
@@ -65,7 +68,9 @@ class NativeDocumentService:
         self.derivations = (
             NativeDerivationService(derivations, self.evidence) if derivations else None
         )
-        self.docx_operations = NativeDocxOperations(repository, docx) if docx else None
+        self.docx_operations = (
+            NativeDocxOperations(repository, docx, docx_structure) if docx else None
+        )
         self.wiki = (
             NativeWikiService(
                 repository,
@@ -123,6 +128,9 @@ class NativeDocumentService:
             "add_pptx_shapes": self._pptx_operation,
             "delete_pptx_shapes": self._pptx_operation,
             "read_docx": self._docx_operation,
+            "create_docx": self._docx_operation,
+            "add_docx_blocks": self._docx_operation,
+            "delete_docx_blocks": self._docx_operation,
             "read_docx_block": self._docx_operation,
             "update_docx": self._docx_operation,
             "verify": self._verify,
@@ -166,6 +174,8 @@ class NativeDocumentService:
             pptx_enabled=self.presentations is not None,
             pdf_enabled=self.pdfs is not None,
             derivations_enabled=self.derivations is not None,
+            docx_structure_enabled=self.docx is not None
+            and self.docx_structure is not None,
             pptx_rendering_configured=self.pptx_renderer is not None
             and self.presentations is not None,
         )

@@ -67,6 +67,12 @@ synthetic results do not establish general OCR accuracy or PDF writeback fidelit
 
 ## v1.3.0 native DOCX revisions and evidence
 
+Unreleased work for **1.4.x** adds independent `create_docx` plus
+`add_docx_blocks` / `delete_docx_blocks` for body paragraphs and editable tables.
+Rich runs, merged cells and explicit grids receive serialized checks; current
+block references protect structural edits. Agents review pagination and layout.
+See [DOCX creation and structure](docs/wiki/Native-File-Assets.md#docx-creation-and-body-structure-unreleased).
+
 - Read revision-bound DOCX/DFM and stage checked edits before explicit source writeback.
 - Verify complete parsed block references; bounded excerpts retain full evidence hashes.
 - Export DOCX block notes, original documents and exact package-part attachments.

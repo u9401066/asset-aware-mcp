@@ -33,6 +33,31 @@ it is not a promise of complete automatic correction or layout verification.
 Verification coverage and unperformed checks must remain explicit. Structural
 validity alone must never be reported as semantic correctness or full fidelity.
 
+### Native DOCX creation and body structure (Unreleased, 1.4.x)
+
+Provide create_docx from typed rich paragraphs and rectangular/merged tables, with
+explicit page dimensions/margins and literal display strings. No precursor PDF or
+DFM source is required. Save into managed identity/history; publication/writeback
+remain separate. New content must retain its requested text, direct formatting,
+grid widths and merge structure after independent native readback.
+
+add_docx_blocks inserts typed blocks at body start/end or before/after a full current
+DOCX block reference. delete_docx_blocks deletes exact referenced top-level body
+paragraphs/tables. Check source/revision/CAS, complete reference hashes and native
+locator metadata before mutation. Resolve original body-child positions, not offsets
+in a flattened text view. Reject partial multi-block paragraphs, protected/signed
+sources, ambiguous body/section structure and deletions affecting range/section/
+field dependencies. Historical references remain valid; new block IDs are revision
+scoped. Retain orphan media/relations; deletion does not promise secure erasure.
+
+Generate only new XML in a scratch document. Patch the original main part without
+resaving its other parts through python-docx; independently verify exact untouched
+body subtrees, source package inventory and unrelated part bytes. Enforce aggregate
+block/cell/run/text budgets and reject invalid XML characters or overlapping merges.
+Existing nested structures remain intact outside an explicit selected deletion.
+MCP checks source/package/representation integrity; Agent checks semantics, page
+flow, inherited styles, rendered layout and updated Word fields/viewer caches.
+
 ### Native whole-slide previews (Unreleased, 1.4.x)
 
 `render_pptx_slide` requires an asset ID, explicit immutable revision and exact

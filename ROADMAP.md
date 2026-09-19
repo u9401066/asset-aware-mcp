@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Unreleased / 1.4.x: independent DOCX creation and reference-bound body paragraph/table insertion/deletion; merged grids, rich text, serialized readback and dependency guards. Full rendered page review and general Word structure editing remain open.
+
 - [x] Unreleased / 1.4.x: revision-pinned whole-slide previews through optional LibreOffice Impress; hidden/reordered/history SDK2 checks and actual Codex visual review with independent pixel audits. PowerPoint fidelity and dynamic playback remain separate.
 
 Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可重用、
@@ -78,7 +80,7 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
   保留未修改 parts、舊版／跨文件／併發修改拒絕，以及獨立來源回寫。
 - DOCX 元件引用驗證／wiki 匯出已接上：版本固定的區塊證據、完整表示與原始
   套件附件，保留舊快照；完整性檢查不等於語意或抽取完整性驗證。
-- 仍未提供 DOCX 結構插刪、樣式設計；其他格式的原生編輯、學術引用引擎
+- main 未發布工作已支援 DOCX 主本文段落／表格建立與插刪；文件樣式設計、其他格式的原生編輯、學術引用引擎
   及完整 Agent 核對流程仍在範圍內。PPTX 的後續進展見 1.4.0。
 
 ## v1.2.0 已發布成果

@@ -9,6 +9,13 @@
 
 ### Added
 
+- Native DOCX creation and body paragraph/table insertion/deletion, with rich runs,
+  explicit twip grids, merged cells and serialized formatting checks. Structural
+  edits use current full block references and preserve unrelated XML/package bytes.
+  Known section/range/field/embedded dependencies, stale references and CAS conflicts
+  fail before publication. Agents review meaning, pagination and rendered layout.
+  Public version remains 1.4.0; this work accumulates Unreleased for 1.4.x.
+
 - Optional `render_pptx_slide` delivers actual whole-slide PNGs with immutable
   revision/slide identity, hashes and LibreOffice renderer metadata. Private
   profiles, timeout cleanup, output checks and hidden-slide page-count checks

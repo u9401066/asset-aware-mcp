@@ -59,6 +59,11 @@ CRUD、Excel 與資產包，並修正實測發現的旋轉圖片裁切問題。�
 
 ## v1.3.0 原生 DOCX 版本與元件證據
 
+**1.4.x 未發布工作**新增 `create_docx`，以及主本文段落／可編輯表格的
+`add_docx_blocks`／`delete_docx_blocks`。富文字、合併格與明確欄寬會在儲存後
+讀回檢查；結構操作綁定目前版本的完整區塊引用，分頁與版面由 Agent 核對。
+詳見 [DOCX 建立與結構操作](docs/wiki/Native-File-Assets.md#docx-creation-and-body-structure-unreleased)。
+
 - 讀取固定版本的 DOCX/DFM，檢查編輯後先建立受管理版本，再明確回寫來源。
 - 驗證完整解析區塊的引用；文字分段仍保留完整證據 hash。
 - 匯出區塊筆記、原始 DOCX 與各套件檔案的原始位元組；保留舊快照及連結。

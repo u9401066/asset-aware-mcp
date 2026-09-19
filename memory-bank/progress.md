@@ -1,5 +1,55 @@
 # Progress (Updated: 2026-09-19)
 
+## 2026-09-19 — native DOCX structure implemented; final publication gates running
+
+Public stays **1.4.0**, all work Unreleased for **1.4.x**, no new tag/bump.
+Authoritative worktree: `/home/eric/workspace251226/asset-aware-mcp-agent-assets`;
+original detached user worktree remains untouched. MCP mechanical checks versus
+Agent semantic/visual/formula review division remains explicit.
+
+- Added typed independent create_docx and current-reference add/delete body blocks;
+  rich runs, half-point/complex-script formatting, explicit twip grids, merges,
+  shading, headers, paragraph flow and page settings. Existing DOCX mutations patch
+  only word/document.xml; independent readback, unchanged XML/other bytes, source/CAS,
+  field/range/section/embedded dependencies guard publication.
+- New domain port/model and infrastructure builder/check modules; wired native
+  operations/contract/dependencies. Added unit guards/operations, SDK2 stdio test,
+  actual Codex runner/auditor plus negative auditor tests and CI matrix registration.
+- Full Python runtime suite: **2147 passed, 31 optional skipped**, 76.03s,
+  `/tmp/asset-aware-docx-structure-full.log`; nine subsequently added auditor tests
+  separately passed. Ruff and mypy 184 files pass. Bandit medium/high and zizmor gates
+  pass; default all-severity Bandit reports 84 existing/low findings (no medium/high).
+  Python audit214 packages and npm0 vulnerabilities; GitHub metadata/labels in sync.
+- Actual Codex `/tmp/asset-aware-codex-docx-structure-01`: CLI0,139.99s,45nativecalls,
+  zero errors, one actual scan PNG independently pixel-checked, five full DFM
+  revisions, exact table strings/leading zeros/fonts/grid/merge and old proofs.
+  Published DOCX and all17 wiki parts match. Audit initially rejected supplementary
+  file proof/source-PDF wiki; corrected auditor and re-audited saved trace, passed.
+  No rerun model needed; no native runtime changed after this run.
+  Runtime SHA256 `7f77a7a215f6f34241ea1db67d458e4963782da1c86fa74cdacb221cd4870308`;
+  lock `abfaddf3d7d964ace1e210b1fd584e1717775a70f8ccdc98ad9b669b61f1bcd3`.
+  Codex0.154.0-alpha.6.1, default model not pinned. Synthetic first page only;
+  no DOCX rendered page/flow review or general real-corpus claim.
+- README/zh, CHANGELOG, ROADMAP, spec, wiki/site and bundled assistant assets updated.
+  Browser zh/en desktop/mobile checks/screenshots pass with Playwright fallback;
+  CDN scripts locally replayed, not a live CDN reachability check.
+- Remaining this checkpoint: Docker/VSIX/wheel install gates, final docs/assets
+  freshness, segmented main commits/push, exact CI/Pages/public-byte verification.
+  Larger goal remains active: native DOCX rendering/general objects/styles, other
+  format CRUD, cross-deck/notes, cell derivation maps, academic CSL and real corpus.
+
+
+## 2026-09-19 — native DOCX creation and body structure in progress
+
+Previous goal turn classified progress: bc23768/260def7 pushed; exact CI35376045368
+(all ten jobs, including actual Impress/SDK2 render) and Pages35376043498 revalidated
+successful at260def7. Public bytes matched, main clean/onlymain, publicversion1.4.0.
+Original user worktree remains untouched. New scope: independent native DOCX
+creation with typed rich paragraphs/tables, and revision/reference-bound body block
+insertion/deletion preserving untouched package bytes. Existing DFM edits, references,
+wiki and explicit source writeback remain in use. Primary python-docx document/text/
+table/merge documentation reviewed. Full cross-format goal remains active.
+
 ## 2026-09-19 — native whole-slide preview in progress
 
 Previous goal turn classified progress: 3fb6b88/208022a committed and pushed;
