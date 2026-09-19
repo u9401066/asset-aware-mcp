@@ -20,6 +20,8 @@ NativeOperation = Literal[
     "create_workbook_rendition",
     "read_rendition",
     "update_worksheet_grid",
+    "read_worksheet_layout",
+    "update_worksheet_layout",
     "update_workbook_table",
     "add_workbook_table",
     "add_worksheets",
@@ -110,6 +112,10 @@ NATIVE_OPERATIONS = {
     ),
     "create_workbook_rendition": _fields("asset_id revision workbook_rendition"),
     "read_rendition": _fields("asset_id revision", "text_offset text_limit"),
+    "read_worksheet_layout": _fields(
+        "asset_id revision worksheet_key", "text_offset text_limit"
+    ),
+    "update_worksheet_layout": _fields("asset_id expected_revision worksheet_layout"),
     "update_worksheet_grid": _fields("asset_id expected_revision worksheet_grid"),
     "update_workbook_table": _fields("asset_id expected_revision table_update"),
     "add_workbook_table": _fields("asset_id expected_revision table_create"),

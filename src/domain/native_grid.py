@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from pydantic import Field, model_validator
 
 from src.domain.native_asset_models import NativeEditResult, NativeModel
 from src.domain.native_workbook import NativeWorksheetKey  # noqa: TC001 -- schema
+
+if TYPE_CHECKING:
+    from src.domain.native_layout import NativeLayoutUpdate
 
 
 class NativeTableExpansion(NativeModel):
@@ -109,4 +112,10 @@ class GridTransform:
 class NativeGridAdapter(Protocol):
     def update(
         self, data: bytes, request: NativeGridUpdate
+    ) -> tuple[bytes, NativeEditResult]: ...
+
+    def read_layout(self, data: bytes, key: NativeWorksheetKey) -> dict[str, Any]: ...
+
+    def update_layout(
+        self, data: bytes, request: NativeLayoutUpdate
     ) -> tuple[bytes, NativeEditResult]: ...

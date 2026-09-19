@@ -1,5 +1,16 @@
 # Decision Log
 
+## Worksheet sizes are explicit Agent corrections
+
+Expose point heights and raw OOXML widths, with independent reset/visibility intent.
+Do not infer font-dependent AutoFit or announce semantic/visual success in MCP.
+Preserve authored drawing anchor modes through identity coordinate transforms;
+reject collapse by default and record any explicit preserve_size decision. Changing
+width/visibility may affect CELL/SUBTOTAL-like results, so clear formula/chart caches
+and request recalculation. Retain exact historical cache/source evidence. Existing
+workbook guards and worksheet formatting permissions apply without unlocking.
+Public1.4.0; accumulate development inUnreleased/1.4.x, with no per-task version bump.
+
 ## Immutable workbook visual review
 
 Persist each Calc PDF with exact input revision and explicit mode/calculation settings.

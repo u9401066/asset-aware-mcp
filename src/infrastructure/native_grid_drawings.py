@@ -10,8 +10,11 @@ from src.domain.native_grid_geometry import GridPoint, relocate_axis
 if TYPE_CHECKING:
     from lxml import etree
 
-    from src.domain.native_grid import GridTransform
-    from src.domain.native_grid_geometry import GridAxisMetrics, GridPlacement
+    from src.domain.native_grid_geometry import (
+        GeometryTransform,
+        GridAxisMetrics,
+        GridPlacement,
+    )
 
 XDR = "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"
 DRAWING = "http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -99,7 +102,7 @@ def _sync_transform(
 
 def shift_drawing(
     root: etree._Element,
-    transform: GridTransform,
+    transform: GeometryTransform,
     before: GridAxisMetrics,
     after: GridAxisMetrics,
 ) -> list[dict[str, Any]]:

@@ -1,5 +1,18 @@
 # System Architect
 
+## Native worksheet layout architecture (Unreleased / 1.4.x)
+
+NativeLayoutUpdate carries explicit dimension/reset/visibility intent. Grid adapter
+exposes read_layout/update_layout; application supplies pinned paged records, the
+complete review budget and one repository CAS. LayoutTransform keeps coordinates
+fixed while shared GeometryTransform protocols let DrawingML/VML reuse authored
+move/resize policies with before/after metrics. Native XML patches split intervals
+without dropping styles/foreign attributes; sparse row creation uses ordered lookup.
+Default-hidden absent rows remain hidden when adding only a height record.
+Formula/chart caches invalidate; cell identity/content/styles and serialized XML
+are checked independently. Agents select sizes from actual frozen PDF images and
+review a new rendition; old source/PDF/evidence identities remain immutable.
+
 ## Workbook rendition architecture (Unreleased / 1.4.x)
 
 NativeWorkbookRendition supplies explicit rendering intent; NativeWorkbookRenderer

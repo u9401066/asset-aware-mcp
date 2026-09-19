@@ -1,5 +1,15 @@
 # Product Context
 
+## Agent-owned visual correction with durable asset history
+
+A document asset includes exact source versions, native locators, inspectable edits
+and durable before/after renditions. The model chooses corrections after looking
+at actual images; MCP preserves structure and makes each step verifiable. Worksheet
+layout now closes this loop for explicit row heights/column widths: real Codex
+corrects clipped titles/text without changing cell text/fonts/styles or historical
+PDFs. This validated sample does not establish general Excel fidelity or replace
+broader cross-format/corpus work. Public1.4.0; Unreleased within1.4.x.
+
 > 本檔描述目前產品定位與技術真相；歷史版本決策請見
 > `activeContext.md` 與 `decisionLog.md`。
 

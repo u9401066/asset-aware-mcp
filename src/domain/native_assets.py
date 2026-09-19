@@ -45,6 +45,9 @@ from src.domain.native_file_reference import (
     NativeFileReference,  # noqa: TC001 -- Pydantic schema
 )
 from src.domain.native_grid import NativeGridUpdate  # noqa: TC001 -- Pydantic schema
+from src.domain.native_layout import (
+    NativeLayoutUpdate,  # noqa: TC001 -- Pydantic schema
+)
 from src.domain.native_operations import (
     NativeOperation,
     operation_fields,
@@ -154,6 +157,8 @@ class NativeDocumentRequest(NativeModel):
     workbook_view: Literal["structure", "references"] = "structure"
     worksheet_insert: NativeWorksheetInsert | None = None
     worksheet_grid: NativeGridUpdate | None = None
+    worksheet_layout: NativeLayoutUpdate | None = None
+    worksheet_key: NativeWorksheetKey | None = None
     table_update: NativeTableUpdate | None = None
     table_create: NativeTableCreate | None = None
     worksheet_rename: NativeWorksheetRename | None = None

@@ -1,5 +1,54 @@
 # Progress (Updated: 2026-09-19)
 
+## Worksheet layout correction — verified locally, publication pending
+
+Implemented read_worksheet_layout/update_worksheet_layout with explicit dimensions,
+reset/visibility, complete hash-pinned receipts and one CAS. Preserve native cell
+identity/content/styles, Table/merge structures, interval metadata and authored
+DrawingML/VML anchor modes. Default-hidden absent rows stay hidden; sparse row
+creation uses ordered lookup. Formula/chart caches invalidate for Agent recalculation.
+MCP checks mechanics; Agent selects sizes and reviews actual frozen PDF images.
+
+Final fullpytest2931 passed/35 optional skips105.17s; real Calc/SDK2 passed6.75s.
+Actual default-model Codex125 successful calls/0 tool errors/194.47s,9 deliveredPNGs,
+four workbook versions, complete dimensions/receipts/pages, historical cell/PNG
+proof and exact Wiki attachments. Source text/formulas/styles/visibility preserved;
+First/Last row1=36points, Hidden columnA rawwidth24 correct observed top/right cuts.
+Independent equal-scale title pixels: red1196→2956,blue1063→2729. These are one
+synthetic workbook's corrections, not general Excel fidelity certification.
+Evidence:/dev/shm/asset-aware-codex-workbook-layout-02. Earlier run01 completed136
+calls/14 rejected oversized schema reads/170.34s; errors retained. Final rerun follows
+sparse-row optimization; no schema limits were weakened. Full01:2924/35;full02:2930/35;
+full03 is the final2931/35 run. Browser first attempt exposed a new unsupported
+fragment link; corrected the document link and verified both languages/viewports.
+
+SourceSHA c90cac3ea6ca64d70a923c84df22318123d9768adbd8823b555a82bb25c5f195
+matches actual Codex, wheel and Docker393359eef35d08baeb2d7a00505c06f0c70176fdbc22efe8d4cf8f9ae2821f6d.
+Ruff581/mypy253/Bandit/locked audit214zero/npmzero/zizmor passed. Extension199,
+VSIX package/install-update, clean wheel and Docker import/doctor/list/SDK2 passed.
+Local GUI activation unavailable. Browser plugin absent; Playwright desktop/mobile
+zh/en navigation, console and overflow passed; mobile screenshot inspected.
+README/wiki/bilingual site and bundled harness synchronized; metadata/labels checked.
+Proof:/tmp/asset-aware-layout-local-proof.json. Public stays1.4.0 / Unreleased1.4.x,
+no tag/bump. Direct-main source/docs commits and exact CI/Pages/public proof follow.
+All11 temporarily staged owned terminal runs restored with exact hashes/mtimes;
+only the completed builder and superseded owned runtime removed. Current image and
+real-Codex evidence retained. Original dirty detached user worktree untouched.
+Overall goal stays active.
+
+## Worksheet layout correction — in development
+
+Version policy reconfirmed: public1.4.0 / Unreleased for1.4.x, no per-task bump/tag.
+Previous rendition milestone fully published at e09bd566552ce1a62306a255b0722494ad38a2e6:
+CI35422734715 all10 and Pages35422733329 all3 passed; public5 files exact.
+Proof: /tmp/asset-aware-rendition-publication-proof.json. Older pending entries
+below are historical. Original dirty detached user worktree remains untouched.
+
+Next: explicit native row height/column width/reset/visibility, complete dimension
+read-back, authored object anchor behavior and Agent rerender correction. Preserve
+source revisions and immutable PDF evidence. Spec:docs/specs/native-worksheet-layout.md.
+No automatic semantic/visual verdict; full cross-format goal remains active.
+
 ## Workbook rendition publication checkpoint
 
 Source commit 890f5f09898d95de0f492f4a35f6e725968747de contains22 counted files plus5 MEM.

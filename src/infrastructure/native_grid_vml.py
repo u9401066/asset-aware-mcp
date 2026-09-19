@@ -15,8 +15,11 @@ from src.infrastructure.native_grid_xml import address, shift_cell
 if TYPE_CHECKING:
     from lxml import etree
 
-    from src.domain.native_grid import GridTransform
-    from src.domain.native_grid_geometry import GridAxisMetrics, GridPlacement
+    from src.domain.native_grid_geometry import (
+        GeometryTransform,
+        GridAxisMetrics,
+        GridPlacement,
+    )
 
 VML = "urn:schemas-microsoft-com:vml"
 EXCEL = "urn:schemas-microsoft-com:office:excel"
@@ -90,7 +93,7 @@ def _style(shape: etree._Element, placement: GridPlacement, axis: str) -> None:
 def _geometry(
     shape: etree._Element,
     data: etree._Element,
-    transform: GridTransform,
+    transform: GeometryTransform,
     before: GridAxisMetrics,
     after: GridAxisMetrics,
 ) -> dict[str, Any]:
@@ -128,7 +131,7 @@ def _geometry(
 
 def shift_vml(
     root: etree._Element,
-    transform: GridTransform,
+    transform: GeometryTransform,
     before: GridAxisMetrics,
     after: GridAxisMetrics,
 ) -> list[dict[str, Any]]:

@@ -15,13 +15,19 @@ from src.infrastructure.native_spreadsheet_reader import NS
 if TYPE_CHECKING:
     from lxml import etree
 
-    from src.domain.native_grid import GridTransform, NativeGridUpdate
-    from src.domain.native_grid_geometry import GridAxisMetrics
+    from src.domain.native_grid import NativeGridUpdate
+    from src.domain.native_grid_geometry import GeometryTransform, GridAxisMetrics
+    from src.domain.native_layout import NativeLayoutUpdate
     from src.infrastructure.native_workbook_plan import WorkbookPlan
 
 
 class GridObjects:
-    def __init__(self, plan: WorkbookPlan, worksheet: str, request: NativeGridUpdate):
+    def __init__(
+        self,
+        plan: WorkbookPlan,
+        worksheet: str,
+        request: NativeGridUpdate | NativeLayoutUpdate,
+    ):
         self.plan, self.root = plan, plan.roots[worksheet]
         self.metrics = GridMetrics(plan, request)
         self.drawings: dict[str, etree._Element] = {}
@@ -106,7 +112,7 @@ class GridObjects:
                     shapes.add(location)
 
     def before(
-        self, transform: GridTransform
+        self, transform: GeometryTransform
     ) -> tuple[GridAxisMetrics, dict[str, Any]] | None:
         if not self.drawings and not self.vml:
             return None
@@ -114,7 +120,7 @@ class GridObjects:
 
     def apply(
         self,
-        transform: GridTransform,
+        transform: GeometryTransform,
         before: tuple[GridAxisMetrics, dict[str, Any]] | None,
     ) -> dict[str, Any]:
         changes: dict[str, Any] = {"comments": [], "drawings": {}, "vml": {}}

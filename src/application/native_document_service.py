@@ -182,6 +182,8 @@ class NativeDocumentService:
             "create_workbook_rendition": self.rendition_operations.execute,
             "read_rendition": self.rendition_operations.execute,
             "update_worksheet_grid": self._workbook_operation,
+            "read_worksheet_layout": self._workbook_operation,
+            "update_worksheet_layout": self._workbook_operation,
             "update_workbook_table": self._workbook_operation,
             "add_workbook_table": self._workbook_operation,
             "add_worksheets": self._workbook_operation,

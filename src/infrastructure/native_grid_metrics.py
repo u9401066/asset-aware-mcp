@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from lxml import etree
 
     from src.domain.native_grid import NativeGridUpdate
+    from src.domain.native_layout import NativeLayoutUpdate
     from src.infrastructure.native_workbook_plan import WorkbookPlan
 
 EMU_PER_PIXEL = 9525
@@ -35,7 +36,9 @@ def _width_pixels(value: str, digit: int) -> int:
 
 
 class GridMetrics:
-    def __init__(self, plan: WorkbookPlan, request: NativeGridUpdate):
+    def __init__(
+        self, plan: WorkbookPlan, request: NativeGridUpdate | NativeLayoutUpdate
+    ):
         self.plan, self.request = plan, request
         self.calibri = self._normal_calibri()
 

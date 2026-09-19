@@ -55,12 +55,20 @@ class NativeWorkbookOperations:
         asset = self.repository.load(request.asset_id)
         if asset.format not in {"xlsx", "xlsm"}:
             raise ValueError("This format has no native workbook structure")
-        if request.op == "read_workbook":
+        if request.op in {"read_workbook", "read_worksheet_layout"}:
             revision = request.revision or asset.revision
             data = self.repository.read(asset.asset_id, revision)
-            record = self.adapter.read(
-                data, references=request.workbook_view == "references"
-            )
+            if request.op == "read_worksheet_layout":
+                if self.grid is None:
+                    raise ValueError(
+                        "Native worksheet layout adapter is not configured"
+                    )
+                assert request.worksheet_key is not None
+                record = self.grid.read_layout(data, request.worksheet_key)
+            else:
+                record = self.adapter.read(
+                    data, references=request.workbook_view == "references"
+                )
             history = next(
                 item for item in reversed(asset.history) if item.sha256 == revision
             )
@@ -97,6 +105,21 @@ class NativeWorkbookOperations:
                     "operation_result": checks.model_dump(),
                 }
             )
+        elif request.op == "update_worksheet_layout":
+            if self.grid is None:
+                raise ValueError("Native worksheet layout adapter is not configured")
+            assert request.worksheet_layout is not None
+            updated, checks = self.grid.update_layout(data, request.worksheet_layout)
+            _record_text(
+                {
+                    **self.grid.read_layout(
+                        updated, request.worksheet_layout.worksheet
+                    ),
+                    "asset_id": asset.asset_id,
+                    "revision": hashlib.sha256(updated).hexdigest(),
+                    "operation_result": checks.model_dump(),
+                }
+            )
         elif request.op == "update_worksheet_grid":
             if self.grid is None:
                 raise ValueError("Native workbook grid adapter is not configured")
@@ -121,6 +144,13 @@ class NativeWorkbookOperations:
         committed = self.repository.commit(
             asset.asset_id, request.expected_revision, updated, checks
         )
+        layout = request.op == "update_worksheet_layout"
+        review_op = "read_worksheet_layout" if layout else "read_workbook"
+        review_fields = (
+            {"worksheet_key": request.worksheet_layout.worksheet.model_dump()}
+            if layout and request.worksheet_layout is not None
+            else {"workbook_view": "references"}
+        )
         return {
             "success": True,
             "asset": self.summarize(committed),
@@ -131,13 +161,13 @@ class NativeWorkbookOperations:
                 "checks": checks.checks,
                 "repairs": checks.repairs,
                 "review_required": checks.review_required,
-                "full_result_in": "read_workbook.operation_result",
+                "full_result_in": review_op + ".operation_result",
             },
             "review_request": {
-                "op": "read_workbook",
+                "op": review_op,
                 "asset_id": asset.asset_id,
                 "revision": committed.revision,
-                "workbook_view": "references",
+                **review_fields,
             },
         }
 
@@ -173,6 +203,11 @@ def _read_page(
         "source_written": False,
         "review_boundary": "Structure and explicit reference inventory do not cover every cell or prove meaning, rendering, dynamic references or calculated results. Use read_cell and Agent review.",
     }
+    if request.op == "read_worksheet_layout":
+        result.pop("workbook_view")
+        result["worksheet_key"] = record["worksheet"]["key"]
+        result["representation"] = "native-worksheet-layout-v1"
+        result["review_boundary"] = record["review_boundary"]
     while True:
         result.update(
             text_excerpt=text[start:end],

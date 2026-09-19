@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from lxml import etree
 
     from src.domain.native_grid import GridTransform
+    from src.domain.native_grid_geometry import GeometryTransform
 
 MAX_GRID_CELLS = 200_000
 
@@ -113,7 +114,7 @@ def cell_map(root: etree._Element) -> dict[str, etree._Element]:
 
 
 def shift_cell(
-    value: str, transform: GridTransform, *, clamp: bool = False
+    value: str, transform: GeometryTransform, *, clamp: bool = False
 ) -> str | None:
     row, column = cell_position(value)
     point = transform.point(

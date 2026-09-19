@@ -5,10 +5,24 @@ from __future__ import annotations
 from bisect import bisect_left
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, Literal
+from typing import Literal, Protocol
 
-if TYPE_CHECKING:
-    from src.domain.native_grid import GridTransform
+
+class GeometryEdit(Protocol):
+    @property
+    def axis(self) -> Literal["row", "column"]: ...
+    @property
+    def limit(self) -> int: ...
+    @property
+    def at(self) -> int: ...
+    @property
+    def collapsed_objects(self) -> Literal["preserve_size", "reject"] | None: ...
+
+
+class GeometryTransform(Protocol):
+    @property
+    def edit(self) -> GeometryEdit: ...
+    def point(self, value: int, *, clamp: bool = False) -> int | None: ...
 
 
 @dataclass(frozen=True)
@@ -88,7 +102,7 @@ def relocate_axis(
     end: GridPoint,
     before: GridAxisMetrics,
     after: GridAxisMetrics,
-    transform: GridTransform,
+    transform: GeometryTransform,
     *,
     mode: Literal["twoCell", "oneCell", "absolute"],
 ) -> GridPlacement:

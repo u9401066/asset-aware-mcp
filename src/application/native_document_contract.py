@@ -76,6 +76,11 @@ def native_asset_summary(
             "edit_worksheets": asset.format in {"xlsx", "xlsm"}
             and workbook_structure_enabled
             and not asset.archived,
+            "read_worksheet_layout": asset.format in {"xlsx", "xlsm"}
+            and workbook_grid_enabled,
+            "update_worksheet_layout": asset.format in {"xlsx", "xlsm"}
+            and workbook_grid_enabled
+            and not asset.archived,
             "update_worksheet_grid": asset.format in {"xlsx", "xlsm"}
             and workbook_grid_enabled
             and not asset.archived,
@@ -128,11 +133,13 @@ def native_document_contract(
             "policy": "create_workbook_rendition pins XLSX revision, explicit print/whole_sheet and recalculate/prefer_cache policies. New immutable PDF; read complete read_rendition receipt then existing PDF page PNGs. Agent reviews layout/results; source bytes stay unchanged.",
         },
         "workbook_grid_enabled": workbook_grid_enabled,
+        "worksheet_layout_enabled": workbook_grid_enabled,
+        "worksheet_layout_policy": "Pin revision/worksheet_key; read complete dimensions. Set height_points/width_ooxml, reset_size or hidden. Anchors follow authored policies with recorded metrics. Invalidate formula/chart caches; render a new PDF for Agent review. Sources/history stay intact.",
         "workbook_table_edit_enabled": workbook_table_edit_enabled,
         "table_totals_lifecycle_enabled": workbook_table_edit_enabled,
-        "table_totals_lifecycle_policy": "update_workbook_table accepts table_update.totals_row to add/remove totals without worksheet row movement. Add requires blank cells below the Table; reuse hidden definitions or choose blanks, with optional last-data-row direct cell styles. Remove clears contents or keeps cells with own Table references frozen to pre-removal absolute ranges; definitions can be retained for reuse. Current-row selectors in kept totals formulas require explicit correction because they lack a data-row context. Other formulas keep structured references. Read complete cell receipts and source checks; Agent reviews meaning, future formula membership and rendering.",
+        "table_totals_lifecycle_policy": "update_workbook_table.totals_row adds/removes totals without moving rows. Add needs blanks; optionally reuse definitions/copy last-data-row styles. Remove clears or keeps cells; kept own-Table refs freeze to old ranges, while other formulas stay structured. Kept current-row selectors need correction. Read full receipts/source checks; Agent reviews meaning, future membership and rendering.",
         "workbook_table_creation_enabled": workbook_table_creation_enabled,
-        "workbook_table_creation_policy": "add_workbook_table pins revision, worksheet and exact range. Unique ordered column names; header_policy requires matching strings or explicitly fills blanks, preserving rich runs. Headerless Tables disable autofilter. Explicit totals rows must start blank; no rows are inserted. Calculated columns require blank cells or explicit replace_all. Preserve ordinary data and cell styles; apply the requested built-in/existing Table style. Read complete references and creation receipt; Agent checks meaning, rendering and formula results. Historical evidence never migrates.",
+        "workbook_table_creation_policy": "add_workbook_table pins revision/worksheet/range and ordered unique columns. Match headers or explicitly fill blanks; preserve rich runs. Headerless Tables disable autofilter; reserved totals cells must be blank. No row insertion. Calculated columns need blanks or replace_all. Preserve data/styles; use built-in/existing Table styles. Read full receipt/references; Agent reviews meaning, rendering and results. Historical evidence stays fixed.",
         "workbook_table_edit_policy": "update_workbook_table pins worksheet/part/ref, file revision and column IDs/expected names. Rename headers and existing structured references together; rich headers require exact header_runs. New formulas use final names. Calculated require_matching preserves exceptions by rejecting; replace_all explicitly replaces ordinary values; null/keep_cells removes metadata only. Totals edits require an existing totals row. Read complete current references and operation receipt. Source schema dependencies may block edits. Agent reviews meaning, formula results and rendered formatting; old evidence and A2T bindings never migrate.",
         "workbook_grid_policy": "Sequential row/column insert/delete uses exact worksheet keys and revisions. Preserve native payloads, styles and modeled dependencies; read the complete operation receipt. Geometry uses declared metrics. Dynamic sources, rendered layout and recalculated results need Agent review; historical references never migrate.",
         "table_expansion_enabled": workbook_grid_enabled,
@@ -267,7 +274,13 @@ def _formats(
             ]
         )
     if workbook_structure_enabled and workbook_grid_enabled:
-        workbook_ops.append("update_worksheet_grid")
+        workbook_ops.extend(
+            [
+                "update_worksheet_grid",
+                "read_worksheet_layout",
+                "update_worksheet_layout",
+            ]
+        )
     if workbook_structure_enabled and workbook_table_edit_enabled:
         workbook_ops.append("update_workbook_table")
     if workbook_structure_enabled and workbook_table_creation_enabled:

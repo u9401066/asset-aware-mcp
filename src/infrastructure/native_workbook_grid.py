@@ -38,6 +38,7 @@ from src.infrastructure.native_grid_shared import (
 from src.infrastructure.native_grid_tables import GridTables
 from src.infrastructure.native_grid_views import shift_breaks, shift_views
 from src.infrastructure.native_grid_xml import tag
+from src.infrastructure.native_workbook_layout import read_layout, update_layout
 from src.infrastructure.native_workbook_plan import WorkbookPlan
 
 if TYPE_CHECKING:
@@ -46,6 +47,9 @@ if TYPE_CHECKING:
 
 
 class NativeWorkbookGrid:
+    read_layout = staticmethod(read_layout)
+    update_layout = staticmethod(update_layout)
+
     def update(
         self, data: bytes, request: NativeGridUpdate
     ) -> tuple[bytes, NativeEditResult]:
