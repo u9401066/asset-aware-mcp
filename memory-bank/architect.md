@@ -1,5 +1,24 @@
 # System Architect
 
+## Immutable ETL citation evidence (Unreleased / 1.4.x)
+
+Domain EtlEvidenceReference binds snapshot manifest hash, full evidence-record hash,
+source identity and immutable_captured_extraction scope; typed selector enables full
+read-only discovery. Application etl_references contains the former pure presentation
+helpers, with backward-compatible wrappers. EtlEvidenceService rebuilds spans from
+captured canonical bytes, checks complete typed locators, stores/reads the immutable
+record and delegates original-page rendering to the bounded PDF adapter. No semantic
+judgment or fabricated bibliography is added.
+
+Infrastructure FileEtlSourceReader bounds original/manifest/markdown/blocks/image IO,
+rejects unsafe paths/symlinks and rechecks captured files. FileEtlSnapshotRepository
+uses existing exclusive manifest-last publication and verifies every artifact on
+read. Mixed CSL sources export all captured artifacts with content-hashed filenames.
+Hash paging and actual PNGs remain within the existing evidence facade; no new tool,
+dependency or version. Original ETL directories may change/disappear without changing
+saved evidence; tampered snapshots fail. DOCX DFM is separate; native DOCX already
+supplies CSL references. Agent reviews meaning, extraction accuracy and actual pages.
+
 ## CSL citation document architecture (Unreleased / 1.4.x)
 
 CslDocument and CslProcessor live in domain with bounded structured bibliographic

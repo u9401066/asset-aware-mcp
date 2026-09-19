@@ -10,7 +10,10 @@ Existing custom citation display remains available. Exact native references and
 source attachments accompany immutable portable Wiki snapshots and HTML typography.
 Bibliographic truth, semantic support and printed locator correspondence belong to
 Agent review; MCP validates mechanical structure/source/version/resource integrity.
-Legacy ETL evidence bindings and broader style/corpus coverage remain ongoing.
+Unreleased legacy PDF ETL spans/tables/figures now use explicit immutable capture,
+full readback and original-page views, mixed with native CSL evidence. All original
+source/extraction artifacts travel with Wiki snapshots and survive ETL deletion.
+Broader publication/style/corpus coverage remains ongoing.
 Public1.4.0 / Unreleased1.4.x; this feature does not trigger a version bump.
 
 ## Agent-owned visual correction with durable asset history

@@ -16,6 +16,7 @@ from src.application.csl_citation_service import CslCitationService
 from src.application.dfm_table_bridge import DfmTableBridge
 from src.application.document_service import DocumentService
 from src.application.docx_service import DocxService
+from src.application.etl_evidence_service import EtlEvidenceService
 from src.application.job_service import JobService
 from src.application.knowledge_service import KnowledgeService
 from src.application.native_document_service import NativeDocumentService
@@ -31,6 +32,10 @@ from src.domain.marker_errors import MARKER_INSTALL_HINT, MarkerBackendUnavailab
 from src.infrastructure.bundle_publisher import FileBundlePublisher
 from src.infrastructure.config import settings
 from src.infrastructure.csl_processor import NodeCslProcessor
+from src.infrastructure.etl_evidence_store import (
+    FileEtlSnapshotRepository,
+    FileEtlSourceReader,
+)
 from src.infrastructure.excel_renderer import ExcelRenderer
 from src.infrastructure.extractor_factory import (
     HELD_STRUCTURED_ENGINES,
@@ -208,10 +213,17 @@ native_document_service = NativeDocumentService(
 )
 
 
+etl_evidence_service = EtlEvidenceService(
+    FileEtlSourceReader(settings.data_dir),
+    FileEtlSnapshotRepository(settings.data_dir / "citation-sources"),
+    ProcessNativePdf(),
+)
+
 csl_citation_service = CslCitationService(
     NodeCslProcessor(),
     native_document_service.evidence,
     FileNativeWikiPublisher((settings.data_dir,)),
+    etl=etl_evidence_service,
 )
 
 

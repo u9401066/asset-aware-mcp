@@ -2987,6 +2987,7 @@ async def evidence(
     expected_text_sha256: Annotated[
         str | None, Field(pattern=r"^[0-9a-f]{64}$")
     ] = None,
+    render_size: Annotated[int, Field(ge=64, le=2048)] = 1024,
 ) -> Any:
     """Evidence operations; contract describes citation formats, bundle applies them.
 
@@ -2997,8 +2998,43 @@ async def evidence(
     Vancouver processing; read every text page at one text_sha256. Optional
     wiki_root exports an immutable citation snapshot with exact native sources.
     CSL text_limit is 1..8000 characters; stop paging when next_text_offset is null.
+    inspect_etl_source takes ref={doc_id,source_type,source_id} and returns a full
+    current AssetRef via hash paging. capture_etl_source verifies/captures it in ref.
+    read_etl_source reads the resulting immutable ref; view_etl_source returns its
+    actual original PDF page image. Use the captured ref in CSL sources; source
+    extraction accuracy and semantic support still require Agent review.
     """
     operation = _normalize_op(op)
+    if render_size != 1024 and operation != "view_etl_source":
+        return {"success": False, "error": "render_size requires view_etl_source"}
+    if operation in {
+        "inspect_etl_source",
+        "capture_etl_source",
+        "read_etl_source",
+        "view_etl_source",
+    }:
+        from src.presentation.tools.csl_support import etl_operation
+
+        if (
+            citation_document is not None
+            or citation_contract is not None
+            or citation_metadata is not None
+            or wiki_root
+        ):
+            return {
+                "success": False,
+                "error": "ETL source operations use ref, not citation document/templates or wiki_root",
+            }
+        payload = await etl_operation(
+            operation, ref, text_offset, text_limit, expected_text_sha256, render_size
+        )
+        if "image_png" in payload:
+            from src.presentation.native_pdf_response import native_pdf_image_response
+
+            return native_pdf_image_response(payload, title="Captured ETL source page")
+        return format_limited_json_response(
+            title="Captured ETL evidence", payload=payload
+        )
     if operation in {"csl_contract", "render_citations"}:
         from src.presentation.tools.csl_support import csl_operation
 

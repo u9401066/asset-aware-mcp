@@ -1,5 +1,62 @@
 # Progress (Updated: 2026-09-19)
 
+## ETL evidence snapshots — validated, publication pending
+
+Immutable legacy PDF ETL capture/read/view plus complete no-write inspection now
+connect spans/tables/figures with native sources in CSL. Fresh spans rebuild from
+captured canonical artifacts, not cached citation_index. Raw BOM/encoding/line-ending
+bytes remain separate from normalized text hashes. Source/locator checks are MCP
+mechanics; Agent reviews extraction, pixels, semantics and bibliographic truth.
+Public1.4.0 / Unreleased1.4.x, no tag. Original dirty checkout remains untouched.
+
+Full01:3110passed35optional-skips289.41s with NIST/NASA. New snapshot unit34pass;
+SDK2 actual ingestion/historical PNG onepass38.65s; seven later auditor regressions
+pass0.13s separately. Actual default Codex01:52successful/2recovered input errors,
+223.68s,6PNGs,3ETLsnapshots,1mixed-source Wiki. Both errors passed text_limit to native
+contract; schema paging recovered. Initial audit mistook mime_type for wire mimeType
+and omitted readonly schema discovery; same retained trace passes corrected audit.
+Original failure retained in audit.before-wire-fix.json; no model rerun/model override.
+Evidence:/run/user/1000/asset-aware-codex-etl-csl-01. No subagents.
+
+Source SHA296dc68aca5227328ac6eef71f74af6502449561e8edcfeaebbc99d96e72da86
+matches actual/wheel/checkout/Docker727caccabe93. Clean Python3.10 wheel runtime and
+outside-checkout replay pass all3historical PNGs and byte-identical Wiki. BaseDocker
+import/doctor/tools/SDK2 pass; CSL explicitly lacks optionalNode; readonly Node mount
+renders, and readonly actual-evidence replay with matching UID1000 passes. First
+replay default container UID could not read host0600 native asset metadata; retained
+failure, no chmod or source mutation. VSIX199tests/64files/install-update pass; local
+activation unavailable and delegated to CI. Browserzh/en desktop/mobile guide +APA
+preview pass6screens with existing private Chromium libs; first missingLD_LIBRARY_PATH
+launch retained. Ruff636/mypy274/Bandit/harness/security/artifacts and final docs/auditor46pass
+0.37s all pass. uv214/npm0vulnerabilities, existing zizmorinfo baseline.
+
+All11 temporarily staged owned terminal directories restored with exact hashes/mtimes;
+/tmp/asset-aware-etl-csl-staging.json allrestoredtrue. Only owned replaced Docker image
+1a0f5426b862 and current terminalbuilder42b30863b83c removed. Root~16MiBfree; private
+wheel env removed after terminal replay proof. No outstanding staging obligation. Final docs,
+MEM, scoped commits (<=30 counted files), mainpush/CI/Pages/live-byte proof remain.
+Whole multi-format goal remains active; this is substantive progress, not blocked.
+
+## ETL citation snapshots — active
+
+Previous goal turn made substantive progress:5f4450b168fbcf67aa22fdc53bf8eb82405f8a2e
+fully published; CI35436567752 all10success, Pages35436567715 all3success, six public
+files exact, latestreleasev1.4.0, mainclean. Authoritative external proof:
+/tmp/asset-aware-csl-publication-proof.json. No proof-only commit needed.
+
+Current gap: legacy PDF ETL AssetRefs bind mutable manifest/markdown/blocks, unlike
+native immutable revisions. Implement explicit capture/read/view of immutable ETL
+citation snapshots, then mixed native/ETL CSL sources and portable full evidence.
+Read docs/specs/etl-citation-snapshots.md before source changes. Existing pure ref
+checks move into application without changing public compatibility. Canonical spans
+must rebuild from captured bytes; cached spans alone are insufficient. DOCX DFM is
+separate; native DOCX block refs already provide its CSL route. Consulted official
+DoclingDocument/graph provenance docs for structured content+geometry+hash boundaries.
+MCP checks bytes/locators/versions; Agent reviews meaning, actual images and citations.
+Public1.4.0/Unreleased1.4.x; actual Codex uses unchanged default model; no subagents.
+RootFS28MiB free; use /run/user/1000 for task scratch, keep all previous evidence.
+No current staged/restoration obligation; prior11directories fully restored.
+
 ## CSL docs and publication checkpoint
 
 Source/tests91e2131 follows pinned resources/spec6ad8ab5; both authored by authorized

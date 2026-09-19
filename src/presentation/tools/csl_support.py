@@ -7,7 +7,43 @@ from typing import Any
 
 from src.application.csl_citation_service import citation_page
 from src.domain.csl_citations import CslDocument
-from src.presentation.dependencies import csl_citation_service
+from src.domain.etl_evidence import EtlEvidenceReference, EtlSourceSelector
+from src.presentation.dependencies import csl_citation_service, etl_evidence_service
+
+
+async def etl_operation(
+    operation: str,
+    ref: dict[str, Any] | None,
+    offset: int,
+    limit: int,
+    expected: str | None,
+    render_size: int,
+) -> dict[str, Any]:
+    try:
+        if ref is None:
+            raise ValueError("ETL evidence operations require ref")
+        citation_page({}, offset, limit, None)
+        if operation == "inspect_etl_source":
+            selector = EtlSourceSelector.model_validate(ref)
+            result = await asyncio.to_thread(etl_evidence_service.inspect, selector)
+        elif operation == "capture_etl_source":
+            result = await asyncio.to_thread(
+                etl_evidence_service.capture, ref, expected
+            )
+        else:
+            parsed = EtlEvidenceReference.model_validate(ref)
+            if operation == "view_etl_source":
+                if offset or limit != 4000 or expected is not None:
+                    raise ValueError(
+                        "view_etl_source uses ref/render_size, not text paging"
+                    )
+                return await asyncio.to_thread(
+                    etl_evidence_service.view, parsed, render_size
+                )
+            result = await asyncio.to_thread(etl_evidence_service.read, parsed)
+        return citation_page(result, offset, limit, expected)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        return {"success": False, "error": str(exc)[:2000]}
 
 
 async def csl_operation(

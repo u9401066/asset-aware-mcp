@@ -9,12 +9,18 @@ from typing import TYPE_CHECKING, Any
 from src.application.citation_format_service import citation_markdown
 from src.application.csl_markup import citation_preview, safe_csl_html
 from src.domain.csl_citations import MAX_CSL_OUTPUT_BYTES, CslDocument
+from src.domain.etl_evidence import (
+    ETL_REFERENCE_VERSION,
+    EtlEvidenceReference,
+    EtlSourceSelector,
+)
 from src.domain.native_assets import NativeDocumentRequest
 from src.domain.native_wiki import MAX_WIKI_BYTES
 
 if TYPE_CHECKING:
     from src.application.native_evidence_service import NativeEvidenceService
     from src.domain.csl_citations import CslProcessor
+    from src.domain.etl_evidence import EtlCitationSources
     from src.domain.native_wiki import NativeWikiPublisher
 
 
@@ -74,8 +80,11 @@ class CslCitationService:
         processor: CslProcessor,
         evidence: NativeEvidenceService,
         publisher: NativeWikiPublisher,
+        *,
+        etl: EtlCitationSources | None = None,
     ):
         self.processor, self.evidence, self.publisher = processor, evidence, publisher
+        self.etl = etl
 
     def contract(self) -> dict[str, Any]:
         return {
@@ -83,6 +92,22 @@ class CslCitationService:
             **self.processor.capabilities(),
             "document_schema": CslDocument.model_json_schema(),
             "operations": ["csl_contract", "render_citations"],
+            "etl_sources": {
+                "configured": self.etl is not None,
+                "operations": [
+                    "inspect_etl_source",
+                    "capture_etl_source",
+                    "read_etl_source",
+                    "view_etl_source",
+                ],
+                "capture_input": "ref: complete current canonical span/table/figure AssetRef; previews are rejected",
+                "inspect_selector_schema": EtlSourceSelector.model_json_schema(),
+                "inspect": "ref selector returns full current asset_ref/record with hash paging; no snapshot is written",
+                "reference_schema": EtlEvidenceReference.model_json_schema(),
+                "paging": "capture/read use text_offset/text_limit/expected_text_sha256; read returns immutable historical evidence",
+                "view": "ref plus render_size 64..2048; actual captured original PDF page PNG",
+                "lifecycle": "capture before mutable ETL changes; use returned immutable reference in sources; no automatic migration",
+            },
             "source_reference_schema": "document native contract for_op=verify; use complete references",
             "review_required": [
                 "bibliographic_metadata",
@@ -101,59 +126,17 @@ class CslCitationService:
         sources: dict[str, Any] = {}
         attachments: dict[str, bytes] = {}
         for key, value in document.sources.items():
-            reference = NativeDocumentRequest.model_validate(
-                {"op": "verify", "reference": value}
-            ).reference
-            if reference is None:
-                raise ValueError("Citation source requires a complete native reference")
-            verification = self.evidence.verify(reference)
-            if not verification.get("valid"):
-                raise ValueError(
-                    "Citation source reference failed verification: " + key
-                )
-            record = {
-                "reference": reference.model_dump(mode="json"),
-                "verification": {
-                    "valid": True,
-                    "verification_scope": verification["verification_scope"],
-                    "checks": verification.get("checks", {}),
-                },
-                "semantic_support": "not_checked",
-            }
-            asset = self.evidence.repository.load(reference.asset_id)
-            data = self.evidence.repository.read(reference.asset_id, reference.revision)
-            if digest(data) != reference.revision:
-                raise ValueError("Citation attachment revision mismatch")
-            extension = (
-                asset.format
-                if asset.format
-                in {
-                    "pdf",
-                    "docx",
-                    "pptx",
-                    "xlsx",
-                    "xlsm",
-                    "csv",
-                    "tsv",
-                    "png",
-                    "jpeg",
-                    "jpg",
-                }
-                else "bin"
-            )
-            name = f"source-{reference.revision}.{extension}"
+            if value.get("schema_version") == ETL_REFERENCE_VERSION:
+                record, files = self._etl_source(value)
+            else:
+                record, files = self._native_source(value)
             if wiki_root:
-                attachments[name] = data
+                attachments.update(files)
             if (
                 sum(map(len, attachments.values()))
                 > MAX_WIKI_BYTES - MAX_CSL_OUTPUT_BYTES
             ):
                 raise ValueError("Citation source attachments exceed wiki byte limit")
-            record["attachment"] = {
-                "name": name,
-                "sha256": digest(data),
-                "size_bytes": len(data),
-            }
             sources[key] = record
         output = self.processor.render(document)
         citations = []
@@ -216,6 +199,87 @@ class CslCitationService:
         )
         return result, publication
 
+    def _native_source(
+        self, value: dict[str, Any]
+    ) -> tuple[dict[str, Any], dict[str, bytes]]:
+        reference = NativeDocumentRequest.model_validate(
+            {"op": "verify", "reference": value}
+        ).reference
+        if reference is None:
+            raise ValueError("Citation source requires a complete native reference")
+        verification = self.evidence.verify(reference)
+        if not verification.get("valid"):
+            raise ValueError("Citation source reference failed verification")
+        record = {
+            "reference": reference.model_dump(mode="json"),
+            "verification": {
+                "valid": True,
+                "verification_scope": verification["verification_scope"],
+                "checks": verification.get("checks", {}),
+            },
+            "semantic_support": "not_checked",
+        }
+        asset = self.evidence.repository.load(reference.asset_id)
+        data = self.evidence.repository.read(reference.asset_id, reference.revision)
+        if digest(data) != reference.revision:
+            raise ValueError("Citation attachment revision mismatch")
+        extension = (
+            asset.format
+            if asset.format
+            in {
+                "pdf",
+                "docx",
+                "pptx",
+                "xlsx",
+                "xlsm",
+                "csv",
+                "tsv",
+                "png",
+                "jpeg",
+                "jpg",
+            }
+            else "bin"
+        )
+        name = f"source-{reference.revision}.{extension}"
+        record["attachment"] = {
+            "name": name,
+            "sha256": digest(data),
+            "size_bytes": len(data),
+        }
+        return record, {name: data}
+
+    def _etl_source(
+        self, value: dict[str, Any]
+    ) -> tuple[dict[str, Any], dict[str, bytes]]:
+        if self.etl is None:
+            raise ValueError("ETL citation snapshots are not configured")
+        reference = EtlEvidenceReference.model_validate(value)
+        captured, files = self.etl.resolve(reference)
+        artifacts, attachments = {}, {}
+        for name, data in files.items():
+            prefix = "source" if name == captured["source_file"] else "evidence"
+            extension = name.rsplit(".", 1)[-1]
+            target = f"{prefix}-{digest(data)}.{extension}"
+            artifacts[name] = {
+                "name": target,
+                "sha256": digest(data),
+                "size_bytes": len(data),
+            }
+            attachments[target] = data
+        record = {
+            "reference": reference.model_dump(mode="json"),
+            "verification": {
+                "valid": True,
+                "verification_scope": reference.verification_scope,
+                "checks": captured["checks"],
+            },
+            "semantic_support": "not_checked",
+            "attachment": artifacts[captured["source_file"]],
+            "evidence_record": captured,
+            "snapshot_artifacts": artifacts,
+        }
+        return record, attachments
+
     def _publish(
         self, wiki_root: str, result: dict[str, Any], attachments: dict[str, bytes]
     ) -> dict[str, Any]:
@@ -236,6 +300,12 @@ class CslCitationService:
                 f"- [Source {citation_markdown(key)}]({result['sources'][key]['attachment']['name']})"
                 for key in keys
             ]
+            for key in keys:
+                artifacts = result["sources"][key].get("snapshot_artifacts")
+                if artifacts:
+                    source_links.append(
+                        f"- [Captured evidence {citation_markdown(key)}]({artifacts['evidence.json']['name']})"
+                    )
             note = (
                 f"# {citation_markdown(cluster['id'])}\n\n<div>{cluster['html']}</div>\n\n"
                 + "\n".join(source_links)
