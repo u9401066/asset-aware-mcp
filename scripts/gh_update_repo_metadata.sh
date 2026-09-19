@@ -15,7 +15,7 @@ if [[ ! "$REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
   exit 2
 fi
 
-DESCRIPTION="Agent document collaboration: versioned PDF pages, DOCX/PPTX, spreadsheets and CSV/TSV, with checked edits, source provenance and wikilink evidence libraries"
+DESCRIPTION="Agent document collaboration: versioned PDF pages, DOCX/PPTX, spreadsheets and CSV/TSV, with checked edits, source provenance, CSL citations and wikilink evidence libraries"
 # The repository homepage should open the redesigned product landing. README
 # documentation links intentionally deep-link to the generated reader instead.
 HOMEPAGE="https://u9401066.github.io/asset-aware-mcp/"

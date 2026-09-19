@@ -1,5 +1,11 @@
 # asset-aware-mcp
 
+Unreleased 已加入完整文稿的 CSL 引用：APA 7、Chicago 18 與 Vancouver／NLM，
+處理同作者年份消歧、重複引用及參考文獻；Wiki 保留精確來源附件與排版預覽，
+原有自訂模板仍可使用。詳見
+[學術引用文稿](docs/wiki/Citation-Provenance.md#csl-citation-documents-unreleased)。
+公開版仍為 **1.4.0**，變更累積於 **1.4.x**。
+
 真實 PDF 回歸已加入 NIST 證書與 Apollo 11 原始掃描報告，固定來源位元組、
 獨立核對完整表格字串，並直接使用 Codex 實測。
 詳見 [真實文件驗證](docs/wiki/Release-And-Testing.md#real-pdf-corpus-unreleased)。

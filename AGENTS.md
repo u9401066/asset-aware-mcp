@@ -38,6 +38,16 @@ and LightRAG knowledge graph outputs.
 
 ## Native Files and Agent Review
 
+- For document-context academic citations, discover evidence(op="csl_contract")
+  completely, then render_citations with structured CSL-JSON items and ordered
+  clusters. Read every text page at one text_sha256. sources holds full native
+  references; source_keys binds cites without overriding canonical locators.
+  Printed CSL locators and bibliographic truth require Agent review. wiki_root
+  exports immutable citations, source files and a typography preview; use the
+  preview hash as expected_text_sha256. Old refs/snapshots remain historical.
+  CSL uses optional local Node.js; existing custom display templates remain.
+  Public1.4.0 / Unreleased1.4.x; no per-feature version bump.
+
 - When delimited_enabled is advertised, create_delimited creates independent CSV/TSV
   string tables. Pin revisions for read_delimited/read_delimited_cell; logical row/
   column indices are zero-based. Assemble complete JSON at one text_sha256. Explicit

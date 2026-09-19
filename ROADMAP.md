@@ -50,7 +50,10 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
 - [x] Versioned custom citation display contracts for existing PDF evidence,
   Foam notes and portable asset exports, independent of canonical provenance.
 - [ ] Standards-aware academic citation rendering (APA/Chicago/CSL) and citation
-  integration with the remaining native-format evidence adapters.
+  integration with the remaining native-format evidence adapters. Unreleased CSL
+  citation documents now connect complete native references to APA7/Chicago18/
+  Vancouver-NLM and portable Wiki snapshots; broad publication/style coverage and
+  integration with legacy ETL evidence remain ongoing.
 - [ ] Real-file regressions, README/Pages/metadata/labels/MEM synchronization,
   reviewed staged commits/pushes and fully verified releases throughout the work.
 

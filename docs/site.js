@@ -321,7 +321,7 @@ MCP checks source versions, locators, saved values and unchanged package parts. 
 ## v1.2.0: native evidence wiki
 Version 1.2.0 adds verify and export_wiki. Export a revision-pinned Foam index and cell notes, original attachment, manifest and full JSONL references. Native citation_contract and citation_metadata go inside native_request; sheet/cell locators come from the source. Opaque formats export attachments without fabricated interpretation.
 
-New revisions create new snapshots. Existing notes are verified and never replaced; modified or unexpected files stop reuse. Put human synthesis in adjacent notes. A new citation style for the same revision requires a separate wiki directory. The 20,000-cell and 128 MiB limits reject incomplete exports. Interrupted publication retains files and reports reconciliation_required. Full academic CSL formatting and rendered verification remain separate work.
+New revisions create new snapshots. Existing notes are verified and never replaced; modified or unexpected files stop reuse. Put human synthesis in adjacent notes. A new citation style for the same revision requires a separate wiki directory. The 20,000-cell and 128 MiB limits reject incomplete exports. Interrupted publication retains files and reports reconciliation_required. Document-context CSL citations use evidence csl_contract/render_citations; the native export_wiki projection retains display templates. Rendered verification still requires Agent review.
 
 ## v1.3.0: native DOCX
 Version 1.3.0 adds read_docx and update_docx using the existing DFM checks. Read all excerpts at a fixed revision, preserve frontmatter and block markers, then submit complete edits to create a managed revision. Untouched OOXML parts are checked byte for byte; source writeback stays explicit. DOCX block references now support bounded read_docx_block and native verification. A distinct docx-blocks-v1 wiki projection includes full parsed block records, the original DOCX and exact package-part attachments, preserving previous snapshots. Integrity does not prove extraction completeness. Unreleased body creation and insertion/deletion are described below. Document-wide styles and full layout verification remain separate work.
@@ -488,7 +488,18 @@ DOCX ingest creates a DFM representation with Word-origin block and run metadata
 
 ## Respect format boundaries
 Use validation and conversion tools for supported round trips, and review structural table edits before writeback.`,
-  "citation-provenance": `## Preserve exact evidence
+  "citation-provenance": `## CSL citation documents (Unreleased)
+Render a complete document through evidence(op="render_citations", citation_document=...). Discover the hash-paged csl_contract first. Pinned citeproc-js and official styles support APA7, Chicago18 author-date/notes and Vancouver-NLM citation sequence. Document context handles retroactive year suffixes, repeat citations and bibliography ordering; sorting within a group follows the selected style. Existing citation-format-v1 custom templates remain available.
+
+Provide structured CSL-JSON items, ordered clusters and optional uncited_ids. Chicago notes require positive ordered note_index values; in-text styles use zero. locales are en-US and zh-TW, with bundled zh-CN base fallback. Missing author/date/title fields are reported; no bibliographic data is invented. Optional local Node.js >=20 is required only for this operation (use a supported Node24 LTS). No runtime network downloads or installs. The bundled npm release is 2.4.63; its internal processor version is 1.4.61, recorded separately with exact resource hashes and upstream licenses.
+
+Place full native references in sources, then connect each cite through source_keys. Native source integrity is verified at immutable revisions. Printed CSL locators remain caller-supplied display data, separate from PDF indices or native locators. Agent review covers bibliographic truth, semantic support, printed locator correspondence and typography.
+
+Read every text_excerpt page at one text_sha256 and verify UTF-8 SHA-256. expected_text_sha256 rejects changed content before publication. Optional wiki_root creates an immutable citation snapshot with exact source attachments, complete citations.json, per-cluster wikilinks and references.html typography preview. Identical snapshots require exact byte/inventory checks before reuse; curated notes and historical citations remain intact after native edits. This is a document citation snapshot; existing native export_wiki projections remain unchanged.
+
+Limits:500 bibliography items,1000 clusters,2MiB input,8MiB result,128MiB total Wiki output. Bounded Node processing fails explicitly on timeout or invalid input. Public1.4.0 / Unreleased1.4.x.
+
+## Preserve exact evidence
 A canonical AssetRef ties an exact quote to document identity, revision, line or character ranges, context, and hashes. Verification fails closed when the current source no longer matches those fields.
 
 ## Distinguish previews
@@ -590,6 +601,16 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### CSL citation document evaluation (Unreleased)
+
+On 2026-09-19 the actual default Codex model completed APA/Vancouver citation documents and two immutable Wikis in 38 successful MCP calls, one recovered tool error and 192.75 seconds. It viewed four PDF images before/after rotation, read the complete contract, page records and citation pages, and checked APA same-author/year disambiguation, ordering, bibliography and historical references. A truncated native schema hash was rejected and retrieved again; this was not a zero-error run. Human PDF bytes/mtime stayed unchanged and the original APA snapshot remained reusable after the managed source changed.
+
+The first run is also retained: 167 successful calls, one recovered error and 221.2 seconds, including many redundant page reads that do not establish additional coverage. That run exceeded the CSL page limit; MCP now advertises typed bounds and the test prompt explicitly stops at null next_text_offset. Independent audit checks complete readbacks, images, original attachments, snapshot inventories, bibliography values and resource hashes. Forged excerpts and missing initial chunks have regression tests. The two-book/two-page fixture is explicitly fictional, not proof of real scholarly accuracy.
+
+Reproduce with uv run python -m tests.codex_csl.run --output /absolute/new-csl-run; ordinary pytest never starts a model. scripts/smoke_csl_runtime.py checks the installed optional Node.js processor. Full suite: 3,075 passed / 35 optional skipped in 221.04s, including the actual NIST/NASA corpus. Clean Python3.10 CSL unit/audit/SDK2 group: 31 passed in 23.30s. Three outdated GitHub description fixtures were synchronized after an earlier full-suite failure; the complete rerun passed. Source hashes match checkout, wheel, actual Codex and Docker. The base container explicitly reports Node.js unconfigured; mounting an optional Node executable read-only passes real APA rendering. VSIX199 tests and install/update pass; local extension activation is unavailable and remains a CI check.
+
+Browser checks cover 1440x1000 and390x844, Chinese/English guide switching, APA/Vancouver previews, nonblank content, no horizontal overflow, italics and APA hanging indent, with eight screenshots retained. These cases do not establish every journal, language or metadata combination. Agent review still owns bibliographic truth, semantic support, printed locator correspondence and final typography. Public1.4.0 / Unreleased1.4.x, with no new version tag.
 
 ### Real PDF corpus (Unreleased)
 

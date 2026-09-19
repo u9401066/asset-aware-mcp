@@ -1,5 +1,12 @@
 # asset-aware-mcp
 
+Unreleased CSL citation documents now render APA 7, Chicago 18 and Vancouver/NLM
+with complete document context, including disambiguation and repeated citations.
+Portable Wiki snapshots retain exact native sources and a typography preview;
+existing custom templates remain available. See
+[academic citation documents](docs/wiki/Citation-Provenance.md#csl-citation-documents-unreleased).
+Public **1.4.0**; changes accumulate within **1.4.x**.
+
 Real PDF regression now includes a NIST certificate and the original Apollo 11
 scans, with pinned source bytes, complete table-string oracles and actual Codex
 evaluation. See [real-document validation](docs/wiki/Release-And-Testing.md#real-pdf-corpus-unreleased).

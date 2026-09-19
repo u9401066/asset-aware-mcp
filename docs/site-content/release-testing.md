@@ -2,6 +2,42 @@
 
 # Release And Testing
 
+## CSL citation document evaluation (Unreleased)
+
+2026-09-19 的真實 **Codex 預設模型**透過 MCP 完成 APA／Vancouver 引用文件與
+兩份不可變 Wiki：**38 次成功呼叫、1 次恢復的工具錯誤、192.75 秒**。Agent 查看
+原始及旋轉後共四張 PDF 圖像，完整讀取 contract、頁面紀錄與引用分頁，並核對
+來源、APA 同作者同年 a／b 消歧義、引文順序、參考文獻及歷史引用。錯誤是抄短
+native schema 雜湊，被工具拒絕後重取；不可宣稱零錯誤。來源 PDF 的 bytes／mtime
+不變，舊來源修改後，原本的 APA 快照仍可原樣重用。
+
+首輪 **167 次成功呼叫、1 次錯誤、221.2 秒**亦保留；其中含大量重複頁面讀取，
+不能算成額外覆蓋。該輪超出 CSL 分頁上限後恢復；現在 MCP schema 明示上下界，
+測試提示亦要求 next_text_offset 為 null 時停止。獨立稽核檢查完整讀回內容、
+圖像、原檔附件、快照清單、書目值及資源雜湊；偽造摘錄或漏讀初始分頁有回歸測試。
+這是明確標示虛構的兩本書／兩頁 PDF fixture，不是實際學術文獻正確性的證明。
+
+重現方式（一般 pytest 不啟動模型；Node.js 為此排版功能的選配執行環境）：
+
+```bash
+uv run pytest tests/unit/test_csl_processor.py tests/unit/test_csl_citation_service.py tests/unit/test_codex_csl_audit.py tests/integration/test_csl_citations_stdio.py
+uv run python -m tests.codex_csl.run --output /absolute/new-csl-run
+uv run python scripts/smoke_csl_runtime.py
+```
+
+完整套件 **3,075 passed／35 optional skipped（221.04 秒）**，包含真實 NIST／NASA
+PDF 回歸；乾淨 Python 3.10 的 CSL 單元／稽核／SDK2 共 **31 passed（23.30 秒）**。
+先前完整測試揭露三個 GitHub 描述 fixture 尚未包含 CSL 文案，已同步並重跑通過。
+wheel、實際 Codex、Docker 與原始碼雜湊一致。基礎容器未包含 Node.js，明確回報
+未配置；唯讀掛載 Node.js 後實際 APA 排版通過。VSIX **199 項**測試與安裝／更新
+通過；本機未執行 extension activation，交由 CI 環境驗證。
+
+瀏覽器驗證涵蓋 1440×1000／390×844、中英指南切換與 APA／Vancouver 排版預覽，
+檢查非空內容、無水平溢出、斜體及 APA 懸掛縮排，留存八張截圖。
+這些範例不涵蓋所有期刊規則、語言或書目欄位組合；書目真實性、來源語意支持、
+印刷頁碼對應與最終版面仍由 Agent 核對。公開版 **1.4.0**，功能保留於
+**Unreleased／1.4.x**，沒有新增版本標籤。
+
 ## Real PDF corpus (Unreleased)
 
 2026-09-19 的 **Codex 預設模型**直接透過本工作樹 MCP 處理以下原始公開文件，

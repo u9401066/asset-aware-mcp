@@ -2,6 +2,75 @@
 
 # Citation Provenance
 
+## CSL citation documents (Unreleased)
+
+公開版維持 **1.4.0**，新功能累積於 **Unreleased／1.4.x**。
+
+學術引用以整份文稿為單位處理：同作者同年份消歧、群組排序、編號與重複註解
+會影響其他引用，不能逐筆套模板。`evidence(op="csl_contract")` 提供固定 hash 的
+分頁契約；`evidence(op="render_citations", citation_document=...)` 回傳完整引用與
+參考文獻。既有 `citation-format-v1` 自訂模板與 source／author-year／numeric
+顯示預設保持原本用途；author-year 模板不能當作 APA 認證。
+
+可選樣式為 `apa`（APA 7）、`chicago-author-date`、
+`chicago-notes-bibliography`（Chicago 18）與 `vancouver`（官方 Vancouver/NLM
+的 `nlm-citation-sequence`）。樣式決定群組內是否排序；Chicago 18 的官方
+作者年份樣式保留輸入順序。語系可指定 `en-US`／`zh-TW`，另附 CSL 所需的
+`zh-CN` 基礎詞彙回退。所有 XML、schema、處理器都有固定來源及雜湊。
+
+需要 PATH 上的本機 Node.js（最低 20，建議使用受支援的 Node.js 24 LTS）。
+不在 runtime 下載樣式、安裝套件或連線找文獻。未配置 Node 時會明確回報，
+其他文件及自訂模板功能照常運作。內附 citeproc npm 2.4.63，處理器內部版號
+1.4.61；兩者分別記錄。上游授權與完整出處保留於套件的 `csl_resources`。
+
+最小文稿例子：
+
+```json
+{
+  "style": "apa",
+  "locale": "en-US",
+  "items": [{
+    "id": "report",
+    "type": "report",
+    "title": "Example report",
+    "author": [{"literal": "Example Institute"}],
+    "issued": {"date-parts": [[2020]]}
+  }],
+  "clusters": [{"id": "claim-1", "cites": [{"id": "report"}]}]
+}
+```
+
+以 CSL-JSON 結構提供作者、日期及出版資料，不從任意字串猜測。`clusters` 順序
+就是文稿順序；Chicago 註腳需正數且依序的 `note_index`，其他樣式使用 0。
+`uncited_ids` 可明確加入未於文中引用的文獻。缺少 author／issued／title 會列入
+`missing_metadata`，引擎可能依樣式產生無日期等顯示，但不補造來源資料。
+
+若需證據，先取得原生完整引用，放入文稿的 `sources` 字典，再在各 cite 的
+`source_keys` 指定對應鍵。支援既有原生 cell／DOCX block／PPTX shape／PDF
+page、region／CSV field／selection／whole-file 引用。每一筆固定 revision
+引用都重新驗證；CSL `locator` 是另行提供的印刷頁碼或節號，不會覆寫原生
+定位，也不會自動證明它對應 PDF 的實際頁面。語意及書目真實性由 Agent 核對。
+
+回應包含 `text_excerpt`、`text_sha256` 與 `next_text_offset`。每次以相同文稿
+和 hash 讀完所有頁，串接後核對 UTF-8 SHA-256 再解析；文字片段不是完整結果。
+`text_limit` 為 1–8,000 字元，實際切頁另考量 JSON 跳脫後大小。
+`expected_text_sha256` 不符時拒絕操作，且不建立 Wiki。
+
+指定 `wiki_root` 後，每種文稿／樣式會建立不可變快照：完整 `citations.json`、
+各引用的 wikilink note、精確來源附件、manifest，以及 `references.html`
+排版預覽（斜體、懸掛縮排、行距）。已有相同快照必須逐檔核對才可重用；人工
+改動不會被覆蓋。來源更新後舊引用仍固定原版本，不能自動把新內容當成舊證據。
+來源本身與 native `export_wiki` 的既有投影不改寫；此操作建立文稿引用快照。
+
+目前上限為 500 筆書目、1,000 個引用群組、2 MiB 輸入、8 MiB 結果；來源附件
+與其他 Wiki 檔案合計最多 128 MiB。Node 子程序有記憶體及時間限制，超限明確
+失敗，不回傳部分參考文獻。正式文稿仍應由 Agent 核對書目、印刷定位及排版。
+
+參考實作：[citeproc-js](https://github.com/Juris-M/citeproc-js)、
+[CSL 規格](https://docs.citationstyles.org/en/stable/specification.html)、
+[官方樣式](https://github.com/citation-style-language/styles)。
+
+
 ## 目標
 
 Citation-ready 在此專案中表示：每個引用都能追溯到具體文件、block/span、locator、hash 與周邊 context。不能只保存一段文字，因為文件轉換、OCR、DFM 編輯或 table persistence 都可能讓 locator 漂移。

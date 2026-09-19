@@ -550,7 +550,8 @@ document(op="native", native_request={
 symlink 會拒絕覆蓋。若要用不同引用格式重新呈現同一版本，請指定另一個匯出目錄，
 將其當作另一份 wiki 使用；目前沒有原地重寫快照或自動合併人工筆記的操作。
 筆記名稱與 canonical reference 不受顯示格式影響；引用定位如 `'Budget'!B2`
-由來源產生，不能透過 citation metadata 覆寫。這不是完整 APA／CSL 排版引擎。
+由來源產生，不能透過 citation metadata 覆寫。此處是顯示模板；完整文稿的 APA／CSL 引用另用 evidence 的
+csl_contract／render_citations，見 [學術引用文稿](Citation-Provenance#csl-citation-documents-unreleased)。
 
 上限為 20,000 個已儲存 cell、128 MiB 匯出內容，超過時整次拒絕，不會靜默截斷。
 尚未儲存的空白座標及 chart／dialog sheets 不產生儲存格筆記。公式快取未重新計算；

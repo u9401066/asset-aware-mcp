@@ -7,6 +7,14 @@
 
 ## [Unreleased]
 
+- Added document-context CSL citation rendering through `evidence` with pinned
+  citeproc-js, official APA7/Chicago18/Vancouver-NLM styles and locales. Full
+  hash-paged results retain structured bibliographic data, retroactive citation
+  updates, sorted bibliography mappings and native source references. Optional
+  immutable Wiki snapshots include exact source bytes and a safe typography preview.
+  Local Node.js is optional and required only for CSL rendering; existing custom
+  citation templates remain unchanged. Public1.4.0 / Unreleased1.4.x.
+
 - Added hash-pinned NIST and NASA real PDF corpus tests, independent complete
   table-string oracles, actual default-model Codex evaluation and SDK2 regressions.
   Preserve first transcription/workflow failures separately from retries. CI

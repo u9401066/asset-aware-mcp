@@ -83,7 +83,7 @@ if [[ "$1" == "api" && "$*" == *"--jq .description"* ]]; then
   if [[ "${GH_FAKE_SCENARIO:-ok}" == "metadata-drift" ]]; then
     printf '%s\\n' 'stale description'
   else
-    printf '%s\\n' 'Agent document collaboration: versioned PDF pages, DOCX/PPTX, spreadsheets and CSV/TSV, with checked edits, source provenance and wikilink evidence libraries'
+    printf '%s\\n' 'Agent document collaboration: versioned PDF pages, DOCX/PPTX, spreadsheets and CSV/TSV, with checked edits, source provenance, CSL citations and wikilink evidence libraries'
   fi
 elif [[ "$1" == "api" && "$*" == *"--jq .homepage"* ]]; then
   printf '%s\\n' 'https://u9401066.github.io/asset-aware-mcp/'
