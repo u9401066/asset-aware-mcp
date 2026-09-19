@@ -15,6 +15,7 @@ from src.infrastructure.native_pdf_graph import (
     PdfObjectGraph,
     canonical,
 )
+from src.infrastructure.native_pdf_lengths import verified_parser_checks
 
 
 class NativePdfPackage:
@@ -41,8 +42,9 @@ class NativePdfPackage:
             raise ValueError("Native PDF exceeds the object limit")
         if len({page.obj.objgen for page in self.pdf.pages}) != len(self.pdf.pages):
             raise ValueError("Native PDF has duplicate page object identities")
-        if self.pdf.get_warnings():
-            raise ValueError("Native PDF parser reported warnings; repair separately")
+        self.parser_checks = verified_parser_checks(
+            self.data, self.pdf, self.pdf.get_warnings()
+        )
 
     def __enter__(self) -> NativePdfPackage:
         return self
@@ -99,6 +101,8 @@ class NativePdfPackage:
             "text_blocks": self._text(index),
             "extraction_scope": "native_text_blocks_and_pdf_object_graph; no_OCR_or_semantic_segmentation",
         }
+        if self.parser_checks:
+            record["parser_checks"] = self.parser_checks
         if len(canonical(record)) > 16 * 1024 * 1024:
             raise ValueError("Native PDF page representation exceeds 16 MiB")
         return record

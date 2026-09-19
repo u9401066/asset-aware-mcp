@@ -1,5 +1,88 @@
 # Progress (Updated: 2026-09-19)
 
+## Real PDF corpus — all local publication gates passed
+
+Full03:3043passed35optional-skips197.35s, with actual government corpus enabled.
+Passed-fixture cleanup and TMPDIR avoid constrained-disk failures; assertions/test
+coverage unchanged. Clean private Python3.10:31passed74.86s; canonical built-wheel
+CLI/doctor/tools/SDK2 smoke passes. Installed-wheel import was independently checked
+outside checkout. Source/wheel/actualNIST02+NASA01/Docker all share SHA
+fae31e15c827e60055c8a00286e56d4df0b54ed197b61f39821a63c1509c4300.
+Docker e4de8f8e8de61e8de06a743860f3e3886083c016479ba39d8e998bd922c5939e
+passes import/doctor/tools/actualSDK2; old owned a83runtime and67886aa builder removed
+only after proof.11ownedterminal evidence directories were staged to private
+/run/user/1000 then restored with exact hashes/mtimes; manifestallrestoredtrue:
+/tmp/asset-aware-real-pdf-staging.json. Private wheel environment removed after proof;
+Python3.10 SDKfixtures retained /run/user/1000/asset-aware-real-pdf-py310-tests-01.
+VSIX199tests106ms,64file packageaudit,66file233.83KiBpackage,install/update pass;
+local activation unavailable as before. Browser zh/en desktop/mobile pass.
+Docs35pass; source Ruff614/mypy265/Bandit, zizmorbaseline,uv215lock/214audit/npm0
+passed. Public1.4.0/Unreleased1.4.x,no tag.
+
+Next: staged source/spec/tests and docs/harness commits under authorized user,
+pushmain, then require exact-head CI, Pages and public-byte proofs. Broad goal active.
+
+
+## Real public PDF corpus — actual Agent proofs and parser correction
+
+Current source SHA fae31e15c827e60055c8a00286e56d4df0b54ed197b61f39821a63c1509c4300
+matches both actual default-model Codex runs: NIST02 234successful/0errors283.58s,
+25rows75data-cells; NASA01 232/0/251.22s,34rows68data-cells across2pages. All143
+first-transcribed values match independently image-reviewed truth. Each run audits
+7CSV history events, allinitial/finalfields, bytes/BOM/CRLF, complete receipts,
+source bytes/mtime, sampled region claims and Wiki. NIST01 remains a failed workflow:
+75/75transcription but model edited column0 instead of specifiedcolumn1 (237calls,
+256.27s). Explicit zero-based wording fixed retry; do not erase first outcome.
+Artifacts:/dev/shm/asset-aware-codex-real-{nist-01,nist-02,nasa-01}.
+
+NASA original source has359 duplicate Length warnings. New source-byte/xref/dictionary
+checks prove718 equal direct integer declarations against all raw streams and bounds;
+read bytes unchanged, parser_checks retained, requested edits/copies record repair.
+Conflicts/indirect/unknown warnings still fail. Native page references for ordinary
+PDFs stay unchanged.15focused parser regressions plus14corpus/auditor cases and2real
+SDK2 cases pass31/72.10s; actual NASA page copy canonicalizes duplicates.
+
+Independent exact direct-region pixels pass; full-page crop resampling differs on
+old scans, so corpus audit reports diagnostic4.726/3.847mean differences instead of
+reusing synthetic mean<1 assumption. Separate calibrated glyph bounds/string truth
+remain; forged PNG+hash is rejected. Both rendering paths share MuPDF.
+
+README/CHANGELOG/ROADMAP, zh/en Pages guides and5assistant sources+bundled copies
+updated; docs35pass, browser4desktop/mobile/language flows pass. CI now explicitly
+fetches/hash-checks original government PDFs;3platform inventories include offline
+parser/oracle tests. Metadata/labels already synchronized. Ruff614/mypy265/Bandit,
+zizmor baseline and dependency audits pass; VSIX199tests/package64pass.
+
+Full01 exhausted shared-memory test scratch; full02 passed3040 with3failures:
+worker root-temp ENOSPC(2), doc-link convention(1). Fixed docs links and directed
+TMPDIR to SHM; focused failures2pass. Full03 now runs with passed-fixture cleanup,
+no disabled assertions. Preserve final SDK05/actual evidence; terminal failed SDK
+scratch/full01 and duplicate verified download were removed. Source corpus remains
+/dev/shm/asset-aware-real-pdf-sources-01. RootFS tight; owned terminal evidence may
+be temporarily staged via /tmp/asset-aware-real-pdf-stage.py to /run/user/1000 only
+with snapshot/hash/mtime verification and exact restoration.
+
+Remaining publication gates: full03, fresh wheel/isolated Python3.10/runtime proof,
+VSIX install smoke, Docker, scoped source/docs commits+push, exact-head CI/Pages.
+Public1.4.0/future1.4.x, no new tag. Original broader goal remains active.
+
+
+## Real PDF corpus — active work
+
+Previous CSV milestone is fully published at c88747951ed3599911451d083bc72600ac4f0767:
+CI35430475848 all10 success, Pages35430475275 all3 success, public5 exact. External
+proof:/tmp/asset-aware-delimited-publication-proof.json. Main clean, only main;
+Python/VSIX/latest release remain1.4.0, future workUnreleased1.4.x/no new tag.
+
+Next requirement: actual real-file PDF visual/structured CRUD. Spec now records
+unchanged NIST1648a (17pages, SHAde60072d…) and Apollo11 NASA report (359pages,
+SHA3314d996…), including scan+imperfectOCR, not synthetic scans. Entire selected
+tables:25 NISTrows,34 NASArows across2pages. Independently image-reviewed string
+oracles, source-hash pins and region coverage; actual default-model Codex plus
+separate SDK2 tests. Sources:/dev/shm/asset-aware-real-pdf-sources-01. No completion
+claim yet; broad native text/web/media and academiccitation work remains active.
+
+
 ## Native delimited compatibility publication checkpoint
 
 NUL source correction e16a971cc70c5a295bc6eb0de9a20e5b50e9b1c3 preserves exact CSV strings/positions across Python3.10

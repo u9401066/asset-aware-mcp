@@ -144,6 +144,10 @@ def checked_serialization(
     labels = [p.label for p in pdf.pages]
     data = save_pdf(pdf, min_version)
     with NativePdfPackage(data) as checked:
+        if checked.parser_checks:
+            raise ValueError(
+                "Serialized PDF retains redundant stream length declarations"
+            )
         if len(checked.pdf.pages) != len(identities):
             raise ValueError("PDF page count changed during serialization")
         actual_map = {

@@ -30,6 +30,11 @@ def copy_pages(
 
     with NativePdfPackage(data) as source:
         source.check_editable()
+        if (
+            source.parser_checks
+            and "canonicalized_equal_duplicate_stream_lengths" not in plan.repairs
+        ):
+            plan.repairs.append("canonicalized_equal_duplicate_stream_lengths")
         plan.min_version = max(
             plan.min_version,
             source.pdf.pdf_version,

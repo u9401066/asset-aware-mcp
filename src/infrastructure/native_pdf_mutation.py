@@ -22,7 +22,12 @@ if TYPE_CHECKING:
 
 class PdfMutation:
     def __init__(
-        self, pdf: pikepdf.Pdf, data: bytes | None = None, *, adding: bool = False
+        self,
+        pdf: pikepdf.Pdf,
+        data: bytes | None = None,
+        *,
+        adding: bool = False,
+        parser_checks: list[dict[str, Any]] | None = None,
     ):
         self.pdf = pdf
         self.min_version = pdf.pdf_version
@@ -44,7 +49,9 @@ class PdfMutation:
         )
         self.geometry: set[tuple[int, int]] = set()
         self.changes: list[dict[str, Any]] = []
-        self.repairs: list[str] = []
+        self.repairs: list[str] = (
+            ["canonicalized_equal_duplicate_stream_lengths"] if parser_checks else []
+        )
         self.imports: dict[tuple[int, int], tuple[bytes, int, str]] = {}
 
     def expect_geometry(self, page: pikepdf.Page, ignored: tuple[str, ...]) -> str:

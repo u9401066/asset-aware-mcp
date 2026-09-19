@@ -1,5 +1,19 @@
 # Decision Log
 
+## 2026-09-19 — Real scans, equivalent Length declarations and independent oracles
+
+Use unchanged hash-pinned government PDFs, not synthetic replacements, to expand
+actual Codex testing. Separate factual string truth, native byte/locator integrity,
+Agent visual review and source-region raster replay. Preserve first-run failures.
+NASA's redundant equal stream lengths are accepted only after bounded lexical/xref/
+raw-byte proof; no warning suppression or silent source rewrite. Expose parser_checks
+and record output canonicalization. Unknown/conflicting/indirect cases still fail.
+Do not apply a synthetic full-page-crop pixel-error threshold to different scan
+resampling; direct source pixels stay exact, full-page differences remain measured,
+and glyph bounds plus independently reviewed values retain independent checks.
+Public1.4.0/future1.4.x; no per-feature bump.
+
+
 ## 2026-09-19 — Native delimited file semantics
 
 Use maintained Python csv for values and a separate source-boundary scanner for

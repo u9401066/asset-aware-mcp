@@ -155,6 +155,8 @@ jobs:
           tests/unit/test_native_pdf.py
           tests/unit/test_native_pdf_contract.py
           tests/unit/test_native_pdf_guards.py
+          tests/unit/test_native_pdf_lengths.py
+          tests/unit/test_real_pdf_corpus.py
           tests/unit/test_native_pdf_operations.py
           tests/unit/test_native_pdf_worker.py
           tests/unit/test_native_docx.py
@@ -273,6 +275,8 @@ jobs:
           tests/unit/test_native_pdf.py
           tests/unit/test_native_pdf_contract.py
           tests/unit/test_native_pdf_guards.py
+          tests/unit/test_native_pdf_lengths.py
+          tests/unit/test_real_pdf_corpus.py
           tests/unit/test_native_pdf_operations.py
           tests/unit/test_native_pdf_worker.py
           tests/unit/test_native_docx.py
@@ -383,6 +387,8 @@ jobs:
           tests/unit/test_native_pdf.py
           tests/unit/test_native_pdf_contract.py
           tests/unit/test_native_pdf_guards.py
+          tests/unit/test_native_pdf_lengths.py
+          tests/unit/test_real_pdf_corpus.py
           tests/unit/test_native_pdf_operations.py
           tests/unit/test_native_pdf_worker.py
           tests/unit/test_native_docx.py
@@ -543,11 +549,15 @@ jobs:
       - name: Prepare private pinned CJK font fixture
         run: uv run python -m tests.codex_docx_structure.fonts --output "$RUNNER_TEMP/asset-aware-cjk-fonts"
 
+      - name: Fetch and verify pinned public PDF corpus
+        run: uv run python -m tests.real_pdf.corpus --directory "$RUNNER_TEMP/asset-aware-real-pdf-corpus" --fetch
+
       - name: Run DFM + MCP Integration Tests
         env:
           NATIVE_PPTX_RENDER_TEST: "1"
           NATIVE_DOCX_RENDER_TEST: "1"
           NATIVE_DOCX_FONT_FIXTURE: ${{ runner.temp }}/asset-aware-cjk-fonts
+          ASSET_AWARE_REAL_PDF_CORPUS: ${{ runner.temp }}/asset-aware-real-pdf-corpus
         run: |
           uv run pytest \
             tests/test_dfm.py \
@@ -558,6 +568,9 @@ jobs:
             tests/integration/test_pdf_asset_stdio_e2e.py \
             tests/integration/test_pdf_crud_stdio_matrix.py \
             tests/integration/test_native_pdf_stdio.py \
+            tests/integration/test_native_pdf_regions_stdio.py \
+            tests/integration/test_native_delimited_stdio.py \
+            tests/integration/test_real_pdf_corpus_stdio.py \
             tests/integration/test_native_pptx_picture_stdio.py \
             tests/integration/test_native_pptx_table_stdio.py \
             tests/integration/test_native_pptx_grid_stdio.py \

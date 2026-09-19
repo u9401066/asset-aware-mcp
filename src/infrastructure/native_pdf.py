@@ -61,6 +61,11 @@ class NativePdf:
     def inspect(self, data: bytes) -> dict[str, Any]:
         with NativePdfPackage(data) as package:
             return {
+                **(
+                    {"parser_checks": package.parser_checks}
+                    if package.parser_checks
+                    else {}
+                ),
                 "page_count": len(package.pdf.pages),
                 "pdf_version": package.pdf.pdf_version,
                 "pages": [
@@ -97,7 +102,9 @@ class NativePdf:
     ) -> tuple[bytes, NativeEditResult]:
         with NativePdfPackage(data) as package:
             package.check_editable()
-            plan = PdfMutation(package.pdf, data, adding=True)
+            plan = PdfMutation(
+                package.pdf, data, adding=True, parser_checks=package.parser_checks
+            )
             if len(package.pdf.pages) + len(request.pages) > MAX_PDF_PAGES:
                 raise ValueError("PDF insertion exceeds the page limit")
             insert_pages(plan, request.pages, sources, request.position)
@@ -111,7 +118,7 @@ class NativePdf:
             targets = _targets(package, references)
             if len(targets) == len(package.pdf.pages):
                 raise ValueError("PDF deletion must retain at least one page")
-            plan = PdfMutation(package.pdf, data)
+            plan = PdfMutation(package.pdf, data, parser_checks=package.parser_checks)
             for ref in sorted(
                 references, key=lambda r: r.locator.page_index, reverse=True
             ):
@@ -129,7 +136,7 @@ class NativePdf:
             targets = _targets(package, references, MAX_PDF_PAGES)
             if len(targets) != len(package.pdf.pages):
                 raise ValueError("PDF reorder must name every page exactly once")
-            plan = PdfMutation(package.pdf, data)
+            plan = PdfMutation(package.pdf, data, parser_checks=package.parser_checks)
             for position, page in enumerate(targets):
                 index = next(
                     i
@@ -154,7 +161,7 @@ class NativePdf:
         with NativePdfPackage(data) as package:
             package.check_editable()
             pages = _targets(package, [edit.reference for edit in edits])
-            plan = PdfMutation(package.pdf, data)
+            plan = PdfMutation(package.pdf, data, parser_checks=package.parser_checks)
             for page, edit in zip(pages, edits, strict=True):
                 ignored = tuple(
                     key
