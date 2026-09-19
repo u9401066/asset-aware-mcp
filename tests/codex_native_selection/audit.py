@@ -128,7 +128,11 @@ def audit(output):
     pages = complete_records(calls)
     records = selected_records(calls, pages)
     directory = workspace / "data" / "native-assets" / target["asset_id"]
-    if expected.get("worksheets"):
+    if expected.get("grid"):
+        from tests.codex_native_grid.audit import validate_grid_history
+
+        validate_grid_history(calls, target, directory)
+    elif expected.get("worksheets"):
         from tests.codex_native_workbook.audit import validate_workbook_history
 
         validate_workbook_history(calls, target, directory)
@@ -212,6 +216,7 @@ def audit(output):
         "scope": "Synthetic scan page to literal XLSX table; precise historical value evidence and two revision-specific wikis. No OCR or Excel rendering guarantee.",
         "worksheet_structure_evaluated": bool(expected.get("worksheets")),
         "native_table_workspaces_evaluated": bool(expected.get("tables")),
+        "native_grid_evaluated": bool(expected.get("grid")),
     }
 
 

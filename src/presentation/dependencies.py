@@ -49,6 +49,7 @@ from src.infrastructure.native_pptx import NativePresentation
 from src.infrastructure.native_pptx_render import LibreOfficePresentationRenderer
 from src.infrastructure.native_spreadsheet import SpreadsheetFileAdapter
 from src.infrastructure.native_wiki_publisher import FileNativeWikiPublisher
+from src.infrastructure.native_workbook_grid import NativeWorkbookGrid
 from src.infrastructure.native_workbook_range import NativeWorkbookRange
 from src.infrastructure.native_workbook_structure import NativeWorkbookStructure
 from src.infrastructure.ocr_processor import OCRProcessor
@@ -191,6 +192,7 @@ native_document_service = NativeDocumentService(
     docx_structure=NativeDocxStructure(),
     docx_renderer=LibreOfficeWordRenderer(),
     workbook_structure=NativeWorkbookStructure(),
+    workbook_grid=NativeWorkbookGrid(),
     workbook_ranges=NativeWorkbookRange(),
     table_workspaces=table_service,
 )

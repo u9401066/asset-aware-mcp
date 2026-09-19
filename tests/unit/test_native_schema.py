@@ -84,6 +84,32 @@ def test_scoped_schema_declares_runtime_fields_and_fits_response(operation):
         assert not Draft202012Validator(field_schema).is_valid(None)
 
 
+@pytest.mark.parametrize("operation", get_args(NativeOperation))
+def test_all_enabled_formats_keep_contract_and_schema_discovery_complete(operation):
+    contract = native_document_contract(
+        NativeDocumentRequest(for_op=operation),
+        docx_enabled=True,
+        pptx_enabled=True,
+        pdf_enabled=True,
+        workbook_structure_enabled=True,
+        workbook_grid_enabled=True,
+        table_workspaces_enabled=True,
+        derivations_enabled=True,
+        pptx_rendering_configured=True,
+        docx_structure_enabled=True,
+        docx_rendering_configured=True,
+    )
+    assert "response_truncated" not in format_limited_json_response(
+        title="Native", payload=contract
+    )
+    schema = _assemble(contract["schema_request"])
+    assert schema == native_schema.request_schema(operation)
+    if contract["schema_delivery"] == "inline":
+        assert contract["schema"] == schema
+    else:
+        assert "schema" not in contract
+
+
 def test_scoped_update_has_nested_definitions_and_nonempty_edits():
     schema = native_schema.request_schema("update")
     validator = Draft202012Validator(schema)

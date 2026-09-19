@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any
 
 from src.application.native_schema import schema_discovery
@@ -19,6 +20,7 @@ def native_asset_summary(
     pptx_enabled: bool = False,
     pdf_enabled: bool = False,
     workbook_structure_enabled: bool = False,
+    workbook_grid_enabled: bool = False,
     table_workspaces_enabled: bool = False,
 ) -> dict[str, Any]:
     return {
@@ -72,6 +74,9 @@ def native_asset_summary(
             "edit_worksheets": asset.format in {"xlsx", "xlsm"}
             and workbook_structure_enabled
             and not asset.archived,
+            "update_worksheet_grid": asset.format in {"xlsx", "xlsm"}
+            and workbook_grid_enabled
+            and not asset.archived,
             "project_workbook_table": asset.format in {"xlsx", "xlsm"}
             and table_workspaces_enabled,
             "inspect_cells": asset.format in {"xlsx", "xlsm"},
@@ -92,6 +97,7 @@ def native_document_contract(
     pptx_enabled: bool = False,
     pdf_enabled: bool = False,
     workbook_structure_enabled: bool = False,
+    workbook_grid_enabled: bool = False,
     table_workspaces_enabled: bool = False,
     derivations_enabled: bool = False,
     pptx_rendering_configured: bool = False,
@@ -99,12 +105,14 @@ def native_document_contract(
     docx_rendering_configured: bool = False,
 ) -> dict[str, Any]:
     for_op = request.for_op if request is not None else None
-    return {
+    result = {
         "success": True,
         "contract_version": "native-contract-v2",
         "operations": list(NATIVE_OPERATIONS),
         **schema_discovery(for_op),
         "workbook_structure_enabled": workbook_structure_enabled,
+        "workbook_grid_enabled": workbook_grid_enabled,
+        "workbook_grid_policy": "Sequential row/column insert/delete uses exact worksheet keys and revisions. Preserve native payloads, styles and modeled dependencies; read the complete operation receipt. Geometry uses declared metrics. Dynamic sources, rendered layout and recalculated results need Agent review; historical references never migrate.",
         "table_workspaces_enabled": table_workspaces_enabled,
         "table_workspace_policy": "Project exact worksheet ranges into tagged A2T cells without header/type inference. Read complete hash-pinned workspaces/source records; preserve source bindings. Apply only unchanged row/column correspondence with exact table hash and native revision. Independent creation is a new workbook. Applied/exported A2T snapshots are retained as workspace_reference; Agent reviews meaning, formula results and layout.",
         "workbook_policy": "Read complete hash-pinned read_workbook JSON. Sheet changes need current revision and sheetId/part keys. Preserve explicit references, views and scopes; reject surviving deletion dependencies and default 3D membership changes. Dynamic strings, calculation results and rendering need Agent review. Detached parts remain; no secure erasure.",
@@ -135,6 +143,7 @@ def native_document_contract(
             docx_rendering_configured,
             workbook_structure_enabled,
             table_workspaces_enabled,
+            workbook_grid_enabled,
         ),
         "verification": "MCP checks integrity; agents verify semantics, layout and calculated results.",
         "docx_policy": "Pin revision; assemble all DFM chunks with frontmatter/markers. Updates stage versions; writeback is explicit.",
@@ -143,6 +152,15 @@ def native_document_contract(
         "archive_policy": "Archive retains history and the human source.",
         "wiki_policy": "Immutable snapshots; never replace existing notes. Citation fields go inside native_request.",
     }
+    # Account for enabled-format inventory and policy text as well as the schema.
+    # Keep the hash-pinned schema request when moving a large contract to pages.
+    if (
+        "schema" in result
+        and len(json.dumps(result, ensure_ascii=False, indent=2)) > 10_000
+    ):
+        result.pop("schema")
+        result["schema_delivery"] = "paged"
+    return result
 
 
 def _edit_constraints(format_name: str) -> list[str]:
@@ -196,6 +214,7 @@ def _formats(
     docx_rendering_configured: bool = False,
     workbook_structure_enabled: bool = False,
     table_workspaces_enabled: bool = False,
+    workbook_grid_enabled: bool = False,
 ) -> dict[str, list[str]]:
     workbook_ops = (
         [
@@ -217,6 +236,8 @@ def _formats(
                 "create_workbook_from_table",
             ]
         )
+    if workbook_structure_enabled and workbook_grid_enabled:
+        workbook_ops.append("update_worksheet_grid")
     return {
         "pdf": [
             "create_pdf",

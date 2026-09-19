@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from src.domain.native_derivation import NativeDerivationRepository
     from src.domain.native_docx import NativeDocxAdapter
     from src.domain.native_docx_structure import NativeDocxStructureAdapter
+    from src.domain.native_grid import NativeGridAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_rendering import (
@@ -63,11 +64,17 @@ class NativeDocumentService:
         workbook_structure: NativeWorkbookStructureAdapter | None = None,
         workbook_ranges: NativeTableRangeReader | None = None,
         table_workspaces: NativeTableWorkspaces | None = None,
+        workbook_grid: NativeGridAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
+        if workbook_grid is not None and workbook_structure is None:
+            raise ValueError("Native grid editing requires workbook read-back support")
+        self.workbook_grid = workbook_grid
         self.workbook_operations = (
-            NativeWorkbookOperations(repository, workbook_structure)
+            NativeWorkbookOperations(
+                repository, workbook_structure, workbook_grid, summarize=self._summary
+            )
             if workbook_structure
             else None
         )
@@ -126,6 +133,7 @@ class NativeDocumentService:
             pptx_enabled=self.presentations is not None,
             pdf_enabled=self.pdfs is not None,
             workbook_structure_enabled=self.workbook_operations is not None,
+            workbook_grid_enabled=self.workbook_grid is not None,
             table_workspaces_enabled=self.table_operations is not None,
         )
 
@@ -143,6 +151,7 @@ class NativeDocumentService:
             "apply_table_workspace": self._table_operation,
             "create_workbook_from_table": self._table_operation,
             "read_workbook": self._workbook_operation,
+            "update_worksheet_grid": self._workbook_operation,
             "add_worksheets": self._workbook_operation,
             "rename_worksheet": self._workbook_operation,
             "reorder_worksheets": self._workbook_operation,
@@ -221,6 +230,7 @@ class NativeDocumentService:
             pptx_enabled=self.presentations is not None,
             pdf_enabled=self.pdfs is not None,
             workbook_structure_enabled=self.workbook_operations is not None,
+            workbook_grid_enabled=self.workbook_grid is not None,
             table_workspaces_enabled=self.table_operations is not None,
             derivations_enabled=self.derivations is not None,
             docx_structure_enabled=self.docx is not None

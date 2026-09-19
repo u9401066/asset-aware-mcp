@@ -9,16 +9,36 @@ from typing import TYPE_CHECKING, Any
 from src.application.native_document_contract import native_asset_summary
 
 if TYPE_CHECKING:
-    from src.domain.native_assets import NativeAssetRepository, NativeDocumentRequest
+    from collections.abc import Callable
+
+    from src.domain.native_assets import (
+        NativeAssetRepository,
+        NativeDocumentRequest,
+        NativeFileAsset,
+    )
+    from src.domain.native_grid import NativeGridAdapter
     from src.domain.native_workbook import NativeWorkbookStructureAdapter
 
 
 class NativeWorkbookOperations:
     def __init__(
-        self, repository: NativeAssetRepository, adapter: NativeWorkbookStructureAdapter
+        self,
+        repository: NativeAssetRepository,
+        adapter: NativeWorkbookStructureAdapter,
+        grid: NativeGridAdapter | None = None,
+        *,
+        summarize: Callable[[NativeFileAsset], dict[str, Any]] | None = None,
     ):
         self.repository = repository
         self.adapter = adapter
+        self.grid = grid
+        self.summarize = summarize or (
+            lambda asset: native_asset_summary(
+                asset,
+                workbook_structure_enabled=True,
+                workbook_grid_enabled=grid is not None,
+            )
+        )
 
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.asset_id is not None
@@ -46,7 +66,12 @@ class NativeWorkbookOperations:
         if asset.archived or asset.revision != request.expected_revision:
             raise ValueError("Archived or stale native asset; inspect before editing")
         data = self.repository.read(asset.asset_id, request.expected_revision)
-        if request.op == "add_worksheets":
+        if request.op == "update_worksheet_grid":
+            if self.grid is None:
+                raise ValueError("Native workbook grid adapter is not configured")
+            assert request.worksheet_grid is not None
+            updated, checks = self.grid.update(data, request.worksheet_grid)
+        elif request.op == "add_worksheets":
             assert request.worksheet_insert is not None
             updated, checks = self.adapter.add(
                 data, request.worksheet_insert, request.allow_3d_membership_change
@@ -65,7 +90,7 @@ class NativeWorkbookOperations:
         )
         return {
             "success": True,
-            "asset": native_asset_summary(committed, workbook_structure_enabled=True),
+            "asset": self.summarize(committed),
             "source_written": False,
             "operation_result": {
                 "changed_part_count": len(checks.changed_parts),

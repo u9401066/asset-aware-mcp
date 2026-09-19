@@ -52,8 +52,26 @@ async def _discover(native, document) -> None:
     assert "NativeDocxEdit" in document.input_schema["$defs"]
     for operation in ("create", "update_docx"):
         scoped = await native(op="contract", for_op=operation)
-        assert scoped["schema_delivery"] == "inline"
-        assert scoped["schema"]["properties"]["op"]["const"] == operation
+        assert "response_truncated" not in scoped
+        if scoped["schema_delivery"] == "inline":
+            schema = scoped["schema"]
+        else:
+            request, chunks = scoped["schema_request"], []
+            while True:
+                page = await native(**request)
+                assert page["success"] and "response_truncated" not in page
+                assert page["schema_sha256"] == scoped["schema_sha256"]
+                chunks.append(page["text_excerpt"])
+                if page["next_text_offset"] is None:
+                    break
+                request = {**request, "text_offset": page["next_text_offset"]}
+            text = "".join(chunks)
+            assert (
+                hashlib.sha256(text.encode("utf-8")).hexdigest()
+                == scoped["schema_sha256"]
+            )
+            schema = json.loads(text)
+        assert schema["properties"]["op"]["const"] == operation
     rejected = await native(op="schema", schema_sha256="0" * 64)
     assert rejected["success"] is False
 
