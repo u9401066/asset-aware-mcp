@@ -7,6 +7,13 @@
 
 🌐 [繁體中文](README.zh-TW.md) · [Docs Site](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+Unreleased native Excel/A2T workspaces preserve typed values and exact source-cell
+references. Edit projected cells in A2T, then apply them to the original workbook at
+checked table/file revisions; each applied input remains an immutable snapshot.
+Structural A2T changes can create an independent workbook. See
+[native table workspaces](docs/wiki/A2T-Tables.md#native-workbook-workspaces-unreleased).
+Public stays **1.4.0**; development continues within **1.4.x**.
+
 Unreleased workbook structure operations now read complete sheet/reference inventories,
 add, rename, reorder and delete worksheets while retaining native package parts.
 Explicit references and view indices receive checked repairs; Agent review covers

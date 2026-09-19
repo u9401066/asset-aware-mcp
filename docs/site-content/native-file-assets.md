@@ -2,6 +2,15 @@
 
 # Native File Assets（v1.4.0）
 
+## Native table workspaces (Unreleased)
+
+原生工作簿可投影指定範圍到 A2T，以帶型別的值與完整原始儲存格引用協作。
+`project_workbook_table`／`read_table_workspace`／`apply_table_workspace`／
+`create_workbook_from_table` 提供讀回、原檔儲存格更新及獨立建立；詳見
+[A2T 原生工作區](#/a2t-tables)。套用輸入保留
+不可變快照，來源綁定不自動前進；原檔列欄結構修改與完整畫面核對仍有明確邊界。
+公開版維持 1.4.0，後續使用 1.4.x。
+
 ## Workbook sheet structure (Unreleased)
 
 先查 `contract(for_op="read_workbook")` 的 `workbook_structure_enabled`。

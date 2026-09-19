@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Unreleased / 1.4.x: native range ↔ A2T cell-value correspondence, typed edits, source-cell evidence, immutable input snapshots and independent workbook creation. Applying structural row/column changes with formula, merge and style relocation remains open.
+
 - [x] Unreleased / 1.4.x: native worksheet read/add/rename/reorder/delete with stable keys, explicit reference repair, deletion and 3D membership checks, complete read-back and historical evidence. Full workbook rendering, dynamic references and general grid edits remain open.
 
 - [x] Unreleased / 1.4.x: immutable JSON-value and Unicode-span selections inside native cells/blocks/shapes/pages, verified derivation endpoints and portable Wiki selection evidence. Pixel-region evidence, automatic cell correspondence and semantic alignment remain open.
@@ -99,7 +101,8 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
 - 原生檔案 registry：固定 ID、不可變版本、能力與來源狀態；其他格式可先保留原始內容。
 - XLSX 建立、XLSX/XLSM cells 讀取／分段讀取／typed update／清空、歷史、
   明確回寫、外部修改 refresh、保留歷史的 archive。格式限制與 Agent 核對仍明確保留。
-- 尚未完成工作表／列欄結構 CRUD、A2T 橋接或視覺核對自動化；原生 wiki
+- 此版本尚未包含後續 Unreleased 的工作表結構與 A2T 儲存格橋接；一般列欄結構
+  編輯與視覺核對自動化仍待完成。原生 wiki
   引用已於 1.2.0 提供。以上子項進展不代表跨格式總目標完成。
 
 ## 已完成

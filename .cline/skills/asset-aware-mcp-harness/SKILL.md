@@ -32,6 +32,21 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
 
 ## Native Document Operations
 
+- When table_workspaces_enabled is advertised, project_workbook_table pins an exact
+  revision, worksheet key and range. Headers remain data; native columns hold
+  tagged {kind,value} cells. Read the complete read_table_workspace JSON with one
+  table_sha256, verifying assembled text_sha256. Use table_data with stable row_id
+  and tagged values, then read again before apply_table_workspace at the exact
+  table hash and bound native revision. Only unchanged row/column correspondence
+  can be applied; source styles/untouched parts survive supported cell edits.
+  Read the new native revision and full stored operation result. Applied/exported
+  inputs persist as workspace_reference snapshots; verify and re-read them even
+  after mutable A2T changes. Bindings do not auto-advance. Structural A2T edits can
+  create_workbook_from_table independently; it retains values/formula text but
+  does not copy source layout or relocate formulas. Source refs describe origin,
+  not semantic support for changed data. Agent reviews meaning/results/layout.
+  Public stays 1.4.0; new work is Unreleased within 1.4.x.
+
 - When advertised, read_workbook returns complete hash-pinned structure/reference JSON.
   Pin revision and workbook_view, assemble text_excerpt pages and verify UTF-8 SHA-256.
   add_worksheets uses worksheet_insert; rename_worksheet uses worksheet_rename;

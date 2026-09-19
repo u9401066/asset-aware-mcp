@@ -2,6 +2,43 @@
 
 # A2T Tables
 
+## Native workbook workspaces (Unreleased)
+
+公開版仍為 **1.4.0**，此功能累積於 **1.4.x**。先查原生 `contract` 的
+`table_workspaces_enabled` 與各操作的 `for_op` schema。
+
+1. `read_workbook` 取得固定 revision 的工作表 `sheet_id`／`part`。
+2. `project_workbook_table` 指定 asset_id、revision 與
+   `table_projection={worksheet:key,start_cell:"A1",end_cell:"E3"}`。
+   所有列（含標題列）都是資料，欄名為 Excel 欄字母，不猜型別或標題。
+3. `read_table_workspace(table_id=...)` 讀回完整 JSON；依 `next_text_offset`
+   續讀，每頁固定 `table_sha256`，拼接後以 UTF-8 核對 `text_sha256`。
+   最多 20,000 格、完整表示 16 MiB，每頁至多 4,000 字元。
+4. 使用 `table_data` 更新穩定 row_id 的儲存格，例如
+   `value={"kind":"string","value":"007"}`。可用 string／number／boolean／
+   formula／blank；formula 明確以 `=` 開頭，一般字串 `=1+1` 不會變公式。
+   `source_only` 保留無編輯器的原值；不能當成可寫型別。
+5. 重新完整讀取後，`apply_table_workspace` 指定 table_id、
+   `expected_table_sha256`、asset_id 與原綁定的 `expected_revision`。
+   只套用變動格，保留原格式與未修改 parts；合併尾格、富文字及表格標題等
+   既有編輯保護仍有效。核對新版儲存格及 `read_workbook.operation_result`。
+
+每次套用或另建工作簿都保存實際使用的 A2T JSON，回傳 `workspace_reference`。
+它可用 `verify` 驗證，也可傳回 `read_table_workspace`；即使可變表格後來更新或
+刪除，仍能重讀原快照。綁定不會自動改指新版檔案；下一輪同步請重新投影。
+來源檔只在明確 publish／writeback 時輸出或回寫。
+
+若已增刪／重排列欄，套回原工作簿會拒絕，避免錯位。可使用
+`create_workbook_from_table`，指定 table_id、expected_table_sha256 與
+`table_workbook={name:"table.xlsx",sheet:"Data",include_headers:false}`，另建
+獨立 XLSX；也可指定 workspace_reference 重用固定輸入。新檔保留型別與公式文字，
+會回報列欄對應，但不複製來源樣式、不搬移公式引用。普通 A2T 的純量也可匯出；
+native 欄位不可經舊的 Excel renderer 字串化輸出。
+
+完整工作區同時保留目前值與原版 source_cells 引用。引用表示抽取來源，並不宣稱
+它支持修改後的語意；既有 PDF／DFM CellCitation 另行保留。Agent 仍需核對語意、
+公式計算與畫面。原生列欄結構變更的公式／合併／樣式遷移仍屬後續工作。
+
 ## 核心模型
 
 A2T 是 Anything to Table。它用 `TableContext` 表示可由文件、DOCX 表格、圖表或 LLM extraction 建立的結構化表格，並讓每個 cell 可以帶來源引用。

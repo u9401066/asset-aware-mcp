@@ -1,5 +1,28 @@
 # Release And Testing
 
+## Native A2T correspondence evaluation (Unreleased)
+
+`tests/unit/test_native_table_*.py` 與 `tests/integration/test_native_table_stdio.py`
+涵蓋 typed cells、原生格式／未修改 parts、合併與富文字保護、過期版本、獨立新建、
+分頁 hash、保存／重載及可變表格刪除後的不可變快照。SDK2 透過實際 `table_data`
+傳入 JSON 物件，確認工具不會把帶型別資料壓成字串。
+
+```bash
+uv run python -m tests.codex_native_selection.run --tables --output /tmp/a2t-codex
+uv run python -m tests.codex_native_selection.audit /tmp/a2t-codex
+```
+
+2026-09-19 run 01：**90 次 MCP 呼叫（89 次成功、1 次錯誤後恢復）、145.14 秒**。
+Codex 看實際掃描 PNG、建立 15 個字面值儲存格、投影為 A2T、將 B2 的字串 007
+改成 008，再套回原工作簿並從固定快照另建 XLSX。原 PDF 位元組／mtime、完整
+修改前後讀回、原生來源引用、A2T 快照、工作簿歷程、發布檔及兩份歷史 Wiki
+均通過獨立稽核。一次錯誤是 schema 的 text_limit=20000 超過 4000 上限；
+Codex 改用合法分頁後完成。稽核測試會拒絕事後補讀、漏讀快照或偽造 hash。
+
+CLI 0.154.0-alpha.6.1 使用預設模型；此合成案例不代表一般 OCR、公式求值或
+Excel 渲染已驗證。舊的 007 主張不會遷移到 008；新工作簿版面另行核對。
+公開版仍為 1.4.0，開發列於 Unreleased／1.4.x。
+
 ## Native workbook structure evaluation (Unreleased)
 
 執行 `tests/unit/test_native_workbook_*.py`、`tests/unit/test_codex_workbook_audit.py`

@@ -18,6 +18,8 @@
 
 ### 核心功能
 
+- **原生 A2T（main 未發布／1.4.x）** — 指定工作簿範圍投影為帶型別的表格，完整讀回固定 hash 與原始格引用；修改後以 table/file revision 套回原檔並保留不可變快照。列欄對應改變時另建工作簿；Agent 核對語意、公式及版面，來源綁定不自動前進。公開版仍 1.4.0。
+
 - **工作表結構（main 未發布／1.4.x）** — `read_workbook` 完整分頁核對工作表／引用清單；新增、改名、重排、刪除使用 expected_revision 與目前 sheet_id／part。相依及 3D 範圍變動有檢查，原 parts 與歷史證據保留；Agent 核對動態引用、計算結果與畫面。公開版仍 1.4.0。
 
 - **精確選取（main 未發布／1.4.x）** — `read_selection` 以完整父引用、JSON Pointer 與 Unicode 範圍選取值；分頁核對固定 text_sha256，verify／轉製帳本／Wiki 保留選取證據。範圍對應解析字串，文件更新不自動搬移主張；Agent 核對語意／畫面。

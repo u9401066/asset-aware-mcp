@@ -227,6 +227,10 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
   "native-file-assets": `## Native documents and versioned files — v1.4.0
 
+### Native table workspaces (Unreleased)
+
+Project an exact workbook range into A2T, read complete typed cells and source references, edit through table_data, then apply only changed cells at the pinned table/file revisions. Applied inputs remain immutable workspace_reference snapshots. Structural table changes can create a separate workbook; original row/column relocation and full layout review remain open. See the A2T guide. Public stays 1.4.0, with development within 1.4.x.
+
 ### Workbook sheet structure (Unreleased)
 
 Query contract.for_op for workbook_structure_enabled. read_workbook returns complete, hash-pinned JSON for workbook_view="structure" or "references". Pin revision and view, assemble every text_excerpt through next_text_offset, and verify UTF-8 SHA-256. Structure includes sheet identities/order/visibility, names and views; references adds explicit formula, chart, validation, conditional-format, hyperlink, pivot and consolidation fields. Use read_cell for cell contents.
@@ -434,6 +438,17 @@ A bounded asset-ref-preview-v1 response is not canonical and must not be submitt
   "a2t-tables": `## Build reusable tables
 Plan schemas, manage tables, query stable rows, attach cell citations, and use durable drafts for interrupted work. Table history records changes while render operations produce reusable artifacts.
 
+## Native workbook workspaces (Unreleased)
+Discover table_workspaces_enabled and each operation with contract.for_op. Read the workbook's exact sheet_id/part, then project_workbook_table with asset_id, revision and table_projection={worksheet:key,start_cell:"A1",end_cell:"E3"}. All rows remain data, including headers. Columns use Excel letters; types are never guessed.
+
+Read the complete read_table_workspace JSON through next_text_offset, pin table_sha256 on continuation, and verify the assembled UTF-8 text_sha256. Limits are 20,000 cells, 16 MiB per complete representation and 4,000 characters per page. Use table_data.update_cell with stable row_id, column_name and tagged value={kind:"string",value:"007"}. Strings, numbers, booleans, formulas and blanks remain distinct; source_only values cannot be written without choosing a supported type.
+
+After another complete read, apply_table_workspace requires table_id, expected_table_sha256, asset_id and the bound expected_revision. It patches only changed cells in the original package; styles, unchanged rich text and unrelated parts survive. Existing merged-cell, rich-text and table-header guards still apply. Read the new workbook and its operation_result. Source publication/writeback stays explicit.
+
+Applied/exported input is retained as an immutable workspace_reference: verify it or pass it to read_table_workspace after the live table changes or is deleted. Bindings never auto-advance; project the new revision for a subsequent synchronized edit. Source references describe extraction origin and do not assert support for edited values.
+
+Changed row/column correspondence rejects application to the source. create_workbook_from_table instead creates an independent XLSX with table_workbook={name:"table.xlsx",sheet:"Data",include_headers:false}, the table ID/hash, and an optional frozen workspace_reference. It retains typed data and formula text, with row/column mapping in the stored operation result. Source styles and formula relocation are not copied. Ordinary scalar A2T tables are also supported; native columns must use this path for Excel output. Agent review covers meaning, formula results and layout. Public stays 1.4.0; this is Unreleased development for 1.4.x.
+
 ## Keep row evidence explicit
 Use stable row identifiers and cell-level AssetRefs so every comparison can return to its source.
 
@@ -475,6 +490,14 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Native A2T correspondence evaluation (Unreleased)
+
+Run tests/unit/test_native_table_*.py, tests/unit/test_codex_table_audit.py and tests/integration/test_native_table_stdio.py. They cover typed JSON tool inputs, exact source-cell evidence, unchanged native parts, rich-text/merge guards, stale revisions, independent creation and frozen input recovery after live table deletion.
+
+Explicit model run: uv run python -m tests.codex_native_selection.run --tables --output /tmp/a2t-codex; replay tests.codex_native_selection.audit. Run 01 on 2026-09-19 made **90 MCP calls: 89 successful and one recovered input error**, in **145.14 seconds**. Codex viewed the scan PNG, transcribed all 15 literal cells, projected A2T, changed string 007 to 008, applied it to the original workbook and created an independent XLSX from its frozen input. The rejected schema request used text_limit=20000; subsequent valid paging completed the workflow.
+
+Independent audit verifies complete reads before writes, typed values, source references, immutable A2T snapshots, original PDF bytes/mtime, native history, unchanged parts, both outputs and two revision-specific Wikis. The old 007 assertion never migrates to 008. CLI 0.154.0-alpha.6.1 uses its default model; no general OCR, formula evaluation or Excel rendering guarantee. Public stays 1.4.0; development remains Unreleased for 1.4.x.
 
 
 ### Native workbook structure evaluation (Unreleased)

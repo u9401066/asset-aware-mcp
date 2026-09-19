@@ -1,5 +1,16 @@
 # Active Context
 
+## 2026-09-19 — native/A2T core committed; documentation ready
+
+Core a1f84cbceace18a0292aa336f9ac4a95da1fb122 contains the guarded native/A2T bridge,
+SDK2 and actual-Codex evaluators, regressions, specification and Unreleased notes.
+All local gates and the90-call actual audit passed with the one recovered schema
+input error documented. Final browser zh/en desktop/mobile checks passed; wheel,
+sdist andVSIX audits are complete, runtime bytes match the actual tested source.
+Documentation/harness/bundled assets are ready for the second scoped commit. Push
+both to main, verify exact CI/Pages and public JS bytes. Public stays1.4.0/future1.4.x;
+no tag. The cross-format/structural-grid/CSL/real-corpus goal remains active.
+
 ## 2026-09-19 — native/A2T workspaces verified; commit/push pending
 
 Implemented exact native range projection, tagged A2T cells, complete hash-pinned

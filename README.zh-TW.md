@@ -7,6 +7,11 @@
 
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+Unreleased 的原生 Excel／A2T 工作區保留資料型別與精確來源引用；在 A2T 修改後，
+可核對表格與檔案版本再套回原工作簿，並保留實際套用的不可變快照。已增刪列欄的
+A2T 可另建獨立工作簿。詳見 [原生表格工作區](docs/wiki/A2T-Tables.md#native-workbook-workspaces-unreleased)。
+公開版仍為 **1.4.0**，後續沿用 **1.4.x**。
+
 Unreleased 新增工作表結構操作：完整讀取工作表與引用清單、新增、改名、重排及刪除，
 保留未修改的原生內容，並檢查明確引用與檢視索引。公式結果與版面由 Agent 核對。
 詳見 [工作表操作](docs/wiki/Native-File-Assets.md#workbook-sheet-structure-unreleased)。
