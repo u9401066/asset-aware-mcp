@@ -7,6 +7,16 @@
 
 ## [Unreleased]
 
+- Added hash-pinned NIST and NASA real PDF corpus tests, independent complete
+  table-string oracles, actual default-model Codex evaluation and SDK2 regressions.
+  Preserve first transcription/workflow failures separately from retries. CI
+  explicitly downloads/verifies the public corpus; ordinary pytest stays offline.
+- Native PDF reads now prove identical duplicate direct stream Length declarations
+  against original dictionaries and raw stream boundaries, retaining source bytes
+  and parser observations. Requested edits/copies record canonicalization repairs;
+  conflicting/indirect lengths and unrelated warnings remain rejected. Real NASA
+  scans exposed this previously unsupported but mechanically resolvable structure.
+
 - Preserve CSV NUL values and exact native offsets across Python3.10/newer runtimes.
   Reversible parser-only masking avoids legacy csv errors without altering source
   bytes or dropping characters; regressions include marker/dialect collisions.

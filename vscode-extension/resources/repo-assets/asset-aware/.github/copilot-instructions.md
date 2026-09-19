@@ -30,6 +30,13 @@
   fields/dialects; old refs never migrate. Agent reviews meaning and downstream
   rendering/formula interpretation. Public1.4.0 / Unreleased1.4.x; no per-feature bump.
 
+- PDF listings/page records may include parser_checks for independently proven
+  equal, direct duplicate stream Length values. Keep those observations with the
+  evidence; original bytes are unchanged. Other warnings/conflicting/indirect
+  lengths still require a separate repair workflow. Requested page edits/copies
+  record canonicalized_equal_duplicate_stream_lengths when serialized. Agent
+  reviews actual images and meaning; these checks are not an OCR/fidelity verdict.
+
 - When pdf_regions_enabled is advertised, read_pdf_region takes a full PDF page
   reference plus pdf_region.rect in displayed CropBox fractions (0–1, top-left,
   after rotation), or a full existing region reference without selector override.

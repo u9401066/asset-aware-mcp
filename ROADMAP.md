@@ -29,7 +29,9 @@ Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可�
 ## 2026-09-18 active goal — not complete
 
 - [ ] 直接使用 Codex 測試 MCP 的 PDF 圖像轉結構化資料 CRUD；1.4.0 已提供
-  合成數位／掃描／混合文件基線與獨立稽核，後續擴充真實複雜文件。
+  合成數位／掃描／混合文件基線與獨立稽核，Unreleased 再加入 NIST 證書及 NASA
+  跨頁掃描表格的固定 corpus、完整字串答案、SDK2 與實際 Agent 流程；持續擴充
+  真實複雜文件，兩份文件不足以證明任意 PDF 忠實度。
 - [ ] Maintain MCP SDK 2.0+ compatibility, evaluate current native-format/PDF
   libraries against official repositories and regression evidence; adopt suitable
   updates without removing format features or bypassing release checks.

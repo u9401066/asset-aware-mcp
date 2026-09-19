@@ -1,5 +1,10 @@
 # asset-aware-mcp
 
+Real PDF regression now includes a NIST certificate and the original Apollo 11
+scans, with pinned source bytes, complete table-string oracles and actual Codex
+evaluation. See [real-document validation](docs/wiki/Release-And-Testing.md#real-pdf-corpus-unreleased).
+Public **1.4.0**; development remains **Unreleased / 1.4.x**.
+
 Unreleased CSV/TSV assets now support independent creation, complete field reads,
 cell edits and row/column insertion/deletion. Edits preserve original encoding,
 quotes and line endings outside checked byte patches; field references connect

@@ -227,6 +227,12 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
   "native-file-assets": `## Native documents and versioned files — v1.4.0
 
+### Checked historical PDF syntax (Unreleased)
+
+Some historical scans contain duplicate stream Length declarations. Native PDF reads accept this case only after independently checking every original dictionary value is the same direct integer and matches the raw stream bytes and boundaries. Listings and complete page records retain parser_checks with policy, counts and proof digest; source bytes remain unchanged. Conflicting/indirect lengths, other parser warnings and unsupported dictionaries still require separate handling.
+
+Requested page edits or copies serialize a single Length and record canonicalized_equal_duplicate_stream_lengths in repairs, retaining existing graph/render checks and immutable source history. Agents still review actual glyphs and meaning. See [real PDF validation](#/release-testing). Public1.4.0 / Unreleased1.4.x.
+
 ### Native CSV/TSV files (Unreleased)
 
 Register human CSV/TSV files or create independent string tables with create_delimited. Query delimited_enabled and contract.for_op. read_delimited and read_delimited_cell require asset_id/revision; delimited_row/column are zero-based logical coordinates. Assemble all text_excerpt chunks at one text_sha256 and verify UTF-8 SHA-256. Fields retain values, raw spelling, byte/character/physical-line spans, context and full native-delimited-cell-ref-v1 references. No header, number or formula inference.
@@ -584,6 +590,16 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Real PDF corpus (Unreleased)
+
+On 2026-09-19 the actual default Codex model used this checkout's MCP on unchanged public PDFs: [NIST SRM 1648a](https://tsapps.nist.gov/srmext/certificates/1648a.pdf), Table1 on PDF index4, and the [NASA Apollo11 mission report](https://ntrs.nasa.gov/citations/19700008096), Table3-I across indices17/18. NIST completed 234 successful calls, zero tool errors, 75 exact data cells in 283.58 seconds; NASA completed 232/0, 68 exact cells in 251.22 seconds. Source sizes, hashes and page counts are pinned. NASA retains its historical scan and imperfect OCR layer; expected strings were separately image-reviewed, never supplied to the model.
+
+Agents viewed three complete pages and three chosen table regions, read all initial/final CSV fields, performed update/restore plus row/column insertion/deletion, and exported Wiki/source attachments and exact CSV bytes. Audit checks seven history events per table, BOM/CRLF, every intermediate byte revision, complete receipts, historical refs, immutable source bytes/mtime and three sampled region-to-value claims. All 143 data cells are checked; only each page's first-row value has a derivation, not every cell.
+
+Preserve the failed NIST first workflow: transcription75/75 was correct, but the Agent edited the first column when the second was required (237 calls,256.27s); the byte audit rejected it. The retry explicitly states zero-based coordinates. NASA's initial SDK2 run exposed359 duplicated Length dictionaries, now proven against original stream bytes and reported; copied pages record canonicalization. Scan clip/full-page raster sampling also differs: exact independent direct-source pixels are required; full-page crop mean differences4.726/3.847 are diagnostic, not a universal less-than-one gate. Both paths use MuPDF; glyph bounds and complete string truth are separate checks.
+
+Run tests.real_pdf.corpus with --directory /absolute/corpus --fetch explicitly; set ASSET_AWARE_REAL_PDF_CORPUS for tests/integration/test_real_pdf_corpus_stdio.py. Actual model runs use python -m tests.real_pdf.run --corpus /absolute/corpus --case nist-1648a (or apollo11) --output /absolute/new-run. Normal pytest downloads nothing and invokes no model. CI explicitly fetches/verifies both sources; offline parser/oracle cases run on Python3.10/macOS/Windows. Focused parser/oracle/SDK2: 31 passed in 72.10s. Full suite: 3,043 passed / 35 optional skipped in 197.35s. Clean Python 3.10: 31 passed in 74.86s plus installed-wheel CLI/SDK2 smoke. VSIX 199 tests, install/update and Docker SDK2 smoke pass; source hashes match checkout, wheel, actual Agent runs and container. These documents do not prove arbitrary-PDF fidelity. Public1.4.0 / Unreleased1.4.x.
 
 ### Native CSV/TSV evaluation (Unreleased)
 

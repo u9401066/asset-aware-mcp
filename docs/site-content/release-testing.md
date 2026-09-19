@@ -2,6 +2,58 @@
 
 # Release And Testing
 
+## Real PDF corpus (Unreleased)
+
+2026-09-19 的 **Codex 預設模型**直接透過本工作樹 MCP 處理以下原始公開文件，
+沒有預先提供表格答案，也沒有另指定模型：
+
+| 原始文件與範圍 | 成功呼叫／工具錯誤 | 獨立核對的資料格 | 時間 |
+| --- | --- | --- | --- |
+| [NIST SRM 1648a](https://tsapps.nist.gov/srmext/certificates/1648a.pdf)，PDF index 4，Table 1 全部 25 列 | 234／0 | 75／75 | 283.58 秒 |
+| [NASA Apollo 11](https://ntrs.nasa.gov/citations/19700008096)，PDF indices 17、18，Table 3-I 全部 34 列 | 232／0 | 68／68 | 251.22 秒 |
+
+NIST 是數位 PDF；NASA 是歷史掃描且含品質不佳的 OCR 層。兩份完整來源 PDF 的
+大小、SHA-256、頁數均固定在 corpus manifest；不是重新製作的合成掃描。答案先從
+原始圖像核對，NIST 再交叉檢查文字；保留小數精度、±、單位、上下標方法字母、
+前導零、時間標點及引擎點火的 `*`。僅將排版空白與上下標依明訂規則攤平。
+
+Agent 查看三個整頁與三個自行選取的表格區域，建立 CSV，完整讀取所有初始及
+最後欄位，依序更新／還原第二欄、插列、插欄、刪列、刪欄。獨立稽核驗證每份
+CSV 的七筆歷史事件、中間精確位元組、BOM／CRLF、完整操作紀錄、歷史引用、
+發布內容與 Wiki 原檔附件。來源 PDF 的位元組及 mtime 不變。
+
+每個表格頁的第一筆數值另有來源區域轉製主張，共三筆；這是抽樣來源關係覆蓋，
+不代表 143 格都有逐格主張。所有 143 個資料值均與獨立答案相符。圖像稽核逐像素
+比較自行建立的原始區域渲染，另保留整頁裁切差異。NASA 兩區差異均值為
+4.726／3.847（0–255），來自局部掃描取樣；既有 MuPDF 限制明確保留，兩條
+渲染路徑共享引擎。字元範圍及完整答案另行檢查，不宣稱兩種取樣逐像素等同。
+
+失敗記錄也保留：NIST 首輪 75 格轉錄正確，但 Agent 以第一欄執行原本指定的
+第二欄 CRUD，獨立位元組稽核拒絕該輪（237 次呼叫、256.27 秒）。重測明確指定
+CSV 座標皆由 0 起算；不能將成功重測冒稱首次流程全對。NASA SDK2 首輪則揭露
+359 個重複 Length 字典；現在逐一證明直接整數、原始串流內容與邊界相符，保留
+來源 bytes／parser_checks，頁面複製另記錄 canonicalization repair。相衝突值、
+間接 Length、其他警告仍拒絕。詳見 [格式處理](Native-File-Assets#checked-historical-pdf-syntax-unreleased)。
+
+重現方式（PDF 保存在 Git 外；一般 pytest 不下載、不呼叫模型）：
+
+```bash
+uv run python -m tests.real_pdf.corpus --directory /absolute/corpus --fetch
+ASSET_AWARE_REAL_PDF_CORPUS=/absolute/corpus uv run pytest tests/integration/test_real_pdf_corpus_stdio.py
+uv run python -m tests.real_pdf.run --corpus /absolute/corpus --case nist-1648a --output /absolute/new-nist-run
+uv run python -m tests.real_pdf.run --corpus /absolute/corpus --case apollo11 --output /absolute/new-nasa-run
+```
+
+CI 明確下載並核對固定來源，執行 SDK2 真實文件回歸；Python 3.10、macOS、Windows
+另納入不需網路的 parser／oracle 邊界測試。局部 parser／oracle／實際 SDK2 共
+**31 passed（72.10 秒）**，包含 NASA 原始頁面複製後消除重複 Length 的檢查。
+完整回歸 **3,043 passed／35 optional skipped（197.35 秒）**；乾淨 Python 3.10
+環境同批 **31 passed（74.86 秒）**，另通過安裝 wheel 的 CLI／SDK2 smoke。
+VSIX 199 項測試、安裝／更新與 Docker SDK2 smoke 均通過；原始碼、wheel、
+實際 Agent 與容器的來源雜湊一致。
+兩份文件仍不足以證明任意 PDF 的 OCR、語意、版面或回寫忠實度；跨格式總目標
+繼續進行。公開版 **1.4.0**，新增工作列於 **Unreleased／1.4.x**。
+
 ## Native CSV/TSV evaluation (Unreleased)
 
 真實 Codex **預設模型**於 2026-09-19 完成 **103 次成功 MCP 呼叫、零工具錯誤、

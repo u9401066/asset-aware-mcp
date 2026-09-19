@@ -1,5 +1,18 @@
 # Progress (Updated: 2026-09-19)
 
+## Real PDF publication checkpoint
+
+Source/spec/tests commit 9031f4aec2115d907e632ea06ba16218f5ff1f49 preserves original NASA/NIST source bytes and
+adds verified duplicate-Length interpretation plus real corpus/actual Agent audits.
+All local gates pass, including3043/35full,31Python3.10,466successful current Codex
+calls/0toolerrors/143exactdata-cells, wheel/container source SHAfae31e15…509c4300,
+VSIX199 and browser zh/en desktop/mobile. NIST's earlier wrong-column workflow
+remains reported separately. This docs/harness commit publishes clear scope, test
+commands and mechanical-vs-Agent boundary; runtime source remains unchanged.
+Push both commits to main, then require exact-head CI/Pages/public-byte evidence.
+Public1.4.0/Unreleased1.4.x,no tag; broad goal remains active.
+
+
 ## Real PDF corpus — all local publication gates passed
 
 Full03:3043passed35optional-skips197.35s, with actual government corpus enabled.

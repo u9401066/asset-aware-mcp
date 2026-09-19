@@ -1,5 +1,10 @@
 # asset-aware-mcp
 
+真實 PDF 回歸已加入 NIST 證書與 Apollo 11 原始掃描報告，固定來源位元組、
+獨立核對完整表格字串，並直接使用 Codex 實測。
+詳見 [真實文件驗證](docs/wiki/Release-And-Testing.md#real-pdf-corpus-unreleased)。
+公開版保持 **1.4.0**，開發累積於 **Unreleased／1.4.x**。
+
 Unreleased 的 CSV／TSV 可獨立建立、完整讀取逐格內容、修改與插刪列欄；
 以原生位元組局部修改，保留未變動內容的編碼、引號與換行。逐格來源引用可連結
 PDF 轉錄及 Wiki 證據。詳見 [CSV／TSV 原生操作](docs/wiki/Native-File-Assets.md#native-csvtsv-files-unreleased)。

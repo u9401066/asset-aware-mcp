@@ -2,6 +2,19 @@
 
 # Native File Assets（v1.4.0）
 
+## Checked historical PDF syntax (Unreleased)
+
+部分歷史 PDF 的串流字典會重複宣告同一個 `/Length`。原生讀取現在會從原始
+位元組逐一核對：每個值都是相同的直接整數，且與串流長度、實際內容及結束位置
+一致，才接受這類重複宣告。`read_pdf` 與完整 `read_pdf_page` 會保留
+`parser_checks`，包括檢查策略、數量與證明摘要；讀取不會改寫來源。
+
+有衝突的數值、間接 Length、其他解析警告及超出支援範圍的字典仍需另行處理。
+若後續要求編輯或複製頁面，輸出會使用單一 Length，並在 `repairs` 明確記錄
+`canonicalized_equal_duplicate_stream_lengths`；既有物件圖／頁面渲染檢查仍執行。
+這是格式上的可確定檢查，字形、OCR、意義與完整畫面由 Agent 核對。
+詳見 [真實 PDF 驗證](Release-And-Testing#real-pdf-corpus-unreleased)。
+
 ## Native CSV/TSV files (Unreleased)
 
 CSV／TSV 檔案現在可成為有穩定身分、版本與逐格證據的原生資產。先查詢
