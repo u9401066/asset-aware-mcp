@@ -1,5 +1,25 @@
 # Progress (Updated: 2026-09-19)
 
+## Native Word story lifecycle documentation — ready for publication
+
+Runtime412ee00 (27counted+2MEM) and audit compatibility251126e (10counted+2MEM)
+are committed under authoru9401066. This20-file documentation/harness segment
+publishes bilingual lifecycle/contract paging instructions and exact evaluation
+metrics, README/CHANGELOG/ROADMAP, generated website and five source/bundled
+harness pairs. Final docs28pass and eight browser feature/evaluation desktop/mobile
+zh/en states pass; actual desktopzh/mobileen and Word page3/4 screenshots reviewed.
+Owned localhost8884 stopped. All11temporary staging directories restored exactly;
+Docker smoke image/builder removed after successful complete read/Wiki replay.
+Final full3315/33optional skips/357.08s; actual defaultCodex98success/0errors/222.28s;
+source70aef matches installed wheel/Docker; no production change after actual run.
+Private Python3.10 environment retained until CI completion, then remove only that
+owned environment. All original error logs stay retained. Original dirty detached
+checkout untouched. Public1.4.0; next consolidated1.4.1, no version/tag bump.
+Pushmain next. Exact-head all CI jobs, Pages jobs and six public-file comparisons
+pending; proof will be /tmp/asset-aware-story-lifecycle-publication-proof.json.
+Broader all-format goal remains active; this milestone does not finish every format.
+
+
 ## Native contract discovery — legacy evaluation compatibility
 
 Runtime/spec/tests committed as412ee00,27counted files plus2MEM. This separate

@@ -7,14 +7,23 @@
 
 ## [Unreleased]
 
+- Added Word header/footer definition creation, native cloning, explicit section
+  binding/inheritance, checked deletion and first/even-page options. Clones retain
+  relationship targets and remap supported unique identities; full paged receipts,
+  native preservation and incoming-dependency checks precede atomic commits.
+  Deleted definitions remain historical evidence; Agent reviews actual pages.
+- Fixed growing native contract prose being truncated by MCP transport. Capability
+  indexes retain all enabled flags and format/schema discovery; `contract_details`
+  supplies complete hash-pinned metadata separately from request-schema pages.
+
 - Added complete native Word header/footer discovery from actual content types,
   relationships and section inheritance. Existing shared definitions support
   reference-bound text edits and native paragraph/table insertion/deletion with
   complete receipts and unchanged surrounding XML/parts. New story references
   integrate verification, selections, derivations and citations; a distinct Wiki
   projection retains full records and original parts without changing legacy
-  snapshots. Agents review all affected pages and field results. Whole-definition
-  lifecycle and footnote/endnote editing remain future work. Public 1.4.0 / 1.4.x.
+  snapshots. Agents review all affected pages and field results. Footnote/endnote
+  editing remains future work. Public 1.4.0 / 1.4.x.
 
 - Added native Word table pagination controls: contiguous repeated header prefixes,
   explicit automatic/minimum/exact/inherited row heights and allow/prevent/inherit

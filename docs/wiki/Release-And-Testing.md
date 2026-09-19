@@ -1,5 +1,46 @@
 # Release And Testing
 
+## Native Word story lifecycle evaluation (Unreleased)
+
+實際 Codex 預設模型處理一份 **四頁、三節**的合成 Word 文件，完整讀取來源頁首頁尾、
+節綁定及 contract 分頁，並查看四張初始頁面。Agent 複製頁首、建立頁尾，將中間節
+綁定新定義，明確保留後續節原有綁定，刪除未使用的舊定義，再修正新頁首文字。
+**98 次成功 MCP 呼叫、0 次工具錯誤、222.28 秒**；未覆寫模型設定。
+
+獨立稽核通過 **10 份完整內容記錄、3 份完整結構記錄、2 份完整 contract、3 個管理版本、
+2 份歷史 Wiki 與全部 8 張實際 PNG**。來源 bytes／mtime、原生 XML、未修改 package parts、
+完整操作紀錄、分頁雜湊、已刪除定義的歷史引用／文字選取，以及全部 Wiki 附件均通過。
+三個版本皆為四頁；修改前後第 1、2、4 頁逐像素一致，只有第 3 頁改變。
+第 3 頁保留粗體／斜體、`007` 與 `-0.50 mg/L`，新增頁尾 `Section B verified / 007 µg`；
+較長的新頁首使 `KEEP-ITALIC` 換行並將後續內容下移。Agent 明確記錄這項排版變化，
+沒有把結構保存說成版面完全相同。
+
+首次獨立稽核把等價的字級數值 `9` 與 `9.0` 當作不同請求；修正稽核器的數值比較並新增
+回歸測試後，同一份 98 次呼叫紀錄通過，沒有重跑模型。原始失敗紀錄保留。
+新增能力也重現了 contract 回應過長而被截斷的問題；現在完整政策經過雜湊固定的
+`contract_details` 分頁提供，精簡索引保留全部能力旗標與 schema 續讀資訊。
+原有 Codex 稽核流程也接受唯讀的 contract 分頁；回寫與缺漏操作仍被拒絕。
+
+```bash
+uv run pytest tests/unit/test_native_docx_story_lifecycle.py tests/unit/test_native_docx_story_structure_service.py tests/unit/test_native_contract_details.py tests/unit/test_codex_story_lifecycle_audit.py tests/integration/test_native_docx_story_lifecycle_stdio.py
+uv run python -m tests.codex_story_lifecycle.run --output /absolute/new-story-lifecycle-run --font-fixture /absolute/pinned-font-fixture
+uv run python -m tests.codex_story_lifecycle.audit /absolute/new-story-lifecycle-run
+python /path/to/scripts/smoke_docx_story_runtime.py /absolute/new-story-lifecycle-run/workspace
+```
+
+最終完整測試 **3,315 通過、33 個選配項目跳過（357.08 秒）**，包含 Writer／中英文字形
+與 NIST／NASA PDF。Python 3.10 重點群組 **36 通過、1 個選配渲染項目跳過**；
+乾淨 wheel 在 checkout 外重現 10 份完整內容、3 份結構記錄及兩份 byte-identical 歷史 Wiki，
+程式雜湊與實際 Codex 執行相同。一般 pip 安裝／SDK2 smoke 也通過。
+VSIX **199 項**測試、64 檔套件檢查與安裝／更新通過；本地 activation 由 CI 補驗。
+本機沒有 Impress／Calc，相關三項選配整合測試跳過。完整測試先前遇到過期 corpus 路徑、
+舊 contract 消費端及暫存空間不足；修正接線並啟用成功案例逐案清理後通過，原始錯誤紀錄保留。
+
+一般 pytest 不啟動模型。此案例使用選配 LibreOffice Writer，沒有測試 Microsoft Word；
+未涵蓋任意真實文件、所有特殊依賴的複製或註腳／尾註。MCP 核對來源、版本與結構，
+Agent 負責完整語意、視覺核對及修正。公開版 **1.4.0**，變更累積於 **Unreleased／1.4.x**，
+下一次統整發布為 **1.4.1**。
+
 ## Native Word header/footer evaluation (Unreleased)
 
 實際 Codex 預設模型處理一份 **三頁、兩節**的合成 Word 文件：首頁獨立頁首、空白頁尾，

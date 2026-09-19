@@ -227,6 +227,18 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
   "native-file-assets": `## Native documents and versioned files — v1.4.0
 
+### Native Word story lifecycle (Unreleased)
+
+Discover docx_story_structure_enabled. read_docx_story_structure pins asset_id/revision and returns the complete catalog, independent catalog_sha256 and latest operation_result in hash-paged story_structure JSON. Assemble every text_excerpt at one text_sha256 before editing.
+
+update_docx_story_structure requires expected_revision and docx_story_structure: expected_catalog_sha256, explicit scope sections_and_following_inheritors, and 1..32 sequential edits. create supplies a new part, story_kind and typed paragraph/table blocks. clone supplies a new part, source_part and source_part_sha256. bind takes zero-based section_index, story_kind, variant default/first/even, and a part or null. delete takes part and expected_part_sha256 after all bindings are removed. first_page takes section_index/enabled; even_pages takes document-level enabled. Both options affect headers and footers.
+
+Null binding resumes inheritance; it does not produce blank content. Create/bind a blank paragraph definition to suppress inherited content. Following sections inherit the change until another direct declaration, so explicitly rebind a successor to its original part when needed. Disabling first/even options retains their definitions.
+
+Clones preserve native runs, tables, field caches and media bytes, relocate relationship targets and allocate distinct supported paragraph/drawing identities. Known ranges, controls, revisions, notes and embedded dependencies require further identity-aware clone support and are explicitly rejected. New names are bounded ASCII XML paths under word/, without _rels directories, collisions or existing dangling targets.
+
+Deletion checks retained parts and historical section XML, removes the definition and its own relationships, and retains referenced media; this is not secure erasure. Complete receipts must be deliverable before atomic commit. Source bytes/mtime, unrelated XML/parts, historical references, selections and Wikis remain intact. No-op batches add no history. Agent reviews every full receipt/story and actual page. Footnote/endnote CRUD and Microsoft Word parity remain further work. Public1.4.0; next consolidated1.4.1.
+
 ### Native Word header/footer stories (Unreleased)
 
 Discover docx_stories_enabled. read_docx_stories pins asset_id/revision and returns complete section definitions, inherited/shared bindings and header/footer parts based on actual content types and relationships. Never infer variants from filenames. Legacy DFM header/footer fields are abbreviated projections; read_docx supplies header_footer_request for complete native discovery while retaining historical references.
@@ -237,7 +249,7 @@ update_docx_story requires expected_revision, the complete docx_story_reference 
 
 Native runs/styles, unrelated XML and other package parts remain intact. Field, range, revision and bound/locked-control checks apply. Literal text includes field caches and alternate/revision branches, not evaluated results or reading order. Read every review_request page and the complete operation_result, then inspect every affected actual PNG. A recurring file SHA may have a newer receipt; verify the complete text hash. No-op edits create no history entry.
 
-Historical story references participate in verification, JSON selections, derivations and custom/CSL citations. Wikis containing stories use the distinct docx-stories-v1 projection with stories.jsonl, story-catalog.json, the original DOCX and every package part. Legacy snapshots remain intact. Existing-definition content CRUD is supported; whole-definition creation/removal, section relinking and footnote/endnote editing remain further work. Public 1.4.0; next consolidated patch 1.4.1.
+Historical story references participate in verification, JSON selections, derivations and custom/CSL citations. Wikis containing stories use the distinct docx-stories-v1 projection with stories.jsonl, story-catalog.json, the original DOCX and every package part. Legacy snapshots remain intact. Whole-definition lifecycle and section links use the operations above; remaining identity-aware clone dependencies and footnote/endnote editing require further work. Public 1.4.0; next consolidated patch 1.4.1.
 
 ### Native Word table pagination (Unreleased)
 
@@ -379,6 +391,8 @@ Known section, range, field, revision and embedded-content dependencies block un
 ### v1.4.0: native PPTX and schema discovery
 
 Native PPTX supports create_pptx, read_pptx, read_pptx_shape and update_pptx. Creation uses explicit text boxes, styled runs and notes; updates target existing native runs with revision and text-hash preconditions. Shape references support verify. The pptx-shapes-v1 wiki projection retains complete shape JSON/XML and exact package attachments, including media, charts, layouts, masters and relationships. Older snapshots remain unchanged. Agents review rendering, overflow, inherited formatting and semantic accuracy; Unreleased structural operations are described below; legacy or macro formats remain outside this adapter.
+
+Unreleased discovery also advertises contract_delivery. If paged, follow contract_request to contract_details, preserving contract_sha256 and for_op, then assemble every text_excerpt and verify UTF-8 SHA-256. The compact index retains all enabled flags, format/operation lists and schema continuation; complete policies remain in these pages. Capability/scope changes require rediscovery. This is separate from schema_delivery/schema_request; read both when advertised.
 
 The native-contract-v2 discovery response supports for_op. Check schema_delivery; follow schema_request for complete JSON pages, preserve schema_sha256 and for_op, then verify the assembled UTF-8 hash. Existing native document inputs are unchanged. Version 1.4.0 includes this discovery migration; clients must no longer assume that the full schema is always inline.
 
@@ -645,6 +659,20 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Native Word story lifecycle evaluation (Unreleased)
+
+Actual default-model Codex processed a synthetic four-page, three-section Word document. It assembled complete story, binding and contract records and reviewed all four initial pages, cloned a header, created a footer, bound the middle section, explicitly retained the following section's original definitions, deleted an unused definition and corrected the new header text. The run completed 98 successful MCP calls, zero tool errors and 222.28 seconds, without a model override.
+
+Independent audit passes ten complete story records, three complete structure records, two complete contracts, three managed revisions, two historical Wikis and all eight actual PNGs. Source bytes/mtime, native XML, untouched package parts, full operation receipts, paged hashes, deleted-definition historical references/selections and every Wiki attachment pass. All three versions render four pages. Initial/final pages one, two and four have identical pixels; only page three changes. Bold/italic styling, 007 and -0.50 mg/L survive; its new footer reads Section B verified / 007 µg. The longer header wraps KEEP-ITALIC and moves subsequent content downward. The Agent explicitly records that layout change; native preservation does not imply identical layout.
+
+The first independent audit incorrectly treated equivalent font-size values 9 and 9.0 as different requests. Numeric comparison was corrected with a regression test; the same 98-call trace then passed without rerunning the model. The original failed audit remains retained. New capabilities also exposed contract response truncation: complete policies now use hash-pinned contract_details pages, while the compact index retains every capability flag and schema continuation. Retained Codex audits accept read-only contract pages while still rejecting unauthorized writeback and missing required operations.
+
+Opt in with python -m tests.codex_story_lifecycle.run --output /absolute/new-story-lifecycle-run --font-fixture /absolute/pinned-font-fixture; audit with python -m tests.codex_story_lifecycle.audit /absolute/new-story-lifecycle-run. Replay installed packages with scripts/smoke_docx_story_runtime.py and that run's workspace. Ordinary pytest never starts a model.
+
+Final full suite: 3,315 passed, 33 optional skips in 357.08 seconds, including Writer/CJK and NIST/NASA PDFs. Python 3.10 focused group: 36 passed, one optional rendering skip. A clean wheel outside checkout reproduces ten complete stories, three structure records and both byte-identical historical Wikis at the exact actual-Codex source fingerprint; standard pip installation and SDK2 smoke also pass. VSIX: 199 tests, 64-file package check and install/update pass; local activation is delegated to CI. Local Impress/Calc are absent, so their three optional integration cases are skipped. Earlier full attempts encountered an expired corpus path, a legacy contract consumer and temporary-storage exhaustion; corrected wiring and per-test cleanup of successful temporary fixtures resolve them. Original error logs remain retained.
+
+This synthetic case uses optional LibreOffice Writer and does not establish Microsoft Word fidelity, arbitrary-document coverage, every special clone dependency or footnote/endnote support. MCP checks source, version and structure; Agent owns full semantic/visual review and correction. Public 1.4.0 / Unreleased 1.4.x; next consolidated release 1.4.1.
 
 ### Native Word header/footer evaluation (Unreleased)
 

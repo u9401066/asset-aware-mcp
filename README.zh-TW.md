@@ -1,9 +1,10 @@
 # asset-aware-mcp
 
-Unreleased 已提供 Word 頁首頁尾的完整原生內容、節關聯與共用／繼承關係，
-可修改既有文字、插刪原生段落及表格，完整讀回紀錄後由 Agent 核對所有受影響頁面。
-引用、原始 parts 與完整內容保存在不可變 Wiki；不以檔名猜用途。
-詳見 [Word 頁首頁尾](docs/wiki/Native-File-Assets.md#native-word-headerfooter-stories-unreleased)。
+Unreleased 已可建立、複製、綁定／解除共用及刪除整份 Word 頁首頁尾定義，
+並保留既有文字與段落／表格編修。明確的繼承範圍與完整操作紀錄，讓 Agent
+獨立修改某節並保留後續節，再核對所有實際頁面；刪除的定義仍可由歷史來源與 Wiki 驗證。
+較長的完整能力說明使用固定雜湊分頁，避免被截短。
+詳見 [Word 頁首頁尾生命週期](docs/wiki/Native-File-Assets.md#native-word-story-lifecycle-unreleased)。
 公開版 **1.4.0**，下次整合發布 **1.4.1**，不逐功能升版。
 
 Unreleased 的 Word 表格排版控制讓 Agent 修正固定列高裁字、設定跨頁標題及列分頁方式；

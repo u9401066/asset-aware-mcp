@@ -1,5 +1,40 @@
 # Native File Assets（v1.4.0）
 
+## Native Word story lifecycle (Unreleased)
+
+要讓某節有獨立頁首，必須同時處理定義與繼承關係。查詢 `docx_story_structure_enabled`，
+先完整讀取 `read_docx_story_structure`：指定 `asset_id`／`revision`，在 `story_structure`
+內依 `next_text_offset` 組合所有頁面，核對 `text_sha256`。其中保留完整 `catalog`、
+獨立的 `catalog_sha256` 及該檔案版本最後一份 `operation_result`。
+
+`update_docx_story_structure` 指定 `expected_revision`，並提供 `docx_story_structure`：
+清單雜湊 `expected_catalog_sha256`、明確 `scope: sections_and_following_inheritors`，
+以及 1 至 32 個依序執行的 `edits`。
+
+| 操作 | 必要資料與效果 |
+| --- | --- |
+| `create` | 新 `part`、`story_kind` 與 typed `blocks`，建立原生段落／表格定義。 |
+| `clone` | 新 `part`、`source_part`、`source_part_sha256`，複製原生內容與關聯。 |
+| `bind` | 從 0 起算的 `section_index`、`story_kind`、`variant` 與 `part`；`null` 恢復繼承。 |
+| `delete` | `part`、`expected_part_sha256`；須先解除所有仍存活或停用中的綁定。 |
+| `first_page` | 節索引與 `enabled`，同時控制該節首頁頁首／頁尾。 |
+| `even_pages` | `enabled`，控制全文件奇偶頁頁首／頁尾差異。 |
+
+解除直接綁定會沿用前節，不是空白；需要空白時，建立只有空段落的定義再綁定。
+變更會傳遞到後續繼承節，直到另一個直接宣告；要保持後節內容，必須明確綁回原本的 part。
+停用首頁／偶數頁選項不會刪除其定義。
+
+複製保留原生 runs、表格、欄位快取及圖片 bytes，調整相對關聯路徑，並重編支援的
+段落／繪圖識別碼。範圍標記、控制項、修訂、註腳及嵌入物件等尚需進一步身分處理的
+複製情境會明確拒絕。新 part 使用 `word/` 下的 ASCII XML 路徑，不得覆用既有名稱、
+使用 `_rels` 目錄或接管原本失效的關聯。
+
+刪除會檢查其他 parts 與歷史節 XML 是否仍引用該定義；只移除定義本身及自己的關聯，
+被引用的媒體仍保留，不是安全抹除。完整修改紀錄須能分頁讀回，才會原子提交新版本；
+未修改 XML／parts、來源 bytes／mtime 與歷史引用保持不變，無變更不新增歷史。
+刪除前的定義仍可引用、選取或從舊 Wiki 核對。Agent 必須完整讀回並查看全部受影響頁面。
+註腳／尾註 CRUD 與 Microsoft Word 顯示一致性仍需擴充。公開 **1.4.0**，下次統整 **1.4.1**。
+
 ## Native Word header/footer stories (Unreleased)
 
 頁首頁尾可能跨節共用，也可能只有首頁或偶數頁使用。查詢 `docx_stories_enabled`，
@@ -32,8 +67,8 @@
 
 含完整頁首頁尾的 Wiki 使用獨立 `docx-stories-v1` 投影，帶走 `stories.jsonl`、
 `story-catalog.json`、原始 DOCX 與每個 part；舊 Wiki 不被覆蓋。
-此階段完成既有定義內的內容 CRUD；整份定義的新增／移除、節重新連結，以及
-註腳／章節附註編輯仍需擴充。公開版 **1.4.0**，下次整合發布 **1.4.1**。
+整份定義與節連結可使用上方的生命週期操作；註腳／尾註編輯及其他複雜身分依賴仍需擴充。
+公開版 **1.4.0**，下次整合發布 **1.4.1**。
 
 ## Native Word table pagination (Unreleased)
 
@@ -468,6 +503,12 @@ Discover the installed contract
 before using the new operations.
 
 ## Contract v2 (1.4.0)
+
+Unreleased 增加 `contract_delivery`。若為 `paged`，先完整讀取 `contract_request`
+所指定的 `contract_details`，固定 `contract_sha256` 與 `for_op`，組合所有
+`text_excerpt` 並核對 UTF-8 雜湊。精簡索引保留所有能力旗標、格式／操作清單與 schema
+續讀方式；完整操作說明在此分頁內。能力或範圍改變會拒絕舊雜湊，必須重新探索。
+這與下方的 `schema_delivery`／`schema_request` 是兩種獨立分頁，兩者都須依指示讀完。
 
 1.4.0 的 `contract` 回傳 `contract_version="native-contract-v2"`。
 此回應變更需要客戶端遷移；請先查安裝版本。客戶端應查看 `schema_delivery`，

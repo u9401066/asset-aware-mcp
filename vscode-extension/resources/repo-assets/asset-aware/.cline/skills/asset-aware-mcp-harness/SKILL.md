@@ -32,6 +32,23 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
 
 ## Native Document Operations
 
+- Native discovery advertises contract_delivery separately from schema_delivery.
+  When paged, assemble ALL contract_request / contract_details pages using one
+  contract_sha256 and for_op; check UTF-8 text_sha256 before reading complete policies.
+  Keep every enabled flag and format/schema continuation from the compact index.
+  Rediscover on capability/scope/hash changes; never operate from preview_json.
+- When docx_story_structure_enabled is advertised, read_docx_story_structure pins
+  revision and pages full catalog/catalog_sha256/latest operation_result. Update
+  with expected_revision, docx_story_structure.expected_catalog_sha256, explicit
+  scope sections_and_following_inheritors and sequential create/clone/bind/delete/
+  first_page/even_pages edits. Clone/delete need exact part hashes. bind part:null
+  resumes inheritance, not blank; create/bind an empty paragraph to blank a slot.
+  Explicitly rebind following sections when retaining their previous definitions.
+  Read every receipt/story and actual page. Supported unique identities are remapped;
+  range/control/revision/note/embedded cloning dependencies remain explicit limits.
+  Deleted parts retain historical refs/Wikis; orphan media is not securely erased.
+  Public1.4.0, next consolidated1.4.1; no per-feature bump.
+
 - When docx_stories_enabled is advertised, read_docx_stories discovers actual
   header/footer definitions, section inheritance and dormant/shared bindings.
   read_docx_story pins docx_story_part; assemble every story page at one text_sha256.
@@ -42,7 +59,7 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
   alternate/revision branches are not evaluated results. Preserve historical refs;
   selections/derivations/citations and docx-stories-v1 Wiki retain full evidence.
   Legacy DFM header/footer fields are abbreviated; never infer roles from filenames.
-  Whole-definition lifecycle/relinking and note stories remain further work.
+  Definition lifecycle/relinking use the operations above; note stories remain open.
   Public1.4.0; next consolidated1.4.1, no per-feature version bump.
 
 - When docx_table_layout_enabled is advertised, update_docx_table_grid accepts
