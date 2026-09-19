@@ -2,6 +2,32 @@
 
 # Release And Testing
 
+## Native workbook structure evaluation (Unreleased)
+
+執行 `tests/unit/test_native_workbook_*.py`、`tests/unit/test_codex_workbook_audit.py`
+及 `tests/integration/test_native_workbook_stdio.py`，涵蓋真實 XLSX 的公式、樣式、
+註解、合併格、圖表、樞紐／合併計算引用、3D 範圍、版本與來源保護。SDK2 測試
+讀完分頁清單，執行工作表 CRUD，再以獨立讀取器核對輸出與歷史選取引用。
+
+實際模型測試需明確執行：
+
+```bash
+uv run python -m tests.codex_native_selection.run --worksheets --output /tmp/workbook-codex
+uv run python -m tests.codex_native_selection.audit /tmp/workbook-codex
+```
+
+2026-09-19 的 run 01 完成 **115 次 MCP 呼叫、0 次工具錯誤、160.49 秒**。
+Codex 看掃描頁 PNG、轉出 15 個保留字面值的 XLSX 儲存格，保留原始 007 選取引用，
+更新為 008，再新增 Review／Temporary、加入跨表公式、將來源表改名為
+`資料 O'Brien`、重排並刪除 Temporary。七個受管理版本的原表格內容、穩定身分、
+公式引用、未改 parts、完整修改前後讀回、原 PDF 位元組／mtime、發布檔及兩份
+Wiki 都由獨立稽核核對。稽核另有拒絕事後補讀、偽造版本轉移或 hash 的回歸測試。
+Codex CLI 0.154.0-alpha.6.1 使用預設模型，沒有固定模型版本。
+
+這是合成掃描案例，不代表一般 OCR、Excel 渲染或公式求值已驗證。來源為整頁引用，
+產物為精確文字選取；舊主張不遷移到新版。公開版保持 1.4.0，功能列於 Unreleased／1.4.x。
+
+
 ## Native selection evaluation (Unreleased)
 
 ```bash

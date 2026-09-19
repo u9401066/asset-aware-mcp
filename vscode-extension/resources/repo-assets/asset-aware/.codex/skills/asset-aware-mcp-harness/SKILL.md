@@ -37,6 +37,19 @@ verification.
 
 ## Native Document Operations
 
+- When advertised, read_workbook returns complete hash-pinned structure/reference JSON.
+  Pin revision and workbook_view, assemble text_excerpt pages and verify UTF-8 SHA-256.
+  add_worksheets uses worksheet_insert; rename_worksheet uses worksheet_rename;
+  reorder_worksheets supplies every current sheet_id/part key in worksheet_order;
+  delete_worksheets takes selected worksheet_keys. Pin expected_revision, follow
+  review_request and read full operation_result. Preserve 3D membership unless
+  allow_3d_membership_change is explicitly intended. Known dependencies block
+  deletion; detached parts remain, not secure erasure. Formula strings/external
+  workbooks stay unchanged; Agent reviews dynamic references, results and rendering.
+  Original sources and historical evidence remain intact; publication is explicit.
+  Public stays 1.4.0, with new work Unreleased for 1.4.x.
+
+
 - When advertised, read_selection accepts full native cell/block/shape/page refs.
   Read the complete parent with an empty selector, then select an actual RFC6901
   pointer and optional half-open Unicode character range. Assemble all pages at

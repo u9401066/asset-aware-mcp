@@ -7,6 +7,12 @@
 
 🌐 [繁體中文](README.zh-TW.md) · [Docs Site](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+Unreleased workbook structure operations now read complete sheet/reference inventories,
+add, rename, reorder and delete worksheets while retaining native package parts.
+Explicit references and view indices receive checked repairs; Agent review covers
+formula results and layout. See [worksheet operations](docs/wiki/Native-File-Assets.md#workbook-sheet-structure-unreleased).
+Public version remains **1.4.0**, with these changes planned for **1.4.x**.
+
 Unreleased `read_selection` binds exact native values or text spans to their source
 revision. Verification, derivation ledgers and Wiki attachments retain the full
 selection evidence; edits do not migrate old assertions. See

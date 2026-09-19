@@ -18,6 +18,8 @@
 
 ### 核心功能
 
+- **工作表結構（main 未發布／1.4.x）** — `read_workbook` 完整分頁核對工作表／引用清單；新增、改名、重排、刪除使用 expected_revision 與目前 sheet_id／part。相依及 3D 範圍變動有檢查，原 parts 與歷史證據保留；Agent 核對動態引用、計算結果與畫面。公開版仍 1.4.0。
+
 - **精確選取（main 未發布／1.4.x）** — `read_selection` 以完整父引用、JSON Pointer 與 Unicode 範圍選取值；分頁核對固定 text_sha256，verify／轉製帳本／Wiki 保留選取證據。範圍對應解析字串，文件更新不自動搬移主張；Agent 核對語意／畫面。
 
 - 📄 **PDF ETL** — 多引擎文件拆解成 agent 資產（圖片、表格、章節、公式），`ETL_ENGINE` 可插拔

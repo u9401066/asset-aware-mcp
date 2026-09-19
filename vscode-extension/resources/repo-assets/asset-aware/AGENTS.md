@@ -38,6 +38,19 @@ and LightRAG knowledge graph outputs.
 
 ## Native Files and Agent Review
 
+- When advertised, read_workbook returns complete hash-pinned structure/reference JSON.
+  Pin revision and workbook_view, assemble text_excerpt pages and verify UTF-8 SHA-256.
+  add_worksheets uses worksheet_insert; rename_worksheet uses worksheet_rename;
+  reorder_worksheets supplies every current sheet_id/part key in worksheet_order;
+  delete_worksheets takes selected worksheet_keys. Pin expected_revision, follow
+  review_request and read full operation_result. Preserve 3D membership unless
+  allow_3d_membership_change is explicitly intended. Known dependencies block
+  deletion; detached parts remain, not secure erasure. Formula strings/external
+  workbooks stay unchanged; Agent reviews dynamic references, results and rendering.
+  Original sources and historical evidence remain intact; publication is explicit.
+  Public stays 1.4.0, with new work Unreleased for 1.4.x.
+
+
 - For native workbooks use `document(op="native", native_request={"op":"contract"})`.
   Register an existing file or create XLSX independently; typed cell edits use the
   returned expected revision. Edits create managed versions before explicit writeback.

@@ -227,6 +227,16 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
   "native-file-assets": `## Native documents and versioned files — v1.4.0
 
+### Workbook sheet structure (Unreleased)
+
+Query contract.for_op for workbook_structure_enabled. read_workbook returns complete, hash-pinned JSON for workbook_view="structure" or "references". Pin revision and view, assemble every text_excerpt through next_text_offset, and verify UTF-8 SHA-256. Structure includes sheet identities/order/visibility, names and views; references adds explicit formula, chart, validation, conditional-format, hyperlink, pivot and consolidation fields. Use read_cell for cell contents.
+
+add_worksheets takes worksheet_insert={index:0,names:["Review"]}. rename_worksheet takes worksheet_rename={key:current_key,name:"Research"}. reorder_worksheets supplies all current keys exactly once in worksheet_order; delete_worksheets supplies selected worksheet_keys. Every key contains sheet_id and part from that exact revision. Mutations require expected_revision, create managed versions, and return review_request. Full operation results are retained in read_workbook.operation_result. Limits: 32 inserted/deleted sheets per request and 256 sheets for structure edits.
+
+Renaming preserves IDs and updates supported explicit local references without altering string literals or external workbook references. Deletion fails when retained formulas, tables, pivots or package links depend on removed sheets. At least one visible worksheet must remain. Insertion/reordering preserve 3D-reference membership by default; explicitly allow_3d_membership_change only after reviewing the intended formula scope.
+
+Untouched native package parts retain their exact bytes. Scope/view indices follow sheet identity; stale calculation-chain links are detached, recalculation requested, and optional stale sheet-title caches cleared. Detached sheets, media and chain parts remain; deletion is not secure erasure. Historical cell/selection references and Wiki assertions never migrate automatically. Protected, signed, VBA/ActiveX, revision and unknown workbook-extension structures require dedicated workflows. Agents review dynamic references, calculated results and Excel rendering. The openpyxl tokenizer identifies formula spans only; it never resaves source workbooks. Public remains 1.4.0, with this work Unreleased for 1.4.x.
+
 ### Native selections (Unreleased)
 
 read_selection identifies exact JSON values or Unicode text spans inside full native cell, DOCX block, PPTX shape or PDF page references. Start with an empty selector to discover the complete parsed parent record without added evidence metadata. Then supply an actual RFC6901 pointer, such as /value for a cell, and optionally char_range={start:0,end:3}. DOCX table text is a projection, not a complete native cell geometry model.
@@ -466,6 +476,14 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
 
+
+### Native workbook structure evaluation (Unreleased)
+
+Run tests/unit/test_native_workbook_*.py, tests/unit/test_codex_workbook_audit.py and tests/integration/test_native_workbook_stdio.py. Rich native fixtures cover formulas, styles, comments, merges, charts, pivots/consolidation, 3D ranges and source/version preservation. SDK2 exercises complete paged read-back, worksheet CRUD and historical selected-value verification with independent workbook inspection.
+
+Explicitly opt into the real model with uv run python -m tests.codex_native_selection.run --worksheets --output /tmp/workbook-codex. Replay tests.codex_native_selection.audit against that directory. Run 01 on 2026-09-19 completed **115 MCP calls, zero tool errors, 160.49 seconds**. Codex viewed an actual scan PNG, created all 15 literal XLSX cells, retained the original 007 selection and updated B2 to 008. It added Review/Temporary sheets and a native cross-sheet formula, renamed Sheet1 to 資料 O'Brien, reordered the workbook and deleted Temporary.
+
+Independent audit checks all seven native revisions, literal values, stable sheet IDs/parts, exact formula rewriting, unchanged parts, complete reads before/after edits, source bytes/mtime, published output and two revision-specific Wiki snapshots. Regression tests reject late reads, forged revision transitions and hashes. Codex CLI 0.154.0-alpha.6.1 used its default model, not a pinned model. No general OCR, formula evaluation or Excel rendering claim; source evidence covers the whole scanned page. Ordinary pytest never starts Codex. Public remains 1.4.0 / future 1.4.x.
 
 ### Native selection evaluation (Unreleased)
 

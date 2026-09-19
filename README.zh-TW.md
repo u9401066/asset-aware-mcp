@@ -7,6 +7,11 @@
 
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+Unreleased 新增工作表結構操作：完整讀取工作表與引用清單、新增、改名、重排及刪除，
+保留未修改的原生內容，並檢查明確引用與檢視索引。公式結果與版面由 Agent 核對。
+詳見 [工作表操作](docs/wiki/Native-File-Assets.md#workbook-sheet-structure-unreleased)。
+公開版仍為 **1.4.0**，這些變更規劃於 **1.4.x** 發布。
+
 Unreleased 的 `read_selection` 可將原生值或文字範圍綁定到來源版本，驗證、
 轉製帳本與 Wiki 附件均保留完整選取證據；更新文件不會自動遷移舊主張。
 詳見 [精確選取引用](docs/wiki/Native-File-Assets.md#native-selections-unreleased)。

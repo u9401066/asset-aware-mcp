@@ -2,6 +2,44 @@
 
 # Native File Assets（v1.4.0）
 
+## Workbook sheet structure (Unreleased)
+
+先查 `contract(for_op="read_workbook")` 的 `workbook_structure_enabled`。
+`read_workbook` 可使用 `workbook_view="structure"` 或 `"references"`，回傳完整
+工作表名稱、順序、可見性、`sheetId`／part、名稱範圍與檢視資料；後者另列明確
+公式、圖表、驗證、條件格式、連結、樞紐與合併計算來源。這不是全部儲存格內容，
+儲存格仍用 `read_cell`／`inspect` 讀取。每頁固定 `revision` 與 `workbook_view`，
+沿 `next_text_offset` 讀完 `text_excerpt`，核對相同 `text_sha256` 的 UTF-8 SHA-256。
+
+所有修改指定 `asset_id` 和 `expected_revision`，先建立受管理版本：
+
+| 操作 | 主要欄位 | 行為 |
+|---|---|---|
+| `add_worksheets` | `worksheet_insert={"index":0,"names":["Review"]}` | 在零起算位置插入空白工作表，後續沿用 typed cell edits |
+| `rename_worksheet` | `worksheet_rename={"key":current_key,"name":"研究表"}` | 保留 ID／part，更新可解析的本機明確引用 |
+| `reorder_worksheets` | `worksheet_order=[current_key,...]` | 每個目前 key 恰好出現一次 |
+| `delete_worksheets` | `worksheet_keys=[current_key,...]` | 檢查保留內容的相依，至少保留一張可見工作表 |
+
+`current_key` 必須取自該版本，包含 `sheet_id` 與 `part`。每次修改回傳
+`review_request`；完整修復、變動 parts 與操作資料在新版 `read_workbook` JSON 的
+`operation_result`。一次插入／刪除最多 32 張，修改工作簿最多 256 張。
+改名保留外部工作簿引用與公式字串；`INDIRECT` 等動態語意須由 Agent 核對。
+插入／重排若改變 `Sheet1:Sheet3!A1` 這類 3D 範圍包含的工作表，預設拒絕；
+Agent 確認用途後可在該次請求指定 `allow_3d_membership_change=true`，結果會記錄數量。
+
+來源不經整份物件模型重存，未修改的 package parts 保持原位元組。工作表索引與
+區域名稱範圍依身分重排，請求開啟時重新計算，解除過期 calculation-chain 關聯，
+清除選用的過期 sheet-title 屬性快取。刪除的工作表／附件與計算鏈 parts 仍保留，
+不代表安全抹除。舊儲存格／選取引用仍固定歷史版本，Wiki 主張不自動搬移。
+保護、簽章、VBA／ActiveX、修訂與未知工作簿擴充結構需要專用流程，會阻擋結構修改；
+讀取能力仍獨立提供。這些檢查不代表公式已計算或 Excel 畫面已通過核對。
+
+實作參考 [Microsoft SpreadsheetML 結構](https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/structure-of-a-spreadsheetml-document)、
+[樞紐來源欄位](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.worksheetsource?view=openxml-3.0.1)
+與 [openpyxl 公式 tokenizer](https://openpyxl.readthedocs.io/en/stable/formula.html)。
+Tokenizer 僅協助定位原公式片段；不是計算引擎，也不拿來重存來源檔。
+公開版仍為 **1.4.0**，功能累積於 **Unreleased／1.4.x**。
+
 ## Native selections (Unreleased)
 
 `read_selection` 將完整原生儲存格、DOCX 區塊、PPTX 形狀或 PDF 頁面引用，

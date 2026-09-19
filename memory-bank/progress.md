@@ -1,5 +1,16 @@
 # Progress (Updated: 2026-09-19)
 
+## 2026-09-19 — workbook core committed, documentation prepared
+
+Core c74758a contains worksheet operations, contracts, source-preserving repairs,
+SDK2/actual-Codex evaluators, regression tests and the Unreleased spec/changelog.
+All local gates and actual115-call audit passed as recorded below. Documentation,
+English/TraditionalChinese website and bundled assistant instructions now describe
+the same capabilities/limits. Commit this reviewed documentation batch and push
+both commits to main, then await exact CI/Pages and verify public JS bytes.
+Public version1.4.0/future1.4.x; no tag. Broad user goal remains active.
+
+
 ## 2026-09-19 — workbook structure verified locally; main push pending
 
 Implemented native read_workbook/add_worksheets/rename_worksheet/reorder_worksheets/
