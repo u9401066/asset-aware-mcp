@@ -8,7 +8,7 @@ Pages35409818898 (3 jobs) passed; four public website files matched. Proof:
 /tmp/asset-aware-grid-publication-proof.json. Original user worktree is unchanged.
 Public remains 1.4.0; all current development stays Unreleased/future 1.4.x.
 
-Current uncommitted implementation adds stable A2T column IDs, fresh IDs for new
+Core commit156885b adds stable A2T column IDs, fresh IDs for new
 rows/columns, rename identity preservation and legacy snapshot representation
 compatibility. Missing legacy dates stay unknown and hash-stable. Complete workspace
 reads expose a deterministic structural_plan. apply_table_workspace optionally takes
@@ -41,7 +41,7 @@ completed task's builder image110026c3fbb5 and old smoke64d7b0f7; current smoke2
 remains available. Completed pytest and wheel temp directories were removed.
 Local evidence: /tmp/asset-aware-a2t-grid-local-proof.json.
 
-Remaining this phase: segmented commits and exact CI/Pages/public validation.
+Remaining this phase: final documentation commit, push and exact CI/Pages/public validation.
 Broader native Table membership expansion,
 headers/calculated-column edits, surviving-axis reordering and cross-format/real-corpus
 goal remain incomplete. Do not equate this bridge milestone with whole-goal completion.

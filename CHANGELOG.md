@@ -9,19 +9,29 @@
 
 ### Added
 
+- Structural A2T application uses stable column/row identities, a complete explicit
+  worksheet_grid plan and one native revision commit. Supported native formulas,
+  rich text and styles survive relocation; final values and unedited representations
+  are read back. Column renames keep identity; recreated rows/columns do not inherit
+  deleted identities. Frozen inputs and source bindings remain historical. Native
+  table-edge expansion, specialized table editing and reordering remain separate.
+  Typed JSON column defaults are accepted. Legacy snapshot hashes remain readable;
+  missing legacy creation dates no longer generate a new timestamp on every read.
+  Public remains 1.4.0; these changes are Unreleased for 1.4.x.
+
 - Unreleased `update_worksheet_grid`: revision-checked sequential native row/column
   insertion/deletion, preserving source XML/styles and relocating modeled formulas,
   table columns, merges, drawings, notes and views. Complete receipts retain geometry
   assumptions, deleted-reference errors, cache repairs and required Agent review.
-  Source publication is explicit; A2T structural correspondence remains in progress.
+  Source publication is explicit; A2T correspondence uses a separate explicit plan.
   Public version stays 1.4.0, with development on the 1.4.x line.
 
 - Native workbook/A2T workspaces: exact range projection, typed cells, complete
   hash-pinned readback with original cell evidence, guarded application to the
   source workbook and independent XLSX creation. Applied/exported table inputs
   remain available as immutable `workspace_reference` snapshots. Cell updates
-  preserve original styles and untouched parts; structural A2T edits require
-  independent creation. `table_data.update_cell` accepts typed JSON values.
+  preserve original styles and untouched parts; structural A2T edits use the explicit
+  identity-checked grid plan or independent creation. `table_data.update_cell` accepts typed JSON values.
   Source bindings do not auto-advance; Agent reviews meaning, formulas and layout.
   Public version remains 1.4.0; all development stays Unreleased for 1.4.x.
 

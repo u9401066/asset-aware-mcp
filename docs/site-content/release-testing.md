@@ -2,6 +2,30 @@
 
 # Release And Testing
 
+## Structural A2T writeback evaluation (Unreleased)
+
+`tests/unit/test_native_table_grid_apply.py` 與
+`tests/integration/test_native_table_grid_stdio.py` 驗證欄位改名／重建身分、刪除後
+重建相同資料列、原生公式搬移、富文字／樣式、完整範圍讀回、版本衝突與舊快照。
+SDK2 實際傳入 native 欄位的 JSON default_value，並核對一次原生版本提交。
+
+```bash
+uv run python -m tests.codex_native_selection.run --table-grid --output /tmp/table-grid-codex
+uv run python -m tests.codex_native_selection.audit /tmp/table-grid-codex
+```
+
+2026-09-19 run 01：**86 次工具呼叫（84 次成功、2 次錯誤後恢復）、178.67 秒**。
+Codex 看掃描 PNG，保留原始 007 選取證據與 derivation，在 A2T 將 B2 改為 008，
+刪除／重建資料列及欄位，加入手動資料後一次套回原 XLSX。獨立稽核檢查原來
+15 格與修改後 20 格字面值、列欄 ID、修改前後完整讀取、原生操作紀錄、固定
+A2T 快照、原 PDF 位元組／mtime，以及兩份歷史 Wiki。舊主張沒有遷移。
+
+兩次查詢錯誤是把 table_data／table_manage 送入 native contract.for_op；
+它只接受原生操作名稱，其他工具使用 MCP 已提供的工具 schema。CLI
+0.154.0-alpha.6.1 使用預設模型。這次實際模型案例沒有原生 Excel Table 物件，
+也未驗證一般 OCR、公式求值或 Excel 渲染；富文字／公式保留另由原生測試覆蓋。
+公開版維持 1.4.0，變更列於 Unreleased／1.4.x。
+
 ## Native worksheet grid evaluation (Unreleased)
 
 `tests/unit/test_native_grid_*.py`、`tests/unit/test_native_workbook_grid.py`

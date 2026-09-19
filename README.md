@@ -10,7 +10,10 @@
 Unreleased native Excel/A2T workspaces preserve typed values and exact source-cell
 references. Edit projected cells in A2T, then apply them to the original workbook at
 checked table/file revisions; each applied input remains an immutable snapshot.
-Structural A2T changes can create an independent workbook. See
+With table_grid_apply_enabled, explicit identity-checked plans also apply A2T row/
+column insertion and deletion in one native commit. Column renaming keeps identity;
+deleted/recreated rows and columns receive new identities. Whole worksheet axes
+move; native table edges and unsupported table edits require separate review. See
 [native table workspaces](docs/wiki/A2T-Tables.md#native-workbook-workspaces-unreleased).
 Public stays **1.4.0**; development continues within **1.4.x**.
 

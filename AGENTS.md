@@ -38,6 +38,20 @@ and LightRAG knowledge graph outputs.
 
 ## Native Files and Agent Review
 
+- When table_grid_apply_enabled is advertised, read the COMPLETE A2T structural_plan
+  after edits and inspect current native references. Pass worksheet_grid explicitly
+  to apply_table_workspace with the exact table hash and bound file revision. Stable
+  row_ids/column_ids distinguish surviving, renamed and newly created identities.
+  The plan moves whole worksheet axes, including outside the projection; deleted
+  merged anchors are discarded. Unchanged formulas follow native relocation; new/
+  edited formulas use destination coordinates. Read full new workbook references,
+  operation_result and frozen workspace_reference, then verify the snapshot.
+  Native Table edge expansion, specialized table edits and reordering have separate
+  limits. Agent checks table membership, semantics, recalculated results and layout.
+  Old bindings/evidence never auto-advance. native contract.for_op accepts native
+  operation names only; table_data/table_manage use their exposed MCP tool schemas.
+  Public stays 1.4.0 / Unreleased within 1.4.x.
+
 - When workbook_grid_enabled is advertised, update_worksheet_grid takes an exact
   worksheet_grid.worksheet key and 1..32 sequential row/column insert/delete edits.
   Indices are one-based in each intermediate grid. Pin expected_revision, read the

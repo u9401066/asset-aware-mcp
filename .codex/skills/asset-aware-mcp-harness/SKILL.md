@@ -42,8 +42,8 @@ verification.
   tagged {kind,value} cells. Read the complete read_table_workspace JSON with one
   table_sha256, verifying assembled text_sha256. Use table_data with stable row_id
   and tagged values, then read again before apply_table_workspace at the exact
-  table hash and bound native revision. Only unchanged row/column correspondence
-  can be applied; source styles/untouched parts survive supported cell edits.
+  table hash and bound native revision. Changed correspondence uses the explicit
+  structural plan below; source styles/untouched parts survive supported edits.
   Read the new native revision and full stored operation result. Applied/exported
   inputs persist as workspace_reference snapshots; verify and re-read them even
   after mutable A2T changes. Bindings do not auto-advance. Structural A2T edits can
@@ -51,6 +51,20 @@ verification.
   does not copy source layout or relocate formulas. Source refs describe origin,
   not semantic support for changed data. Agent reviews meaning/results/layout.
   Public stays 1.4.0; new work is Unreleased within 1.4.x.
+
+- When table_grid_apply_enabled is advertised, read the COMPLETE A2T structural_plan
+  after edits and inspect current native references. Pass worksheet_grid explicitly
+  to apply_table_workspace with the exact table hash and bound file revision. Stable
+  row_ids/column_ids distinguish surviving, renamed and newly created identities.
+  The plan moves whole worksheet axes, including outside the projection; deleted
+  merged anchors are discarded. Unchanged formulas follow native relocation; new/
+  edited formulas use destination coordinates. Read full new workbook references,
+  operation_result and frozen workspace_reference, then verify the snapshot.
+  Native Table edge expansion, specialized table edits and reordering have separate
+  limits. Agent checks table membership, semantics, recalculated results and layout.
+  Old bindings/evidence never auto-advance. native contract.for_op accepts native
+  operation names only; table_data/table_manage use their exposed MCP tool schemas.
+  Public stays 1.4.0 / Unreleased within 1.4.x.
 
 - When workbook_grid_enabled is advertised, update_worksheet_grid takes an exact
   worksheet_grid.worksheet key and 1..32 sequential row/column insert/delete edits.

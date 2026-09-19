@@ -135,8 +135,9 @@ optional dimension calibration). It requires configured grid and workbook-readba
 adapters, stages an immutable managed revision with compare-and-swap, and returns
 a revision-pinned `read_workbook` review request for the complete operation receipt.
 Source writeback stays explicit. The contract advertises `workbook_grid_enabled`
-only when configured. Structural A2T correspondence, SDK2 and actual Codex workflow
-evaluation remain required before release; development stays Unreleased/1.4.x.
+only when configured. SDK2 and actual Codex cover direct grid editing and the A2T
+insertion/deletion bridge below. Broader table/move fidelity remains open;
+development stays Unreleased/1.4.x.
 
 Named pivot/consolidation sources must resolve worksheet-scoped and workbook-scoped
 name chains, exact A1 rectangles and explicit table selectors against each current
@@ -167,8 +168,9 @@ Applying uses a copied table snapshot with expected_table_sha256 plus the exact 
 workbook expected_revision. Reconstruct source records and compare tagged values;
 unchanged native cells are never rewritten. Apply only typed changed cells through
 the checked original-package adapter, preserving styles and all untouched parts.
-Reject changed row/column correspondence, unsupported edits, stale bindings, archives
-and malformed type payloads before native commit. The operation result records the
+Changed correspondence requires an explicit worksheet_grid plan as described below.
+Reject unsupported edits, stale bindings, archives and malformed type payloads
+before native commit. The operation result records the
 applied snapshot hash and table/source identity. Before committing a native update
 or independent creation, retain canonical A2T JSON as a managed immutable file with
 format `a2t`, media type `application/vnd.asset-aware.a2t+json`, and a full
@@ -182,11 +184,38 @@ work. Source publication/writeback remains an explicit existing operation.
 Independent creation from A2T handles the current rows/columns, including structural
 A2T edits, using explicit destination filename/sheet/header choices. It creates a new
 native asset and returns the mapping; it is not a format-preserving source writeback.
-Applying row/column structural transformations to existing workbooks still requires
-native grid/reference/merge/style relocation work under the broader goal. Agent
+Applying insertion/deletion to existing workbooks uses the native grid/reference/
+merge/style adapter through the explicit identity plan below. Agent
 reviews meaning, dynamic references, formula results and rendered layout. Regressions,
 SDK2 and actual Codex must verify literal scan data, typed edits, original bytes,
 source and table preconditions, complete readback and persistent historical evidence.
+
+### Structural A2T application (Unreleased, 1.4.x)
+
+New TableContext instances carry stable column_ids as well as row_ids. Rename keeps
+column identity; new appended rows and columns receive fresh IDs, including after
+deletion of an identical value/name. Persistence retains these IDs. Historical A2T
+snapshots without column IDs keep their canonical representation; compatible mutable
+legacy schemas can acquire an explicit binding before a schema edit. Ambiguous
+previous schema history cannot be silently mapped. Missing legacy creation dates
+remain unknown instead of changing the workspace hash with each fresh read.
+
+When table_grid_apply_enabled, complete read_table_workspace exposes structural_plan.
+Its deterministic insert/delete proposal follows stable identity order and records
+the destination. Caller explicitly supplies worksheet_grid to apply_table_workspace;
+MCP checks the exact worksheet, surviving IDs and new slots, bounding every edit to
+the changing projection. Whole worksheet axes move, so content outside the projection
+also relocates. Plans discard deleted merged anchors. Reordering surviving identities
+requires a native move operation, not reconstruction with fabricated old identities.
+
+Read exact original records, apply the checked native grid to memory, then apply only
+new or changed typed values. Unchanged formulas/rich text follow the native relocation;
+new/edited formulas address the destination. Missing new values are blank. Read every
+destination value back and compare unedited representations/styles, retain the frozen
+A2T input and commit once under the original file CAS. Old evidence remains historical.
+Native Table edge insertion does not imply membership expansion; table headers,
+calculated columns and partial array structures retain their dedicated edit boundaries.
+No structural preview claims semantic, recalculation or visual completeness.
 
 ### Native workbook sheet structure (Unreleased, 1.4.x)
 

@@ -8,7 +8,8 @@
 `project_workbook_table`／`read_table_workspace`／`apply_table_workspace`／
 `create_workbook_from_table` 提供讀回、原檔儲存格更新及獨立建立；詳見
 [A2T 原生工作區](#/a2t-tables)。套用輸入保留
-不可變快照，來源綁定不自動前進；原檔列欄結構修改與完整畫面核對仍有明確邊界。
+不可變快照，來源綁定不自動前進。`table_grid_apply_enabled` 啟用時，可依穩定列欄
+身分與明確計畫，將 A2T 增刪列欄一次套回原檔；原生 Table 邊界及畫面另需核對。
 公開版維持 1.4.0，後續使用 1.4.x。
 
 ## Worksheet grid operations (Unreleased)
@@ -51,8 +52,9 @@ document(op="native", native_request={
 
 修改先建立受管理版本，原始檔不會自動覆寫。沿回傳的 `review_request` 完整讀取
 `read_workbook.operation_result`，核對新位置的值與必要的版面／公式結果。舊引用與
-Wiki 主張仍固定歷史版本。A2T 工作區的原始綁定不會自動跟隨列欄搬移；結構對應
-回寫仍在開發。公開版維持 1.4.0，這些工作累積於 Unreleased／1.4.x。
+Wiki 主張仍固定歷史版本。A2T 工作區的原始綁定不會自動跟隨列欄搬移；增刪回寫
+使用 [A2T 結構計畫](#/a2t-tables)。公開版維持
+1.4.0，這些工作累積於 Unreleased／1.4.x。
 
 ## Workbook sheet structure (Unreleased)
 

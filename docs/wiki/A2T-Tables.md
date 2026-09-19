@@ -26,7 +26,7 @@
 刪除，仍能重讀原快照。綁定不會自動改指新版檔案；下一輪同步請重新投影。
 來源檔只在明確 publish／writeback 時輸出或回寫。
 
-若已增刪／重排列欄，套回原工作簿會拒絕，避免錯位。可使用
+結構修改可使用下節的明確回寫計畫。也可使用
 `create_workbook_from_table`，指定 table_id、expected_table_sha256 與
 `table_workbook={name:"table.xlsx",sheet:"Data",include_headers:false}`，另建
 獨立 XLSX；也可指定 workspace_reference 重用固定輸入。新檔保留型別與公式文字，
@@ -35,7 +35,40 @@ native 欄位不可經舊的 Excel renderer 字串化輸出。
 
 完整工作區同時保留目前值與原版 source_cells 引用。引用表示抽取來源，並不宣稱
 它支持修改後的語意；既有 PDF／DFM CellCitation 另行保留。Agent 仍需核對語意、
-公式計算與畫面。原生列欄結構變更的公式／合併／樣式遷移仍屬後續工作。
+公式計算與畫面；來源引用不會自動變成修改後內容的證據。
+
+## Structural A2T writeback (Unreleased)
+
+先確認 `contract(for_op="apply_table_workspace")` 的 `table_grid_apply_enabled`。
+新工作區保存 row_ids 與 column_ids；欄位改名保留身分，刪除再建立同名欄位會
+產生新 ID。`table_manage` 的 native 欄位可使用帶型別 JSON 作為 default_value。
+舊快照仍能依原 hash 讀回；已有模糊結構歷史的舊工作區需要重新建立明確對應。
+
+以 `table_data`／`table_manage` 增刪列欄後，再完整讀取 `read_table_workspace`。
+`structural_plan` 提供依身分推導的 `worksheet_grid` 與目的範圍；MCP 不會自行套用。
+核對計畫及目前工作簿的完整 references，才將該計畫明確傳入：
+
+```python
+document(op="native", native_request={
+    "op": "apply_table_workspace",
+    "asset_id": asset_id,
+    "expected_revision": bound_revision,
+    "table_id": table_id,
+    "expected_table_sha256": current_table_hash,
+    "worksheet_grid": complete_workspace["structural_plan"]["worksheet_grid"],
+})
+```
+
+結構與值只產生一次原生版本提交。未改值的來源儲存格隨原生列欄搬移，保留格式、
+富文字及公式調整；新建／明確修改的公式使用目的座標，新格未給值視為空白。
+完整讀回新版 `read_workbook(workbook_view="references")`、操作紀錄及目的範圍，
+並重讀／驗證 workspace_reference。原綁定與舊證據維持歷史版本。
+
+計畫操作的是整列／整欄，投影外的內容也會移動。刪除計畫使用
+`merged_anchor="delete"`，不把已刪身分的內容挪給其他儲存格。既有列欄重排仍需
+原生移動支援；原生 Excel Table 標題、計算欄、部分陣列等保護仍有效。
+在原生 Table 範圍外插入列欄不會自動擴大它；表格成員、動態引用、公式求值及
+實際畫面仍由 Agent 核對。獨立建立工作簿可另外使用 create_workbook_from_table。
 
 ## 核心模型
 

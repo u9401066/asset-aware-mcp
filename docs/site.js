@@ -229,7 +229,7 @@ Confirm activation, provider discovery, and preservation of custom settings befo
 
 ### Native table workspaces (Unreleased)
 
-Project an exact workbook range into A2T, read complete typed cells and source references, edit through table_data, then apply only changed cells at the pinned table/file revisions. Applied inputs remain immutable workspace_reference snapshots. Structural A2T changes can create a separate workbook; applying their changed row/column correspondence to the original workbook remains open. Native worksheet grid operations are available separately. See the A2T guide. Public stays 1.4.0, with development within 1.4.x.
+Project an exact workbook range into A2T, read complete typed cells and source references, then edit through table_data/table_manage. With table_grid_apply_enabled, an explicit identity-checked worksheet_grid plan applies row/column insertion and deletion together with value edits in one native commit. Renaming retains column identity; deleted/recreated rows and columns receive new identities. Applied inputs remain immutable workspace_reference snapshots. Whole worksheet axes move; native table membership and specialized edits have explicit limits. See the A2T guide. Public stays 1.4.0, with development within 1.4.x.
 
 ### Worksheet grid operations (Unreleased)
 
@@ -237,7 +237,7 @@ Discover update_worksheet_grid and workbook_grid_enabled. Assemble any paged sch
 
 Insertion uses inherit_format to inherit formatting from before (default), after or none. Deletion preserves a removed merged anchor's payload by default unless that would overwrite surviving content; merged_anchor="delete" discards it. collapsed_objects selects preserve_size (default) or reject when deletion would collapse an image. Cells/styles, table column identities and supported formulas, names, filters, charts, notes and views move together. Deleted references become explicit #REF!; stale formula/chart caches are cleared and recalculation requested.
 
-Drawing geometry records 96-DPI assumptions. Non-default fonts may require measured column_digit_width/default_column_pixels/default_row_height_points. Dynamic named sources needing evaluation, partial array/pivot edits, protected or unmodeled structures report explicit limits. Agents review automatic row heights, rotated/grouped objects, rendering and actual formula results. Complete the returned review_request and inspect the full operation receipt. Old references and Wiki assertions remain historical; A2T structural correspondence remains in development. Source writeback is explicit. Public stays 1.4.0 / Unreleased for 1.4.x.
+Drawing geometry records 96-DPI assumptions. Non-default fonts may require measured column_digit_width/default_column_pixels/default_row_height_points. Dynamic named sources needing evaluation, partial array/pivot edits, protected or unmodeled structures report explicit limits. Agents review automatic row heights, rotated/grouped objects, rendering and actual formula results. Complete the returned review_request and inspect the full operation receipt. Old references and Wiki assertions remain historical; A2T insertion/deletion uses its explicit structural plan. Source writeback is explicit. Public stays 1.4.0 / Unreleased for 1.4.x.
 
 ### Workbook sheet structure (Unreleased)
 
@@ -455,7 +455,15 @@ After another complete read, apply_table_workspace requires table_id, expected_t
 
 Applied/exported input is retained as an immutable workspace_reference: verify it or pass it to read_table_workspace after the live table changes or is deleted. Bindings never auto-advance; project the new revision for a subsequent synchronized edit. Source references describe extraction origin and do not assert support for edited values.
 
-Changed row/column correspondence rejects application to the source. create_workbook_from_table instead creates an independent XLSX with table_workbook={name:"table.xlsx",sheet:"Data",include_headers:false}, the table ID/hash, and an optional frozen workspace_reference. It retains typed data and formula text, with row/column mapping in the stored operation result. Source styles and formula relocation are not copied. Ordinary scalar A2T tables are also supported; native columns must use this path for Excel output. Agent review covers meaning, formula results and layout. Public stays 1.4.0; this is Unreleased development for 1.4.x.
+Changed correspondence requires the explicit structural plan below. create_workbook_from_table can also create an independent XLSX with table_workbook={name:"table.xlsx",sheet:"Data",include_headers:false}, the table ID/hash, and an optional frozen workspace_reference. It retains typed data and formula text, with row/column mapping in the stored operation result. Source styles and formula relocation are not copied to independent workbooks. Ordinary scalar A2T tables are also supported. Agent review covers meaning, formula results and layout. Public stays 1.4.0; this is Unreleased development for 1.4.x.
+
+### Structural A2T writeback (Unreleased)
+
+Check table_grid_apply_enabled on contract(for_op="apply_table_workspace"). New workspaces retain row_ids and column_ids. Renaming preserves identity; deleting/recreating a same-name column creates a new identity. table_manage accepts typed JSON default_value for native columns. Historical snapshots retain their hashes; ambiguous legacy column history needs a fresh explicit correspondence.
+
+After table_data/table_manage edits, read the COMPLETE workspace again. Review structural_plan.worksheet_grid and its destination plus the complete current native workbook references. Supply the plan explicitly as worksheet_grid to apply_table_workspace with asset_id, bound expected_revision, table_id and the current expected_table_sha256. The MCP checks each surviving identity and new slot, applies structure and values before one native commit, and reads the complete destination back. Re-read the new workbook references, full operation receipt and frozen workspace_reference; verify the snapshot. Source bindings and old evidence never auto-advance.
+
+Unchanged source cells follow native relocation, preserving supported formulas, rich text and styles. Edited/new formulas use destination coordinates; missing new values mean blank. Plans move WHOLE worksheet rows/columns, including content outside the projection, and discard deleted merged anchors. Reordering existing identities requires native move support. Native Table headers/calculated columns, partial arrays and unmodeled structures retain their checks; insertion beyond a native Table edge does not expand its membership. Agent review covers membership, dynamic references, calculated results and actual rendering.
 
 ## Keep row evidence explicit
 Use stable row identifiers and cell-level AssetRefs so every comparison can return to its source.
@@ -498,6 +506,14 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Structural A2T writeback evaluation (Unreleased)
+
+Run tests/unit/test_native_table_grid_apply.py and tests/integration/test_native_table_grid_stdio.py for renamed/recreated identities, identical row recreation, native formula relocation, rich text/styles, complete destination reads, version conflicts and historical snapshots. SDK2 sends typed JSON column defaults and checks one native commit.
+
+Explicit model run: uv run python -m tests.codex_native_selection.run --table-grid --output /tmp/table-grid-codex; replay tests.codex_native_selection.audit. Run 01 on 2026-09-19 made **86 tool calls: 84 successful and two recovered input errors**, in **178.67 seconds**. Codex viewed the scan PNG, retained the original 007 selection/derivation, edited B2 to 008 in A2T, deleted/recreated a row and column, added manual data and applied everything in one native commit. Independent audit checks the original 15 and final 20 literal cells, stable identities, complete before/after reads, the native operation receipt, frozen A2T input, source PDF bytes/mtime and two historical Wikis. Old assertions never migrate.
+
+The two rejected discovery calls passed table_data/table_manage to native contract.for_op, which accepts only native operation names; Codex recovered using their exposed MCP tool schemas. CLI 0.154.0-alpha.6.1 uses its default model. This actual model fixture has no native Excel Table object and does not certify general OCR, formula evaluation or Excel rendering. Rich native formulas/styles have separate package tests. Public stays 1.4.0 / Unreleased within 1.4.x.
 
 ### Native worksheet grid evaluation (Unreleased)
 

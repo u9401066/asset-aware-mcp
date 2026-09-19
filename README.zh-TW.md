@@ -8,8 +8,10 @@
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
 Unreleased 的原生 Excel／A2T 工作區保留資料型別與精確來源引用；在 A2T 修改後，
-可核對表格與檔案版本再套回原工作簿，並保留實際套用的不可變快照。已增刪列欄的
-A2T 可另建獨立工作簿。詳見 [原生表格工作區](docs/wiki/A2T-Tables.md#native-workbook-workspaces-unreleased)。
+可核對表格與檔案版本再套回原工作簿，並保留實際套用的不可變快照。
+`table_grid_apply_enabled` 啟用時，可用明確計畫將 A2T 列欄增刪一次套回原檔；
+欄位改名保留 ID，刪除後重建不重用舊身分。操作搬移整張工作表的列欄，原生 Table
+邊界與尚未支援的表格編輯另有檢查。詳見 [原生表格工作區](docs/wiki/A2T-Tables.md#native-workbook-workspaces-unreleased)。
 公開版仍為 **1.4.0**，後續沿用 **1.4.x**。
 
 Unreleased 的工作表操作可完整讀取引用清單、新增、改名、重排及刪除工作表；
