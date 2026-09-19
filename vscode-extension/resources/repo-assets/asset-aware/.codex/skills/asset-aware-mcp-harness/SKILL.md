@@ -72,6 +72,18 @@ verification.
   and semantic support still require agent review. Never treat DFM temporary paths
   as persistent media attachments; use manifest.part_attachments.
 
+
+- When advertised, create_docx creates independent native Word paragraphs and tables.
+  add_docx_blocks inserts at start/end or before/after a full current block reference;
+  delete_docx_blocks deletes complete body paragraphs/tables with docx_block_refs.
+  Pin expected_revision, follow review_request, read all DFM chunks and block pages.
+  Use update_docx for existing content; never alter block markers to insert/delete.
+  Covered merged cells must be default empty. Known section/range/field/revision/
+  embedded dependencies block unsupported deletion. Original parts/history remain.
+  MCP checks serialized structure and untouched XML/bytes; Agent reviews page flow,
+  inherited formatting, fields and rendering. Native DOCX page preview remains open.
+  Source publication/writeback is explicit; public stays 1.4.0 / Unreleased for 1.4.x.
+
 - When configured, render_pptx_slide returns a whole-slide MCP PNG using optional
   LibreOffice Impress. Supply an explicit revision and exact pptx_slide_key from
   read_pptx; compare current/historical images with complete native content. Check

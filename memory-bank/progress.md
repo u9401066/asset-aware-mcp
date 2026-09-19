@@ -1,6 +1,20 @@
 # Progress (Updated: 2026-09-19)
 
-## 2026-09-19 — native DOCX structure implemented; final publication gates running
+## 2026-09-19 — native DOCX structure local gates passed; exact remote proof next
+
+Core committed as `235b89b` (26 counted files +2 MEM) with author u9401066.
+Final full suite **2156 passed,31 optional skipped**,76.97s, retained log
+`/tmp/asset-aware-docx-structure-final-full.log`. Extension199 passed;64-file
+package guard; fresh/update VSIX install passed (baseline0.2.10 absent, local
+GUI activation unavailable). VSIX rebuilt66files; wheel/sdist/VSIX auditallpass.
+Clean-wheel install/help/doctor/list-tools/SDK2stdio passed. Docker image
+`b8303c0aa802` and builder `3f5e1eb577b1` passed CLI/stdio; only these task-owned
+images removed after proof to recover350MiB. Dedicated full-pytest shm cleaned
+after terminal success. Runtime fingerprint still matches actual Codex run.
+Public remains1.4.0. Next: documentation/assets checkpoint, push main, exactHEAD
+CI/Pages and publicsitehash proof. Goal stays active for outstanding scope.
+
+### Implementation and evaluation detail
 
 Public stays **1.4.0**, all work Unreleased for **1.4.x**, no new tag/bump.
 Authoritative worktree: `/home/eric/workspace251226/asset-aware-mcp-agent-assets`;

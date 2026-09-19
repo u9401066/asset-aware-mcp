@@ -207,6 +207,51 @@ custom citation templates only affect presentation. Existing snapshots are never
 replaced. Agents retain responsibility for semantic, rendered and formula review.
 
 
+## DOCX creation and body structure (Unreleased)
+
+公開版仍維持 **1.4.0**；以下累積在 main，供後續 **1.4.x**。先用
+`contract(for_op="create_docx")` 查安裝版本是否提供 `docx_structure_enabled`。
+
+- `create_docx` 獨立建立原生 Word 文件，接受具型別的段落與可編輯表格，
+  不需要先有來源檔。可設定頁面／邊界 twips、作者、富文字 runs、半點字級、
+  字型／顏色、段落間距，以及固定欄寬、最小列高、合併格、底色與重複標題列。
+- `add_docx_blocks` 在 `start`／`end` 插入，或以目前完整區塊引用指定
+  `before`／`after`。插入最多 100 個區塊；既有文件的樣式會影響未明確指定的格式。
+- `delete_docx_blocks` 使用 `docx_block_refs`，只刪除完整主本文段落／表格。
+  部分段落、表格內部區塊、頁首頁尾、內容控制項、節分隔、書籤／註解範圍、
+  欄位、修訂與內嵌物件等已知相依會阻擋不受支援的刪除。
+
+結構操作需要 `asset_id` 與 `expected_revision`。引用取自固定版本的
+`read_docx` 區塊清單，跟隨 `next_offset` 讀完；修改文字則沿用 `update_docx`，
+提交完整 DFM，保留 native frontmatter 與區塊標記。不要把插刪標記當成結構操作。
+
+```python
+document(op="native", native_request={
+    "op": "create_docx",
+    "docx_create": {
+        "name": "review.docx",
+        "author": "u9401066",
+        "blocks": [{"kind": "paragraph", "runs": [
+            {"text": "研究 007 µg", "bold": True, "font_size_pt": 11.5}
+        ]}]
+    }
+})
+```
+
+表格必須為完整矩形；合併範圍不可重疊，被覆蓋的儲存格必須保持預設空白，
+避免隱藏內容損失。資料字串保留前導零、負號、逗號、換行與 Unicode，不計算公式。
+MCP 讀回新區塊的文字、格式、欄寬與合併狀態，並核對未修改 XML 與其他 parts 的
+位元組。刪除保留歷史版本及既有附件，因此不等於安全抹除。
+
+所有變更先建立受管理版本；`publish`／`writeback` 仍明確執行。舊區塊引用可作
+歷史證據，不能拿來修改新版本。完整 DFM 讀回與 package checks 不代表畫面相同；
+Agent 仍需核對語意、分頁、繼承格式、Word 欄位／檢視器快取。此階段尚未提供
+原生 DOCX 整頁 MCP 預覽、樣式庫設計或任意 Word 物件結構編輯。
+
+底層建立參考 [python-docx Document API](https://python-docx.readthedocs.io/en/latest/api/document.html)
+與 [合併格模型](https://python-docx.readthedocs.io/en/latest/dev/analysis/features/table/cell-merge.html)；
+既有文件結構更新只替換 `word/document.xml`，其餘 parts 保留。
+
 ## 1.3.0: native DOCX bridge
 
 1.3.0 新增 `read_docx`／`update_docx`，使用既有 DFM 流程處理已登錄

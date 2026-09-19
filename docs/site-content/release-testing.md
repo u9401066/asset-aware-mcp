@@ -2,6 +2,40 @@
 
 # Release And Testing
 
+## Native DOCX structure evaluation (Unreleased)
+
+The real Codex CLI can transcribe a synthetic scanned PDF page into a newly created,
+editable DOCX table, change and restore a cell, insert/delete disposable body blocks,
+verify historical references, and publish a wiki snapshot. Ordinary pytest never
+starts Codex; this runner uses the existing logged-in CLI without reading credentials
+or changing persistent configuration. Only the native document MCP tool is enabled.
+
+```bash
+uv run pytest tests/unit/test_native_docx_structure.py tests/unit/test_native_docx_structure_guards.py tests/unit/test_native_docx_structure_operations.py tests/integration/test_native_docx_structure_stdio.py -q
+uv run python -m tests.codex_docx_structure.run --output /tmp/docx-codex-structure
+uv run python -m tests.codex_docx_structure.audit /tmp/docx-codex-structure
+```
+
+The independent auditor checks actual source PNG pixels, exact strings, leading
+zeros, run formatting, column/row grids, merges, managed history, complete DFM reads
+before edits, full references, source bytes/mtime and wiki part attachments. This
+does not establish full Word rendering fidelity or real-corpus coverage. Public
+version remains 1.4.0; new features accumulate Unreleased for 1.4.x.
+
+Run 01 on 2026-09-19 completed **45 MCP calls with zero tool errors**, one actual
+source PNG and complete DFM readback for all five managed DOCX revisions. Exact
+transcription, leading zeros, half-point Arial runs, merged title/grid, temporary
+insert/delete, old evidence, published bytes and all 17 wiki package attachments
+passed independent checks. Codex also exported a source PDF wiki and verified a
+whole-file reference; the auditor accepts these additional valid outputs. It
+explicitly reported that DOCX page rendering/page flow were not reviewed.
+
+
+Final local gates passed on 2026-09-19: **2,156 Python tests passed, 31 optional
+skipped**; extension **199 passed**. Ruff, mypy, dependency/security gates, Docker
+CLI/SDK2 stdio, fresh/update VSIX install and clean-wheel CLI/stdio checks passed.
+Local GUI activation was unavailable; CI runs that check. No public version bump.
+
 ## Whole-slide rendering evaluation (Unreleased)
 
 Use `--render` with `tests.codex_pptx_tables.run` to make the real Codex CLI view
