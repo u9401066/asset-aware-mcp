@@ -1,5 +1,37 @@
 # Progress (Updated: 2026-09-19)
 
+## Native delimited NUL fix — all local gates revalidated
+
+Current source SHA0f9c93deb1f56031bce79b3aeeca373c4cf2e0b429e2173b2afa08fbf20a0a24
+matches actual default Codex run02, built wheel, isolated Python3.10 installation,
+and Docker a83ff0fe9f0b91cbaa2f1cec29bcf1e3ba82c029475baf12b6289696f2a21e4b.
+Fullpytest3012passed35optional-skips126.86s; Python3.10 focusedunit+SDK2 37pass13.91s.
+Actual Codex103successful/0errors210.09s,4regionPNGs,3claims,6historyevents and2Wikis
+pass independent bytes/raster/trace audit; artifacts:/dev/shm/asset-aware-codex-delimited-02.
+Clean wheel and rebuilt Docker import/doctor/tools/SDK2 pass. Source lint/type/Bandit,
+artifact audits, docs/hygiene32tests and browser desktop/mobile zh/en pass. Previous
+extension199tests/package/install checks still apply (no extension/harness changes).
+Both prior CI failures are documented: stale metadata fixture at2dde288, then legacy
+Python3.10 NUL rejection at7dae1a3; all other latter-run platform/unit/integration jobs
+passed. The NUL correction preserves source/value/positions; no tests were disabled.
+Temporary Docker staging was restored with exact hashes/mtimes; obsolete owned builder/
+image and terminal private Python3.10 environment/full-test scratch were cleaned.
+Push scoped code/docs correction, then require new exact-head CI/Pages/public proof.
+Public1.4.0/future1.4.x, no tag; original broad goal remains active.
+
+## Native delimited Python3.10 NUL compatibility
+
+CI35429684191 at7dae1a3 passed every functional platform/unit/integration job except
+Python3.10: its stdlib csv rejects NUL on read/write (upstream71767/97503). Newer
+Python accepted the existing long-field fixture. Add reversible, syntax-disjoint
+single-scalar masking only around csv calls; original bytes/text/positions and values
+stay exact. Regression covers real marker collisions, custom quoting/escape dialects,
+NUL and native offsets. An initial new assertion compared neighbor context across
+an edit; corrected it to preserve the field/spans while expecting updated context.
+Python3.13 focused36pass; clean isolated Python3.10 unit+actual SDK2 37pass13.91s.
+Runtime source changed; rebuild/recheck wheel/container and rerun default Codex,
+full suite and exact-head CI/Pages before publication. No version/tag change.
+
 ## Native delimited final-state recheck
 
 Corrected metadata fixture plus explicit CSV cross-platform inventories pass the

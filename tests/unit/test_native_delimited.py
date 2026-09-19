@@ -402,3 +402,40 @@ def test_independent_codex_auditor_rejects_rehashed_wrong_field_span(adapter):
     )
     with pytest.raises(ValueError, match="transcription"):
         check_field(changed, data)
+
+
+@pytest.mark.parametrize(
+    "dialect",
+    [
+        NativeDelimitedDialect(),
+        NativeDelimitedDialect(delimiter="\ue000", escapechar="\ue001"),
+        NativeDelimitedDialect(quotechar=None, escapechar="\\"),
+    ],
+)
+def test_nul_compatibility_preserves_real_marker_characters_and_original_offsets(
+    adapter, dialect
+):
+    value = '\ue000\ue001\ue002\x00quoted,"\r\n尾\x00'
+    created, _ = adapter.create(
+        NativeDelimitedCreate(rows=[[value, "007"]], dialect=dialect, bom=True)
+    )
+    field = adapter.read_cell(created, dialect, 0, 0)
+    assert field["value"] == value
+    loc = field["locator"]
+    assert created[loc["byte_start"] : loc["byte_end"]].decode() == field["raw"]
+    assert (
+        created.decode("utf-8-sig")[loc["char_start"] : loc["char_end"]] == field["raw"]
+    )
+    ref = reference(adapter, created, dialect, 0, 1)
+    changed, _ = edit(
+        adapter,
+        created,
+        dialect,
+        operation="set_cells",
+        cells=[{"reference": ref, "value": "008"}],
+    )
+    assert changed == created[:-5] + b"008\r\n"
+    reread = adapter.read_cell(changed, dialect, 0, 0)
+    for key in ("value", "raw", "raw_sha256", "locator", "line_range"):
+        assert reread[key] == field[key]
+    assert "008" in reread["context"]["suffix"]

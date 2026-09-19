@@ -6,6 +6,7 @@ import bisect
 import csv
 import hashlib
 import io
+import itertools
 import re
 from array import array
 from dataclasses import dataclass
@@ -81,6 +82,34 @@ def field_spans(
     return fields, ""
 
 
+def protect_nul(
+    values: list[str], dialect: NativeDelimitedDialect
+) -> tuple[list[str], str | None]:
+    """Hide legacy _csv NUL sentinels without changing Unicode positions or syntax."""
+    if not any("\x00" in value for value in values):
+        return values, None
+    used = set("\x00\r\n")
+    for value in values:
+        used.update(value)
+    used.update(
+        c
+        for c in (dialect.delimiter, dialect.quotechar, dialect.escapechar)
+        if c is not None
+    )
+    # Start in private-use space; skip surrogates. Search is bounded by Unicode.
+    marker = next(
+        (
+            chr(n)
+            for n in itertools.chain(range(0xE000, 0x110000), range(1, 0xD800))
+            if chr(n) not in used
+        ),
+        None,
+    )
+    if marker is None:
+        raise ValueError("No unused Unicode scalar for CSV NUL compatibility")
+    return [value.replace("\x00", marker) for value in values], marker
+
+
 class DelimitedDocument:
     def __init__(self, data: bytes, dialect: NativeDelimitedDialect):
         self.source = decode_source(data, dialect.encoding)
@@ -89,10 +118,13 @@ class DelimitedDocument:
         self.line_ends = array(
             "I", (m.end() for m in re.finditer(r"\r\n|\r|\n", self.source.text))
         )
-        stream = io.StringIO(self.source.text, newline="")
+        protected, marker = protect_nul([self.source.text], self.dialect)
+        stream = io.StringIO(protected[0], newline="")
         reader = csv.reader(stream, **csv_options(self.dialect))
         start, field_count = 0, 0
         for values in reader:
+            if marker is not None:
+                values = [value.replace(marker, "\x00") for value in values]
             end = stream.tell()
             fields, separator = field_spans(self.source.text, start, end, self.dialect)
             if len(fields) != len(values):
@@ -181,8 +213,11 @@ def encode_row(
         options["quoting"] = csv.QUOTE_ALL
     # Both newline characters must trigger escaping, independent of chosen separator.
     writer = csv.writer(stream, **{**options, "lineterminator": "\r\n"})
-    writer.writerow(values)
+    protected, marker = protect_nul(values, dialect)
+    writer.writerow(protected)
     encoded = stream.getvalue()
+    if marker is not None:
+        encoded = encoded.replace(marker, "\x00")
     if not encoded.endswith("\r\n"):
         raise ValueError("CSV writer did not produce its declared record boundary")
     return encoded[:-2] + separator

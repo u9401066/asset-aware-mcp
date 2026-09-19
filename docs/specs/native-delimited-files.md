@@ -55,6 +55,13 @@ source-boundary scanner. A bounded child process owns csv.field_size_limit so se
 and other tools' global CSV state does not change. Byte spans are absolute original
 file offsets (including BOM); character spans address decoded text without BOM;
 logical rows differ from physical lines for quoted/escaped multiline values.
+CPython3.10 csv rejects NULs (upstream issues71767/97503). For consistent native
+string support, temporarily substitute each NUL with one unused Unicode scalar
+absent from the complete input and dialect. Restore it immediately after CSV
+parsing/writing; the original text/bytes and one-character position mapping remain
+unchanged. The marker never reaches evidence, persisted sources or output values.
+If every candidate scalar is already present, fail explicitly before mutation.
+
 Bounds: 16 MiB file, 20,000 fields/rows, 1,024 inserted/deleted rows or deleted columns, one inserted column per call,
 1,000 replacements and fixed process/result/time budgets. No silent truncation. All-enabled contract discovery must fit the existing 10,000-
 character response budget; retain operation/schema inventory and compact repeated
@@ -84,3 +91,6 @@ References considered:
   edits to preserve source formatting; JSON support remains subsequent work).
 - Tree-sitter: https://github.com/tree-sitter/py-tree-sitter (syntax byte spans;
   additional structured formats remain within the active goal).
+
+NUL compatibility references: https://github.com/python/cpython/issues/71767 and
+https://github.com/python/cpython/issues/97503.
