@@ -1,5 +1,45 @@
 # Native File Assets（v1.4.0）
 
+## Workbook renditions (Unreleased)
+
+`create_workbook_rendition` 將固定 `asset_id`／`revision` 的 XLSX 經由選配
+LibreOffice Calc 轉為獨立 PDF。`workbook_rendition` 必須明確指定 `mode` 與
+`calculation`；原 XLSX 的位元組、公式快取與歷史版本保持不變。
+
+```json
+{
+  "op": "create_workbook_rendition",
+  "asset_id": "file_…",
+  "revision": "完整 SHA-256",
+  "workbook_rendition": {
+    "name": "review.pdf",
+    "mode": "whole_sheet",
+    "calculation": "recalculate"
+  }
+}
+```
+
+| 選項 | 實際範圍 |
+|---|---|
+| `mode: print` | 沿用列印範圍與分頁；可能略過隱藏、空白或範圍外資料，不推測頁碼對應工作表。 |
+| `mode: whole_sheet` | 忽略紙張、列印範圍及隱藏狀態；核對頁數後，一張工作表對一頁，空白頁可能極小。 |
+| `calculation: recalculate` | 要求 Calc 匯入時重新計算；結果仍需 Agent 核對。 |
+| `calculation: prefer_cache` | 優先沿用既有快取；缺少快取或特殊公式仍可能重算。 |
+
+依 `review_request` 完整分頁讀取 `read_rendition`，固定 PDF revision 與
+`text_sha256`。紀錄包含來源引用、模式、渲染器版本、頁面幾何與限制。
+再以 `read_pdf`／`read_pdf_page`／`render_pdf_page` 核對每一頁的實際 PNG。
+同一 PDF 翻頁不會重新轉換或計算；修改 PDF 後不繼承原工作表對應。
+`export_wiki` 附上 `rendition.json`、當時的 XLSX 與 PDF 證據，保留機械來源關係，
+不虛構 Agent 核對結果。
+
+需另裝 LibreOffice Calc，必要時設定 `LIBREOFFICE_BIN`。目前接受 1–100 張普通
+工作表的 transitional XLSX；連結資源、巨集、OLE 等需要另外的工作流程。
+整張工作表模式仍可能截斷溢出文字；Agent 應比較原儲存格及列印模式，檢查字型、
+物件和公式結果。這不是 Microsoft Excel 保真認證，欄寬／列高修正仍屬後續工作。
+參考 [LibreOffice 官方 PDF 參數](https://help.libreoffice.org/latest/en-US/text/shared/guide/pdf_params.html)。
+公開版 **1.4.0**，本功能列於 **Unreleased／1.4.x**。
+
 Unreleased 的原生 Table 合計列現在可新增、移除及重用定義。透過
 `table_update.totals_row` 明確選擇清空或保留儲存格，保留既有資料與樣式；完整讀回
 操作紀錄，再由 Agent 核對公式範圍、結果與畫面。詳見 [合計列流程](A2T-Tables)。

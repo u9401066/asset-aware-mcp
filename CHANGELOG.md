@@ -7,6 +7,13 @@
 
 ## [Unreleased]
 
+- Immutable workbook PDF renditions: explicit source revision, print/whole-sheet
+  scope and recalculate/prefer-cache policy through optional LibreOffice Calc.
+  Complete `read_rendition` receipts, native PDF page PNGs and Wiki attachments
+  preserve the exact workbook source without resaving it. Hidden/blank pages,
+  stale caches and text clipping are explicit review concerns; agents check
+  semantics, visual layout and formula results. Public remains 1.4.0 / 1.4.x.
+
 - Added `table_update.totals_row` for native Table add/remove/reuse with blank-space
   checks, explicit clear/keep contents, optional direct cell-style inheritance and
   retained definitions. Kept formulas freeze only their own Table references;

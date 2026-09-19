@@ -1,5 +1,24 @@
 # Release And Testing
 
+## Workbook rendition evaluation (Unreleased)
+
+選配真實 Calc／SDK2 測試通過：四種列印／整張工作表與快取／重算組合，
+核對實際 PNG 像素、列印範圍、隱藏及空白工作表、來源位元組與 mtime、歷史
+版本及 Wiki 來源附件。以 `NATIVE_WORKBOOK_RENDER_TEST=1` 執行
+`tests/integration/test_native_workbook_rendition_stdio.py`；需先安裝 Calc，
+或設定 `LIBREOFFICE_BIN`。
+
+2026-09-19 真實 Codex 預設模型完成 **232 次成功 MCP 呼叫、零工具錯誤、184.70 秒**，
+查看十個 PDF 頁面並重看一頁，共 **11 張實際 MCP PNG**。它建立快取列印、
+重算整張工作表及公式修改後三份 PDF；確認顯示結果依序為 999／3／5，完整讀取
+來源引用與分頁紀錄，核對歷史儲存格，發布三份 PDF／一份 XLSX 及包含轉換紀錄的 Wiki。
+獨立稽核核對來源檔未變、兩個工作簿版本、PDF 位元組、所有頁面紀錄、影像像素與 Wiki 附件。
+
+Agent 實際指出整張工作表的標題上緣與隱藏頁文字右緣截斷；測試沒有假稱已修正。
+完整頁數不等於版面保真，Calc 結果也不是 Excel 認證。欄寬／列高調整與更廣語料核對
+仍待完成。重現：`uv run python -m tests.codex_workbook_rendition.run --output /absolute/new/run-dir`。
+普通 pytest 不會啟動模型。公開版 **1.4.0**，此項為 **Unreleased／1.4.x**。
+
 ## Native Table totals lifecycle evaluation (Unreleased)
 
 實際預設模型 Codex 完成 **201 次成功 MCP 呼叫、零工具錯誤**，耗時

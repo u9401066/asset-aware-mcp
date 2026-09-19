@@ -47,6 +47,16 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
   not semantic support for changed data. Agent reviews meaning/results/layout.
   Public stays 1.4.0; new work is Unreleased within 1.4.x.
 
+- When workbook_rendering.configured is true, create_workbook_rendition pins XLSX
+  asset_id/revision and requires workbook_rendition.mode (print/whole_sheet) plus
+  calculation (recalculate/prefer_cache). Optional Calc creates a separate PDF.
+  Read complete read_rendition at its creation revision and text_sha256, then all
+  PDF page records/PNGs. Print may omit hidden/blank/out-of-range cells; whole-sheet
+  includes hidden sheets but may clip overflow. Compare source formulas and actual
+  images; no Excel fidelity verdict. Wiki retains the receipt and exact XLSX.
+  Source caches stay unchanged; later PDF edits do not inherit sheet mappings.
+  Agent owns semantic/visual/result review. Public1.4.0 / Unreleased1.4.x.
+
 - When table_totals_lifecycle_enabled is advertised, update_workbook_table accepts
   table_update.totals_row with the exact revision, worksheet key, Table part/ref.
   Add requires blank cells below the Table; reuse_definitions restores hidden

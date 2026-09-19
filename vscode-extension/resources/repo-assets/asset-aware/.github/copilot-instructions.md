@@ -18,6 +18,8 @@
 
 ### 核心功能
 
+- **工作簿版面核對（Unreleased／1.4.x）** — `create_workbook_rendition` 固定 XLSX revision，明確指定 print／whole_sheet 與 recalculate／prefer_cache，使用選配 Calc 建立獨立 PDF。完整讀取 `read_rendition` 與所有頁面 PNG；Wiki 附來源 XLSX 及轉換紀錄。隱藏、空白頁、溢出文字及公式結果由 Agent 核對，來源不改寫；公開版仍 1.4.0。
+
 - **原生 Table 合計列（Unreleased／1.4.x）** — `table_totals_lifecycle_enabled` 啟用時，以 `table_update.totals_row` 新增、移除或重用合計定義；新增前檢查空白範圍，移除明確選擇 clear／keep_cells。保留公式固定原 Table 範圍，其他引用保持結構化形式。完整讀回操作紀錄，由 Agent 核對公式結果及版面；公開版維持 1.4.0。
 
 - **原生 Table 建立（main 未發布／1.4.x）** — `workbook_table_creation_enabled` 啟用時，`add_workbook_table` 在固定 worksheet key／ref／revision 建立 Table。可搭配 `create` 獨立建立 XLSX；既有標題須相符或明確填空，合計列須先為空白，計算欄覆寫須明確。保留資料、格式與歷史證據；讀回完整 created_table／header_cells／operation_result，再由 Agent 核對公式結果與畫面。公開版仍 1.4.0。

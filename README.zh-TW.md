@@ -1,9 +1,10 @@
 # asset-aware-mcp
 
-Unreleased 的原生 Table 合計列可新增、移除及重用；明確選擇清空或保留內容，
-保留資料與樣式。MCP 提供版本、結構及來源檢查，Agent 核對語意、公式結果與畫面。
-詳見 [合計列流程](docs/wiki/A2T-Tables.md#native-table-totals-lifecycle-unreleased)。
-公開版維持 **1.4.0**，後續累積 **1.4.x**，不逐功能升版。
+Unreleased 的工作簿預覽將指定版本 XLSX 保存成獨立 PDF 資產。明確選擇列印或
+整張工作表及重算政策，再由 Agent 看實際頁面；Wiki 保留轉換紀錄與原始 XLSX。
+詳見 [工作簿版面核對](docs/wiki/Native-File-Assets.md#workbook-renditions-unreleased)。
+公開版維持 **1.4.0**，功能累積於 **Unreleased／1.4.x**。
+
 
 Unreleased 新增 `add_workbook_table`：在既有或獨立建立的 XLSX 指定範圍建立
 原生 Excel Table，包含標題、計算欄、合計列與表格樣式，保留既有資料及儲存格格式。

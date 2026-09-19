@@ -1,5 +1,13 @@
 # Active Context
 
+## Workbook rendition publication checkpoint
+
+Source commit 890f5f09898d95de0f492f4a35f6e725968747de contains22 counted files plus5 MEM.
+Final local fullpytest2896/34skipped103.89s and actual Codex232/0/11PNG proof pass.
+The documentation commit updates README, Wiki, bilingual site and synced assistant
+assets, retaining public1.4.0 / Unreleased1.4.x. Both scoped commits go directly to
+main; exact CI/Pages/public-byte validation follows. Overall goal stays active.
+
 ## Workbook renditions — verified locally, publication pending
 
 Implemented create_workbook_rendition/read_rendition with explicit mode/calculation,

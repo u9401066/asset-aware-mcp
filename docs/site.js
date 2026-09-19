@@ -227,6 +227,17 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
   "native-file-assets": `## Native documents and versioned files — v1.4.0
 
+### Workbook renditions (Unreleased)
+
+create_workbook_rendition converts an exact XLSX asset_id/revision into a separate native PDF using optional LibreOffice Calc. workbook_rendition requires mode (print or whole_sheet) and calculation (recalculate or prefer_cache); name defaults to workbook-preview.pdf. Original workbook bytes, formula caches and history stay unchanged.
+
+Follow review_request and read complete read_rendition chunks at one PDF revision/text_sha256. The receipt records the source file reference, renderer/version, requested policies, page geometry and limitations. Use read_pdf/read_pdf_page/render_pdf_page to inspect every actual page. Reading this frozen PDF does not recalculate or repaginate. Modified PDF revisions do not inherit its worksheet mapping.
+
+Print honors print ranges and paper settings, so hidden/blank sheets or out-of-range cells may be absent; no guessed page-to-sheet mapping. Whole-sheet ignores those settings and includes hidden sheets, requiring one page per source worksheet before mapping. Blank pages may be tiny and overflowing text or objects can still be clipped. Compare native cells with actual print and whole-sheet views. Requested recalculation is not a formula correctness verdict; missing caches, volatile formulas and unsupported functions need review.
+
+export_wiki includes rendition.json, the exact input XLSX and PDF page evidence. This is mechanical conversion provenance, without invented Agent review. Install Calc separately and optionally set LIBREOFFICE_BIN. Initially supports 1–100 ordinary worksheets in transitional XLSX; linked resources, macros and embedded OLE need dedicated workflows. Agent reviews semantics, fonts, layout and results. Column-width/row-height correction remains further work. This is not Microsoft Excel fidelity certification. Public1.4.0 / Unreleased1.4.x.
+
+
 ### Native table workspaces (Unreleased)
 
 Project an exact workbook range into A2T, read complete typed cells and source references, then edit through table_data/table_manage. With table_grid_apply_enabled, an explicit identity-checked worksheet_grid plan applies row/column insertion and deletion together with value edits in one native commit. Renaming retains column identity; deleted/recreated rows and columns receive new identities. Applied inputs remain immutable workspace_reference snapshots. Whole worksheet axes move; native table membership and specialized edits have explicit limits. See the A2T guide. Public stays 1.4.0, with development within 1.4.x.
@@ -540,6 +551,14 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Workbook rendition evaluation (Unreleased)
+
+The optional real Calc/SDK2 test covers all four print/whole-sheet and prefer-cache/recalculate combinations, actual PNG pixels, print areas, hidden/blank sheets, source bytes/mtime, historical revisions and portable Wiki provenance. Set NATIVE_WORKBOOK_RENDER_TEST=1 and run tests/integration/test_native_workbook_rendition_stdio.py with Calc installed; optionally set LIBREOFFICE_BIN.
+
+On 2026-09-19 actual default-model Codex completed **232 successful MCP calls with zero tool errors in184.70 seconds**, receiving **11 actual MCP PNGs** across ten pages and one historical reread. It created cached print, recalculated whole-sheet and updated-formula PDFs, checked displayed999/3/5, complete source receipts/page records and historical cell evidence, then published three PDFs, one XLSX and a PDF Wiki retaining exact conversion inputs. Independent audit checks source immutability, both workbook revisions, PDF bytes, complete page records, delivered pixels and Wiki attachments.
+
+Codex identified top-edge heading clipping and right-edge hidden-sheet text clipping in whole-sheet output. This remains visible and uncorrected; complete page counts do not certify visual fidelity. Column-width/row-height correction and broader corpus coverage remain open. Run uv run python -m tests.codex_workbook_rendition.run --output /absolute/new/run-dir. Ordinary pytest never starts a model. Public1.4.0 / Unreleased1.4.x.
 
 ### Native Table totals lifecycle evaluation (Unreleased)
 

@@ -1,5 +1,10 @@
 # A2T Tables
 
+原生 XLSX 套用 A2T 修改後，可用 `create_workbook_rendition` 將該版本固定成
+PDF，完整讀取 `read_rendition`，再以實際頁面核對公式與版面。列印範圍、隱藏
+工作表及快取政策會影響結果；詳見 [工作簿版面核對](Native-File-Assets)。
+公開版維持 1.4.0，本項為 Unreleased／1.4.x。
+
 ## Native Table totals lifecycle (Unreleased)
 
 `table_totals_lifecycle_enabled` 啟用時，以 `update_workbook_table` 的
