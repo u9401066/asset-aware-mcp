@@ -38,8 +38,11 @@ class NativeDocxWikiContent(NativeWikiContent):
         identity: dict[str, str],
         contract: CitationFormatContract,
         metadata: CitationMetadata,
+        *,
+        projection: str = PROJECTION,
     ):
-        super().__init__(identity, contract, metadata, projection=PROJECTION)
+        super().__init__(identity, contract, metadata, projection=projection)
+        self.docx_projection = projection
         self.source_name = self.prefix + ".docx"
         self.parts: dict[str, dict[str, Any]] = {}
 
@@ -120,7 +123,7 @@ class NativeDocxWikiContent(NativeWikiContent):
         return {
             **self.record_counts(),
             "representation": "docx_blocks",
-            "projection": PROJECTION,
+            "projection": self.docx_projection,
             "part_attachments": self.parts,
             "extraction_scope": "Existing DFM parser blocks; original/package parts retain unparsed features",
         }

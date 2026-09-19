@@ -6,6 +6,7 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 
+from src.application.native_docx_story_operations import attach_story_evidence
 from src.application.native_pdf_operations import PDF_REVIEW, attach_pdf_evidence
 from src.application.native_pdf_region_service import NativePdfRegionService
 from src.application.native_pptx_operations import attach_pptx_evidence
@@ -16,6 +17,7 @@ from src.domain.native_delimited import (
     NativeDelimitedReference,
     attach_delimited_evidence,
 )
+from src.domain.native_docx_stories import STORY_REVIEW, DocxStoryReference
 from src.domain.native_file_reference import NativeFileReference
 from src.domain.native_pdf import NativePdfReference
 from src.domain.native_pdf_region import NativePdfRegionReference
@@ -29,6 +31,7 @@ if TYPE_CHECKING:
     )
     from src.domain.native_delimited import NativeDelimitedAdapter
     from src.domain.native_docx import NativeDocxAdapter
+    from src.domain.native_docx_stories import NativeDocxStoryAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_selection import NativeSelectionParent
@@ -57,6 +60,7 @@ class NativeEvidenceService:
         presentations: NativePresentationAdapter | None = None,
         pdfs: NativePdfAdapter | None = None,
         delimited: NativeDelimitedAdapter | None = None,
+        docx_stories: NativeDocxStoryAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
@@ -64,6 +68,7 @@ class NativeEvidenceService:
         self.presentations = presentations
         self.pdfs = pdfs
         self.delimited = delimited
+        self.docx_stories = docx_stories
 
     def read_parent_record(self, reference: NativeSelectionParent) -> dict[str, Any]:
         if isinstance(reference, NativePdfRegionReference):
@@ -88,6 +93,13 @@ class NativeEvidenceService:
                 reference.locator.block_id,
                 reference.locator,
             )
+        elif (
+            isinstance(reference, DocxStoryReference)
+            and asset.format == "docx"
+            and self.docx_stories
+        ):
+            record = self.docx_stories.read(data, reference.locator.part)
+            attach_story_evidence(record, asset.asset_id, reference.revision)
         elif (
             isinstance(reference, NativePptxReference)
             and asset.format == "pptx"
@@ -119,6 +131,7 @@ class NativeEvidenceService:
         self,
         reference: NativeCellReference
         | NativeDocxBlockReference
+        | DocxStoryReference
         | NativePptxReference
         | NativePdfReference
         | NativePdfRegionReference
@@ -126,6 +139,22 @@ class NativeEvidenceService:
         | NativeFileReference
         | NativeSelectionReference,
     ) -> dict[str, Any]:
+        if isinstance(reference, DocxStoryReference):
+            asset = self.repository.load(reference.asset_id)
+            record = self.read_parent_record(reference)
+            valid = record["evidence"] == reference.model_dump()
+            return {
+                "success": True,
+                "valid": valid,
+                "asset_id": asset.asset_id,
+                "revision": reference.revision,
+                "is_current_managed_revision": asset.revision == reference.revision,
+                "archived": asset.archived,
+                "verification_scope": "immutable_native_representation",
+                "checks": {"revision_hash": True, "story_representation_hash": valid},
+                "source_freshness": "not_checked; refresh tracks external human edits",
+                "review_required": STORY_REVIEW,
+            }
         if isinstance(reference, NativeSelectionReference):
             return NativeSelectionService(self).verify(reference)
         if isinstance(reference, NativePdfRegionReference):

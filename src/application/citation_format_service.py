@@ -46,6 +46,8 @@ def render_citation(
         escaped_sheet = str(sheet).replace("'", "''")
         location.append(f"'{escaped_sheet}'!{cell}")
     part, block_id = locator.get("part"), locator.get("block_id")
+    if part is not None and locator.get("story_kind") in {"header", "footer"}:
+        location.append(f"{locator['story_kind']}: {part}")
     if part is not None and block_id is not None:
         location.append(f"{part}#{block_id}")
     if (

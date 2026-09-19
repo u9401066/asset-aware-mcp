@@ -1,5 +1,67 @@
 # Active Context
 
+## Native Word header/footer stories — validated runtime/spec/tests
+
+Final source 92fe28b29f3988b4c9a2cdff41745eb7fdbf38e3fe03a6b80f05786553e030a4
+passed full3268/33optional skips/325.91s, with actual Writer/CJK and NIST/NASA PDFs.
+New unit42pass; SDK2 both2pass16.10s; private Python3.10 group43pass/1optional skip
+7.50s. Final docs28pass; Ruff671/mypy285; harness/artifact/sync/diff clean. Bandit,
+uv214/npm/zizmor pass. VSIX199tests/64files/install-update pass; activation in CI.
+Metadata/topics/managed labels synchronized. No version change: public1.4.0,
+Unreleased1.4.x, next consolidated patch1.4.1.
+
+Actual default Codex completed75success/0toolerrors/165.22s, eight complete story
+records, three managed revisions, two historical Wikis and six actual PNGs. Source
+bytes/mtime, all unrelated parts, complete receipts and historical references pass
+independent audit. Synthetic3page/2section source uses a nonstandard shared header
+part and preserved first-page exception. Native PAGE cache stays1; rendered pages
+2/3 calculate dynamic values. No MicrosoftWord parity claim. Full-definition
+lifecycle/relinking and note stories remain further work; broad goal stays active.
+
+Clean Python3.10 wheel and Docker ae03a5a48b94 reproduce all8complete records,
+2catalogs and both exact historical Wikis outside checkout. Source SHA equals
+actualCodex. Import/doctor/SDK2stdio30tools pass. Only successful owned Docker
+smoke and terminal builder ae62692458eb removed; all11 staged historical runs
+restored with exact hashes/mtimes. Actual traces and failure logs retained.
+Initial render oracle was corrected for titlePg's blank first-page footer; no
+production change/model rerun. Initial system zizmor command was absent; locked
+uv invocation passed. One docs test command used a nonexistent path; actual
+reference-sync/hygiene tests28pass. No errors erased or unrelated cleanup.
+
+Feature browser4desktop/mobile zh/en states passed; actual final Word pages and
+desktopzh/mobileen documentation visually inspected. Browser plugin absent;
+existing Playwright fallback used. Evaluation browser separately checked after
+metrics update. Original dirty checkout untouched; working main in agent-assets.
+Commit runtime/spec/tests/CI/smoke separately from docs/harness, each withMEM.
+Pushmain next; require exact-head CI/Pages and six live byte comparisons. Final
+proof planned /tmp/asset-aware-docx-stories-publication-proof.json. Goal active.
+
+## Native Word header/footer stories — active
+
+Previous goal turn made substantive progress: pagination correction fully published
+at cb9a4a8e2619114483f7f43516acdf623df6028a, CI35445459440 all10success and
+Pages35445458766 all3success, six deployed files exact. CI integration197pass364.64s,
+including both new layout SDK2 cases. Authoritative proof:
+/tmp/asset-aware-docx-layout-publication-proof.json. No pending staging or processes;
+private Python3.10 env removed after success. Public1.4.0; next consolidated1.4.1.
+
+Next verified gap: legacy DFM header/footer previews stop at100 characters and guess
+variants from filenames; nonstandard story filenames can be missed. Native story
+operations now discover actual content types/relationships, section inheritance,
+full XML/text paths, and edit existing shared definitions (text/insert/delete blocks)
+while preserving all other parts. Independent representation keeps legacy refs stable.
+MCP mechanical checks; Agent reviews all shared/dormant definitions and actual pages.
+New story references connect selection/derivation/citation/Wiki; distinct story Wiki
+projection leaves old snapshots intact. Full definition creation/unlink/deletion and
+footnote/endnote stories remain outstanding toward the broader all-format objective.
+
+Test-first missing-module failure retained; core5pass and service tests underway.
+Continue meaningful guard/SDK2/actual default Codex multi-section visual evaluation,
+then full release harness, docs/MEM and segmented author u9401066 commits/pushmain.
+No source checkout changes, no branch/PR/version/tag, no subagents. Temporary outputs
+use /run/user/1000/asset-aware-docx-stories-*; root92MiB free, stage only verified
+owned terminal runs if Docker requires space. Broad goal remains active.
+
 ## Native Word pagination docs — ready for publication
 
 Runtime/spec/tests committed as12e2230 (16 counted files plus2MEM), authored by

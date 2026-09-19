@@ -17,6 +17,7 @@ from src.domain.native_asset_models import (
     NativeModel,
 )
 from src.domain.native_delimited import NativeDelimitedReference
+from src.domain.native_docx_stories import DocxStoryReference
 from src.domain.native_pdf import NativePdfReference
 from src.domain.native_pdf_region import NativePdfRegionReference
 from src.domain.native_pptx import NativePptxReference
@@ -24,6 +25,7 @@ from src.domain.native_pptx import NativePptxReference
 NativeSelectionParent = (
     NativeCellReference
     | NativeDocxBlockReference
+    | DocxStoryReference
     | NativePptxReference
     | NativePdfReference
     | NativePdfRegionReference

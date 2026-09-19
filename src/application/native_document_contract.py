@@ -127,6 +127,7 @@ def native_document_contract(
     docx_structure_enabled: bool = False,
     docx_rendering_configured: bool = False,
     workbook_rendering_configured: bool = False,
+    docx_stories_enabled: bool = False,
 ) -> dict[str, Any]:
     for_op = request.for_op if request is not None else None
     result = {
@@ -191,8 +192,11 @@ def native_document_contract(
             workbook_table_creation_enabled,
             workbook_rendering_configured,
             delimited_enabled,
+            docx_stories_enabled,
         ),
         "verification": "MCP checks structure/integrity and deterministic repairs. Read full operation receipts. Agents verify semantics, rendered layout, dynamic references and calculated results; sources/history stay intact.",
+        "docx_stories_enabled": docx_stories_enabled,
+        "docx_stories_policy": "Read full header/footer catalog and story JSON at a pinned revision. Bindings follow actual relationships and inheritance, including dormant/shared parts. update_docx_story requires full story ref and all_sections_using_part scope. Read complete receipts and review every affected actual page. Legacy DFM header/footer fields are abbreviated; use stories for exact content and bindings.",
         "docx_policy": "Pin revision; assemble all DFM chunks with frontmatter/markers. Updates stage versions; writeback is explicit.",
         "docx_structure_enabled": docx_structure_enabled,
         "docx_table_grid_enabled": docx_enabled and docx_structure_enabled,
@@ -278,6 +282,7 @@ def _formats(
     workbook_table_creation_enabled: bool = False,
     workbook_rendering_configured: bool = False,
     delimited_enabled: bool = False,
+    docx_stories_enabled: bool = False,
 ) -> dict[str, list[str]]:
     workbook_ops = (
         [
@@ -353,7 +358,12 @@ def _formats(
         ]
         if pptx_enabled
         else [],
-        "docx": (["render_docx_page"] if docx_rendering_configured else [])
+        "docx": (
+            ["read_docx_stories", "read_docx_story", "update_docx_story"]
+            if docx_stories_enabled
+            else []
+        )
+        + (["render_docx_page"] if docx_rendering_configured else [])
         + (
             [
                 "create_docx",

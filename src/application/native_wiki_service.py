@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Any
 from src.application.native_delimited_operations import dialect_for
 from src.application.native_delimited_wiki import NativeDelimitedWikiContent
 from src.application.native_derivation_wiki import add_derivations
+from src.application.native_docx_story_operations import attach_story_evidence
+from src.application.native_docx_story_wiki import NativeDocxStoryWikiContent
 from src.application.native_docx_wiki import NativeDocxWikiContent
 from src.application.native_evidence_service import attach_native_evidence
 from src.application.native_pdf_operations import attach_pdf_evidence
@@ -31,6 +33,7 @@ if TYPE_CHECKING:
     from src.domain.native_delimited import NativeDelimitedAdapter
     from src.domain.native_derivation import NativeDerivationLedger
     from src.domain.native_docx import NativeDocxAdapter
+    from src.domain.native_docx_stories import NativeDocxStoryAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_wiki import NativeWikiPublisher
@@ -47,6 +50,7 @@ class NativeWikiService:
         pdfs: NativePdfAdapter | None = None,
         derivations: NativeDerivationService | None = None,
         delimited: NativeDelimitedAdapter | None = None,
+        docx_stories: NativeDocxStoryAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
@@ -56,6 +60,7 @@ class NativeWikiService:
         self.pdfs = pdfs
         self.derivations = derivations
         self.delimited = delimited
+        self.docx_stories = docx_stories
 
     def export(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.asset_id is not None and request.output_dir is not None
@@ -82,7 +87,12 @@ class NativeWikiService:
             if asset.format in {"csv", "tsv"} and self.delimited
             else None
         )
-        content = self._content(request, asset, revision, ledger, structure)
+        catalog = (
+            self.docx_stories.inspect(data)
+            if asset.format == "docx" and self.docx and self.docx_stories
+            else None
+        )
+        content = self._content(request, asset, revision, ledger, structure, catalog)
         add_rendition(content, asset, self.repository)
         self._populate(content, data)
         if ledger is not None and self.derivations is not None:
@@ -109,6 +119,7 @@ class NativeWikiService:
         revision: str,
         ledger: NativeDerivationLedger | None,
         delimited_structure: dict[str, Any] | None = None,
+        story_catalog: dict[str, Any] | None = None,
     ) -> NativeWikiContent:
         contract = resolve_citation_format(
             request.citation_contract.model_dump(mode="json")
@@ -141,6 +152,10 @@ class NativeWikiService:
             return NativeDelimitedWikiContent(
                 identity, contract, metadata, delimited_structure
             )
+        if story_catalog and story_catalog["stories"]:
+            return NativeDocxStoryWikiContent(
+                identity, contract, metadata, story_catalog
+            )
         return builder(identity, contract, metadata)
 
     def _populate(self, content: NativeWikiContent, data: bytes) -> None:
@@ -170,6 +185,15 @@ class NativeWikiService:
             content.add_parts(decomposition.parts)
             for block in decomposition.blocks:
                 content.add_block(block)
+            if isinstance(content, NativeDocxStoryWikiContent) and self.docx_stories:
+                stories = []
+                for item in content.catalog["stories"]:
+                    record = self.docx_stories.read(data, item["locator"]["part"])
+                    attach_story_evidence(
+                        record, identity["asset_id"], identity["revision"]
+                    )
+                    stories.append(record)
+                content.add_stories(stories)
 
         elif isinstance(content, NativePptxWikiContent) and self.presentations:
             content.add_parts(self.presentations.package_parts(data))

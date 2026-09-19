@@ -50,6 +50,7 @@ from src.infrastructure.native_asset_store import FileNativeAssetRepository
 from src.infrastructure.native_delimited_process import ProcessNativeDelimited
 from src.infrastructure.native_derivation_store import FileNativeDerivationRepository
 from src.infrastructure.native_docx_render import LibreOfficeWordRenderer
+from src.infrastructure.native_docx_stories import NativeDocxStories
 from src.infrastructure.native_docx_structure import NativeDocxStructure
 from src.infrastructure.native_docx_workspace import FileNativeDocxWorkspaces
 from src.infrastructure.native_pdf_process import ProcessNativePdf
@@ -201,6 +202,7 @@ native_document_service = NativeDocumentService(
     ),
     pptx_renderer=LibreOfficePresentationRenderer(),
     docx_structure=NativeDocxStructure(),
+    docx_stories=NativeDocxStories(),
     docx_renderer=LibreOfficeWordRenderer(),
     workbook_structure=NativeWorkbookStructure(),
     workbook_renderer=LibreOfficeWorkbookRenderer(),

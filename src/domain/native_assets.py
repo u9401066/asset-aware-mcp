@@ -46,6 +46,10 @@ from src.domain.native_docx import NativeDocxEdit  # noqa: TC001 -- Pydantic sch
 from src.domain.native_docx_grid import (
     NativeDocxTableGridEdit,  # noqa: TC001 -- Pydantic schema
 )
+from src.domain.native_docx_stories import (  # noqa: TC001 -- schema
+    DocxStoryReference,
+    DocxStoryUpdate,
+)
 from src.domain.native_docx_structure import (  # noqa: TC001 -- Pydantic schema
     NativeDocxCreate,
     NativeDocxInsert,
@@ -187,6 +191,9 @@ class NativeDocumentRequest(NativeModel):
     delimited_row: int | None = Field(default=None, ge=0, lt=20_000, strict=True)
     delimited_column: int | None = Field(default=None, ge=0, lt=20_000, strict=True)
     delimited_update: NativeDelimitedUpdate | None = None
+    docx_story_part: str | None = Field(default=None, min_length=1, max_length=1024)
+    docx_story_reference: DocxStoryReference | None = None
+    docx_story_update: DocxStoryUpdate | None = None
     docx_edit: NativeDocxEdit | None = None
     docx_create: NativeDocxCreate | None = None
     docx_page_index: int | None = Field(default=None, ge=0, lt=2000, strict=True)
@@ -236,6 +243,7 @@ class NativeDocumentRequest(NativeModel):
     reference: (
         NativeCellReference
         | NativeDocxBlockReference
+        | DocxStoryReference
         | NativePptxReference
         | NativePdfReference
         | NativePdfRegionReference
