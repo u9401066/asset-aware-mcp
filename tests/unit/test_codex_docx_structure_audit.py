@@ -25,7 +25,13 @@ from tests.unit.test_native_docx_structure_operations import structured as struc
 def test_codex_prompt_reaches_process_as_utf8_under_windows_locale(
     tmp_path, monkeypatch
 ):
-    monkeypatch.setattr(subprocess, "_text_encoding", lambda: "cp1252")
+    popen = subprocess.Popen
+
+    def windows_locale(*args, **kwargs):
+        kwargs.setdefault("encoding", "cp1252")
+        return popen(*args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "Popen", windows_locale)
     prompt = "研究 007 µg"
     command = [
         sys.executable,

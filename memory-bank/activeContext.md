@@ -20,6 +20,11 @@ Next: push the test-only locale fix, await exact newHEAD CI/Pages, preserve acti
 
 
 
+The locale regression uses a public Popen wrapper instead of the newer private
+_text_encoding helper, which is absent on Python3.10. A system Python3.10 child
+process independently reproduced the omitted-encoding failure and verified UTF-8
+roundtrip; all47 focused tests still pass on Python3.13.
+
 The same locale review found the shared Codex runner passed Unicode prompt stdin
 through the platform-default subprocess encoding. It now explicitly uses UTF-8;
 a real child-process echo regression forces cp1252 defaults and checks exact UTF-8
