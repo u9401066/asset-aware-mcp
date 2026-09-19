@@ -1,5 +1,18 @@
 # Decision Log
 
+## 2026-09-19 — Totals roles and physical worksheet rows stay explicit
+
+Add extends the Table over blank cells; remove shrinks only the role and requires
+clear/keep cell intent. Agent composes whole-row movement separately. Hidden totals
+definitions may be retained for reuse. Kept formulas freeze own Table selectors to
+pre-removal ranges, preserving scope after implicit Table context disappears; other
+workbook formulas retain #Totals behavior. Official Microsoft semantics require
+rejecting current-row selectors in retained totals formulas: header/totals contexts
+return #VALUE!, so resolving them as valid cells would silently change results.
+Full old/new pivot footprints are checked.
+MCP performs mechanical checks; Agent reviews meaning, future membership, results
+and rendering. Public1.4.0 / Unreleased1.4.x; no per-feature bump or tag.
+
 ## 2026-09-19 — Native Table creation preserves explicit row intent
 
 Use a separate domain creation port and typed request; reuse column writers/source guards and exact Table readback. Range includes headers/data/optional totals, with blank totals prerequisite; never silently insert rows or coerce headers. New Tables reserve names/IDs/parts even when old Table parts are detached. Empty openpyxl workbookProtection is inactive; preserve false flags and retain actual/unknown lock guards. New work remains Unreleased1.4.x.

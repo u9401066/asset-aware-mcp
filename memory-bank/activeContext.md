@@ -1,9 +1,30 @@
 # Active Context
 
-Native Table creation core committed as 685279b; documentation, bilingual site and
-assistant parity form the next scoped commit. Local proof and actual Codex audit
-passed on the final source; exact remote CI/Pages/public checks follow push.
-Public remains1.4.0 / Unreleased1.4.x; broader goal active.
+## Native Table totals lifecycle — locally verified; publication pending
+
+Explicit add/remove/reuse landed in the private Table edit path, retaining typed
+row intent, data/filter membership, style choices, original receipts and source
+footprint checks. Kept direct structured references become pre-removal ranges;
+current-row selectors in header/totals contexts reject per Microsoft semantics.
+No worksheet rows move implicitly; MCP checks mechanics, Agent reviews results/layout.
+
+Final source SHA 5380c98cf192e251ef7ba1a96c48e952811adde1f8c801a52377f020bb2aa0e7 matches actual Codex, wheel and Docker
+sha256:e21a09b7850065a873711832dc7b9b90cde2652f1a9e33c809146c1e0c0f0b8b. Pytest2834 passed/33 optional skips (103.42s), Ruff555,
+mypy245, Bandit, locked audit214/no findings, npm audit0 and zizmor high passed.
+SDK2 lifecycle, CAS/read-budget rollback and independent package regressions passed.
+Actual Codex 201 successful calls/0 errors/181.76s, one scanned MCP PNG,
+five complete history entries, historical007 proof and two exact Wiki snapshots:
+/dev/shm/asset-aware-codex-table-totals-02. No Excel rendering/recalculation claim.
+Extension199, VSIX contents/install-update, clean wheel and Docker MCP smoke passed;
+local activation not run without display. Browser zh/en desktop/mobile and docs25
+passed. GitHub metadata/labels synchronized. All11 owned temporary evidence moves
+were restored with exact hashes/mtimes; original dirty user worktree unchanged.
+
+Proofs: /tmp/asset-aware-table-totals-local-proof.json and source-proof.json.
+Previous main2882ade CI35418513200 all10, Pages35418512785 all3/public5 files verified.
+Next: segmented direct-main source/docs commits (21/22 counted files), then exact-head
+CI/Pages/public-byte verification. Public1.4.0 / Unreleased1.4.x; no bump/tag.
+Overall cross-format CRUD/evidence/real-Codex goal remains ACTIVE; not complete.
 
 ## Native Table creation — verified locally, publication pending
 

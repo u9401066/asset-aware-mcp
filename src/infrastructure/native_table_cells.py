@@ -25,6 +25,7 @@ class TableCellWriter:
         self.guards = NativeCellGuards(self.book)
         self.changed: dict[str, dict[str, Any]] = {}
         self.expected: dict[str, bytes] = {}
+        self.style_sources: dict[str, str] = {}
         self.receipt_bytes = 0
         self.merges = [
             Rectangle.parse(node.get("ref", ""))
@@ -41,6 +42,7 @@ class TableCellWriter:
         value: str | None,
         *,
         runs: list[str] | None = None,
+        allow_rich_clear: bool = False,
     ) -> None:
         if len(self.changed) >= 20_000 and location not in self.changed:
             raise ValueError("Table cell edits exceed the 20000-cell budget")
@@ -61,11 +63,22 @@ class TableCellWriter:
                 raise ValueError("Unsupported Table cell formula metadata")
         text_root = self._text(existing) if before["kind"] == "string" else None
         rich = text_root is not None and bool(text_root.findall("s:r", NS))
-        if rich and (kind != "string" or runs is None):
+        if (
+            rich
+            and (kind != "string" or runs is None)
+            and not (kind == "blank" and allow_rich_clear)
+        ):
             raise ValueError("Rich Table text requires explicit run-aware editing")
         if runs is not None and not rich:
             raise ValueError("header_runs requires an existing rich header")
         cell = self.writer.empty(location)
+        if location in self.style_sources:
+            template = self.writer.cells.get(self.style_sources[location])
+            style = template.get("s") if template is not None else None
+            if style is None:
+                cell.attrib.pop("s", None)
+            else:
+                cell.set("s", style)
         if kind == "string":
             assert value is not None
             cell.set("t", "inlineStr")
@@ -96,13 +109,19 @@ class TableCellWriter:
             existing[:] = []
             existing.attrib.pop("t", None)
         self.writer.put(cell)
+        previous_size = (
+            len(json.dumps(self.changed[location], ensure_ascii=False).encode("utf-8"))
+            if location in self.changed
+            else 0
+        )
         self.changed[location] = {
             "before": self.book._value(self.original_cells.get(location)),
             "after": self.book._value(cell),
         }
         self.expected[location] = etree.tostring(cell, method="c14n", exclusive=True)
-        self.receipt_bytes += len(
-            json.dumps(self.changed[location], ensure_ascii=False).encode("utf-8")
+        self.receipt_bytes += (
+            len(json.dumps(self.changed[location], ensure_ascii=False).encode("utf-8"))
+            - previous_size
         )
         if self.receipt_bytes > 8 * 1024 * 1024:
             raise ValueError("Table cell receipt exceeds the 8 MiB readback budget")

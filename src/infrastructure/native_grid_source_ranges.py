@@ -28,7 +28,11 @@ class GridSourceRange:
 
 
 def table_bounds(
-    state: GridTableState, selector: str, *, source_name: bool
+    state: GridTableState,
+    selector: str,
+    *,
+    source_name: bool,
+    current_row: int | None = None,
 ) -> Rectangle:
     bounds = state.bounds
     values = selectors(selector) if selector else []
@@ -40,10 +44,24 @@ def table_bounds(
     outside = list(selector)
     for value in values:
         outside[value.start : value.end] = " " * (value.end - value.start)
-    if "@" in outside or "#this row" in items:
-        raise ValueError("Current-row source selectors require an evaluation context")
+    this_row = "@" in outside or "#this row" in items
     rows = []
-    if "#all" in items or (source_name and not selector):
+    if this_row:
+        if current_row is None:
+            raise ValueError(
+                "Current-row source selectors require an evaluation context"
+            )
+        if (
+            items - {"#this row"}
+            or not bounds.first_row + state.headers
+            <= current_row
+            <= bounds.last_row - state.totals
+        ):
+            raise ValueError(
+                "Current-row selector has no data-row context; header/totals rows return #VALUE!"
+            )
+        rows = [(current_row, current_row)]
+    elif "#all" in items or (source_name and not selector):
         rows = [(bounds.first_row, bounds.last_row)]
     else:
         if "#headers" in items and state.headers:

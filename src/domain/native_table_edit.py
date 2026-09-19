@@ -7,6 +7,9 @@ from typing import Literal, Protocol
 from pydantic import Field, model_validator
 
 from src.domain.native_asset_models import NativeEditResult, NativeModel
+from src.domain.native_table_totals import (
+    NativeTotalsRowChange,  # noqa: TC001 -- schema
+)
 from src.domain.native_workbook import NativeWorksheetKey  # noqa: TC001 -- schema
 
 TOTAL_FUNCTIONS = {
@@ -76,10 +79,19 @@ class NativeTableUpdate(NativeModel):
     worksheet: NativeWorksheetKey
     part: str = Field(min_length=1, max_length=1024)
     expected_ref: str = Field(min_length=2, max_length=21)
-    columns: list[NativeTableColumnEdit] = Field(min_length=1, max_length=256)
+    columns: list[NativeTableColumnEdit] = Field(default_factory=list, max_length=256)
+    totals_row: NativeTotalsRowChange | None = None
 
     @model_validator(mode="after")
     def unique_columns(self) -> NativeTableUpdate:
+        if not self.columns and self.totals_row is None:
+            raise ValueError("A Table update needs column edits or a totals transition")
+        if (
+            self.totals_row is not None
+            and self.totals_row.action == "remove"
+            and any(column.totals is not None for column in self.columns)
+        ):
+            raise ValueError("Totals cell edits cannot accompany totals-row removal")
         if len({column.column_id for column in self.columns}) != len(self.columns):
             raise ValueError("Duplicate Table column edit identity")
         return self

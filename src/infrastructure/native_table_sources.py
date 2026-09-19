@@ -13,6 +13,7 @@ from src.infrastructure.native_spreadsheet_reader import NS, _decode_text, _enco
 if TYPE_CHECKING:
     from src.domain.native_grid_tables import GridTableChange
     from src.infrastructure.native_grid_table_state import GridTableState
+    from src.infrastructure.native_grid_xml import Rectangle
     from src.infrastructure.native_table_cells import TableCellWriter
     from src.infrastructure.native_workbook_plan import WorkbookPlan
 
@@ -23,6 +24,8 @@ def update_sources(
     state: GridTableState,
     writer: TableCellWriter,
     changes: list[GridTableChange],
+    *,
+    affected_bounds: Rectangle | None = None,
 ) -> list[str]:
     resolver = GridSourceResolver(plan, states)
     affected = set()
@@ -63,7 +66,7 @@ def update_sources(
             resolved = resolver.resolve(expression, owner)
             if resolved is None or resolved.sheet.casefold() != writer.sheet.casefold():
                 continue
-            if not resolved.bounds.overlaps(state.bounds):
+            if not resolved.bounds.overlaps(affected_bounds or state.bounds):
                 continue
             if source.tag == tag("worksheetSource"):
                 header = resolved.bounds.first_row

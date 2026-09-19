@@ -52,6 +52,11 @@ def _spill_shadow(text: str) -> str:
                 brackets -= 1
         elif char == "[":
             brackets = 1
+        elif char == "@" and index + 1 < len(text) and text[index + 1] == "'":
+            # openpyxl cannot lex @ immediately before a quoted qualifier.
+            # A unary plus occupies the same span; callers still see the exact
+            # original @ token and range positions, never this lexer shadow.
+            output[index] = "+"
         elif char in {'"', "'"}:
             quote = char
         elif char in "\t\r":

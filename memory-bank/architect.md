@@ -1,5 +1,15 @@
 # System Architect
 
+## 2026-09-19 — Native Table totals lifecycle
+
+Domain NativeTotalsRowChange is a discriminated add/remove intent on NativeTableUpdate.
+TableTotalsTransition coordinates roles, hidden definitions, direct cell styles and
+old/new source footprints inside the existing private Table patch and one CAS.
+Retained formula operands resolve through bounded static selectors with an explicit
+current-row context; other worksheet formulas keep their structured references.
+The shared tokenizer shadows @ before quoted qualifiers while preserving all spans.
+Existing complete XML/cell/untouched-part readback and review budgets remain in force.
+
 ## 2026-09-19 — Native Table creation adapter
 
 NativeTableCreate/NativeTableCreateAdapter remain domain-only. NativeWorkbookOperations coordinates bounded review and one CAS; NativeWorkbookTableCreate delegates geometry/name/style checks, package registration, existing Table cell writers and common native_table_finish verification. Composition root injects creation separately from existing Table editing; contract advertises only configured capability.

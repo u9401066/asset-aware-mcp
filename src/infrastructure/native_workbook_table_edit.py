@@ -21,6 +21,7 @@ from src.infrastructure.native_table_columns import (
 )
 from src.infrastructure.native_table_finish import finish_table
 from src.infrastructure.native_table_sources import update_sources
+from src.infrastructure.native_table_totals import TableTotalsTransition
 from src.infrastructure.native_workbook_plan import WorkbookPlan
 
 if TYPE_CHECKING:
@@ -92,6 +93,7 @@ class NativeWorkbookTableEdit:
             GridTableChange(alias, before, tuple(after)) for alias in sorted(aliases)
         ]
         writer = TableCellWriter(plan, state.worksheet, owner["name"])
+        totals = TableTotalsTransition(plan, tables.states, state, request, writer)
         nodes = state.root.findall("s:tableColumns/s:tableColumn", NS)
         for position, (col, node) in enumerate(
             zip(before, nodes, strict=True), state.bounds.first_column
@@ -101,6 +103,7 @@ class NativeWorkbookTableEdit:
         references = (
             tables.rewrite_references(changes) if change.before != change.after else {}
         )
+        totals.add()
         # New formulas are expressed in the final column names; identity mappings
         # validate known selectors without rewriting them back into old names.
         final_names = [
@@ -126,7 +129,15 @@ class NativeWorkbookTableEdit:
                     )
             update_calculated(state, node, position, edit, writer)
             update_totals(state, node, position, edit, writer)
-        sources = update_sources(plan, tables.states, state, writer, changes)
+        totals.remove()
+        sources = update_sources(
+            plan,
+            tables.states,
+            state,
+            writer,
+            changes,
+            affected_bounds=totals.footprint,
+        )
         caches = clear_formula_caches(plan.roots)
         charts = clear_chart_caches(plan.roots)
         order_cells(writer.root)
@@ -141,6 +152,7 @@ class NativeWorkbookTableEdit:
                 "request": request.model_dump(),
                 "cells": writer.changed,
                 "structured_references": references,
+                "totals_transition": totals.receipt,
                 "invalidated_pivot_caches": sources,
                 "formula_caches_removed": caches,
                 "chart_caches_removed": charts,

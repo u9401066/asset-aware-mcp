@@ -394,8 +394,10 @@ def test_swapping_names_retains_original_column_identity():
     assert read(updated, "B3")["value"] == "=[[#This Row],Label]*2"
 
 
+@pytest.mark.parametrize("totals", [False, True])
 def test_late_cas_conflict_keeps_concurrent_revision_without_table_partial_write(
     tmp_path,
+    totals,
 ):
     from src.application.native_document_service import NativeDocumentService
     from src.infrastructure.native_asset_store import FileNativeAssetRepository
@@ -428,7 +430,11 @@ def test_late_cas_conflict_keeps_concurrent_revision_without_table_partial_write
             op="update_workbook_table",
             asset_id=asset["asset_id"],
             expected_revision=asset["revision"],
-            table_update=request(column(name="Amount")).model_dump(),
+            table_update=(
+                request(totals_row={"action": "add"})
+                if totals
+                else request(column(name="Amount"))
+            ).model_dump(),
         )
     current = repository.load(asset["asset_id"])
     assert len(current.history) == 2
@@ -438,7 +444,10 @@ def test_late_cas_conflict_keeps_concurrent_revision_without_table_partial_write
     assert source.read_bytes() == repository.read(asset["asset_id"], asset["revision"])
 
 
-def test_combined_public_readback_budget_rejects_before_commit(tmp_path, monkeypatch):
+@pytest.mark.parametrize("totals", [False, True])
+def test_combined_public_readback_budget_rejects_before_commit(
+    tmp_path, monkeypatch, totals
+):
     from src.application import native_workbook_operations as operations
     from src.application.native_document_service import NativeDocumentService
     from src.infrastructure.native_asset_store import FileNativeAssetRepository
@@ -471,7 +480,11 @@ def test_combined_public_readback_budget_rejects_before_commit(tmp_path, monkeyp
             op="update_workbook_table",
             asset_id=asset["asset_id"],
             expected_revision=asset["revision"],
-            table_update=request(column(name="Amount")).model_dump(),
+            table_update=(
+                request(totals_row={"action": "add"})
+                if totals
+                else request(column(name="Amount"))
+            ).model_dump(),
         )
     current = repository.load(asset["asset_id"])
     assert current.revision == asset["revision"] and len(current.history) == 1
