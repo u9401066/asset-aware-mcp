@@ -139,7 +139,8 @@ def validate_wiki(workspace, asset):
         "Wiki source bytes differ",
     )
     records = [
-        json.loads(line) for line in (root / "records.jsonl").read_text().splitlines()
+        json.loads(line)
+        for line in (root / "records.jsonl").read_text(encoding="utf-8").splitlines()
     ]
     require(len(records) == 2, "Wiki does not cover final heading and table")
     for record in records:
@@ -151,7 +152,10 @@ def validate_wiki(workspace, asset):
             digest(canonical(core)) == record["evidence"]["value_sha256"],
             "Wiki block hash differs",
         )
-        require("[[" in (root / record["note"]).read_text(), "Wiki links absent")
+        require(
+            "[[" in (root / record["note"]).read_text(encoding="utf-8"),
+            "Wiki links absent",
+        )
     with ZipFile(workspace / "verified.docx") as archive:
         require(
             set(manifest["part_attachments"]) == set(archive.namelist()),
@@ -169,7 +173,8 @@ def audit(output):
     final = read_json(output / "last-message.txt")
     workspace = output / "workspace"
     events = [
-        json.loads(line) for line in (output / "events.jsonl").read_text().splitlines()
+        json.loads(line)
+        for line in (output / "events.jsonl").read_text(encoding="utf-8").splitlines()
     ]
     calls = calls_from(events)
     source = load_asset(workspace, final["source_asset_id"])
@@ -204,7 +209,9 @@ def write_audit(output):
         result = audit(output)
     except (ValueError, KeyError, OSError, TypeError, AssertionError) as exc:
         result = {"passed": False, "error": str(exc)}
-    (output / "audit.json").write_text(json.dumps(result, indent=2, ensure_ascii=False))
+    (output / "audit.json").write_text(
+        json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     return result
 
 

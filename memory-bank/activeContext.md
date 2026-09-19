@@ -1,5 +1,24 @@
 # Active Context
 
+## 2026-09-19 — Windows audit locale fix; remote checks rerun required
+
+`5e3f89b` (core235b89b) was pushed; CI35380567397 passed all substantive jobs except
+Windows. Windows699-case native suite: one audit test failed,698passed3skipped;
+`records.jsonl` was decoded with the locale default, changing Chinese representation
+text and producing a false hash mismatch. DOCX runtime/artifact bytes were correct.
+The new Codex DOCX runner/auditor now explicitly reads/writes UTF-8. Regression
+parameterization simulates cp1252 defaults on Linux; **12 focused audit tests pass**,
+including extra PDF snapshot and corruption rejection. Saved actual Codex trace
+re-audited successfully (45calls,0errors,5revisions). Runtime fingerprint unchanged.
+No repeat model run or runtime install is needed for this tests-only correction.
+
+Pages35380566066 already succeeded for5e3f89b; served site.js SHA256
+`d14ecc7a330d9e364015e4878b0f1bdc62873c17171637a608e1e3376fb0f6b7` and
+site-content.js `fd91583ad3e97713a9dbb3e03c60620290c2865ca7b1f6bfa7ede96857d80576`
+matched localbytes. Public remainsv1.4.0, onlymain, originalworktreeuntouched.
+Next: push the test-only locale fix, await exact newHEAD CI/Pages, preserve active goal.
+
+
 ## 2026-09-19 — native DOCX structure local gates passed; exact remote proof next
 
 Core committed as `235b89b` (26 counted files +2 MEM) with author u9401066.

@@ -79,7 +79,9 @@ def main():
         ).strip(),
         "model_selection": "Codex default; not pinned by runner",
     }
-    (output / "expected.json").write_text(json.dumps(metadata, indent=2))
+    (output / "expected.json").write_text(
+        json.dumps(metadata, indent=2), encoding="utf-8"
+    )
     text = prompt(workspace)
     (output / "prompt.txt").write_text(text, encoding="utf-8")
     cli = command(args.codex, repo, workspace, output)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 from docx import Document
@@ -62,8 +63,9 @@ def test_independent_docx_table_audit(tmp_path, fault):
 
 
 @pytest.mark.parametrize("fault", [None, "part", "projection"])
+@pytest.mark.parametrize("locale_encoding", ["utf-8", "cp1252"])
 def test_wiki_audit_selects_docx_with_extra_source_snapshot(
-    structured, tmp_path, fault
+    structured, tmp_path, fault, locale_encoding, monkeypatch
 ):
     service, _, _ = structured
     request = creation().model_dump()
@@ -77,20 +79,29 @@ def test_wiki_audit_selects_docx_with_extra_source_snapshot(
         asset_id=asset["asset_id"],
         output_dir=str(tmp_path / "native-wiki"),
     )
-    from pathlib import Path
-
     root = Path(result["output_dir"])
     unrelated = tmp_path / "native-wiki" / "source-pdf"
     unrelated.mkdir()
-    (unrelated / "manifest.json").write_text(json.dumps({"asset_id": "source"}))
+    (unrelated / "manifest.json").write_text(
+        json.dumps({"asset_id": "source"}), encoding="utf-8"
+    )
     manifest_path = root / "manifest.json"
-    manifest = json.loads(manifest_path.read_text())
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if fault == "part":
         part = root / manifest["part_attachments"]["word/document.xml"]["attachment"]
         part.write_bytes(part.read_bytes().replace(qn("w:t").encode(), b"wrong") + b" ")
     elif fault == "projection":
         manifest["projection"] = "pdf-pages-v1"
-        manifest_path.write_text(json.dumps(manifest))
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    read_text = Path.read_text
+
+    def locale_read(path, encoding=None, errors=None, **kwargs):
+        return read_text(
+            path, encoding=encoding or locale_encoding, errors=errors, **kwargs
+        )
+
+    # Reproduce a non-UTF-8 Windows locale even when the tests run on Linux.
+    monkeypatch.setattr(Path, "read_text", locale_read)
     if fault:
         with pytest.raises(ValueError):
             validate_wiki(tmp_path, asset)
