@@ -246,7 +246,7 @@ Version 1.3.0 adds read_docx and update_docx using the existing DFM checks. Read
 
 ### v1.4.0: native PPTX and schema discovery
 
-Native PPTX supports create_pptx, read_pptx, read_pptx_shape and update_pptx. Creation uses explicit text boxes, styled runs and notes; updates target existing native runs with revision and text-hash preconditions. Shape references support verify. The pptx-shapes-v1 wiki projection retains complete shape JSON/XML and exact package attachments, including media, charts, layouts, masters and relationships. Older snapshots remain unchanged. Agents review rendering, overflow, inherited formatting and semantic accuracy; structural edits and legacy or macro formats remain outside this adapter.
+Native PPTX supports create_pptx, read_pptx, read_pptx_shape and update_pptx. Creation uses explicit text boxes, styled runs and notes; updates target existing native runs with revision and text-hash preconditions. Shape references support verify. The pptx-shapes-v1 wiki projection retains complete shape JSON/XML and exact package attachments, including media, charts, layouts, masters and relationships. Older snapshots remain unchanged. Agents review rendering, overflow, inherited formatting and semantic accuracy; Unreleased structural operations are described below; legacy or macro formats remain outside this adapter.
 
 The native-contract-v2 discovery response supports for_op. Check schema_delivery; follow schema_request for complete JSON pages, preserve schema_sha256 and for_op, then verify the assembled UTF-8 hash. Existing native document inputs are unchanged. Version 1.4.0 includes this discovery migration; clients must no longer assume that the full schema is always inline.
 
@@ -261,6 +261,18 @@ Follow review_request to read the new revision, page shape listings and assemble
 delete_pptx_shapes takes pptx_shape_refs containing complete native-pptx-shape-ref-v1 evidence from the expected revision. Groups include descendants. Duplicate targets, ancestor/descendant overlaps, stale hashes and surviving known connector/timing/build shape references are rejected. A connector and its target can be deleted together. Checks cover numeric spid/shapeid and a:stCxn/endCxn IDs; arbitrary vendor-extension or GUID dependencies still require agent review.
 
 MCP verifies package inventory, untouched member bytes, IDs and XML outside requested nodes by reversing the planned changes for comparison. Relationships, media and embedded parts remain even when orphaned; deletion is not secure erasure. Historical evidence and wiki snapshots remain available. Edits stage managed revisions; explicit writeback retains source checks and backups. Agents perform the full semantic and visual review and correction.
+
+### PPTX slide structure (Unreleased)
+
+read_pptx_layouts discovers layouts across all destination masters using asset_id, revision, offset and limit. Follow next_offset at one revision. Records include part, master_part, name, type and placeholder_count; layout indices are never assumed.
+
+add_pptx_slides takes expected_revision and pptx_slide_insert={index,slides:[{layout_part,textboxes}]}. The zero-based boundary may precede any slide or append at the end. Each batch inserts 1–100 slides using an explicit destination layout. Ordinary shape placeholders are created empty with inherited formatting; master prompt text is not copied into content, and date/footer/slide-number placeholders remain inherited. Optional textboxes use existing typed EMU/run models. Only generated new slide XML is extracted; the original presentation is never resaved by python-pptx.
+
+Completely read current read_pptx slides through next_slide_offset. reorder_pptx_slides takes pptx_slide_order, a complete unique permutation of {slide_id,part} keys. delete_pptx_slides takes pptx_slide_keys with 1–100 keys, and may leave an empty deck. Both require asset_id and expected_revision. Follow review_request, then read complete shape JSON and use update_pptx for precise new-run edits.
+
+Surviving slide IDs, parts, media, charts, notes and XML remain intact. Deletion removes slide-list entries and presentation relationships while retaining detached slide/notes/media parts; it is not secure erasure. Incoming relationships from retained parts or custom shows block deletion; exclusively removed slides' notes backreferences may remain. Reordering preserves independent custom-show order. Section lists and index-based show ranges currently block structure edits. Cross-deck copying/import and new speaker-note structures remain further work.
+
+Limits: 2,000 slides, 20,000 new runs / 4 MiB UTF-8 per batch, plus existing package/component budgets. MCP checks revisions, dependencies, ordering, relationships, new content and untouched parts, and updates known slide/notes count properties. Agents review actual rendering, overflow, inherited styles, interactions and other cached viewer properties. Historical evidence/wiki and guarded explicit source writeback remain available. See [python-pptx layout semantics](https://python-pptx.readthedocs.io/en/latest/user/slides.html) and [Microsoft slide deletion](https://learn.microsoft.com/en-us/office/open-xml/presentation/how-to-delete-a-slide-from-a-presentation).
 
 ### Native PDF pages (Unreleased)
 
@@ -465,6 +477,13 @@ Grid run 01 on 2026-09-19 completed 123 MCP calls with zero tool errors, exact f
 Add --merges to tests.codex_pptx_tables.run, optionally with --grid and --derivations. Six mutations insert a temporary formatted row, merge its five cells with explicit paragraph migration, split it while keeping all text at the anchor, delete it, then split and remerge the original title. Each mutation uses a complete current reference and full readback. Independent audits inspect every intermediate PPTX for exact paragraph XML, rich formatting, ordering, original scanned cells, grid/frame/merge geometry and untouched XML/parts. Auditor regressions deliberately corrupt leading zeros, formatting, merge coverage and split content. Ordinary pytest never starts a model; live events, transcription errors and recoveries remain separate. Full slide rendering remains a separate check.
 
 Merge run 01 on 2026-09-19 (--grid --merges) completed 180 MCP calls with zero tool errors, exact first transcription, one actual PNG and thirteen complete records. Five grid and six merge/split intermediate revisions passed independent audits of paragraph XML, original strings/styles, source, published files and wiki. No full-slide rendering was performed. Full pytest passed 2,015 tests with 30 optional skips; one subsequent absent-anchor-body regression passed within an 18-test focused run, with production source unchanged. VSIX tests passed 199.
+
+## Native slide structure exercise (Unreleased)
+
+Add --slides to tests.codex_pptx_tables.run, optionally with grid/merge/derivation exercises. After scanned-table creation, Codex discovers layouts, inserts two formatted temporary slides, reorders all slide identities and deletes the temporary slides. It fully reads slide listings before/after each mutation, complete temporary shapes and the original table, then verifies deleted-shape historical evidence. Independent audits inspect raw ZIP relationships/XML for all intermediate slide IDs/order, exact strings/leading zeros, formatting/geometry, original parts, content types, relationships and count properties. A regression exposed python-pptx's in-memory slide-part renaming after reorder; the auditor now reads original package relationships. Synthetic scan results do not establish general OCR accuracy or full slide rendering.
+
+Slides run 01 on 2026-09-19 completed 96 MCP calls with zero tool errors, exact first transcription, one actual PNG and eight complete shape/page records. All three intermediate presentations passed independent identity/order, rich text, preserved-parts, historical evidence and final published-file/wiki audits. Full pytest passed 2,068 tests with 30 optional skips; VSIX tests passed 199. No presentation-viewer rendering was performed.
+
 
 
 ## Publish in order

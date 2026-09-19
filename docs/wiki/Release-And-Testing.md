@@ -398,3 +398,21 @@ Agent 完成掃描表格後，插入帶有前導零、正負號、粗斜體的�
 均符合預期；未執行完整投影片渲染。完整 pytest 為 2,015 passed／30 optional
 skipped，之後新增「起點缺少可選文字框」案例並通過含該案例的 18 項測試；
 production source 未變更。VSIX 199 tests 通過。
+
+### Codex native slide structure exercise (Unreleased)
+
+使用 `tests.codex_pptx_tables.run --slides`，可與格網、合併／拆分及轉製帳本流程
+組合。Agent 查看掃描頁並完成可編輯表格後，探索目前版型、插入兩頁帶格式文字框、
+重排全部頁面，再刪除兩頁暫存內容。每一步前後完整讀取目前頁序，完整讀回新增
+文字框及重排後的原表格，刪頁後仍驗證暫存文字框的歷史證據。
+
+獨立稽核讀取每個中間 PPTX 的原始 ZIP 關聯與 XML，檢查頁面身分、頁序、精確
+字串／前導零／格式／位置、原始 parts、content types、關聯及數量屬性。不能用
+python-pptx 在記憶體中重新命名後的 part 路徑取代原始檔案身分；此差異已由
+重排回歸測試揭露並修正稽核器。合成掃描頁通過不代表通用 OCR 或完整投影片渲染。
+
+2026-09-19 slides run 01 完成 **96 次 MCP 呼叫、零工具錯誤**，首次轉錄完全
+一致，1 張實際 PNG、8 份完整形狀／頁面紀錄。三個中間投影片版本的頁序／身分、
+新增文字格式與原始 parts 均通過獨立稽核，刪頁後歷史證據及最終發布檔／Wiki
+也通過。完整 pytest：2,068 passed、30 optional skipped；VSIX：199 tests。
+沒有執行完整投影片檢視器渲染，因此不宣稱完整畫面保真。

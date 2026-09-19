@@ -413,6 +413,54 @@ MCP 重新讀回新套件，檢查 ID、套件檔案清單、未修改 part 的�
 仍可讀取及驗證。操作只建立受管理版本；來源檔另行 `writeback`，保留備份與
 來源衝突檢查。MCP 負責這些必要檢查，Agent 負責完整語意／視覺核對與修正。
 
+## PPTX slide structure (Unreleased)
+
+先查安裝版本的 contract。`read_pptx_layouts` 以 `asset_id`、`revision` 與
+`offset`／`limit` 探索所有母片下的版型；沿用同一版本並追蹤 `next_offset`。
+每筆提供 `part`、`master_part`、名稱、類型及預留位置數量，不假設固定版型索引。
+
+```python
+document(op="native", native_request={
+    "op": "add_pptx_slides", "asset_id": deck_id,
+    "expected_revision": revision,
+    "pptx_slide_insert": {
+        "index": 1,
+        "slides": [{
+            "layout_part": chosen_layout["part"],
+            "textboxes": [{"paragraphs": [[{"text": "007 µg", "bold": True}]]}]
+        }]
+    }
+})
+```
+
+`index` 為從 0 開始的插入位置，可插在最前、頁與頁之間或最後。每批新增 1–100
+頁，使用明確的既有版型。一般文字預留位置依版型建立空內容，母片提示文字不會
+變成新頁正文；日期、頁尾及頁碼保留繼承行為。既有版型／母片及其樣式保持原樣。
+可另外指定文字框的本地 EMU 尺寸與格式化 runs，或省略 `textboxes`。
+
+以目前版本的 `read_pptx` 完整取得 `slides`，追蹤 `next_slide_offset`。
+每頁的 `{slide_id, part}` 是版本內身分；不要用會隨重排改變的顯示頁碼代替：
+
+- `reorder_pptx_slides` 的 `pptx_slide_order` 必須包含全部目前頁面且各出現一次。
+- `delete_pptx_slides` 的 `pptx_slide_keys` 指定 1–100 頁，可刪到空簡報。
+- 兩者皆需 `asset_id` 與 `expected_revision`。新增後沿用 `review_request`
+  讀回新版本；以既有 `read_pptx_shape`／`update_pptx` 核對及修改新文字框。
+
+倖存頁面的 ID、part、圖片、圖表、備註與 XML 保持不變。刪頁會移除主頁序清單
+與主簡報關聯，原頁／備註／附件仍留在套件，**不等同安全抹除**。其他保留頁面、
+自訂播放或其他 parts 若仍引用被刪頁面，操作會拒絕；屬於被刪頁面的備註回指可保留。
+重排不改動自訂播放的獨立順序。章節清單與以頁碼定義的播放範圍目前會阻擋結構
+操作，避免自行猜測應如何修改。跨簡報複製／匯入與新增備註結構仍待擴充。
+
+本組操作最多 2,000 頁；新增文字合計最多 20,000 runs／4 MiB UTF-8，並沿用套件
+容量與元件上限。MCP 核對版本、相依、頁序、型別關聯、新增內容與未修改 parts，
+更新已知的投影片／備註數量屬性。其他檢視器快取屬性可能需重新整理；完整畫面、
+文字溢出、繼承樣式與播放互動由 Agent 核對。來源回寫仍需明確操作及備份，
+舊形狀證據與 Wiki 原始附件持續可用。
+
+實作參考 [python-pptx 版型語意](https://python-pptx.readthedocs.io/en/latest/user/slides.html)
+與 [Microsoft 刪頁相依說明](https://learn.microsoft.com/en-us/office/open-xml/presentation/how-to-delete-a-slide-from-a-presentation)。
+
 ## Native PDF pages (Unreleased)
 
 `main` 開發版提供原生 PDF 頁面協作；公開套件仍是 **1.4.0**，後續沿用

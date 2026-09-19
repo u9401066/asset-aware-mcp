@@ -72,6 +72,17 @@ verification.
   and semantic support still require agent review. Never treat DFM temporary paths
   as persistent media attachments; use manifest.part_attachments.
 
+- When advertised, read_pptx_layouts discovers all destination masters' layouts at
+  a pinned revision. add_pptx_slides uses explicit layout_part plus optional typed
+  textboxes; ordinary placeholders start empty and inherit layout formatting.
+  Read complete current slide listings via next_slide_offset. reorder_pptx_slides
+  needs all slide_id/part keys once; delete_pptx_slides takes selected exact keys.
+  Pin expected_revision, follow review_request and read complete shapes. Incoming
+  retained dependencies, sections and index-based show ranges may block edits.
+  Detached parts remain after deletion; not secure erasure. Agent reviews rendering,
+  inherited styles, viewer caches and unmodeled interactions. Source writeback stays
+  explicit; cross-deck copy/import and new notes structures remain additional work.
+
 - When advertised, add_pptx_pictures embeds registered PNG/JPEG file_reference
   bytes in existing containers. replace_pptx_pictures uses full current shape refs
   and preserve_existing mapping; shared media is never overwritten. read_pptx_picture

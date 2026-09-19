@@ -40,6 +40,11 @@ lock zero known vulnerabilities. Clean-wheel smoke passed (help/doctor/list-tool
 removed after terminal proof. Runtime source/lock hashes still match the actual Codex
 run. Local gates complete, pending scoped commits/push and exact CI/Pages. Public 1.4.0.
 
+Core committed as 3fb6b88. Companion commit contains independent Codex slide audits,
+corruption regressions, platform/SDK2 CI registration, bilingual website/docs and
+synchronized assistant assets. No source change after full suite/actual Codex run.
+Remaining checkpoint work: push both commits and verify exact CI/Pages/public bytes.
+
 ## 2026-09-19 — native table merge/split in progress
 
 Previous goal turn made verified progress: a9739eb/6cb054b pushed. Exact CI
