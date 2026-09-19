@@ -1,0 +1,8 @@
+{
+  "name": "asset-aware-csl-vendor-audit",
+  "private": true,
+  "description": "Audit metadata for the unmodified bundled citeproc-js resource; no runtime npm installation",
+  "dependencies": {
+    "citeproc": "2.4.63"
+  }
+}

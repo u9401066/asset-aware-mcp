@@ -1,5 +1,60 @@
 # Active Context
 
+## CSL resources — final local validation checkpoint
+
+Pinned upstream citeproc-js2.4.63 (internal1.4.61), official CSL styles/locales and
+input schema retain exact URLs, hashes and original licenses. Resources/spec are
+committed separately from runtime/tests and docs/harness; each group <=30 counted
+files excluding MEM. Public1.4.0 / Unreleased1.4.x; no new tag or model override.
+
+Final full03:3075passed35optional-skips221.04s with real NIST/NASA corpus. Earlier
+full02 had three stale GitHub-description fixtures; fixed expectation and reran all.
+Clean private Python3.10 CSL unit/audit/SDK2:31passed23.30s. Actual default Codex02:
+38successful calls,1recovered invalid schema-hash error,192.75s,4PDFimages,2Wikis.
+Actual01 retained167/1/221.2s with redundant reads and an oversized CSL page request.
+Both use fictional books; neither proves arbitrary bibliographic/semantic fidelity.
+Proofs:/run/user/1000/asset-aware-codex-csl-{01,02}; all original bytes/mtime retained.
+
+Source/wheel/actual02/Docker share SHA5b4d74bc3dc8e1aed0f05f89aa210f6c6e33ad95b20f52737fc90fa64410c0ef.
+CSL manifest97beaf131e1784d8dc694fc9de9afd7270b9cc773f46cab52ea4cf4885b4a953;
+worker d897399d29e9f521764f2366e15fbc4970beba227ad4e0a898d51386725beb42.
+Docker1a0f5426b862 passes import/doctor/tools/SDK2; base has noNode and reports it;
+read-only optional Node mount passes actual APA. Installed wheel outside checkout
+passes real rendering. VSIX199 tests, package64files and install/update pass; local
+activation unavailable. Browser1440x1000/390x844 zh/en and APA/NLM previews pass,
+8screens saved. Docs35pass0.35s; Ruff626, mypy270, Bandit, artifact/harness/sync audits
+pass. uv214audit/npm audits0vulnerabilities; zizmor has existing informational baseline.
+
+After terminal Docker proof, only owned old e4de8f8e runtime and0ebdb50a builder were
+removed. First restore hit root disk capacity on final directory; staged originals
+remained intact. Removed reproducible local Python/mypy caches, copied missing files,
+and verified all11 original inventories/hashes/mtimes restored; staging manifest
+/tmp/asset-aware-csl-staging.json allrestoredtrue. Terminal private wheel env removed;
+logs/current actual runs retained. Root disk remains tight; avoid unnecessary rebuilds.
+
+Pinned upstream whitespace remains unmodified. Narrow .gitattributes exceptions
+cover only citeproc.js/CPAL; -text preserves resource/worker bytes across Git newline
+conversion. A temporary staged checkout with core.autocrlf=true verifies every
+manifest resource hash/size. This changes no production runtime bytes.
+
+Next commit runtime/tests, then docs/harness with updated MEM; push main and require
+exact-head CI/Pages/public bytes. Original dirty worktree untouched; broad goal active.
+
+## CSL citation document work — active
+
+Prior real-PDF milestone 00470f94 is fully published: CI35433497376 all10success,
+Pages35433497144 all3success, five public files match exact local bytes; proof
+/tmp/asset-aware-real-pdf-publication-proof.json. Current main is clean at start.
+Next implement real document-context CSL processing with complete source evidence
+and portable citation Wiki, preserving existing custom display contracts. Read
+docs/specs/csl-citation-documents.md before code. citeproc-js selected for proper
+retroactive disambiguation; citeproc-py currently documents that feature as missing.
+No Agent delegation; actual Codex must keep default model. Public1.4.0/1.4.x.
+11 owned terminal evidence directories are temporarily staged with verified hashes
+and original symlinks under /run/user/1000/asset-aware-csl-build-staging; manifest
+/tmp/asset-aware-csl-staging.json. Restore exact files/mtimes after terminal gates.
+Broad goal stays active.
+
 ## Real PDF final pre-push checkpoint
 
 Portable corpus correction96b480ea442ac70edc7a6c2531d72423612a8800 changes only test

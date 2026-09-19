@@ -1,0 +1,96 @@
+{
+  "processor": "citeproc-js",
+  "version": "2.4.63",
+  "npm_integrity": "sha512-68F95Bp4UbgZU/DBUGQn0qV3HDZLCdI9+Bb2ByrTaNJDL5VEm9LqaiNaxljsvoaExSLEXe1/r6n2Z06SCzW3/Q==",
+  "commits": {
+    "Juris-M/citeproc-js": "cc9153c45293af878de08cafddbefe6ea150c380",
+    "citation-style-language/styles": "81c3eb863d1c5a83aab7e296e045013d2422f2cb",
+    "citation-style-language/locales": "a89adece41013402236e2c9020972d7e931fbab8",
+    "citation-style-language/schema": "e3ce254a72c4470a5ed3b9d23b428017d25674e9"
+  },
+  "styles": {
+    "apa": "APA Style 7th edition",
+    "chicago-author-date": "Chicago Manual of Style 18th edition (author-date)",
+    "chicago-notes-bibliography": "Chicago Manual of Style 18th edition (notes and bibliography)",
+    "vancouver": "Vancouver - NLM citation-sequence (nlm-citation-sequence)"
+  },
+  "files": {
+    "citeproc-LICENSE": {
+      "url": "https://raw.githubusercontent.com/Juris-M/citeproc-js/cc9153c45293af878de08cafddbefe6ea150c380/LICENSE",
+      "sha256": "b96ca8e1716f93449b480083c7510c18d129fa9afa4644d62c6347c06177ce30",
+      "size": 1017
+    },
+    "citeproc-AGPLv3": {
+      "url": "https://raw.githubusercontent.com/Juris-M/citeproc-js/cc9153c45293af878de08cafddbefe6ea150c380/AGPLv3",
+      "sha256": "57c8ff33c9c0cfc3ef00e650a1cc910d7ee479a8bc509f6c9209a7c2a11399d6",
+      "size": 34520
+    },
+    "citeproc-CPAL": {
+      "url": "https://raw.githubusercontent.com/Juris-M/citeproc-js/cc9153c45293af878de08cafddbefe6ea150c380/CPAL",
+      "sha256": "a953615139d8c767eb5e95f14215bf5c356ea23397a15137f6e119babf3fe69b",
+      "size": 28740
+    },
+    "apa.csl": {
+      "url": "https://raw.githubusercontent.com/citation-style-language/styles/81c3eb863d1c5a83aab7e296e045013d2422f2cb/apa.csl",
+      "sha256": "1ece4fb3c295e66d04b4394e295aa58a87741ceeef1658192437eb9953c2f13e",
+      "size": 85658
+    },
+    "chicago-author-date.csl": {
+      "url": "https://raw.githubusercontent.com/citation-style-language/styles/81c3eb863d1c5a83aab7e296e045013d2422f2cb/chicago-author-date.csl",
+      "sha256": "002fade78d7e4fe9d42936a16b43a8066b097013f6255df40b1bfba6631eff9b",
+      "size": 167761
+    },
+    "chicago-notes-bibliography.csl": {
+      "url": "https://raw.githubusercontent.com/citation-style-language/styles/81c3eb863d1c5a83aab7e296e045013d2422f2cb/chicago-notes-bibliography.csl",
+      "sha256": "4b6be4bceaf8f3c31b49331c9f9e38c977f666d6ab80e19a2ac8482c7511abeb",
+      "size": 242663
+    },
+    "vancouver.csl": {
+      "url": "https://raw.githubusercontent.com/citation-style-language/styles/81c3eb863d1c5a83aab7e296e045013d2422f2cb/nlm-citation-sequence.csl",
+      "sha256": "492f7935df42054b33d515f7275122f419780df990ea35925dcbbff0fecf1137",
+      "size": 18126
+    },
+    "en-US.xml": {
+      "url": "https://raw.githubusercontent.com/citation-style-language/locales/a89adece41013402236e2c9020972d7e931fbab8/locales-en-US.xml",
+      "sha256": "ac864c7c21166b4390d82c31792cdc509400727fa0060b43d8aa17e07f9cb079",
+      "size": 32649
+    },
+    "zh-TW.xml": {
+      "url": "https://raw.githubusercontent.com/citation-style-language/locales/a89adece41013402236e2c9020972d7e931fbab8/locales-zh-TW.xml",
+      "sha256": "207f39ff0c6f287fbffbd08d48b263d6aee8053125b7db54f4ef26899f5a7912",
+      "size": 22273
+    },
+    "csl-data.json": {
+      "url": "https://raw.githubusercontent.com/citation-style-language/schema/e3ce254a72c4470a5ed3b9d23b428017d25674e9/schemas/input/csl-data.json",
+      "sha256": "23b2c062d7526060f4631bb04b4b3ba237e488484253e327bd00fa691861b811",
+      "size": 12222
+    },
+    "csl-schema-LICENSE": {
+      "url": "https://raw.githubusercontent.com/citation-style-language/schema/e3ce254a72c4470a5ed3b9d23b428017d25674e9/LICENSE.txt",
+      "sha256": "6d77b80c6b2412a010e22ee5b5d0a92689f402ddb8766dea2346b525db6a7c6d",
+      "size": 1102
+    },
+    "styles-README.md": {
+      "url": "https://raw.githubusercontent.com/citation-style-language/styles/81c3eb863d1c5a83aab7e296e045013d2422f2cb/README.md",
+      "sha256": "eeda35e6ab1c71ef74ba98e8d63f3f5c07e1b1c458b92d54cdd7515afcb1b04e",
+      "size": 6573
+    },
+    "locales-README.md": {
+      "url": "https://raw.githubusercontent.com/citation-style-language/locales/a89adece41013402236e2c9020972d7e931fbab8/README.md",
+      "sha256": "f8e1b34d3e1b66f101b45bc45e5fca0397aa923fe4abeab6f98139c8f731c320",
+      "size": 1777
+    },
+    "citeproc.js": {
+      "url": "https://registry.npmjs.org/citeproc/-/citeproc-2.4.63.tgz",
+      "archive_member": "package/citeproc_commonjs.js",
+      "sha256": "55abba1a8b8b48c14323fd053f9646013b4b7a0c977938064ecf5195a502b9f1",
+      "size": 967493
+    },
+    "zh-CN.xml": {
+      "url": "https://raw.githubusercontent.com/citation-style-language/locales/a89adece41013402236e2c9020972d7e931fbab8/locales-zh-CN.xml",
+      "sha256": "95cebc667f2da8fb5b9864e49941e3f867d59f79feba929bc58e8ed6bfd4d582",
+      "size": 18641
+    }
+  },
+  "processor_version": "1.4.61"
+}

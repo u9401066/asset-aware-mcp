@@ -1,0 +1,7 @@
+# Pinned third-party resources must retain exact upstream bytes on every platform.
+src/infrastructure/csl_resources/* -text
+src/infrastructure/csl_worker.cjs -text
+
+# These unmodified upstream files contain intentional whitespace in the release.
+src/infrastructure/csl_resources/citeproc.js -whitespace
+src/infrastructure/csl_resources/citeproc-CPAL -whitespace
