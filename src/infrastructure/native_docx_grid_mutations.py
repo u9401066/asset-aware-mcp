@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from typing import Any
 
 from lxml import etree
 
 from src.domain.native_docx_grid import (
     DocxGridDelete,
     DocxGridEdit,
+    DocxGridHeaderRows,
     DocxGridInsert,
     DocxGridMerge,
     DocxGridResize,
+    DocxGridRowLayout,
     DocxGridSplit,
 )
 from src.domain.native_docx_structure import NativeDocxCell, NativeDocxTable
@@ -29,6 +32,7 @@ from src.infrastructure.native_docx_grid_model import (
     set_value,
 )
 from src.infrastructure.native_docx_structure_checks import check_blocks
+from src.infrastructure.native_docx_table_layout import set_headers, set_rows
 
 
 def _new_cells(
@@ -288,8 +292,12 @@ def split(grid: WordGrid, edit: DocxGridSplit) -> None:
             grid.regions.append(Region(row, column, 1, 1, [cell], True))
 
 
-def apply(grid: WordGrid, edit: DocxGridEdit) -> dict[str, int | str]:
-    receipt: dict[str, int | str] = {"op": edit.op}
+def apply(grid: WordGrid, edit: DocxGridEdit) -> dict[str, Any]:
+    if isinstance(edit, DocxGridHeaderRows):
+        return set_headers(grid, edit)
+    if isinstance(edit, DocxGridRowLayout):
+        return set_rows(grid, edit)
+    receipt: dict[str, Any] = {"op": edit.op}
     if isinstance(edit, DocxGridInsert):
         receipt["inserted_cells"] = insert(grid, edit)
     elif isinstance(edit, DocxGridDelete):

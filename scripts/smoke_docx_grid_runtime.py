@@ -22,7 +22,9 @@ from src.infrastructure.native_wiki_publisher import FileNativeWikiPublisher
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("workspace", type=Path)
-    workspace = parser.parse_args().workspace.resolve()
+    parser.add_argument("--table-revisions", type=int, default=3)
+    args = parser.parse_args()
+    workspace = args.workspace.resolve()
     output = workspace.parent
     expected = json.loads((output / "expected.json").read_text(encoding="utf-8"))
     final = json.loads((output / "last-message.txt").read_text(encoding="utf-8"))
@@ -54,7 +56,7 @@ def main():
             fields["docx_table_reference"],
             page["text_sha256"],
         )
-    assert len(snapshots) == 3
+    assert len(snapshots) == args.table_revisions
     for revision, (reference, digest) in snapshots.items():
         chunks, offset = [], 0
         while True:
@@ -98,6 +100,8 @@ def main():
             for p in (workspace / "native-wiki").rglob("manifest.json")
             if json.loads(p.read_text(encoding="utf-8")).get("asset_id")
             == final["docx_asset_id"]
+            and json.loads(p.read_text(encoding="utf-8")).get("revision")
+            == service.repository.load(final["docx_asset_id"]).revision
         )
         assert {
             p.relative_to(new).as_posix(): p.read_bytes()

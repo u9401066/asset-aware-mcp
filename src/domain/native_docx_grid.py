@@ -60,8 +60,44 @@ class DocxGridSplit(DocxModel):
     column: int = Field(ge=0, le=99)
 
 
+class DocxGridHeaderRows(DocxModel):
+    op: Literal["set_header_rows"]
+    count: int = Field(ge=0, le=100)
+
+
+class DocxRowHeight(DocxModel):
+    rule: Literal["auto", "at_least", "exact", "inherit"]
+    value_twips: Twips | None = None
+
+    @model_validator(mode="after")
+    def sized_rule(self) -> DocxRowHeight:
+        if (self.rule in {"at_least", "exact"}) != (self.value_twips is not None):
+            raise ValueError("Only at_least/exact row heights require value_twips")
+        return self
+
+
+class DocxGridRowLayout(DocxModel):
+    op: Literal["set_row_layout"]
+    index: int = Field(ge=0, le=99)
+    count: int = Field(ge=1, le=100)
+    height: DocxRowHeight | None = None
+    split: Literal["allow", "prevent", "inherit"] | None = None
+
+    @model_validator(mode="after")
+    def explicit_change(self) -> DocxGridRowLayout:
+        if self.height is None and self.split is None:
+            raise ValueError("Row layout requires an explicit height or split policy")
+        return self
+
+
 DocxGridEdit = Annotated[
-    DocxGridInsert | DocxGridDelete | DocxGridResize | DocxGridMerge | DocxGridSplit,
+    DocxGridInsert
+    | DocxGridDelete
+    | DocxGridResize
+    | DocxGridMerge
+    | DocxGridSplit
+    | DocxGridHeaderRows
+    | DocxGridRowLayout,
     Field(discriminator="op"),
 ]
 

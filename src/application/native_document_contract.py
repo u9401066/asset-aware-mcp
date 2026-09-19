@@ -196,6 +196,8 @@ def native_document_contract(
         "docx_policy": "Pin revision; assemble all DFM chunks with frontmatter/markers. Updates stage versions; writeback is explicit.",
         "docx_structure_enabled": docx_structure_enabled,
         "docx_table_grid_enabled": docx_enabled and docx_structure_enabled,
+        "docx_table_layout_enabled": docx_enabled and docx_structure_enabled,
+        "docx_table_layout_policy": "Use set_header_rows for a contiguous repeated prefix; set_row_layout for explicit height and split policies. inherit removes direct properties; auto uses content height. Read full receipts and render all pages. Styles, oversized rows and Microsoft Word behavior require Agent review.",
         "docx_table_grid_policy": "Read full hash-pinned grid JSON at an exact revision. Sequential insert/delete/resize/merge/split requires full table refs. Merge needs explicit content_policy; retain native content and omitted positions. Read new refs and render for Agent review.",
         "docx_structure_policy": "Create typed paragraphs/tables; insert at body boundaries/current block refs. Delete complete blocks with dependency checks. Block IDs are revision-scoped; read back and render for review.",
         "archive_policy": "Archive retains history and the human source.",

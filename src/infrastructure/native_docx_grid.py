@@ -7,7 +7,12 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 from src.domain.native_asset_models import NativeEditResult
-from src.domain.native_docx_grid import DocxGridResize, NativeDocxTableGridEdit
+from src.domain.native_docx_grid import (
+    DocxGridHeaderRows,
+    DocxGridResize,
+    DocxGridRowLayout,
+    NativeDocxTableGridEdit,
+)
 from src.infrastructure.native_docx_grid_model import W, WordGrid, one
 from src.infrastructure.native_docx_grid_mutations import apply
 from src.infrastructure.native_docx_structure import (
@@ -92,7 +97,10 @@ def _guard(
                 raise ValueError(
                     "Bound or locked content control cannot be structurally edited"
                 )
-    if all(isinstance(edit, DocxGridResize) for edit in request.edits):
+    if all(
+        isinstance(edit, (DocxGridResize, DocxGridHeaderRows, DocxGridRowLayout))
+        for edit in request.edits
+    ):
         return
     protected = (
         DEPENDENCIES

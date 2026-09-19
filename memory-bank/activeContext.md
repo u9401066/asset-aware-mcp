@@ -1,5 +1,57 @@
 # Active Context
 
+## Native Word table pagination — validated runtime/spec/test segment
+
+Final source f5abe76ba927967af4b568eb688804eae31f57a0ae0549307a4216df928a50ad
+passed 3218 tests /33 optional skips /305.27s, including actual Writer/CJK and
+NIST/NASA PDFs. New layout/audit/SDK2 group34pass14.82s; Python3.10 group33pass /
+1optional rendering skip7.61s. Docs25pass, Ruff657/mypy280, harness/artifact audit,
+Bandit/uv214/npm/zizmor checks pass. VSIX199tests/64files/install-update pass;
+activation skipped locally and required in CI. Metadata/topics/labels synchronized.
+
+Actual default Codex01 passed74 successful MCP calls with1 recovered schema-limit
+input error in200.83s, no model override or rerun to erase errors. Two complete
+DFM/grid/receipt reads, two historical Wikis and all5 actual page PNGs reviewed.
+The clipped1-page source becomes4 pages, both header rows repeat, all14 body rows
+retain every END/CONFIRMED line and numeric spelling. Independent pixels, native
+cell/style XML and all other package parts, source bytes/mtime and Wiki pass.
+Synthetic14-row scope only; inherited styles/oversized rows/MicrosoftWord remain
+open. MCP checks mechanical properties; Agent owns full meaning/visual correction.
+
+Clean installed Python3.10 wheel and Docker b7663e5ec8b0 replay both complete table
+revisions and exact current Wiki outside checkout; source SHA matches actualCodex.
+Import/doctor/SDK2stdio30tools pass. Docker builder717fe344272c and smokeimage were
+removed only after successful replay to reclaim disk. All11 owned historical runs
+restored with exact hashes/mtimes; /tmp/asset-aware-docx-layout-staging.json alltrue.
+Logs/actual runs/failures preserved. No source or original dirty checkout touched.
+Browser4desktop/mobile zh/en states pass; desktopzh/mobileen visually inspected;
+no overflow/console errors. Browser plugin absent; existing Playwright used.
+
+Commit runtime/spec/tests/CI/smoke separately from docs/harness, each withMEM.
+Public1.4.0; next consolidated patch1.4.1, no per-feature bump/tag. Broader goal
+remains active. Next pushmain, require exact-head CI/Pages and six live byte checks;
+final proof /tmp/asset-aware-docx-layout-publication-proof.json pending.
+
+## Native Word table pagination — active
+
+Previous goal turn made substantive progress: native DOCX grid CRUD fully published
+at67407f2, CI35443245856 all10success, Pages35443245547 all3success, six deployed
+files exact. Authoritative proof:/tmp/asset-aware-docx-grid-publication-proof.json.
+Main/origin clean and equal; all previous staging restored. Public1.4.0, next
+consolidated patch1.4.1; no per-feature bump/tag. Original checkout untouched.
+
+Next gap verified from code: table row resizing only sets minimum heights, existing
+repeated headers cannot be configured, and row pagination cannot be corrected.
+Implement explicit contiguous header count and row height/split policies through
+existing version-bound table-grid operations. Preserve native cell/paragraph XML,
+styles, merged/omitted topology and other package parts. Agent checks actual pages;
+MCP does not claim visual fidelity. Add multi-page clipped-text/header correction
+fixtures, real SDK2 images and actual default Codex before/after review. Keep source
+history/Wiki evidence and atomic review receipts. Research uses official OpenXML
+TableHeader/CantSplit/TableRowHeight plus python-docx implementation, no new deps.
+Root104MiB free; new transient outputs under /run/user/1000/asset-aware-docx-layout-*.
+No staging currently. Broad all-format/citation/wiki goal remains active.
+
 ## Native DOCX grid docs — ready for publication
 
 Runtime/spec/tests committed as d22bac4 (22 counted files plus2MEM), authored by

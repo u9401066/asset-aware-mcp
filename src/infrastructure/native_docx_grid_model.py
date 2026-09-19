@@ -394,6 +394,11 @@ class WordGrid:
                 row.append(cell)
 
     def record(self) -> dict[str, Any]:
+        from src.infrastructure.native_docx_table_layout import (
+            header_prefix,
+            layout_state,
+        )
+
         return {
             "schema": "native-docx-table-grid-v1",
             "rows": len(self.rows),
@@ -415,6 +420,9 @@ class WordGrid:
             "text_projection": "Literal w:t, tab and break tokens with paragraph boundaries; no field evaluation or visibility verdict. Inspect native_xml and actual rendering.",
             "row_omissions": [{"before": a, "after": b} for a, b in self.omissions],
             "repeat_header_rows": [r for r, row in enumerate(self.rows) if header(row)],
+            "repeat_header_prefix_length": header_prefix(self),
+            "row_layout": [layout_state(row) for row in self.rows],
+            "layout_scope": "Direct row properties only; inherited styles and rendered pagination require Agent review. Noncontiguous header flags do not extend the repeating prefix.",
             "regions": [
                 {
                     "row": x.row,
