@@ -46,6 +46,7 @@ NativeOperation = Literal[
     "read_docx_block",
     "update_docx",
     "verify",
+    "read_selection",
     "record_derivation",
     "read_derivations",
     "retract_derivation",
@@ -115,6 +116,7 @@ NATIVE_OPERATIONS = {
     "read_docx_block": _fields("asset_id block_id", "revision text_offset text_limit"),
     "update_docx": _fields("asset_id expected_revision docx_edit"),
     "verify": _fields("reference"),
+    "read_selection": _fields("reference", "selection text_offset text_limit"),
     "record_derivation": _fields("asset_id expected_derivations_sha256 derivation"),
     "read_derivations": _fields(
         "asset_id", "derivations_sha256 text_offset text_limit"

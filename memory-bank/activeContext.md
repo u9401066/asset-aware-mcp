@@ -1,5 +1,73 @@
 # Active Context
 
+## 2026-09-19 — native selections verified locally; push pending
+
+Implemented immutable native-selection-ref-v1 for exact RFC6901 JSON values or
+Unicode spans within verified native XLSX cells, DOCX blocks, PPTX shapes and PDF
+pages. Empty selector reads the complete parsed parent without added evidence.
+Full parent identity/selector/value/context are hashed; UTF-8 spans refer to parsed
+strings, not original file offsets. Readback is bounded complete canonical JSON.
+Existing verify/derivation history and Wiki exports accept selections, retain full
+sidecar records and exact sources, and never migrate assertions to new revisions.
+Opaque/nested parents, wrong pointers/types/ranges and forged bindings fail.
+
+Actual Codex `/tmp/asset-aware-codex-selection-01`: 58 MCP calls, zero errors,
+130.45 seconds, one actual scanned PNG. Independent audit verifies all 15 literal
+XLSX cells, full parent/selection/ledger reads, hashes, PNG pixels, source bytes/mtime,
+historical 007 after B2 becomes 008, published workbook and two revision-specific
+wikis. Old Wiki retains selected-record JSON and the exact PDF; new Wiki has no
+inherited assertion. CLI0.154.0-alpha.6.1 default model not pinned. Rehashed fake
+values/context/locators fail evaluator regressions. SDK2 also checks precise text
+inside a merged-title PPTX table across an edit. No general OCR/Excel fidelity,
+pixel-region evidence or native DOCX cell geometry claim.
+
+Full suite: 2,262 passed,33 optional skips in82.29seconds after updating the DOCX
+contract's expected operation list. Subsequent focused41passed4.82sec includes an
+additional real DOCX Unicode/combining-character span/source-preservation case;
+actual saved Codex audit replay passed after auditor module split. Ruff421files,
+mypy188sources, bandit/highzizmor, lock,214Python/npmzero audits, harness/skills/docs
+passed. Extension199tests/64contentguard, fresh/updateVSIXinstall, cleanwheel console
+and SDK2, Dockerdoctor/listtools/SDK2, allartifactaudit passed. Local GUI activation
+unavailable; CI must cover it. Browserzh/en desktop/mobile passed and screenshots
+viewed; cached CDN fixtures do not establish live CDN availability. GitHub metadata
+and managed labels already synchronized. README/wiki/site/harness copies updated.
+
+Evaluated runtime394f33ef4dee30f16df5b7760a8d440d500f53ca413e4c992a6a4eff3a5922e3;
+lockabfaddf3d7d964ace1e210b1fd584e1717775a70f8ccdc98ad9b669b61f1bcd3.
+Docker build briefly exhausted local disk; removed only this run's builder1880636e5922
+and runtimeb5b101b6e090 after checks. Kept source/evaluation evidence and all unrelated
+images. Removed only exact completed test-owned /dev/shm/asset-aware-selection-pytest.
+Public version remains1.4.0, all new workUnreleased/future1.4.x, no tag. Original
+user worktree untouched. Next: segmented main commits/push and exact CI/Pages/public
+byte verification. Broader nativeCRUD/fidelity, A2T/native correspondence, fullCSL,
+real-corpus validation and general document structures remain active goal work.
+
+## 2026-09-19 — revision-bound selection evidence in progress
+
+Previous goal turn is **progress**: CJK correction committed/pushed as70645dc
+(core53024f5/docs2b3fba9), exact CI35387856340 all10jobs and Pages35387855694 passed.
+Revalidated clean main and exact successful CI this turn. Codex49calls/zeroerrors,
+CJK pixels/native evidence passed; public1.4.0, future1.4.x, no new tag.
+
+Next: native selection references identify exact JSON subtrees or Unicode character
+ranges inside verified immutable XLSX cells, DOCX blocks, PPTX shapes or PDF pages.
+RFC6901 pointer + optional half-open character range; parent/reference/selector/value
+are bound by the selection hash, so equal values at different locators cannot swap.
+read_selection also exposes complete paged parent records (empty pointer), closing
+DOCX full-representation discovery through MCP. Reject opaque/no-parser and nested
+selection parents. Preserve UTF-8 spans/context for text; ranges address parsed
+text, never raw DOCX/PDF bytes. No guessed OCR, scan region or semantic alignment.
+
+Extend existing verify/derivation endpoints and wiki snapshots, attaching complete
+selection records alongside native originals. Old refs/ledgers retain identities;
+new revisions never remap assertions. Agent can record a source-to-specific-value
+claim and review; machine integrity remains separate from semantic support.
+References: RFC6901 and W3C Web Annotation selectors (conceptual guidance; do not
+claim JSON-LD annotation compliance). Need cross-format, Unicode/locator/tamper/
+history/ledger/wiki regression coverage, actual SDK2 and real Codex evidence use,
+then docs/harness/assets, release checks, segmented main commits/push and exact CI.
+
+
 ## 2026-09-19 — portable font manifest paths
 
 CJK changes pushed as2b3fba9 (core53024f5); initial exact CI35387712309 and

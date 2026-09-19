@@ -110,6 +110,7 @@ def native_document_contract(
         },
         "pptx_grid_policy": "Sequential insert/delete/resize/merge/split with full shape references. Merge requires explicit content_policy; split retains anchor text. Read complete updated shapes and review rendering.",
         "file_reference_policy": "file_reference identifies exact immutable file bytes; verify does not assert source freshness or semantic meaning.",
+        "selection_policy": "read_selection requires a full parsed cell/block/shape/page reference. An empty RFC6901 pointer reads its complete record without evidence metadata; an optional nonempty half-open Unicode character range selects within a JSON string. Assemble all pages at one text_sha256. verify and derivations accept selection refs; wiki attaches active selection records. Offsets are not source-file bytes; no nested or opaque-file selections or automatic remapping.",
         "formats": _formats(
             docx_enabled,
             pptx_enabled,
@@ -182,6 +183,7 @@ def _formats(
             "create_pdf",
             "read_pdf",
             "read_pdf_page",
+            "read_selection",
             "render_pdf_page",
             "add_pdf_pages",
             "update_pdf",
@@ -205,6 +207,7 @@ def _formats(
             "create_pptx",
             "read_pptx",
             "read_pptx_shape",
+            "read_selection",
             "update_pptx",
             "add_pptx_tables",
             "update_pptx_table_grid",
@@ -224,14 +227,15 @@ def _formats(
         + [
             "read_docx",
             "read_docx_block",
+            "read_selection",
             "update_docx",
             "verify",
             "export_wiki",
         ]
         if docx_enabled
         else [],
-        "xlsx": ["create", "inspect_cells", "edit_cells"],
-        "xlsm": ["inspect_cells", "edit_cells"],
+        "xlsx": ["create", "inspect_cells", "edit_cells", "read_selection"],
+        "xlsm": ["inspect_cells", "edit_cells", "read_selection"],
         "other": [
             "register",
             "inspect_metadata",

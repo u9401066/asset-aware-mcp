@@ -33,6 +33,33 @@ it is not a promise of complete automatic correction or layout verification.
 Verification coverage and unperformed checks must remain explicit. Structural
 validity alone must never be reported as semantic correctness or full fidelity.
 
+### Native selection evidence (Unreleased, 1.4.x)
+
+Add read_selection over full verified native cell/block/shape/page references.
+Use RFC6901 JSON-string pointers (no URI-fragment decoding), zero-based array
+indices without leading zeros and exact Unicode keys without normalization. Empty
+pointer reads the complete parent record without added evidence metadata. Optional character ranges are nonempty,
+zero-based and half-open over a selected string; report its UTF-8 byte range,
+source text hash and nearby context. These offsets address parsed values, not
+original package bytes or PDF geometry. Opaque file references have no parsed
+selection; nested selection parents are unsupported.
+
+Bind parent identity, selector, context and selected JSON value in canonical UTF-8
+SHA256. Return immutable native-selection-ref-v1 plus complete hash-pinned paged
+JSON. Re-reading an existing selection ref must verify its full identity; false,
+zero, null and empty strings are valid selected values. Limit pointer length/depth
+and selection bytes; reject missing keys, wrong types and out-of-range spans.
+
+Existing verify, derivation recording/supersession/retraction and wiki workflows
+accept selection endpoints. Preserve old reference/ledger serialization and history.
+Selection evidence is revision-local; edits never migrate it automatically. Export
+complete deduplicated selected-record artifacts and exact source attachments for
+active assertions at the exported revision. Immutable checks do not infer semantic
+support, OCR, native-cell equivalence or visual fidelity. Native rendering and Agent
+review remain necessary. Test every supported parent format, locator/hash tampering,
+equal-value wrong paths, Unicode codepoints, merged/changed tables, complete paging,
+portable wiki evidence and actual Codex use against scanned source plus native table.
+
 ### CJK preview environment correction (Unreleased, 1.4.x)
 
 Provide an opt-in, private Linux Fontconfig evaluation fixture with exact upstream

@@ -18,6 +18,7 @@ from src.application.native_evidence_service import (
 from src.application.native_pdf_operations import NativePdfOperations
 from src.application.native_pptx_operations import NativePptxOperations
 from src.application.native_schema import read_schema
+from src.application.native_selection_service import NativeSelectionService
 from src.application.native_wiki_service import NativeWikiService
 
 if TYPE_CHECKING:
@@ -142,6 +143,7 @@ class NativeDocumentService:
             "read_docx_block": self._docx_operation,
             "update_docx": self._docx_operation,
             "verify": self._verify,
+            "read_selection": NativeSelectionService(self.evidence).read,
             "record_derivation": self._derivation_operation,
             "read_derivations": self._derivation_operation,
             "retract_derivation": self._derivation_operation,

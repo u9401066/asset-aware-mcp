@@ -6,7 +6,9 @@ from typing import TYPE_CHECKING, Any
 
 from src.application.citation_format_service import citation_markdown
 from src.application.native_derivation_service import REVIEW_BOUNDARY
+from src.application.native_selection_service import NativeSelectionService
 from src.domain.native_derivation import canonical, fingerprint
+from src.domain.native_selection import NativeSelectionReference, canonical_selection
 
 SOURCE_SUFFIXES = {"pdf", "docx", "pptx", "xlsx", "xlsm", "png", "jpg", "jpeg"}
 
@@ -34,9 +36,24 @@ def add_derivations(
         if record.derivation.target.revision == content.identity["revision"]
     ]
     attachments: dict[str, Any] = {}
+    selections: dict[str, Any] = {}
     for record in records:
         service.require_valid(record.derivation.target)
         links = []
+        for ref in [record.derivation.target, *record.derivation.sources]:
+            if isinstance(ref, NativeSelectionReference):
+                key = fingerprint(ref)
+                if key not in selections:
+                    selected = NativeSelectionService(service.evidence).record(ref)
+                    name = f"{content.prefix}-selection-{key}.json"
+                    content.add_file(name, canonical_selection(selected) + b"\n")
+                    selections[key] = {
+                        "reference": ref.model_dump(mode="json"),
+                        "record_file": name,
+                    }
+                links.append(
+                    f"- [Exact selection {key[:12]}]({selections[key]['record_file']})"
+                )
         for ref in record.derivation.sources:
             service.require_valid(ref)
             key = f"{ref.asset_id}:{ref.revision}"
@@ -62,6 +79,7 @@ def add_derivations(
         "ledger_sha256": fingerprint(ledger),
         "active_ids_for_revision": [r.derivation_id for r in records],
         "source_attachments": attachments,
+        **({"selection_records": selections} if selections else {}),
         "verification_scope": "immutable_endpoint_references; active records for exported revision only",
         "review_boundary": REVIEW_BOUNDARY,
     }

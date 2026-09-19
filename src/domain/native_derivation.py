@@ -18,6 +18,7 @@ from src.domain.native_asset_models import (
 from src.domain.native_file_reference import NativeFileReference
 from src.domain.native_pdf import NativePdfReference
 from src.domain.native_pptx import NativePptxReference
+from src.domain.native_selection import NativeSelectionReference
 
 NativeReference = (
     NativeCellReference
@@ -25,6 +26,7 @@ NativeReference = (
     | NativePptxReference
     | NativePdfReference
     | NativeFileReference
+    | NativeSelectionReference
 )
 ReviewResult = Literal["not_checked", "passed", "failed", "not_applicable"]
 MAX_DERIVATION_BYTES = 16 * 1024 * 1024

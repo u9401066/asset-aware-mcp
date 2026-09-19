@@ -8,20 +8,22 @@ from typing import TYPE_CHECKING, Any
 
 from src.application.native_pdf_operations import PDF_REVIEW, attach_pdf_evidence
 from src.application.native_pptx_operations import attach_pptx_evidence
-from src.domain.native_assets import NativeDocxBlockReference
+from src.application.native_selection_service import NativeSelectionService
+from src.domain.native_assets import NativeCellReference, NativeDocxBlockReference
 from src.domain.native_file_reference import NativeFileReference
 from src.domain.native_pdf import NativePdfReference
 from src.domain.native_pptx import NativePptxReference
+from src.domain.native_selection import NativeSelectionReference
 
 if TYPE_CHECKING:
     from src.domain.native_assets import (
         NativeAssetRepository,
-        NativeCellReference,
         NativeSpreadsheetAdapter,
     )
     from src.domain.native_docx import NativeDocxAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
+    from src.domain.native_selection import NativeSelectionParent
 
 
 def attach_native_evidence(cell: dict[str, Any], asset_id: str, revision: str) -> None:
@@ -53,14 +55,56 @@ class NativeEvidenceService:
         self.presentations = presentations
         self.pdfs = pdfs
 
+    def read_parent_record(self, reference: NativeSelectionParent) -> dict[str, Any]:
+        asset = self.repository.load(reference.asset_id)
+        data = self.repository.read(reference.asset_id, reference.revision)
+        if isinstance(reference, NativeCellReference) and asset.format in {
+            "xlsx",
+            "xlsm",
+        }:
+            record = self.spreadsheets.read_cell_by_locator(data, reference.locator)
+            attach_native_evidence(record, asset.asset_id, reference.revision)
+        elif (
+            isinstance(reference, NativeDocxBlockReference)
+            and asset.format == "docx"
+            and self.docx
+        ):
+            record = self.docx.read_block(
+                data,
+                asset.asset_id,
+                reference.revision,
+                reference.locator.block_id,
+                reference.locator,
+            )
+        elif (
+            isinstance(reference, NativePptxReference)
+            and asset.format == "pptx"
+            and self.presentations
+        ):
+            record = self.presentations.read_shape(data, reference.locator)
+            attach_pptx_evidence(record, asset.asset_id, reference.revision)
+        elif (
+            isinstance(reference, NativePdfReference)
+            and asset.format == "pdf"
+            and self.pdfs
+        ):
+            record = self.pdfs.read_page(data, reference.locator)
+            attach_pdf_evidence(record, asset.asset_id, reference.revision)
+        else:
+            raise ValueError("This format has no configured native selection reader")
+        return record
+
     def verify(
         self,
         reference: NativeCellReference
         | NativeDocxBlockReference
         | NativePptxReference
         | NativePdfReference
-        | NativeFileReference,
+        | NativeFileReference
+        | NativeSelectionReference,
     ) -> dict[str, Any]:
+        if isinstance(reference, NativeSelectionReference):
+            return NativeSelectionService(self).verify(reference)
         if isinstance(reference, NativeFileReference):
             return self._verify_file(reference)
         if isinstance(reference, NativePdfReference):

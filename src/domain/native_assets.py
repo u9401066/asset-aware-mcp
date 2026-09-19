@@ -76,6 +76,10 @@ from src.domain.native_pptx_table import (
     NativePptxTableAddition,
     validate_table_additions,
 )
+from src.domain.native_selection import (  # noqa: TC001 -- Pydantic schema
+    NativeSelectionReference,
+    NativeSelectionSelector,
+)
 
 __all__ = [
     "ASSET_ID_PATTERN",
@@ -174,8 +178,10 @@ class NativeDocumentRequest(NativeModel):
         | NativePptxReference
         | NativePdfReference
         | NativeFileReference
+        | NativeSelectionReference
         | None
     ) = None
+    selection: NativeSelectionSelector | None = None
     edits: list[NativeCellEdit] = Field(
         default_factory=list, max_length=MAX_NATIVE_CELLS
     )
