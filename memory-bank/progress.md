@@ -21,8 +21,9 @@ Evidence: /tmp/asset-aware-grid-pytest-04.log,
 Artifact, wheel/runtime/stdio, Docker, VSIX install/update, browser and metadata
 gates pass; /tmp/asset-aware-grid-local-proof.json pins the source/site/lock hashes.
 Local VSIX activation was not run because no display/Xvfb is available. Four
-segmented commits are being prepared from base 11ddd92; exact CI/Pages verification
-remains. Structural A2T writeback remains unfinished. Public stays 1.4.0 with
+segmented commits from base 11ddd92 comprise core 397a024, 853460f, b86a5ae and the
+pending documentation commit; exact CI/Pages verification remains after push.
+Structural A2T writeback remains unfinished. Public stays 1.4.0 with
 Unreleased/future 1.4.x; no tag or original user-worktree changes.
 
 ## 2026-09-19 — native table/drawing package integration, still private

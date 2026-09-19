@@ -14,10 +14,11 @@ Structural A2T changes can create an independent workbook. See
 [native table workspaces](docs/wiki/A2T-Tables.md#native-workbook-workspaces-unreleased).
 Public stays **1.4.0**; development continues within **1.4.x**.
 
-Unreleased workbook structure operations now read complete sheet/reference inventories,
-add, rename, reorder and delete worksheets while retaining native package parts.
-Explicit references and view indices receive checked repairs; Agent review covers
-formula results and layout. See [worksheet operations](docs/wiki/Native-File-Assets.md#workbook-sheet-structure-unreleased).
+Unreleased workbook operations read complete sheet/reference inventories and add,
+rename, reorder or delete worksheets. `update_worksheet_grid` inserts/deletes rows
+and columns while preserving native cells/styles and relocating modeled references,
+tables, pictures and notes. Read the complete operation receipt; Agent review covers
+formula results and layout. See [grid operations](docs/wiki/Native-File-Assets.md#worksheet-grid-operations-unreleased).
 Public version remains **1.4.0**, with these changes planned for **1.4.x**.
 
 Unreleased `read_selection` binds exact native values or text spans to their source

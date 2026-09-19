@@ -11,6 +11,19 @@ citation-ready provenance.
 
 ## Operating Rules
 
+- When workbook_grid_enabled is advertised, update_worksheet_grid takes an exact
+  worksheet_grid.worksheet key and 1..32 sequential row/column insert/delete edits.
+  Indices are one-based in each intermediate grid. Pin expected_revision, read the
+  complete current workbook references before edits, and complete review_request
+  afterward. Record geometry calibration; do not guess non-default font metrics.
+  Inspect deleted-reference errors, table identities, moved objects and cache repairs.
+  Agent review covers layout, automatic row heights and recalculated results. Old
+  references and A2T bindings do not migrate. Source writeback remains explicit.
+  Identical bytes can recur at a later history entry; compare the complete current
+  operation receipt as well as file revision. Public stays 1.4.0 / Unreleased 1.4.x.
+
+
+
 - Use the Asset-Aware MCP tools for document ingestion, asset lookup, DFM/DOCX
   conversion, table rendering, section navigation, and LightRAG retrieval.
 - Keep evidence traceable to concrete document spans whenever possible.

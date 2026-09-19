@@ -33,6 +33,118 @@ it is not a promise of complete automatic correction or layout verification.
 Verification coverage and unperformed checks must remain explicit. Structural
 validity alone must never be reported as semantic correctness or full fidelity.
 
+### Native worksheet grid transformations (in progress, Unreleased, 1.4.x)
+
+Extend native workbook collaboration with sequential row/column insertion and
+deletion at an exact worksheet key and expected revision. Operate on the original
+OOXML package, retaining surviving cell XML, rich text, number formats, row heights,
+column widths, hidden/outline metadata and unrelated parts. New blank rows/columns
+use an explicit before/after/none format inheritance policy. Coordinates are
+one-based and each operation uses the grid resulting from prior operations.
+
+The operation must transform explicit A1 references across local/cross-sheet
+formulas, scoped names, chart series, validation, conditional formatting and
+hyperlinks, including absolute/mixed references, whole rows/columns and range
+shrinkage. Preserve formula whitespace, strings, external-workbook references and
+unaffected names. Deleted direct references become explicit #REF! and are reported;
+this is not formula evaluation. Expand shared formulas before relocation; reject
+partial array/data-table edits and ambiguous 3D/reference contexts instead of
+inventing semantics. Historical cell/selection references remain revision-local.
+
+Move/resize merged ranges and retain surviving cell formatting. If deleting only
+the merged anchor, use an explicit preserve/delete content policy; preserving must
+retain the complete cell payload without overwriting conflicting surviving data.
+Update table/filter/sort ranges and column identities, comments and drawing/VML
+anchors, view/selection/freeze locations, breaks, print areas and worksheet bounds.
+Respect move/resize behavior; geometric reconstruction must use known or explicitly
+supplied column digit metrics instead of guessing non-default font widths. Keep
+unmodeled or protected structures unchanged by rejecting unsupported transformations.
+
+Return a complete operation receipt with coordinate transforms, removed content
+counts, moved anchors, reference repairs and required Agent review. Reparse the
+serialized workbook, verify cell/mapping/format invariants and unchanged part bytes,
+repair stale derived counts/caches and request recalculation. Source publication
+remains explicit. Extend A2T correspondence using these operations without silently
+reinterpreting stable row IDs or moving old semantic assertions. Verify rich real
+packages, boundary/overflow/merge/reference cases, SDK2 and actual Codex scanned
+PDF→native→A2T→structurally edited native workflows. This section records the intended
+implementation; it does not mark native grid/A2T structural fidelity complete.
+
+Primary references: [openpyxl dependency boundary](https://openpyxl.readthedocs.io/en/stable/editing_worksheets.html),
+[OOXML column metrics](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.column),
+and [XlsxWriter object placement](https://xlsxwriter.readthedocs.io/working_with_object_positioning.html).
+Formula materialization follows the [Open XML shared/array/data-table rules](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.cellformula):
+nonshared overrides inside a shared rectangle remain independent, while a shared
+follower's own text does not override its master. Rebase validation/conditional
+formulas when their first application cell is deleted, before rewriting coordinates.
+Array/data-table result cells are stale caches even when only the master stores a
+formula node. Preserve [escaped structured column names](https://support.microsoft.com/en-us/excel/using-structured-references-with-excel-tables)
+as literal headers; both endpoints of structured ranges must participate in known
+dependency checks. Frozen pane counts differ from split positions in points, and
+page break coordinates are zero-based. These internal helpers do not advertise a
+public operation until package orchestration and the complete workflow are tested.
+
+Table columns retain their native numeric IDs across grid edits. Structured column
+references resolve names against those IDs, including local row selectors, escaped
+headers, column intervals and explicit worksheet/external qualifiers. A deleted
+single-column reference becomes #REF!; a column interval shrinks to its surviving
+endpoints. References to a removed table become #REF!. Do not silently bind a lost
+column to a newly inserted column with the same name. Keep unaffected formula
+spelling. New table columns receive unique IDs and deterministic unique headers;
+table/header/formula changes must participate in the same private package plan.
+Deleting a table's header row hides that header while retaining column names and
+all surviving data; it does not overwrite the next data row with generated labels.
+Deleting its totals row disables the totals row and removes the corresponding
+totals definitions. Inserted data rows receive the table's calculated-column
+formulas at their new coordinates; inserted columns receive empty data and unique
+headers. Implicit selectors require an unambiguous table context.
+
+Drawing geometry uses 96-DPI pixel/EMU metrics with recorded font/default-width
+assumptions or explicit caller-supplied calibration. Preserve fixed-position
+objects' absolute placement, moving-only objects' extent, and moving/resizing
+objects' transformed endpoints. A deleted interval that collapses an object uses
+an explicit preserve-size/reject policy, rather than silently making its content
+invisible. VML offsets are pixel values; comments retain their text/author payload
+while cell locators and display anchors move together. Whole deleted comment cells
+remove their corresponding note shapes. Dynamic auto-height, renderer font metrics
+and final appearance still require Agent review.
+
+The private package adapter now combines these stages for sequential edits and
+checks surviving cell payloads/styles before any merge promotion or generated
+table cells. After serialization it reparses every planned XML part, table column
+identity/range/relationship and unchanged package member. Cell comparison uses
+exclusive canonical XML so inherited unused namespace declarations do not cause
+false payload differences. Whole-package XML readback remains exact.
+
+DrawingML supports two-cell, one-cell and fixed anchors, keeping corresponding
+top-level transforms consistent and retaining intentionally zero chart transforms.
+Legacy note text/authors, cell locators, pixel anchors and point-valued display
+styles participate in the same private plan. Empty note parts remain valid after
+deleting all note cells; original source/history bytes are retained. See the
+[Microsoft VML anchor definition](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.vml.spreadsheet.anchor).
+Worksheet outline summaries and cell watches are repaired. Whole pivot result
+rectangles may move; partial edits require coordinated pivot-field handling.
+Direct named-table pivot sources invalidate caches on row changes and reject
+unmapped column changes. External same-name sources retain their own grid.
+Chart reference caches are invalidated even when table expansion leaves their
+formula text unchanged. This does not calculate new chart or formula results.
+
+The development operation is `update_worksheet_grid`, taking `asset_id`,
+`expected_revision` and `worksheet_grid` (exact worksheet key, sequential edits and
+optional dimension calibration). It requires configured grid and workbook-readback
+adapters, stages an immutable managed revision with compare-and-swap, and returns
+a revision-pinned `read_workbook` review request for the complete operation receipt.
+Source writeback stays explicit. The contract advertises `workbook_grid_enabled`
+only when configured. Structural A2T correspondence, SDK2 and actual Codex workflow
+evaluation remain required before release; development stays Unreleased/1.4.x.
+
+Named pivot/consolidation sources must resolve worksheet-scoped and workbook-scoped
+name chains, exact A1 rectangles and explicit table selectors against each current
+grid. Keep scope precedence and external workbook identity. Compare source ranges
+before/after each edit; pivot fields require the same column schema and surviving
+header. Cyclic names, ambiguous scopes and formulas requiring evaluation must fail
+with an explicit dependency error rather than retain stale field identities.
+
 ### Native workbook/A2T correspondence (Unreleased, 1.4.x)
 
 Expose project_workbook_table, read_table_workspace, apply_table_workspace and

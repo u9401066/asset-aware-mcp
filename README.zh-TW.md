@@ -12,9 +12,10 @@ Unreleased 的原生 Excel／A2T 工作區保留資料型別與精確來源引�
 A2T 可另建獨立工作簿。詳見 [原生表格工作區](docs/wiki/A2T-Tables.md#native-workbook-workspaces-unreleased)。
 公開版仍為 **1.4.0**，後續沿用 **1.4.x**。
 
-Unreleased 新增工作表結構操作：完整讀取工作表與引用清單、新增、改名、重排及刪除，
-保留未修改的原生內容，並檢查明確引用與檢視索引。公式結果與版面由 Agent 核對。
-詳見 [工作表操作](docs/wiki/Native-File-Assets.md#workbook-sheet-structure-unreleased)。
+Unreleased 的工作表操作可完整讀取引用清單、新增、改名、重排及刪除工作表；
+`update_worksheet_grid` 可插入／刪除列欄，保留原生內容與樣式，並搬移已支援的
+引用、表格、圖片和註解。請完整讀回操作紀錄；公式結果與版面由 Agent 核對。
+詳見 [列欄操作](docs/wiki/Native-File-Assets.md#worksheet-grid-operations-unreleased)。
 公開版仍為 **1.4.0**，這些變更規劃於 **1.4.x** 發布。
 
 Unreleased 的 `read_selection` 可將原生值或文字範圍綁定到來源版本，驗證、

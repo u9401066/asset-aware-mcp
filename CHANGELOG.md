@@ -9,6 +9,13 @@
 
 ### Added
 
+- Unreleased `update_worksheet_grid`: revision-checked sequential native row/column
+  insertion/deletion, preserving source XML/styles and relocating modeled formulas,
+  table columns, merges, drawings, notes and views. Complete receipts retain geometry
+  assumptions, deleted-reference errors, cache repairs and required Agent review.
+  Source publication is explicit; A2T structural correspondence remains in progress.
+  Public version stays 1.4.0, with development on the 1.4.x line.
+
 - Native workbook/A2T workspaces: exact range projection, typed cells, complete
   hash-pinned readback with original cell evidence, guarded application to the
   source workbook and independent XLSX creation. Applied/exported table inputs
@@ -131,6 +138,11 @@
   Reading cell after the last correction, retaining prior evaluation evidence.
 
 ### Fixed
+
+- Native workbook formula parsing preserves escaped brackets in structured column
+  headers, including header text resembling cell or worksheet references. Worksheet
+  deletion checks both structured range endpoints and respects external workbook
+  qualifier scope.
 
 - A2T read/update/delete/clear and citation result labels now identify the resolved
   stable row and current index, including after earlier-row deletion. A supplied

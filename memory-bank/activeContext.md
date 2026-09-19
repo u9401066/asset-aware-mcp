@@ -3,8 +3,10 @@
 ## 2026-09-19 — native grid MCP workflow and actual Codex audit passed
 
 Public versions remain 1.4.0; this work accumulates Unreleased within 1.4.x.
-The original detached user worktree is unchanged. Grid changes are being committed
-in four dependency-ordered groups from working main 11ddd92; no tag or version bump.
+The original detached user worktree is unchanged. Native grid core is committed
+as 397a024 (transforms/references), 853460f (native package integration), and
+b86a5ae (MCP/application and actual-Codex evaluation). The final documentation group
+is being committed before pushing working main; no tag or version bump.
 
 update_worksheet_grid now has typed contract/schema discovery, configured native
 adapter, exact revision checks, repository CAS and complete operation readback.

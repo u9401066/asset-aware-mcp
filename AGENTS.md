@@ -38,6 +38,18 @@ and LightRAG knowledge graph outputs.
 
 ## Native Files and Agent Review
 
+- When workbook_grid_enabled is advertised, update_worksheet_grid takes an exact
+  worksheet_grid.worksheet key and 1..32 sequential row/column insert/delete edits.
+  Indices are one-based in each intermediate grid. Pin expected_revision, read the
+  complete current workbook references before edits, and complete review_request
+  afterward. Record geometry calibration; do not guess non-default font metrics.
+  Inspect deleted-reference errors, table identities, moved objects and cache repairs.
+  Agent review covers layout, automatic row heights and recalculated results. Old
+  references and A2T bindings do not migrate. Source writeback remains explicit.
+  Identical bytes can recur at a later history entry; compare the complete current
+  operation receipt as well as file revision. Public stays 1.4.0 / Unreleased 1.4.x.
+
+
 - When advertised, read_workbook returns complete hash-pinned structure/reference JSON.
   Pin revision and workbook_view, assemble text_excerpt pages and verify UTF-8 SHA-256.
   add_worksheets uses worksheet_insert; rename_worksheet uses worksheet_rename;

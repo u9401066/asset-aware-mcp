@@ -9,6 +9,49 @@
 不可變快照，來源綁定不自動前進；原檔列欄結構修改與完整畫面核對仍有明確邊界。
 公開版維持 1.4.0，後續使用 1.4.x。
 
+## Worksheet grid operations (Unreleased)
+
+先查 `contract(for_op="update_worksheet_grid")` 的 `workbook_grid_enabled`。
+若 schema 分頁，沿 `schema_request` 取得完整內容並固定 `schema_sha256`。
+以目前版本完整讀取 `read_workbook(workbook_view="references")`，取得目標 key：
+
+```python
+document(op="native", native_request={
+    "op": "update_worksheet_grid",
+    "asset_id": asset_id,
+    "expected_revision": current_revision,
+    "worksheet_grid": {
+        "worksheet": current_key,
+        "edits": [
+            {"axis": "row", "operation": "insert", "at": 2, "count": 1},
+            {"axis": "column", "operation": "delete", "at": 3, "count": 1},
+        ],
+    },
+})
+```
+
+列／欄位置從 1 起算；每一步針對前一步完成後的工作表。最多 32 步，每步最多
+1,024 列／欄。插入的 `inherit_format` 可指定 `before`（預設）、`after` 或
+`none`，只繼承樣式。刪除合併儲存格的起點時，`merged_anchor` 可用 `preserve`
+（預設）或 `delete`；保留不得覆蓋其他既有內容。圖片被刪除範圍壓成零大小時，
+`collapsed_objects` 可用 `preserve_size`（預設）或 `reject`。
+
+原生 XML 會同步更新儲存格、合併範圍、表格欄位 ID／篩選／計算欄、明確公式、
+名稱範圍、註解、圖片定位、檢視與分頁位置。刪除的引用會明確成為 `#REF!`；
+清除過期公式／圖表快取並請求重新計算，不會把快取當成新計算結果。
+樞紐來源的明確名稱鏈會核對前後範圍；需要公式求值的動態來源、部分陣列公式、
+未對應的樞紐欄位變更、保護或未支援的擴充結構會回報限制。
+
+圖像定位使用記錄在結果中的 96-DPI 尺寸模型。非預設字型可在 `worksheet_grid`
+提供 `column_digit_width`、`default_column_pixels`、`default_row_height_points`，
+數值須來自實際字型／畫面量測，不能猜測。自動列高、旋轉／群組物件及最終畫面
+仍需 Agent 核對。MCP 的 XML／位元組讀回檢查不代表 Excel 視覺保真已通過。
+
+修改先建立受管理版本，原始檔不會自動覆寫。沿回傳的 `review_request` 完整讀取
+`read_workbook.operation_result`，核對新位置的值與必要的版面／公式結果。舊引用與
+Wiki 主張仍固定歷史版本。A2T 工作區的原始綁定不會自動跟隨列欄搬移；結構對應
+回寫仍在開發。公開版維持 1.4.0，這些工作累積於 Unreleased／1.4.x。
+
 ## Workbook sheet structure (Unreleased)
 
 先查 `contract(for_op="read_workbook")` 的 `workbook_structure_enabled`。

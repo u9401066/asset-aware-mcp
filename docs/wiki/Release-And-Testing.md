@@ -1,5 +1,28 @@
 # Release And Testing
 
+## Native worksheet grid evaluation (Unreleased)
+
+`tests/unit/test_native_grid_*.py`、`tests/unit/test_native_workbook_grid.py`
+及 `tests/integration/test_native_grid_stdio.py` 涵蓋原生列欄插刪、公式與表格
+身分、合併、註解／圖形位移、具名來源、完整分頁讀回及版本衝突。使用獨立
+openpyxl 讀取檢查輸出，不透過它重新儲存來源工作簿。
+
+```bash
+uv run python -m tests.codex_native_selection.run --grid --output /tmp/grid-codex
+uv run python -m tests.codex_native_selection.audit /tmp/grid-codex
+```
+
+2026-09-19 run 01：**126 次 MCP 呼叫全部成功、175.95 秒**。Codex 看實際掃描
+PNG，建立 15 個字面值儲存格，將 B2 的 007 改成 008，插入再刪除列欄。
+獨立稽核核對每一步完整版本讀取、所有儲存格／空白位置、操作歷史、原 PDF
+位元組／mtime、舊引用與 derivation，以及兩份歷史 Wiki。刪除新增的空白列欄後，
+內容 SHA 恰好回到先前版本，因此仍須核對當次操作紀錄。
+
+初版稽核誤拒先前的探索讀取；修正後允許探索，但每次修改前仍必須完整讀取
+固定版本。回歸測試會拒絕漏讀當次紀錄、缺少修改前讀取或沿用舊的同 SHA 證明。
+CLI 0.154.0-alpha.6.1 使用預設模型；此合成案例不代表一般 OCR、Excel 渲染、
+公式求值或 A2T 結構回寫已驗證。公開版仍為 1.4.0，開發列於 Unreleased／1.4.x。
+
 ## Native A2T correspondence evaluation (Unreleased)
 
 `tests/unit/test_native_table_*.py` 與 `tests/integration/test_native_table_stdio.py`

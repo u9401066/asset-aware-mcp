@@ -229,7 +229,15 @@ Confirm activation, provider discovery, and preservation of custom settings befo
 
 ### Native table workspaces (Unreleased)
 
-Project an exact workbook range into A2T, read complete typed cells and source references, edit through table_data, then apply only changed cells at the pinned table/file revisions. Applied inputs remain immutable workspace_reference snapshots. Structural table changes can create a separate workbook; original row/column relocation and full layout review remain open. See the A2T guide. Public stays 1.4.0, with development within 1.4.x.
+Project an exact workbook range into A2T, read complete typed cells and source references, edit through table_data, then apply only changed cells at the pinned table/file revisions. Applied inputs remain immutable workspace_reference snapshots. Structural A2T changes can create a separate workbook; applying their changed row/column correspondence to the original workbook remains open. Native worksheet grid operations are available separately. See the A2T guide. Public stays 1.4.0, with development within 1.4.x.
+
+### Worksheet grid operations (Unreleased)
+
+Discover update_worksheet_grid and workbook_grid_enabled. Assemble any paged schema, then read complete current workbook references. Supply asset_id, expected_revision and worksheet_grid={worksheet:current_key,edits:[{axis:"row",operation:"insert",at:2,count:1}]}. Coordinates are one-based; up to 32 sequential edits each affect at most 1,024 rows or columns. Later edits use the intermediate grid.
+
+Insertion uses inherit_format to inherit formatting from before (default), after or none. Deletion preserves a removed merged anchor's payload by default unless that would overwrite surviving content; merged_anchor="delete" discards it. collapsed_objects selects preserve_size (default) or reject when deletion would collapse an image. Cells/styles, table column identities and supported formulas, names, filters, charts, notes and views move together. Deleted references become explicit #REF!; stale formula/chart caches are cleared and recalculation requested.
+
+Drawing geometry records 96-DPI assumptions. Non-default fonts may require measured column_digit_width/default_column_pixels/default_row_height_points. Dynamic named sources needing evaluation, partial array/pivot edits, protected or unmodeled structures report explicit limits. Agents review automatic row heights, rotated/grouped objects, rendering and actual formula results. Complete the returned review_request and inspect the full operation receipt. Old references and Wiki assertions remain historical; A2T structural correspondence remains in development. Source writeback is explicit. Public stays 1.4.0 / Unreleased for 1.4.x.
 
 ### Workbook sheet structure (Unreleased)
 
@@ -490,6 +498,14 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Native worksheet grid evaluation (Unreleased)
+
+Run tests/unit/test_native_grid_*.py, tests/unit/test_native_workbook_grid.py and tests/integration/test_native_grid_stdio.py. They cover native row/column insertion and deletion, formula and table identities, merges, notes/drawing geometry, named sources, complete paged readback and version conflicts. Independent openpyxl inspection never resaves the source package.
+
+Explicit model run: uv run python -m tests.codex_native_selection.run --grid --output /tmp/grid-codex; replay tests.codex_native_selection.audit. Run 01 on 2026-09-19 completed **126 successful MCP calls, zero tool errors, 175.95 seconds**. Codex viewed the actual scan PNG, created 15 literal cells, changed B2 from 007 to 008, then inserted and deleted rows/columns. Independent audit verifies all intermediate values/blanks, complete pinned reads, current operation receipts, history, source bytes/mtime, old references/derivations and two revision-specific Wikis.
+
+Deleting the newly inserted blanks returned to an earlier content SHA. The auditor therefore checks the current history event as well as immutable bytes. An initial auditor bug rejected exploratory reads; corrected auditing permits exploration but still requires complete pinned reads before every mutation. Regressions reject missing current receipts and reused proof for repeated hashes. CLI 0.154.0-alpha.6.1 uses its default model. This synthetic case does not certify general OCR, Excel rendering, formula evaluation or structural A2T writeback. Public stays 1.4.0; development remains Unreleased for 1.4.x.
 
 ### Native A2T correspondence evaluation (Unreleased)
 
