@@ -413,6 +413,33 @@ MCP 重新讀回新套件，檢查 ID、套件檔案清單、未修改 part 的�
 仍可讀取及驗證。操作只建立受管理版本；來源檔另行 `writeback`，保留備份與
 來源衝突檢查。MCP 負責這些必要檢查，Agent 負責完整語意／視覺核對與修正。
 
+## PPTX whole-slide previews (Unreleased)
+
+`render_pptx_slide` 回傳整張投影片的實際 PNG，讓 Agent 核對文字、表格遮擋、溢出與版面。
+先查 contract 的 `pptx_rendering`，再從 `read_pptx` 取得固定版本的 slide ID／part：
+
+```json
+{"op":"render_pptx_slide","asset_id":"file_…","revision":"完整 SHA-256",
+ "pptx_slide_key":{"slide_id":"256","part":"ppt/slides/slide1.xml"},"render_size":1024}
+```
+
+需要另外安裝 LibreOffice **含 Impress**；可用 `LIBREOFFICE_BIN` 指定執行檔。
+`configured` 只表示 adapter 已接線，實際可用性在請求時檢查。僅有 Writer／soffice
+不足以轉換 PPTX。回應包含來源版本、slide key、原始順序、隱藏狀態、圖片 SHA-256
+與渲染器版本；歷史版本也可預覽。來源與 managed revisions 不會被改寫。
+
+轉檔使用暫存副本和獨立使用者設定，保留完整簡報上下文，包含隱藏投影片、排除備註頁，
+核對 PDF 頁數後才取出對應頁。輸入最多 100 張投影片，PNG 最長邊 64–2048 px；
+一般 OOXML／PDF 位元組限制及 60 秒執行期限仍適用。外連內容、SVG media、自訂播放
+清單與播放範圍目前會拒絕；一般超連結可保留。獨立程序／設定檔不等同 OS 沙箱。
+
+**這是 LibreOffice 靜態預覽。** 字型替代、PowerPoint 差異、動畫及影音播放仍須另行核對；
+MCP 不會把「產生圖片成功」視為「視覺驗證通過」。Agent 應比較修改前後畫面與完整原生
+內容，必要時提出後續修改。`read_pptx_picture` 則只顯示內嵌圖片，兩者用途不同。
+參考 [LibreOffice PDF 匯出選項](https://help.libreoffice.org/latest/en-US/text/shared/guide/pdf_params.html)
+與 [獨立 profile 參數](https://help.libreoffice.org/latest/en-US/text/shared/guide/start_parameters.html)。
+公開版本仍為 **1.4.0**，這項功能累積於 **1.4.x／Unreleased**。
+
 ## PPTX slide structure (Unreleased)
 
 先查安裝版本的 contract。`read_pptx_layouts` 以 `asset_id`、`revision` 與

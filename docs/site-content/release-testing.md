@@ -2,6 +2,34 @@
 
 # Release And Testing
 
+## Whole-slide rendering evaluation (Unreleased)
+
+Use `--render` with `tests.codex_pptx_tables.run` to make the real Codex CLI view
+both the final slide and a historical slide through `render_pptx_slide`.
+The runner forwards an explicitly set `LIBREOFFICE_BIN` to its isolated MCP server.
+The auditor independently converts the exact stored PPTX revisions with LibreOffice,
+uses raw ZIP slide relationships and PyMuPDF, and compares every delivered RGB pixel.
+It checks revision/slide identity, image hashes, actual MCP image delivery and the
+Agent's declared review scope. Agent observations remain judgments, not machine proofs.
+
+Run 01 on 2026-09-19 completed **78 MCP calls with zero tool errors**, exact first
+scan transcription, five complete native records and three actual images: one PDF
+page and two whole-slide previews at distinct revisions. Source bytes/mtime,
+published PPTX, history, old references and wiki checks passed. Codex identified
+that a historical native `008` edit was hidden by a second overlapping table, so
+both screenshots visibly showed `007`. It also reported that the new table's blue
+style and equal column widths differed from the scanned original. This illustrates
+why XML readback and visual review answer different questions.
+
+The local renderer was LibreOffice 7.3.7 with matching Ubuntu Impress/Draw modules in
+a private test overlay; the installed system originally had Writer only. No system
+installation was changed. An SDK2 integration test separately checks hidden-slide
+and reordered-slide colors plus historical image stability; enable it with
+`NATIVE_PPTX_RENDER_TEST=1` and a usable Impress installation. CI installs Impress
+for that test. Ordinary pytest never starts Codex. Full local suite: **2,095 passed,
+30 optional skipped**; extension: **199 passed**. No PowerPoint, animations, media
+playback, general OCR or real-corpus coverage is claimed. Public version stays 1.4.0.
+
 ## Focused Checks
 
 依變更範圍先跑 focused tests：

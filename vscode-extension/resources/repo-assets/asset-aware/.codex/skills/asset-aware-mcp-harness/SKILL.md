@@ -72,6 +72,13 @@ verification.
   and semantic support still require agent review. Never treat DFM temporary paths
   as persistent media attachments; use manifest.part_attachments.
 
+- When configured, render_pptx_slide returns a whole-slide MCP PNG using optional
+  LibreOffice Impress. Supply an explicit revision and exact pptx_slide_key from
+  read_pptx; compare current/historical images with complete native content. Check
+  overlap, clipping and inherited layout. Report the renderer and actual review
+  scope; static LibreOffice output is not a PowerPoint fidelity verdict. Missing
+  Impress or unsupported linked/show resources fail explicitly. Sources stay intact.
+
 - When advertised, read_pptx_layouts discovers all destination masters' layouts at
   a pinned revision. add_pptx_slides uses explicit layout_part plus optional typed
   textboxes; ordinary placeholders start empty and inherit layout formatting.

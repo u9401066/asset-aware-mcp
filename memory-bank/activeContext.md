@@ -1,5 +1,58 @@
 # Active Context
 
+## 2026-09-19 — native whole-slide preview in progress
+
+Previous goal turn classified progress: 3fb6b88/208022a committed and pushed;
+CI 35372694026 (ten jobs) and Pages 35372691520 passed at exact 208022a.
+Public version remains 1.4.0; all new work is Unreleased for the 1.4.x line.
+Original user worktree and its preexisting changes remain untouched.
+
+This turn adds an optional rendering port and revision-pinned render_pptx_slide.
+Actual environment probe found LibreOffice 7.3.7 Writer without Impress: conversion
+returned exit zero without output. Downloaded matching Ubuntu Impress/Draw .debs
+into /tmp/asset-aware-render-lo and built a private overlay for testing; no system
+installation or user profile modified. Three-slide hidden-middle probe then passed.
+Production adapter checks actual output, PDF count, raw source slide keys, timeout
+cleanup, bounded images and explicit renderer identity; no PowerPoint fidelity verdict.
+76 focused unit/schema tests and real SDK2 image delivery passed. Initial SDK2 test
+attempts exposed test harness constructor/image-unwrapping mistakes; corrected final
+run passed in 7.96s, /tmp/asset-aware-render-stdio-final.log; failed logs retained.
+Source/MEM/docs/actual Codex and remaining release gates are in progress.
+Broader goal remains active: other formats, cross-deck import, notes, A2T bridges,
+real corpus, cell derivation mappings and standards-aware academic citations.
+
+Actual Codex --render run 01 passed: 78 calls, zero MCP errors, exact first
+transcription, five complete native records, one scanned-page PNG and two static
+slide PNGs at two revisions. Independent LibreOffice/PyMuPDF replay matched all
+RGB pixels. Codex correctly observed the historical 008 edit hidden behind the
+second table (visible 007), plus style differences from the scan. Screenshots viewed.
+Logs/artifacts: /tmp/asset-aware-codex-pptx-render-01, /tmp/asset-aware-render-codex-01.log.
+Runtime source SHA256 74a47ca86ac08bef237847c41c2d8b53a78a9196a4440105172f60330433371a;
+lock abfaddf3d7d964ace1e210b1fd584e1717775a70f8ccdc98ad9b669b61f1bcd3.
+Full suite 2,095 passed/30 optional skipped (79.31s); task-owned RAM fixtures removed
+only after terminal success, log /tmp/asset-aware-render-full.log retained.
+Ruff/386-file format/mypy180/Bandit/docs/harness/skills/CI workflow audits passed.
+199 VSIX tests/64-file guard and fresh/update installation passed; GUI activation
+unavailable locally and remains CI-enforced. Initial follow-on packaging exited228
+with an empty log; retry in progress after removing completed task Docker images.
+Docker f0f98eb1d6e3 import/native wiring passed; initial --doctor CLI spelling failed,
+correct doctor/list-tools and SDK2 stdio retry passed. Removed only that runtime and
+its builder ffd85ac7e75a after terminal success to reclaim 350MiB before wheel smoke.
+Python214/npm locks report no known vulnerabilities; GitHub metadata/labels match.
+Browser plugin unavailable: Playwright1.63.0 fallback verifies zh/en desktop/mobile,
+no overflow or console errors; screenshots /tmp/native-render-* viewed. Cached CDN
+scripts mean CDN reachability is not covered. Clean-wheel/package/CI/Pages pending.
+
+Final local package retry passed: 66 VSIX entries, all-artifact audit passed.
+Clean-venv built-wheel help/doctor/list-tools/SDK2 stdio passed; task-owned RAM pip
+cache removed after terminal proof. Local gate logs retained. No source change after
+actual Codex/full suite; source fingerprint rechecked. Pending scoped main commits,
+push and exact CI/Pages/public-byte verification. No version bump or release tag.
+
+Core committed as bc23768. Companion commit contains actual Codex rendering audits,
+corruption regressions, required Impress integration CI, bilingual website/docs and
+synchronized assistant assets. Final push/CI/Pages verification follows.
+
 ## 2026-09-19 — native slide structure in progress
 
 Previous goal turn classified progress: 796656c/68153e3 pushed; exact CI 35369646303

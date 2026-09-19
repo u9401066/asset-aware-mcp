@@ -288,6 +288,14 @@ Within-document edits retain checked bookmarks/links, labels, forms, metadata an
 
 verify retains historical page evidence. export_wiki creates an immutable pdf-pages-v1 projection with complete JSONL, page notes, 768-pixel previews, citation contracts and the exact PDF attachment. Old opaque snapshots remain; modified managed notes block reuse. Publish/writeback are explicit, with source checks and backups. See [native PDF evaluation](#/release-testing) for real Codex MCP calls and independent audits.
 
+### PPTX whole-slide previews (Unreleased)
+
+render_pptx_slide requires asset_id, explicit revision and pptx_slide_key={slide_id,part} from read_pptx. It returns an actual whole-slide MCP PNG, image hash, source slide index, hidden status and LibreOffice renderer version. Historical revisions can also be viewed without changing managed or human files.
+
+Install LibreOffice with Impress separately; LIBREOFFICE_BIN can select its executable. The contract's pptx_rendering.configured describes adapter wiring, while availability is checked per request. Writer alone cannot convert PPTX. Temporary full-deck export includes hidden slides and excludes notes pages, preserving slide-number context. PDF page counts and exact source keys are checked before bounded rendering. Limits: 100 slides, 64–2048 pixel longest edge and a 60-second deadline, with normal package/PDF byte budgets. Linked external content, SVG media and alternative show selections require separate workflows. Ordinary hyperlinks are supported. Private processes/profiles are not an OS sandbox.
+
+Agents compare native content and rendered images for overlapping shapes, clipping, layout and meaning, then coordinate corrections. A static LibreOffice image does not establish PowerPoint fidelity, installed-font equivalence, animation or media playback. read_pptx_picture remains an embedded-image preview. Public packages stay 1.4.0; this work is Unreleased for 1.4.x.
+
 ### PPTX picture assets (Unreleased)
 
 Main adds add_pptx_pictures, replace_pptx_pictures, read_pptx_picture and extract_pptx_picture. Public version remains 1.4.0; development continues on 1.4.x. Register human PNG/JPEG files, then use their native-file-ref-v1 file_reference. verify checks immutable whole-file bytes; it does not prove semantic interpretation or live source freshness.
@@ -477,6 +485,34 @@ Grid run 01 on 2026-09-19 completed 123 MCP calls with zero tool errors, exact f
 Add --merges to tests.codex_pptx_tables.run, optionally with --grid and --derivations. Six mutations insert a temporary formatted row, merge its five cells with explicit paragraph migration, split it while keeping all text at the anchor, delete it, then split and remerge the original title. Each mutation uses a complete current reference and full readback. Independent audits inspect every intermediate PPTX for exact paragraph XML, rich formatting, ordering, original scanned cells, grid/frame/merge geometry and untouched XML/parts. Auditor regressions deliberately corrupt leading zeros, formatting, merge coverage and split content. Ordinary pytest never starts a model; live events, transcription errors and recoveries remain separate. Full slide rendering remains a separate check.
 
 Merge run 01 on 2026-09-19 (--grid --merges) completed 180 MCP calls with zero tool errors, exact first transcription, one actual PNG and thirteen complete records. Five grid and six merge/split intermediate revisions passed independent audits of paragraph XML, original strings/styles, source, published files and wiki. No full-slide rendering was performed. Full pytest passed 2,015 tests with 30 optional skips; one subsequent absent-anchor-body regression passed within an 18-test focused run, with production source unchanged. VSIX tests passed 199.
+
+## Whole-slide rendering evaluation (Unreleased)
+
+Use --render with tests.codex_pptx_tables.run to make the real Codex CLI view
+both the final slide and a historical slide through render_pptx_slide.
+The runner forwards an explicitly set LIBREOFFICE_BIN to its isolated MCP server.
+The auditor independently converts the exact stored PPTX revisions with LibreOffice,
+uses raw ZIP slide relationships and PyMuPDF, and compares every delivered RGB pixel.
+It checks revision/slide identity, image hashes, actual MCP image delivery and the
+Agent's declared review scope. Agent observations remain judgments, not machine proofs.
+
+Run 01 on 2026-09-19 completed **78 MCP calls with zero tool errors**, exact first
+scan transcription, five complete native records and three actual images: one PDF
+page and two whole-slide previews at distinct revisions. Source bytes/mtime,
+published PPTX, history, old references and wiki checks passed. Codex identified
+that a historical native 008 edit was hidden by a second overlapping table, so
+both screenshots visibly showed 007. It also reported that the new table's blue
+style and equal column widths differed from the scanned original. This illustrates
+why XML readback and visual review answer different questions.
+
+The local renderer was LibreOffice 7.3.7 with matching Ubuntu Impress/Draw modules in
+a private test overlay; the installed system originally had Writer only. No system
+installation was changed. An SDK2 integration test separately checks hidden-slide
+and reordered-slide colors plus historical image stability; enable it with
+NATIVE_PPTX_RENDER_TEST=1 and a usable Impress installation. CI installs Impress
+for that test. Ordinary pytest never starts Codex. Full local suite: **2,095 passed,
+30 optional skipped**; extension: **199 passed**. No PowerPoint, animations, media
+playback, general OCR or real-corpus coverage is claimed. Public version stays 1.4.0.
 
 ## Native slide structure exercise (Unreleased)
 

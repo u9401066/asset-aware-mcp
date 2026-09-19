@@ -198,6 +198,11 @@ def audit(output):
 
         slides = validate_slides(workspace, deck, calls)
     derivations = None
+    renders = None
+    if expected.get("render"):
+        from tests.codex_pptx_tables.renders import validate_renders
+
+        renders = validate_renders(workspace, deck, calls, final)
     if expected.get("derivations"):
         from tests.codex_pptx_tables.derivations import validate_derivations
 
@@ -224,7 +229,8 @@ def audit(output):
         "grids": grids,
         "merges": merges,
         "slides": slides,
-        "scope": "Synthetic scanned first page, editable table strings/grid/merge and native package evidence; no full slide render or general OCR claim",
+        "renders": renders,
+        "scope": "Synthetic scanned first page, editable table strings/grid/merge and native package evidence; optional static LibreOffice previews are reported separately. No general OCR or PowerPoint fidelity claim.",
     }
 
 
