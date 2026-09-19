@@ -1,5 +1,11 @@
 # Roadmap
 
+- [x] Unreleased / 1.4.x: complete existing Word header/footer stories, actual
+  section inheritance/shared scope, native text and paragraph/table content CRUD,
+  immutable references/selections/citations and distinct portable Wiki snapshots.
+  Whole-definition lifecycle, section relinking and footnote/endnote editing
+  remain open toward full Word CRUD; actual-page review stays with the Agent.
+
 - [x] Unreleased / 1.4.x: direct Word table pagination controls, contiguous repeated
   headers, explicit row height/split policies and source-preserving page review.
   Computed style effects, oversized-row pagination and Microsoft Word parity

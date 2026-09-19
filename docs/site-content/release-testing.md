@@ -2,6 +2,36 @@
 
 # Release And Testing
 
+## Native Word header/footer evaluation (Unreleased)
+
+實際 Codex 預設模型處理一份 **三頁、兩節**的合成 Word 文件：首頁獨立頁首、空白頁尾，
+第二、三頁共用頁首頁尾；共用頁首刻意使用非標準檔名。Agent 先完整讀取節綁定與內容，
+查看初始頁面，再修改共用文字、插入段落、刪除舊段落，以及更新頁碼前綴。
+**75 次成功 MCP 呼叫、0 次工具錯誤、165.22 秒**，未覆寫模型設定。
+
+獨立稽核檢查 **8 份完整頁首頁尾記錄、3 個管理版本、2 份歷史 Wiki 與全部 6 張實際 PNG**。
+完整分頁雜湊、原生 XML、其他 package parts、來源 bytes／mtime、歷史引用、文字選取與
+每份 Wiki 附件均通過。初始與最終首頁 PNG 相同；第二、三頁呈現修改後的共用內容，
+保留粗體／斜體、`007`、`-0.50 mg/L` 與新增的 `REVIEWED 1,234.50`。
+原生 `PAGE` 欄位快取保持 `1`，Writer 實際計算並呈現 `Verified page 2` 與 `Verified page 3`。
+這項差異明確區分了檔案中的文字記錄與實際計算結果。
+
+```bash
+uv run pytest tests/unit/test_native_docx_stories.py tests/unit/test_native_docx_story_service.py tests/unit/test_codex_docx_stories_audit.py tests/integration/test_native_docx_stories_stdio.py
+uv run python -m tests.codex_docx_stories.run --output /absolute/new-word-stories-run --font-fixture /absolute/pinned-font-fixture
+uv run python -m tests.codex_docx_stories.audit /absolute/new-word-stories-run
+```
+
+一般 pytest 不啟動模型；實測使用已登入的 Codex、選配 Writer 與固定雜湊的私有字體環境。
+最終程式完整測試 **3,268 通過、33 個選配項目跳過（325.91 秒）**，包含既有 Writer／中英文字形
+及 NIST／NASA PDF 案例。新單元測試 **42 通過**，SDK2 兩種渲染設定 **2 通過**；
+Python 3.10 **43 通過、1 個選配渲染項目跳過**。乾淨安裝的 wheel 在 checkout 外重現
+8 份完整內容、2 份清單及兩份 byte-identical 歷史 Wiki，程式雜湊與實際 Codex 執行一致。
+
+此案例沒有測試 Microsoft Word，也沒有建立／刪除整個頁首頁尾定義、重新連結節，或處理註腳／尾註。
+MCP 核對來源、版本與結構；Agent 負責完整語意和視覺核對。公開版仍為 **1.4.0**，
+變更累積於 **Unreleased／1.4.x**，下一次統整發布為 **1.4.1**。
+
 ## Native Word pagination evaluation (Unreleased)
 
 實際 Codex 預設模型接收一份列高裁字、未設定重複標題的原生 Word 表格，先查看

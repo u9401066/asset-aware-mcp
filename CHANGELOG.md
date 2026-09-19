@@ -7,6 +7,15 @@
 
 ## [Unreleased]
 
+- Added complete native Word header/footer discovery from actual content types,
+  relationships and section inheritance. Existing shared definitions support
+  reference-bound text edits and native paragraph/table insertion/deletion with
+  complete receipts and unchanged surrounding XML/parts. New story references
+  integrate verification, selections, derivations and citations; a distinct Wiki
+  projection retains full records and original parts without changing legacy
+  snapshots. Agents review all affected pages and field results. Whole-definition
+  lifecycle and footnote/endnote editing remain future work. Public 1.4.0 / 1.4.x.
+
 - Added native Word table pagination controls: contiguous repeated header prefixes,
   explicit automatic/minimum/exact/inherited row heights and allow/prevent/inherit
   split policies. Full before/after receipts and native content/property checks

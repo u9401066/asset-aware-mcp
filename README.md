@@ -1,5 +1,13 @@
 # asset-aware-mcp
 
+Unreleased Word header/footer stories expose complete native XML and text,
+actual section links and inherited/shared definitions. Agents can edit existing
+text and insert/delete native paragraphs or tables with full references and
+receipts, then review every affected page. Story evidence and both source parts
+and complete records travel with immutable Wikis. See
+[Word header/footer stories](docs/wiki/Native-File-Assets.md#native-word-headerfooter-stories-unreleased).
+Public **1.4.0**; next consolidated patch **1.4.1**, with no per-feature bump.
+
 Unreleased Word table layout controls let Agents correct clipped text, set repeated
 header rows and control row splitting after viewing actual pages. Edits retain
 native cells/styles and expose complete before/after receipts; source files and

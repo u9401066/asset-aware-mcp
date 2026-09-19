@@ -32,6 +32,19 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
 
 ## Native Document Operations
 
+- When docx_stories_enabled is advertised, read_docx_stories discovers actual
+  header/footer definitions, section inheritance and dormant/shared bindings.
+  read_docx_story pins docx_story_part; assemble every story page at one text_sha256.
+  update_docx_story needs full docx_story_reference and expected_revision; its
+  docx_story_update requires part, shared_scope:all_sections_using_part and sequential
+  set_text/insert_blocks/delete_blocks edits. Paths/indices address intermediate XML.
+  Read complete receipts and all affected actual PNGs. Literal field caches and
+  alternate/revision branches are not evaluated results. Preserve historical refs;
+  selections/derivations/citations and docx-stories-v1 Wiki retain full evidence.
+  Legacy DFM header/footer fields are abbreviated; never infer roles from filenames.
+  Whole-definition lifecycle/relinking and note stories remain further work.
+  Public1.4.0; next consolidated1.4.1, no per-feature version bump.
+
 - When docx_table_layout_enabled is advertised, update_docx_table_grid accepts
   set_header_rows(count) and set_row_layout(index,count,height,split). Header rows
   form a contiguous prefix; do not cut a vertical merge. Height rule auto/inherit

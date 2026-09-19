@@ -227,6 +227,18 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
   "native-file-assets": `## Native documents and versioned files — v1.4.0
 
+### Native Word header/footer stories (Unreleased)
+
+Discover docx_stories_enabled. read_docx_stories pins asset_id/revision and returns complete section definitions, inherited/shared bindings and header/footer parts based on actual content types and relationships. Never infer variants from filenames. Legacy DFM header/footer fields are abbreviated projections; read_docx supplies header_footer_request for complete native discovery while retaining historical references.
+
+read_docx_story adds docx_story_part and returns complete XML, literal text_nodes paths, direct block indices, relationships and native-docx-story-ref-v1 evidence. Both readers page their story object with text_offset/text_limit; follow every next_text_offset at one UTF-8 text_sha256. Bindings include dormant/unbound definitions; unknown switches are null. This is a definition map, not a rendered page map.
+
+update_docx_story requires expected_revision, the complete docx_story_reference and docx_story_update containing part, explicit shared_scope all_sections_using_part and sequential edits. set_text(path,text) changes an existing w:t; insert_blocks(index,blocks) adds typed native paragraphs/tables; delete_blocks(index,count) removes complete direct blocks. Paths and indices are zero-based in each intermediate XML tree. Editing a shared part affects every linked section and dormant definition; it never silently detaches a section.
+
+Native runs/styles, unrelated XML and other package parts remain intact. Field, range, revision and bound/locked-control checks apply. Literal text includes field caches and alternate/revision branches, not evaluated results or reading order. Read every review_request page and the complete operation_result, then inspect every affected actual PNG. A recurring file SHA may have a newer receipt; verify the complete text hash. No-op edits create no history entry.
+
+Historical story references participate in verification, JSON selections, derivations and custom/CSL citations. Wikis containing stories use the distinct docx-stories-v1 projection with stories.jsonl, story-catalog.json, the original DOCX and every package part. Legacy snapshots remain intact. Existing-definition content CRUD is supported; whole-definition creation/removal, section relinking and footnote/endnote editing remain further work. Public 1.4.0; next consolidated patch 1.4.1.
+
 ### Native Word table pagination (Unreleased)
 
 Exact row heights can hide text that remains in the native file. Discover docx_table_layout_enabled, read the complete table and actual pages, then use update_docx_table_grid with the full reference, expected_revision and sequential edits.
@@ -633,6 +645,18 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Native Word header/footer evaluation (Unreleased)
+
+Actual default-model Codex processed a synthetic three-page, two-section Word document: a separate first-page header and blank footer, plus shared default stories on pages two and three. The shared header deliberately used a nonstandard part filename. After complete binding/content reads and initial page review, the Agent edited shared text, inserted and deleted paragraphs, and changed the page-number prefix. The run completed 75 successful MCP calls, zero tool errors and 165.22 seconds without a model override.
+
+Independent audit checks eight complete story records, three managed revisions, two historical Wikis and all six actual PNGs. Complete paged hashes, native XML, unchanged package parts, source bytes/mtime, historical references, text selections and every Wiki attachment pass. Initial and final first-page PNGs are identical. Pages two and three show the corrected shared content, preserving bold/italic formatting, 007, -0.50 mg/L and the added REVIEWED 1,234.50. The native PAGE field cache remains 1; Writer evaluates and displays Verified page 2 and Verified page 3. Stored literal text and evaluated results are distinct evidence.
+
+Opt in with python -m tests.codex_docx_stories.run --output /absolute/new-word-stories-run --font-fixture /absolute/pinned-font-fixture; audit with python -m tests.codex_docx_stories.audit /absolute/new-word-stories-run. Ordinary pytest never starts a model. Actual runs use authenticated Codex, optional Writer and the pinned private font fixture.
+
+Final full suite: 3,268 passed, 33 optional skips in 325.91 seconds, including existing Writer/CJK and NIST/NASA PDF cases. New unit tests: 42 passed; SDK2 with both rendering configurations: two passed. Python 3.10: 43 passed and one optional rendering skip. A clean installed wheel outside checkout reproduces eight complete story records, two catalogs and both byte-identical historical Wikis, with the same source fingerprint as actual Codex.
+
+This case does not test Microsoft Word, whole-definition creation/removal, section relinking or footnote/endnote stories. MCP checks source, version and structure; Agent owns full semantic/visual review. Public 1.4.0 / Unreleased 1.4.x; next consolidated release 1.4.1.
 
 ### Native Word pagination evaluation (Unreleased)
 

@@ -1,5 +1,19 @@
 # Progress (Updated: 2026-09-19)
 
+## Native Word header/footer documentation — ready for publication
+
+Runtime/spec/tests committed as f3ccf0d (27 counted files plus2MEM), author u9401066.
+This separate segment publishes bilingual story content CRUD and exact evaluation
+metrics, README/CHANGELOG/ROADMAP, generated site and five synchronized source /
+bundled harness pairs. Feature and evaluation pages passed eight total desktop /
+mobile zh/en states; desktopzh/mobileen screenshots from both visually inspected.
+Browser plugin unavailable, installed Playwright used. Owned localhost8880 stopped.
+Final docs28pass, full3268/33/325.91s, actual75success/0errors/165.22s, source92fe28
+and installed wheel/Docker parity unchanged. All staged temporary runs restored;
+original dirty checkout untouched. Public1.4.0, next consolidated1.4.1, no tag/bump.
+Pushmain next; exact-head CI/Pages and six deployed file comparisons pending.
+Remaining broad all-format/Word story lifecycle work keeps the goal active.
+
 ## Native Word header/footer stories — validated runtime/spec/tests
 
 Final source 92fe28b29f3988b4c9a2cdff41745eb7fdbf38e3fe03a6b80f05786553e030a4

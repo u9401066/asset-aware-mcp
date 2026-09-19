@@ -1,5 +1,40 @@
 # Native File Assets（v1.4.0）
 
+## Native Word header/footer stories (Unreleased)
+
+頁首頁尾可能跨節共用，也可能只有首頁或偶數頁使用。查詢 `docx_stories_enabled`，
+以實際 content types、relationships 與節設定探索；不可依 `header2.xml` 等檔名猜用途。
+舊 DFM 的頁首頁尾欄位是簡略投影；`read_docx` 現在附上 `header_footer_request`，
+讓 Agent 接續讀取完整原生內容，既有歷史引用保持原來的意義。
+
+- `read_docx_stories` 指定 `asset_id`、`revision`，讀取所有節與頁首頁尾部件清單。
+  `bindings` 顯示 `variant`、`declared`、`inherited_from` 及 `enabled`；包含停用或
+  未綁定的定義。未知開關呈現 `null`，此清單不代表實際頁碼或版面。
+- `read_docx_story` 再指定 `docx_story_part`，取得完整 XML、`text_nodes` 路徑、
+  直接子區塊索引、關聯及 `native-docx-story-ref-v1` 引用。
+  兩種讀取均在 `story` 內使用 `text_offset`／`text_limit`，跟隨 `next_text_offset`
+  並核對組合後的 UTF-8 `text_sha256`。
+- `update_docx_story` 指定 `expected_revision`、完整 `docx_story_reference`，以及
+  `docx_story_update` 的 `part`、明確 `shared_scope: all_sections_using_part` 和
+  依序執行的 `edits`。`set_text(path,text)` 修改既有 `w:t`；`insert_blocks(index,blocks)`
+  插入 typed 原生段落／表格；`delete_blocks(index,count)` 刪除完整直接區塊。
+  路徑與索引從 0 起算，對應每一步的中間 XML 樹。
+
+編輯共用 part 會影響所有沿用它的節與停用定義，不會自動拆出獨立副本。
+既有 runs／樣式及未修改的 XML、來源檔與其他 parts 保持不變；欄位、範圍標記、
+鎖定或資料綁定控制項仍有對應檢查。文字清單包括原生欄位快取與替代／修訂分支，
+不能當成已計算的欄位結果或閱讀順序。Agent 必須核對每一張實際頁面 PNG。
+
+修改後完整讀取 `review_request`，其中的 `operation_result` 是該檔案版本最後一份
+歷史操作紀錄；相同檔案 SHA 可能再次出現，因此讀取期間仍須固定文字雜湊。
+無變更操作保留原始 bytes，不新增歷史。舊引用可驗證或透過 `read_selection`
+選取 JSON 字串，亦可參與轉製關係與自訂／CSL 引用。
+
+含完整頁首頁尾的 Wiki 使用獨立 `docx-stories-v1` 投影，帶走 `stories.jsonl`、
+`story-catalog.json`、原始 DOCX 與每個 part；舊 Wiki 不被覆蓋。
+此階段完成既有定義內的內容 CRUD；整份定義的新增／移除、節重新連結，以及
+註腳／章節附註編輯仍需擴充。公開版 **1.4.0**，下次整合發布 **1.4.1**。
+
 ## Native Word table pagination (Unreleased)
 
 固定列高可能把儲存格文字裁掉，檔案內容仍存在卻無法在頁面上完整看見。
