@@ -166,7 +166,9 @@ def audit(output):
     validate_refs(calls, records, source["asset_id"], deck["asset_id"])
     images = validate_images(calls, workspace, source)
     root = workspace / "data" / "native-assets" / deck["asset_id"] / "revisions"
-    first_exact = validate_revisions(root, deck, grid=expected.get("grid", False))
+    first_exact = validate_revisions(
+        root, deck, grid=expected.get("grid", False) or expected.get("merges", False)
+    )
     validate_table(workspace / "verified.pptx")
     require(
         digest((workspace / "verified.pptx").read_bytes()) == deck["revision"],
@@ -177,7 +179,16 @@ def audit(output):
     if expected.get("grid"):
         from tests.codex_pptx_tables.grids import validate_grids
 
-        grids = validate_grids(workspace, deck, calls)
+        grids = validate_grids(
+            workspace, deck, calls, following_merges=expected.get("merges", False)
+        )
+    merges = None
+    if expected.get("merges"):
+        from tests.codex_pptx_tables.merges import validate_merges
+
+        merges = validate_merges(
+            workspace, deck, calls, preceding_grid=expected.get("grid", False)
+        )
     derivations = None
     if expected.get("derivations"):
         from tests.codex_pptx_tables.derivations import validate_derivations
@@ -203,6 +214,7 @@ def audit(output):
         "tool_errors": tool_errors(events),
         "derivations": derivations,
         "grids": grids,
+        "merges": merges,
         "scope": "Synthetic scanned first page, editable table strings/grid/merge and native package evidence; no full slide render or general OCR claim",
     }
 

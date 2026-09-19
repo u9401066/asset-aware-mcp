@@ -41,7 +41,9 @@
   preservation implemented. Full 2,015 tests / 30 skips plus additional regression
   pass; 199 extension tests pass. Codex --grid --merges: 180 calls, zero errors,
   exact first transcription, 13 full records and 11 independently audited stages.
-- [ ] Merge checkpoint release gates / commit / push / exact CI and Pages pending.
+- [x] Merge checkpoint local release gates pass (including Docker, VSIX, clean wheel
+  and browser QA); initial disk-exhaustion failures retained and successfully rerun.
+- [ ] Merge checkpoint 796656c + companion: push / exact CI and Pages pending.
 
 - [x] Unreleased checkpoint: native PPTX textbox addition / existing shape deletion
   with reference, dependency, version and XML preservation guards; truthful A2T

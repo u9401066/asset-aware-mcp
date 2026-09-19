@@ -114,7 +114,7 @@ def surviving_cells(before, after, stage):
             )
 
 
-def validate_grids(workspace, deck, calls):
+def validate_grids(workspace, deck, calls, *, following_merges=False):
     root = workspace / "data" / "native-assets" / deck["asset_id"] / "revisions"
     available, chunks, outputs, count = set(), {}, [], 0
     for call in calls:
@@ -143,11 +143,16 @@ def validate_grids(workspace, deck, calls):
             "Grid revision digest mismatch",
         )
         count += 1
+        if following_merges and count > 5:
+            continue
         check_stage(after, count)
         unchanged_package(before, after, ref["locator"]["part"])
         surviving_cells(before, after, count)
         outputs.append((revision, ref["locator"]))
-    require(count == 5, "Missing or unexpected successful grid mutation stages")
+    require(
+        count == 5 + (6 if following_merges else 0),
+        "Missing or unexpected successful grid mutation stages",
+    )
     for revision, locator in outputs:
         require(
             any(
@@ -158,7 +163,7 @@ def validate_grids(workspace, deck, calls):
             "Grid result lacks complete shape readback",
         )
     return {
-        "mutations": count,
+        "mutations": len(outputs),
         "intermediate_revisions_checked": len(outputs),
         "full_readbacks": True,
         "unchanged_package_parts": True,

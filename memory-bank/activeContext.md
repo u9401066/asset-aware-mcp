@@ -45,6 +45,10 @@ removed after terminal proof. Logs: /tmp/asset-aware-merge-{docker-retry,package
 wheel-smoke-retry}.log. Runtime fingerprint still matches actual Codex run. Ready for
 scoped main commits, then exact CI/Pages verification; no version bump/tag.
 
+Core committed as 796656c. Companion commit contains the actual Codex merge auditor,
+cross-platform/SDK2 CI registration, Chinese/English docs and synchronized assistant
+harness. Local gates complete; push and exact remote CI/Pages remain pending.
+
 ## 2026-09-19 — native PPTX table grid CRUD in progress
 
 Previous goal turn made verified progress: cea4870 / 29369ec pushed; exact CI

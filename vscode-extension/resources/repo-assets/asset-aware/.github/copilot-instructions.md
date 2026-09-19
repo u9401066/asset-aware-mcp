@@ -28,7 +28,7 @@
 - 📽️ **PPTX 形狀操作（main 未發布）** — 先查 contract；`add_pptx_shapes` 新增文字框，`delete_pptx_shapes` 使用目前版本完整引用刪除形狀。已知相依會阻擋刪除，附件仍保留；Agent 核對版面與未涵蓋相依，來源回寫仍明確指定。公開版維持 1.4.0／後續 1.4.x。
 - 🖼️ **PPTX 圖片（main 未發布）** — `add_pptx_pictures`／`replace_pptx_pictures` 使用版本化 PNG/JPEG 資產，保留共用 media；`read_pptx_picture` 顯示實際內嵌圖片，`extract_pptx_picture` 建立含來源歷程的新資產。`native-file-ref-v1` 只驗證完整不可變位元組。Agent 核對投影片畫面、裁切、效果與語意；公開版仍 1.4.0／後續 1.4.x。
 - 📊 **PPTX 原生表格（main 未發布）** — `add_pptx_tables` 新增明確尺寸、合併與文字格式的表格；讀回／修改 anchor run／刪除／證據與 Wiki 沿用原生操作。目的簡報樣式及溢出由 Agent 核對。`citation_contract` typed schema 僅存引用顯示格式，來源證據另行保存。
-- 📊 **PPTX 格網（main 未發布）** — `update_pptx_table_grid` 使用完整引用依序列欄插刪與調整尺寸；檢查合併區擴縮、起點移動及隱藏內容衝突。Agent 核對新版位置、畫面與轉製關係。
+- 📊 **PPTX 格網（main 未發布）** — `update_pptx_table_grid` 使用完整引用依序列欄插刪與調整尺寸；檢查合併區擴縮、起點移動及隱藏內容衝突。合併須明確選擇 require_empty／append_paragraphs；後者依序搬移完整段落，拆分保留起點內容、不自動分回。Agent 核對新版位置、畫面與轉製關係。
 - 🔗 **轉製來源帳本（main 未發布）** — 完整原生引用連結來源與產物；先讀 hash 固定的帳本，再新增／修訂／撤回。MCP 驗證引用，Agent 核對聲明另存；Wiki 保留帳本與活躍關係的來源附件。舊版本主張不會自動繼承。
 - 📄 **Native PDF（main 未發布）** — 頁面建立／讀取／PNG 顯示／複製／插刪／重排／旋轉裁切、版本引用與 Wiki；先查 contract，完整頁面引用必須固定版本。MCP 檢查物件圖與有限解析度讀回，Agent 核對語意／完整畫面／表單行為；不提供任意文字編輯或 secure redaction。公開版仍 1.4.0。
 - 📊 **A2T** — Anything to Table 表格建立

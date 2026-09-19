@@ -302,7 +302,17 @@ update_pptx_table_grid takes asset_id, expected_revision and pptx_table_grid={re
 
 Insertions inside merges expand them; insertion at the start shifts them. Partial deletion shrinks merges. When deleting a surviving merge's anchor, its content and formatting move to the new top-left cell; hidden content, fields, relationships, extensions or identity at that destination block promotion. A surviving single cell becomes unmerged. New covered cells must be default/empty. Source signatures, stale references, malformed grids, bounds and concurrent writes fail before commit.
 
-Existing cell XML, row/column metadata, styles and untouched package parts are retained, except explicit deletion, changed merge flags and anchor promotion replacing covered-cell formatting. Position stays fixed; frame extents follow grid totals at the existing scale. Limits apply at every intermediate step: 1–100 rows/columns, 10,000 cells, 20,000 runs, 4 MiB text and 100,000,000 EMU dimensions/frame; at most 10,000 cells inserted per batch. Old evidence remains valid; coordinates and derivation assertions do not migrate automatically. Agents review rendering, overflow, banding and semantics. Arbitrary merge/split operations remain separate.
+Existing cell XML, row/column metadata, styles and untouched package parts are retained, except explicit deletion, changed merge flags and anchor promotion replacing covered-cell formatting. Position stays fixed; frame extents follow grid totals at the existing scale. Limits apply at every intermediate step: 1–100 rows/columns, 10,000 cells, 20,000 runs, 4 MiB text and 100,000,000 EMU dimensions/frame; at most 10,000 cells inserted per batch. Old evidence remains valid; coordinates and derivation assertions do not migrate automatically. Agents review rendering, overflow, banding and semantics. Cell merge/split is described below.
+
+### Table cell merge/split (Unreleased)
+
+The same update_pptx_table_grid edits accept merge with row, column, end_row, end_column and required content_policy; split takes the existing merge origin row and column. Coordinates are zero-based and inclusive; a merge must span at least two cells.
+
+require_empty rejects meaningful non-anchor content, including whitespace text, fields, links, extensions and paragraph identities. append_paragraphs moves complete paragraphs from nonempty cells to the top-left anchor in row-major order. Literal text, rich formatting, fields, links and paragraph XML survive. Internal empty paragraphs and the anchor's existing empty paragraphs are retained. Source cells receive an empty paragraph; cell properties and text-body settings stay with their original cells.
+
+Existing merges must be wholly contained by the new rectangle; partial intersections require splitting first. Split removes the merge flags and keeps all migrated text at the anchor; it does not reconstruct earlier content distribution. Split, row/column insertion and merge can be composed within one checked batch. This follows [python-pptx merge/split semantics](https://python-pptx.readthedocs.io/en/latest/user/table.html#un-merging-a-cell), with explicit content policies and version checks.
+
+MCP checks current full references, unchanged paragraph XML during migration, merge structure, serialized results and untouched parts. Agents read the complete updated shape and review paragraph order, meaning, rendered borders/styles and overflow. Managed revisions precede explicit source writeback. Public packages remain 1.4.0; these changes stay Unreleased for 1.4.x.
 
 ### Native derivations (Unreleased)
 
@@ -449,6 +459,13 @@ Run 04 against the final runtime preserving native source extensions completed 9
 Add --grid to tests.codex_pptx_tables.run for five actual Codex mutations after scanned-table creation: insert a column, insert a temporary row, resize both dimensions, delete the row and delete the column. Every mutation uses a current full reference and complete readback. Independent checks open all five intermediate PPTX revisions and compare literal strings, merged title coverage, dimensions, surviving cell XML/formatting, surrounding XML and untouched parts. Final source/history/wiki checks still apply. It can be combined with --derivations. This synthetic scan does not establish full slide rendering or real-corpus coverage.
 
 Grid run 01 on 2026-09-19 completed 123 MCP calls with zero tool errors, exact first transcription, one actual PNG and nine complete records. All five intermediate grids passed independent content, merge, geometry and preserved-XML audits, together with source/history/published-file/wiki checks. The full Python suite passed 1,971 tests with 30 optional skips; extension tests passed 199. No full-slide rendering claim is made.
+
+## Native table merge/split exercise (Unreleased)
+
+Add --merges to tests.codex_pptx_tables.run, optionally with --grid and --derivations. Six mutations insert a temporary formatted row, merge its five cells with explicit paragraph migration, split it while keeping all text at the anchor, delete it, then split and remerge the original title. Each mutation uses a complete current reference and full readback. Independent audits inspect every intermediate PPTX for exact paragraph XML, rich formatting, ordering, original scanned cells, grid/frame/merge geometry and untouched XML/parts. Auditor regressions deliberately corrupt leading zeros, formatting, merge coverage and split content. Ordinary pytest never starts a model; live events, transcription errors and recoveries remain separate. Full slide rendering remains a separate check.
+
+Merge run 01 on 2026-09-19 (--grid --merges) completed 180 MCP calls with zero tool errors, exact first transcription, one actual PNG and thirteen complete records. Five grid and six merge/split intermediate revisions passed independent audits of paragraph XML, original strings/styles, source, published files and wiki. No full-slide rendering was performed. Full pytest passed 2,015 tests with 30 optional skips; one subsequent absent-anchor-body regression passed within an 18-test focused run, with production source unchanged. VSIX tests passed 199.
+
 
 ## Publish in order
 Confirm built artifacts and runtime diagnostics before tagging, then verify each public registry after publication.`,

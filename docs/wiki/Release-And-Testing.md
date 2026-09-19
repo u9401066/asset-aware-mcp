@@ -379,3 +379,22 @@ Wiki。`--derivations` 可另外組合；一般 pytest 不會啟動模型。
 五個中間 PPTX 版本均通過獨立內容／合併／尺寸／保留 XML 稽核；來源、歷史、
 發布檔與 Wiki 亦通過。完整 pytest：1,971 passed、30 optional skipped；
 擴充套件：199 tests。這些結果仍不代表完成投影片畫面核對。
+
+### Codex native table merge/split exercise (Unreleased)
+
+使用 `tests.codex_pptx_tables.run --merges`，也可組合 `--grid`／`--derivations`。
+Agent 完成掃描表格後，插入帶有前導零、正負號、粗斜體的暫存列，合併其內容、
+拆分、刪除暫存列，最後拆分並重合併原標題。六次操作皆須完整目前引用與
+完整讀回；拆分後五段文字仍在左上角，不會自動還原原先分格。
+
+獨立稽核開啟每個中間 PPTX，逐一核對段落 XML／格式／順序、原始掃描格子、
+格網／外框／合併、周圍 XML 與未修改 parts。額外回歸測試刻意破壞前導零、
+格式、合併及拆分內容，確認稽核會拒絕。一般 pytest 不啟動模型，實際執行
+保留事件流、初次辨讀、工具錯誤與恢復紀錄；完整畫面仍須另行核對。
+
+2026-09-19 merge run 01（`--grid --merges`）完成 **180 次 MCP 呼叫、零工具錯誤**，
+首次轉錄完全一致，1 張實際 PNG、13 份完整紀錄。五個格網與六個合併／拆分
+中間版本全部通過獨立稽核，段落 XML、原字串與格式、來源、發布檔及 Wiki
+均符合預期；未執行完整投影片渲染。完整 pytest 為 2,015 passed／30 optional
+skipped，之後新增「起點缺少可選文字框」案例並通過含該案例的 18 項測試；
+production source 未變更。VSIX 199 tests 通過。

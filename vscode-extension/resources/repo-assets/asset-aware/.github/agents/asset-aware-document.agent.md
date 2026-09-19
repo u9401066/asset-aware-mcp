@@ -63,6 +63,10 @@ citation-ready provenance.
   only when covered-cell data will not be lost. Read complete updated shapes and
   review rendering, style banding and overflow. Old evidence remains historical;
   coordinates and derivation assertions do not automatically migrate.
+  Merge edits require content_policy=require_empty or append_paragraphs. The latter
+  moves exact rich paragraphs in row-major order to the anchor; partial intersections
+  with existing merges fail. Split names an existing merge origin and leaves migrated
+  content there. It never redistributes text. Read back and review the new layout.
 
 - When derivations_enabled is advertised, read complete read_derivations JSON
   with derivations_sha256 before record_derivation/retract_derivation. Pin full

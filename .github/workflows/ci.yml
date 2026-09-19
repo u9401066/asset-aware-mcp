@@ -134,6 +134,9 @@ jobs:
           tests/unit/test_native_pptx_grid_guards.py
           tests/unit/test_native_pptx_grid_operations.py
           tests/unit/test_codex_grid_audit.py
+          tests/unit/test_native_pptx_merges.py
+          tests/unit/test_native_pptx_merge_guards.py
+          tests/unit/test_codex_merge_audit.py
           tests/unit/test_native_citation_schema.py
           tests/unit/test_native_derivations.py
           tests/unit/test_native_derivation_store.py
@@ -160,6 +163,7 @@ jobs:
           tests/integration/test_native_pptx_picture_stdio.py
           tests/integration/test_native_pptx_table_stdio.py
           tests/integration/test_native_pptx_grid_stdio.py
+          tests/integration/test_native_pptx_merge_stdio.py
           tests/integration/test_native_derivation_stdio.py
           tests/integration/test_native_pdf_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py
@@ -232,6 +236,9 @@ jobs:
           tests/unit/test_native_pptx_grid_guards.py
           tests/unit/test_native_pptx_grid_operations.py
           tests/unit/test_codex_grid_audit.py
+          tests/unit/test_native_pptx_merges.py
+          tests/unit/test_native_pptx_merge_guards.py
+          tests/unit/test_codex_merge_audit.py
           tests/unit/test_native_citation_schema.py
           tests/unit/test_native_derivations.py
           tests/unit/test_native_derivation_store.py
@@ -258,6 +265,7 @@ jobs:
           tests/integration/test_native_pptx_picture_stdio.py
           tests/integration/test_native_pptx_table_stdio.py
           tests/integration/test_native_pptx_grid_stdio.py
+          tests/integration/test_native_pptx_merge_stdio.py
           tests/integration/test_native_derivation_stdio.py
           tests/integration/test_native_pdf_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py
@@ -322,6 +330,9 @@ jobs:
           tests/unit/test_native_pptx_grid_guards.py
           tests/unit/test_native_pptx_grid_operations.py
           tests/unit/test_codex_grid_audit.py
+          tests/unit/test_native_pptx_merges.py
+          tests/unit/test_native_pptx_merge_guards.py
+          tests/unit/test_codex_merge_audit.py
           tests/unit/test_native_citation_schema.py
           tests/unit/test_native_derivations.py
           tests/unit/test_native_derivation_store.py
@@ -348,6 +359,7 @@ jobs:
           tests/integration/test_native_pptx_picture_stdio.py
           tests/integration/test_native_pptx_table_stdio.py
           tests/integration/test_native_pptx_grid_stdio.py
+          tests/integration/test_native_pptx_merge_stdio.py
           tests/integration/test_native_derivation_stdio.py
           tests/integration/test_native_pdf_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py
@@ -491,6 +503,7 @@ jobs:
             tests/integration/test_native_pptx_picture_stdio.py \
             tests/integration/test_native_pptx_table_stdio.py \
             tests/integration/test_native_pptx_grid_stdio.py \
+            tests/integration/test_native_pptx_merge_stdio.py \
             tests/integration/test_native_derivation_stdio.py \
             -v --timeout=180 --junitxml=junit-integration.xml
 
