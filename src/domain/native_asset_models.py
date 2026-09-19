@@ -36,6 +36,8 @@ def validate_sheet_name(name: str) -> str:
         not name.strip()
         or len(name) > 31
         or re.search(r"[\[\]:*?/\\\x00-\x1f]", name)
+        or re.search(r"[\ud800-\udfff\ufffe\uffff]", name)
+        or name.casefold() == "history"
         or name.startswith("'")
         or name.endswith("'")
     ):

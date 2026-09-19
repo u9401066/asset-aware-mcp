@@ -49,6 +49,7 @@ from src.infrastructure.native_pptx import NativePresentation
 from src.infrastructure.native_pptx_render import LibreOfficePresentationRenderer
 from src.infrastructure.native_spreadsheet import SpreadsheetFileAdapter
 from src.infrastructure.native_wiki_publisher import FileNativeWikiPublisher
+from src.infrastructure.native_workbook_structure import NativeWorkbookStructure
 from src.infrastructure.ocr_processor import OCRProcessor
 from src.infrastructure.pymupdf_preflight import PyMuPDFPreflightInspector
 from src.infrastructure.subprocess_ingest_worker_runner import (
@@ -133,6 +134,7 @@ native_document_service = NativeDocumentService(
     pptx_renderer=LibreOfficePresentationRenderer(),
     docx_structure=NativeDocxStructure(),
     docx_renderer=LibreOfficeWordRenderer(),
+    workbook_structure=NativeWorkbookStructure(),
 )
 # Engine selection (config-driven via ETL_ENGINE): the base extractor is always
 # available (PyMuPDF, or the layout-aware pymupdf4llm) and doubles as the fast

@@ -20,6 +20,7 @@ from src.application.native_pptx_operations import NativePptxOperations
 from src.application.native_schema import read_schema
 from src.application.native_selection_service import NativeSelectionService
 from src.application.native_wiki_service import NativeWikiService
+from src.application.native_workbook_operations import NativeWorkbookOperations
 
 if TYPE_CHECKING:
     from src.domain.native_assets import (
@@ -38,6 +39,7 @@ if TYPE_CHECKING:
         NativeWordRenderer,
     )
     from src.domain.native_wiki import NativeWikiPublisher
+    from src.domain.native_workbook import NativeWorkbookStructureAdapter
 
 
 class NativeDocumentService:
@@ -53,9 +55,15 @@ class NativeDocumentService:
         pptx_renderer: NativePresentationRenderer | None = None,
         docx_structure: NativeDocxStructureAdapter | None = None,
         docx_renderer: NativeWordRenderer | None = None,
+        workbook_structure: NativeWorkbookStructureAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
+        self.workbook_operations = (
+            NativeWorkbookOperations(repository, workbook_structure)
+            if workbook_structure
+            else None
+        )
         self.docx = docx
         self.docx_structure = docx_structure
         self.docx_renderer = docx_renderer
@@ -99,6 +107,7 @@ class NativeDocumentService:
             docx_enabled=self.docx is not None,
             pptx_enabled=self.presentations is not None,
             pdf_enabled=self.pdfs is not None,
+            workbook_structure_enabled=self.workbook_operations is not None,
         )
 
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
@@ -110,6 +119,11 @@ class NativeDocumentService:
             "create": self._create,
             "history": self._history,
             "read_cell": self._read_cell,
+            "read_workbook": self._workbook_operation,
+            "add_worksheets": self._workbook_operation,
+            "rename_worksheet": self._workbook_operation,
+            "reorder_worksheets": self._workbook_operation,
+            "delete_worksheets": self._workbook_operation,
             "create_pdf": self._pdf_operation,
             "read_pdf": self._pdf_operation,
             "read_pdf_page": self._pdf_operation,
@@ -183,6 +197,7 @@ class NativeDocumentService:
             docx_enabled=self.docx is not None,
             pptx_enabled=self.presentations is not None,
             pdf_enabled=self.pdfs is not None,
+            workbook_structure_enabled=self.workbook_operations is not None,
             derivations_enabled=self.derivations is not None,
             docx_structure_enabled=self.docx is not None
             and self.docx_structure is not None,
@@ -383,3 +398,8 @@ class NativeDocumentService:
         if self.pptx_operations is None:
             raise ValueError("The native PPTX adapter is not configured")
         return self.pptx_operations.execute(request)
+
+    def _workbook_operation(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        if self.workbook_operations is None:
+            raise ValueError("Native workbook structure adapter is not configured")
+        return self.workbook_operations.execute(request)

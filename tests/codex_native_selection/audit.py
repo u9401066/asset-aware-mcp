@@ -125,25 +125,32 @@ def audit(output):
     pages = complete_records(calls)
     records = selected_records(calls, pages)
     directory = workspace / "data" / "native-assets" / target["asset_id"]
-    require(len(target["history"]) == 2, "Unexpected workbook history")
-    for index, item in enumerate(target["history"]):
-        with_bytes = (directory / "revisions" / item["sha256"]).read_bytes()
-        workbook = load_workbook(io.BytesIO(with_bytes))
-        try:
-            require(workbook.sheetnames == ["Sheet1"], "Wrong worksheet")
-            values = [list(COLUMNS), *[list(row) for row in PAGE_ROWS[0]]]
-            if index:
-                values[1][1] = "008"
-            sheet = workbook["Sheet1"]
-            require(sheet.max_row == 3 and sheet.max_column == 5, "Wrong table bounds")
-            for row, expected_row in zip(sheet.iter_rows(), values, strict=True):
+    if expected.get("worksheets"):
+        from tests.codex_native_workbook.audit import validate_workbook_history
+
+        validate_workbook_history(calls, target, directory)
+    else:
+        require(len(target["history"]) == 2, "Unexpected workbook history")
+        for index, item in enumerate(target["history"]):
+            with_bytes = (directory / "revisions" / item["sha256"]).read_bytes()
+            workbook = load_workbook(io.BytesIO(with_bytes))
+            try:
+                require(workbook.sheetnames == ["Sheet1"], "Wrong worksheet")
+                values = [list(COLUMNS), *[list(row) for row in PAGE_ROWS[0]]]
+                if index:
+                    values[1][1] = "008"
+                sheet = workbook["Sheet1"]
                 require(
-                    [c.value for c in row] == expected_row
-                    and all(c.data_type == "s" for c in row),
-                    "Literal native values differ",
+                    sheet.max_row == 3 and sheet.max_column == 5, "Wrong table bounds"
                 )
-        finally:
-            workbook.close()
+                for row, expected_row in zip(sheet.iter_rows(), values, strict=True):
+                    require(
+                        [c.value for c in row] == expected_row
+                        and all(c.data_type == "s" for c in row),
+                        "Literal native values differ",
+                    )
+            finally:
+                workbook.close()
     require(
         digest((workspace / "verified.xlsx").read_bytes()) == target["revision"],
         "Published workbook mismatch",
@@ -196,6 +203,7 @@ def audit(output):
         "selection_records": len(records),
         "agent_reported_limitations": final.get("limitations", []),
         "scope": "Synthetic scan page to literal XLSX table; precise historical value evidence and two revision-specific wikis. No OCR or Excel rendering guarantee.",
+        "worksheet_structure_evaluated": bool(expected.get("worksheets")),
     }
 
 

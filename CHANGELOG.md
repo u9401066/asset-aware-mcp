@@ -9,6 +9,15 @@
 
 ### Added
 
+- Native workbook structure CRUD: hash-pinned `read_workbook` JSON, worksheet
+  insertion, renaming, reordering and dependency-checked deletion. Stable sheet
+  identities, explicit local formula/name/chart/pivot references, view indices
+  and scoped names remain consistent; unrelated native parts remain byte-identical.
+  3D membership changes require explicit policy. Detached sheets/calculation chains
+  remain retained; this is not secure erasure. Dynamic references, rendering and
+  formula results require Agent review. Uses openpyxl's tokenizer without resaving
+  source workbooks. Public stays 1.4.0; this work is Unreleased for 1.4.x.
+
 - `read_selection` exposes complete parsed native cell/block/shape/page records
   or exact JSON values and Unicode text spans, with parent/selector/context hashes.
   Existing verification and derivation ledgers accept immutable selection refs;

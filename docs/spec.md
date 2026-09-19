@@ -33,6 +33,42 @@ it is not a promise of complete automatic correction or layout verification.
 Verification coverage and unperformed checks must remain explicit. Structural
 validity alone must never be reported as semantic correctness or full fidelity.
 
+### Native workbook sheet structure (Unreleased, 1.4.x)
+
+Provide revision-pinned read_workbook structure/reference inventories and managed
+add_worksheets, rename_worksheet, reorder_worksheets and delete_worksheets. Keys use
+exact sheetId/part identity; rename retains both. Reorder supplies every current key
+exactly once; deletion cannot remove the last visible worksheet. Add empty native
+worksheets, then reuse typed cell edits. Preserve all existing worksheet/media/style/
+comment/custom-part bytes outside explicit reference or view repairs; retain detached
+deleted-sheet parts and state that deletion is not secure erasure.
+
+Patch the original OOXML package rather than resaving through an object model.
+Update workbook relationships/content types, scoped defined-name indices, active
+view indices and known reference fields. Use lossless formula token spans to rewrite
+explicit local sheet qualifiers across formulas, names, charts, validation and
+conditional formatting. Preserve external-workbook references and string literals;
+INDIRECT/HYPERLINK string semantics and calculated values require Agent review.
+Use openpyxl's tokenizer only, retaining original whitespace and syntax outside edits.
+Detect unsupported syntax and ambiguous identities instead of silently guessing.
+
+Reject deletion with surviving explicit sheet/table/pivot/consolidation references. For insertion
+and reordering, preserve the membership of 3D references by default; allow an explicit
+allow_3d_membership_change policy with reported counts and Agent formula review.
+Remap localSheetId and workbook view indices to retained sheet identity. Request
+recalculation, detach stale calc-chain relationships while retaining their original
+parts, and clear optional stale extended-property sheet-title caches. Reject signed/protected or opaque
+macro/revision structures that need a dedicated workflow. Read operations remain
+available independently of mutation eligibility. Bound member/formula/output budgets.
+
+Test rich workbooks with formulas, chart series, tables, merges, comments, protected
+unmodified sheets and custom XML; verify exact unaffected bytes and independent
+openpyxl readback. Include quoted/Unicode names, external refs, dynamic/spill syntax,
+3D membership, defined names, hidden views, relocated parts, stale/archived/history
+references and delete dependencies. Exercise real SDK2 and actual Codex scan-to-XLSX
+sheet lifecycle, selection/history/Wiki and source preservation. Full publication
+gates and docs/harness sync remain required; no automatic version bump/tag.
+
 ### Native selection evidence (Unreleased, 1.4.x)
 
 Add read_selection over full verified native cell/block/shape/page references.

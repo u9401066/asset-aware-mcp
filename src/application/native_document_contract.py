@@ -18,6 +18,7 @@ def native_asset_summary(
     docx_enabled: bool = False,
     pptx_enabled: bool = False,
     pdf_enabled: bool = False,
+    workbook_structure_enabled: bool = False,
 ) -> dict[str, Any]:
     return {
         "asset_id": asset.asset_id,
@@ -65,6 +66,11 @@ def native_asset_summary(
             "read_docx": asset.format == "docx" and docx_enabled,
             "verify_docx_blocks": asset.format == "docx" and docx_enabled,
             "edit_docx": asset.format == "docx" and docx_enabled and not asset.archived,
+            "read_workbook": asset.format in {"xlsx", "xlsm"}
+            and workbook_structure_enabled,
+            "edit_worksheets": asset.format in {"xlsx", "xlsm"}
+            and workbook_structure_enabled
+            and not asset.archived,
             "inspect_cells": asset.format in {"xlsx", "xlsm"},
             "verify_cells": asset.format in {"xlsx", "xlsm"},
             "edit_cells": asset.format in {"xlsx", "xlsm"} and not asset.archived,
@@ -82,6 +88,7 @@ def native_document_contract(
     docx_enabled: bool = False,
     pptx_enabled: bool = False,
     pdf_enabled: bool = False,
+    workbook_structure_enabled: bool = False,
     derivations_enabled: bool = False,
     pptx_rendering_configured: bool = False,
     docx_structure_enabled: bool = False,
@@ -93,6 +100,8 @@ def native_document_contract(
         "contract_version": "native-contract-v2",
         "operations": list(NATIVE_OPERATIONS),
         **schema_discovery(for_op),
+        "workbook_structure_enabled": workbook_structure_enabled,
+        "workbook_policy": "Read complete hash-pinned read_workbook JSON. Sheet changes need current revision and sheetId/part keys. Preserve explicit references, views and scopes; reject surviving deletion dependencies and default 3D membership changes. Dynamic strings, calculation results and rendering need Agent review. Detached parts remain; no secure erasure.",
         "identity": "Stable asset IDs, SHA-256 revisions and revision-scoped locators.",
         "citation_policy": "citation_contract selects a display preset or custom inline/reference templates; it does not store source references or verification reports.",
         "derivations_enabled": derivations_enabled,
@@ -118,6 +127,7 @@ def native_document_contract(
             pptx_rendering_configured,
             docx_structure_enabled,
             docx_rendering_configured,
+            workbook_structure_enabled,
         ),
         "verification": "MCP checks integrity; agents verify semantics, layout and calculated results.",
         "docx_policy": "Pin revision; assemble all DFM chunks with frontmatter/markers. Updates stage versions; writeback is explicit.",
@@ -177,7 +187,19 @@ def _formats(
     pptx_rendering_configured: bool = False,
     docx_structure_enabled: bool = False,
     docx_rendering_configured: bool = False,
+    workbook_structure_enabled: bool = False,
 ) -> dict[str, list[str]]:
+    workbook_ops = (
+        [
+            "read_workbook",
+            "add_worksheets",
+            "rename_worksheet",
+            "reorder_worksheets",
+            "delete_worksheets",
+        ]
+        if workbook_structure_enabled
+        else []
+    )
     return {
         "pdf": [
             "create_pdf",
@@ -234,8 +256,14 @@ def _formats(
         ]
         if docx_enabled
         else [],
-        "xlsx": ["create", "inspect_cells", "edit_cells", "read_selection"],
-        "xlsm": ["inspect_cells", "edit_cells", "read_selection"],
+        "xlsx": [
+            "create",
+            "inspect_cells",
+            "edit_cells",
+            "read_selection",
+            *workbook_ops,
+        ],
+        "xlsm": ["inspect_cells", "edit_cells", "read_selection", *workbook_ops],
         "other": [
             "register",
             "inspect_metadata",

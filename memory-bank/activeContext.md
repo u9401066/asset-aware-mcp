@@ -1,5 +1,79 @@
 # Active Context
 
+## 2026-09-19 — workbook structure verified locally; main push pending
+
+Implemented native read_workbook/add_worksheets/rename_worksheet/reorder_worksheets/
+delete_worksheets with exact revision and sheetId/part keys. Complete structure and
+explicit reference JSON is hash-paged; full operation results remain in history.
+Original OOXML is patched without openpyxl resaving. Local formulas/names/charts/
+validation/conditional formatting/hyperlinks/pivot/consolidation sources are repaired;
+external references and string literals stay intact. Scope/view indices are remapped,
+3D membership changes require explicit policy, and surviving deletion dependencies
+fail. Untouched parts remain byte-identical; deleted sheet/chain parts are detached,
+not securely erased. Signed/protected/VBA/ActiveX/revision/unknown workbook structures
+fail explicitly. Agent owns dynamic-reference, formula-result and rendering review.
+
+Actual Codex /tmp/asset-aware-codex-workbook-01: 115 MCP calls, zero errors,160.49sec,
+one actual scanned PNG. Seven revisions cover all15 literal values, original007
+selection/current008, added Review/Temporary, native cross-sheet formula, Chinese/
+apostrophe rename, reorder and deletion, historical evidence and two Wiki snapshots.
+Independent audit verifies native files, stable keys, explicit formula, unchangedparts,
+sourcebytes/mtime, complete before/after reads and no migrated assertion. CLI0.154.0-
+alpha.6.1 defaultmodel not pinned. Evaluator regressions reject read-after-edit,
+forged revision transitions and hashes. Saved actual trace replay passed after these
+additional audit checks. No OCR, formula evaluation or Excel rendering guarantee.
+
+Full pytest2322passed33optional-skips85.53sec; subsequent15focused tests passed,
+including three additions (two audit cases and consolidated-range reference).
+Ruff438files/mypy196sources, bandit/highzizmor, lock/audit214Python/npmzero, skills/
+harness/docs checks passed. Extension199tests, package-content guard, fresh/update
+VSIX installs/package, Dockerdoctor/listtools/SDK2, cleanwheelconsole/SDK2 and all
+artifactaudit passed. GUIactivation unavailable locally, CI must cover platforms.
+Builtwheel source bytes and runtime/lock hashes match the actual Codex environment.
+
+Runtime b46fad8ec0a37b1eed3bd29e52094ab80a225b6f98e82c191286fd5e49073f49;
+lock27749305b83ccda9c265d5ae7f2b02d004ed5500fbc0fbed143d039c7dfc0739.
+Docker temporarily consumed free disk; removed only own completed builder4d3f3df57dbe
+and runtimeceb21b907aa9. Completed pytest and pip caches in exact task-owned /dev/shm
+paths were removed; retained Codex trace/evidence and original sources.
+
+READMEs/CHANGELOG/ROADMAP/spec/wiki/zh+en site and bundled harness updated. Browser
+zh/en desktop/mobile passed with viewed screenshots and no console errors/overflow.
+Default local monospace lacked Chinese glyphs; rerun using existing private Noto
+Fontconfig fixture rendered the unchanged Chinese code example correctly. No global
+font changes. CachedCDN scripts do not establish liveCDNavailability. GHmetadata/
+managedlabels synchronized. Sourceworktree untouched; main was up to date at9aa31c1.
+Public1.4.0, allnewworkUnreleased/future1.4.x; noautobump/tag. Nextsegmentedcommits,
+mainpush/exactCI/Pages/publicbyteverification. Broadergoal remains active: crossformat
+CRUD/fidelity, native/A2T correspondence, fullCSL and real-corpus cases remain open.
+
+
+## 2026-09-19 — native workbook sheet CRUD in progress
+
+Previous goal turn is progress: native selections committed as38c4b65/docs11cd537,
+final audit correction9aa31c1058127f9bd840b4607db6522932e6f219. Revalidated clean main
+and exact CI35391575079 success; all10jobs and Pages35391573842 passed. Public1.4.0,
+no new tag, next1.4.x. Actual Codex58calls/zeroerrors and independent selection/wiki
+proof passed. Original user worktree remains untouched. The superseded CI35391254625
+was explicitly cancelled after the audit correction queued, not an unresolved failure.
+
+Next scope is real native workbook sheet structure, currently absent: read/add/
+rename/reorder/delete with stable sheetId/part keys and managed revisions. Preserve
+original packages; update explicit formula/name/chart references and index metadata,
+check deletion dependencies and 3D membership, retain untouched parts and historical
+cell/selection evidence. Use openpyxl tokenizer for lossless spans only, never resave
+the original workbook with it. Official docs confirm limited parsing, whitespace
+normalization and no full formula evaluation; experiments show spill '#' needs a
+length-preserving lexical adaptation. Dynamic strings/external references stay intact
+and Agent reviews results. Exact spec recorded before implementation.
+
+Sources: Microsoft SpreadsheetML structure/worksheet relationships and openpyxl
+formula-tokenizer documentation; installed/upstream openpyxl3.1.5 is currently a dev
+only dependency. Promote tokenizer use deliberately with fresh lock/audit/package
+checks. Need domain/contracts, infrastructure reference/structure checks, API wiring,
+meaningful regression/SDK2/actual Codex tests, docs/harness/site/MEM, segmented main
+commits/push and exact CI. Broad goal remains active; all workUnreleased/future1.4.x.
+
 ## 2026-09-19 — selection audit enforces source-read ordering
 
 Core38c4b65/docs11cd537 pushed; Pages35391253676 passed and public JS bytes match.

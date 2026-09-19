@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import Field, field_validator, model_validator
 
 from src.domain.citation_format import (  # noqa: TC001 -- Pydantic runtime schema
@@ -80,6 +82,11 @@ from src.domain.native_selection import (  # noqa: TC001 -- Pydantic schema
     NativeSelectionReference,
     NativeSelectionSelector,
 )
+from src.domain.native_workbook import (  # noqa: TC001 -- Pydantic schema
+    NativeWorksheetInsert,
+    NativeWorksheetKey,
+    NativeWorksheetRename,
+)
 
 __all__ = [
     "ASSET_ID_PATTERN",
@@ -129,6 +136,16 @@ class NativeDocumentRequest(NativeModel):
     )
     citation_metadata: CitationMetadata | None = None
     workbook: NativeWorkbookCreate | None = None
+    workbook_view: Literal["structure", "references"] = "structure"
+    worksheet_insert: NativeWorksheetInsert | None = None
+    worksheet_rename: NativeWorksheetRename | None = None
+    worksheet_keys: list[NativeWorksheetKey] = Field(
+        default_factory=list, max_length=32
+    )
+    worksheet_order: list[NativeWorksheetKey] = Field(
+        default_factory=list, max_length=256
+    )
+    allow_3d_membership_change: bool = Field(default=False, strict=True)
     docx_edit: NativeDocxEdit | None = None
     docx_create: NativeDocxCreate | None = None
     docx_page_index: int | None = Field(default=None, ge=0, lt=2000, strict=True)

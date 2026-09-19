@@ -41,6 +41,7 @@ dependencies = [
     "python-docx>=1.2.0",
     "python-pptx>=1.0.2",
     "xlsxwriter>=3.2.9",
+    "openpyxl>=3.1.5,<4",   # Lossless formula token spans; never resave source packages.
     "lxml>=6.1.0",
     "tabulate>=0.9.0",
     "pyyaml>=6.0.0",
@@ -229,5 +230,4 @@ dev = [
     "pre-commit>=4.0.0",
     "types-pyyaml>=6.0.12.20250915",
     "zizmor==1.29.0",
-    "openpyxl>=3.1.5",
 ]
