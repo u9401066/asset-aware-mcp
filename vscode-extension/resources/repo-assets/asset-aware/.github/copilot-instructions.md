@@ -18,7 +18,7 @@
 
 ### 核心功能
 
-- **原生 A2T（main 未發布／1.4.x）** — 指定工作簿範圍投影為帶型別的表格，完整讀回固定 hash 與原始格引用。`table_grid_apply_enabled` 啟用時，列欄增刪用 structural_plan 的明確 worksheet_grid 與 table/file revision 一次套回原檔；穩定 column_ids 區分改名與重建。整列欄搬移會影響投影外內容，原生 Table 邊界、計算欄與重排另有範圍；Agent 核對語意、公式及版面。完整讀回操作紀錄與不可變快照，來源綁定不自動前進。native contract.for_op 只接受原生操作；table_data/table_manage 使用其 MCP schema。公開版仍 1.4.0。
+- **原生 A2T（main 未發布／1.4.x）** — 指定工作簿範圍投影為帶型別的表格，完整讀回固定 hash 與原始格引用。`table_grid_apply_enabled` 啟用時，列欄增刪用 structural_plan 的明確 worksheet_grid 與 table/file revision 一次套回原檔；穩定 column_ids 區分改名與重建。整列欄搬移會影響投影外內容，Table 邊界可用 expand_tables 的 part／當步 expected_ref 明確擴展；native_generated 只保留本次新生成標題／公式。完整 read_workbook.tables 可查原生定義；特殊計算欄編輯與重排另有範圍；Agent 核對語意、公式及版面。完整讀回操作紀錄與不可變快照，來源綁定不自動前進。native contract.for_op 只接受原生操作；table_data/table_manage 使用其 MCP schema。公開版仍 1.4.0。
 
 - **工作表結構（main 未發布／1.4.x）** — `read_workbook` 完整分頁核對工作表／引用清單；新增、改名、重排、刪除使用 expected_revision 與目前 sheet_id／part。`workbook_grid_enabled` 啟用時，`update_worksheet_grid` 循序插刪列欄；位置從 1 起算，每步依前一步完成後的工作表定位，讀回完整操作紀錄與幾何假設。相依及 3D 範圍變動有檢查，原 parts 與歷史證據保留；Agent 核對動態引用、計算結果與畫面。舊 A2T 綁定不自動搬移；相同檔案 SHA 可再次出現，操作紀錄須依當次歷史核對。公開版仍 1.4.0。
 

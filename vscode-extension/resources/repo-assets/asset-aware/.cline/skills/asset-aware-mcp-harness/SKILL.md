@@ -47,6 +47,18 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
   not semantic support for changed data. Agent reviews meaning/results/layout.
   Public stays 1.4.0; new work is Unreleased within 1.4.x.
 
+- When table_expansion_enabled is advertised, complete read_workbook.tables exposes
+  exact part/worksheet identity, attributes, column IDs, raw-part SHA and parsed XML.
+  Each insert edit can expand_tables with part/expected_ref from that intermediate
+  grid. Use first/last data or left/right column boundaries; insert before totals.
+  Adjacent Tables are not selected implicitly. Native-generated headers/formulas
+  are recorded at their final coordinates. A2T {kind:"native_generated",value:null}
+  explicitly keeps ONLY a newly generated Table cell; missing/blank remain blank.
+  Read generated_table_cells, resolved values, full native references and frozen
+  intent. Review filter visibility, sorting, formula results and layout separately.
+  Existing headers/formulas/totals, mapped sources and identity moves retain checks.
+  Source bindings/evidence never auto-advance. Public remains 1.4.0 / Unreleased 1.4.x.
+
 - When table_grid_apply_enabled is advertised, read the COMPLETE A2T structural_plan
   after edits and inspect current native references. Pass worksheet_grid explicitly
   to apply_table_workspace with the exact table hash and bound file revision. Stable
@@ -55,8 +67,8 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
   merged anchors are discarded. Unchanged formulas follow native relocation; new/
   edited formulas use destination coordinates. Read full new workbook references,
   operation_result and frozen workspace_reference, then verify the snapshot.
-  Native Table edge expansion, specialized table edits and reordering have separate
-  limits. Agent checks table membership, semantics, recalculated results and layout.
+  Explicit Table edge expansion follows the policy above; specialized table edits
+  and reordering retain their checks. Agent checks table membership, semantics, recalculated results and layout.
   Old bindings/evidence never auto-advance. native contract.for_op accepts native
   operation names only; table_data/table_manage use their exposed MCP tool schemas.
   Public stays 1.4.0 / Unreleased within 1.4.x.

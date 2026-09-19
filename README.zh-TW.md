@@ -7,6 +7,8 @@
 
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+原生 Excel Table 可明確擴大範圍，保留欄位 ID 並同步篩選與計算欄；A2T 以 native_generated 指定沿用新生成的標題／公式，完整讀回區分輸入意圖與實際結果。詳見 [Table 擴展流程](docs/wiki/A2T-Tables.md#native-table-expansion-unreleased)。
+
 Unreleased 的原生 Excel／A2T 工作區保留資料型別與精確來源引用；在 A2T 修改後，
 可核對表格與檔案版本再套回原工作簿，並保留實際套用的不可變快照。
 `table_grid_apply_enabled` 啟用時，可用明確計畫將 A2T 列欄增刪一次套回原檔；

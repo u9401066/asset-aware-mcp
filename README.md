@@ -13,7 +13,9 @@ checked table/file revisions; each applied input remains an immutable snapshot.
 With table_grid_apply_enabled, explicit identity-checked plans also apply A2T row/
 column insertion and deletion in one native commit. Column renaming keeps identity;
 deleted/recreated rows and columns receive new identities. Whole worksheet axes
-move; native table edges and unsupported table edits require separate review. See
+move. Native Table expansion uses explicit part/range checks, keeps column IDs and
+coordinates filters and calculated columns. A2T native_generated values request
+new native headers/formulas; complete readback separates intent from resolved values. See
 [native table workspaces](docs/wiki/A2T-Tables.md#native-workbook-workspaces-unreleased).
 Public stays **1.4.0**; development continues within **1.4.x**.
 

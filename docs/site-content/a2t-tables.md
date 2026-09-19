@@ -69,8 +69,47 @@ document(op="native", native_request={
 計畫操作的是整列／整欄，投影外的內容也會移動。刪除計畫使用
 `merged_anchor="delete"`，不把已刪身分的內容挪給其他儲存格。既有列欄重排仍需
 原生移動支援；原生 Excel Table 標題、計算欄、部分陣列等保護仍有效。
-在原生 Table 範圍外插入列欄不會自動擴大它；表格成員、動態引用、公式求值及
+Table 邊界需要下節的明確 expand_tables 指定；表格成員、動態引用、公式求值及
 實際畫面仍由 Agent 核對。獨立建立工作簿可另外使用 create_workbook_from_table。
+
+## Native Table expansion (Unreleased)
+
+先確認 `table_expansion_enabled`。完整 `read_workbook` 的 `tables` 會列出
+Table 的 part、worksheet、attributes、column IDs、原始 part SHA-256 與完整
+解析 XML。Table 定義與工作表儲存格是不同 parts，兩者都必須核對。
+
+列欄插入可明確納入某個 Table。在插入步驟加入 `expand_tables`，例如原本
+Table 為 A1:F3，先新增資料列、再新增右側欄位：
+
+```json
+{
+  "edits": [
+    {"axis":"row","operation":"insert","at":4,
+     "expand_tables":[{"part":"xl/tables/table1.xml","expected_ref":"A1:F3"}]},
+    {"axis":"column","operation":"insert","at":7,
+     "expand_tables":[{"part":"xl/tables/table1.xml","expected_ref":"A1:F4"}]}
+  ]
+}
+```
+
+這是 `worksheet_grid` 的 edits 部分；仍須帶上目前 worksheet key。
+每個 expected_ref 對應該步開始時的範圍。可在首／尾資料邊界或左右欄邊界擴展；
+有總計列時在總計列之前插入。相鄰 Table 不會被連帶選入。整列欄仍會搬移。
+MCP 保留原欄位 ID，為新欄位建立新 ID 與不重複的標題，同步 Table、filter、
+sort 範圍與計算欄公式。篩選條件、排序欄身分及未修改格式保留；不代替 Excel
+重新篩選、排序或計算。
+
+A2T 若要沿用這次操作產生的標題／計算欄格，明確指定
+`{"kind":"native_generated","value":null}`。一般未給值或 blank 仍表示空白，
+不能用它們暗示保留公式。native_generated 只適用於這次新生成的格，不能用在
+一般格、既有格或直接另建工作簿。先讀回原生結果，再投影即可取得已解析值。
+操作紀錄的 `generated_table_cells` 列出最終座標，`resolve_native_generated_values`
+記錄目的範圍內的實際值；凍結 A2T 保存原始意圖，來源引用維持舊版。
+
+自訂 Table 標題、計算欄／總計公式編輯、來源欄位映射及原生重排仍有各自的
+處理範圍。Agent 核對語意、計算結果、篩選可見性、排序及實際畫面。
+設計參考 [Microsoft SpreadsheetML tables](https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/working-with-tables)
+與 [XlsxWriter tables](https://xlsxwriter.readthedocs.io/working_with_tables.html)。
 
 ## 核心模型
 

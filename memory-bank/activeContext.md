@@ -1,5 +1,10 @@
 # Active Context
 
+Core native Table expansion committed as b4e797e; the accompanying documentation,
+bilingual site and synchronized assistant assets form the next scoped commit. All
+local checks and actual Codex proof passed; push and exact CI/Pages checks follow.
+Public remains 1.4.0 / Unreleased for 1.4.x; overall goal is active.
+
 Final verification: pytest04 passed **2678 tests,33 skipped in96.90sec**;
 Docker import/doctor/list/stdio and clean wheel02 installation/runtime/stdio passed.
 GitHub metadata/managed labels and all artifact gates passed. Local proof:

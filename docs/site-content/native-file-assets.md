@@ -2,6 +2,12 @@
 
 # Native File Assets（v1.4.0）
 
+Table 邊界擴展與 A2T 生成值已加入 Unreleased：先完整讀取 `read_workbook.tables`，
+每個 insert 以 `expand_tables` 固定 part／當步 expected_ref，保留欄位身分並同步
+篩選、排序範圍與計算欄。A2T 的 `native_generated` 明確保留新生成的標題／公式；
+讀回實際值與凍結輸入，舊證據不遷移。詳見 [A2T Tables](#/a2t-tables)。
+公開版仍為 1.4.0，後續維持 1.4.x。
+
 ## Native table workspaces (Unreleased)
 
 原生工作簿可投影指定範圍到 A2T，以帶型別的值與完整原始儲存格引用協作。

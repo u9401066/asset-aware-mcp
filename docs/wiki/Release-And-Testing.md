@@ -1,5 +1,27 @@
 # Release And Testing
 
+## Native Table expansion evaluation (Unreleased)
+
+實際 Codex CLI 以 MCP SDK2 完成 **82 次成功呼叫、零錯誤**，耗時 150.48 秒。
+用 MCP PNG 讀取合成掃描 PDF 第一頁，將 10 個資料格保留為原樣字串，填入既有
+Inventory Table 範本。範本另含 CountLength 計算欄；沒有把範本生成算成 MCP 建表。
+
+Agent 完整讀取原生 Table 定義與 references，投影 A2T、改 007→008、增加資料列
+與 Review 欄。兩個 insert 步驟分別指定原生 part／當步 expected_ref，使用
+native_generated 保留 F4 計算公式與 G1 新標題。一次原生提交後為 A1:G4；
+原欄位 ID、計算欄、Table／filter 範圍、新標題 Column7、20 個來源／手動資料字串
+及型別都由獨立 openpyxl／ZIP 稽核核對。
+
+稽核同時檢查完整分頁讀取、操作紀錄、凍結輸入、仍存在的可變 A2T、歷史 007
+引用、來源 PDF／XLSX 位元組與 mtime、兩份原生版本 Wiki 及附件 hash。公式結果
+與原生 Excel 畫面未驗證。另有含總計列、排序、相鄰 Table、非 UTF-8 XML、
+首尾邊界、樞紐／映射保護、版本衝突與錯誤生成意圖的回歸測試。
+
+重現：`uv run python -m tests.codex_table_expansion.run --output /absolute/new/run-dir`。
+runner 使用隔離設定及目前 checkout，普通 pytest 不會啟動模型；完成後使用獨立
+`tests.codex_table_expansion.audit` 稽核。測試保留 default model，不自行覆寫模型。
+公開版仍為 **1.4.0**，此項累積於 **1.4.x Unreleased**。
+
 ## Structural A2T writeback evaluation (Unreleased)
 
 `tests/unit/test_native_table_grid_apply.py` 與

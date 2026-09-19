@@ -9,12 +9,21 @@
 
 ### Added
 
+- Explicit native Table edge expansion via insert edit expand_tables with exact
+  part and intermediate expected_ref. Table/filter/sort extents, stable column IDs,
+  unique generated headers and calculated formulas are coordinated. Inserting
+  before totals also includes new rows in the Table filter. read_workbook.tables
+  exposes complete table definitions and original part hashes. A2T native_generated
+  intent resolves only cells generated during that structural operation; snapshots
+  retain input intent and receipts expose resolved values. No version bump/tag.
+
 - Structural A2T application uses stable column/row identities, a complete explicit
   worksheet_grid plan and one native revision commit. Supported native formulas,
   rich text and styles survive relocation; final values and unedited representations
   are read back. Column renames keep identity; recreated rows/columns do not inherit
   deleted identities. Frozen inputs and source bindings remain historical. Native
-  table-edge expansion, specialized table editing and reordering remain separate.
+  table-edge expansion uses the explicit options above; specialized table editing
+  and reordering remain separate.
   Typed JSON column defaults are accepted. Legacy snapshot hashes remain readable;
   missing legacy creation dates no longer generate a new timestamp on every read.
   Public remains 1.4.0; these changes are Unreleased for 1.4.x.
