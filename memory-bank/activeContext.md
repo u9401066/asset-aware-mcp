@@ -1,5 +1,18 @@
 # Active Context
 
+## 2026-09-19 — selection audit enforces source-read ordering
+
+Core38c4b65/docs11cd537 pushed; Pages35391253676 passed and public JS bytes match.
+CI35391254625 has successful docs/static/npm/Linux/macOS/Python3.10 jobs while
+Windows/Python tests are still running. Final review found the independent Codex
+selection auditor initially pre-populated source availability from all complete
+reads, which could accept a source read occurring after an assertion. Track source
+availability in actual call order and require the exact original PDF revision/page0.
+Add a regression rejecting read-after-assertion and accepting read-before-assertion.
+Six evaluator tests and the saved58-call Codex audit pass. Runtime/lock/public-site
+hashes and all prior packaging/SDK2 gates remain unchanged. Push this test-only
+correction, then verify the superseding exact CI/Pages head. Public1.4.0/future1.4.x.
+
 ## 2026-09-19 — native selections verified locally; push pending
 
 Implemented immutable native-selection-ref-v1 for exact RFC6901 JSON values or

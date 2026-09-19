@@ -167,7 +167,9 @@ def audit(output):
     require(
         len(claim["sources"]) == 1
         and canonical(claim["sources"][0]) in pages
-        and claim["sources"][0]["asset_id"] == source["asset_id"],
+        and claim["sources"][0]["asset_id"] == source["asset_id"]
+        and claim["sources"][0]["revision"] == source["revision"]
+        and claim["sources"][0]["locator"]["page_index"] == 0,
         "Wrong source endpoint",
     )
     require(

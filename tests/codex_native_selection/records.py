@@ -7,10 +7,15 @@ from tests.codex_pdf.trace import require
 
 
 def selected_records(calls, parents):
-    buffers, records, available = {}, {}, set(parents)
+    buffers, records, available = {}, {}, set()
     for call in calls:
         args, result = call["arguments"]["native_request"], payload(call)
-        if args["op"] == "read_selection":
+        if args["op"] == "read_pdf_page":
+            page = result["page"]
+            key = canonical(page["evidence"])
+            if page["next_text_offset"] is None and key in parents:
+                available.add(key)
+        elif args["op"] == "read_selection":
             key = canonical(result["evidence"])
             start, end = result["excerpt_char_range"]
             if start == 0:
