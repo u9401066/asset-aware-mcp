@@ -1,5 +1,11 @@
 # Progress (Updated: 2026-09-19)
 
+Core native Table editing committed as642e3b2. Documentation/assistant parity is
+the second scoped commit before main push. Final local proof is retained at
+/tmp/asset-aware-table-edit-local-proof.json; final2716tests and Codex03/66calls
+pass. Exact CI/Pages/public-file verification remains the immediate publication
+step. Public1.4.0 unchanged; Unreleased1.4.x. Whole goal is still active.
+
 ## Native Table column editing — verified locally, publication pending
 
 Done: exact native Table column/header/calculated/totals edits, preserved rich runs

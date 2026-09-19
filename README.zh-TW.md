@@ -1,5 +1,10 @@
 # asset-aware-mcp
 
+Unreleased 新增 `update_workbook_table`：同步修改原生 Table 欄名、富文字標題、
+計算欄與既有總計列，保留欄位 ID／樣式並更新結構化引用。Agent 可完整讀回標題
+XML；計算欄的例外值需明確指定覆寫，公式結果與畫面仍由 Agent 核對。
+公開版維持 **1.4.0**，後續沿用 **1.4.x**。
+
 > 給 AI Agent 使用的 citation-ready 文件基礎設施：把 PDF、DOCX、表格、
 > 圖片與 evidence span 轉成可重用資產，並組成 Foam／LightRAG wiki。
 

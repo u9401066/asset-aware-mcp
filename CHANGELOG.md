@@ -7,6 +7,14 @@
 
 ## [Unreleased]
 
+- Native `update_workbook_table` coordinates column names/rich headers, scalar
+  calculated-column formulas and existing totals in one revision-checked commit.
+  Complete Table header cell/shared-string XML supports run-aware inspection.
+  Existing structured references follow column identity; explicit policies handle
+  exceptions and metadata removal. Preserve styles/parts, retain historical
+  evidence, check source schemas and invalidate caches for Agent recalculation
+  and visual review. Public remains 1.4.0; development stays within 1.4.x.
+
 ### Added
 
 - Explicit native Table edge expansion via insert edit expand_tables with exact

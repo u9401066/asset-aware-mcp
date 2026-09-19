@@ -1,5 +1,31 @@
 # A2T Tables
 
+## Native Table column edits (Unreleased)
+
+`workbook_table_edit_enabled` 啟用時，先完整讀取目前版本的
+`read_workbook(workbook_view="references")`，再使用 `update_workbook_table`。
+`table_update` 指定 worksheet key、Table part、expected_ref，外層指定
+asset_id／expected_revision。每個 columns 項目固定 column_id／expected_name。
+
+| 欄位 | 行為 |
+|---|---|
+| `name` | 同步改欄位名稱與標題，既有結構化引用依原欄位身分更新 |
+| `header_runs` | 富文字標題必填，段數與原 runs 相同，串接後等於新 name；保留各段格式 |
+| `calculated={formula:"=A2*2",policy:"require_matching"}` | 公式以第一筆資料列定位並逐列搬移；只接受空白或符合舊計算欄公式的格子 |
+| `calculated={formula:"=A2*2",policy:"replace_all"}` | 明確覆寫該欄的一般值／公式，保留樣式 |
+| `calculated={formula:null,policy:"keep_cells"}` | 移除自動填入公式的欄位定義，保留現有儲存格 |
+| `totals={kind:"function",value:"sum"}` | 修改既有總計列的 SUBTOTAL 函式；也可用 blank、label 或 formula |
+
+新公式使用修改後的欄名。完整 `tables[].header_cells` 提供儲存格與解析後共享
+字串 XML，供 Agent 檢查 runs；改一格不會覆寫其他格共用的文字。原 Table 範圍、
+篩選範圍、欄位 ID 與樣式保留；總計列操作不會默默占用資料列。
+
+一般儲存格的保護仍有效。已保護、合併、陣列／共享公式、音標／未知擴充文字
+需要對應操作；樞紐來源標題與映射／查詢結構須先協調欄位身分。修改會清除過期
+公式／圖表快取並請求重算；核對完整 operation_result 與新舊引用後，Agent 再核對
+語意、篩選狀態、公式結果及實際畫面。舊引用與 A2T 綁定不自動前進。
+公開版仍 **1.4.0**，此功能列於 **Unreleased／1.4.x**。
+
 ## Native workbook workspaces (Unreleased)
 
 公開版仍為 **1.4.0**，此功能累積於 **1.4.x**。先查原生 `contract` 的

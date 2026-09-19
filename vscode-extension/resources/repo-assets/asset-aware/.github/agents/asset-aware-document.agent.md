@@ -11,6 +11,18 @@ citation-ready provenance.
 
 ## Operating Rules
 
+- When workbook_table_edit_enabled is advertised, update_workbook_table pins the
+  worksheet key, active Table part/ref, file revision and column IDs/expected names.
+  Read complete references and header_cells XML first. Rich header_runs must match
+  existing runs and concatenate to name; formatting/shared strings are preserved.
+  Existing structured references follow renamed identities; new formulas use final
+  names. Calculated require_matching rejects exceptions; replace_all explicitly
+  replaces ordinary values. Null/keep_cells removes formula metadata only. Totals
+  editing needs an existing totals row. Read full operation_result and new contents;
+  Agent reviews meaning, filters, recalculated results and actual rendering. Source
+  schema dependencies retain checks; old evidence/A2T bindings never migrate.
+  Public stays 1.4.0 / Unreleased within 1.4.x.
+
 - When table_expansion_enabled is advertised, complete read_workbook.tables exposes
   exact part/worksheet identity, attributes, column IDs, raw-part SHA and parsed XML.
   Each insert edit can expand_tables with part/expected_ref from that intermediate

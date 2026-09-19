@@ -1,5 +1,10 @@
 # Native File Assets（v1.4.0）
 
+Unreleased 的 `update_workbook_table` 可同步修改欄名、富文字標題、計算欄與
+既有總計列。先讀完整 Table／header_cells 與引用，固定版本、part、範圍和欄位 ID，
+核對回傳操作紀錄及新版內容；詳見 [原生 Table 編輯](A2T-Tables)。
+Agent 核對公式結果與畫面，公開版仍為 1.4.0／後續 1.4.x。
+
 Table 邊界擴展與 A2T 生成值已加入 Unreleased：先完整讀取 `read_workbook.tables`，
 每個 insert 以 `expand_tables` 固定 part／當步 expected_ref，保留欄位身分並同步
 篩選、排序範圍與計算欄。A2T 的 `native_generated` 明確保留新生成的標題／公式；

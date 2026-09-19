@@ -2,6 +2,26 @@
 
 # Release And Testing
 
+## Native Table column editing evaluation (Unreleased)
+
+實際 Codex CLI 完成 **66 次成功 MCP 呼叫、零工具錯誤**，耗時 **132.75 秒**。
+先以真實 MCP PNG 閱讀合成掃描，再把 10 個資料格逐字轉錄為原生 Table 字串。
+Agent 讀完 Table／富文字標題／引用，以一次專用操作將 Count 改名 Quantity，
+保留兩個 runs 的粗體與斜體，更新計算欄公式及既有總計列，讀回完整操作紀錄。
+
+獨立 openpyxl／ZIP 稽核核對原始字串、型別、欄位 ID、Table／filter 範圍、
+run 格式、公式與名稱範圍、未修改 parts；另核對完整分頁、歷史 Count／007
+引用、來源 PDF／XLSX 位元組與 mtime，以及兩份版本 Wiki／附件雜湊。
+初次稽核把合法的 `schema` 呼叫誤寫成 `read_schema`；後續加入原始版本公式檢查，
+又攔下操作紀錄把中間狀態記為 before 的錯誤。修正後以最終程式重新執行，確認
+before 來自原版、after 來自新版。完整公開讀回的合併容量也在提交前檢查。
+最終程式通過 2,716 項測試、33 項選配略過，wheel／Docker 的來源程式雜湊一致。
+
+這次使用既有 Table 範本，不算 MCP 建表；Excel 畫面與公式計算結果尚未驗證。
+重現：`uv run python -m tests.codex_table_edit.run --output /absolute/new/run-dir`。
+普通 pytest 不啟動模型；runner 使用預設 Codex 模型，audit 獨立核對證據。
+公開版仍 1.4.0，功能列於 Unreleased／1.4.x。
+
 ## Native Table expansion evaluation (Unreleased)
 
 實際 Codex CLI 以 MCP SDK2 完成 **82 次成功呼叫、零錯誤**，耗時 150.48 秒。

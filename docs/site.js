@@ -465,6 +465,14 @@ After table_data/table_manage edits, read the COMPLETE workspace again. Review s
 
 Unchanged source cells follow native relocation, preserving supported formulas, rich text and styles. Edited/new formulas use destination coordinates; missing new values mean blank. Plans move WHOLE worksheet rows/columns, including content outside the projection, and discard deleted merged anchors. Reordering existing identities requires native move support. Native Table headers/calculated columns, partial arrays and unmodeled structures retain their checks; table-boundary membership requires explicit expand_tables as described below. Agent review covers membership, dynamic references, calculated results and actual rendering.
 
+### Native Table column edits (Unreleased)
+
+When workbook_table_edit_enabled is advertised, update_workbook_table pins the exact worksheet key, Table part, expected_ref and file expected_revision. Each column edit identifies column_id and expected_name. name updates the header and existing structured references by original identity. Complete read_workbook.tables[].header_cells exposes native cell and resolved shared-string XML. Rich headers require header_runs matching the original run count and concatenating to the new name; run formatting survives and shared strings are cloned.
+
+calculated uses a scalar formula beginning with =, anchored at the first data row. require_matching accepts blank cells or formulas matching the previous column formula; replace_all explicitly replaces ordinary values/formulas. Null formula with keep_cells removes automatic-fill metadata while retaining cells. totals edits an EXISTING totals row using blank, label, formula or function (sum, average, count, countNums, min, max, stdDev, var). New formulas use final names. Bounds, column IDs and styles remain intact.
+
+Read the complete new references and operation_result. Protected/merged cells, unsupported text/formula features and mapped/query source schemas retain checks; pivot header changes need coordinated field identities. Caches are invalidated and recalculation requested. Agent review covers actual results, filtering and rendered layout. Historical evidence and A2T bindings never migrate. Public stays 1.4.0 / Unreleased for 1.4.x.
+
 ### Native Table expansion (Unreleased)
 
 When table_expansion_enabled is advertised, complete read_workbook.tables exposes worksheet/part identities, attributes, column IDs, original part SHA-256 and complete parsed XML. Each insert edit can supply expand_tables=[{part:"xl/tables/table1.xml",expected_ref:"A1:F3"}]. expected_ref names the table range BEFORE that intermediate step. Extend first/last data boundaries or left/right column boundaries; insert before totals. Adjacent Tables are not selected implicitly. Whole worksheet axes still move.
@@ -516,6 +524,14 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Native Table column editing evaluation (Unreleased)
+
+Actual Codex completed 66 successful MCP calls, zero tool errors, in 132.75 seconds. It viewed the synthetic scan through an actual PNG, transcribed ten data cells as exact strings into a supplied Table, then renamed the rich Count header to Quantity, changed the calculated formula and edited existing totals in one specialized operation. Bold/italic run formats, source data, native styles, column IDs and Table/filter bounds survived. Existing formula/defined-name references followed the renamed identity.
+
+Independent openpyxl/ZIP and trace audits checked complete reads, receipts, historical Count/007 references, original PDF/XLSX bytes and mtimes, and two revision Wikis with exact attachments. The first audit incorrectly named the schema operation; a later check caught an intermediate formula recorded as before. The corrected implementation was rerun and now proves original-revision before values. Combined public readback size is checked before commit. The final source passed 2,716 tests with 33 optional skips and matches the wheel and Docker code. This uses a supplied Table and does not establish native Table creation, Excel rendering or recalculated results.
+
+Reproduce with: uv run python -m tests.codex_table_edit.run --output /absolute/new/run-dir. Ordinary pytest never launches a model. Public remains 1.4.0 / Unreleased within 1.4.x.
 
 ### Native Table expansion evaluation (Unreleased)
 

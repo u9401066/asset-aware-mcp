@@ -1,5 +1,11 @@
 # Active Context
 
+Core Table editing is committed as642e3b2 (23 counted files plus5 MEM). The second
+scoped commit contains README/changelog, bilingual site/Wiki and synchronized
+assistant assets. Final local proof: /tmp/asset-aware-table-edit-local-proof.json.
+All local gates and final Codex03 passed; exact CI/Pages checks follow push.
+Public remains1.4.0 / Unreleased1.4.x; the overall goal remains active.
+
 ## Native Table column editing — final local verification passed
 
 Final source SHA07e8fcbe8627f93cded1a89af22dbd2423b203f210ba792bd3f3dd13e360edcc

@@ -17,6 +17,9 @@ move. Native Table expansion uses explicit part/range checks, keeps column IDs a
 coordinates filters and calculated columns. A2T native_generated values request
 new native headers/formulas; complete readback separates intent from resolved values. See
 [native table workspaces](docs/wiki/A2T-Tables.md#native-workbook-workspaces-unreleased).
+`update_workbook_table` also coordinates native column names, rich headers,
+calculated formulas and existing totals. Explicit policies protect exceptions;
+agents inspect complete header XML and review formula results and layout.
 Public stays **1.4.0**; development continues within **1.4.x**.
 
 Unreleased workbook operations read complete sheet/reference inventories and add,
