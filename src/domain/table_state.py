@@ -27,10 +27,15 @@ def table_state(context: TableContext) -> dict[str, Any]:
         "source_block_id": context.source_block_id,
         "source_revision_id": context.source_revision_id,
         "source_block_hash": context.source_block_hash,
-        "created_at": str(context.created_at),
+        "created_at": str(context.created_at) if context.created_at is not None else "",
     }
+    if context.column_ids:
+        state["column_ids"] = context.column_ids
     if context.native_binding is not None:
-        state["native_binding"] = context.native_binding.model_dump(mode="json")
+        binding = context.native_binding.model_dump(mode="json")
+        if not binding["column_ids"]:
+            binding.pop("column_ids")
+        state["native_binding"] = binding
     if context.citations:
         state["citations"] = {
             key: cite.to_dict() for key, cite in context.citations.items()
@@ -47,6 +52,7 @@ def table_from_state(data: dict[str, Any]) -> TableContext:
         intent=data["intent"],
         title=data["title"],
         columns=[ColumnDef(**column) for column in data["columns"]],
+        column_ids=data.get("column_ids", []),
         rows=data["rows"],
         row_ids=data.get("row_ids", []),
         row_provenance=data.get("row_provenance", {}),

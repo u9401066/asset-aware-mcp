@@ -1,5 +1,23 @@
 # Progress (Updated: 2026-09-19)
 
+## 2026-09-19 — A2T structural bridge verified locally and by actual Codex
+
+Native-grid publication is complete at df1f26a; CI35409819540 all10 and
+Pages35409818898 all3 passed, public bytes matched. Current uncommitted work provides
+stable column identity, fresh recreated row/column IDs, legacy snapshot compatibility,
+typed native column defaults and explicit structural_plan application in one native
+CAS commit. Original rich payloads/formulas/styles, complete destination readback,
+historical snapshots/source evidence and late conflict handling have regressions.
+
+Final full suite2642passed33skipped (94.77sec), including6 new audit tests. Actual Codex audit
+passed86calls (84successful,2recovered native-contract query errors),178.67sec;
+evidence /tmp/asset-aware-codex-a2t-grid-01. Source runtime hash matches the run.
+All local publication gates passed: source checks, extension199, artifact/wheel/
+Docker/VSIX install-update, docs/browser and metadata/labels. No local activation
+because no display/Xvfb; CI will verify it. Proof /tmp/asset-aware-a2t-grid-local-proof.json.
+Segmented commits and exact CI/Pages/public checks remain. Native Table boundary expansion/specialized edits,
+reordering and the broad goal remain open. Public1.4.0; future1.4.x, no auto tag/bump.
+
 ## 2026-09-19 — native grid application and Codex workflow verified
 
 Configured update_worksheet_grid is available through MCP SDK2 with complete

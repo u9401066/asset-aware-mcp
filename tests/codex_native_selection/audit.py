@@ -94,12 +94,16 @@ def audit(output):
             and (
                 (item["tool"] == "document" and item["arguments"]["op"] == "native")
                 or (expected.get("tables") and item["tool"] == "table_data")
+                or (
+                    expected.get("table_grid")
+                    and item["tool"] in {"table_data", "table_manage"}
+                )
             ),
             "Unexpected server/tool",
         )
         if not call_failed(item):
             ordered_calls.append(item)
-            (table_calls if item["tool"] == "table_data" else calls).append(item)
+            (calls if item["tool"] == "document" else table_calls).append(item)
     ops = {c["arguments"]["native_request"]["op"] for c in calls}
     require(
         {
@@ -109,7 +113,9 @@ def audit(output):
             "read_selection",
             "record_derivation",
             "verify_derivation",
-            "apply_table_workspace" if expected.get("tables") else "update",
+            "apply_table_workspace"
+            if expected.get("tables") or expected.get("table_grid")
+            else "update",
             "verify",
             "publish",
             "export_wiki",
@@ -128,7 +134,11 @@ def audit(output):
     pages = complete_records(calls)
     records = selected_records(calls, pages)
     directory = workspace / "data" / "native-assets" / target["asset_id"]
-    if expected.get("grid"):
+    if expected.get("table_grid"):
+        from tests.codex_table_grid.audit import validate_table_grid_workflow
+
+        validate_table_grid_workflow(ordered_calls, workspace, target, directory)
+    elif expected.get("grid"):
         from tests.codex_native_grid.audit import validate_grid_history
 
         validate_grid_history(calls, target, directory)
@@ -217,6 +227,7 @@ def audit(output):
         "worksheet_structure_evaluated": bool(expected.get("worksheets")),
         "native_table_workspaces_evaluated": bool(expected.get("tables")),
         "native_grid_evaluated": bool(expected.get("grid")),
+        "structural_a2t_evaluated": bool(expected.get("table_grid")),
     }
 
 

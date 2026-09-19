@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import uuid
 from datetime import datetime
 from typing import Any, Literal
 
@@ -343,6 +344,7 @@ class TableContext(BaseModel):
     title: str
     columns: list[ColumnDef]
     rows: list[dict[str, Any]] = Field(default_factory=list)
+    column_ids: list[str] = Field(default_factory=list)
     row_ids: list[str] = Field(default_factory=list)
     row_provenance: dict[str, dict[str, Any]] = Field(default_factory=dict)
     source_description: str = ""
@@ -351,7 +353,7 @@ class TableContext(BaseModel):
     source_revision_id: str = ""
     source_block_hash: str = ""
     native_binding: NativeTableBinding | None = None
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime | None = Field(default_factory=datetime.now)
     # 平行引用層 — key: "row_index:column_name"
     citations: dict[str, CellCitation] = Field(default_factory=dict)
     # 變更歷史（惰性初始化）
@@ -359,19 +361,51 @@ class TableContext(BaseModel):
 
     @field_validator("created_at", mode="before")
     @classmethod
-    def _parse_created_at(cls, v: Any) -> datetime:
+    def _parse_created_at(cls, v: Any) -> datetime | None:
         """Handle ISO strings and empty strings from legacy JSON data."""
         if isinstance(v, datetime):
             return v
         if isinstance(v, str):
-            return datetime.fromisoformat(v) if v else datetime.now()
-        return datetime.now()
+            return datetime.fromisoformat(v) if v else None
+        return None
 
     def model_post_init(self, __context: Any) -> None:
         """Ensure change_log and stable row IDs are initialized."""
         if self.change_log is None:
             self.change_log = TableChangeLog(table_id=self.id)
         self.ensure_row_ids()
+        if "column_ids" not in self.model_fields_set:
+            self.ensure_column_ids()
+        elif self.column_ids and (
+            len(self.column_ids) != len(self.columns)
+            or len(set(self.column_ids)) != len(self.column_ids)
+            or any(not _is_safe_row_id(value) for value in self.column_ids)
+        ):
+            raise ValueError("Column identities must be unique and match the schema")
+
+    def ensure_column_ids(self) -> None:
+        """Assign IDs on new tables or explicit mutable legacy schema upgrades."""
+        if self.column_ids:
+            return
+        binding = self.native_binding
+        if binding and not binding.column_ids:
+            structural_history = self.change_log and any(
+                entry.operation in {"add_column", "remove_column", "rename_column"}
+                for entry in self.change_log.entries
+            )
+            if self.column_names != binding.columns or structural_history:
+                raise ValueError(
+                    "Legacy column origin is ambiguous; project again before schema edits"
+                )
+        self.column_ids = [
+            "col_"
+            + hashlib.sha256(
+                f"{self.id}|column|{index}|{column.name}".encode()
+            ).hexdigest()[:24]
+            for index, column in enumerate(self.columns)
+        ]
+        if binding and not binding.column_ids:
+            binding.column_ids = list(self.column_ids)
 
     @staticmethod
     def _cite_key(row_index: int, column_name: str) -> str:
@@ -415,12 +449,19 @@ class TableContext(BaseModel):
         provenance: dict[str, Any] | None = None,
     ) -> str:
         """Append a user row and return its stable row ID."""
-        self.rows.append(row)
         if row_id and not _is_safe_row_id(row_id):
             raise ValueError(
                 "row_id must use 1-128 ASCII letters, numbers, '.', '_' or '-'"
             )
-        resolved = row_id or self._generated_row_id(row, len(self.rows) - 1)
+        if (
+            row_id
+            and self.native_binding
+            and row_id in self.native_binding.row_ids
+            and row_id not in self.row_ids
+        ):
+            raise ValueError("Deleted source row identity cannot be reused")
+        self.rows.append(row)
+        resolved = row_id or "row_" + uuid.uuid4().hex
         salt = 0
         while resolved in self.row_ids:
             salt += 1
@@ -526,7 +567,9 @@ class TableContext(BaseModel):
 
     def add_column(self, col_def: ColumnDef, default_value: Any = None) -> None:
         """新增欄位（帶預設值），不影響現有資料。"""
+        self.ensure_column_ids()
         self.columns.append(col_def)
+        self.column_ids.append("col_" + uuid.uuid4().hex)
         for row in self.rows:
             row[col_def.name] = default_value
 
@@ -538,7 +581,9 @@ class TableContext(BaseModel):
         )
         if col_idx is None:
             return False
+        self.ensure_column_ids()
         self.columns.pop(col_idx)
+        self.column_ids.pop(col_idx)
         for row in self.rows:
             row.pop(column_name, None)
         # 清除相關引用
@@ -554,6 +599,7 @@ class TableContext(BaseModel):
             return False
         if old_name != new_name and any(c.name == new_name for c in self.columns):
             return False
+        self.ensure_column_ids()
         col.name = new_name
         for row in self.rows:
             if old_name in row:

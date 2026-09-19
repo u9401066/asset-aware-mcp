@@ -340,7 +340,7 @@ async def table_manage(
     column_name: str = "",
     column_type: str = "text",
     required: bool = False,
-    default_value: str | None = None,
+    default_value: Any = None,
     enum_values: list[str] | None = None,
     # rename_column
     new_name: str = "",

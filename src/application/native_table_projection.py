@@ -83,6 +83,7 @@ def projected_context(
         projection=projection,
         row_ids=list(context.row_ids),
         columns=columns,
+        column_ids=list(context.column_ids),
     )
     return context
 
@@ -100,7 +101,18 @@ def matching_grid(context: TableContext) -> bool:
     return bool(
         binding
         and context.row_ids == binding.row_ids
-        and context.column_names == binding.columns
+        and (
+            context.column_ids == binding.column_ids
+            if binding.column_ids
+            else context.column_names == binding.columns
+            and not (
+                context.change_log
+                and any(
+                    entry.operation in {"add_column", "remove_column", "rename_column"}
+                    for entry in context.change_log.entries
+                )
+            )
+        )
         and all(column.type == "native" for column in context.columns)
     )
 

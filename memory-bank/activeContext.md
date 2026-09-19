@@ -1,5 +1,51 @@
 # Active Context
 
+## 2026-09-19 — structural A2T application and actual Codex audit in development
+
+Previous goal turn was progress: four native-grid commits reached clean main/origin
+df1f26ad111b66d6cb7a601c9b82ead3acc436b7. Exact CI35409819540 (10 jobs) and
+Pages35409818898 (3 jobs) passed; four public website files matched. Proof:
+/tmp/asset-aware-grid-publication-proof.json. Original user worktree is unchanged.
+Public remains 1.4.0; all current development stays Unreleased/future 1.4.x.
+
+Current uncommitted implementation adds stable A2T column IDs, fresh IDs for new
+rows/columns, rename identity preservation and legacy snapshot representation
+compatibility. Missing legacy dates stay unknown and hash-stable. Complete workspace
+reads expose a deterministic structural_plan. apply_table_workspace optionally takes
+its explicit worksheet_grid, validates the surviving/new identity correspondence,
+applies grid and typed value edits in memory, checks complete destination values and
+unedited representations/styles, freezes input and commits once with native CAS.
+Old bindings, source bytes and evidence do not advance. table_manage accepts typed
+JSON defaults for native columns; invalid defaults fail before schema mutation.
+
+SDK2 plus rich-package tests cover formula relocation, rich text/styles, deletion/
+recreation, whole-axis deletion, late CAS conflict and tampering. Final full pytest
+2642passed33skipped in94.77sec includes the six audit regressions; log
+/tmp/asset-aware-a2t-grid-pytest-02.log. Actual
+Codex /tmp/asset-aware-codex-a2t-grid-01 passed independent audit:86 calls (84
+successful,2 recovered contract input errors),178.67sec,one actual scan PNG. Original
+15 and final20 literal cells, identities, complete before/after reads, native receipt,
+frozen input, old007 selection/derivation, source PDF bytes/mtime and two Wikis checked.
+Runtime SHA1630f0e3781d73f7f4e77a32875ffcb6c2bc33ad17718f15622cce54da243f71 matches.
+Errors were attempts to pass table_data/table_manage as native contract.for_op;
+documentation now distinguishes exposed MCP tool schemas. Source code has not changed
+since this actual run; later edits are tests/docs/harness only.
+
+Local publication gates passed: Ruff507files, mypy230sources, Bandit, lock/dependency/
+workflow audits, extension199tests, synchronized harness, VSIX install/update, artifact
+audit, fresh wheel/runtime/stdio, Docker import/stdio, zh/en desktop/mobile browser
+and metadata/labels. No local VSIX activation (no display/Xvfb). Browser found one
+unsupported cross-page anchor link; switched it to the established page link and
+verified navigation. Temporary disk pressure was resolved by removing only the
+completed task's builder image110026c3fbb5 and old smoke64d7b0f7; current smoke288e73dc
+remains available. Completed pytest and wheel temp directories were removed.
+Local evidence: /tmp/asset-aware-a2t-grid-local-proof.json.
+
+Remaining this phase: segmented commits and exact CI/Pages/public validation.
+Broader native Table membership expansion,
+headers/calculated-column edits, surviving-axis reordering and cross-format/real-corpus
+goal remain incomplete. Do not equate this bridge milestone with whole-goal completion.
+
 ## 2026-09-19 — native grid MCP workflow and actual Codex audit passed
 
 Public versions remain 1.4.0; this work accumulates Unreleased within 1.4.x.

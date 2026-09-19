@@ -73,6 +73,7 @@ class NativeTableBinding(NativeModel):
     projection: NativeTableProjection
     row_ids: list[str] = Field(min_length=1, max_length=MAX_NATIVE_CELLS)
     columns: list[str] = Field(min_length=1, max_length=16_384)
+    column_ids: list[str] = Field(default_factory=list, max_length=16_384)
 
     @model_validator(mode="after")
     def valid_mapping(self) -> NativeTableBinding:
@@ -88,6 +89,11 @@ class NativeTableBinding(NativeModel):
             raise ValueError(
                 "Native table column mapping does not match the source range"
             )
+        if self.column_ids and (
+            len(self.column_ids) != len(self.columns)
+            or len(set(self.column_ids)) != len(self.column_ids)
+        ):
+            raise ValueError("Native column identities must match the source range")
         return self
 
 

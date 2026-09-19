@@ -1,5 +1,22 @@
 # Decision Log
 
+## 2026-09-19: explicit stable identity correspondence for structural A2T writes
+
+Column names are labels, not durable identity: rename retains column_ids, while
+delete/recreate produces new IDs even for the same name. New rows likewise cannot
+regenerate a deleted row ID from equal position/content. Preserve old snapshot
+serialization on read; upgrade compatible mutable legacy schemas before edits,
+and keep missing legacy dates unknown instead of inventing read-time timestamps.
+
+Expose a complete deterministic grid proposal without applying it automatically.
+Caller passes worksheet_grid at exact table/file hashes; verify every surviving
+identity/new slot, then combine native structure and value edits before one CAS.
+Unchanged formula/rich payloads follow native relocation; edited/new values use
+destination coordinates. Verify full destination values and unchanged representations.
+Whole worksheet axes and native Table membership boundaries stay explicit. This
+implements insertion/deletion, not arbitrary move/table-edge/header/calculated edits.
+Keep old bindings/assertions historical and leave semantic/visual review to Agents.
+
 ## 2026-09-19: pin operation history as well as content revisions
 
 A reversible grid insertion/deletion can return byte-for-byte to an earlier XLSX

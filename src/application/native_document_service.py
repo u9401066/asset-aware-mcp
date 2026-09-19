@@ -85,6 +85,7 @@ class NativeDocumentService:
                 workbook_ranges,
                 table_workspaces,
                 summarize=self._summary,
+                grid=workbook_grid,
             )
             if workbook_ranges and table_workspaces
             else None

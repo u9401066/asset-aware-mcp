@@ -363,7 +363,7 @@ class TableService:
                 "row_identity": "stable",
                 "columns": t.column_names,
                 "citations": len(t.citations),
-                "created_at": str(t.created_at),
+                "created_at": str(t.created_at) if t.created_at is not None else "",
             }
             for t in self._tables.values()
         ]
@@ -438,6 +438,7 @@ class TableService:
             "title": context.title,
             "intent": context.intent,
             "columns": col_names,
+            "column_ids": context.column_ids,
             "schema_version": context.schema_version,
             "row_identity": "stable",
             "row_count": context.row_count,
@@ -445,7 +446,9 @@ class TableService:
             "source_description": context.source_description,
             "source_doc_id": context.source_doc_id,
             "source_block_id": context.source_block_id,
-            "created_at": str(context.created_at),
+            "created_at": str(context.created_at)
+            if context.created_at is not None
+            else "",
             # Compact: only show last 2 rows to save tokens
             "last_rows": [
                 {
@@ -982,6 +985,8 @@ class TableService:
             required=required,
             enum_values=enum_values,
         )
+        if col_type == "native" and default_value is not None:
+            NativeTableCellValue.model_validate(default_value)
         context.add_column(col_def, default_value)
         self._record_change(
             context,

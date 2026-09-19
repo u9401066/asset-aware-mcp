@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from src.application.native_document_contract import native_asset_summary
 from src.application.native_evidence_service import attach_native_evidence
+from src.application.native_table_grid_apply import NativeTableGridApply
 from src.application.native_table_projection import (
     canonical_table,
     matching_grid,
@@ -19,6 +20,7 @@ from src.application.native_table_projection import (
 )
 from src.domain.native_asset_models import NativeEditResult
 from src.domain.native_file_reference import NativeFileReference
+from src.domain.native_table_grid import destination_projection, grid_plan_record
 from src.domain.table_state import table_from_state, table_state
 
 if TYPE_CHECKING:
@@ -30,6 +32,7 @@ if TYPE_CHECKING:
         NativeFileAsset,
         NativeSpreadsheetAdapter,
     )
+    from src.domain.native_grid import NativeGridAdapter
     from src.domain.native_table_workspace import (
         NativeTableRangeReader,
         NativeTableWorkspaces,
@@ -47,10 +50,14 @@ class NativeTableOperations:
         ranges: NativeTableRangeReader,
         workspaces: NativeTableWorkspaces,
         summarize: Callable[[NativeFileAsset], dict[str, Any]] = native_asset_summary,
+        grid: NativeGridAdapter | None = None,
     ):
         self.repository, self.spreadsheets = repository, spreadsheets
         self.ranges, self.workspaces = ranges, workspaces
         self.summarize = summarize
+        self.grid_apply = (
+            NativeTableGridApply(grid, spreadsheets, ranges) if grid else None
+        )
 
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
         if request.op == "project_workbook_table":
@@ -105,20 +112,26 @@ class NativeTableOperations:
             for row_id, row in zip(
                 binding.row_ids, self._source_records(context), strict=True
             ):
-                for column, record in zip(binding.columns, row, strict=True):
+                for index, (column, record) in enumerate(
+                    zip(binding.columns, row, strict=True)
+                ):
                     attach_native_evidence(
                         record, binding.source.asset_id, binding.source.revision
                     )
-                    source_cells.append(
-                        {"row_id": row_id, "column_name": column, "source": record}
-                    )
-        return {
+                    cell = {"row_id": row_id, "column_name": column, "source": record}
+                    if binding.column_ids:
+                        cell["column_id"] = binding.column_ids[index]
+                    source_cells.append(cell)
+        record = {
             "schema_version": "native-table-workspace-v1",
             "table": table_state(context),
             "source_cells": source_cells,
             "source_correspondence_unchanged": matching_grid(context),
             "binding_scope": "Extraction origin only; original source references do not assert semantic support for edited values. Styles and raw source details remain in the immutable workbook.",
         }
+        if self.grid_apply and binding is not None:
+            record["structural_plan"] = grid_plan_record(context)
+        return record
 
     def _project(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.asset_id is not None and request.revision is not None
@@ -172,8 +185,21 @@ class NativeTableOperations:
             raise ValueError(
                 "Archived or stale native asset; reconcile before applying the workspace"
             )
-        edits = projection_edits(context, self._source_records(context))
-        if not edits:
+        data = self.repository.read(asset.asset_id, request.expected_revision)
+        result: NativeEditResult | None
+        if request.worksheet_grid is not None:
+            if self.grid_apply is None:
+                raise ValueError("Structural A2T application is not configured")
+            updated, result, edit_count = self.grid_apply.apply(
+                data, context, request.worksheet_grid
+            )
+        else:
+            edits = projection_edits(context, self._source_records(context))
+            edit_count = len(edits)
+            updated, result = (
+                self.spreadsheets.edit(data, edits) if edits else (data, None)
+            )
+        if result is None:
             return {
                 "success": True,
                 "changed": False,
@@ -181,9 +207,6 @@ class NativeTableOperations:
                 "table_sha256": workspace_hash(context),
                 "source_written": False,
             }
-        updated, result = self.spreadsheets.edit(
-            self.repository.read(asset.asset_id, request.expected_revision), edits
-        )
         reference = self._freeze(context)
         result.changes.append(
             {
@@ -192,7 +215,12 @@ class NativeTableOperations:
                 "table_sha256": reference.revision,
                 "workspace_reference": reference.model_dump(),
                 "source_binding": binding.model_dump(),
-                "edited_cell_count": len(edits),
+                "edited_cell_count": edit_count,
+                "destination_projection": (
+                    destination.model_dump()
+                    if (destination := destination_projection(context))
+                    else None
+                ),
             }
         )
         committed = self.repository.commit(

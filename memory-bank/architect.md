@@ -1,5 +1,17 @@
 # System Architect
 
+## 2026-09-19 structural A2T application
+
+Domain native_table_grid computes identity-based insert/delete proposals and validates
+explicit worksheet_grid correspondence. TableContext/table_state retain column IDs
+without rewriting legacy immutable snapshots. NativeTableGridApply composes grid,
+cell and range ports, checks destination values and unchanged parsed/style records,
+and returns combined receipts. NativeTableOperations retains ownership of frozen
+input storage and one native CAS. The composition root reuses its configured grid
+adapter; contract table_grid_apply_enabled exposes the capability. No file formats
+or native package parsing enter the domain layer. Native Table expansion/specialized
+editing and axis move semantics remain separate capabilities.
+
 ## 2026-09-19 native worksheet grid editing
 
 Domain NativeGridUpdate and NativeGridAdapter define sequential typed row/column

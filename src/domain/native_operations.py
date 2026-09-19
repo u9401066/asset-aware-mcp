@@ -96,7 +96,7 @@ NATIVE_OPERATIONS = {
         "table_id", "table_sha256 workspace_reference text_offset text_limit"
     ),
     "apply_table_workspace": _fields(
-        "asset_id expected_revision table_id expected_table_sha256"
+        "asset_id expected_revision table_id expected_table_sha256", "worksheet_grid"
     ),
     "create_workbook_from_table": _fields(
         "table_id expected_table_sha256 table_workbook", "workspace_reference"
