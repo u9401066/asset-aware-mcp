@@ -20,9 +20,20 @@ from PIL import Image, ImageChops
 
 from src.infrastructure.file_storage import FileStorage
 from tests.integration.test_csl_citations_stdio import complete_csl
-from tests.integration.test_native_pdf_regions_stdio import native
+from tests.integration.test_native_pdf_regions_stdio import native, unwrap
 from tests.integration.test_pdf_asset_stdio_e2e import _build_pdf, _unwrap
 from tests.unit.test_csl_processor import document
+
+
+def preview(response):
+    """Read image metadata from TextContent, independent of SDK structured wrapping."""
+    assert not response.is_error
+    metadata = unwrap(response)
+    images = [block for block in response.content if block.type == "image"]
+    assert len(images) == 1
+    png = base64.b64decode(images[0].data, validate=True)
+    assert hashlib.sha256(png).hexdigest() == metadata["image_sha256"]
+    return metadata, png
 
 
 @pytest.mark.timeout(180)
@@ -157,10 +168,8 @@ async def test_etl_capture_mixed_csl_and_historical_png_over_sdk2(tmp_path):
                 "evidence",
                 {"op": "view_etl_source", "ref": reference, "render_size": 640},
             )
-            metadata = _unwrap(response)
-            image = next(c for c in response.content if c.type == "image")
-            png = base64.b64decode(image.data, validate=True)
-            assert hashlib.sha256(png).hexdigest() == metadata["image_sha256"]
+            metadata, png = preview(response)
+            assert metadata["reference"] == reference and metadata["source_page"] == 1
             with pymupdf.open(source) as pdf:
                 page = pdf[0]
                 scale = 640 / max(page.rect.width, page.rect.height)
@@ -233,9 +242,8 @@ async def test_etl_capture_mixed_csl_and_historical_png_over_sdk2(tmp_path):
                 "evidence",
                 {"op": "view_etl_source", "ref": reference, "render_size": 640},
             )
-            png = base64.b64decode(
-                next(c for c in response.content if c.type == "image").data
-            )
+            metadata, png = preview(response)
+            assert metadata["reference"] == reference and metadata["source_page"] == 1
             assert png == images[kind]
         historical, old_sha, reused = await complete_csl(
             client,

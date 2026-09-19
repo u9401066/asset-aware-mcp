@@ -1,5 +1,24 @@
 # Active Context
 
+## CI Python3.10 image decoder correction
+
+Initial exact-head CI35439173449 at e1bd887 failed only the new ETL stdio test in
+Python3.10: structured_content held a list of content blocks, not metadata. Its
+trace fails at metadata[image_sha256]; macOS/Windows/unit/static/VSIX passed before
+final integration. Local frozen Python3.10 reproduced1failure5.89s. Test now parses
+actual TextContent with the existing native decoder, verifies one actual PNG/hash
+and full returned reference on both initial/historical views. Two regressions cover
+list wrapping/no wrapping and changed image rejection. No production source changes.
+
+Frozen Python3.10 snapshot/audit/SDK2 group44pass49.37s; Python3.13 audit/SDK2 group
+10pass40.13s. Ruff636 and diff hygiene pass. Source296dc68a…72da86 remains identical
+to actual52success/2recovered-error audit and wheel/Docker replay. Initial CI logs
+/tmp/asset-aware-etl-csl-ci-job-105886897809.log and localbefore failure are retained.
+Private env/cache:/run/user/1000/asset-aware-etl-csl-py310{,-cache}; remove after final
+CI proof. All staging restored; no new staging. Public1.4.0/Unreleased1.4.x,no tag.
+Next separate correction/docs commits, pushmain and verify new exacthead CI/Pages.
+Whole goal remains active; this is a test-adapter correction with forward progress.
+
 ## ETL snapshot docs — pre-push checkpoint
 
 Runtime/spec/tests committed as ddfafde (18 counted files plus5MEM), authored by
