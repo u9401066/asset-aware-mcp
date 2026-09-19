@@ -44,7 +44,8 @@ ALLOWED = {
 
 def trace(output, case):
     events = [
-        json.loads(line) for line in (output / "events.jsonl").read_text().splitlines()
+        json.loads(line)
+        for line in (output / "events.jsonl").read_text(encoding="utf-8").splitlines()
     ]
     calls, attempts = [], []
     for event in events:
@@ -85,7 +86,7 @@ def trace(output, case):
             calls.append(item)
     # Save the first attempt even when the later workflow is incomplete or wrong.
     (output / "transcriptions.json").write_text(
-        json.dumps(attempts, ensure_ascii=False, indent=2) + "\n"
+        json.dumps(attempts, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     require(any(e["type"] == "turn.completed" for e in events), "Incomplete model turn")
     require(
@@ -123,7 +124,9 @@ def check_wiki(workspace, target, source_sha, fields, ledger):
     )
     records = [
         json.loads(line)
-        for line in (path.parent / "records.jsonl").read_text().splitlines()
+        for line in (path.parent / "records.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
     ]
     require(
         len(records) == manifest["cell_count"] == len(fields), "Incomplete Wiki fields"
@@ -429,7 +432,7 @@ def write_audit(output):
     except Exception as exc:
         report = {"passed": False, "error": str(exc)}
     (output / "audit.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=2) + "\n"
+        json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     return report
 

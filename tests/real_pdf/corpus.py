@@ -12,7 +12,9 @@ MAX_SOURCE_BYTES = 32 * 1024 * 1024
 
 
 def cases():
-    return json.loads(Path(__file__).with_name("corpus.json").read_text())["cases"]
+    return json.loads(
+        Path(__file__).with_name("corpus.json").read_text(encoding="utf-8")
+    )["cases"]
 
 
 def check_source(path, case):

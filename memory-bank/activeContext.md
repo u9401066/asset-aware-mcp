@@ -1,5 +1,17 @@
 # Active Context
 
+## Portable corpus text — pre-push correction
+
+First push of9031f4a+6999d2d failed terminally before connection: GitHub DNS resolution.
+Resolver later returned GitHub/API addresses; retry after final validation. No remote
+CI was started by that failed push. Cross-platform review reproduced corpus loader
+UnicodeDecodeError under PYTHONUTF8=0/PYTHONCOERCECLOCALE=0/LC_ALL=C.
+Manifest/trace/report reads and writes now explicitly use UTF-8;15focused oracle
+tests pass including a real non-UTF-8 child process. No src/runtime changes, so
+actual/wheel/container source SHAfae31e15…509c4300 remains applicable. Full04 recheck
+is running; prior full03 3043/35/197.35s is retained. Public1.4.0/Unreleased1.4.x.
+
+
 ## Real PDF publication checkpoint
 
 Source/spec/tests commit 9031f4aec2115d907e632ea06ba16218f5ff1f49 preserves original NASA/NIST source bytes and

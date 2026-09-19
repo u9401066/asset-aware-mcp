@@ -16,6 +16,8 @@ reviewed expected rows. Keep complete original PDFs outside Git. Explicit downlo
 or an operator-supplied corpus directory is required; normal pytest has no network
 dependency. Reject size/hash drift before any evaluation. Never silently refresh
 the expected answer when an upstream PDF changes. Preserve original scan/OCR data.
+Corpus manifests, model traces and evaluation reports use explicit UTF-8, including
+under a non-UTF-8 process locale; local defaults must never change oracle strings.
 
 Sources:
 

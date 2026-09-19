@@ -120,10 +120,10 @@ def main():
         "model_selection": "Codex default; not pinned by runner",
     }
     (output / "expected.json").write_text(
-        json.dumps(expected, ensure_ascii=False, indent=2)
+        json.dumps(expected, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     text = prompt(workspace, case)
-    (output / "prompt.txt").write_text(text)
+    (output / "prompt.txt").write_text(text, encoding="utf-8")
     cli = command(args.codex, repo, workspace, output)
     cli[-1:-1] = [
         "-c",

@@ -3,6 +3,9 @@
 import csv
 import hashlib
 import io
+import os
+import subprocess
+import sys
 
 import pytest
 from PIL import Image
@@ -87,6 +90,25 @@ def test_changed_cached_pdf_fails_before_network_or_parse(tmp_path, monkeypatch)
     path.write_bytes(b"different length")
     with pytest.raises(ValueError, match="size"):
         check_source(path, case)
+
+
+def test_utf8_oracle_survives_a_non_utf8_default_locale():
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from tests.real_pdf.corpus import cases; assert cases()[0]['rows'][0][1] == '3.43 \\u00b1 0.13'",
+        ],
+        env={
+            **os.environ,
+            "PYTHONUTF8": "0",
+            "PYTHONCOERCECLOCALE": "0",
+            "LC_ALL": "C",
+        },
+        check=True,
+        capture_output=True,
+        timeout=20,
+    )
 
 
 def test_oversized_download_never_publishes_source(tmp_path, monkeypatch):
