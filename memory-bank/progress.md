@@ -1,5 +1,14 @@
 # Progress (Updated: 2026-09-19)
 
+## CI correction docs — ready for retry
+
+Test-only fix 1b7ded8 is paired with updated bilingual evaluation docs;
+initial failed CI and local Python3.10 reproduction remain visible. Corrected groups
+44pass49.37s (3.10) and10pass40.13s (3.13); production fingerprint unchanged. This
+commit records recovery, regenerates Pages and keeps public1.4.0/Unreleased1.4.x.
+Push correction, await exacthead CI and Pages, then refresh external publication
+proof. Whole goal remains active, no version/tag or original-checkout change.
+
 ## CI Python3.10 image decoder correction
 
 Initial exact-head CI35439173449 at e1bd887 failed only the new ETL stdio test in

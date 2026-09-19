@@ -33,6 +33,13 @@ optional skipped（289.41 秒）**，後補的 **7 項稽核回歸**另行通過
 VSIX **199 項**測試、64 檔套件檢查及安裝／更新通過，activation 留待 CI。
 中英指南與 APA 預覽在桌面及手機尺寸通過瀏覽器檢查，保留六張截圖。
 
+首次 CI 的 Python 3.10 工作揭露新整合測試誤讀 SDK 的 structured content 清單；
+本地同版本重現後，改從實際 TextContent 解析影像中繼資料，並同時檢查 PNG hash
+及來源引用。回歸涵蓋有／無清單包裝及影像遭改動；production 程式與既有
+Codex／wheel／Docker 原始碼指紋不變。修正後 Python 3.10 的快照／稽核／SDK2
+共 **44 passed（49.37 秒）**，Python 3.13 的稽核／SDK2 **10 passed（40.13 秒）**。
+首輪 CI 失敗紀錄保留。
+
 ## CSL citation document evaluation (Unreleased)
 
 2026-09-19 的真實 **Codex 預設模型**透過 MCP 完成 APA／Vancouver 引用文件與
