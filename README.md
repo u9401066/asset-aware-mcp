@@ -9,6 +9,11 @@
 
 ## v1.4.0 native presentations and discovery migration
 
+Unreleased whole-slide previews use optional LibreOffice Impress and return actual
+MCP images pinned to exact revisions and slide identities. Agents can compare
+layout, overlap and overflow; static previews are not PowerPoint fidelity verdicts.
+See [slide previews](docs/wiki/Native-File-Assets.md#pptx-whole-slide-previews-unreleased).
+
 Development on `main` adds complete, hash-pinned A2T citation readback through
 `table_cite(operation="read")`; this is not yet in a published package. See
 [canonical readback](docs/wiki/A2T-Tables.md) for paging and verification boundaries.

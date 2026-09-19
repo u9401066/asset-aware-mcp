@@ -9,6 +9,11 @@
 
 ### Added
 
+- Optional `render_pptx_slide` delivers actual whole-slide PNGs with immutable
+  revision/slide identity, hashes and LibreOffice renderer metadata. Private
+  profiles, timeout cleanup, output checks and hidden-slide page-count checks
+  protect the preview workflow; Agent visual judgments remain separate.
+
 - Native PPTX slide layout discovery, insertion, reordering and deletion preserve
   stable surviving slide identities and original parts. New slides use explicit
   destination layouts and empty inherited placeholders with optional rich textboxes.

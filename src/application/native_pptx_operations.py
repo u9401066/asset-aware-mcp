@@ -13,6 +13,7 @@ from src.domain.native_pptx import PPTX_MEDIA_TYPE, shape_representation_sha256
 if TYPE_CHECKING:
     from src.domain.native_assets import NativeAssetRepository, NativeDocumentRequest
     from src.domain.native_pptx import NativePresentationAdapter
+    from src.domain.native_rendering import NativePresentationRenderer
 
 REVIEW_REQUIRED = [
     "semantic_accuracy",
@@ -58,13 +59,16 @@ class NativePptxOperations:
         self,
         repository: NativeAssetRepository,
         presentations: NativePresentationAdapter,
+        renderer: NativePresentationRenderer | None = None,
     ):
         self.repository = repository
         self.presentations = presentations
+        self.renderer = renderer
         self.pictures = NativePptxPictureOperations(repository, presentations)
 
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
         return {
+            "render_pptx_slide": self._render,
             "read_pptx_layouts": self._read_layouts,
             "add_pptx_slides": self._update,
             "delete_pptx_slides": self._update,
@@ -90,6 +94,21 @@ class NativePptxOperations:
             raise ValueError("This format has no native PPTX reader")
         revision = request.revision or asset.revision
         return self.repository.read(asset.asset_id, revision), asset.asset_id, revision
+
+    def _render(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        if self.renderer is None:
+            raise ValueError("Native presentation renderer is not configured")
+        assert request.pptx_slide_key is not None and request.revision is not None
+        data, asset_id, revision = self._source(request)
+        return {
+            **self.renderer.render(data, request.pptx_slide_key, request.render_size),
+            "success": True,
+            "asset_id": asset_id,
+            "inspected_revision": revision,
+            "pptx_slide_key": request.pptx_slide_key.model_dump(),
+            "source_written": False,
+            "review_required": REVIEW_REQUIRED,
+        }
 
     def _create(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.presentation is not None

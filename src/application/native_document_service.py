@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from src.domain.native_docx import NativeDocxAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
+    from src.domain.native_rendering import NativePresentationRenderer
     from src.domain.native_wiki import NativeWikiPublisher
 
 
@@ -44,15 +45,19 @@ class NativeDocumentService:
         presentations: NativePresentationAdapter | None = None,
         pdfs: NativePdfAdapter | None = None,
         derivations: NativeDerivationRepository | None = None,
+        pptx_renderer: NativePresentationRenderer | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.docx = docx
         self.presentations = presentations
+        self.pptx_renderer = pptx_renderer
         self.pdfs = pdfs
         self.pdf_operations = NativePdfOperations(repository, pdfs) if pdfs else None
         self.pptx_operations = (
-            NativePptxOperations(repository, presentations) if presentations else None
+            NativePptxOperations(repository, presentations, pptx_renderer)
+            if presentations
+            else None
         )
         self.evidence = NativeEvidenceService(
             repository, spreadsheets, docx, presentations, pdfs
@@ -101,6 +106,7 @@ class NativeDocumentService:
             "delete_pdf_pages": self._pdf_operation,
             "reorder_pdf_pages": self._pdf_operation,
             "read_pptx_layouts": self._pptx_operation,
+            "render_pptx_slide": self._pptx_operation,
             "add_pptx_slides": self._pptx_operation,
             "delete_pptx_slides": self._pptx_operation,
             "reorder_pptx_slides": self._pptx_operation,
@@ -160,6 +166,8 @@ class NativeDocumentService:
             pptx_enabled=self.presentations is not None,
             pdf_enabled=self.pdfs is not None,
             derivations_enabled=self.derivations is not None,
+            pptx_rendering_configured=self.pptx_renderer is not None
+            and self.presentations is not None,
         )
 
     def _list(self, request: NativeDocumentRequest) -> dict[str, Any]:

@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Unreleased / 1.4.x: revision-pinned whole-slide previews through optional LibreOffice Impress; hidden/reordered/history SDK2 checks and actual Codex visual review with independent pixel audits. PowerPoint fidelity and dynamic playback remain separate.
+
 Asset-Aware MCP 的核心方向是把 PDF、DOCX/DFM、表格與圖片轉成可重用、
 可驗證、可攜式的 agent assets，並以穩定 locator、hash、citation 與 Foam notes
 支援 LLM wiki、知識圖譜和跨文件工作流。

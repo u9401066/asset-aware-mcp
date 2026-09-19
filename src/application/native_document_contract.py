@@ -83,6 +83,7 @@ def native_document_contract(
     pptx_enabled: bool = False,
     pdf_enabled: bool = False,
     derivations_enabled: bool = False,
+    pptx_rendering_configured: bool = False,
 ) -> dict[str, Any]:
     for_op = request.for_op if request is not None else None
     return {
@@ -95,9 +96,16 @@ def native_document_contract(
         "derivations_enabled": derivations_enabled,
         "derivation_policy": "Read complete hash-pinned ledger before record/retract; endpoint integrity and caller-supplied agent review are separate. New file revisions never inherit old assertions automatically.",
         "pptx_slide_policy": "Discover destination layouts; insert, reorder or delete slides with current revision and exact slide IDs/parts. Dependencies may block edits. Deleted parts remain retained, not securely erased; review rendering and cached properties.",
+        "pptx_rendering": {
+            "configured": pptx_rendering_configured,
+            "availability": "Checked per request; requires LibreOffice with Impress. Set LIBREOFFICE_BIN if needed.",
+            "policy": "render_pptx_slide needs revision and exact pptx_slide_key. Returns an actual PNG of the whole slide. Static LibreOffice output is not a PowerPoint fidelity verdict.",
+        },
         "pptx_grid_policy": "Sequential insert/delete/resize/merge/split with full shape references. Merge requires explicit content_policy; split retains anchor text. Read complete updated shapes and review rendering.",
         "file_reference_policy": "file_reference identifies exact immutable file bytes; verify does not assert source freshness or semantic meaning.",
-        "formats": _formats(docx_enabled, pptx_enabled, pdf_enabled),
+        "formats": _formats(
+            docx_enabled, pptx_enabled, pdf_enabled, pptx_rendering_configured
+        ),
         "verification": "MCP checks integrity; agents verify semantics, layout and calculated results.",
         "docx_policy": "Pin revision; assemble all DFM chunks with frontmatter/markers. Updates stage versions; writeback is explicit.",
         "archive_policy": "Archive retains history and the human source.",
@@ -148,7 +156,10 @@ def _edit_constraints(format_name: str) -> list[str]:
 
 
 def _formats(
-    docx_enabled: bool, pptx_enabled: bool, pdf_enabled: bool
+    docx_enabled: bool,
+    pptx_enabled: bool,
+    pdf_enabled: bool,
+    pptx_rendering_configured: bool = False,
 ) -> dict[str, list[str]]:
     return {
         "pdf": [
@@ -165,7 +176,8 @@ def _formats(
         ]
         if pdf_enabled
         else [],
-        "pptx": [
+        "pptx": (["render_pptx_slide"] if pptx_rendering_configured else [])
+        + [
             "read_pptx_layouts",
             "add_pptx_slides",
             "delete_pptx_slides",

@@ -1,5 +1,13 @@
 # System Architect
 
+## 2026-09-19 — Optional native presentation rendering port
+
+NativePresentationRenderer is separate from editing adapters. The application binds
+explicit revision/slide keys; infrastructure owns private LibreOffice profiles,
+conversion/process limits and isolated PDF rendering. Contract configuration is
+separate from runtime availability. Static output is an Agent inspection artifact,
+not a machine visual-verification verdict. Source and native revisions stay immutable.
+
 ## 2026-09-19 — native slide structure
 
 Domain slide keys and insertion models bind stable slide IDs/parts and explicit layouts.

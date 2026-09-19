@@ -44,6 +44,7 @@ from src.infrastructure.native_derivation_store import FileNativeDerivationRepos
 from src.infrastructure.native_docx_workspace import FileNativeDocxWorkspaces
 from src.infrastructure.native_pdf_process import ProcessNativePdf
 from src.infrastructure.native_pptx import NativePresentation
+from src.infrastructure.native_pptx_render import LibreOfficePresentationRenderer
 from src.infrastructure.native_spreadsheet import SpreadsheetFileAdapter
 from src.infrastructure.native_wiki_publisher import FileNativeWikiPublisher
 from src.infrastructure.ocr_processor import OCRProcessor
@@ -127,6 +128,7 @@ native_document_service = NativeDocumentService(
     FileNativeDerivationRepository(
         settings.data_dir / "native-assets", native_repository
     ),
+    pptx_renderer=LibreOfficePresentationRenderer(),
 )
 # Engine selection (config-driven via ETL_ENGINE): the base extractor is always
 # available (PyMuPDF, or the layout-aware pymupdf4llm) and doubles as the fast

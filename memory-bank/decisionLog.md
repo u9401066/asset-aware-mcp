@@ -1,5 +1,15 @@
 # Decision Log
 
+## 2026-09-19 — Whole-deck conversion for exact slide previews
+
+Use a temporary full-deck LibreOffice Impress export, including hidden slides and
+excluding notes, then validate page count and select by original ZIP identity/order.
+Single-slide repackaging could alter slide-number context and relationships. Reject
+alternative show selections and external visual resources instead of guessing.
+Rendering remains optional; private profiles/processes do not constitute an OS sandbox.
+A live Codex run observed hidden edits caused by overlap, demonstrating why native
+representation checks and actual image review both matter. Public stays 1.4.0/Unreleased.
+
 ## 2026-09-19 — destination layouts and stable slide identities
 
 Insert slides with explicitly discovered destination layouts, using ordinary empty

@@ -136,6 +136,7 @@ class NativeDocumentRequest(NativeModel):
         default_factory=list, max_length=100
     )
     pptx_slide_insert: NativePptxSlideInsert | None = None
+    pptx_slide_key: NativePptxSlideKey | None = None
     pptx_slide_keys: list[NativePptxSlideKey] = Field(
         default_factory=list, max_length=100
     )

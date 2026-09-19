@@ -9,6 +9,10 @@
 
 ## v1.4.0 原生簡報協作與規格查詢遷移
 
+Unreleased 新增整張投影片預覽：使用另行安裝的 LibreOffice Impress，回傳固定版本與
+slide ID／part 的實際 MCP 圖片，供 Agent 比較版面、重疊與文字溢出。靜態預覽不代表
+PowerPoint 保真驗證通過。詳見[投影片預覽](docs/wiki/Native-File-Assets.md#pptx-whole-slide-previews-unreleased)。
+
 `main` 開發版新增 `table_cite(operation="read")`，可分頁讀回完整引用並核對
 固定 hash；尚未包含在已發布套件。詳見 [完整引用讀回](docs/wiki/A2T-Tables.md)。
 未發布項目也包含有檢查保護的 PPTX 文字框新增／形狀刪除，以及 A2T 操作結果的

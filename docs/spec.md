@@ -33,6 +33,30 @@ it is not a promise of complete automatic correction or layout verification.
 Verification coverage and unperformed checks must remain explicit. Structural
 validity alone must never be reported as semantic correctness or full fidelity.
 
+### Native whole-slide previews (Unreleased, 1.4.x)
+
+`render_pptx_slide` requires an asset ID, explicit immutable revision and exact
+`pptx_slide_key={slide_id,part}`. A separately injected rendering port returns a
+static PNG plus source identity, image hash, renderer/version, source slide index
+and limitations. MCP never converts a preview into a visual-verification verdict.
+
+The optional LibreOffice Impress adapter exports a temporary full-deck copy with
+hidden slides included and notes pages excluded, then checks PDF page count and
+uses isolated native PDF workers to render the requested slide. Full-deck export
+preserves slide-number context. It checks both the conversion exit and actual PDF;
+an installed `soffice` without Impress is insufficient. Private profiles disable
+macros; process timeout cleanup includes descendants. This is not an OS sandbox.
+Package, slide-count (100), PDF-byte and image-size limits apply. External linked
+content, SVG media and alternative show selections require additional workflows.
+Ordinary hyperlinks remain supported. Fonts, static media, animation and viewer
+differences remain Agent review concerns. Managed/source files are never modified.
+
+The contract distinguishes adapter configuration from per-request availability;
+the default package/container does not gain a mandatory office installation.
+Regression coverage must include missing output despite exit zero, hidden slides,
+reordered raw part identity, historical revisions, subprocess timeout cleanup,
+actual SDK2 image delivery and optional real Impress conversion.
+
 ### Citation presentation contract
 
 Canonical identity, revision, locator and exact quote/hash are independent from
