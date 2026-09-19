@@ -161,7 +161,9 @@ def test_3d_membership_requires_explicit_change():
 def test_structure_guards_allow_read_but_not_mutation(guard):
     source = build_workbook()
     root = etree.fromstring(_parts(source)["xl/workbook.xml"])
-    etree.SubElement(root, f"{{{SHEET_NS}}}{guard}")
+    node = etree.SubElement(root, f"{{{SHEET_NS}}}{guard}")
+    if guard == "workbookProtection":
+        node.set("lockStructure", "1")
     source = _replace(source, {"xl/workbook.xml": xml_bytes(root)})
     assert len(ADAPTER.read(source)["worksheets"]) == 2
     with pytest.raises(ValueError, match="workflow"):

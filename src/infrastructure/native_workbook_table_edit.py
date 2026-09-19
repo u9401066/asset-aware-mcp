@@ -4,16 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from lxml import etree
-
 from src.domain.native_grid_tables import GridTableChange, GridTableColumn
 from src.infrastructure.native_grid_cells import order_cells
-from src.infrastructure.native_grid_integrity import check_relocated_cells
 from src.infrastructure.native_grid_metadata import clear_chart_caches
 from src.infrastructure.native_grid_ranges import update_dimension
 from src.infrastructure.native_grid_references import clear_formula_caches
 from src.infrastructure.native_grid_structured import rewrite_structured_formula
-from src.infrastructure.native_grid_table_state import table_states
 from src.infrastructure.native_grid_tables import GridTables
 from src.infrastructure.native_ooxml import DOC_REL_NS, relationships_path
 from src.infrastructure.native_spreadsheet_reader import NS
@@ -23,6 +19,7 @@ from src.infrastructure.native_table_columns import (
     update_calculated,
     update_totals,
 )
+from src.infrastructure.native_table_finish import finish_table
 from src.infrastructure.native_table_sources import update_sources
 from src.infrastructure.native_workbook_plan import WorkbookPlan
 
@@ -135,7 +132,10 @@ class NativeWorkbookTableEdit:
         order_cells(writer.root)
         update_dimension(writer.root)
         state.validate()
-        updated, result = plan.finish(
+        return finish_table(
+            plan,
+            state.worksheet,
+            writer,
             {
                 "operation": "update_workbook_table",
                 "request": request.model_dump(),
@@ -144,28 +144,5 @@ class NativeWorkbookTableEdit:
                 "invalidated_pivot_caches": sources,
                 "formula_caches_removed": caches,
                 "chart_caches_removed": charts,
-            }
+            },
         )
-        checked = WorkbookPlan(updated)
-        table_states(checked)
-        for part, expected in plan.roots.items():
-            if etree.tostring(checked.part(part), method="c14n") != etree.tostring(
-                expected, method="c14n"
-            ):
-                raise ValueError("Native Table package failed exact XML readback")
-        check_relocated_cells(checked.roots[state.worksheet], writer.expected)
-        for part, payload in plan.book.package.parts.items():
-            if (
-                part not in result.changed_parts
-                and checked.book.package.parts.get(part) != payload
-            ):
-                raise ValueError("Native Table edit changed an untouched package part")
-        result.checks.extend(
-            [
-                "exact_table_and_column_preconditions_checked",
-                "table_cells_and_run_formats_read_back",
-                "complete_table_package_xml_read_back",
-            ]
-        )
-        result.repairs.append("table_reference_and_calculation_caches_updated")
-        return updated, result

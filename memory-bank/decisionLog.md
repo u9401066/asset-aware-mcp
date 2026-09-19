@@ -1,5 +1,9 @@
 # Decision Log
 
+## 2026-09-19 — Native Table creation preserves explicit row intent
+
+Use a separate domain creation port and typed request; reuse column writers/source guards and exact Table readback. Range includes headers/data/optional totals, with blank totals prerequisite; never silently insert rows or coerce headers. New Tables reserve names/IDs/parts even when old Table parts are detached. Empty openpyxl workbookProtection is inactive; preserve false flags and retain actual/unknown lock guards. New work remains Unreleased1.4.x.
+
 ## 2026-09-19 — Native Table metadata and cells share one explicit operation
 
 Generic cell edits retain their Table guards. A separate typed update selects

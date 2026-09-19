@@ -40,6 +40,7 @@ if TYPE_CHECKING:
         NativePresentationRenderer,
         NativeWordRenderer,
     )
+    from src.domain.native_table_create import NativeTableCreateAdapter
     from src.domain.native_table_edit import NativeTableEditAdapter
     from src.domain.native_table_workspace import (
         NativeTableRangeReader,
@@ -67,6 +68,7 @@ class NativeDocumentService:
         table_workspaces: NativeTableWorkspaces | None = None,
         workbook_grid: NativeGridAdapter | None = None,
         workbook_tables: NativeTableEditAdapter | None = None,
+        workbook_table_creation: NativeTableCreateAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
@@ -76,12 +78,18 @@ class NativeDocumentService:
         if workbook_tables is not None and workbook_structure is None:
             raise ValueError("Native Table editing requires workbook read-back support")
         self.workbook_tables = workbook_tables
+        if workbook_table_creation is not None and workbook_structure is None:
+            raise ValueError(
+                "Native Table creation requires workbook read-back support"
+            )
+        self.workbook_table_creation = workbook_table_creation
         self.workbook_operations = (
             NativeWorkbookOperations(
                 repository,
                 workbook_structure,
                 workbook_grid,
                 tables=workbook_tables,
+                table_creation=workbook_table_creation,
                 summarize=self._summary,
             )
             if workbook_structure
@@ -145,6 +153,7 @@ class NativeDocumentService:
             workbook_structure_enabled=self.workbook_operations is not None,
             workbook_grid_enabled=self.workbook_grid is not None,
             workbook_table_edit_enabled=self.workbook_tables is not None,
+            workbook_table_creation_enabled=self.workbook_table_creation is not None,
             table_workspaces_enabled=self.table_operations is not None,
         )
 
@@ -164,6 +173,7 @@ class NativeDocumentService:
             "read_workbook": self._workbook_operation,
             "update_worksheet_grid": self._workbook_operation,
             "update_workbook_table": self._workbook_operation,
+            "add_workbook_table": self._workbook_operation,
             "add_worksheets": self._workbook_operation,
             "rename_worksheet": self._workbook_operation,
             "reorder_worksheets": self._workbook_operation,
@@ -244,6 +254,7 @@ class NativeDocumentService:
             workbook_structure_enabled=self.workbook_operations is not None,
             workbook_grid_enabled=self.workbook_grid is not None,
             workbook_table_edit_enabled=self.workbook_tables is not None,
+            workbook_table_creation_enabled=self.workbook_table_creation is not None,
             table_workspaces_enabled=self.table_operations is not None,
             derivations_enabled=self.derivations is not None,
             docx_structure_enabled=self.docx is not None

@@ -123,7 +123,13 @@ class NativeWorkbookPackage(NativeSpreadsheetReader):
                 )
 
     def check_editable(self) -> None:
-        if self.workbook.find("s:workbookProtection", NS) is not None:
+        protection = self.workbook.findall("s:workbookProtection", NS)
+        if len(protection) > 1 or any(
+            len(node)
+            or set(node.attrib) - {"lockStructure", "lockWindows", "lockRevision"}
+            or any(value not in {"0", "false"} for value in node.attrib.values())
+            for node in protection
+        ):
             raise ValueError(
                 "Protected workbook structure requires an explicit unlock workflow"
             )

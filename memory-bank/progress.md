@@ -1,5 +1,44 @@
 # Progress (Updated: 2026-09-19)
 
+## Native Table creation — verified locally, publication pending
+
+Implemented add_workbook_table over exact worksheet/range/revision: ordered columns,
+matching rich/shared headers or explicit blank fill, calculated policies, blank
+reserved totals rows, native styles, unique package identities including detached
+Tables, protected/overlapping geometry/source checks and one CAS. Shared full Table
+XML/cell/package readback plus combined16MiB public receipt checks run before commit.
+A reproduced openpyxl empty workbookProtection failure is fixed; empty/false flags
+are preserved while active/password/unknown guards stay enforced.
+
+Final fullpytest:2764passed33skipped100.36s; creation45, SDK/schema143, docs25.
+Actual Codex:73successful calls/zeroerrors109.47s from image-only PDF through new
+XLSX and native Table; independent openpyxl/ZIP/trace/history/2Wiki audit passes.
+No supplied native template; no Excel rendering or formula-evaluation claim.
+Evidence:/dev/shm/asset-aware-codex-table-create-01;
+/tmp/asset-aware-table-create-local-proof.json. Source SHA dafa47275927b0d647c8019b365db1eb6e0837b793a6edde6f1202281db41c6d
+matches actual Codex, wheel and Docker b26cdeafc779. Ruff544/mypy242/Bandit,
+lock/security214zero/npmzero/zizmorhigh, extension199/package/install-update,
+artifact audit/wheel/Docker SDK2 and zh/en desktop/mobile browser passed. Local
+VSIX activation unavailable without display; CI platforms must verify after push.
+GitHub metadata/labels synchronized. Temporary disk staging restored all11 owned
+completed synthetic runs with exact hashes/mtimes; unrelated artifacts untouched.
+
+Next: segmented main commits/push, exact CI/Pages/public-byte checks. Public1.4.0 /
+Unreleased1.4.x; no newtag. Broader goal stays active: existing Table totals lifecycle,
+identity moves, cross-format real-corpus fidelity and evidence workflows.
+
+## Native Table creation — in progress
+
+Previous goal turn made progress: exact main6068125 CI35416560142 attempt2 all10
+jobs passed after the pinned CJK download timeout; Pages35416559607 all3 passed;
+all5 public site files matched. Proof: /tmp/asset-aware-table-edit-publication-proof.json.
+
+Current work adds add_workbook_table over explicit current worksheet ranges,
+with native header/data/formula/totals/style preservation and one revision commit.
+Specification: docs/specs/native-table-creation.md. SDK2, actual Codex scan-to-table,
+independent package/evidence audit and full release gates remain required.
+Public1.4.0 / Unreleased1.4.x; original user worktree stays untouched. Broad goal active.
+
 Core native Table editing committed as642e3b2. Documentation/assistant parity is
 the second scoped commit before main push. Final local proof is retained at
 /tmp/asset-aware-table-edit-local-proof.json; final2716tests and Codex03/66calls

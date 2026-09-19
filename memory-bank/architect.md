@@ -1,5 +1,9 @@
 # System Architect
 
+## 2026-09-19 — Native Table creation adapter
+
+NativeTableCreate/NativeTableCreateAdapter remain domain-only. NativeWorkbookOperations coordinates bounded review and one CAS; NativeWorkbookTableCreate delegates geometry/name/style checks, package registration, existing Table cell writers and common native_table_finish verification. Composition root injects creation separately from existing Table editing; contract advertises only configured capability.
+
 ## 2026-09-19 — Native Table specialized edit port
 
 NativeTableUpdate/NativeTableEditAdapter live in domain. NativeWorkbookOperations

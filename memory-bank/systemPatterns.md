@@ -1,5 +1,9 @@
 # System Patterns
 
+## 2026-09-19 — Create native structures without flattening data
+
+Table creation annotates an explicit range with new OOXML Table/relationship/type records. Existing cell payloads and styles survive; blank header fill/calculated replacement/totals are explicit. Read complete revision-pinned operation receipts and exact header XML; native/A2T historical evidence never auto-migrates. Agent reviews actual rendering and formula results.
+
 ## Native Table plans retain both original and intermediate cell state (2026-09-19)
 
 Dedicated Table edits share generic geometry/protection guards, then coordinate

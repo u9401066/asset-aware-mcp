@@ -19,6 +19,7 @@ if TYPE_CHECKING:
         NativeFileAsset,
     )
     from src.domain.native_grid import NativeGridAdapter
+    from src.domain.native_table_create import NativeTableCreateAdapter
     from src.domain.native_table_edit import NativeTableEditAdapter
     from src.domain.native_workbook import NativeWorkbookStructureAdapter
 
@@ -31,18 +32,21 @@ class NativeWorkbookOperations:
         grid: NativeGridAdapter | None = None,
         *,
         tables: NativeTableEditAdapter | None = None,
+        table_creation: NativeTableCreateAdapter | None = None,
         summarize: Callable[[NativeFileAsset], dict[str, Any]] | None = None,
     ):
         self.repository = repository
         self.adapter = adapter
         self.grid = grid
         self.tables = tables
+        self.table_creation = table_creation
         self.summarize = summarize or (
             lambda asset: native_asset_summary(
                 asset,
                 workbook_structure_enabled=True,
                 workbook_grid_enabled=grid is not None,
                 workbook_table_edit_enabled=tables is not None,
+                workbook_table_creation_enabled=table_creation is not None,
             )
         )
 
@@ -72,11 +76,17 @@ class NativeWorkbookOperations:
         if asset.archived or asset.revision != request.expected_revision:
             raise ValueError("Archived or stale native asset; inspect before editing")
         data = self.repository.read(asset.asset_id, request.expected_revision)
-        if request.op == "update_workbook_table":
-            if self.tables is None:
-                raise ValueError("Native Table editing adapter is not configured")
-            assert request.table_update is not None
-            updated, checks = self.tables.update(data, request.table_update)
+        if request.op in {"update_workbook_table", "add_workbook_table"}:
+            if request.op == "add_workbook_table":
+                if self.table_creation is None:
+                    raise ValueError("Native Table creation adapter is not configured")
+                assert request.table_create is not None
+                updated, checks = self.table_creation.create(data, request.table_create)
+            else:
+                if self.tables is None:
+                    raise ValueError("Native Table editing adapter is not configured")
+                assert request.table_update is not None
+                updated, checks = self.tables.update(data, request.table_update)
             # Separate cell/reference budgets do not bound the combined public
             # representation. Reject before CAS if complete review is impossible.
             _record_text(

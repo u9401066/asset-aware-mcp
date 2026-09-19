@@ -1,5 +1,8 @@
 # Asset-Aware MCP: Agent Document Collaboration Specification
 
+Native Table creation: see [the Unreleased operation contract](specs/native-table-creation.md).
+Public remains 1.4.0, with development on 1.4.x.
+
 ## Agent document collaboration contract (2026-09-18)
 
 The goal is native cross-format document CRUD: create, read, decompose, update,
