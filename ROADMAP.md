@@ -1,11 +1,16 @@
 # Roadmap
 
+- [x] Unreleased / 1.4.x: native footnote/endnote content and definition CRUD, exact
+  body anchors, preserved native IDs/formatting, complete paged receipts and immutable
+  evidence/Wiki. Agent reviews actual numbering, placement and meaning; special
+  layout definitions, arbitrary revision/range dependencies and Word parity remain open.
+
 - [x] Unreleased / 1.4.x: complete existing Word header/footer stories, actual
   section inheritance/shared scope, native text and paragraph/table content CRUD,
   immutable references/selections/citations and distinct portable Wiki snapshots.
   Whole-definition create/clone/bind/unlink/delete and first/even options now have
   checked native operations and complete receipts. Remaining identity-aware clone
-  dependencies and footnote/endnote editing stay open; Agent reviews actual pages.
+  dependencies stay open; notes use separate native operations and Agent page review.
 
 - [x] Unreleased / 1.4.x: direct Word table pagination controls, contiguous repeated
   headers, explicit row height/split policies and source-preserving page review.

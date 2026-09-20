@@ -1,5 +1,50 @@
 # Release And Testing
 
+## Native Word footnote/endnote evaluation (Unreleased)
+
+實際 Codex 預設模型處理一份 **三頁**合成 Word 文件，先完整讀取七個一般／特殊註解
+定義、正文參照與 contract，再查看全部初始頁面。Agent 新增原生 ID 11 的註腳與
+ID 12 的尾註、刪除 ID 8 的註腳，接著修正 ID 2 的文字，保留其他段落與格式。
+最終程式實測 **153 次成功 MCP 呼叫、1 次自行恢復的參數錯誤、204.28 秒**，未覆寫模型。
+錯誤是在 `contract` 帶入不適用的 `text_limit`；Agent 移除後完成操作，原始錯誤保留。
+
+獨立稽核通過 **16 份完整註解記錄、3 份清單、12 份 contract、3 個管理版本、
+2 份歷史 Wiki 及全部 6 張實際 PNG**。第一頁新增註腳顯示為 1，修正後的原註腳為 2；
+第三頁新增尾註顯示為 i，原尾註為 ii。原生 ID 11／12 與畫面編號明確區分。
+第二頁舊註脚消失，兩個尾註標記相鄰；正文粗體、`007 µg`、`-0.50 mg/L` 與保留段落均核對。
+來源 bytes／mtime、完整 XML、其他 parts、全部操作紀錄及已刪註解的歷史引用／選取均通過。
+
+首次 SDK2 畫面測試揭露實際內容錯配：新正文註號插在前面，但新定義附在後面時，
+本機 Writer 會依錯誤順序顯示註解。保留失敗檔案，分別試驗定義順序與 ID 後，
+修正為將新定義放在下一個既有參照所屬定義之前；既有 ID 與相對次序不改，新增回歸測試。
+MCP 仍不宣稱能自行判斷語意或證明所有閱讀器顯示一致。
+
+較早的實際 Codex 執行也通過（**149 次成功、1 次恢復錯誤、223.72 秒**）。之後發現
+只啟用註解轉接器時會與完整頁首頁尾投影共用快照身分，新增獨立
+`docx-notes-content-v1` 並保留完整投影既有 bytes 相容性；因程式有修改而重跑最終實測，
+沒有為清除工具錯誤而重跑。兩輪完整紀錄均保留。
+
+```bash
+uv run pytest tests/unit/test_native_docx_notes.py tests/unit/test_native_docx_note_guards.py tests/unit/test_native_docx_note_service.py tests/unit/test_codex_docx_notes_audit.py tests/integration/test_native_docx_notes_stdio.py
+uv run python -m tests.codex_docx_notes.run --output /absolute/new-word-notes-run --font-fixture /absolute/pinned-font-fixture
+uv run python -m tests.codex_docx_notes.audit /absolute/new-word-notes-run
+python /path/to/scripts/smoke_docx_note_runtime.py /absolute/new-word-notes-run/workspace
+```
+
+最終程式完整測試 **3,384 通過、33 個選配項目跳過（396.74 秒）**，包含 Writer／中英文字形
+與 NIST／NASA PDF。Python 3.10 **60 通過、1 個選配渲染跳過（23.43 秒）**；
+首次私有測試環境漏裝鎖定的 backports-asyncio-runner，補齊後通過，原始錯誤紀錄保留。
+乾淨 wheel 在 checkout 外重現 16 份完整註解、3 份清單與兩份 byte-identical Wiki，
+程式雜湊與最終 Codex 相同。VSIX **199 項**測試、64 檔套件檢查及安裝／更新通過；
+本地 GUI activation 交由 CI 補驗。Impress／Calc 未安裝，其選配測試跳過。
+標準 pip wheel 安裝與 MCP stdio 通過；Docker 的已安裝程式也重現相同 16 份註解、
+3 份清單與兩份 byte-identical Wiki，程式雜湊一致。網站八個桌面／手機、中英文狀態
+通過互動與溢出檢查，無 console 錯誤；本機使用快取 CDN 腳本，不代表即時 CDN 可用性。
+
+一般 pytest 不啟動模型。此案例使用選配 Writer、固定私有字體；未驗證 Microsoft Word、
+任意真實文件、所有自訂註號／特殊設定／修訂相依。MCP 提供必要版本、來源與結構檢查，
+Agent 完整核對語意、視覺與修正。公開 **1.4.0**，下次整合 **1.4.1**。
+
 ## Native Word story lifecycle evaluation (Unreleased)
 
 實際 Codex 預設模型處理一份 **四頁、三節**的合成 Word 文件，完整讀取來源頁首頁尾、

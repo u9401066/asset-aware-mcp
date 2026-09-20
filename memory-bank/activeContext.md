@@ -1,5 +1,20 @@
 # Active Context
 
+## Native Word notes documentation — ready for publication
+
+Runtime c074858 and actual-agent audit37a513d are committed under u9401066.
+This20-file documentation/harness segment updates bilingual README, CHANGELOG,
+ROADMAP, native operation/evaluation guides, generated website and five original/
+bundled assistant asset pairs. Final generated-docs25pass/0.15s, harness audit,
+asset sync and diff checks pass. Browser8desktop/mobile zh/en states passed with
+actual desktopzh/mobileen inspected; owned server8885 stopped. Docker/wheel replay
+same16notes/3catalogs/2Wikis at final sourcee5294369; all11staged runs restored,
+owned Docker image/builder removed. Public1.4.0,next consolidated1.4.1, no tag/bump.
+Pushmain next, then exact-head all CI/Pages jobs and six live-file byte comparisons.
+Publication proof will be /tmp/asset-aware-docx-notes-publication-proof.json.
+Privatepy310 environment stays until CI completes. Original failures are retained.
+Broader all-format goal active; original dirty detached checkout untouched.
+
 ## Native Word notes — actual Codex audit and installed replay
 
 Runtime/spec/tests committed as c074858 under u9401066,27counted files plus2MEM.

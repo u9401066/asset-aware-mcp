@@ -2,6 +2,49 @@
 
 # Native File Assets（v1.4.0）
 
+## Native Word footnotes and endnotes (Unreleased)
+
+註腳／尾註是獨立的原生內容，正文中的註號則是另一個參照。探索 `docx_notes_enabled`；
+`read_docx` 會附 `notes_request`。以 `asset_id`／`revision` 完整讀取 `read_docx_notes`，
+在回應的 `note` 中組合所有 `text_excerpt` 並核對 `text_sha256`，取得 `catalog`、
+`catalog_sha256` 及完整 `operation_result`。清單保留實際 parts、一般／特殊定義、
+所有原生參照及完整正文 XML。角色依 `w:type` 判斷，不以 -1、0 等慣用 ID 猜測。
+
+| 操作 | 輸入與用途 |
+| --- | --- |
+| `read_docx_note` | 另給 `docx_note_locator`：`part`、`note_kind`、`note_id`；完整讀回 XML、文字節點、參照與 `native-docx-note-ref-v1`。 |
+| `update_docx_note` | 固定 `expected_revision`、完整 `docx_note_reference`；`docx_note_update` 包含 locator、`shared_scope: all_native_references` 及循序 `set_text`／`insert_blocks`／`delete_blocks`。 |
+| `update_docx_notes` | 固定 `expected_revision`；`docx_notes_update` 包含 `expected_catalog_sha256`、`scope: definitions_and_native_body_references` 及 1–32 個循序建立／刪除操作。 |
+
+建立指定 `note_kind: footnote/endnote`、part、typed 段落／表格 `blocks`，可明確指定正整數
+`note_id`，或省略以配置未使用 ID。既有註解必須沿用正文實際連結的 part；首次建立可使用
+`word/` 下未使用的 ASCII XML 路徑，會加入必要關聯、content type 與分隔定義。
+`anchor` 使用完整正文 XML 的 `text_path`、該 `w:t` 內從 0 起算的 Unicode
+`character_offset`，及讀回的 `text_nodes[].text_sha256` 作為 `expected_text_sha256`。
+插入註號時分開原 run，保留原文字、直接格式與其他 run 子元素。
+
+新定義放在下一個既有正文參照所屬定義之前，保留所有既有 ID 與相對次序；本機 Writer
+測試曾重現只在末尾附加定義會造成註號對錯內容，因此必須同時核對定義與實際頁面。
+原生 ID 不等於畫面編號，也不代表頁碼；編號方式及位置仍沿用文件設定。
+
+刪除需要完整 `locator`、`expected_note_sha256` 及明確 `literal_body_text: preserve`。
+只刪除一般定義與可編輯的正文原生參照；其他位置仍引用、範圍／修訂／鎖定控制項等
+相依會阻止操作。正文普通文字保持原樣，因此自訂的字面註號可能留下，須由 Agent
+核對後明確修正。分隔符等特殊定義可讀取引用，不能透過一般內容 CRUD 改寫。
+註解容器、關聯及未使用媒體保留，並非安全抹除。
+
+所有修改先檢查版本、完整可讀回紀錄、原生 XML 及未改 parts，再提交管理版本。
+Agent 須完整讀取 `review_request`、受影響註解與全部實際頁面，核對語意、編號、位置、
+欄位及自訂標記。舊引用可驗證、精確選取、參與轉製及 CSL／自訂引用。
+`docx-notes-v1` Wiki 包含 `notes.jsonl`、`note-catalog.json`、頁首頁尾紀錄、原始檔與
+所有 parts；沒有註解的文件維持原 Wiki 投影，舊快照不覆蓋。
+若只設定註解轉接器、未設定完整頁首頁尾轉接器，則使用獨立的
+`docx-notes-content-v1` 投影，避免不同內容共用同一個快照身分。
+
+身分與參照模型參考 [Open XML FootnoteReference](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.footnotereference?view=openxml-3.0.1)
+及 [eigenpal/docx-editor 的 note nodes](https://github.com/eigenpal/docx-editor/blob/main/packages/core/src/store/package/note-nodes.ts)；
+未新增該專案依賴或複製其程式碼。公開版 **1.4.0**，下次整合 **1.4.1**。
+
 ## Native Word story lifecycle (Unreleased)
 
 要讓某節有獨立頁首，必須同時處理定義與繼承關係。查詢 `docx_story_structure_enabled`，
@@ -35,7 +78,7 @@
 被引用的媒體仍保留，不是安全抹除。完整修改紀錄須能分頁讀回，才會原子提交新版本；
 未修改 XML／parts、來源 bytes／mtime 與歷史引用保持不變，無變更不新增歷史。
 刪除前的定義仍可引用、選取或從舊 Wiki 核對。Agent 必須完整讀回並查看全部受影響頁面。
-註腳／尾註 CRUD 與 Microsoft Word 顯示一致性仍需擴充。公開 **1.4.0**，下次統整 **1.4.1**。
+註腳／尾註使用上方獨立操作；Microsoft Word 顯示一致性仍需擴充。公開 **1.4.0**，下次統整 **1.4.1**。
 
 ## Native Word header/footer stories (Unreleased)
 
@@ -69,7 +112,7 @@
 
 含完整頁首頁尾的 Wiki 使用獨立 `docx-stories-v1` 投影，帶走 `stories.jsonl`、
 `story-catalog.json`、原始 DOCX 與每個 part；舊 Wiki 不被覆蓋。
-整份定義與節連結可使用上方的生命週期操作；註腳／尾註編輯及其他複雜身分依賴仍需擴充。
+整份定義與節連結可使用上方的生命週期操作；註腳／尾註另有獨立操作，複雜身分依賴仍需擴充。
 公開版 **1.4.0**，下次整合發布 **1.4.1**。
 
 ## Native Word table pagination (Unreleased)

@@ -1,5 +1,10 @@
 # asset-aware-mcp
 
+Unreleased 已可完整讀取、建立、修改與刪除 Word 註腳／尾註，保留原生 ID、
+正文格式與歷史引用，並匯出可引用的 Wiki；Agent 負責核對實際編號、位置與語意。
+詳見 [Word 註腳與尾註](docs/wiki/Native-File-Assets.md#native-word-footnotes-and-endnotes-unreleased)。
+公開版 **1.4.0**，下次整合 **1.4.1**，不逐功能升版。
+
 Unreleased 已可建立、複製、綁定／解除共用及刪除整份 Word 頁首頁尾定義，
 並保留既有文字與段落／表格編修。明確的繼承範圍與完整操作紀錄，讓 Agent
 獨立修改某節並保留後續節，再核對所有實際頁面；刪除的定義仍可由歷史來源與 Wiki 驗證。

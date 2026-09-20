@@ -7,6 +7,16 @@
 
 ## [Unreleased]
 
+- Added complete native footnote/endnote reads, reference-bound content edits and
+  catalog-bound creation/deletion with exact Unicode body anchors. Preserve native
+  IDs, rich runs, special roles, historical references and complete operation receipts.
+  Note evidence supports selections, derivations, CSL/custom citations and a distinct
+  portable Wiki; documents without notes retain legacy snapshot identity.
+- Fixed new note definition placement after actual Writer tests exposed incorrect
+  displayed content associations when newly inserted notes were appended at the end.
+  Existing IDs and definition order remain intact; Agent reviews actual numbering,
+  placement, fields and meaning. Public1.4.0; next consolidated1.4.1.
+
 - Added Word header/footer definition creation, native cloning, explicit section
   binding/inheritance, checked deletion and first/even-page options. Clones retain
   relationship targets and remap supported unique identities; full paged receipts,
@@ -23,7 +33,7 @@
   integrate verification, selections, derivations and citations; a distinct Wiki
   projection retains full records and original parts without changing legacy
   snapshots. Agents review all affected pages and field results. Footnote/endnote
-  editing remains future work. Public 1.4.0 / 1.4.x.
+  operations are described separately above. Public 1.4.0 / 1.4.x.
 
 - Added native Word table pagination controls: contiguous repeated header prefixes,
   explicit automatic/minimum/exact/inherited row heights and allow/prevent/inherit

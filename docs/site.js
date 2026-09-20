@@ -227,6 +227,22 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
   "native-file-assets": `## Native documents and versioned files — v1.4.0
 
+### Native Word footnotes and endnotes (Unreleased)
+
+Discover docx_notes_enabled; read_docx supplies notes_request. read_docx_notes pins asset_id/revision and pages a complete catalog, independent catalog_sha256 and latest operation_result through note. Assemble every text_excerpt at one text_sha256. Roles follow actual w:type, not conventional IDs. Native IDs are distinct from displayed numbering and page locations.
+
+read_docx_note adds docx_note_locator with part/note_kind/note_id and returns full XML, literal text nodes with their SHA256, body references and native-docx-note-ref-v1. update_docx_note requires expected_revision, the full docx_note_reference and docx_note_update with locator, shared_scope:all_native_references and sequential set_text/insert_blocks/delete_blocks edits. Native reference marks remain intact; special separator definitions are readable evidence but not ordinary editable note content.
+
+update_docx_notes pins expected_revision and docx_notes_update.expected_catalog_sha256, with explicit definitions_and_native_body_references scope and 1..32 sequential create/delete edits. Creation supplies footnote/endnote kind, part and typed blocks, optionally a free positive native ID. Existing notes use the linked main-document part. First creation supplies a new bounded ASCII XML path under word/ and creates the relationship, content type and special separator definitions. The anchor takes full main-XML text_path, Unicode character_offset within one w:t, and that text node's returned text_sha256 as expected_text_sha256.
+
+Insertion splits a native run while retaining literal text, direct formatting and other children. The new definition precedes the next existing body reference's definition; all preexisting IDs and sibling order stay intact. Appending a definition at the end reproduced a real Writer note/content mismatch in our fixture, so actual numbering and bindings are reviewed as well as native XML.
+
+Deletion requires locator, expected_note_sha256 and literal_body_text:preserve. It removes normal definitions and editable main-body native references; retained references elsewhere and unsupported ranges/controls/revisions block the operation. Ordinary body text and custom literal marks remain for explicit Agent correction. Containers, relationships and orphan media stay; this is not secure erasure.
+
+Read complete review_request receipts, every affected note and all actual page PNGs. MCP checks source/version/structure and deliverable receipts; Agent reviews semantics, placement, displayed numbering, fields and custom marks. Historical references remain verifiable and work with selections, derivations, CSL and custom citation templates. The distinct docx-notes-v1 Wiki contains complete notes.jsonl/note-catalog.json, stories, original DOCX and package parts; documents without notes retain legacy snapshots unchanged. A note adapter without the optional header/footer story adapter uses the distinct docx-notes-content-v1 projection, preventing different content from sharing one snapshot identity.
+
+The identity/reference model draws on the official [Open XML FootnoteReference](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.footnotereference?view=openxml-3.0.1) documentation and [eigenpal/docx-editor note nodes](https://github.com/eigenpal/docx-editor/blob/main/packages/core/src/store/package/note-nodes.ts), without importing code or a new dependency. Public1.4.0; next consolidated1.4.1.
+
 ### Native Word story lifecycle (Unreleased)
 
 Discover docx_story_structure_enabled. read_docx_story_structure pins asset_id/revision and returns the complete catalog, independent catalog_sha256 and latest operation_result in hash-paged story_structure JSON. Assemble every text_excerpt at one text_sha256 before editing.
@@ -237,7 +253,7 @@ Null binding resumes inheritance; it does not produce blank content. Create/bind
 
 Clones preserve native runs, tables, field caches and media bytes, relocate relationship targets and allocate distinct supported paragraph/drawing identities. Known ranges, controls, revisions, notes and embedded dependencies require further identity-aware clone support and are explicitly rejected. New names are bounded ASCII XML paths under word/, without _rels directories, collisions or existing dangling targets.
 
-Deletion checks retained parts and historical section XML, removes the definition and its own relationships, and retains referenced media; this is not secure erasure. Complete receipts must be deliverable before atomic commit. Source bytes/mtime, unrelated XML/parts, historical references, selections and Wikis remain intact. No-op batches add no history. Agent reviews every full receipt/story and actual page. Footnote/endnote CRUD and Microsoft Word parity remain further work. Public1.4.0; next consolidated1.4.1.
+Deletion checks retained parts and historical section XML, removes the definition and its own relationships, and retains referenced media; this is not secure erasure. Complete receipts must be deliverable before atomic commit. Source bytes/mtime, unrelated XML/parts, historical references, selections and Wikis remain intact. No-op batches add no history. Agent reviews every full receipt/story and actual page. Footnote/endnote CRUD uses the separate operations above; Microsoft Word parity remains further work. Public1.4.0; next consolidated1.4.1.
 
 ### Native Word header/footer stories (Unreleased)
 
@@ -659,6 +675,22 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Native Word footnote/endnote evaluation (Unreleased)
+
+Actual default-model Codex processed a synthetic three-page Word document: complete initial records for seven normal/special definitions, body references, contracts and all initial page PNGs; then create native footnote ID11/endnote ID12, delete footnote ID8, and correct ID2 text while preserving other paragraphs and formatting. Final-source evaluation completed 153 successful MCP calls, one recovered argument error and 204.28 seconds, without a model override. The error supplied text_limit to contract; the Agent removed that unsupported field and completed the workflow. Original errors remain retained.
+
+Independent audit passed sixteen complete note records, three catalogs, twelve complete contracts, three managed revisions, two historical Wikis and all six actual PNGs. Final page1 shows the new footnote as1 and corrected original as2; page3 shows the new endnote asi and original asii. Native IDs11/12 remain distinct. The old page2 footnote disappears and adjacent endnote marks remain. Bold body text, 007 µg, -0.50 mg/L, preserved paragraphs, source bytes/mtime, complete native XML/parts, receipts and deleted-note historical references/selections all pass.
+
+The first SDK2 render attempt exposed a real content/mark mismatch when a new body reference preceded an old one but its definition was appended. Retained failing documents and controlled definition-order/ID probes led to placing new definitions before the next existing body reference's definition, without changing existing IDs or sibling order. A regression covers actual content order. This is a bounded mechanical correction, not a semantic or universal renderer verdict.
+
+An earlier default-Codex run also passed:149 successful calls, one recovered error,223.72 seconds. A later optional-adapter snapshot-identity collision required a distinct docx-notes-content-v1 projection; the full projection remains byte-compatible. The final model run followed that production change, rather than rerunning to erase errors. Both traces remain retained.
+
+Reproduce with the native note unit/SDK2 tests, tests.codex_docx_notes.run --output <new-dir> --font-fixture <pinned-font-dir>, then tests.codex_docx_notes.audit. Outside checkout, replay installed code with scripts/smoke_docx_note_runtime.py and the run workspace. Ordinary pytest never starts a model.
+
+Final full suite:3,384 passed,33 optional skips in396.74 seconds, including Writer/CJK and NIST/NASA PDFs. Python3.10:60 passed,one optional rendering skip in23.43 seconds. Its first private test harness lacked locked backports-asyncio-runner; installing that exact dependency resolved it, with the original log retained. The clean wheel outside checkout reproduces sixteen full notes,three catalogs and both byte-identical Wikis at the exact final-Codex source fingerprint. VSIX:199 tests,64-file package check and install/update pass; GUI activation is delegated to CI. Local Impress/Calc are absent and their optional tests skip. Standard pip wheel installation and MCP stdio pass. The installed Docker runtime reproduces the same sixteen notes,three catalogs and both byte-identical Wikis with the exact source fingerprint. Eight desktop/mobile zh/en website states pass interactions and overflow checks with no console errors; cached CDN scripts do not establish live CDN availability.
+
+This synthetic case uses optional Writer and private pinned fonts. Microsoft Word, arbitrary real documents and every custom mark/special setting/revision dependency remain unverified. MCP supplies source/version/structure checks; Agent owns full semantic and visual review and correction. Public1.4.0; next consolidated1.4.1.
 
 ### Native Word story lifecycle evaluation (Unreleased)
 

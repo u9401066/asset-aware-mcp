@@ -1,5 +1,12 @@
 # asset-aware-mcp
 
+Unreleased Word footnote/endnote workflows now read complete native definitions,
+create exact body anchors, edit content and delete notes with version/reference
+checks. Historical evidence, selections, citations and portable Wikis remain intact;
+Agents review actual numbering, placement and meaning. See
+[Word notes](docs/wiki/Native-File-Assets.md#native-word-footnotes-and-endnotes-unreleased).
+Public **1.4.0**; next consolidated **1.4.1**, without per-feature version bumps.
+
 Unreleased Word header/footer workflows now create, clone, bind/unlink and delete
 whole definitions, alongside native text and paragraph/table edits. Explicit
 inheritance scope and full receipts let Agents isolate a section while preserving

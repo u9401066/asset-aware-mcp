@@ -11,6 +11,21 @@ citation-ready provenance.
 
 ## Operating Rules
 
+- When docx_notes_enabled is advertised, read_docx_notes pins revision and pages
+  full catalog/catalog_sha256/latest operation_result through note. read_docx_note
+  takes docx_note_locator(part,note_kind,note_id); assemble ALL pages at text_sha256.
+  Native IDs are not displayed numbering; roles come from w:type, not reserved IDs.
+  update_docx_note needs full docx_note_reference, expected_revision and locator plus
+  all_native_references scope. update_docx_notes pins catalog hash and explicit
+  definitions_and_native_body_references scope; create uses typed blocks and a body
+  text_path/Unicode character_offset/expected_text_sha256 from text_nodes[].text_sha256.
+  Delete uses locator/exact note hash/literal_body_text:preserve; literal custom marks
+  remain for explicit Agent correction. Special definitions and dependency-heavy edits
+  have explicit limits. Read full receipts/current notes and EVERY actual page; review
+  numbering, placement, bindings, fields and meaning. Existing IDs/source/history and
+  old references stay intact. docx-notes-v1 Wiki retains full evidence/parts; no-note
+  documents keep their legacy projection. Public1.4.0, next consolidated1.4.1.
+
 - Native discovery advertises contract_delivery separately from schema_delivery.
   When paged, assemble ALL contract_request / contract_details pages using one
   contract_sha256 and for_op; check UTF-8 text_sha256 before reading complete policies.
@@ -38,7 +53,7 @@ citation-ready provenance.
   alternate/revision branches are not evaluated results. Preserve historical refs;
   selections/derivations/citations and docx-stories-v1 Wiki retain full evidence.
   Legacy DFM header/footer fields are abbreviated; never infer roles from filenames.
-  Definition lifecycle/relinking use the operations above; note stories remain open.
+  Definition lifecycle/relinking and note CRUD use their separate operations above.
   Public1.4.0; next consolidated1.4.1, no per-feature version bump.
 
 - When docx_table_layout_enabled is advertised, update_docx_table_grid accepts
