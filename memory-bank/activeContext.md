@@ -1,5 +1,16 @@
 # Active Context
 
+## Native Word notes — actual Codex audit and installed replay
+
+Runtime/spec/tests committed as c074858 under u9401066,27counted files plus2MEM.
+This separate6-file segment adds the opt-in default-model Codex runner, complete
+trace/record/native/render/Wiki auditor,18negative audit regressions and installed
+runtime replay without test imports. Final153successful calls+1recovered contract
+input error/204.28s, earlier149+1/223.72s are both retained; no model override.
+Ordinary pytest never starts a model. All production/full-suite/wheel/Docker checks
+remain as recorded below; final production e5294369 unchanged. Docs/harness segment
+and exact-head remote verification remain. Public1.4.0,next consolidated1.4.1.
+
 ## Native Word notes — validated runtime/spec/tests
 
 Final production e52943694c29f791f85dc267f24901c7df8915e2b314a2e9e9eb8bbdc5d04a62
