@@ -16,6 +16,7 @@ from src.domain.native_asset_models import (
     NativeModel,
 )
 from src.domain.native_delimited import NativeDelimitedReference
+from src.domain.native_docx_notes import DocxNoteReference
 from src.domain.native_docx_stories import DocxStoryReference
 from src.domain.native_file_reference import NativeFileReference
 from src.domain.native_pdf import NativePdfReference
@@ -27,6 +28,7 @@ NativeReference = (
     NativeCellReference
     | NativeDocxBlockReference
     | DocxStoryReference
+    | DocxNoteReference
     | NativePptxReference
     | NativePdfReference
     | NativePdfRegionReference

@@ -20,8 +20,10 @@ class NativeDocxStoryWikiContent(NativeDocxWikiContent):
         contract: CitationFormatContract,
         metadata: CitationMetadata,
         catalog: dict[str, Any],
+        *,
+        projection: str = "docx-stories-v1",
     ):
-        super().__init__(identity, contract, metadata, projection="docx-stories-v1")
+        super().__init__(identity, contract, metadata, projection=projection)
         self.catalog = catalog
         self.story_links: list[str] = []
 

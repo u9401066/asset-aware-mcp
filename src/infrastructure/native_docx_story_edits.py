@@ -41,6 +41,11 @@ def locate(root: etree._Element, path: list[int]) -> etree._Element:
 def editable_text(root: etree._Element, node: etree._Element) -> None:
     if node.tag != W + "t":
         raise ValueError("Story set_text must address an existing w:t node")
+    editable_context(root, node)
+
+
+def editable_context(root: etree._Element, node: etree._Element) -> None:
+    """Reject edits inside computed, revised or externally bound native content."""
     depth = 0
     for current, _ in node_paths(root):
         if current.tag == W + "fldChar":

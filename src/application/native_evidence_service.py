@@ -6,6 +6,7 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 
+from src.application.native_docx_note_operations import attach_note_evidence
 from src.application.native_docx_story_operations import attach_story_evidence
 from src.application.native_pdf_operations import PDF_REVIEW, attach_pdf_evidence
 from src.application.native_pdf_region_service import NativePdfRegionService
@@ -17,6 +18,7 @@ from src.domain.native_delimited import (
     NativeDelimitedReference,
     attach_delimited_evidence,
 )
+from src.domain.native_docx_notes import NOTE_REVIEW, DocxNoteReference
 from src.domain.native_docx_stories import STORY_REVIEW, DocxStoryReference
 from src.domain.native_file_reference import NativeFileReference
 from src.domain.native_pdf import NativePdfReference
@@ -31,6 +33,7 @@ if TYPE_CHECKING:
     )
     from src.domain.native_delimited import NativeDelimitedAdapter
     from src.domain.native_docx import NativeDocxAdapter
+    from src.domain.native_docx_notes import NativeDocxNoteAdapter
     from src.domain.native_docx_stories import NativeDocxStoryAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
@@ -61,6 +64,7 @@ class NativeEvidenceService:
         pdfs: NativePdfAdapter | None = None,
         delimited: NativeDelimitedAdapter | None = None,
         docx_stories: NativeDocxStoryAdapter | None = None,
+        docx_notes: NativeDocxNoteAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
@@ -69,6 +73,7 @@ class NativeEvidenceService:
         self.pdfs = pdfs
         self.delimited = delimited
         self.docx_stories = docx_stories
+        self.docx_notes = docx_notes
 
     def read_parent_record(self, reference: NativeSelectionParent) -> dict[str, Any]:
         if isinstance(reference, NativePdfRegionReference):
@@ -93,6 +98,13 @@ class NativeEvidenceService:
                 reference.locator.block_id,
                 reference.locator,
             )
+        elif (
+            isinstance(reference, DocxNoteReference)
+            and asset.format == "docx"
+            and self.docx_notes
+        ):
+            record = self.docx_notes.read(data, reference.locator)
+            attach_note_evidence(record, asset.asset_id, reference.revision)
         elif (
             isinstance(reference, DocxStoryReference)
             and asset.format == "docx"
@@ -132,6 +144,7 @@ class NativeEvidenceService:
         reference: NativeCellReference
         | NativeDocxBlockReference
         | DocxStoryReference
+        | DocxNoteReference
         | NativePptxReference
         | NativePdfReference
         | NativePdfRegionReference
@@ -139,7 +152,7 @@ class NativeEvidenceService:
         | NativeFileReference
         | NativeSelectionReference,
     ) -> dict[str, Any]:
-        if isinstance(reference, DocxStoryReference):
+        if isinstance(reference, (DocxStoryReference, DocxNoteReference)):
             asset = self.repository.load(reference.asset_id)
             record = self.read_parent_record(reference)
             valid = record["evidence"] == reference.model_dump()
@@ -151,9 +164,16 @@ class NativeEvidenceService:
                 "is_current_managed_revision": asset.revision == reference.revision,
                 "archived": asset.archived,
                 "verification_scope": "immutable_native_representation",
-                "checks": {"revision_hash": True, "story_representation_hash": valid},
+                "checks": {
+                    "revision_hash": True,
+                    "note_representation_hash"
+                    if isinstance(reference, DocxNoteReference)
+                    else "story_representation_hash": valid,
+                },
                 "source_freshness": "not_checked; refresh tracks external human edits",
-                "review_required": STORY_REVIEW,
+                "review_required": NOTE_REVIEW
+                if isinstance(reference, DocxNoteReference)
+                else STORY_REVIEW,
             }
         if isinstance(reference, NativeSelectionReference):
             return NativeSelectionService(self).verify(reference)

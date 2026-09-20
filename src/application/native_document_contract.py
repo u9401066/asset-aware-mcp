@@ -129,6 +129,7 @@ def native_document_contract(
     docx_rendering_configured: bool = False,
     workbook_rendering_configured: bool = False,
     docx_stories_enabled: bool = False,
+    docx_notes_enabled: bool = False,
 ) -> dict[str, Any]:
     for_op = request.for_op if request is not None else None
     result = {
@@ -194,8 +195,11 @@ def native_document_contract(
             workbook_rendering_configured,
             delimited_enabled,
             docx_stories_enabled,
+            docx_notes_enabled,
         ),
         "verification": "MCP checks structure/integrity and deterministic repairs. Read full operation receipts. Agents verify semantics, rendered layout, dynamic references and calculated results; sources/history stay intact.",
+        "docx_notes_enabled": docx_notes_enabled,
+        "docx_notes_policy": "Read complete read_docx_notes catalog and all read_docx_note records at a pinned revision/hash. Note locators bind actual part/kind/native ID, never displayed numbering. Content updates require full note refs and all_native_references scope. Definition creation/deletion pins expected_catalog_sha256 and definitions_and_native_body_references scope. Create anchors use full main-XML text_path, Unicode character_offset and expected_text_sha256; IDs allocate positively unless explicit. Delete requires exact note XML hash and literal_body_text:preserve; custom literal marks stay for explicit Agent correction. All receipts are paged. Special definitions, revisions, fields, locked controls and retained external references have edit restrictions. Agent checks every affected actual page, placement, numbering and meaning. Historical notes and Wikis stay immutable; orphan media is retained.",
         "docx_stories_enabled": docx_stories_enabled,
         "docx_story_structure_enabled": docx_stories_enabled,
         "docx_story_structure_policy": "Read the complete read_docx_story_structure catalog and receipt at one text_sha256. update_docx_story_structure pins expected_revision and expected_catalog_sha256, explicit sections_and_following_inheritors scope, and sequential create/clone/bind/delete/first_page/even_pages edits. bind part:null resumes inheritance, not blank. Create a blank definition to suppress inherited content. Clone/delete require full part hash; known identity/incoming dependencies are checked. Read the complete new receipt and each affected story, then review all actual pages. Removed story dependencies remain as orphan media; no secure erasure. Source/history remain unchanged.",
@@ -286,6 +290,7 @@ def _formats(
     workbook_rendering_configured: bool = False,
     delimited_enabled: bool = False,
     docx_stories_enabled: bool = False,
+    docx_notes_enabled: bool = False,
 ) -> dict[str, list[str]]:
     workbook_ops = (
         [
@@ -362,6 +367,16 @@ def _formats(
         if pptx_enabled
         else [],
         "docx": (
+            [
+                "read_docx_notes",
+                "read_docx_note",
+                "update_docx_note",
+                "update_docx_notes",
+            ]
+            if docx_notes_enabled
+            else []
+        )
+        + (
             [
                 "read_docx_stories",
                 "read_docx_story",

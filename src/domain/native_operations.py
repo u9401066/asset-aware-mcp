@@ -61,6 +61,10 @@ NativeOperation = Literal[
     "add_pptx_shapes",
     "delete_pptx_shapes",
     "read_docx",
+    "read_docx_notes",
+    "read_docx_note",
+    "update_docx_note",
+    "update_docx_notes",
     "read_docx_stories",
     "read_docx_story",
     "update_docx_story",
@@ -180,6 +184,14 @@ NATIVE_OPERATIONS = {
     "update_pptx_table_grid": _fields("asset_id expected_revision pptx_table_grid"),
     "add_pptx_shapes": _fields("asset_id expected_revision pptx_shapes"),
     "delete_pptx_shapes": _fields("asset_id expected_revision pptx_shape_refs"),
+    "read_docx_notes": _fields("asset_id revision", "text_offset text_limit"),
+    "read_docx_note": _fields(
+        "asset_id revision docx_note_locator", "text_offset text_limit"
+    ),
+    "update_docx_note": _fields(
+        "asset_id expected_revision docx_note_reference docx_note_update"
+    ),
+    "update_docx_notes": _fields("asset_id expected_revision docx_notes_update"),
     "read_docx_stories": _fields("asset_id revision", "text_offset text_limit"),
     "read_docx_story": _fields(
         "asset_id revision docx_story_part", "text_offset text_limit"

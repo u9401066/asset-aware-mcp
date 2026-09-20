@@ -11,6 +11,7 @@ from src.application.native_document_contract import (
     native_asset_summary,
     native_document_contract,
 )
+from src.application.native_docx_note_operations import NativeDocxNoteOperations
 from src.application.native_docx_operations import NativeDocxOperations
 from src.application.native_docx_story_operations import NativeDocxStoryOperations
 from src.application.native_docx_story_structure_operations import (
@@ -40,6 +41,7 @@ if TYPE_CHECKING:
     from src.domain.native_delimited import NativeDelimitedAdapter
     from src.domain.native_derivation import NativeDerivationRepository
     from src.domain.native_docx import NativeDocxAdapter
+    from src.domain.native_docx_notes import NativeDocxNoteAdapter
     from src.domain.native_docx_stories import NativeDocxStoryAdapter
     from src.domain.native_docx_structure import NativeDocxStructureAdapter
     from src.domain.native_grid import NativeGridAdapter
@@ -82,6 +84,7 @@ class NativeDocumentService:
         workbook_renderer: NativeWorkbookRenderer | None = None,
         delimited: NativeDelimitedAdapter | None = None,
         docx_stories: NativeDocxStoryAdapter | None = None,
+        docx_notes: NativeDocxNoteAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
@@ -129,6 +132,9 @@ class NativeDocumentService:
             raise ValueError("Native Word stories require the DOCX read-back bridge")
         self.docx = docx
         self.docx_stories = docx_stories
+        if docx_notes is not None and docx is None:
+            raise ValueError("Native Word notes require the DOCX read-back bridge")
+        self.docx_notes = docx_notes
         self.docx_structure = docx_structure
         self.docx_renderer = docx_renderer
         self.presentations = presentations
@@ -147,7 +153,14 @@ class NativeDocumentService:
             else None
         )
         self.evidence = NativeEvidenceService(
-            repository, spreadsheets, docx, presentations, pdfs, delimited, docx_stories
+            repository,
+            spreadsheets,
+            docx,
+            presentations,
+            pdfs,
+            delimited,
+            docx_stories,
+            docx_notes,
         )
         self.derivations = (
             NativeDerivationService(derivations, self.evidence) if derivations else None
@@ -168,6 +181,7 @@ class NativeDocumentService:
                 self.derivations,
                 delimited,
                 docx_stories,
+                docx_notes,
             )
             if wiki_publisher is not None
             else None
@@ -243,6 +257,10 @@ class NativeDocumentService:
             "update_pptx_table_grid": self._pptx_operation,
             "add_pptx_shapes": self._pptx_operation,
             "delete_pptx_shapes": self._pptx_operation,
+            "read_docx_notes": self._note_operation,
+            "read_docx_note": self._note_operation,
+            "update_docx_note": self._note_operation,
+            "update_docx_notes": self._note_operation,
             "read_docx_stories": self._story_operation,
             "read_docx_story": self._story_operation,
             "update_docx_story": self._story_operation,
@@ -301,6 +319,7 @@ class NativeDocumentService:
         return native_document_contract(
             request,
             docx_stories_enabled=self.docx_stories is not None,
+            docx_notes_enabled=self.docx_notes is not None,
             workbook_rendering_configured=self.rendition_operations.renderer
             is not None,
             docx_enabled=self.docx is not None,
@@ -509,6 +528,13 @@ class NativeDocumentService:
             "source_written": False,
         }
 
+    def _note_operation(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        if self.docx_notes is None:
+            raise ValueError("Native Word notes are not configured")
+        return NativeDocxNoteOperations(self.repository, self.docx_notes).execute(
+            request
+        )
+
     def _story_operation(self, request: NativeDocumentRequest) -> dict[str, Any]:
         if self.docx_stories is None:
             raise ValueError("Native DOCX story adapter is not configured")
@@ -529,6 +555,12 @@ class NativeDocumentService:
         if self.docx_operations is None:
             raise ValueError("The native DOCX bridge is not configured")
         result = self.docx_operations.execute(request)
+        if request.op == "read_docx" and self.docx_notes is not None:
+            result["notes_request"] = {
+                "op": "read_docx_notes",
+                "asset_id": request.asset_id,
+                "revision": result["inspected_revision"],
+            }
         if request.op == "read_docx" and self.docx_stories is not None:
             result["header_footer_request"] = {
                 "op": "read_docx_stories",

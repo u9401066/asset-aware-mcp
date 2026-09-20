@@ -1,5 +1,67 @@
 # Progress (Updated: 2026-09-19)
 
+## Native Word notes — validated runtime/spec/tests
+
+Final production e52943694c29f791f85dc267f24901c7df8915e2b314a2e9e9eb8bbdc5d04a62
+passes full3384/33optional skips/396.74s with Writer/CJK and fixed NIST/NASA PDFs.
+Actual default Codex153successful MCP calls +1recovered contract input error/204.28s
+verifies16complete notes,3catalogs,12contracts,3managed revisions,2historical Wikis,
+all6actual PNGs with independent pixel replay. No model override. Earlier run
+149success+1recovered error/223.72s is retained; final rerun follows a production
+fix giving note-only Wiki adapters a distinct projection identity. Full projections
+stay byte-compatible. Native IDs differ from displayed numbers; complete source,
+formatting, history, receipts, selections and deleted-note evidence remain intact.
+SDK2 first render exposed real Writer content/order mismatch; exact failed files
+remain in /tmp/pytest-of-eric/pytest-269/test_note_lifecycle_over_sdk2_0. Controlled
+probes support inserting a new definition before the following body reference's
+existing definition, preserving original IDs/order. No Microsoft Word parity claim.
+Python3.10:60pass/1optional skip/23.43s. Clean installed wheel and Docker both replay
+16notes/3catalogs/2byte-identical Wikis at the exact final production fingerprint.
+Standard pip wheel/import/doctor/30tools/SDK2 smoke pass. Ruff705/mypy297, security,
+Python214package audit, both npm audits, artifact/harness/sync and docs25 pass.
+VSIX199tests/64files/install-update pass; local GUI activation remains a CI gate.
+Browser8desktop/mobile zh/en states pass, actual desktopzh/mobileen inspected;
+cached CDN scripts do not establish live CDN availability. Owned server8885 stopped.
+Docker f012ea75fb54 and builder dda78ebdf9ba removed; all11 temporarily staged owned
+runs restored with exact hashes/mtimes. Privatepy310 retained until CI finishes.
+Logs/proof: /run/user/1000/asset-aware-docx-notes-validation.json and matching prefix.
+This runtime/spec/tests segment has27counted files plus2MEM; separate6-file actual
+Codex harness and20-file docs/harness segments follow before one main push.
+Exact-head CI/Pages/public-byte verification pending. Original dirty detached
+checkout untouched. Public1.4.0; next consolidated1.4.1, no tag/version bump.
+MCP necessary checks; Agent complete semantic/visual review and correction.
+Broader all-format goal remains active; no subagents or PRs.
+
+## Native Word footnotes/endnotes — active
+
+Previous goal turn classified as substantive progress, independently revalidated:
+main/origin0a97f8b186cd384c4cf950cba868c5f6c93b3325 clean. Publication proof
+/tmp/asset-aware-story-lifecycle-publication-proof.json passed/fully_published;
+CI35452874985 all10success, Pages35452874881 all3success, six live files exact.
+Integration201pass432.51s includes both new lifecycle SDK2 render configurations.
+All11staged runs restored, privatepy310 removed, Docker image/builder removed,
+owned server stopped. Source70aef unchanged. Public1.4.0, next consolidated1.4.1.
+
+Current verified gap: footnote/endnote definitions and their body references lack
+complete native read/content/definition CRUD, precise evidence and Wiki projection.
+Implement typed note locators (part/kind/nativeID), separate displayed numbering,
+full native body/reference inspection, revision/catalog guards, content edits,
+anchor-bound note creation/deletion, unchanged XML/part checks, historical refs,
+selections/derivations/citations and portable Wiki. MCP supplies mechanical checks;
+Agent must inspect actual pages, note numbering/placement and meaning.
+Reference upstream Open XML Footnote/FootnoteReference/FootnoteEndnoteType and
+GitHub eigenpal/docx-editor note-nodes.ts identity/role separation; do not import
+third-party code or infer note roles from conventional IDs alone.
+Use tests-first, SDK2 and actual default Codex before full release gates. Full
+pytest must use -o tmp_path_retention_policy=failed to avoid RAM accumulation.
+Only Writer exists locally; enable actual Writer/CJK and pinned real PDF corpus,
+leave unavailable Impress/Calc gates disabled. Preserve all original failures.
+Work only agent-assets main; original dirty detached checkout untouched. Direct
+u9401066 commits/push, <=30counted files per segment plus2MEM; no PR/subagents,
+model override, version bump or tag. Broader all-format objective stays active.
+Temporary prefix for this milestone: asset-aware-docx-notes.
+
+
 ## Native Word story lifecycle documentation — ready for publication
 
 Runtime412ee00 (27counted+2MEM) and audit compatibility251126e (10counted+2MEM)

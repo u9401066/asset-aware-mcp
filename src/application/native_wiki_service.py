@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Any
 from src.application.native_delimited_operations import dialect_for
 from src.application.native_delimited_wiki import NativeDelimitedWikiContent
 from src.application.native_derivation_wiki import add_derivations
+from src.application.native_docx_note_operations import attach_note_evidence
+from src.application.native_docx_note_wiki import NativeDocxNoteWikiContent
 from src.application.native_docx_story_operations import attach_story_evidence
 from src.application.native_docx_story_wiki import NativeDocxStoryWikiContent
 from src.application.native_docx_wiki import NativeDocxWikiContent
@@ -23,6 +25,8 @@ from src.domain.native_derivation import fingerprint
 from src.domain.native_wiki import MAX_WIKI_CELLS
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from src.application.native_derivation_service import NativeDerivationService
     from src.domain.native_assets import (
         NativeAssetRepository,
@@ -33,6 +37,7 @@ if TYPE_CHECKING:
     from src.domain.native_delimited import NativeDelimitedAdapter
     from src.domain.native_derivation import NativeDerivationLedger
     from src.domain.native_docx import NativeDocxAdapter
+    from src.domain.native_docx_notes import NativeDocxNoteAdapter
     from src.domain.native_docx_stories import NativeDocxStoryAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
@@ -51,6 +56,7 @@ class NativeWikiService:
         derivations: NativeDerivationService | None = None,
         delimited: NativeDelimitedAdapter | None = None,
         docx_stories: NativeDocxStoryAdapter | None = None,
+        docx_notes: NativeDocxNoteAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
@@ -61,6 +67,7 @@ class NativeWikiService:
         self.derivations = derivations
         self.delimited = delimited
         self.docx_stories = docx_stories
+        self.docx_notes = docx_notes
 
     def export(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.asset_id is not None and request.output_dir is not None
@@ -92,7 +99,14 @@ class NativeWikiService:
             if asset.format == "docx" and self.docx and self.docx_stories
             else None
         )
-        content = self._content(request, asset, revision, ledger, structure, catalog)
+        notes = (
+            self.docx_notes.inspect(data)
+            if asset.format == "docx" and self.docx and self.docx_notes
+            else None
+        )
+        content = self._content(
+            request, asset, revision, ledger, structure, catalog, notes
+        )
         add_rendition(content, asset, self.repository)
         self._populate(content, data)
         if ledger is not None and self.derivations is not None:
@@ -120,6 +134,7 @@ class NativeWikiService:
         ledger: NativeDerivationLedger | None,
         delimited_structure: dict[str, Any] | None = None,
         story_catalog: dict[str, Any] | None = None,
+        notes_catalog: dict[str, Any] | None = None,
     ) -> NativeWikiContent:
         contract = resolve_citation_format(
             request.citation_contract.model_dump(mode="json")
@@ -151,6 +166,10 @@ class NativeWikiService:
         if delimited_structure is not None:
             return NativeDelimitedWikiContent(
                 identity, contract, metadata, delimited_structure
+            )
+        if notes_catalog and (notes_catalog["notes"] or notes_catalog["references"]):
+            return NativeDocxNoteWikiContent(
+                identity, contract, metadata, notes_catalog, story_catalog
             )
         if story_catalog and story_catalog["stories"]:
             return NativeDocxStoryWikiContent(
@@ -194,6 +213,20 @@ class NativeWikiService:
                     )
                     stories.append(record)
                 content.add_stories(stories)
+
+            if isinstance(content, NativeDocxNoteWikiContent) and self.docx_notes:
+                if self.docx_stories is None:
+                    content.add_stories([])
+
+                def records() -> Iterator[dict[str, Any]]:
+                    assert self.docx_notes is not None
+                    for record in self.docx_notes.decompose(data):
+                        attach_note_evidence(
+                            record, identity["asset_id"], identity["revision"]
+                        )
+                        yield record
+
+                content.add_notes(records())
 
         elif isinstance(content, NativePptxWikiContent) and self.presentations:
             content.add_parts(self.presentations.package_parts(data))

@@ -103,6 +103,7 @@ def test_all_enabled_formats_keep_contract_and_schema_discovery_complete(operati
         docx_structure_enabled=True,
         docx_rendering_configured=True,
         docx_stories_enabled=True,
+        docx_notes_enabled=True,
     )
     assert "response_truncated" not in format_limited_json_response(
         title="Native", payload=contract
