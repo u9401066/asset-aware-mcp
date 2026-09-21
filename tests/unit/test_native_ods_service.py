@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import shutil
 from copy import deepcopy
 from pathlib import Path
 
@@ -322,6 +323,8 @@ def test_wiki_compressed_ranges_exact_derivation_endpoints_and_citation_locators
 def test_csl_accepts_exact_ods_source_and_preserves_native_attachment(
     service, tmp_path
 ):
+    if not shutil.which("node"):
+        pytest.skip("CSL rendering requires optional Node.js >=20")
     asset = create(service)
     reference = cell(service, asset)["evidence"]
     raw = document().model_dump()

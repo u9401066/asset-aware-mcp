@@ -7,6 +7,12 @@
 
 ## [Unreleased]
 
+- Synchronize ODS complete-read, exact-cell-reference and Agent-review guidance
+  across Codex, Cline, Copilot and bundled extension assets. Clarify physical-range
+  versus text pagination, inline no-op receipts and the remaining lifecycle/rendering
+  limits. Correct stale ODS integration status and keep optional Node.js checks
+  scoped to the ODS CSL test. Public **1.4.0**, next consolidated **1.4.1**.
+
 - Add native ODS MCP creation, complete hash-paged physical-range/logical-cell reads,
   and cell edits/clears guarded by full original references and expected revisions.
   Integrate exact ODS evidence with selections, derivations, CSL/custom citations
@@ -20,7 +26,7 @@
   records and require every planned cache to match reopened output. Grouped and
   repeated ranges retain exact locators and namespaces. A 5,000-formula local
   replay fell from 19.5s to 0.34s with byte-identical output and full receipts.
-  ODS MCP/evidence/Wiki integration follows below; public 1.4.0, next 1.4.1.
+  ODS MCP/evidence/Wiki integration is described above; public 1.4.0, next 1.4.1.
 
 - Store complete native operation receipts as immutable, hash-checked blobs bound
   to asset/history/revision/parent/operation, keeping the revision index bounded.
@@ -38,8 +44,8 @@
   Calc rendering and independent odfdo reads pass. Calc 7.3 and 24.2 checks use
   independently authored expected workbooks, matching exported values/types and
   complete rendered pages despite version-specific predicate/color encoding.
-  MCP/evidence/Wiki integration
-  remains pending; no project version bump or new public operation yet.
+  The subsequent MCP/evidence/Wiki integration is described above; no project
+  version bump was made for this adapter.
 
 - Retain complete raster frame/catalog representations and generated PNG recipes
   across decoder upgrades and process restarts. Pinned historical reads, regions,

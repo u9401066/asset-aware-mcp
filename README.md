@@ -13,6 +13,8 @@ receipts in portable Wikis. Repeated ranges remain compressed; anchor references
 identify one coordinate, not verified coverage of every represented cell. Selections,
 derivations, CSL citations and custom locators retain exact ODS sources. Agents
 review formulas and actual rendering. See the [ODS specification](docs/native-ods-spec.md).
+Bundled Agent instructions cover complete reads, exact references and review limits;
+discover `ods_enabled` in the installed runtime before using these operations.
 Public **1.4.0**; next consolidated **1.4.1**, with no per-feature version bump.
 
 Unreleased PDF annotations now support complete native reads and guarded creation,

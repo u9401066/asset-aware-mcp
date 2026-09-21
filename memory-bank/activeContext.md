@@ -1,5 +1,79 @@
 # Active Context
 
+## ODS Agent guidance — verified locally; ready for direct-main commit
+
+Add native ODS complete reads with both pagination layers, exact logical refs,
+original-revision cell edits, inline no-op receipts and MCP/Agent review boundaries
+to5assistant sources and5bundled copies. README/spec/Unreleased status corrected.
+Only optional-Node ODS CSL test guard changes Python test code; runtime337files,
+all src/dependency/build definitions and extension TypeScript are unchanged.
+
+Focused44passed/3.29s; no-Node14passed/1skip/2.20s; VSIX199tests/64entries and
+install/update passed. All5actual packaged guidance files match source bytes.
+Local activation skipped; exact-head remote Linux activation remains required.
+Ruff/format/releaseharness/docs/sync/diff checks pass. Parent fce0b63 full3813/33,
+Codex04, wheel/Docker evidence remains valid for identical runtime hashes; no
+new full-suite/model run is claimed for this documentation/test-guard segment.
+Proof:/run/user/1000/asset-aware-ods-harness-local-proof.json; internal VSIX
+/run/user/1000/asset-aware-ods-harness-local-1.4.0.vsix is not a release.
+
+Initial npm logging hit ENOSPC before asset synchronization; failure log retained.
+All11 temporarily staged prior modeltrace directories are now restored ordinary
+with exact file hashes/sizes/mtimes; task-owned npm dependencies/cache/out removed.
+Root~34MiB, use atomic MEMwrites. Github description now names XLSX/ODS;20topics
+verified with spreadsheets replacing xlsx. Metadata proof retained.
+
+14countedfiles+2MEM, user-author directmain commit/push next; require ALL exact-head
+CI/Pages and deployed bytes before development. Public1.4.0,next consolidated1.4.1,
+no bump/tag/release. Broad all-format goal ACTIVE; ODS lifecycle/recalculated
+renditions and remaining formats still outstanding. Original checkout untouched.
+
+## ODS MCP/evidence/Wiki — publication verified; Agent guidance follow-up
+
+Head fce0b63b1f70204fbdf4a3cd14f4131b477a5672 is on main with user author.
+Fresh REST API confirms all10CI jobs35602250351 and all3Pages jobs35602247118
+success; six deployed files match exact commit bytes. Publication proof:
+/run/user/1000/asset-aware-ods-mcp-publication-proof.json,published_verified.
+The watch45026 terminated1 on network-unreachable, not a CI/test failure;
+independent completed-run/job metadata was saved. No watcher remains live.
+
+Next bounded segment: synchronize ODS complete-read/reference/review guidance in
+AGENTS/Codex/Cline/Copilot + bundled VSIX copies; correct stale pending-MCP text;
+make only the Node-dependent ODS-CSL test skip when optional Node is absent.
+Runtime337source files remain frozen with full3813passed/33skipped, finalCodex04
+223successful calls, installedwheel/Docker and cross-platformCI evidence intact.
+No runtime behavior or version change. All seven declarations are1.4.0; next
+consolidated1.4.1. No tags/releases. Broader all-format goal remains ACTIVE;
+ODS lifecycle/recalculated renditions and ODT/ODP/other formats remain.
+Original dirty detached checkout untouched; no subagents; exact staging <=30files
+plus2MEM. Use atomic MEMwrites and temporary task-owned storage for dependencies.
+
+## ODS MCP/evidence/Wiki — pushed fce0b63; exact-head CI pending
+
+Head fce0b63b1f70204fbdf4a3cd14f4131b477a5672 is committed/pushed directmain
+as u9401066<u9401066@gap.kmu.edu.tw>,30countedfiles+2MEM.
+CI35602250351 watcher session45026 is RUNNING; do not restart a livewatch.
+Pages35602247118 completed success; verify all3jobs and6deployedfiles with proof
+/run/user/1000/asset-aware-ods-mcp-publication-proof.json. CI needs ALL10jobs.
+No new development until exact-head checks are green; fix actual failures first.
+
+Final local full3813passed/33skipped/764.61s; discovery233pass; cold-cache PDF
+annotation follow-up2pass at same300slimit, and bothcases pass in finalfullsuite.
+DefaultCodex final04:223calls/0errors/197.33s,27fullODSreads,9cellrecords,3source+
+2independent revisions,3Wikis; no visual/calculation claim. Source337manifestSHA
+b2b4d2b93ea634211f618fa54b02c0332d1a35ac06a26dfaa9a8c95b55385820.
+Final wheel3.13/Docker3.12 exactsource/output/receipt/restart/doctor/30tools/SDK2
+pass. VSIX199tests/64entries/install-update pass; remote Linux activation pendingCI.
+All11prior modeltraces restored ordinary/hash+mtime exact; own install artifacts
+removed. Runtimebytecode retained for worker startup. Root~37MiB; atomicMEMwrites.
+Public1.4.0,next consolidated1.4.1; no bump/tag/release.
+
+After publication: bundledODSAgent guidance in separate segment; also align new
+ODS-CSL optional-node test guard with existing optionalCSLtests if needed.
+Broader ODS lifecycle/renditions, ODT/ODP/etc goal stays ACTIVE. No subagents.
+Original dirty detached checkout untouched.
+
+
 ## ODS MCP/evidence/Wiki — final local gates COMPLETE; ready for commit/push
 
 Final source337files frozen at manifestSHA

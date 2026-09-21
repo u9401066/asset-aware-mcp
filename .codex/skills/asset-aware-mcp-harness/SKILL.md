@@ -37,6 +37,26 @@ verification.
 
 ## Native Document Operations
 
+- When ods_enabled is advertised, create_ods creates independent native ODS files.
+  Pin asset/revision for read_ods and read_ods_cell. read_ods lists compressed
+  physical ranges with offset/limit; assemble ALL text_excerpt chunks at one
+  text_sha256, sending ods_text_sha256 on text continuation. Then follow next_offset
+  for physical ranges, resetting text_offset and the text hash for that new listing.
+  read_ods_cell takes ods_locator with content.xml, exact table index/name and
+  zero-based logical row/column, including explicit absent cells. Full cell refs
+  identify ONE logical coordinate, never every cell represented by a repeated range.
+  update_ods requires expected_revision and 1..100 unique full original cell refs,
+  typed values and explicit replace_paragraphs_preserve_cell_style display_policy.
+  Blank clears value only; strings stay literal. Review any rich-paragraph replacement.
+  Read complete review_request receipts and new cell refs; no-op receipts are inline
+  and create no history entry. Formula caches and display remain unverified.
+  MCP checks source/revision/native structure; Agent reviews meaning, rich text,
+  recalculated formula results and actual Calc appearance. Cell operations provide
+  no ODS renderer or row/column/table lifecycle; repeated formulas/objects retain
+  mapping-aware edit guards. Wiki retains exact .ods, physical ranges, anchor-only
+  refs, full receipts and exact logical derivation endpoints. Historical evidence
+  stays fixed. Public1.4.0; next consolidated1.4.1; no per-feature version bump.
+
 - When images_enabled is advertised, read_image/read_image_frame pin asset/revision;
   frame reads add image_locator. Assemble ALL image.text_excerpt pages at one
   text_sha256, including complete catalogs and operation receipts. Actual PNGs use

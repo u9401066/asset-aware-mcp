@@ -132,8 +132,8 @@ Python 3.10 also runs the kernel tests.
 check with `NATIVE_ODS_ODFDO_TEST=1`; odfdo 3.25.0 was isolated outside the runtime
 environment. `tests/native_ods_artifact_smoke.py` compares all installed source
 files and replays exact ODS bytes/full receipts against the actual Calc fixture
-in clean wheel and Docker installations. Neither test substitutes for the
-still-pending MCP/Agent/evidence/Wiki integration.
+in clean wheel and Docker installations. These kernel checks complement the
+MCP/Agent/evidence/Wiki verification described below.
 
 ## Formula-cache traversal performance (Unreleased)
 
@@ -153,7 +153,7 @@ Verification must compare exact output bytes and complete receipts with the
 published implementation, prove bounded physical traversal without flaky timing
 thresholds, cover grouped/repeated rows and columns, and replay the 5,000-formula
 case in actual package artifacts. Wall-clock benchmarks supplement those checks.
-Public MCP/evidence/Wiki integration is still pending; public1.4.0,next1.4.1.
+The MCP/evidence/Wiki integration above now uses this traversal. Public1.4.0,next1.4.1.
 
 Implementation now shares exact cell-record construction between point reads and
 physical traversal. Cache collection retains each visited record; reopened output
