@@ -231,9 +231,21 @@ Confirm activation, provider discovery, and preservation of custom settings befo
 
 Built-in model features may be sufficient for one-off summaries and questions. This workflow focuses on editable native documents, exact source revisions and inspectable operation results that another Agent can reuse through citations and Wiki notes. If a scanned 007 becomes an Excel string and a later version changes it to 008, the old reference still identifies the original source and value. MCP checks source identity, versions and format constraints; the Agent reviews actual images and meaning and coordinates corrections.
 
-Main has Unreleased operations for PDF, DOCX, workbooks, CSV/TSV and PPTX; discover the complete runtime contract before use. Standalone raster support is an internal kernel awaiting MCP, evidence and Wiki integration. Public **1.4.0**; next consolidated **1.4.1**. See the [capability gaps and upstream references](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/agent-asset-gap-analysis.md) for format-specific limits and product claims still requiring comparative evaluation.
+Main has Unreleased operations for PDF, DOCX, workbooks, CSV/TSV and PPTX; discover the complete runtime contract before use. Standalone raster support now includes oriented frame/region evidence, actual PNGs, explicit derivatives, guarded frame revisions and source-attached Wikis. Public **1.4.0**; next consolidated **1.4.1**. See the [capability gaps and upstream references](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/agent-asset-gap-analysis.md) for format-specific limits and product claims still requiring comparative evaluation.
 
-### Native PDF annotations (Unreleased)
+### Native raster assets (Unreleased)
+
+Discover images_enabled and complete operation contracts/schemas. read_image and read_image_frame pin the asset/revision; frame reads add image_locator. Assemble ALL image.text_excerpt pages at one text_sha256, including the entire operation receipt. render_image_frame takes a full frame reference; read_image_region takes that reference with a displayed-frame fraction rectangle, or an existing complete region reference. Coordinates follow EXIF orientation, top-left origin, with outward pixel rounding.
+
+create_image creates an explicit RGBA PNG canvas. extract_image creates PNG/TIFF derivatives from a full source-frame reference and optional region. compose_images creates an ordered TIFF sequence. Extraction/composition require explicit decoded-pixel or RGBA8 policies and pixels_only metadata. Original sources remain intact.
+
+update_image pins expected_revision, the catalog hash and a complete candidate file reference of the same detected format. Map/delete every old frame and map/insert every candidate frame exactly once. Mappings explicitly preserve or replace pixels and decoder metadata; the committed file is exactly the checked candidate bytes. Read full new records/receipts and every actual PNG before concluding the Agent review.
+
+Historical frame/region/selection references and cross-format derivations remain bound to old bytes. Wiki snapshots keep sources, frame PNGs/records, complete receipts, direct operation inputs and explicit derivation evidence. Custom citation displays do not replace the full source locator. Invalid ICC needs a reviewed explicit image_color_policy:unmanaged choice. RGBA8 previews do not prove source precision, animation playback, private-layer completeness or viewer parity. Decoder version participates in frame representations; an upgrade that changes them cannot silently migrate old references.
+
+An actual default-model Codex run used an explicitly derived EXIF-oriented image from the original NIST PDF page index4: 258 successful calls, 15 full-frame PNGs, one region preview, three TIFF revisions, six literal workbook cells and three Wikis passed independent checks. This is scoped evidence from a benchmark derivative, not an originally published NIST PNG or a general image-fidelity claim. See the [image contract](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/native-image-spec.md) and [evaluation, including the retained wrapper failure](https://github.com/u9401066/asset-aware-mcp/blob/main/tests/codex_native_image/README.md).
+
+## Native PDF annotations (Unreleased)
 
 Discover pdf_annotations_enabled and assemble complete contract/schema pages. read_pdf_annotations pins asset_id/revision; read_pdf_annotation adds pdf_annotation_locator. Follow every annotation.text_excerpt at one text_sha256 for complete catalogs, records and operation receipts. Identity combines revision, page, zero-based annotation-array index and native object/generation; names alone are not identities.
 
@@ -699,6 +711,14 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Native raster evaluation (Unreleased)
+
+Synthetic regressions cover all eight EXIF orientations, palette/alpha, high precision, ICC, truncated GIF/TIFF sequences, frame accounting, source guards and cross-format evidence. Both SDK2 balanced/compact surfaces deliver actual PNGs and complete frame/receipt/Wiki workflows. MCP checks provenance and structure; Agent review owns meaning and actual appearance.
+
+A default-model Codex run used an explicitly derived EXIF-orientation6 benchmark PNG from hash-pinned NIST SRM1648a PDF page index4. In 304.08 seconds it completed 258 successful calls with zero tool errors: 15 frame PNGs, one region preview, three TIFF revisions through reorder/insert/delete, six literal XLSX cells, historical references/selection, a region-to-cell derivation and three Wikis. Independent checks compare original PDF rasterization, native stage pixels, exact candidate bytes, literal cells and source attachments. Twenty-three positive/negative audit regressions reject changed pixels/orientation/alpha/order/crops and incomplete or corrupt readback.
+
+The first runner wrapper failed AFTER the successful CLI turn because its audit module did not exist yet. That log is retained; subsequent independent audits passed. The runner now imports its audit before model execution and refuses existing traces. Local full suite: 3,648 passed, 33 optional skips, 726.48 seconds. Python3.10 image/SDK2 scope: 111 passed in 41.10 seconds. Installed wheel/Docker replay the same source fingerprint and complete TIFF/frame/evidence/Wiki artifacts; MCP stdio, 199 VSIX tests and install/update pass. Local activation was unavailable without xvfb-run; required CI activation and exact-head CI/Pages publication checks remain pending. This fixture does not establish arbitrary image, layer, animation or workbook-viewer fidelity. Public **1.4.0**; next consolidated **1.4.1**. See the [reproducible evaluation](https://github.com/u9401066/asset-aware-mcp/blob/main/tests/codex_native_image/README.md).
 
 ### Native PDF annotation evaluation (Unreleased)
 

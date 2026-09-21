@@ -1,7 +1,8 @@
 # Native raster assets — implementation contract
 
 Status: local kernel, application, evidence/Wiki, SDK2 and actual default-model
-Codex evaluation verified; full release validation remains pending. Public **1.4.0**, next
+Codex evaluation and local release gates verified; remote publication checks remain
+pending. Public **1.4.0**, next
 consolidated release **1.4.1**. These changes have not yet been pushed or released.
 
 The `images_enabled` contract flag controls `create_image`, `extract_image`,

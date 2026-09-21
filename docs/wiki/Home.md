@@ -12,7 +12,8 @@ KG/RAG 串成可驗證的文件流程。
 目標是 Agent 跨格式文件 CRUD、獨立表格創造與 wikilink 證據庫。
 MCP 提供來源／版本、格式與操作結果的必要檢查；Agent 負責完整核對與修正。
 main 的 Unreleased 已包含 PDF、DOCX、試算表、CSV／TSV 與 PPTX 的指定原生
-操作，引用與 Wiki 保留來源版本；獨立圖片仍在核心與整合開發階段。
+操作，引用與 Wiki 保留來源版本；獨立圖片亦有影格／區域、衍生檔、候選版本
+修改及 Wiki，並以真實 PDF 衍生圖片完成實際 Codex 核對。
 公開版 **1.4.0**，下次整合 **1.4.1**，不隨單一功能跳版。詳見
 [能力與缺口分析](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/agent-asset-gap-analysis.md)。
 

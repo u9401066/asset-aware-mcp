@@ -8,10 +8,43 @@
 當時的來源與數值。MCP 檢查來源、版本與格式；Agent 核對畫面、語意並修正。
 
 目前 main 的 Unreleased 已涵蓋 PDF、DOCX、試算表、CSV／TSV 與 PPTX 的
-指定操作，使用前須完整讀取實際 contract。獨立圖片仍是內部核心，MCP、
-引用與 Wiki 串接尚未完成。公開版 **1.4.0**，下次整合 **1.4.1**。
+指定操作與獨立圖片工作流，使用前須完整讀取實際 contract。
+公開版 **1.4.0**，下次整合 **1.4.1**。
 各格式限制、待驗證的產品價值及上游專案見
 [能力與缺口分析](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/agent-asset-gap-analysis.md)。
+
+## Native raster assets (Unreleased)
+
+獨立圖片可保留原檔、拆成影格與區域證據、建立 PNG／TIFF 衍生檔，再把轉錄
+結果連到獨立表格與 Wiki。MCP 檢查來源、版本、像素／metadata 政策與完整影格
+對應；Agent 檢查實際畫面、文字、色彩、區域範圍並協調修正。
+
+先確認 `images_enabled`，完整讀取 contract 與各操作 schema。
+
+| 操作 | 用途與必要條件 |
+| --- | --- |
+| `read_image`／`read_image_frame` | 固定來源版本，取得完整清單、影格與最新操作紀錄；影格另給 `image_locator`。 |
+| `render_image_frame`／`read_image_region` | 給完整引用，傳回實際 PNG；區域按 EXIF 方向處理後的畫面比例，從左上起算。 |
+| `create_image`／`extract_image` | 建立 RGBA PNG 畫布，或以完整影格引用裁出 PNG／TIFF；明確選擇像素與 metadata 政策。 |
+| `compose_images` | 明確排序完整影格引用，產生新的多影格 TIFF。 |
+| `update_image` | 固定 `expected_revision`、清單雜湊和完整候選檔引用；每個舊／新影格各對應、刪除或新增一次。 |
+
+`image.text_excerpt` 必須依 `next_text_offset` 讀完並核對 `text_sha256`；摘要不是
+完整 receipt。修改採用檢查過的候選檔原始 bytes；保留舊檔與歷史引用。Wiki 包含
+原檔、影格預覽、完整紀錄、操作 receipt、直接輸入附件，以及明確記錄的跨格式
+衍生引用。自訂引用控制顯示，來源引用仍固定完整版本與定位。
+
+PNG 預覽是 RGBA8，不能證明原始高精度樣本、動畫播放或所有檢視器的外觀。
+損壞 ICC 需檢查後明確選擇 `image_color_policy:unmanaged`；解碼器未建模的圖層與
+私有欄位由原檔保存，並不表示能任意編輯。解碼器版本也參與影格表示；升級後
+若表示改變，舊引用可能需要原解碼器核對，不能靜默移到新表示。
+
+實際 Codex 以 NIST 原始 PDF 第五頁產生的測試圖片，完成方向核對、整列裁切、
+TIFF 影格重排／新增／刪除、獨立 XLSX 與區域到儲存格的引用。258 次成功呼叫、
+15 張影格 PNG、一張區域預覽、六格文字及三份 Wiki 通過獨立稽核。這是明確的
+PDF 衍生圖片，並非 NIST 發布的 PNG，也不是任意照片／動畫的保真證明。
+詳見[規格](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/native-image-spec.md)與
+[測試流程及保留的失敗](https://github.com/u9401066/asset-aware-mcp/blob/main/tests/codex_native_image/README.md)。
 
 ## Native PDF annotations (Unreleased)
 

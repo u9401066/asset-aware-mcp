@@ -32,6 +32,24 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
 
 ## Native Document Operations
 
+- When images_enabled is advertised, read_image/read_image_frame pin asset/revision;
+  frame reads add image_locator. Assemble ALL image.text_excerpt pages at one
+  text_sha256, including complete catalogs and operation receipts. Actual PNGs use
+  render_image_frame with a full reference; read_image_region adds displayed-frame
+  fraction geometry after EXIF orientation, or uses an existing full region ref.
+  create_image is an explicit RGBA PNG canvas; extract_image and compose_images
+  require full frame refs and explicit pixel/pixels_only metadata policies. TIFF
+  composition orders the frames. update_image pins expected_revision, catalog hash,
+  full same-format candidate file ref and exhaustive old/new map/delete/insert
+  correspondence. Mapped pixels/metadata policies are explicit; commit exact candidate
+  bytes. Read complete new refs/receipts and EVERY actual frame PNG. Agent reviews
+  meaning, coverage, color/precision, metadata and viewer/animation behavior. Invalid
+  ICC needs reviewed explicit image_color_policy:unmanaged, including Wiki previews.
+  Historical evidence stays fixed. Wikis retain sources, frame/region records and
+  previews, receipts and DIRECT operation inputs plus explicit derivations, not
+  inferred recursive lineage. Decoder version can affect frame hashes; never silently
+  migrate references. Public1.4.0; next consolidated1.4.1; no per-feature bump.
+
 - When pdf_annotations_enabled is advertised, read_pdf_annotations pins asset/revision;
   read_pdf_annotation also takes pdf_annotation_locator. Assemble ALL annotation
   text pages at one text_sha256, including catalogs and complete operation receipts.

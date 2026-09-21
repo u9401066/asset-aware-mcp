@@ -2,6 +2,31 @@
 
 # Release And Testing
 
+## Native raster evaluation (Unreleased)
+
+圖片工作流分別核對原檔／解碼樣本、完整 MCP 紀錄、實際 Agent 預覽與 Wiki。
+合成案例涵蓋 EXIF 八個方向、透明／調色盤、高精度、ICC、GIF／TIFF 截斷、
+動畫資訊、候選影格完整對應、來源版本保護與跨格式證據。SDK2 balanced／compact
+皆完成實際 PNG、影格操作與 Wiki；MCP 不宣稱能判斷語意或自動保證外觀。
+
+實際預設模型 Codex 以已固定 SHA-256 的 NIST SRM1648a PDF 第五頁產生測試 PNG，
+存入 EXIF orientation6。這是明確的測試衍生檔，不是 NIST 發布的 PNG。304.08 秒
+內完成 258 次成功呼叫、零工具錯誤：完整讀取後查看 15 張影格 PNG 與一張區域
+預覽，建立／重排／新增／刪除形成三個 TIFF 版本，把 Aluminum (Al)(a,b) |
+3.43 ± 0.13 | % 寫入獨立表格，保留歷史引用、區域選取及三份 Wiki。外部稽核
+比對原始 PDF raster、全部階段的原生像素、候選 bytes、六格字串及來源附件。
+23 個反例／正常案例檢查稽核可拒絕像素、方向、透明度、順序、裁切或分頁錯誤。
+
+第一次包裝程式在 CLI 成功後因稽核模組尚未建立而退出，失敗紀錄保留；之後
+獨立完成的稽核通過。包裝程式現在先載入稽核，再啟動模型，並防止覆寫既有紀錄。
+本機全套 3,648 項通過、33 項選配略過（726.48 秒）；Python3.10 圖片與 SDK2
+111 項通過（41.10 秒）。wheel／Docker 重驗相同程式指紋、三個 TIFF 版本與
+全部影格／引用／Wiki，MCP stdio、VSIX 199 項及安裝／更新通過。此環境缺
+xvfb-run，本機未驗證 VSIX activation，發布 CI 必須另外通過。遠端 CI／Pages
+發布核對仍待推送後確認。本案例不代表任意照片、圖層、動畫或 Excel 外觀一致。
+公開 **1.4.0**，下次整合 **1.4.1**。詳見
+[可重跑流程](https://github.com/u9401066/asset-aware-mcp/blob/main/tests/codex_native_image/README.md)。
+
 ## Native PDF annotation evaluation (Unreleased)
 
 批註工作流分別測試原生物件、完整 MCP 傳輸、實際 Agent 圖片核對與可攜證據。

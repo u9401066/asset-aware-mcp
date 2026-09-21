@@ -202,7 +202,9 @@ Agent 負責完整的語意與視覺核對，依據可檢查的結果協調修�
 目前 main 已有 PDF 頁面／區域／批註、指定範圍的 DOCX 編輯、試算表與
 CSV／TSV、PPTX 元件、獨立 A2T 表格，以及固定版本的引用與 Wiki。
 這些 Unreleased 能力以實際 contract 為準；公開版 **1.4.0**，下次整合 **1.4.1**。
-獨立圖片仍是內部核心，MCP／引用／Wiki 串接尚未完成。詳見
+獨立圖片已串接影格／區域、實際 PNG 預覽、PNG／TIFF 衍生檔、受檢查的影格
+版本修改及附來源的 Wiki。實際 Codex 已用真實 PDF 衍生圖片完成操作，通過
+獨立像素／歷史／引用核對；這不等於任意圖片都已證明保真。詳見
 [原生文件用法與限制](docs/wiki/Native-File-Assets.md)及
 [能力缺口與上游參考](docs/agent-asset-gap-analysis.md)。
 更廣泛的原生 CRUD 仍在開發；有轉檔工具不代表保真回寫。詳見

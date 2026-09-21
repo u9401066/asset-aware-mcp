@@ -251,8 +251,11 @@ Current main coverage includes PDF pages/regions/annotations, scoped DOCX editin
 native workbook and CSV/TSV workflows, PPTX components, independent A2T tables and
 revision-bound citations/Wikis. These Unreleased additions require the advertised
 runtime capabilities; public release remains **1.4.0**, next consolidated **1.4.1**.
-Standalone raster processing is an internal kernel awaiting MCP/evidence/Wiki
-integration. See [native usage and limits](docs/wiki/Native-File-Assets.md) and the
+Standalone raster workflows now expose oriented frames/regions, actual PNG previews,
+explicit PNG/TIFF derivatives, guarded frame revisions and source-attached Wikis.
+An actual default-model Codex run on a real-PDF-derived image passed independent
+pixel/history/citation checks; this is scoped evidence, not general image fidelity.
+See [native usage and limits](docs/wiki/Native-File-Assets.md) and the
 [capability gaps and upstream references](docs/agent-asset-gap-analysis.md).
 Broader native CRUD and per-format review remain ongoing; conversion does not prove
 a faithful round trip. See [contracts](docs/spec.md) and [roadmap](ROADMAP.md).

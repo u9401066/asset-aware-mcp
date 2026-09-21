@@ -1,5 +1,38 @@
 # Progress (Updated: 2026-09-21)
 
+## Native raster local release gates — ready for exact-head publication checks
+
+Actual default-model Codex NIST derivative audit passes258calls/zeroerrors/304.08s,
+15framePNGs/one region/three TIFF revisions/six literal XLSX cells/three Wikis.
+Full suite:3648passed,33optional skips,726.48s. Python3.10 image/SDK2 scope:111passed,
+41.10s; balanced17.56s/compact17.39s. Final docs/GitHub-hygiene35tests pass0.34s.
+Ruff766files, mypy322sources, Bandit/zizmor/harness/diff checks pass. Installed wheel
+and Docker exactsource replay plus console/doctor/30-tool SDK2 stdio pass. Source:
+de71fed018b653557674cd0d50623ae92eba7de3e336626c7244b2097f917a00.
+
+VSIX199tests,64package-content entries,all-artifact audit and install/update pass.
+Local activation unavailable without xvfb-run; required CI activation must pass.
+Eight bilingual desktop/mobile website states pass; feature desktopzh/mobileen
+screenshots visually checked. Browser first lacked private libasound path, then
+old copied assertion expected nonexistent native-image-v1; retained both failures.
+Corrected harness uses existing private libs and actual raster contract terms.
+No production/UI fix or global package/font/renderer change was needed.
+
+README/ChineseREADME, changelog/roadmap/spec/capability analysis, Chinese/English
+usage and evaluation pages and five source/bundled assistant guides now reflect
+scoped raster workflows and remaining limits. GitHub metadata/label scripts now
+include raster frames and retain PDF annotations; topic list stays unchanged.
+27counted files plus two MEM comprise this final docs/assets/metadata segment.
+All11temporarily staged owned terminal runs restored with exact hashes/mtimes.
+Owned Docker image591f7dafd083/builderb045f1d29e3c and wheel/replay envs removed;
+Python3.10 test env retained until CI passes. Actual/failed traces remain intact.
+
+Proof:/run/user/1000/asset-aware-native-image-validation.json. Commit/push main,
+then await all exact-head CI/Pages jobs, compare live files and verify release1.4.0.
+Docs server8887 still running for checks; stop after publication. No new tag or
+version bump: public1.4.0, next consolidated1.4.1. Broader all-format goal remains
+active; original dirty checkout untouched. Author u9401066 <u9401066@gap.kmu.edu.tw>.
+
 ## Actual Codex raster workflow — independent audit passed; release gates in progress
 
 Local integration committed as dc0b8d1 (30 counted files + two MEM). New evaluation

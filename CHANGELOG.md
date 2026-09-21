@@ -7,12 +7,17 @@
 
 ## [Unreleased]
 
-- Started the internal standalone raster kernel: complete oriented frame records,
-  explicit color-managed previews, source-bound regions, PNG/TIFF derivatives,
-  ordered TIFF composition and guarded exact-candidate revisions. Native sample,
-  palette/alpha, metadata, frame-count and worker limits have focused regressions.
-  MCP/evidence/Wiki/actual-Agent integration remains pending; no public image
-  operation is advertised yet. Public **1.4.0**, next consolidated **1.4.1**.
+- Added standalone raster MCP workflows: complete oriented frame/region evidence,
+  actual color-managed PNG previews, explicit PNG/TIFF derivatives, ordered TIFF
+  composition and guarded exact-candidate frame revisions. Full hash-paged receipts,
+  historical verification, selections, derivations, custom/CSL citations and immutable
+  Wikis retain exact sources and direct operation inputs. Agent reviews meaning,
+  appearance, color/precision and unmodeled metadata/layers.
+- Actual default-model Codex evaluated an EXIF-oriented benchmark PNG derived from
+  a pinned real NIST PDF: 258 successful calls, 15 frame PNGs, one region, three TIFF
+  revisions, six literal cells and three Wikis passed independent checks. The first
+  wrapper's post-run missing-audit-module failure is retained; separate audits pass,
+  and imports now precede model execution. Public **1.4.0**, next consolidated **1.4.1**.
 
 - Added native PDF annotation catalogs/records and guarded create, metadata edit,
   explicit appearance replacement and deletion for supported annotation kinds.
