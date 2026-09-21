@@ -18,8 +18,11 @@ from tests.codex_native_pdf.trace import canonical, digest, payload
 from tests.codex_pdf.trace import call_failed, require, tool_errors
 from tests.codex_story_lifecycle.audit import intent_bytes
 from tests.native_docx_note_lifecycle_helpers import (
+    assert_native_id_correction,
     assert_native_stages,
     edits,
+    id_correction,
+    inspect_id_mismatch,
     inspect_pages,
     text_edit,
 )
@@ -84,7 +87,7 @@ def validate_history(workspace, asset, expected):
     )
     history = asset["history"]
     require(
-        len(history) == 3
+        len(history) == (4 if expected.get("repair_note_ids") else 3)
         and history[0]["sha256"] == expected["source_sha256"]
         and not asset["archived"],
         "Managed history differs",
@@ -95,18 +98,21 @@ def validate_history(workspace, asset, expected):
         raw = (root / stage["sha256"]).read_bytes()
         require(digest(raw) == stage["sha256"], "Managed bytes differ")
         data.append(raw)
-    assert_native_stages(*data)
+    assert_native_stages(*data[:3])
+    if expected.get("repair_note_ids"):
+        assert_native_id_correction(data[2], data[3])
     require(
         (workspace / "verified.docx").read_bytes() == data[-1], "Published bytes differ"
     )
     return root
 
 
-def validate_reads(calls, workspace, asset):
+def validate_reads(calls, workspace, asset, repair_note_ids=False):
     buffers, records, catalogs = {}, {}, {}
-    images, verified, metadata = set(), set(), set()
+    images, verified, metadata, verified_notes = set(), set(), set(), set()
     root = workspace / "data/native-assets" / asset["asset_id"] / "revisions"
     initial, current = asset["history"][0]["sha256"], asset["revision"]
+    pre_correction = asset["history"][2]["sha256"]
     pending, writes, selected = None, 0, False
     for call in calls:
         args, result = call["arguments"]["native_request"], payload(call)
@@ -198,18 +204,39 @@ def validate_reads(calls, workspace, asset):
                     {(initial, i) for i in range(3)} <= images, "Initial pages missing"
                 )
             if op == "update_docx_notes":
-                require(writes == 0 and revision == initial, "Wrong structure order")
                 request = args["docx_notes_update"]
+                correction = repair_note_ids and writes == 2
+                wanted_revision = pre_correction if correction else initial
+                require(
+                    (writes == 0 or correction) and revision == wanted_revision,
+                    "Wrong structure order",
+                )
                 require(
                     request["scope"] == "definitions_and_native_body_references"
                     and request["expected_catalog_sha256"]
-                    == catalogs[initial]["catalog_sha256"],
+                    == catalogs[wanted_revision]["catalog_sha256"],
                     "Wrong catalog precondition",
                 )
-                expected = edits(
-                    catalogs[initial]["catalog"],
-                    records[initial, canonical(locator(identity=8))],
-                )
+                if correction:
+                    require(
+                        {(pre_correction, i) for i in range(3)} <= images,
+                        "Actual pre-correction pages missing",
+                    )
+                    require(
+                        all(
+                            (pre_correction, canonical(n["locator"])) in records
+                            for n in independent_catalog(
+                                (root / pre_correction).read_bytes()
+                            )["notes"]
+                        ),
+                        "Pre-correction full note records missing",
+                    )
+                    expected = id_correction()
+                else:
+                    expected = edits(
+                        catalogs[initial]["catalog"],
+                        records[initial, canonical(locator(identity=8))],
+                    )
                 require(
                     intent_bytes(request["edits"]) == intent_bytes(expected),
                     "Wrong definition edit intent",
@@ -240,10 +267,23 @@ def validate_reads(calls, workspace, asset):
             require(result["valid"], "Invalid historical evidence")
             ref = args["reference"]
             if ref["schema_version"] == "native-docx-note-ref-v1":
+                allowed = {(initial, canonical(locator(identity=8)))}
+                if repair_note_ids:
+                    allowed |= {
+                        (pre_correction, canonical(locator(identity=11))),
+                        (
+                            pre_correction,
+                            canonical(locator(kind="endnote", identity=5)),
+                        ),
+                    }
                 require(
-                    ref == records[initial, canonical(locator(identity=8))]["evidence"],
-                    "Wrong deleted-note reference",
+                    any(
+                        key in records and ref == records[key]["evidence"]
+                        for key in allowed
+                    ),
+                    "Wrong historical-note reference",
                 )
+                verified_notes.add((ref["revision"], canonical(ref["locator"])))
             verified.add(ref["schema_version"])
         elif op == "publish":
             locations = [
@@ -262,7 +302,20 @@ def validate_reads(calls, workspace, asset):
                 and {"native-docx-note-ref-v1", "native-selection-ref-v1"} <= verified,
                 "Historical evidence not verified",
             )
-    require(writes == 2 and pending is None, "Unexpected or unreviewed mutations")
+    require(
+        writes == (3 if repair_note_ids else 2) and pending is None,
+        "Unexpected or unreviewed mutations",
+    )
+    if repair_note_ids:
+        require(
+            {
+                (initial, canonical(locator(identity=8))),
+                (pre_correction, canonical(locator(identity=11))),
+                (pre_correction, canonical(locator(kind="endnote", identity=5))),
+            }
+            <= verified_notes,
+            "Deleted or remapped historical note verification missing",
+        )
     return {
         "note_records": len(records),
         "catalog_records": len(catalogs),
@@ -282,30 +335,45 @@ def audit(output):
     calls = calls_from(events)
     asset = load_asset(workspace, final["docx_asset_id"])
     root = validate_history(workspace, asset, expected)
-    reads = validate_reads(calls, workspace, asset)
+    repair_note_ids = expected.get("repair_note_ids", False)
+    reads = validate_reads(calls, workspace, asset, repair_note_ids)
     validate_wikis(workspace, asset, root)
     require(
         isinstance(final.get("limitations"), list) and final["limitations"],
         "Missing limitations",
     )
     with environment(expected["font_environment"]):
-        renders = validate_renders(
-            workspace, asset, calls, final, {asset["history"][0]["sha256"]}
-        )
-        for index in [0, 2]:
+        historical = {asset["history"][0]["sha256"]}
+        if repair_note_ids:
+            historical.add(asset["history"][2]["sha256"])
+        renders = validate_renders(workspace, asset, calls, final, historical)
+        last = len(asset["history"]) - 1
+        for index in [0, last]:
             pdf, _ = inspect_pages(
                 (root / asset["history"][index]["sha256"]).read_bytes(),
-                final=index == 2,
+                final=index == last,
             )
             (output / f"independent-notes-{index}.pdf").write_bytes(pdf)
+        mismatch = None
+        if repair_note_ids:
+            pdf, texts = inspect_id_mismatch(
+                (root / asset["history"][2]["sha256"]).read_bytes()
+            )
+            (output / "independent-before-id-correction.pdf").write_bytes(pdf)
+            mismatch = {
+                "independently_reproduced": True,
+                "before_correction_page_texts": texts,
+                "correction": "Explicit mappings; contents and source preserved; all final pages checked",
+            }
     return {
         "passed": True,
         "tool_calls": len(calls),
         "tool_errors": tool_errors(events),
         "complete_reads": reads,
-        "managed_revisions": 3,
+        "managed_revisions": len(asset["history"]),
         "historical_wikis": 2,
         "renders": renders,
+        "id_correction": mismatch,
         "limitations": final["limitations"],
     }
 

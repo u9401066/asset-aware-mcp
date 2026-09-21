@@ -1,5 +1,17 @@
 # Active Context
 
+## Native Word ID correction — actual Agent recovery harness
+
+Runtime/spec/tests committed a8e8333 (7counted+2MEM). This2-file test segment adds
+opt-in --repair-note-ids while keeping the original3-revision audit compatible.
+The default-model Agent must read/render the misbound intermediate revision,
+explicitly remap known IDs, reread full receipts/notes, review corrected pages,
+verify mapped/deleted historical refs and retain both immutable Wikis. Independent
+native/render audits enforce all4versions,9PNGs and the actual wrong contents
+before correction. Final211successful calls+2recovered errors/282.24s is retained.
+No model override or rerun to erase errors. Source22b65 unchanged; documentation/
+harness segment follows. Public1.4.0,nextconsolidated1.4.1,broadgoal remainsactive.
+
 ## Native Word note ID correction — validated runtime/spec/tests
 
 Prior notes main aff334e CI35457459127 failed honestly: npm503 maintenance and a

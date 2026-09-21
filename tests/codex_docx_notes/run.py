@@ -15,8 +15,8 @@ from tests.codex_pdf.run import command, execute
 from tests.native_docx_notes_helpers import source_document
 
 
-def prompt(workspace):
-    return f"""Use ONLY asset_aware_under_test document native MCP tools. The human
+def prompt(workspace, repair_note_ids=False):
+    text = f"""Use ONLY asset_aware_under_test document native MCP tools. The human
 supplied {workspace / "source.docx"}, a Word file containing two body pages and one
 endnote page. Use the Codex default model and installed contracts; never write back
 source.docx. Native note IDs are not the rendered numbering.
@@ -62,6 +62,36 @@ IDs and formatting, all six actual PNGs, immutable old evidence and both Wikis.
 No shell or fixture access. Do not claim that checking native bytes proves semantics
 or universal Microsoft Word fidelity. Complete the actual workflow.
 """
+    if repair_note_ids:
+        start = text.index("4. Render ALL THREE final actual PNGs")
+        end = text.index("5. Verify DELETED footnote", start)
+        text = (
+            text[:start]
+            + """4. Render ALL THREE post-edit actual PNGs at render_size1024 BEFORE any further
+mutation. Compare every note's displayed content/number against the complete native
+records. This evaluation uses Writer24.2.7, which can swap contents when native IDs
+are out of body order. Record what the actual images show, including any mismatch.
+Keep the complete pre-correction footnoteID11 and endnoteID5 references.
+Then explicitly correct IDs using update_docx_notes with the current complete
+catalog hash and definitions_and_native_body_references scope. Two remap_ids edits:
+ - existing footnote part/kind footnote: mappings [{note_id:11,new_note_id:1}].
+ - existing endnote part/kind endnote: mappings
+   [{note_id:12,new_note_id:1},{note_id:5,new_note_id:2}].
+Only these explicitly listed IDs may change. All other IDs, special definitions,
+content, native ordering, formatting and human source bytes remain intact.
+Read the COMPLETE review_request, mapping receipt, corrected catalog and EVERY
+corrected note record. Render ALL THREE corrected final PNGs at render_size1024.
+Check page1 NEW FOOTNOTE displayed1 / VERIFIED FOOTNOTE displayed2; page3 NEW
+ENDNOTE displayedi / original ENDNOTE displayedii. Check body text/units and removed
+old note. Native IDs changed explicitly; old references remain historical.
+Verify BOTH retained pre-correction references (footnoteID11 and endnoteID5).
+"""
+            + text[end:]
+        )
+        text = text.replace(
+            "all six actual PNGs", "all nine actual PNGs across four managed revisions"
+        )
+    return text
 
 
 def main():
@@ -69,6 +99,7 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--codex", default="codex")
     parser.add_argument("--font-fixture", required=True, type=Path)
+    parser.add_argument("--repair-note-ids", action="store_true")
     args = parser.parse_args()
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
@@ -93,11 +124,12 @@ def main():
         ).strip(),
         "model_selection": "Codex default; not pinned by runner",
         "font_environment": fonts,
+        "repair_note_ids": args.repair_note_ids,
     }
     (output / "expected.json").write_text(
         json.dumps(metadata, indent=2), encoding="utf-8"
     )
-    text = prompt(workspace)
+    text = prompt(workspace, args.repair_note_ids)
     (output / "prompt.txt").write_text(text, encoding="utf-8")
     cli = command(args.codex, repo, workspace, output)
     cli[-1:-1] = [
