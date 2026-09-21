@@ -17,6 +17,7 @@ from src.infrastructure.native_pdf_annotation_edits import edit_annotations
 from src.infrastructure.native_pdf_annotations import decompose_annotations
 from src.infrastructure.native_pdf_graph import graph_digest
 from tests.native_pdf_helpers import build_pdf, page_reference, pixels, rewrite
+from tests.native_pdf_length_helpers import duplicate_length_pdf
 
 
 def reference(data, text="Keep annotation 0"):
@@ -38,6 +39,36 @@ def update(data, edits):
 def body_pixels(data):
     with pymupdf.open(stream=data, filetype="pdf") as document:
         return [p.get_pixmap(annots=False).samples for p in document]
+
+
+def test_annotation_reader_copy_preserves_verified_duplicate_length_policy():
+    original = duplicate_length_pdf()
+    created, receipt = update(
+        original,
+        [
+            {
+                "op": "create",
+                "page_reference": page_reference(original, 0).model_dump(),
+                "appearance": {"kind": "Text", "point": [0.2, 0.2]},
+                "metadata": {"contents": "Retain source bytes"},
+            }
+        ],
+    )
+    assert "canonicalized_equal_duplicate_stream_lengths" in receipt.repairs
+    assert body_pixels(original) == body_pixels(created)
+    assert b"/Length 4 /Length 4" in original
+    with pytest.raises(ValueError):
+        bad = duplicate_length_pdf(b"/Length 3 /Length 4")
+        update(
+            bad,
+            [
+                {
+                    "op": "create",
+                    "page_reference": page_reference(bad, 0).model_dump(),
+                    "appearance": {"kind": "Text", "point": [0.2, 0.2]},
+                }
+            ],
+        )
 
 
 def test_metadata_preserves_foreign_appearance_and_native_page_content():

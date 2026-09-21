@@ -1,5 +1,16 @@
 # Decision Log
 
+## [2026-09-21] Separate annotation-free reader verification from requested PDF output
+
+Highlight transparency changed MuPDF body compositing even with annots=False; exact
+native checks proved unchanged source bodies. Compare strict pixels on disposable
+annotation-free reader copies, retain all inverse native checks and original output
+annotations. Reuse NativePdfPackage in those readers so independently proven equal
+duplicate stream lengths are handled consistently; NASA actual-Agent failure exposed
+the bypass. Do not suppress general writer warnings or introduce pixel tolerances.
+Annotation Contents/FreeText are authored content and must not be confused with the
+underlying highlighted quotation. Model error traces and all old evidence remain.
+
 ## CI correction docs — ready for retry
 
 Test-only fix 1b7ded8 is paired with updated bilingual evaluation docs;

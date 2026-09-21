@@ -34,7 +34,7 @@ from src.infrastructure.native_pdf_checks import (
     verify_reference,
 )
 from src.infrastructure.native_pdf_graph import graph_digest
-from src.infrastructure.native_pdf_package import NativePdfPackage
+from src.infrastructure.native_pdf_package import NativePdfPackage, save_pdf
 
 if TYPE_CHECKING:
     from src.domain.native_pdf_annotations import PdfAnnotationAppearance
@@ -121,16 +121,29 @@ def _metadata(annotation: pikepdf.Object, metadata: PdfAnnotationMetadata) -> No
             annotation[key] = pikepdf.String(value)
 
 
-def _base_pixels(data: bytes, index: int) -> tuple[int, int, str]:
-    with pymupdf.open(stream=data, filetype="pdf") as pdf:
+def _base_pixels(data: bytes) -> list[tuple[int, int, str]]:
+    # annots=False can still let a Highlight's transparency change MuPDF's
+    # page compositing by one color level. Remove annotations from a disposable
+    # reader copy, never from the managed source or requested output. Native
+    # inverse checks independently preserve every non-annotation object.
+    with NativePdfPackage(data) as reader:
+        for page in reader.pdf.pages:
+            if "/Annots" in page.obj:
+                del page.obj.Annots
+        body = save_pdf(reader.pdf)
+    with pymupdf.open(stream=body, filetype="pdf") as pdf:
         if pdf.is_repaired:
             raise ValueError("PDF annotation pixel readback required repair")
-        page = pdf[index]
-        scale = min(1.0, 512 / max(page.rect.width, page.rect.height))
-        pix = page.get_pixmap(
-            matrix=pymupdf.Matrix(scale, scale), alpha=False, annots=False
-        )
-        return pix.width, pix.height, hashlib.sha256(pix.samples).hexdigest()
+        result = []
+        for page in pdf:
+            scale = min(1.0, 512 / max(page.rect.width, page.rect.height))
+            pix = page.get_pixmap(
+                matrix=pymupdf.Matrix(scale, scale), alpha=False, annots=False
+            )
+            result.append(
+                (pix.width, pix.height, hashlib.sha256(pix.samples).hexdigest())
+            )
+        return result
 
 
 def _replace_contents(array: pikepdf.Object, items: list[pikepdf.Object]) -> None:
@@ -349,9 +362,9 @@ class AnnotationMutation:
             self.package.pdf, list(self.mapping.values()), self.package.pdf.pdf_version
         )
         self._restore_and_check()
+        if _base_pixels(self.package.data) != _base_pixels(data):
+            raise ValueError("PDF annotation edit changed underlying page pixels")
         for index in range(len(self.package.pdf.pages)):
-            if _base_pixels(self.package.data, index) != _base_pixels(data, index):
-                raise ValueError("PDF annotation edit changed underlying page pixels")
             if index not in self.affected and render_fingerprint(
                 self.package.data, index
             ) != render_fingerprint(data, index):

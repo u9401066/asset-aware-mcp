@@ -1,5 +1,48 @@
 # Progress (Updated: 2026-09-21)
 
+## Native PDF annotation real-Agent checks — rendering/parser copy corrections
+
+Local commits:fdf9ba9(core),0b117a9(22counted integration files+2MEM). Not pushed.
+Default-model Codex NIST01 passed:399successful MCP calls+1recovered contract
+text_limit error,321.35s,17original pages,4revisions,37complete annotation records,
+8actual PNGs,2Wikis. All body streams/pixels and8original Links preserved. Source
+fingerprint is recorded in expected.json; NIST precedes the later NASA reader fix.
+Actual created/final target images independently viewed. Evidence:
+/run/user/1000/asset-aware-codex-pdf-annotations-nist-01.
+
+New mixed Highlight/FreeText audit exposed MuPDF annots=False compositing differences
+(max1level,mean<0.004). Native graphs/body streams unchanged. Production now compares
+exact pixels from annotation-free disposable reader copies; audit independently
+removes page Annots using MuPDF xrefs, retains all original full-annotation checks.
+No tolerance relaxation or source/output mutation. FreeText can enter page text
+extraction, documented explicitly. Probe retained at/run/user/1000/asset-aware-pdf-
+annotation-transparency-probe. After first correction109focusedpass6.80s,mypy306pass.
+
+Apollo01 actual Agent failed safely at first mutation:writer warning in the reader
+copy because it bypassed verified duplicate-Length parser checks. No revision was
+committed. Exact traceback retained inpdf-annotations-apollo-writer-probe.log.
+Reader now uses NativePdfPackage, preserving strict known-equal proof and rejecting
+conflicting/unknown warnings.58focusedpass3.27s. Apollo02 default-model run ACTIVE;
+full-final pytest ACTIVE. Full-first was intentionally interrupted for this real
+bug:55passed30optional skips468.35s,not a final full-suite result.
+
+New opt-in runner/auditor/replay and negative audit tests retain real corpus identity,
+complete reads/order, raw streams, all body pixels, delivered images, historical refs,
+derivations and Wiki checks. Docker first build and wheel smoke passed before NASA
+fix; they are rebuilt after the fix. First Docker replay found mount UID/path issues,
+not document failure; preserve logs, use uid1000 and SAME absolute evidence bind path.
+Latest Docker image:asset-aware-mcp:pdf-annotations-final-smoke. Wheel venv:
+/dev/shm/asset-aware-wheel-smoke-6m300tps/venv. Source replay awaits Apollo02 result.
+
+Docs/harness updates remain separate/uncommitted; generatedsite and source/bundled
+instructions synced. VSIX199tests/package64 passed; install/update smoke running.
+xvfb-run absent, required-activation attempt exits127; normal install smoke is next.
+Seven old owned evaluation runs remain hash/mtime-verified RAM staging; four restored.
+Restore ALL with/tmp/asset-aware-pdf-annotations-stage.py restore after own Docker
+cleanup. Do not delete unrelated caches. No new version/tag:public1.4.0,next1.4.1.
+Authoru9401066@gap.kmu.edu.tw;original dirty checkout untouched;no PR/subagent.
+Broad all-format goal remains active. Full release/docs/CI/Pages/push outstanding.
+
 ## Native PDF annotation MCP integration — SDK2 and provenance validated
 
 The22-file runtime/service/test segment exposes complete hash-pinned catalogs and
