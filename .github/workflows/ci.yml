@@ -97,7 +97,7 @@ jobs:
   python310-mcp-smoke:
     name: 🐍 Python 3.10 MCP Runtime Smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -211,7 +211,7 @@ jobs:
           tests/integration/test_native_docx_story_lifecycle_stdio.py
           tests/integration/test_native_docx_notes_stdio.py
           tests/integration/test_native_asset_stdio_e2e.py
-          -q --timeout=120
+          -q --timeout=120 --durations=10
 
   # ==========================================
   # npm dependency security gate

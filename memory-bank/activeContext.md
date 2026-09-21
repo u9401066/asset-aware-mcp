@@ -1,5 +1,37 @@
 # Active Context
 
+## PDF annotation Python 3.10 CI — measured timeout correction, final rerun pending
+
+The coverage correction correctly exposed two 180-second timeouts on CI head
+7400c7e, run 35561236292: 1,157 passed, four optional skips, two failed in 712.88s.
+Both failures are pytest-timeout, not content assertion errors. All other CI jobs
+except the dependent summary passed. Full logs and completed job states retained:
+/run/user/1000/asset-aware-pdf-annotations-ci-py310-first.log and
+/tmp/asset-aware-pdf-annotations-second-remote-proof.json. No failed run rerun.
+
+Created isolated /dev/shm/asset-aware-pdf-annotations-py310 using frozen lock and
+system Python 3.10.12; symlinked dependencies, no global Python/font/renderer change.
+A diagnostic invokes the unmodified balanced test with every assertion and records
+each MCP call: 408 calls, 142.512s, passed. It has an explicit 600s diagnostic bound.
+Evidence: /run/user/1000/asset-aware-pdf-annotations-py310-diagnostic.
+Only the two annotation case deadlines now use 300s; the enclosing Python 3.10 job
+allows 20 minutes and reports ten slowest tests. Other test deadlines remain 120s;
+no assertion, paging completeness, source/visual/Wiki checks or runtime code changed.
+Formal Python 3.10 pytest then passed both cases in 266.20s (134.47s/130.83s).
+Final source fingerprint remains 74e3abc39b06170c0bedc7fa777654abfdb0d9138e638012c1da8293a27b25f5;
+prior complete 3,521-test suite, actual Codex and wheel/Docker proofs still apply.
+
+Ruff/zizmor/harness guards, 28 docs tests and regenerated site pass. Chinese/English
+release notes preserve both timeout failures and successful diagnostic. Eight
+browser/language states passed after the failure documentation; later text adds
+only the formal two-case result. Owned temporary docs server has stopped.
+Validation JSON updated with the failed run and measured correction. This six-file
+plus two-MEM segment needs commit/push and fresh all-ten CI/all-three Pages checks,
+six live byte comparisons and latest-release confirmation before publication proof.
+Keep private Python 3.10 environment until final CI passes, then remove only it.
+Public 1.4.0; next consolidated 1.4.1. No new tags, PRs, subagents or model overrides.
+Broad all-format goal remains active; original dirty checkout remains untouched.
+
 ## Native PDF annotation CI coverage — all gates passed, adding persistent SDK2 coverage
 
 8b7e243 first publication checks passed: CI 35560131550 all ten jobs and Pages

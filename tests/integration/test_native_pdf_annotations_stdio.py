@@ -114,7 +114,9 @@ async def actual_pages(client, native, asset, data):
 
 
 @pytest.mark.parametrize("surface", ["balanced", "compact"])
-@pytest.mark.timeout(180)
+# Complete paged records across four revisions make hundreds of isolated-worker
+# calls. Both Python 3.10 CI cases exceeded 180s; retain every integrity assertion.
+@pytest.mark.timeout(300)
 async def test_annotations_over_sdk2_preserve_native_source_and_evidence(
     tmp_path, surface
 ):

@@ -708,6 +708,8 @@ A mixed Highlight/FreeText fixture also exposed one-level MuPDF compositing drif
 
 The final full suite passed 3,521 tests with 33 optional skips in 698.37 seconds, including Writer/CJK fonts, the real PDF corpus and both SDK2 annotation workflows. Ruff, type checks across 306 modules and the Bandit medium/high gate passed; 185 low-severity Bandit findings remain recorded. VSIX 199 tests, 64-file package checks, install/update and wheel/Docker MCP stdio passed. Local VS Code activation was unavailable because xvfb-run was missing; remote CI still checks it. Desktop/mobile documentation and both language switches passed without horizontal overflow or browser errors.
 
+Adding both annotation workflows to the explicit Python 3.10 CI list exposed the original 180-second test limit: that run retained 1,157 passes, four skips and two timeout failures. An isolated Python 3.10 diagnostic completed all original assertions and 408 MCP calls in 142.51 seconds. Only these two cases now allow 300 seconds, with a 20-minute enclosing CI job and slow-test duration reporting. Other test limits, runtime code, complete pagination and every content-integrity assertion remain unchanged. Both configurations then passed the isolated Python 3.10 pytest run: two tests in 266.20 seconds.
+
 Ordinary pytest never launches a model. Use uv run python -m tests.codex_pdf_annotations.run --corpus /path/to/verified-corpus --case nist-1648a --output /path/to/new-run; use --case apollo11 for the second original. No model override. Audits retain full contract/schema/record continuation and ordering, errors, actual images and limits. Public release: 1.4.0; next consolidated patch: 1.4.1.
 
 ### Native Word footnote/endnote evaluation (Unreleased)
