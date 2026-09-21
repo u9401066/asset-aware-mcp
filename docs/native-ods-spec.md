@@ -141,6 +141,12 @@ edits the managed formula and requires actual PNGs for all three frozen PDFs.
 Its independent auditor retains the existing XLSX evaluation and checks ODS XML,
 formula/style preservation, historical refs, pixels and the native Wiki attachment.
 
+Codex, Cline and Copilot guidance now follows this rendition workflow and ships
+with the extension. It requires advertised source formats, complete receipts and
+every actual PDF page, distinguishes requested calculation policy from observed
+results, and leaves semantic/visual correction with the Agent. A stored preview
+does not recalculate when read; new PDF edits do not inherit old sheet mappings.
+
 ## References and reuse choices
 
 - [OASIS ODF packages](https://docs.oasis-open.org/office/OpenDocument/v1.4/os/part2-packages/OpenDocument-v1.4-os-part2-packages.html):

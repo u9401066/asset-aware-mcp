@@ -7,6 +7,12 @@
 
 ## [Unreleased]
 
+- Synchronize Codex, Cline, Copilot and bundled Agent guidance with native ODS
+  renditions. Discover supported source formats, read complete conversion receipts
+  and actual PDF pages, and review cache differences and clipped content. Keep
+  source/history identities and the MCP/Agent responsibility boundary explicit.
+  Public **1.4.0**, next consolidated **1.4.1**; no per-feature version bump.
+
 - Add revision-bound native ODS PDF renditions through the existing workbook
   operation, with ODF-specific resource/formula checks and Calc import policies.
   Keep exact source bytes, complete receipts and `.ods` Wiki attachments. Real

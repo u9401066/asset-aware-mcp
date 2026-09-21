@@ -32,10 +32,12 @@
   Read complete review_request receipts and new cell refs; no-op receipts are inline
   and create no history entry. Formula caches and display remain unverified.
   MCP checks source/revision/native structure; Agent reviews meaning, rich text,
-  recalculated formula results and actual Calc appearance. Cell operations provide
-  no ODS renderer or row/column/table lifecycle; repeated formulas/objects retain
-  mapping-aware edit guards. Wiki retains exact .ods, physical ranges, anchor-only
-  refs, full receipts and exact logical derivation endpoints. Historical evidence
+  recalculated formula results and actual Calc appearance. Cell operations do not
+  render automatically or implement row/column/table lifecycle. When
+  workbook_rendering.source_formats includes ods, use the rendition workflow below.
+  Repeated formulas/objects retain mapping-aware edit guards. Wiki retains exact
+  .ods, physical ranges, anchor-only refs, full receipts and exact logical derivation
+  endpoints. Historical evidence
   stays fixed. Public1.4.0; next consolidated1.4.1; no per-feature version bump.
 
 - When images_enabled is advertised, read_image/read_image_frame pin asset/revision;
@@ -206,7 +208,19 @@
 
 - **工作表尺寸修正（Unreleased／1.4.x）** — `read_worksheet_layout` 固定 revision／worksheet_key，完整讀回尺寸；`update_worksheet_layout` 明確指定點數列高、原始 OOXML 欄寬、重設或隱藏。保留儲存格／樣式，物件沿原錨點規則調整；清除公式及圖表快取。完整讀回紀錄，再由 Agent 產生新 PDF 核對畫面與結果，來源及歷史證據保持；公開版仍 1.4.0。
 
-- **工作簿版面核對（Unreleased／1.4.x）** — `create_workbook_rendition` 固定 XLSX revision，明確指定 print／whole_sheet 與 recalculate／prefer_cache，使用選配 Calc 建立獨立 PDF。完整讀取 `read_rendition` 與所有頁面 PNG；Wiki 附來源 XLSX 及轉換紀錄。隱藏、空白頁、溢出文字及公式結果由 Agent 核對，來源不改寫；公開版仍 1.4.0。
+- **工作簿版面核對（Unreleased／1.4.x）** — 先確認
+  `workbook_rendering.source_formats` 支援的 XLSX／ODS；
+  `create_workbook_rendition` 固定原生 asset_id／revision，明確指定
+  print／whole_sheet 與 recalculate／prefer_cache，使用選配 Calc 建立獨立 PDF。
+  ODS 使用 ODFRecalcMode 並停用外部連結更新。以建立時的 revision 與同一個
+  text_sha256 讀完 `read_rendition`，再讀完每頁記錄並查看每一張實際 PNG。
+  prefer_cache 是匯入偏好；缺少快取或 ODS 未指定樣式而須判定數字格式時，
+  仍可能重算。Agent 比對原生公式、快取與實際結果，不能把政策視為結果保證。
+  列印可能省略隱藏／空白表及範圍外內容，整表模式可能裁切溢出文字，須明確回報。
+  整表頁面映射不是儲存格定位；Wiki 保留完整紀錄與原始 .xlsx／.ods。
+  原檔快取不回存，已存 PDF 不隨讀取重算，後續 PDF 編輯不繼承舊映射。
+  MCP 檢查完整性；Agent 負責語意、畫面、結果核對與修正。公開 1.4.0，
+  下次整合 1.4.1，不逐項升版。
 
 - **原生 Table 合計列（Unreleased／1.4.x）** — `table_totals_lifecycle_enabled` 啟用時，以 `table_update.totals_row` 新增、移除或重用合計定義；新增前檢查空白範圍，移除明確選擇 clear／keep_cells。保留公式固定原 Table 範圍，其他引用保持結構化形式。完整讀回操作紀錄，由 Agent 核對公式結果及版面；公開版維持 1.4.0。
 

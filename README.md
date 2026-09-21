@@ -17,8 +17,10 @@ When `workbook_rendering.source_formats` includes `ods`, the optional Calc rende
 creates an independent PDF from an exact ODS revision. Read its complete conversion
 receipt and every actual page; Wikis retain the original `.ods`. Print and whole-sheet
 modes expose different content, and preferring caches does not guarantee frozen values.
-Bundled Agent instructions cover complete reads, exact references and review limits;
-discover `ods_enabled` in the installed runtime before using these operations.
+Bundled Agent instructions cover native XLSX/ODS rendition discovery, complete
+receipts, every actual page, cache-policy limits and clipped-content review.
+Discover `ods_enabled` for cell operations and `workbook_rendering.source_formats`
+for previews in the installed runtime.
 Public **1.4.0**; next consolidated **1.4.1**, with no per-feature version bump.
 
 Unreleased PDF annotations now support complete native reads and guarded creation,

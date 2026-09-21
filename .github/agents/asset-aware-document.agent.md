@@ -25,10 +25,12 @@ citation-ready provenance.
   Read complete review_request receipts and new cell refs; no-op receipts are inline
   and create no history entry. Formula caches and display remain unverified.
   MCP checks source/revision/native structure; Agent reviews meaning, rich text,
-  recalculated formula results and actual Calc appearance. Cell operations provide
-  no ODS renderer or row/column/table lifecycle; repeated formulas/objects retain
-  mapping-aware edit guards. Wiki retains exact .ods, physical ranges, anchor-only
-  refs, full receipts and exact logical derivation endpoints. Historical evidence
+  recalculated formula results and actual Calc appearance. Cell operations do not
+  render automatically or implement row/column/table lifecycle. When
+  workbook_rendering.source_formats includes ods, use the rendition workflow below.
+  Repeated formulas/objects retain mapping-aware edit guards. Wiki retains exact
+  .ods, physical ranges, anchor-only refs, full receipts and exact logical derivation
+  endpoints. Historical evidence
   stays fixed. Public1.4.0; next consolidated1.4.1; no per-feature version bump.
 
 - When images_enabled is advertised, read_image/read_image_frame pin asset/revision;
@@ -206,15 +208,23 @@ citation-ready provenance.
   render a new recalculated PDF, and inspect actual images/results. No AutoFit or
   visual verdict is inferred; history/source/evidence stay fixed. Public1.4.0 / 1.4.x.
 
-- When workbook_rendering.configured is true, create_workbook_rendition pins XLSX
-  asset_id/revision and requires workbook_rendition.mode (print/whole_sheet) plus
-  calculation (recalculate/prefer_cache). Optional Calc creates a separate PDF.
-  Read complete read_rendition at its creation revision and text_sha256, then all
-  PDF page records/PNGs. Print may omit hidden/blank/out-of-range cells; whole-sheet
-  includes hidden sheets but may clip overflow. Compare source formulas and actual
-  images; no Excel fidelity verdict. Wiki retains the receipt and exact XLSX.
-  Source caches stay unchanged; later PDF edits do not inherit sheet mappings.
-  Agent owns semantic/visual/result review. Public1.4.0 / Unreleased1.4.x.
+- When workbook_rendering.configured is true, check source_formats for advertised
+  xlsx/ods support. create_workbook_rendition pins native asset_id/revision and
+  requires workbook_rendition.mode (print/whole_sheet) plus calculation
+  (recalculate/prefer_cache). Optional Calc reads an unchanged native copy and
+  creates an independent PDF; ODS uses ODFRecalcMode with external updates disabled.
+  Read ALL read_rendition chunks at the creation revision and one text_sha256,
+  then every complete PDF page record and EVERY actual PNG. prefer_cache is an
+  import preference, not frozen values: missing caches or number-format resolution
+  for unstyled ODS formulas can trigger recalculation. Compare native expressions,
+  caches and actual results; MCP does not assert formula correctness or fidelity.
+  Print can omit hidden/blank/out-of-range content; whole_sheet includes hidden
+  sheets but can clip overflow. Review coverage and report clipping. Whole-sheet
+  order/count mappings identify source sheets, not native cell locators. Wiki
+  retains the full receipt and exact .xlsx/.ods source. Source caches stay unchanged;
+  stored PDF reads never recalculate, and later PDF edits do not inherit mappings.
+  Agent owns semantic/visual/result review and corrections. Public1.4.0; next
+  consolidated1.4.1; no per-feature version bump.
 
 - When table_totals_lifecycle_enabled is advertised, update_workbook_table accepts
   table_update.totals_row with the exact revision, worksheet key, Table part/ref.

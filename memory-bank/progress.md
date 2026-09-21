@@ -1,5 +1,101 @@
 # Progress (Updated: 2026-09-21)
 
+## ODS rendition guidance — locally verified; ready to publish
+
+Previous goal turn was PROGRESS: e5950c1 nativeODS renditions implemented, tested,
+pushed and ALL10CI/3Pages/6deployedfiles verified. This turn re-read live GitHub
+jobs and origin/main; still e5950c12a6bac881d6cbd58e1b0d2fd5ac4c1906 and allsuccess.
+Goal remains ACTIVE; full all-format scope unchanged. No subagents.
+
+Current13countedfiles+2MEM synchronize5Agent guidance sources and5bundled copies,
+plus README/CHANGELOG/native-ods-spec. Discover source_formats separately from
+ods_enabled, read complete creation receipts and everyactualpage, compare formula/
+cache/results, report clipping, retain exact .xlsx/.ods and historical mappings.
+MCP mechanical checks; Agent full semantic/visual/result review and corrections.
+Onlydocumentation/assistantassets changed; runtime339files, tests, dependencies,
+extensionimplementation and buildconfig unchanged. No new model/full-suite run is
+claimed. Parent3847pass/41skips, defaultCodex208successfulcalls/11PNGs, actualCalc7.3/
+24.2, installedwheel actualCalc and Docker capturedCalc replay remain evidence for
+that identical runtime. Allruntimefiles match the captured source manifest.
+
+Currentfocused55passed/0.80s; VSIX199tests/64entries/install-updatepass. All5actual
+packagedguides are byte-identical to sources. Localactivation skipped; exact-head
+remoteactivation required afterpush. Releaseharness/docs/sync/metadata/diffchecks
+pass; GitHubdescription and20topics reread and stillaccurate, no mutation needed.
+Localproof /run/user/1000/asset-aware-ods-rendition-guides-local-proof.json.
+InternalVSIX /run/user/1000/asset-aware-ods-rendition-guides-local-1.4.0.vsix.
+
+All11historicalmodeltrace dirs restoredordinary with exacthash/size/mtime. Owned
+npmdeps/cache/out removed. Currentpublic1.4.0,nextconsolidated1.4.1; no bump/tag/
+release. Work ONLY agent-assets main; original dirtydetached checkout untouched.
+Next exact13+2MEMstage, userauthor u9401066<u9401066@gap.kmu.edu.tw>, directmain
+commit/push, then ALLexact-head10CI/3Pages/6deployedbytechecks before newdevelopment.
+Broader ODS table/row/column lifecycle and ODT/ODP/HTML/EPUB/email/LaTeX/etc remain.
+
+## ODS renditions — publication COMPLETE, e5950c1 verified
+
+Head e5950c12a6bac881d6cbd58e1b0d2fd5ac4c1906 is on main/origin with user author
+u9401066<u9401066@gap.kmu.edu.tw>. ALL10CI jobs35614035534 and ALL3Pages jobs
+35614034482 passed. Six deployedfiles match exactcommitbytes: index.html,site.js,
+site-content.js,site-content/native-file-assets.md,native-ods-spec.md,
+wiki/Native-File-Assets.md. Publicationrunner62547 terminal0; no livewatch remains.
+Proof /run/user/1000/asset-aware-ods-render-publication-proof.json is published_verified.
+Localproof /run/user/1000/asset-aware-ods-render-local-proof.json now records both.
+
+Current segment24countedfiles+2MEM implements nativeODS PDF renditions, native
+resource/OpenFormula/graphicchecks and source-preserving Wiki receipts. Drawing
+namespace fixed with real-URI/no-ID guards; historical byte/full-receiptgoldens
+remain exact. Runtime339files, all7versions1.4.0. Latestpublicrelease re-readv1.4.0;
+next consolidated1.4.1, no per-feature bump/tag/release. Broader goal ACTIVE.
+
+Localfull3847passed/41environment-skips/635.25s plus9audit focusedtests(4newafter
+fullcollection). Calc7.3:39unit+5integrationpassed; Calc24.2:5integrationpassed.
+Independent fullpagepixels, styled999/recalculated3, unstyledcachepolicy, hidden/
+blank scopes, charts/raster, SDK2 restart and exactWiki/source retention verified.
+DefaultCodexrun01:208successfulcalls,11actualPNGs,234.98s,1recoveredargumenterror.
+Original auditor failure retained; exact authoredformula spelling corrected and
+independent nativeXML/read tamper checks strengthened, final auditpassed. No runtime
+change after capturedmodel manifest. Installedwheel339+actualCalc, Docker339+
+capturedCalc replay; bothdoctor/30tools/SDK2stdio pass. Docker does not claim actual
+Calc installation. VSIX199tests/64entries/install-updatepass, remoteactivationpass.
+
+All11historical modeltrace dirs restored ordinary/hash-size-mtime exact. Owned
+Dockerimage/builder,wheelenv/cache/data,npmdeps/cache/out, completedpytest-32temp and
+thisturn'sprivateCalc24.2runtime cleaned. Logs, sourceorigin proof, actualCalc/model/
+artifact artifacts and internalVSIX retained in/run. Preexisting7.3runtime and warm
+workerbytecode retained. Original dirtydetached checkout untouched. No subagents.
+
+NEXT coherent segment: update5Agent guidance sources and5bundledcopies for native
+ODS renditions/source_formats, complete receipts/actualpage review, cache/clipping
+boundaries; existing instructions still describe XLSX-only renditions. Stay<=30
+countedfiles excluding2MEM, sync/package/verify; currentruntime/model/fullproof can
+be reused only if exactruntime unchanged. Then continue ODS lifecycle and remaining
+ODT/ODP/HTML/EPUB/email/LaTeX/all-format scope. Only post-publicationMEM status changes
+remain dirty. Do not mark the broad goal complete or blocked.
+
+## ODS renditions — e5950c1 pushed; exact-head publication checks pending
+
+Head e5950c12a6bac881d6cbd58e1b0d2fd5ac4c1906 committed/pushed directmain as
+u9401066<u9401066@gap.kmu.edu.tw>,24countedfiles+2MEM. No version/tag/release:
+public1.4.0,next consolidated1.4.1. Baseline2d7cdfd remains fully verified.
+
+LIVE publication runner62547; poll this handle, do not duplicate it.
+CI35614035534 requires ALL10jobs; Pages35614034482 requires ALL3jobs plus6deployed
+files byte-exact. Script /run/user/1000/asset-aware-ods-render-verify-publication.py;
+log /run/user/1000/asset-aware-ods-render-publication-watch.log;
+proof /run/user/1000/asset-aware-ods-render-publication-proof.json.
+Do not start new development until exact-head verification completes.
+
+Localproof /run/user/1000/asset-aware-ods-render-local-proof.json records
+3847passed/41skips/635.25s +9focused auditcases (4added after fullcollection),
+Calc7.3unit39+integration5/Calc24.2integration5, defaultCodex208successfulcalls/
+11PNGs/1recoveredargumenterror, installedwheel339+actualCalc and Docker339+
+capturedCalc replay, bothdoctor/30tools/SDK2stdio, VSIX199/64entries/install-update.
+All11historical trace dirs restored exactly; ownedruntime/builddeps/cache/image/
+builder cleaned; all logs/proofs retained. Localactivation skipped, remote required.
+Original checkout untouched. Goal ACTIVE. After verification, update5Agent sources+
+5bundled copies in a separate <=30file segment; then broader format/lifecycle work.
+
 ## ODS renditions — local gates complete; ready for direct-main publication
 
 Current segment24countedfiles+2MEM adds native ODS PDF renditions, ODF resource/
