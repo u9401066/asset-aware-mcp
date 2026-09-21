@@ -19,6 +19,10 @@ from src.domain.native_asset_models import (
 from src.domain.native_delimited import NativeDelimitedReference
 from src.domain.native_docx_notes import DocxNoteReference
 from src.domain.native_docx_stories import DocxStoryReference
+from src.domain.native_image import (
+    NativeImageFrameReference,
+    NativeImageRegionReference,
+)
 from src.domain.native_pdf import NativePdfReference
 from src.domain.native_pdf_annotations import PdfAnnotationReference
 from src.domain.native_pdf_region import NativePdfRegionReference
@@ -34,6 +38,8 @@ NativeSelectionParent = (
     | PdfAnnotationReference
     | NativePdfRegionReference
     | NativeDelimitedReference
+    | NativeImageFrameReference
+    | NativeImageRegionReference
 )
 MAX_SELECTION_BYTES = 16 * 1024 * 1024
 

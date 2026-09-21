@@ -129,8 +129,8 @@ class ProcessNativeImage:
     ) -> Any:
         return self._run("render_region", data, locator, selector, size, color_policy)
 
-    def decompose(self, data: bytes) -> Any:
-        return self._run("decompose", data)
+    def decompose(self, data: bytes, color_policy: str = "embedded_to_srgb") -> Any:
+        return self._run("decompose", data, color_policy)
 
     def create(self, request: Any) -> Any:
         return self._run("create", request)

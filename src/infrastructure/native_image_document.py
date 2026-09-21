@@ -164,10 +164,12 @@ class NativeImage:
             raise ValueError("Image frame locator is outside the source sequence")
         return result
 
-    def decompose(self, data: bytes) -> list[dict[str, Any]]:
+    def decompose(
+        self, data: bytes, color_policy: ImageColorPolicy = "embedded_to_srgb"
+    ) -> list[dict[str, Any]]:
         result, size = [], len(data)
         for record, image in _frames(data):
-            preview = _preview(image, 768, "embedded_to_srgb")
+            preview = _preview(image, 768, color_policy)
             size += len(canonical(record)) + len(preview["png"])
             if size > 96 * 1024 * 1024:
                 raise ValueError("Raster decomposition exceeds its output budget")

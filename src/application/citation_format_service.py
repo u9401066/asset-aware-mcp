@@ -34,6 +34,14 @@ def render_citation(
     location: list[str] = []
     if page is not None:
         location.append(f"p. {page}")
+    if "frame_index" in locator:
+        location.append(f"frame index {locator['frame_index']} (zero-based)")
+    if "image_region" in locator:
+        location.append(
+            "displayed frame fractions ["
+            + ", ".join(str(v) for v in locator["image_region"])
+            + "]"
+        )
     if "annotation_index" in locator:
         location.append(f"annotation index {locator['annotation_index']} (zero-based)")
         if "annotation_object" in locator and "generation" in locator:

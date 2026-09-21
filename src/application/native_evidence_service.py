@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from src.application.native_docx_note_operations import attach_note_evidence
 from src.application.native_docx_story_operations import attach_story_evidence
+from src.application.native_image_evidence import NativeImageEvidence
 from src.application.native_pdf_annotation_operations import attach_annotation_evidence
 from src.application.native_pdf_operations import PDF_REVIEW, attach_pdf_evidence
 from src.application.native_pdf_region_service import NativePdfRegionService
@@ -22,6 +23,10 @@ from src.domain.native_delimited import (
 from src.domain.native_docx_notes import NOTE_REVIEW, DocxNoteReference
 from src.domain.native_docx_stories import STORY_REVIEW, DocxStoryReference
 from src.domain.native_file_reference import NativeFileReference
+from src.domain.native_image import (
+    NativeImageFrameReference,
+    NativeImageRegionReference,
+)
 from src.domain.native_pdf import NativePdfReference
 from src.domain.native_pdf_annotations import ANNOTATION_REVIEW, PdfAnnotationReference
 from src.domain.native_pdf_region import NativePdfRegionReference
@@ -37,6 +42,7 @@ if TYPE_CHECKING:
     from src.domain.native_docx import NativeDocxAdapter
     from src.domain.native_docx_notes import NativeDocxNoteAdapter
     from src.domain.native_docx_stories import NativeDocxStoryAdapter
+    from src.domain.native_image import NativeImageAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_selection import NativeSelectionParent
@@ -67,6 +73,7 @@ class NativeEvidenceService:
         delimited: NativeDelimitedAdapter | None = None,
         docx_stories: NativeDocxStoryAdapter | None = None,
         docx_notes: NativeDocxNoteAdapter | None = None,
+        images: NativeImageAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
@@ -76,8 +83,18 @@ class NativeEvidenceService:
         self.delimited = delimited
         self.docx_stories = docx_stories
         self.docx_notes = docx_notes
+        self.images = images
+
+    def _image_evidence(self) -> NativeImageEvidence:
+        if self.images is None:
+            raise ValueError("Native image adapter is not configured")
+        return NativeImageEvidence(self.repository, self.images)
 
     def read_parent_record(self, reference: NativeSelectionParent) -> dict[str, Any]:
+        if isinstance(reference, NativeImageRegionReference):
+            return self._image_evidence().region(reference)
+        if isinstance(reference, NativeImageFrameReference):
+            return self._image_evidence().frame(reference)
         if isinstance(reference, NativePdfRegionReference):
             return NativePdfRegionService(self).record(reference)
         asset = self.repository.load(reference.asset_id)
@@ -159,9 +176,15 @@ class NativeEvidenceService:
         | PdfAnnotationReference
         | NativePdfRegionReference
         | NativeDelimitedReference
+        | NativeImageFrameReference
+        | NativeImageRegionReference
         | NativeFileReference
         | NativeSelectionReference,
     ) -> dict[str, Any]:
+        if isinstance(
+            reference, NativeImageFrameReference | NativeImageRegionReference
+        ):
+            return self._image_evidence().verify(reference)
         if isinstance(reference, PdfAnnotationReference):
             asset = self.repository.load(reference.asset_id)
             record = self.read_parent_record(reference)

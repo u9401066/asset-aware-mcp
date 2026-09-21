@@ -237,6 +237,12 @@ class CslCitationService:
                 "png",
                 "jpeg",
                 "jpg",
+                "tif",
+                "tiff",
+                "gif",
+                "webp",
+                "bmp",
+                "avif",
             }
             else "bin"
         )

@@ -35,6 +35,14 @@ NativeOperation = Literal[
     "read_delimited_cell",
     "update_delimited",
     "create_pdf",
+    "create_image",
+    "extract_image",
+    "compose_images",
+    "read_image",
+    "read_image_frame",
+    "render_image_frame",
+    "read_image_region",
+    "update_image",
     "read_pdf",
     "read_pdf_page",
     "read_pdf_region",
@@ -160,6 +168,18 @@ NATIVE_OPERATIONS = {
     ),
     "delete_worksheets": _fields("asset_id expected_revision worksheet_keys"),
     "create_pdf": _fields("pdf_create"),
+    "create_image": _fields("image_create"),
+    "extract_image": _fields("image_extract"),
+    "compose_images": _fields("image_compose"),
+    "read_image": _fields("asset_id revision", "text_offset text_limit"),
+    "read_image_frame": _fields(
+        "asset_id revision image_locator", "text_offset text_limit"
+    ),
+    "render_image_frame": _fields("reference", "render_size image_color_policy"),
+    "read_image_region": _fields(
+        "reference", "image_region render_size image_color_policy"
+    ),
+    "update_image": _fields("asset_id expected_revision image_update"),
     "read_pdf": _fields("asset_id", "revision offset limit"),
     "read_pdf_page": _fields("asset_id pdf_locator", "revision text_offset text_limit"),
     "render_pdf_page": _fields("asset_id pdf_locator", "revision render_size"),
@@ -236,7 +256,7 @@ NATIVE_OPERATIONS = {
     ),
     "export_wiki": _fields(
         "asset_id output_dir",
-        "revision citation_contract citation_metadata derivations_sha256 delimited_dialect",
+        "revision citation_contract citation_metadata derivations_sha256 delimited_dialect image_color_policy",
     ),
     "update": _fields("asset_id expected_revision edits"),
     "history": _fields("asset_id", "offset limit"),

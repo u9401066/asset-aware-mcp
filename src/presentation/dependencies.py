@@ -54,6 +54,7 @@ from src.infrastructure.native_docx_render import LibreOfficeWordRenderer
 from src.infrastructure.native_docx_stories import NativeDocxStories
 from src.infrastructure.native_docx_structure import NativeDocxStructure
 from src.infrastructure.native_docx_workspace import FileNativeDocxWorkspaces
+from src.infrastructure.native_image_process import ProcessNativeImage
 from src.infrastructure.native_pdf_process import ProcessNativePdf
 from src.infrastructure.native_pptx import NativePresentation
 from src.infrastructure.native_pptx_render import LibreOfficePresentationRenderer
@@ -214,6 +215,7 @@ native_document_service = NativeDocumentService(
     workbook_ranges=NativeWorkbookRange(),
     table_workspaces=table_service,
     delimited=ProcessNativeDelimited(),
+    images=ProcessNativeImage(),
 )
 
 

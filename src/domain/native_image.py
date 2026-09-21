@@ -195,7 +195,9 @@ class NativeImageAdapter(Protocol):
     def read_frame(
         self, data: bytes, locator: NativeImageFrameLocator
     ) -> dict[str, Any]: ...
-    def decompose(self, data: bytes) -> list[dict[str, Any]]: ...
+    def decompose(
+        self, data: bytes, color_policy: ImageColorPolicy = "embedded_to_srgb"
+    ) -> list[dict[str, Any]]: ...
     def render(
         self,
         data: bytes,

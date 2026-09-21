@@ -1,5 +1,38 @@
 # Progress (Updated: 2026-09-21)
 
+## Native image MCP integration — local verification passed, real Agent evaluation next
+
+Version policy reconfirmed: Python/VSIX remain 1.4.0; next consolidated release
+1.4.1. No per-feature bump/tag. Work remains on main in the isolated agent-assets
+worktree; original dirty checkout untouched. Thirty counted integration files plus
+the two MEM files comprise this segment, author u9401066 <u9401066@gap.kmu.edu.tw>.
+
+Production ProcessNativeImage now provides full hash-paged catalogs/frame records,
+actual PNG previews/regions, guarded PNG creation/cropping, ordered TIFF composition
+and exact candidate revisions. Full references integrate historical verification,
+selections, derivations, custom/CSL citations and immutable image/cross-format Wikis.
+Wiki identity includes catalog/receipt/color policy; direct operation input files
+are preserved, without claiming recursive semantic lineage. Repeated frame inputs
+now decode each source version once. Invalid ICC requires explicit unmanaged preview.
+MCP checks bytes/structure; Agent owns semantic and actual visual review/correction.
+
+Focused suite: 332 passed in 39.28s. Final changed scope: eight passed in 35.04s,
+including balanced/compact actual SDK2 stdio lifecycles (16.67s/16.76s). Full Ruff,
+format (757 files), mypy (322 sources), Bandit, zizmor and release-harness audit pass.
+Evidence: /run/user/1000/asset-aware-native-image-integration-proof.json;
+source SHA de71fed018b653557674cd0d50623ae92eba7de3e336626c7244b2097f917a00.
+Earlier failures are retained: nonexistent test path (zero collected), two wrong
+Wiki test assumptions (authors field and two unique input versions), and SDK2 test
+helper passed a partial instead of the client. Corrected tests retain all assertions.
+Root disk exhaustion interrupted Ruff cache writing; only this checkout's mypy/Ruff
+caches moved to owned /run/user/1000 paths, no unrelated data removed.
+
+Next: add five new test paths to the persistent release-harness audit, actual
+default-model Codex evaluation with a hash-pinned real-PDF-derived oriented image,
+independent trace/artifact checks, bilingual docs/assistant asset sync, full release
+gates and final exact-head CI/Pages before claiming publication. Existing PDF
+publication proofs do not cover this new runtime. No new push yet; broad goal active.
+
 ## Product scope documentation — capability matrix and honest comparison criteria
 
 Local kernel commit 46e0494 contains 25 counted files plus two MEM files, author

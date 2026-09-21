@@ -21,6 +21,7 @@ from src.application.native_evidence_service import (
     NativeEvidenceService,
     attach_native_evidence,
 )
+from src.application.native_image_operations import NativeImageOperations
 from src.application.native_pdf_annotation_operations import (
     NativePdfAnnotationOperations,
 )
@@ -33,6 +34,7 @@ from src.application.native_selection_service import NativeSelectionService
 from src.application.native_table_operations import NativeTableOperations
 from src.application.native_wiki_service import NativeWikiService
 from src.application.native_workbook_operations import NativeWorkbookOperations
+from src.domain.native_image import IMAGE_EXTENSIONS
 
 if TYPE_CHECKING:
     from src.domain.native_assets import (
@@ -48,6 +50,7 @@ if TYPE_CHECKING:
     from src.domain.native_docx_stories import NativeDocxStoryAdapter
     from src.domain.native_docx_structure import NativeDocxStructureAdapter
     from src.domain.native_grid import NativeGridAdapter
+    from src.domain.native_image import NativeImageAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_rendering import (
@@ -88,9 +91,14 @@ class NativeDocumentService:
         delimited: NativeDelimitedAdapter | None = None,
         docx_stories: NativeDocxStoryAdapter | None = None,
         docx_notes: NativeDocxNoteAdapter | None = None,
+        images: NativeImageAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
+        self.images = images
+        self.image_operations = (
+            NativeImageOperations(repository, images) if images else None
+        )
         if workbook_renderer is not None and pdfs is None:
             raise ValueError("Workbook rendering requires native PDF read-back support")
         self.rendition_operations = NativeRenditionOperations(
@@ -164,6 +172,7 @@ class NativeDocumentService:
             delimited,
             docx_stories,
             docx_notes,
+            images=images,
         )
         self.derivations = (
             NativeDerivationService(derivations, self.evidence) if derivations else None
@@ -185,6 +194,7 @@ class NativeDocumentService:
                 delimited,
                 docx_stories,
                 docx_notes,
+                images=images,
             )
             if wiki_publisher is not None
             else None
@@ -202,6 +212,7 @@ class NativeDocumentService:
             workbook_table_edit_enabled=self.workbook_tables is not None,
             workbook_table_creation_enabled=self.workbook_table_creation is not None,
             table_workspaces_enabled=self.table_operations is not None,
+            images_enabled=self.images is not None,
         )
 
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
@@ -235,6 +246,14 @@ class NativeDocumentService:
             "read_delimited_cell": self._delimited_operation,
             "update_delimited": self._delimited_operation,
             "create_pdf": self._pdf_operation,
+            "create_image": self._image_operation,
+            "extract_image": self._image_operation,
+            "compose_images": self._image_operation,
+            "read_image": self._image_operation,
+            "read_image_frame": self._image_operation,
+            "render_image_frame": self._image_operation,
+            "read_image_region": self._image_operation,
+            "update_image": self._image_operation,
             "read_pdf": self._pdf_operation,
             "read_pdf_page": self._pdf_operation,
             "read_pdf_region": NativePdfRegionService(self.evidence).read,
@@ -317,6 +336,11 @@ class NativeDocumentService:
             raise ValueError("Native PDF adapter is not configured")
         return self.pdf_operations.execute(request)
 
+    def _image_operation(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        if self.image_operations is None:
+            raise ValueError("Native image adapter is not configured")
+        return self.image_operations.execute(request)
+
     def _pdf_annotation_operation(
         self, request: NativeDocumentRequest
     ) -> dict[str, Any]:
@@ -335,6 +359,7 @@ class NativeDocumentService:
             request,
             docx_stories_enabled=self.docx_stories is not None,
             docx_notes_enabled=self.docx_notes is not None,
+            images_enabled=self.images is not None,
             workbook_rendering_configured=self.rendition_operations.renderer
             is not None,
             docx_enabled=self.docx is not None,
@@ -466,6 +491,13 @@ class NativeDocumentService:
                 "size_bytes": len(data),
                 "native_editor": "dfm_bridge",
                 "read_operation": "read_docx",
+            }
+        elif asset.format in IMAGE_EXTENSIONS and self.images is not None:
+            result["content"] = {
+                "representation": "native_raster_frames",
+                "size_bytes": len(data),
+                "read_operation": "read_image",
+                "format_detection": "Read the pinned catalog; decoding identifies actual bytes, not the filename.",
             }
         else:
             result["content"] = {

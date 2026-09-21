@@ -13,6 +13,8 @@ from src.application.native_docx_story_operations import attach_story_evidence
 from src.application.native_docx_story_wiki import NativeDocxStoryWikiContent
 from src.application.native_docx_wiki import NativeDocxWikiContent
 from src.application.native_evidence_service import attach_native_evidence
+from src.application.native_image_lineage import add_image_inputs
+from src.application.native_image_wiki import NativeImageWikiContent
 from src.application.native_pdf_annotation_operations import attach_annotation_evidence
 from src.application.native_pdf_annotation_wiki import NativePdfAnnotationWikiContent
 from src.application.native_pdf_operations import attach_pdf_evidence
@@ -24,6 +26,13 @@ from src.application.native_wiki_format import NativeWikiContent
 from src.domain.citation_format import CitationMetadata, resolve_citation_format
 from src.domain.native_delimited import attach_delimited_evidence
 from src.domain.native_derivation import fingerprint
+from src.domain.native_image import (
+    IMAGE_EXTENSIONS,
+    NativeImageFrameReference,
+    NativeImageRegionReference,
+)
+from src.domain.native_image_evidence import image_catalog as build_image_catalog
+from src.domain.native_selection import NativeSelectionReference
 from src.domain.native_wiki import MAX_WIKI_CELLS
 
 if TYPE_CHECKING:
@@ -41,6 +50,7 @@ if TYPE_CHECKING:
     from src.domain.native_docx import NativeDocxAdapter
     from src.domain.native_docx_notes import NativeDocxNoteAdapter
     from src.domain.native_docx_stories import NativeDocxStoryAdapter
+    from src.domain.native_image import NativeImageAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_wiki import NativeWikiPublisher
@@ -59,6 +69,7 @@ class NativeWikiService:
         delimited: NativeDelimitedAdapter | None = None,
         docx_stories: NativeDocxStoryAdapter | None = None,
         docx_notes: NativeDocxNoteAdapter | None = None,
+        images: NativeImageAdapter | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
@@ -70,6 +81,7 @@ class NativeWikiService:
         self.delimited = delimited
         self.docx_stories = docx_stories
         self.docx_notes = docx_notes
+        self.images = images
 
     def export(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.asset_id is not None and request.output_dir is not None
@@ -120,11 +132,22 @@ class NativeWikiService:
             catalog,
             notes,
             annotations_catalog,
+            build_image_catalog(data, self.images.records(data))
+            if asset.format in IMAGE_EXTENSIONS and self.images
+            else None,
         )
         add_rendition(content, asset, self.repository)
         self._populate(content, data)
+        if isinstance(content, NativeImageWikiContent) and self.images:
+            add_image_inputs(content, self.repository, self.images)
         if ledger is not None and self.derivations is not None:
-            add_derivations(content, ledger, self.derivations, self.repository)
+            add_derivations(
+                content,
+                ledger,
+                self.derivations,
+                self.repository,
+                image_color_policy=request.image_color_policy,
+            )
         result = self.publisher.publish(
             request.output_dir,
             content.snapshot_id,
@@ -150,6 +173,7 @@ class NativeWikiService:
         story_catalog: dict[str, Any] | None = None,
         notes_catalog: dict[str, Any] | None = None,
         annotations_catalog: dict[str, Any] | None = None,
+        image_catalog: dict[str, Any] | None = None,
     ) -> NativeWikiContent:
         contract = resolve_citation_format(
             request.citation_contract.model_dump(mode="json")
@@ -178,6 +202,28 @@ class NativeWikiService:
             ),
         }
         metadata = request.citation_metadata or CitationMetadata()
+        if ledger is not None and any(
+            isinstance(
+                ref.parent if isinstance(ref, NativeSelectionReference) else ref,
+                NativeImageFrameReference | NativeImageRegionReference,
+            )
+            for event in ledger.active_records().values()
+            if event.derivation.target.revision == revision
+            for ref in [event.derivation.target, *event.derivation.sources]
+        ):
+            identity["image_color_policy"] = request.image_color_policy
+        if image_catalog is not None:
+            latest = next(
+                item for item in reversed(asset.history) if item.sha256 == revision
+            )
+            return NativeImageWikiContent(
+                identity,
+                contract,
+                metadata,
+                image_catalog,
+                latest.result.model_dump(mode="json") if latest.result else None,
+                request.image_color_policy,
+            )
         if annotations_catalog and annotations_catalog["annotations"]:
             return NativePdfAnnotationWikiContent(
                 identity, contract, metadata, annotations_catalog
@@ -198,7 +244,9 @@ class NativeWikiService:
 
     def _populate(self, content: NativeWikiContent, data: bytes) -> None:
         identity = content.identity
-        if isinstance(content, NativePdfWikiContent) and self.pdfs:
+        if isinstance(content, NativeImageWikiContent) and self.images:
+            content.add_frames(data, self.images.decompose(data, content.color_policy))
+        elif isinstance(content, NativePdfWikiContent) and self.pdfs:
             for item in self.pdfs.decompose(data):
                 attach_pdf_evidence(
                     item["record"], identity["asset_id"], identity["revision"]

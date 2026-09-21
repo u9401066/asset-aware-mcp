@@ -40,6 +40,13 @@ class NativeWikiContent:
             snapshot_identity["projection"] = projection
         if "derivations_sha256" in identity:
             snapshot_identity["derivations_sha256"] = identity["derivations_sha256"]
+        for key in (
+            "image_catalog_sha256",
+            "image_operation_sha256",
+            "image_color_policy",
+        ):
+            if key in identity:
+                snapshot_identity[key] = identity[key]
         self.snapshot_id = digest(canonical_json(snapshot_identity))
         self.prefix = f"native-{self.snapshot_id}"
         self.index_name = f"{self.prefix}-index.md"

@@ -1,7 +1,17 @@
 # Native raster assets — implementation contract
 
-Status: internal kernel in development; public version **1.4.0**, next consolidated
-release **1.4.1**. No image operations are advertised through MCP yet.
+Status: local kernel, application, evidence/Wiki and SDK2 integration verified;
+actual-Agent and release validation remain pending. Public version **1.4.0**, next
+consolidated release **1.4.1**. These changes have not yet been pushed or released.
+
+The `images_enabled` contract flag controls `create_image`, `extract_image`,
+`compose_images`, `read_image`, `read_image_frame`, `render_image_frame`,
+`read_image_region` and `update_image`. Creates use typed `image_create`,
+`image_extract` or `image_compose`; updates pin `asset_id`, `expected_revision`
+and `image_update`. Reads pin asset/revision, with `image_locator` for a frame.
+Complete catalog/record/receipt JSON is hash-paged through `image`; previews take
+a full frame/region `reference` and return actual MCP PNGs. Historical evidence
+remains bound to its source. Adapter availability never implies a visual verdict.
 
 A raster asset retains its exact source bytes and immutable revisions. Frame
 records describe the decoder's main frame sequence, with zero-based locators,
@@ -20,6 +30,16 @@ canonical record hash. Regions use EXIF-oriented displayed-frame fractions with 
 top-left origin; bounds round outward to whole pixels. Render size/color policy
 does not change region identity. PNG previews are RGBA8, optionally transformed
 from embedded ICC to sRGB, with no inferred HDR intensity scaling.
+
+`export_wiki` retains exact source attachments, all frame records and PNGs, complete
+catalogs and operation receipts, plus direct operation input attachments/references.
+This is mechanical provenance, not recursively inferred semantic lineage. Explicit
+frame/region/selection derivations attach their source evidence across formats.
+Custom citation displays include frame/region geometry; CSL retains the full
+reference and source file separately from caller-supplied printed locators.
+`image_color_policy` also applies to exported previews; invalid ICC needs an explicit
+`unmanaged` choice. Image snapshots bind catalog, receipt and color policy, keeping
+legacy opaque snapshots and earlier same-file-SHA operation snapshots intact.
 
 Creation offers explicit RGBA canvases. Extraction creates a new PNG/TIFF from a
 complete source-frame reference and optional region. TIFF composition creates a

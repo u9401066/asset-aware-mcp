@@ -67,6 +67,17 @@ from src.domain.native_file_reference import (
     NativeFileReference,  # noqa: TC001 -- Pydantic schema
 )
 from src.domain.native_grid import NativeGridUpdate  # noqa: TC001 -- Pydantic schema
+from src.domain.native_image import (  # noqa: TC001 -- Pydantic schema
+    ImageColorPolicy,
+    NativeImageBlank,
+    NativeImageCompose,
+    NativeImageExtract,
+    NativeImageFrameLocator,
+    NativeImageFrameReference,
+    NativeImageRegionReference,
+    NativeImageRegionSelector,
+    NativeImageRevisionPlan,
+)
 from src.domain.native_layout import (
     NativeLayoutUpdate,  # noqa: TC001 -- Pydantic schema
 )
@@ -206,6 +217,13 @@ class NativeDocumentRequest(NativeModel):
     delimited_row: int | None = Field(default=None, ge=0, lt=20_000, strict=True)
     delimited_column: int | None = Field(default=None, ge=0, lt=20_000, strict=True)
     delimited_update: NativeDelimitedUpdate | None = None
+    image_create: NativeImageBlank | None = None
+    image_extract: NativeImageExtract | None = None
+    image_compose: NativeImageCompose | None = None
+    image_locator: NativeImageFrameLocator | None = None
+    image_region: NativeImageRegionSelector | None = None
+    image_update: NativeImageRevisionPlan | None = None
+    image_color_policy: ImageColorPolicy = "embedded_to_srgb"
     docx_note_locator: DocxNoteLocator | None = None
     docx_note_reference: DocxNoteReference | None = None
     docx_note_update: DocxNoteUpdate | None = None
@@ -272,6 +290,8 @@ class NativeDocumentRequest(NativeModel):
         | PdfAnnotationReference
         | NativePdfRegionReference
         | NativeDelimitedReference
+        | NativeImageFrameReference
+        | NativeImageRegionReference
         | NativeFileReference
         | NativeSelectionReference
         | None

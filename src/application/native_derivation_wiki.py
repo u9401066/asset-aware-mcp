@@ -6,9 +6,15 @@ from typing import TYPE_CHECKING, Any
 
 from src.application.citation_format_service import citation_markdown
 from src.application.native_derivation_service import REVIEW_BOUNDARY
+from src.application.native_image_reference_wiki import add_image_reference
 from src.application.native_pdf_region_wiki import add_region
 from src.application.native_selection_service import NativeSelectionService
 from src.domain.native_derivation import canonical, fingerprint
+from src.domain.native_image import (
+    IMAGE_EXTENSIONS,
+    NativeImageFrameReference,
+    NativeImageRegionReference,
+)
 from src.domain.native_pdf_region import NativePdfRegionReference
 from src.domain.native_selection import NativeSelectionReference, canonical_selection
 
@@ -23,7 +29,7 @@ SOURCE_SUFFIXES = {
     "jpeg",
     "csv",
     "tsv",
-}
+} | IMAGE_EXTENSIONS
 
 if TYPE_CHECKING:
     from src.application.native_derivation_service import NativeDerivationService
@@ -33,6 +39,7 @@ if TYPE_CHECKING:
         NativeDerivationLedger,
         NativeDerivationRecord,
     )
+    from src.domain.native_image import ImageColorPolicy
 
 
 def add_derivations(
@@ -40,6 +47,8 @@ def add_derivations(
     ledger: NativeDerivationLedger,
     service: NativeDerivationService,
     assets: NativeAssetRepository,
+    *,
+    image_color_policy: ImageColorPolicy = "embedded_to_srgb",
 ) -> None:
     if not ledger.events:
         return
@@ -51,6 +60,7 @@ def add_derivations(
     attachments: dict[str, Any] = {}
     selections: dict[str, Any] = {}
     regions: dict[str, Any] = {}
+    image_records: dict[str, Any] = {}
     for record in records:
         service.require_valid(record.derivation.target)
         links = []
@@ -88,6 +98,32 @@ def add_derivations(
             )
         for ref in [record.derivation.target, *record.derivation.sources]:
             region = ref.parent if isinstance(ref, NativeSelectionReference) else ref
+            if isinstance(
+                region, NativeImageFrameReference | NativeImageRegionReference
+            ):
+                key = fingerprint(region)
+                if key not in image_records:
+                    same_source = (region.asset_id, region.revision) == (
+                        content.identity["asset_id"],
+                        content.identity["revision"],
+                    )
+                    attachment = (
+                        content.source_name
+                        if same_source
+                        else attachments[f"{region.asset_id}:{region.revision}"][
+                            "attachment"
+                        ]
+                    )
+                    image_records[key] = add_image_reference(
+                        content,
+                        region,
+                        service.evidence,
+                        attachment,
+                        image_color_policy,
+                    )
+                links.append(
+                    f"- [[{image_records[key]['note'][:-3]}|Image evidence {key[:12]}]]"
+                )
             if isinstance(region, NativePdfRegionReference):
                 key = fingerprint(region)
                 if key not in regions:
@@ -117,6 +153,7 @@ def add_derivations(
         "source_attachments": attachments,
         **({"selection_records": selections} if selections else {}),
         **({"region_records": regions} if regions else {}),
+        **({"image_records": image_records} if image_records else {}),
         "verification_scope": "immutable_endpoint_references; active records for exported revision only",
         "review_boundary": REVIEW_BOUNDARY,
     }

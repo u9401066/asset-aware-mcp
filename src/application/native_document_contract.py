@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from src.application.native_contract_delivery import deliver_contract
 from src.application.native_schema import schema_discovery
 from src.domain.native_file_reference import NativeFileReference
+from src.domain.native_image import IMAGE_EXTENSIONS
 from src.domain.native_operations import NATIVE_OPERATIONS
 
 if TYPE_CHECKING:
@@ -26,6 +27,7 @@ def native_asset_summary(
     workbook_table_edit_enabled: bool = False,
     workbook_table_creation_enabled: bool = False,
     table_workspaces_enabled: bool = False,
+    images_enabled: bool = False,
 ) -> dict[str, Any]:
     return {
         "asset_id": asset.asset_id,
@@ -40,6 +42,11 @@ def native_asset_summary(
         "source": asset.source.model_dump() if asset.source else None,
         "revision_count": len(asset.history),
         "capabilities": {
+            "read_image": asset.format in IMAGE_EXTENSIONS and images_enabled,
+            "edit_image": asset.format in IMAGE_EXTENSIONS
+            and images_enabled
+            and not asset.archived,
+            "verify_image_frames": asset.format in IMAGE_EXTENSIONS and images_enabled,
             "verify_file_bytes": True,
             "read_delimited": asset.format in {"csv", "tsv"} and delimited_enabled,
             "edit_delimited": asset.format in {"csv", "tsv"}
@@ -134,11 +141,14 @@ def native_document_contract(
     workbook_rendering_configured: bool = False,
     docx_stories_enabled: bool = False,
     docx_notes_enabled: bool = False,
+    images_enabled: bool = False,
 ) -> dict[str, Any]:
     for_op = request.for_op if request is not None else None
     result = {
         "success": True,
         "contract_version": "native-contract-v2",
+        "images_enabled": images_enabled,
+        "image_policy": "Pin source revision and read all image JSON pages at one text_sha256. Frame/region refs bind full decoder records; pixels are EXIF-oriented and animation-composited. Regions use displayed frame fractions rounded outward to pixels. Previews are RGBA8 with explicit ICC/unmanaged color policy. create_image creates PNG; extract_image creates PNG/TIFF, compose_images creates ordered TIFF, with required pixel and pixels_only metadata policies. update_image pins source catalog, exact candidate file ref and exhaustive old/new frame mappings with explicit pixel/metadata preservation or replacement. Source/history remain intact; read full receipts and actual PNGs. Agent reviews appearance, meaning, color, private fields and animation behavior. Decoder/version drift must not silently remap old evidence.",
         "delimited_enabled": delimited_enabled,
         "delimited_policy": "CSV/TSV strings; explicit dialect/encoding, no inferred headers/types. Pin revisions; assemble full JSON at one text_sha256. Cell edits need full refs; row/column edits preserve untouched bytes. Evidence/Wiki bind dialects.",
         "pdf_regions_enabled": pdf_enabled,
@@ -202,6 +212,7 @@ def native_document_contract(
             delimited_enabled,
             docx_stories_enabled,
             docx_notes_enabled,
+            images_enabled,
         ),
         "verification": "MCP checks structure/integrity and deterministic repairs. Read full operation receipts. Agents verify semantics, rendered layout, dynamic references and calculated results; sources/history stay intact.",
         "docx_notes_enabled": docx_notes_enabled,
@@ -297,6 +308,7 @@ def _formats(
     delimited_enabled: bool = False,
     docx_stories_enabled: bool = False,
     docx_notes_enabled: bool = False,
+    images_enabled: bool = False,
 ) -> dict[str, list[str]]:
     workbook_ops = (
         [
@@ -442,6 +454,26 @@ def _formats(
                 else []
             )
             for kind in ("csv", "tsv")
+        },
+        **{
+            kind: (
+                [
+                    "read_image",
+                    "read_image_frame",
+                    "render_image_frame",
+                    "read_image_region",
+                    "extract_image",
+                    "compose_images",
+                    "update_image",
+                    "verify",
+                    "read_selection",
+                    "export_wiki",
+                    *(["create_image"] if kind == "png" else []),
+                ]
+                if images_enabled
+                else []
+            )
+            for kind in sorted(IMAGE_EXTENSIONS)
         },
         "other": [
             "register",

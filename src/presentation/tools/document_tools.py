@@ -2542,6 +2542,15 @@ async def document(
                 "operation": native_request.op,
                 "error": str(exc),
             }
+        if native_request.op in {
+            "render_image_frame",
+            "read_image_region",
+        } and payload.get("success"):
+            from src.presentation.native_pdf_response import native_pdf_image_response
+
+            return native_pdf_image_response(
+                payload, title="Native raster image preview"
+            )
         if native_request.op in {"render_pdf_page", "read_pdf_region"} and payload.get(
             "success"
         ):
