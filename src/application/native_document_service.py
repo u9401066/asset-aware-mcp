@@ -97,6 +97,7 @@ class NativeDocumentService:
         images: NativeImageAdapter | None = None,
         image_archive: NativeImageArchive | None = None,
         ods: NativeODSAdapter | None = None,
+        ods_renderer: NativeWorkbookRenderer | None = None,
     ):
         self.ods = ods
         self.ods_operations = (
@@ -109,10 +110,10 @@ class NativeDocumentService:
         self.image_operations = (
             NativeImageOperations(repository, images, image_archive) if images else None
         )
-        if workbook_renderer is not None and pdfs is None:
+        if (workbook_renderer is not None or ods_renderer is not None) and pdfs is None:
             raise ValueError("Workbook rendering requires native PDF read-back support")
         self.rendition_operations = NativeRenditionOperations(
-            repository, workbook_renderer
+            repository, workbook_renderer, ods_renderer
         )
         if workbook_grid is not None and workbook_structure is None:
             raise ValueError("Native grid editing requires workbook read-back support")
@@ -389,6 +390,7 @@ class NativeDocumentService:
             and self.image_archive is not None,
             workbook_rendering_configured=self.rendition_operations.renderer
             is not None,
+            ods_rendering_configured=self.rendition_operations.ods_renderer is not None,
             docx_enabled=self.docx is not None,
             pptx_enabled=self.presentations is not None,
             pdf_enabled=self.pdfs is not None,

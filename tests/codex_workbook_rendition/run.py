@@ -18,6 +18,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--codex", default="codex")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--format", choices=["xlsx", "ods"], default="xlsx")
     args = parser.parse_args()
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
@@ -25,8 +26,13 @@ def main():
     workspace.mkdir()
     source = workspace / "source.xlsx"
     source.write_bytes(rendered_workbook())
+    if args.format == "ods":
+        from tests.codex_workbook_rendition.ods import prepare_source
+
+        source = prepare_source(source, output)
     repo = Path(__file__).resolve().parents[2]
     expected = {
+        "native_format": args.format,
         "source_sha256": sha256(source),
         "source_mtime_ns": source.stat().st_mtime_ns,
         "server_source_sha256": hashlib.sha256(
@@ -43,10 +49,20 @@ def main():
     }
     (output / "expected.json").write_text(json.dumps(expected, indent=2))
     text = prompt(workspace)
+    if args.format == "ods":
+        from tests.codex_workbook_rendition.ods import ods_prompt
+
+        text = ods_prompt(text)
     (output / "prompt.txt").write_text(text)
     cli = command(args.codex, repo, workspace, output)
     extra = ["-c", 'mcp_servers.asset_aware_under_test.enabled_tools=["document"]']
-    for key in ("LIBREOFFICE_BIN", "TMPDIR", "FONTCONFIG_FILE", "FONTCONFIG_PATH"):
+    for key in (
+        "LIBREOFFICE_BIN",
+        "TMPDIR",
+        "PYTHONDONTWRITEBYTECODE",
+        "FONTCONFIG_FILE",
+        "FONTCONFIG_PATH",
+    ):
         if key in os.environ:
             extra.extend(
                 [

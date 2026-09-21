@@ -187,6 +187,7 @@ jobs:
           tests/unit/test_native_image_retention.py
           tests/unit/test_native_odf_package.py
           tests/unit/test_native_ods.py
+          tests/unit/test_native_ods_render.py
           tests/integration/test_native_image_retention_stdio.py
           tests/unit/test_codex_pdf_annotations_audit.py
           tests/unit/test_real_pdf_corpus.py

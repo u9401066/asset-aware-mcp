@@ -69,3 +69,34 @@ def test_agent_prose_or_shell_cannot_substitute_for_native_calls():
             calls_from(
                 [{"type": "turn.completed"}, {"type": "item.completed", "item": item}]
             )
+
+
+@pytest.mark.parametrize("fault", ["formula", "style", "cache", "surrounding"])
+def test_ods_native_audit_rejects_changed_evidence(fault):
+    from tests.codex_native_ods_audit import parts
+    from tests.codex_workbook_rendition.ods import check_native_xml
+    from tests.native_ods_helpers import fixture, repack
+
+    row = '<table:table-row><table:table-cell office:value-type="string"><text:p>kept</text:p></table:table-cell><table:table-cell table:style-name="Default" table:formula="{formula}"{cache}/></table:table-row>'
+
+    def package(formula, cache="", style="Default", surrounding="kept"):
+        data = fixture(
+            row.format(formula=formula, cache=cache)
+            .replace("Default", style)
+            .replace("kept", surrounding)
+        )
+        members = parts(data)
+        members["content.xml"] = members["content.xml"].replace(
+            b'table:name="Sheet1"', b'table:name="First"'
+        )
+        return repack(members)
+
+    original = package("of:=1+2", ' office:value="999"')
+    check_native_xml(original, package("=2+3"))
+    wrong = (
+        {"formula": "=2+4"}
+        if fault == "formula"
+        else {fault: ' office:value="999"' if fault == "cache" else "changed"}
+    )
+    with pytest.raises(ValueError):
+        check_native_xml(original, package(**{"formula": "=2+3", **wrong}))

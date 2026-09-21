@@ -20,6 +20,7 @@ NS = {
     for name in ("office", "table", "text", "style", "manifest", "draw", "config")
 }
 NS["of"] = ODF + "of:1.2"
+NS["draw"] = ODF + "drawing:1.0"
 ODS_MIME = "application/vnd.oasis.opendocument.spreadsheet"
 MAX_PART_BYTES = 32 * 1024 * 1024
 MAX_PACKAGE_BYTES = 128 * 1024 * 1024

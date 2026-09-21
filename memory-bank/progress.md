@@ -1,5 +1,204 @@
 # Progress (Updated: 2026-09-21)
 
+## ODS renditions — local gates complete; ready for direct-main publication
+
+Current segment24countedfiles+2MEM adds native ODS PDF renditions, ODF resource/
+formula/graphic checks, native-source Wiki receipts, real Calc/SDK2 restart and
+model/artifact evidence. Official drawing namespace bug fixed with independent
+no-ID repetition tests; historical original-input byte/full-receipt goldens retained.
+Runtime339files unchanged since model/full-suite snapshot. Public/current1.4.0;
+next consolidated1.4.1. No bump/tag/release. Goal ACTIVE, no subagents.
+
+RealCalc7.3:39unit+5integration=44pass; Calc24.2:5integrationpass. Exact same-version
+control pixels cover all4mode/policy combinations, native chart/raster, hidden/blank
+sheets, cache999 vs result3 and the unstyled forced-recalc case. SDK2 processrestart
+retains receipts, actualPNGs and byte-exactWiki/nativeODS. Agent owns semantics,
+formula result review and visual clipping; MCP does not assert fidelity.
+
+DefaultCodex actualrun /run/user/1000/asset-aware-codex-ods-rendition-01:
+208successful calls,11actualPNGs,234.98s;1recovered text_limit12000 error retained.
+Audit passes with exact source/formula/style/native read records, source mtime,
+PDFpixels, oldrefs and Wikis. Initial auditor expected a namespace prefix that the
+existing typed editor intentionally does not author; corrected to exact =2+3.
+Original failedaudit retained, strengthened nativeXML comparisons and4negative
+cases pass (9focused total). Model CLI0; wrapperinitial1 reflected auditonly.
+Current339runtimefiles/uv.lock still match captured model fingerprints.
+
+Full3847passed/41environment-skips/635.25s, runner72939 terminal0. The4newaudit
+cases were added after collection and verified separately. Ruff/format804,
+mypy339, banditmedium, releaseharness, docs generation, bundledsync, allartifact
+metadata/contents and diffchecks pass. Sevenversiondeclarations all1.4.0.
+VSIX199tests/64entries/install-updatepass; localactivation skipped, exact-head
+remote activation required. InternalVSIX /run/user/1000/asset-aware-ods-render-local-1.4.0.vsix.
+
+Python3.13installedwheel matches all339files; actualCalc chartPDF pixels and complete
+receipt/source/Wiki/restart match. DockerPython3.12 matches all339files and replays
+captured actualCalc output through resourcechecks/service/Wiki; it does NOT install
+or claim realCalc inside Docker. Bothdoctor/30tools/SDK2stdio pass. Allproof:
+/run/user/1000/asset-aware-ods-render-local-proof.json
+All logs/artifacts retained with asset-aware-ods-render prefixes.
+
+All11temporarily staged historicalmodeltrace directories restored ordinary with
+exacthash/size/mtime. OwnedDockerimage56d4adec75af/buildera9039c5db278 removed;
+wheelenv/cache/data and npmdeps/cache/out removed. Completedfulltest tmp pytest-32
+removed after successful run; retained actualCalc/model/artifact proofs remain.
+Newprivate24.2runtime removed after successfultests; official42deb/archivesource
+proof remains. Keep preexisting7.3runtime and warmedworkerbytecode.
+
+NEXT: exact24+2MEMstage, userauthor u9401066<u9401066@gap.kmu.edu.tw>, directmain
+commit/push. Verify ALLexact-headCI10+Pages3 and6deployedbytes before any further
+changes. Assistantguidance5sources+5bundles needs the next coherent follow-up
+segment to stay within30files. Broader ODS lifecycle/ODT/ODP/HTML/EPUB/email/LaTeX/
+allformat work remains. Original dirtydetached checkout untouched.
+
+## ODS renditions — runtime implemented; validation in progress
+
+Base2d7cdfd remains fully published/verified. Current runtime339files is frozen
+for full suite72939 and completed actual default-model evaluation. No commit/push
+or version change: public1.4.0,next consolidated1.4.1. Goal ACTIVE; no subagents.
+Work only agent-assets checkout; original dirty detached checkout untouched.
+
+Real Calc7.3:44passed(new39unit+5integration), 24.2:5integrationpassed.
+SDK2 four policy/mode variants, restart/receipts/PNGs/Wiki/source preservation
+and independent full-page chart/raster pixels pass. Explicit style is necessary
+for cached999 vs recalculated3; unstyled formulas independently render3 even
+with prefer_cache because Calc resolves number formats. Hidden overflow is clipped;
+full pixel equality to direct Calc verifies it, Agent reports the limitation.
+Logs /run/user/1000/asset-aware-ods-render-calc73-03.log and -calc242-01.log.
+Namespace drawing fix and historical unchanged byte/receipt goldens remain.
+
+Actual defaultCodex run /run/user/1000/asset-aware-codex-ods-rendition-01:
+208successful calls,11actualPNGs,234.98s,1recovered text_limit12000 error. Initial
+audit incorrectly expected of:=2+3 while the existing editor writes requested
+=2+3 verbatim; initial failure retained as audit-initial-formula-spelling-failure.json.
+Corrected exact spelling + strengthened independent XML/read checks pass on the
+same retained run. New4negative audit tests+existing5pass. No new model run needed.
+Runtime/lock fingerprint needs final verification. All model session83552 terminal1
+was caused only by initial auditor; CLI itself0. Final audit proof is separate.
+
+Full suite LIVE session72939, log /run/user/1000/asset-aware-ods-render-full-01.log;
+uses localWriter and privateCalc7.3, normal warmed bytecode, TMPDIR=/dev/shm.
+Focused prior231+101tests; mypy339 and changed lint pass. Full suite collected
+before4newauditcases; run those separately (9passed) and do not claim otherwise.
+New packaged rendition replay tests/native_ods_rendition_artifact_smoke.py passes
+locally with captured actual chartPDF+receipt; first failure was test keywordpdf
+instead ofpdfs and retained. Installedwheel actualCalc and Docker replay pending.
+Source manifest /run/user/1000/asset-aware-ods-render-source-manifest.json.
+
+Docs README/CHANGELOG/native-ods-spec/wiki/site regenerated; CI3.10unit gate wired.
+Assistant sources/bundles still need separate coherent follow-up (count cap30).
+Current count about24+2MEM; use actualgit before staging. Need wheel/Docker/VSIX,
+full gates, localproof, exactstage user-author directmaincommit/push and ALLexact-head
+CI10+Pages3+6deployed files before further development. Do not mark goal complete.
+
+Private24.2runtime this turn /dev/shm/asset-aware-ods-render-calc242-runtime-01
+verified official archive+42deb hashes, alltests complete; safe to remove only this
+owned runtime to free space for packaging. Origin proof and all test artifacts in/run
+must remain. Historical11traces currently restored; if staging use NEW script/manifest
+asset-aware-ods-render-space, verify hash-size-mtime on stage/restore. No user cleanup.
+
+## ODS renditions — implementation in progress, not committed
+
+Base2d7cdfd47ea9831184cf7001ff397fa188f73fdf fully published/verified. Previous
+goalturn was PROGRESS (harness commit+allCI/deployed checks). Current segment
+adds ODS-specific resource/OpenFormula checks and LibreOfficeODSRenderer, extends
+create_workbook_rendition to configured XLSX/ODS ports, advertises source_formats,
+and retains .ods attachments in rendition Wikis. Source remains native/unchanged.
+No version change:public1.4.0,next1.4.1. Broad all-format goal ACTIVE.
+
+Important discovered/fixed bug: NS[draw] was incorrectly xmlns:draw:1.0 instead
+of official xmlns:drawing:1.0. Fix native_odf_package; real namespace/no-ID drawing
+regressions now protect repeated row/cell splits and render resource checks.
+Historical performance fixture explicitly retains its old unused drawing declaration;
+all old byte/full-receipt goldens still pass. No hash assertions were loosened.
+
+Verified:231existingXLSX/schema tests; latest101ODS/kernel/performance/renderer/
+rendition tests; Ruff and mypy339 pass. Logs /run/user/1000/asset-aware-ods-render-*.
+No full suite, artifacts, actual Codex, docs/harness sync or commit/push yet.
+Sources9 + tests3 currently (count actual git state before staging; <=30+2MEM).
+
+Current actual Calc7.3 SDK2 test FAILED: prefer_cache requested but cached999
+renders3; investigate rather than accept arbitrary values. Initial standalone
+stdin renderer probe failed only because multiprocessing spawn needs a real
+__main__ file. Later real-file probe tested constant and dependent formulas,
+Calc/custom generator: both policies render3. Record:
+/run/user/1000/asset-aware-ods-render-policy-probe-01.log and artifactdirectory.
+Actual integrationfailure:/run/user/1000/asset-aware-ods-render-calc73-01.log.
+First unitfailure was incorrect test protected-root path; corrected, latestpasses.
+All completed test/probe sessions are terminal; no model run has started.
+
+Old privateCalc24.2 runtime had been cleaned; missing-path probe failure retained.
+Preparing a NEW private24.2.7.2 runtime from previously verified official archive:
+/run/user/1000/asset-aware-ods-render-install-calc242.py (running; locate current
+session from latest tool result); log sameprefix .log. Archive in/run, extracted
+packages in/dev/shm/asset-aware-ods-render-calc242-runtime-01. Verifies whole archive
+and all42package hashes against prior origin proof; no apt install/postinstall.
+Read/resolve current live handle; do not duplicate on an observation timeout.
+
+Need finish policy/control investigation, actual Calc cases incl images/charts,
+SDK2 restart/receipts/Wiki, default-model Codex image review, doc/harness updates,
+CI gate wiring/packaged replay/full checks. Existing new test is appended to
+tests/integration/test_native_ods_calc.py so its configured CI path will collect it.
+Original checkout untouched; no subagents. Rootrecent266MiB;/dev/shm~1GiBfree;
+use atomicMEMwrites, retained runtimebytecode, TMPDIR=/dev/shm.
+
+## ODS Agent guidance — publication COMPLETE, 2d7cdfd verified
+
+Head2d7cdfd47ea9831184cf7001ff397fa188f73fdf is on main/origin with user author.
+ALL10CI jobs35604988799 and ALL3Pages jobs35604987852 passed. Six deployedfiles
+match exact commit bytes:index.html,site.js,site-content.js,
+site-content/native-file-assets.md,native-ods-spec.md,wiki/Native-File-Assets.md.
+Runner36701 terminalexit0; no live watch remains. One transient Pages connection
+retry succeeded; no CI failures. Proof statuspublished_verified:
+/run/user/1000/asset-aware-ods-harness-publication-proof.json
+
+Current segment14countedfiles+2MEM synchronizes5Agent sources/5bundledcopies,
+corrects stale ODS status, and scopes optionalNode skipping to the ODS CSL test.
+Focused44passed; withoutNode14passed/1skip; VSIX199tests/64entries/install-update
+and remote Linux activation pass. Actual5packaged guidance files equal sources.
+Runtime337files and dependency/build definitions unchanged; parentfull3813/33,
+Codex04(223successful calls), wheel/Docker evidence remains applicable to that
+identical runtime. No new full-suite/model run is claimed for the docs segment.
+Parentfce0b63 also fully published/verified. Current localproof:
+/run/user/1000/asset-aware-ods-harness-local-proof.json
+
+All11staged historicalmodeltrace dirs restored ordinary/hash-size-mtime exact.
+Owned npm dependencies/cache/out removed; internalVSIX retained in/run.
+Root~37MiB; retain runtimebytecode, avoid unrelated cleanup, use atomicMEMwrites.
+Githubdescription names XLSX/ODS;20topics verified. Latestpublicreleasev1.4.0 and
+all7version declarations remain1.4.0; nextconsolidated1.4.1. No bump/tag/release.
+Original dirtydetached checkout untouched; no subagents. Only post-publication
+MEM status updates remain dirty for the next coherent <=30file segment.
+
+NEXT: native ODS recalculated renditions and table/row/column lifecycle; retain
+all-format scope including ODT/ODP/HTML/EPUB/email/LaTeX/etc. Broad goal ACTIVE,
+not complete/blocked. Read-only renderer preparation is saved outside the repo:
+/run/user/1000/asset-aware-ods-rendition-research.md. Existing XLSX renderer/source
+checks are OOXML-specific; ODFRecalcMode and native ODS resource/dependency checks
+need separate handling. Upstream LibreOffice/OASIS references recorded; no ODS
+renderer implementation or new render test is claimed.
+
+## ODS Agent guidance — pushed 2d7cdfd; exact-head checks pending
+
+Head2d7cdfd47ea9831184cf7001ff397fa188f73fdf is committed/pushed directmain as
+u9401066<u9401066@gap.kmu.edu.tw>;14countedfiles+2MEM. Current CI35604988799 and
+Pages35604987852 need all10/all3jobs plus6deployed exact-byte checks.
+Verification runner36701 is LIVE; poll it, do not duplicate.
+Script:/run/user/1000/asset-aware-ods-harness-verify-publication.py
+Log:/run/user/1000/asset-aware-ods-harness-publication-watch.log
+Proof:/run/user/1000/asset-aware-ods-harness-publication-proof.json
+No further code until this exact head verifies; fix genuine failures first.
+
+Parentfce0b63 is fully verified. Current runtime337sourcefiles unchanged; local
+44focused +14pass/1skip withoutNode +199VSIXtests/64entries/install-update passed.
+Five actual packaged guidance files are byte-exact. Full3813/33, Codex04, installed
+wheel/Docker proof remains from identical parent runtime, not newly rerun.
+All11historical modeltrace dirs are restored ordinary with hashes/sizes/mtimes
+exact; task npm dependencies/out removed. Local VSIXproof in/run; root~34MiB.
+Original dirty checkout untouched. Public/current1.4.0,next consolidated1.4.1;
+no bump/tag/release. Broad goal ACTIVE; no subagents. After verification, ODS
+lifecycle/renditions and remaining native formats still require implementation.
+
 ## ODS Agent guidance — verified locally; ready for direct-main commit
 
 Add native ODS complete reads with both pagination layers, exact logical refs,

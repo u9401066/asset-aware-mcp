@@ -148,6 +148,7 @@ def native_document_contract(
     images_enabled: bool = False,
     ods_enabled: bool = False,
     image_evidence_retention_enabled: bool = False,
+    ods_rendering_configured: bool = False,
 ) -> dict[str, Any]:
     for_op = request.for_op if request is not None else None
     result = {
@@ -169,9 +170,13 @@ def native_document_contract(
         **schema_discovery(for_op),
         "workbook_structure_enabled": workbook_structure_enabled,
         "workbook_rendering": {
-            "configured": workbook_rendering_configured,
+            "configured": workbook_rendering_configured or ods_rendering_configured,
+            "source_formats": [
+                *(["xlsx"] if workbook_rendering_configured else []),
+                *(["ods"] if ods_rendering_configured else []),
+            ],
             "availability": "Checked per request; requires LibreOffice Calc and optional LIBREOFFICE_BIN.",
-            "policy": "create_workbook_rendition pins XLSX revision, explicit print/whole_sheet and recalculate/prefer_cache policies. New immutable PDF; read complete read_rendition receipt then existing PDF page PNGs. Agent reviews layout/results; source bytes stay unchanged.",
+            "policy": "create_workbook_rendition pins an exact revision in source_formats (XLSX/ODS), explicit print/whole_sheet and recalculate/prefer_cache policies. ODS uses its native package and ODF recalculation policy. New immutable PDF; read complete read_rendition receipt then every existing PDF page PNG. Agent reviews layout/results and omitted content; source bytes stay unchanged. Dynamic or external resources require a resource-aware preview. No visual/calculation verdict is inferred.",
         },
         "workbook_grid_enabled": workbook_grid_enabled,
         "worksheet_layout_enabled": workbook_grid_enabled,
@@ -224,6 +229,7 @@ def native_document_contract(
             docx_notes_enabled,
             images_enabled,
             ods_enabled,
+            ods_rendering_configured,
         ),
         "verification": "MCP checks structure/integrity and deterministic repairs. Read full operation receipts. Agents verify semantics, rendered layout, dynamic references and calculated results; sources/history stay intact.",
         "docx_notes_enabled": docx_notes_enabled,
@@ -329,6 +335,7 @@ def _formats(
     docx_notes_enabled: bool = False,
     images_enabled: bool = False,
     ods_enabled: bool = False,
+    ods_rendering_configured: bool = False,
 ) -> dict[str, list[str]]:
     workbook_ops = (
         [
@@ -458,17 +465,20 @@ def _formats(
             *workbook_ops,
             *(["create_workbook_rendition"] if workbook_rendering_configured else []),
         ],
-        "ods": [
-            "create_ods",
-            "read_ods",
-            "read_ods_cell",
-            "update_ods",
-            "read_selection",
-            "verify",
-            "export_wiki",
-        ]
-        if ods_enabled
-        else [],
+        "ods": (
+            [
+                "create_ods",
+                "read_ods",
+                "read_ods_cell",
+                "update_ods",
+                "read_selection",
+                "verify",
+                "export_wiki",
+            ]
+            if ods_enabled
+            else []
+        )
+        + (["create_workbook_rendition"] if ods_rendering_configured else []),
         "xlsm": ["inspect_cells", "edit_cells", "read_selection", *workbook_ops],
         **{
             kind: (

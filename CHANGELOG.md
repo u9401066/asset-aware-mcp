@@ -7,6 +7,15 @@
 
 ## [Unreleased]
 
+- Add revision-bound native ODS PDF renditions through the existing workbook
+  operation, with ODF-specific resource/formula checks and Calc import policies.
+  Keep exact source bytes, complete receipts and `.ods` Wiki attachments. Real
+  Calc 7.3/24.2 checks cover both calculation policies, printed/whole-sheet output,
+  charts/images, SDK2 restart and independent full-page pixel comparisons.
+  Fix the ODF drawing namespace so real drawing objects retain repetition guards.
+  MCP checks integrity; Agent reviews formulas, clipping and actual appearance.
+  Public **1.4.0**, next consolidated **1.4.1**; no per-feature version bump.
+
 - Synchronize ODS complete-read, exact-cell-reference and Agent-review guidance
   across Codex, Cline, Copilot and bundled extension assets. Clarify physical-range
   versus text pagination, inline no-op receipts and the remaining lifecycle/rendering

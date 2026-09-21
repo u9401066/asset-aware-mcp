@@ -6,7 +6,7 @@ release 1.4.1. Discover `ods_enabled` in the installed runtime before using ODS 
 ODS must remain ODS throughout native CRUD. An XLSX/CSV conversion is a separate
 derivative, with its own source relationship. The bounded package/worksheet adapter connects to revision-bound MCP operations,
 evidence, citations and Wiki. Actual Agent evaluation is scoped to the exercised
-operations; rendering and format lifecycle gaps remain explicit.
+operations; format lifecycle and reader-specific fidelity gaps remain explicit.
 
 ## MCP, evidence and portable snapshots
 
@@ -90,10 +90,56 @@ independent actual Calc read/render. MCP source/revision guards and complete
 hash-paged evidence use the same adapter, with dedicated ODS locator types.
 
 Remaining beyond the first adapter: sheet/row/column lifecycle and dependency
-remapping, rich-run edits and recalculated renditions. SDK2 integration covers
+remapping and rich-run edits. Recalculated renditions are described below. SDK2 integration covers
 restart, full receipts,
 source preservation and unchanged portable snapshots. ODT/ODP and the other
 format gaps remain part of the broader goal.
+
+## Native ODS renditions (Unreleased)
+
+Discover `workbook_rendering.source_formats`; `ods` enables the existing
+`create_workbook_rendition` request with an exact asset/revision, explicit
+`print`/`whole_sheet` mode and `recalculate`/`prefer_cache` import policy. The
+optional LibreOffice Calc process reads an unchanged private `.ods` copy and
+creates a separate PDF. No intermediate XLSX conversion or source writeback occurs.
+Read the complete `read_rendition` receipt at its creation revision and hash,
+then every PDF page record and actual PNG. The receipt records ODFRecalcMode,
+renderer version, exact source reference, sheets, page count and PDF hash.
+Whole-sheet mappings retain content.xml/table index/name and verified page order;
+print pages have no inferred cell/sheet mapping. Wiki retains the exact `.ods`.
+
+ODS resource checks resolve package-relative paths and OpenFormula namespaces,
+distinguishing quoted literals/local references from external resources. Local
+rasters and embedded ODF charts are supported, including chart parent-data links
+and bounded native GDIMetaFile fallbacks. Foreign/nested metafile payloads and
+unsupported comments retain explicit limits. Scripts, linked data, external
+formula resources and unknown embedded objects need a dedicated workflow.
+These are mechanical checks, not an operating-system sandbox or a visual verdict.
+
+Calc 7.3 and 24.2 tests independently author/import ODS, then compare complete
+rendered pages with direct same-version Calc conversion. They cover chart/raster
+content, native style retention, cached999 versus recalculated3, all four
+mode/policy combinations, blank/hidden sheets, source bytes/mtime, SDK2 restart,
+unchanged preview PNGs and byte-identical Wiki snapshots. Whole-sheet rendering
+can clip text that overflows the last populated column; the Agent must report it.
+
+`prefer_cache` is not a promise to freeze formula values. An unstyled formula can
+recalculate to determine its number format even with ODFRecalcMode=never. A
+separate regression compares that case with independent Calc output; explicitly
+styled fixtures verify cached999 versus recalculated3 without accepting arbitrary
+values. Source formula caches remain unchanged in both cases. This follows the
+[Calc import implementation](https://github.com/LibreOffice/core/blob/master/sc/source/filter/xml/xmlcelli.cxx)
+and the separate [ODF recalculation setting](https://github.com/LibreOffice/core/blob/master/officecfg/registry/schema/org/openoffice/Office/Calc.xcs).
+Native vector record framing is informed by the upstream
+[SVM reader](https://github.com/LibreOffice/core/blob/master/vcl/source/filter/svm/SvmReader.cxx);
+no new parsing dependency or copied upstream implementation is introduced.
+
+The default-model evaluation is available through
+`python -m tests.codex_workbook_rendition.run --format ods --output <new-directory>`.
+It uses only the isolated document MCP, reads complete source/receipt/page records,
+edits the managed formula and requires actual PNGs for all three frozen PDFs.
+Its independent auditor retains the existing XLSX evaluation and checks ODS XML,
+formula/style preservation, historical refs, pixels and the native Wiki attachment.
 
 ## References and reuse choices
 

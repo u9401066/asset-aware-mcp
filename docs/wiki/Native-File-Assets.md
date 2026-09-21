@@ -47,7 +47,14 @@ part、table 索引／名稱與列欄；CSL 引用保留完整來源，顯示定
 Wiki 保留原始 `.ods`、完整區段、起點引用、操作紀錄與 wikilinks；衍生關係
 另保留實際引用的邏輯格，包括非起點與缺省格。公式快取與顯示文字不是重新
 計算的結果，Agent 須檢查實際 Calc 畫面、公式與語意。表／列／欄生命週期、
-依賴重映射與 MCP 內的 ODS 轉譯預覽仍是後續工作。
+依賴重映射仍是後續工作。
+
+當 `workbook_rendering.source_formats` 包含 `ods`，可用
+`create_workbook_rendition` 固定 ODS 版本，選擇 `print`／`whole_sheet` 與
+`recalculate`／`prefer_cache`，產生獨立 PDF。讀完 `read_rendition` 紀錄，再
+查看每頁實際 PNG；Wiki 同時保留原始 `.ods`。原檔不回存，歷史預覽不重算。
+`prefer_cache` 是匯入偏好；缺少明確樣式等情況仍可能觸發 Calc 計算。
+列印可能省略隱藏／空白表，整表模式可能裁切溢出的文字，均須 Agent 核對。
 
 公開版 **1.4.0**，下次整合 **1.4.1**，不逐項升版。詳見
 [ODS 規格](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/native-ods-spec.md)。

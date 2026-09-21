@@ -57,22 +57,27 @@ class NativeRenditionOperations:
         self,
         repository: NativeAssetRepository,
         renderer: NativeWorkbookRenderer | None = None,
+        ods_renderer: NativeWorkbookRenderer | None = None,
     ):
         self.repository = repository
         self.renderer = renderer
+        self.ods_renderer = ods_renderer
 
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
         if request.op == "read_rendition":
             return self.read(request)
         assert request.asset_id is not None and request.revision is not None
         assert request.workbook_rendition is not None
-        if self.renderer is None:
-            raise ValueError("Workbook rendition renderer is not configured")
         source = self.repository.load(request.asset_id)
-        if source.format != "xlsx":
-            raise ValueError("Workbook renditions currently require native XLSX assets")
+        if source.format not in {"xlsx", "ods"}:
+            raise ValueError("Workbook renditions require native XLSX or ODS assets")
+        renderer = self.ods_renderer if source.format == "ods" else self.renderer
+        if renderer is None:
+            raise ValueError(
+                "Workbook rendition renderer is not configured for this format"
+            )
         data = self.repository.read(source.asset_id, request.revision)
-        pdf, rendering = self.renderer.convert(data, request.workbook_rendition)
+        pdf, rendering = renderer.convert(data, request.workbook_rendition)
         revision = hashlib.sha256(pdf).hexdigest()
         if (
             not 0 < len(pdf) <= MAX_NATIVE_BYTES

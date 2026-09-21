@@ -34,7 +34,13 @@ def formula_source(count):
         if index:
             cell.set(q("table", "formula"), "of:=[.A1]*2")
         etree.SubElement(cell, q("text", "p")).text = "2" if index else "1"
-    package.parts["content.xml"] = xml_bytes(root)
+    # Keep the exact historical 5093031 input for its captured output/receipt
+    # goldens. That fixture declared an unused legacy drawing namespace; new
+    # native documents now declare the correct ODF drawing namespace.
+    package.parts["content.xml"] = xml_bytes(root).replace(
+        b'xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0"',
+        b'xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:draw:1.0"',
+    )
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w") as archive:
         for name, value in package.parts.items():

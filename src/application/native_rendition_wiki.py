@@ -24,7 +24,7 @@ def add_rendition(
     )
     source = assets.load(reference.asset_id)
     data = assets.read(reference.asset_id, reference.revision)
-    suffix = "xlsx" if source.format == "xlsx" else "bin"
+    suffix = source.format if source.format in {"xlsx", "ods"} else "bin"
     name = f"{content.prefix}-rendition-source.{suffix}"
     receipt = receipt_text(report.model_dump()).encode("utf-8")
     content.add_file("rendition.json", receipt)

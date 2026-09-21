@@ -21,7 +21,7 @@ from tests.codex_table_grid.reads import read_events
 from tests.native_workbook_helpers import _parts
 
 
-def calls_from(events):
+def calls_from(events, native_format="xlsx"):
     require(any(e["type"] == "turn.completed" for e in events), "Incomplete Codex turn")
     calls = []
     for event in events:
@@ -59,6 +59,12 @@ def calls_from(events):
         "history",
     }
     actual = {c["arguments"]["native_request"]["op"] for c in calls}
+    if native_format == "ods":
+        required = (required - {"read_workbook", "read_cell", "update"}) | {
+            "read_ods",
+            "read_ods_cell",
+            "update_ods",
+        }
     require(
         required <= actual <= required | {"schema", "contract_details", "inspect"},
         "Incomplete/unexpected rendition workflow",
@@ -101,13 +107,14 @@ def audit(output):
     events = [
         json.loads(line) for line in (output / "events.jsonl").read_text().splitlines()
     ]
-    calls = calls_from(events)
+    native_format = expected.get("native_format", "xlsx")
+    calls = calls_from(events, native_format)
     source = load_asset(workspace, final["source_asset_id"])
-    original = (workspace / "source.xlsx").read_bytes()
+    original_path = workspace / f"source.{native_format}"
+    original = original_path.read_bytes()
     require(
         digest(original) == expected["source_sha256"]
-        and (workspace / "source.xlsx").stat().st_mtime_ns
-        == expected["source_mtime_ns"],
+        and original_path.stat().st_mtime_ns == expected["source_mtime_ns"],
         "Human source changed",
     )
     require(
@@ -115,20 +122,31 @@ def audit(output):
         and source["history"][0]["sha256"] == digest(original),
         "Wrong workbook history",
     )
-    updated = (workspace / "verified.xlsx").read_bytes()
+    updated = (workspace / f"verified.{native_format}").read_bytes()
     require(digest(updated) == source["revision"], "Wrong published workbook")
     old_parts, new_parts = _parts(original), _parts(updated)
     require(set(old_parts) == set(new_parts), "Workbook part inventory changed")
     require(
         {name for name in old_parts if old_parts[name] != new_parts[name]}
-        <= {"xl/worksheets/sheet1.xml", "xl/workbook.xml"},
+        <= (
+            {"content.xml"}
+            if native_format == "ods"
+            else {"xl/worksheets/sheet1.xml", "xl/workbook.xml"}
+        ),
         "Unrelated workbook parts changed",
     )
+    styles_part = "styles.xml" if native_format == "ods" else "xl/styles.xml"
     require(
-        old_parts["xl/styles.xml"] == new_parts["xl/styles.xml"],
+        old_parts[styles_part] == new_parts[styles_part],
         "Source styles changed",
     )
-    for data, formula in ((original, "=1+2"), (updated, "=2+3")):
+    if native_format == "ods":
+        from tests.codex_workbook_rendition.ods import check_sources
+
+        check_sources(original, updated, calls, source)
+    for data, formula in (
+        () if native_format == "ods" else ((original, "=1+2"), (updated, "=2+3"))
+    ):
         book = openpyxl.load_workbook(io.BytesIO(data))
         try:
             require(book["First"]["B2"].value == formula, "Wrong formula history")
@@ -139,7 +157,8 @@ def audit(output):
         r for r in read_events(calls) if r[1].get("workbook_view") == "references"
     ]
     require(
-        {r[3] for r in references} >= {digest(original), source["revision"]},
+        native_format == "ods"
+        or {r[3] for r in references} >= {digest(original), source["revision"]},
         "Incomplete workbook reference reads",
     )
     reports = receipts(calls)
@@ -258,7 +277,9 @@ def audit(output):
     folder = manifests[0].parent
     require(manifest["revision"] == assets[-1]["revision"], "Wrong Wiki PDF revision")
     require(
-        (folder / manifest["rendition"]["source_attachment"]).read_bytes() == updated,
+        manifest["rendition"]["source_attachment"].endswith("." + native_format)
+        and (folder / manifest["rendition"]["source_attachment"]).read_bytes()
+        == updated,
         "Wiki lost exact conversion source",
     )
     require(
@@ -278,7 +299,7 @@ def audit(output):
         "images": image_count,
         "observations": final.get("observations"),
         "limitations": final.get("limitations"),
-        "scope": "Exact XLSX revisions, explicit Calc policies, frozen PDF pages/actual pixels, formula999/3/5, hidden/blank/print scopes and portable conversion provenance; not Excel fidelity certification.",
+        "scope": f"Exact {native_format.upper()} revisions, explicit Calc policies, frozen PDF pages/actual pixels, formula999/3/5, hidden/blank/print scopes and portable conversion provenance; not cross-reader fidelity certification.",
     }
 
 

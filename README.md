@@ -13,6 +13,10 @@ receipts in portable Wikis. Repeated ranges remain compressed; anchor references
 identify one coordinate, not verified coverage of every represented cell. Selections,
 derivations, CSL citations and custom locators retain exact ODS sources. Agents
 review formulas and actual rendering. See the [ODS specification](docs/native-ods-spec.md).
+When `workbook_rendering.source_formats` includes `ods`, the optional Calc renderer
+creates an independent PDF from an exact ODS revision. Read its complete conversion
+receipt and every actual page; Wikis retain the original `.ods`. Print and whole-sheet
+modes expose different content, and preferring caches does not guarantee frozen values.
 Bundled Agent instructions cover complete reads, exact references and review limits;
 discover `ods_enabled` in the installed runtime before using these operations.
 Public **1.4.0**; next consolidated **1.4.1**, with no per-feature version bump.
