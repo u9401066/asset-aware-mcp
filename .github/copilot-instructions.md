@@ -29,8 +29,13 @@
   Delete uses locator/exact note hash/literal_body_text:preserve; literal custom marks
   remain for explicit Agent correction. Special definitions and dependency-heavy edits
   have explicit limits. Read full receipts/current notes and EVERY actual page; review
-  numbering, placement, bindings, fields and meaning. Existing IDs/source/history and
-  old references stay intact. docx-notes-v1 Wiki retains full evidence/parts; no-note
+  numbering, placement, bindings, fields and meaning. Explicit remap_ids supplies
+  part/note_kind and mappings of note_id to new_note_id; normal definitions and all
+  editable main-body references change atomically. Check mapping receipts and read
+  new refs. Definition order, special roles, literal content and styles stay intact.
+  Reader-specific misbindings need actual before/after pages; old refs stay tied to
+  historical revisions. Existing IDs stay unless explicitly remapped; source/history
+  and old references stay intact. docx-notes-v1 Wiki retains full evidence/parts; no-note
   documents keep their legacy projection. Public1.4.0, next consolidated1.4.1.
 
 - Native discovery advertises contract_delivery separately from schema_delivery.

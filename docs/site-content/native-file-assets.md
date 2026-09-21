@@ -14,7 +14,7 @@
 | --- | --- |
 | `read_docx_note` | 另給 `docx_note_locator`：`part`、`note_kind`、`note_id`；完整讀回 XML、文字節點、參照與 `native-docx-note-ref-v1`。 |
 | `update_docx_note` | 固定 `expected_revision`、完整 `docx_note_reference`；`docx_note_update` 包含 locator、`shared_scope: all_native_references` 及循序 `set_text`／`insert_blocks`／`delete_blocks`。 |
-| `update_docx_notes` | 固定 `expected_revision`；`docx_notes_update` 包含 `expected_catalog_sha256`、`scope: definitions_and_native_body_references` 及 1–32 個循序建立／刪除操作。 |
+| `update_docx_notes` | 固定 `expected_revision`；`docx_notes_update` 包含 `expected_catalog_sha256`、`scope: definitions_and_native_body_references` 及 1–32 個循序建立／刪除／ID 對應修正操作。 |
 
 建立指定 `note_kind: footnote/endnote`、part、typed 段落／表格 `blocks`，可明確指定正整數
 `note_id`，或省略以配置未使用 ID。既有註解必須沿用正文實際連結的 part；首次建立可使用
@@ -26,6 +26,20 @@
 新定義放在下一個既有正文參照所屬定義之前，保留所有既有 ID 與相對次序；本機 Writer
 測試曾重現只在末尾附加定義會造成註號對錯內容，因此必須同時核對定義與實際頁面。
 原生 ID 不等於畫面編號，也不代表頁碼；編號方式及位置仍沿用文件設定。
+
+若 Agent 在目標閱讀器發現註解內容錯配，可明確使用 `remap_ids`：指定正文目前連結的
+`part`、`note_kind`，以及 `mappings: [{note_id: 11, new_note_id: 1}]`。
+它同時改寫一般定義與全部可編輯正文參照的 ID；交換 ID 也以一次操作完成。
+未列出的 ID、定義次序、特殊角色、文字、格式與字面註號保留。
+來源 ID 重複、新 ID 碰撞、特殊定義或範圍外仍有參照會拒絕；新 ID 必須是正整數。
+完整 receipt 記錄每個舊／新 locator、定義雜湊與參照變更；後續編輯須重新讀取新引用。
+舊引用綁定原版本，仍可核對與引用，不會自動改指新 ID。
+
+本專案的控制實驗在 Writer 7.3.7 與 24.2.7 重現不同的註解匯入行為；只調整定義次序
+不足以保證兩者正確。明確使 ID 與正文順序對齊後，兩版的實測文件均通過。
+此操作修改管理版本與最後匯出的 DOCX；預覽仍渲染該版本的真實 bytes。
+Agent 必須再查看全部頁面，確認註號、內容、位置及語意；不能把 ID 修正當成通用視覺保證。
+
 
 刪除需要完整 `locator`、`expected_note_sha256` 及明確 `literal_body_text: preserve`。
 只刪除一般定義與可編輯的正文原生參照；其他位置仍引用、範圍／修訂／鎖定控制項等

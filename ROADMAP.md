@@ -1,7 +1,7 @@
 # Roadmap
 
 - [x] Unreleased / 1.4.x: native footnote/endnote content and definition CRUD, exact
-  body anchors, preserved native IDs/formatting, complete paged receipts and immutable
+  body anchors, preserved native IDs/formatting, explicit ID-remapping correction, complete paged receipts and immutable
   evidence/Wiki. Agent reviews actual numbering, placement and meaning; special
   layout definitions, arbitrary revision/range dependencies and Word parity remain open.
 

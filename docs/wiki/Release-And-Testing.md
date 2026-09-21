@@ -2,10 +2,41 @@
 
 ## Native Word footnote/endnote evaluation (Unreleased)
 
+後續 CI 在 Writer 24.2.7 揭露真實內容錯配，原本的頁面斷言正確攔下。以官方 24.2.7.2
+隔離程式重播相同 DOCX，確認不是空白或文字擷取差異。八次控制實驗比較定義次序與
+ID 對應：正文次序的定義加上對齊的 ID，才同時通過 7.3.7 與 24.2.7。
+新增明確 `remap_ids`，保留來源、原生文字／格式及歷史引用，讓 Agent 看到錯配後
+執行可核對的修正；原始失敗 PDF、PNG、CI 日誌與控制實驗皆保留。
+
+修正後實際 Codex 預設模型在 Writer 24.2.7.2 完成 **211 次成功 MCP 呼叫、2 次自行恢復
+參數錯誤、282.24 秒**。錯誤分別是 contract 不適用的 text_limit，以及 schema 結束後
+傳入 text_offset:null；皆保留原始紀錄。Agent 查看初始、錯配、修正後的全部 **9 張 PNG**，
+獨立重播逐像素一致，並驗證 **24 份完整註解、4 份清單、13 份 contract、4 個管理版本、
+兩份歷史 Wiki**。明確映射註腳 11→1、尾註 12→1／5→2，其餘 ID、文字／格式與來源保留。
+已刪註腳及修正前的註腳 11／尾註 5 引用仍可依歷史版本驗證。
+
+以 `LIBREOFFICE_BIN` 指定隔離 24.2.7.2，執行原 runner 並加 `--repair-note-ids`；
+一般 pytest 不啟動模型。控制實驗採官方封存檔，SHA-256 為
+`be967ebc63cb15b831b4e8176492e83eb625dc00852eb96eda2b299b6e74bb74`。
+原 7.3 流程與兩輪舊模型證據仍保留，修正流程另有四版本與錯配頁面的稽核。
+Python 3.10：**79 通過、1 個選配渲染跳過（28.60 秒）**；
+已安裝 wheel 在 checkout 外重現 **24 份註解、4 份清單與兩份完全相同 Wiki**，
+原始碼指紋與此輪 Codex 一致。
+
+修正後全套測試 **3,403 通過、33 個選配項目跳過（426.69 秒）**，包含原本 Writer 7.3、
+中英文字形及 NIST／NASA PDF；另以 Writer 24.2.7.2 通過兩種 SDK2 設定。
+Docker 的已安裝程式亦重現相同 24 份註解、4 份清單及兩份 byte-identical Wiki，
+與實際 Codex／wheel 的原始碼指紋一致。標準 pip 安裝、MCP stdio、套件稽核，
+以及 VSIX **199 項**測試、64 檔套件檢查與安裝／更新均通過。
+首次 CI 的 npm 稽核因服務維護回傳 503；服務恢復後本機兩份 npm lock 稽核皆為零漏洞，
+原始失敗紀錄保留，推送後仍要求全部遠端工作成功。
+
+以下保留先前 Writer 7.3 的開發與驗證紀錄，並非對所有閱讀器的相容性宣稱。
+
 實際 Codex 預設模型處理一份 **三頁**合成 Word 文件，先完整讀取七個一般／特殊註解
 定義、正文參照與 contract，再查看全部初始頁面。Agent 新增原生 ID 11 的註腳與
 ID 12 的尾註、刪除 ID 8 的註腳，接著修正 ID 2 的文字，保留其他段落與格式。
-最終程式實測 **153 次成功 MCP 呼叫、1 次自行恢復的參數錯誤、204.28 秒**，未覆寫模型。
+前一版程式實測 **153 次成功 MCP 呼叫、1 次自行恢復的參數錯誤、204.28 秒**，未覆寫模型。
 錯誤是在 `contract` 帶入不適用的 `text_limit`；Agent 移除後完成操作，原始錯誤保留。
 
 獨立稽核通過 **16 份完整註解記錄、3 份清單、12 份 contract、3 個管理版本、
@@ -31,7 +62,7 @@ uv run python -m tests.codex_docx_notes.audit /absolute/new-word-notes-run
 python /path/to/scripts/smoke_docx_note_runtime.py /absolute/new-word-notes-run/workspace
 ```
 
-最終程式完整測試 **3,384 通過、33 個選配項目跳過（396.74 秒）**，包含 Writer／中英文字形
+前一版程式完整測試 **3,384 通過、33 個選配項目跳過（396.74 秒）**，包含 Writer／中英文字形
 與 NIST／NASA PDF。Python 3.10 **60 通過、1 個選配渲染跳過（23.43 秒）**；
 首次私有測試環境漏裝鎖定的 backports-asyncio-runner，補齊後通過，原始錯誤紀錄保留。
 乾淨 wheel 在 checkout 外重現 16 份完整註解、3 份清單與兩份 byte-identical Wiki，

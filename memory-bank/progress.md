@@ -1,5 +1,22 @@
 # Progress (Updated: 2026-09-21)
 
+## Native Word note ID correction documentation — ready for publication
+
+Runtime a8e8333 and recovery auditc7b8d10 are committed underu9401066.
+This20-file docs/harness segment updates bilingual operation/evaluation guides,
+README/CHANGELOG/ROADMAP, generatedsite and five source/bundled instruction pairs.
+The actual Writer24 failure and controlled probes are reported honestly; explicit
+mapping is a managed document correction, not a hidden renderer workaround.
+Final3403/33optional skips426.69s;actualCodex211success+2recovered errors282.24s;
+wheel/Docker24notes/4catalogs/2Wikis atsource22b65;browser8states anddocs25pass.
+All11stagedrunsrestored,ownedDockerimage/builderremoved,server8886stopped. Private
+py310 andisolatedWriter24remainforCI followup. Originalfailures/oldtracesretained.
+Pushmain next,then exact-head allCI/Pages jobs andsixlivebytecomparisons. Previous
+CI failure isterminal andneeds thiscorrectivecommit, not an unchangedrerun.
+Localproof:/run/user/1000/asset-aware-docx-notes-remap-validation.json.
+Publicationproof:/tmp/asset-aware-docx-notes-publication-proof.json.
+Public1.4.0,nextconsolidated1.4.1;notag/bump.Broadall-formatgoalactive.
+
 ## Native Word ID correction — actual Agent recovery harness
 
 Runtime/spec/tests committed a8e8333 (7counted+2MEM). This2-file test segment adds

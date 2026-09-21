@@ -5,6 +5,8 @@ create exact body anchors, edit content and delete notes with version/reference
 checks. Historical evidence, selections, citations and portable Wikis remain intact;
 Agents review actual numbering, placement and meaning. See
 [Word notes](docs/wiki/Native-File-Assets.md#native-word-footnotes-and-endnotes-unreleased).
+Explicit note ID remapping now supports Agent corrections for reader-specific content
+binding errors, with complete old/new identity receipts and preserved historical refs.
 Public **1.4.0**; next consolidated **1.4.1**, without per-feature version bumps.
 
 Unreleased Word header/footer workflows now create, clone, bind/unlink and delete

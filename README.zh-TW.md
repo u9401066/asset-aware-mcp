@@ -3,6 +3,7 @@
 Unreleased 已可完整讀取、建立、修改與刪除 Word 註腳／尾註，保留原生 ID、
 正文格式與歷史引用，並匯出可引用的 Wiki；Agent 負責核對實際編號、位置與語意。
 詳見 [Word 註腳與尾註](docs/wiki/Native-File-Assets.md#native-word-footnotes-and-endnotes-unreleased)。
+另提供明確的註解 ID 對應修正，讓 Agent 處理閱讀器的內容錯配，保留完整變更紀錄與歷史引用。
 公開版 **1.4.0**，下次整合 **1.4.1**，不逐功能升版。
 
 Unreleased 已可建立、複製、綁定／解除共用及刪除整份 Word 頁首頁尾定義，

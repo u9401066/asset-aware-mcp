@@ -7,6 +7,11 @@
 
 ## [Unreleased]
 
+- Added explicit native note ID remapping with atomic collision checks, complete
+  old/new identity receipts and preserved content, formatting and historical refs.
+  Actual Writer24.2.7 tests caught content misbinding missed by the older renderer;
+  Agent-directed correction aligns IDs with body order and is rechecked visually.
+
 - Added complete native footnote/endnote reads, reference-bound content edits and
   catalog-bound creation/deletion with exact Unicode body anchors. Preserve native
   IDs, rich runs, special roles, historical references and complete operation receipts.
