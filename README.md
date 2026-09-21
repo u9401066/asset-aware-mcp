@@ -1,5 +1,12 @@
 # asset-aware-mcp
 
+Unreleased native operation receipts now use separate immutable storage, preserving
+complete before/after evidence as histories grow. Existing reads and Wiki exports
+retain full receipts; old stored assets remain readable and migrate on a successful
+write. Back up the entire asset directory. See the
+[storage contract](docs/native-operation-results-spec.md). Public **1.4.0**; next
+consolidated **1.4.1**.
+
 ODS native support is in development: the first adapter creates spreadsheets,
 reads compressed cell ranges and edits or clears typed values while retaining
 styles and untouched package members. Actual Calc and independent odfdo checks

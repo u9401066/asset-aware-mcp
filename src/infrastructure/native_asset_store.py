@@ -26,6 +26,7 @@ from src.infrastructure.native_file_io import (
     operation_lock,
     publish_new_file,
 )
+from src.infrastructure.native_operation_results import read_result, retain_result
 from src.infrastructure.native_spreadsheet import NativeSpreadsheet
 
 if TYPE_CHECKING:
@@ -49,13 +50,49 @@ class FileNativeAssetRepository:
     def _lock(self, asset_id: str) -> AbstractContextManager[Path]:
         return operation_lock(self._directory(asset_id))
 
-    def _save(self, asset: NativeFileAsset) -> None:
-        data = asset.model_dump_json(indent=2).encode("utf-8")
+    def _prepare_results(self, asset: NativeFileAsset) -> NativeFileAsset:
+        directory = self._directory(asset.asset_id)
+        history = [
+            entry.model_copy(
+                update={
+                    "result": None,
+                    "result_ref": retain_result(
+                        directory, asset.asset_id, index, entry
+                    ),
+                }
+            )
+            if entry.result is not None
+            else entry
+            for index, entry in enumerate(asset.history)
+        ]
+        return NativeFileAsset.model_validate(
+            {
+                **asset.model_dump(exclude={"history"}),
+                "schema_version": "native-file-asset-v2",
+                "history": history,
+            }
+        )
+
+    def _save(self, asset: NativeFileAsset) -> NativeFileAsset:
+        published = self._prepare_results(asset)
         _write_atomic(
             self._directory(asset.asset_id) / "asset.json",
-            data,
+            published.model_dump_json(indent=2).encode("utf-8"),
             limit=MAX_METADATA_BYTES,
         )
+        return published
+
+    def read_result(
+        self, asset_id: str, entry: NativeAssetRevision
+    ) -> NativeEditResult | None:
+        asset = self.load(asset_id)
+        try:
+            index = asset.history.index(entry)
+        except ValueError as exc:
+            raise ValueError(
+                "Operation result does not belong to the native asset history"
+            ) from exc
+        return read_result(self._directory(asset_id), asset_id, index, entry)
 
     def _blob(self, asset_id: str, revision: str) -> Path:
         if re.fullmatch(SHA256_PATTERN, revision) is None:
@@ -141,8 +178,7 @@ class FileNativeAssetRepository:
                 )
             ],
         )
-        self._save(asset)
-        return asset
+        return self._save(asset)
 
     def load(self, asset_id: str) -> NativeFileAsset:
         data, _ = _read_file(
@@ -211,16 +247,14 @@ class FileNativeAssetRepository:
                 )
             )
             asset.revision = revision
-            self._save(asset)
-            return asset
+            return self._save(asset)
 
     def archive(self, asset_id: str, expected_revision: str) -> NativeFileAsset:
         with self._lock(asset_id):
             asset = self.load(asset_id)
             self._check(asset, expected_revision)
             asset.archived = True
-            self._save(asset)
-            return asset
+            return self._save(asset)
 
     def refresh(
         self, asset_id: str, expected_revision: str, expected_source_sha256: str
@@ -244,8 +278,7 @@ class FileNativeAssetRepository:
                 # File replacement/touch with identical bytes is safe even if
                 # a managed edit is waiting for writeback.
                 asset.source = current
-                self._save(asset)
-                return asset
+                return self._save(asset)
             if asset.revision not in {source.sha256, current.sha256}:
                 raise ValueError(
                     "Source and managed revision diverged; compare both versions "
@@ -269,8 +302,7 @@ class FileNativeAssetRepository:
             # Also reconciles a writeback whose bytes succeeded but metadata
             # publication failed, without inventing another content revision.
             asset.source = current
-            self._save(asset)
-            return asset
+            return self._save(asset)
 
     def publish(
         self, asset_id: str, expected_revision: str, output_path: str
@@ -305,6 +337,10 @@ class FileNativeAssetRepository:
                     "Expected source revision does not match registered source state"
                 )
             data = self.read(asset_id, expected_revision)
+
+            # Retain legacy inline receipts before any external source replacement.
+            # Only the eventual metadata save publishes their references.
+            asset = self._prepare_results(asset)
 
             def save_source(updated_source: NativeSource) -> None:
                 asset.source = updated_source

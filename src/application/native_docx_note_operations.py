@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from src.application.native_document_contract import native_asset_summary
 from src.application.native_docx_story_operations import page
 from src.application.native_docx_table_operations import RECEIPT_POLICY, record_text
+from src.application.native_operation_results import revision_result_dict
 from src.domain.native_docx_notes import NOTE_REVIEW
 
 if TYPE_CHECKING:
@@ -62,8 +63,8 @@ class NativeDocxNoteOperations:
             latest = next(
                 item for item in reversed(asset.history) if item.sha256 == revision
             )
-            record["operation_result"] = (
-                latest.result.model_dump() if latest.result else None
+            record["operation_result"] = revision_result_dict(
+                self.repository, asset, latest
             )
             record["operation_receipt_policy"] = RECEIPT_POLICY
             return {

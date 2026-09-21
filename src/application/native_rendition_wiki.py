@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 def add_rendition(
     content: NativeWikiContent, asset: NativeFileAsset, assets: NativeAssetRepository
 ) -> None:
-    report = rendition_receipt(asset, content.identity["revision"])
+    report = rendition_receipt(asset, content.identity["revision"], assets)
     if report is None:
         return
     reference = NativeFileReference.model_validate(

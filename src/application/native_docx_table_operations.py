@@ -7,6 +7,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from src.application.native_document_contract import native_asset_summary
+from src.application.native_operation_results import revision_result_dict
 
 RECEIPT_POLICY = "Latest history entry for these file bytes; a file hash can recur with a different receipt. Verify complete text_sha256 across pages."
 
@@ -94,9 +95,9 @@ class NativeDocxTableOperations:
             record = {
                 **self.structure.read_table(data, chain),
                 "evidence": reference.model_dump(),
-                "operation_result": history.result.model_dump()
-                if history.result
-                else None,
+                "operation_result": revision_result_dict(
+                    self.repository, asset, history
+                ),
                 "operation_receipt_policy": RECEIPT_POLICY,
             }
             text = record_text(record)

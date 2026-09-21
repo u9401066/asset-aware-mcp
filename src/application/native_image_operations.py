@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from src.application.native_document_contract import native_asset_summary
 from src.application.native_image_evidence import IMAGE_REVIEW, NativeImageEvidence
+from src.application.native_operation_results import revision_result_dict
 from src.domain.native_asset_models import MAX_NATIVE_BYTES
 from src.domain.native_image import NativeImageFrameReference
 from src.domain.native_image_evidence import (
@@ -125,8 +126,8 @@ class NativeImageOperations:
         latest = next(
             item for item in reversed(asset.history) if item.sha256 == request.revision
         )
-        record["operation_result"] = (
-            latest.result.model_dump(mode="json") if latest.result else None
+        record["operation_result"] = revision_result_dict(
+            self.repository, asset, latest
         )
         record["operation_receipt_policy"] = RECEIPT_POLICY
         return {

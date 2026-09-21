@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from src.application.native_document_contract import native_asset_summary
 from src.application.native_docx_story_operations import page
 from src.application.native_docx_table_operations import RECEIPT_POLICY, record_text
+from src.application.native_operation_results import revision_result_dict
 from src.domain.native_docx_stories import STORY_REVIEW
 
 if TYPE_CHECKING:
@@ -42,9 +43,9 @@ class NativeDocxStoryStructureOperations:
             record = {
                 "catalog": catalog,
                 "catalog_sha256": digest,
-                "operation_result": latest.result.model_dump()
-                if latest.result
-                else None,
+                "operation_result": revision_result_dict(
+                    self.repository, asset, latest
+                ),
                 "operation_receipt_policy": RECEIPT_POLICY,
             }
             return {
@@ -75,9 +76,7 @@ class NativeDocxStoryStructureOperations:
                 ).hexdigest(),
                 "operation_result": result.model_dump()
                 if changed
-                else latest.result.model_dump()
-                if latest.result
-                else None,
+                else revision_result_dict(self.repository, asset, latest),
                 "operation_receipt_policy": RECEIPT_POLICY,
             }
         )

@@ -104,8 +104,9 @@ def test_pdf_creation_retains_source_lineage(managed_pdf):
     )
     assert created["asset"]["source"] is None
     history = service.repository.load(created["asset"]["asset_id"]).history[0]
-    assert history.result is not None
-    assert [c["source_reference"] for c in history.result.changes] == [
+    result = service.repository.read_result(created["asset"]["asset_id"], history)
+    assert result is not None
+    assert [c["source_reference"] for c in result.changes] == [
         p["reference"] for p in inputs
     ]
 

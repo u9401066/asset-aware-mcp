@@ -15,6 +15,7 @@ SHA256_PATTERN = r"^[a-f0-9]{64}$"
 ASSET_ID_PATTERN = r"^file_[a-f0-9]{32}$"
 MAX_NATIVE_BYTES = 64 * 1024 * 1024
 MAX_NATIVE_CELLS = 20_000
+MAX_NATIVE_RESULT_BYTES = 128 * 1024 * 1024
 
 
 def cell_position(address: str) -> tuple[int, int]:
@@ -147,12 +148,29 @@ class NativeEditResult(NativeModel):
     )
 
 
+class NativeOperationResultReference(NativeModel):
+    schema_version: Literal["native-operation-result-ref-v1"] = (
+        "native-operation-result-ref-v1"
+    )
+    sha256: str = Field(pattern=SHA256_PATTERN)
+    size_bytes: int = Field(ge=2, le=MAX_NATIVE_RESULT_BYTES)
+
+
 class NativeAssetRevision(NativeModel):
     sha256: str = Field(pattern=SHA256_PATTERN)
     size_bytes: int = Field(ge=0, le=MAX_NATIVE_BYTES)
     operation: str
     parent_sha256: str | None = Field(default=None, pattern=SHA256_PATTERN)
     result: NativeEditResult | None = None
+    result_ref: NativeOperationResultReference | None = None
+
+    @model_validator(mode="after")
+    def exclusive_result(self) -> NativeAssetRevision:
+        if self.result is not None and self.result_ref is not None:
+            raise ValueError(
+                "Native history cannot contain both inline and external results"
+            )
+        return self
 
 
 class NativeSource(NativeModel):
@@ -165,7 +183,9 @@ class NativeSource(NativeModel):
 
 
 class NativeFileAsset(NativeModel):
-    schema_version: Literal["native-file-asset-v1"] = "native-file-asset-v1"
+    schema_version: Literal["native-file-asset-v1", "native-file-asset-v2"] = (
+        "native-file-asset-v1"
+    )
     asset_id: str = Field(pattern=ASSET_ID_PATTERN)
     name: str
     format: str
@@ -174,6 +194,20 @@ class NativeFileAsset(NativeModel):
     source: NativeSource | None = None
     archived: bool = False
     history: list[NativeAssetRevision] = Field(min_length=1, max_length=10000)
+
+    @model_validator(mode="after")
+    def result_storage_version(self) -> NativeFileAsset:
+        if self.schema_version == "native-file-asset-v1" and any(
+            entry.result_ref is not None for entry in self.history
+        ):
+            raise ValueError("External native results require asset storage schema v2")
+        if self.schema_version == "native-file-asset-v2" and any(
+            entry.result is not None for entry in self.history
+        ):
+            raise ValueError(
+                "Native storage schema v2 keeps results in immutable blobs"
+            )
+        return self
 
 
 class NativeAssetRepository(Protocol):
@@ -191,6 +225,9 @@ class NativeAssetRepository(Protocol):
     ) -> NativeFileAsset: ...
     def load(self, asset_id: str) -> NativeFileAsset: ...
     def read(self, asset_id: str, revision: str | None = None) -> bytes: ...
+    def read_result(
+        self, asset_id: str, entry: NativeAssetRevision
+    ) -> NativeEditResult | None: ...
     def commit(
         self,
         asset_id: str,

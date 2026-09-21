@@ -7,6 +7,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from src.application.native_document_contract import native_asset_summary
+from src.application.native_operation_results import revision_result
 from src.domain.native_asset_models import MAX_NATIVE_BYTES, NativeEditResult
 from src.domain.native_file_reference import NativeFileReference
 from src.domain.native_pdf import PDF_MEDIA_TYPE
@@ -22,13 +23,15 @@ if TYPE_CHECKING:
 MAX_RENDITION_RECEIPT_BYTES = 1024 * 1024
 
 
-def rendition_receipt(asset: NativeFileAsset, revision: str) -> NativeEditResult | None:
+def rendition_receipt(
+    asset: NativeFileAsset, revision: str, repository: NativeAssetRepository
+) -> NativeEditResult | None:
     initial = asset.history[0]
-    report = initial.result
+    if asset.format != "pdf" or initial.sha256 != revision:
+        return None
+    report = revision_result(repository, asset, initial)
     if (
-        asset.format == "pdf"
-        and initial.sha256 == revision
-        and report is not None
+        report is not None
         and len(report.changes) == 1
         and report.changes[0].get("schema_version") == "native-rendition-v1"
     ):
@@ -127,7 +130,7 @@ class NativeRenditionOperations:
     def read(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.asset_id is not None and request.revision is not None
         asset = self.repository.load(request.asset_id)
-        report = rendition_receipt(asset, request.revision)
+        report = rendition_receipt(asset, request.revision, self.repository)
         if report is None:
             raise ValueError(
                 "No rendition receipt for this exact PDF creation revision"

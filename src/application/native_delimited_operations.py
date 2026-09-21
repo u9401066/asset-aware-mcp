@@ -6,6 +6,7 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 
+from src.application.native_operation_results import revision_result_dict
 from src.domain.native_delimited import (
     DELIMITED_REVIEW,
     NativeDelimitedDialect,
@@ -122,9 +123,9 @@ class NativeDelimitedOperations:
                 record.update(
                     asset_id=asset.asset_id,
                     revision=request.revision,
-                    operation_result=history.result.model_dump()
-                    if history.result
-                    else None,
+                    operation_result=revision_result_dict(
+                        self.repository, asset, history
+                    ),
                 )
             return _page(record, request)
         assert (

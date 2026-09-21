@@ -76,7 +76,9 @@ def test_picture_extract_lineage_and_immutable_file_reference(managed):
     assert service.repository.read(child["asset_id"]) == image.read_bytes()
     assert child["revision"] == image_asset["revision"] and child["source"] is None
     initial = service.repository.load(child["asset_id"]).history[0]
-    assert initial.result.changes[0]["source_reference"] == read["shape_reference"]
+    result = service.repository.read_result(child["asset_id"], initial)
+    assert result is not None
+    assert result.changes[0]["source_reference"] == read["shape_reference"]
     for ref in [
         child["file_reference"],
         image_asset["file_reference"],

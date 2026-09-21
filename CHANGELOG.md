@@ -7,6 +7,14 @@
 
 ## [Unreleased]
 
+- Store complete native operation receipts as immutable, hash-checked blobs bound
+  to asset/history/revision/parent/operation, keeping the revision index bounded.
+  Read legacy inline results without rewriting them; migrate on successful writes.
+  Existing document reads, conversion provenance and Wiki exports resolve complete
+  receipts through the repository. Verify migration before source writeback and
+  reject missing, corrupt or rebound results. Public **1.4.0**, next consolidated
+  **1.4.1**; no per-feature version bump.
+
 - Began native ODS support with a bounded package/worksheet adapter: compressed
   ranges, exact typed lexical values, explicit rich-display replacement, checked
   cell edits/clears and native creation. Preserve styles, source format versions

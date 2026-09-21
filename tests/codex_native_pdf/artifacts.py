@@ -28,17 +28,65 @@ def load_asset(workspace, asset_id):
     directory = workspace / "data" / "native-assets" / asset_id
     asset = read_json(directory / "asset.json")
     require(asset["asset_id"] == asset_id, "Asset identity mismatch")
-    for item in asset["history"]:
+    for index, item in enumerate(asset["history"]):
         revision = item["sha256"]
         require(re.fullmatch(r"[0-9a-f]{64}", revision), "Invalid revision")
         require(
             digest((directory / "revisions" / revision).read_bytes()) == revision,
             "Stored revision hash mismatch",
         )
+        if item.get("result_ref") is not None:
+            item["result"] = archived_result(directory, asset, index, item)
     require(
         asset["history"][-1]["sha256"] == asset["revision"], "Current history mismatch"
     )
     return asset
+
+
+def archived_result(directory, asset, index, entry):
+    """Independently verify archive bytes; never call the production resolver."""
+    ref = entry["result_ref"]
+    require(asset["schema_version"] == "native-file-asset-v2", "Wrong archive schema")
+    require(entry.get("result") is None, "Conflicting result representations")
+    require(
+        ref["schema_version"] == "native-operation-result-ref-v1", "Wrong result ref"
+    )
+    require(re.fullmatch(r"[0-9a-f]{64}", ref["sha256"]), "Invalid result hash")
+    require(2 <= ref["size_bytes"] <= 128 * 1024 * 1024, "Invalid result size")
+    path = directory / "results" / (ref["sha256"] + ".json")
+    require(
+        not path.is_symlink() and not path.parent.is_symlink(), "Result redirection"
+    )
+    require(path.stat().st_size == ref["size_bytes"], "Result size mismatch")
+    raw = path.read_bytes()
+    require(digest(raw) == ref["sha256"], "Result hash mismatch")
+    blob = json.loads(raw)
+    require(raw == canonical(blob), "Noncanonical result bytes")
+    require(
+        {k: v for k, v in blob.items() if k != "result"}
+        == {
+            "schema_version": "native-operation-result-v1",
+            "asset_id": asset["asset_id"],
+            "history_index": index,
+            "revision": entry["sha256"],
+            "parent_revision": entry.get("parent_sha256"),
+            "operation": entry["operation"],
+        },
+        "Result history binding mismatch",
+    )
+    require(
+        set(blob["result"])
+        == {
+            "changed_parts",
+            "preserved_parts",
+            "changes",
+            "checks",
+            "repairs",
+            "review_required",
+        },
+        "Incomplete result fields",
+    )
+    return blob["result"]
 
 
 def validate_source(workspace, expected, source):

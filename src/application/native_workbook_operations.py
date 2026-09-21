@@ -7,6 +7,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from src.application.native_document_contract import native_asset_summary
+from src.application.native_operation_results import revision_result_dict
 
 MAX_WORKBOOK_READ_BYTES = 16 * 1024 * 1024
 
@@ -75,9 +76,7 @@ class NativeWorkbookOperations:
             record.update(
                 asset_id=asset.asset_id,
                 revision=revision,
-                operation_result=history.result.model_dump()
-                if history.result
-                else None,
+                operation_result=revision_result_dict(self.repository, asset, history),
             )
             return _read_page(record, request, revision)
         assert request.expected_revision is not None

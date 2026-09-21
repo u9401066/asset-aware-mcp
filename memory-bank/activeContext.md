@@ -1,5 +1,127 @@
 # Active Context
 
+## Native complete result storage — local gates complete; committing/publishing
+
+Full suite session89412 completed exit0:3775passed/44skipped/571.83s. The11extra
+skips versus the prior baseline were optional Word/CJK/ODS/real-PDF fixtures;
+rerun session1650 enabled them using existing private fixtures:15passed173.83s,
+including all11missing cases. Remaining33skip scopes match the prior baseline.
+Logs /run/user/1000/asset-aware-native-results-full.log and
+/run/user/1000/asset-aware-native-results-optional-gaps.log. Do not repeat full
+tests without source changes or new failures. Actual Codex188calls/audit, full
+receipts/Wiki restarts, source-matched wheel/Docker and VSIX gates all pass.
+
+Machine proof /run/user/1000/asset-aware-native-results-local-proof.json; source
+manifest335files SHA d6df2ae2d7e7b92fac5f66e04092b8bc99a1592a79c5f854b8324ea95c48448c.
+Thirty counted files plus2MEM staged exactly from commit-paths.json. All11prior
+traces are ordinary restored directories; actual new Codex run retained. Owned
+Docker/wheel/node_modules build products removed after validation. No source
+changes since frozen manifest. Product1.4.0,next consolidated1.4.1,no tag/release.
+
+Commit and push directmain as u9401066<u9401066@gap.kmu.edu.tw>, then require
+ALL exact-head CI/Pages jobs and deployed bytes before continuing. ODS traversal
+optimization is next, followed by public operations/evidence/citations/Wiki. Broad
+all-format goal remains active; original detached checkout stays untouched.
+
+## Native receipt archive — Agent/artifact gates passed; full suite pending
+
+Read-only follow-up analysis locates the ODS quadratic work: `_invalidate_caches`
+already traverses physical row/cell elements, yet calls `book.read_cell` from the
+start for each cache; serialized readback repeats `checked.read_cell` per cache.
+Next phase should construct identical records from each visited element and its
+exact compressed repetition coordinates, then match a single checked physical
+traversal to planned locators. Avoid a persistent index over mutable XML unless
+invalidation is explicit. Keep same receipts byte-for-byte, namespace context,
+repeated ranges and protection guards. No ODS runtime changes made in this segment.
+
+Actual default-model Codex CSV/PDF evaluation completed187.52s,exit0,audit passed:
+188successful native calls,4actual region PNGs,6CSV revisions,3derivations,zero
+errors. Original run stays /tmp/asset-aware-native-results-codex-delimited-01.
+Synthetic fixture scope only; no arbitrary-document review claim. Complete
+three-process SDK2 receipt/Wiki migration equality passes. Source335files remain
+exact manifest d6df2ae2d7e7b92fac5f66e04092b8bc99a1592a79c5f854b8324ea95c48448c.
+
+Fresh5,000-formula capacity replay passes locally, Python3.13 wheel and Docker3.12:
+source4,051bytes; old index18,829,912bytes locally; new index1,320bytes; complete
+receipt12,387,603bytes. All5,000before/after caches and source bytes/mtime survive
+restart. Docker source path changes metadata length only. ODS traversal still
+~19.5s locally/~27.3s container, so performance work remains. Both artifacts pass
+console doctor,30tools and SDK2stdio. VSIX199tests,64contententries and install/update
+pass; local activation skipped, required remoteCI remains. Ruff791files,mypy335,
+harness/artifact audit,docs sync and configured security gates pass. An earlier
+unfiltered Bandit log retains23existing low findings; CI medium/high gate is clean.
+
+Owned Docker imageaceba8a4d05b/builder7054b607b1c1 and wheel environments removed.
+All11previous traces RESTORED as ordinary directories with exact hashes/mtimes;
+manifest /run/user/1000/asset-aware-native-results-space.json marks every restored.
+Owned node_modules removed after completed extension checks. A transient root
+disk exhaustion affected only a git-status refresh; completed artifact commands
+passed. Current space recovered; do not remove unrelated data or original traces.
+
+Full suite session89412/log /run/user/1000/asset-aware-native-results-full.log still
+running. Local machine proof /run/user/1000/asset-aware-native-results-local-proof.json.
+Exactly30countedfiles plus2MEM; exact commit list in
+/run/user/1000/asset-aware-native-results-commit-paths.json. Repository description
+reviewed and still accurate. Next finish full suite, update proof/spec/MEM, commit
+and push directmain using user author, then verify all exact-headCI/Pages before
+further development. Public1.4.0,next consolidated1.4.1; no tag/release/bump.
+
+## Native complete result archive — implemented; release validation underway
+
+Complete receipts now persist outside asset.json with hash/size and exact history
+bindings; v1 inline data remains read-only until a successful migration. All11
+application consumers resolve full reports, including rendition and image Wiki.
+Legacy archive preparation precedes external writeback. Selected corruption fails
+without hiding intact history. New independent model auditor reads verified raw
+blobs without the production resolver. No version bump: public1.4.0,next1.4.1.
+
+Focused existing native tests:1925passed108.10s. Expanded storage+auditor44passed
+1.52s; three-process SDK2 migration/read/Wiki equality1passed10.82s. Ruff/mypy335
+source files pass. Frozen source manifest:
+/run/user/1000/asset-aware-native-results-source-manifest.json
+SHA d6df2ae2d7e7b92fac5f66e04092b8bc99a1592a79c5f854b8324ea95c48448c.
+Actual default-model Codex CSV/PDF/derivation/Wiki evaluation is running at
+/tmp/asset-aware-native-results-codex-delimited-01 (session23673), no override.
+Capacity replay running15699; full/artifact checks and publication still pending.
+
+Eleven previous terminal evaluation directories are temporarily staged with
+verified hashes/mtimes in /dev/shm/asset-aware-native-results-build-staging. Original
+paths retain symlinks. Restore ALL as ordinary directories using manifest
+/run/user/1000/asset-aware-native-results-space.json before finishing. Staging
+session87912 must complete. Private Calc24.2 fixture is removed after copying
+origin to /run/user/1000/asset-aware-native-results-calc242-origin.json; private7.3
+stays unchanged. This frees space for required build checks without losing traces.
+
+ODS cache performance and MCP/evidence/Wiki integration are still pending; full
+all-format goal remains active, not complete or blocked. Root checkout untouched.
+
+## Native result storage — actual capacity failure reproduced; design recorded
+
+On current d7b8905, a4,000-formula ODS edit commits successfully but needs15,623,786
+metadata bytes. A5,000-formula ODS (3,091bytes compressed) edits successfully but
+its13,087,436-byte compact receipt makes19,529,786 metadata bytes and actual commit
+fails at16MiB with "Native asset output exceeds byte limit". Prior asset metadata,
+managed revision and source bytes remain exact after failure. Logs/proofs:
+/run/user/1000/asset-aware-ods-receipt-storage-before.{json,log} and
+/run/user/1000/asset-aware-ods-receipt-storage-5000-before.{json,log}.
+The earlier measured quadratic scan is also confirmed (5,000 takes18.49s).
+
+Specification written first:docs/native-operation-results-spec.md. Plan immutable
+full result blobs bound to asset/history/revision/parent/operation, small hash/size
+references in versioned metadata, lazy checked repository access, read compatibility
+for v1 inline results and migration on a successful write. Preserve complete data;
+do not work around the problem by increasing limits or dropping audit fields.
+Existing application result consumers and rendition/Wiki paths require adaptation.
+The Calc oracle fix is now verified: all10 exact-head CI jobs passed. Begin the
+result-archive implementation and regressions; retain private Calc24.2 temporarily
+for focused validation, then remove it before heavier artifact builds.
+
+Current remote head d7b89056f082c6e066958a961bfe801863cac406; CI35585741752/watch91058
+completed successfully (watch91058 exit0). Pages35585741038 passed all3 jobs and six deployed files equal the
+commit, including changed native-ods-spec.md. Publication proof remains
+/run/user/1000/asset-aware-ods-adapter-publication-proof.json. Root checkout stays
+untouched; alternate worktree main only. Public1.4.0,next consolidated1.4.1.
+
 ## ODS Calc export oracle — local compatibility fix verified, ready to push
 
 Core commit e657fc3 CI35582830640 finished with eight passing jobs and one actual

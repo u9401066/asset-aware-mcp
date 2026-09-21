@@ -13,6 +13,17 @@
 各格式限制、待驗證的產品價值及上游專案見
 [能力與缺口分析](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/agent-asset-gap-analysis.md)。
 
+## 完整操作紀錄與備份（Unreleased）
+
+操作紀錄會保留修改前後的完整內容、格式檢查、修復及待 Agent 核對事項。
+大型紀錄與版本索引分開儲存，讀取與 Wiki 匯出仍提供完整內容；遺失或損毀
+會明確失敗。舊資料可以直接讀取，成功寫入時才遷移儲存格式。
+
+備份請複製整個資產目錄，包含原生文件版本與操作紀錄；只備份索引不足以
+還原證據。雜湊與版本檢查不代表語意、畫面或公式已通過 Agent 核對。
+公開版維持 **1.4.0**，下次整合 **1.4.1**。維護細節見
+[完整紀錄儲存規格](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/native-operation-results-spec.md)。
+
 ## Native raster assets (Unreleased)
 
 獨立圖片可保留原檔、拆成影格與區域證據、建立 PNG／TIFF 衍生檔，再把轉錄

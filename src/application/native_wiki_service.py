@@ -16,6 +16,7 @@ from src.application.native_evidence_service import attach_native_evidence
 from src.application.native_image_lineage import add_image_inputs
 from src.application.native_image_projection import NativeImageProjection
 from src.application.native_image_wiki import NativeImageWikiContent
+from src.application.native_operation_results import revision_result_dict
 from src.application.native_pdf_annotation_operations import attach_annotation_evidence
 from src.application.native_pdf_annotation_wiki import NativePdfAnnotationWikiContent
 from src.application.native_pdf_operations import attach_pdf_evidence
@@ -225,7 +226,7 @@ class NativeWikiService:
                 contract,
                 metadata,
                 image_catalog,
-                latest.result.model_dump(mode="json") if latest.result else None,
+                revision_result_dict(self.repository, asset, latest),
                 request.image_color_policy,
             )
         if annotations_catalog and annotations_catalog["annotations"]:

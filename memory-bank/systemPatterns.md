@@ -1,5 +1,21 @@
 # System Patterns
 
+## Immutable complete operation-result storage (Unreleased / 1.4.x)
+
+Native operation results move out of the bounded asset metadata index into canonical
+UTF-8 blobs under each owning asset's results directory. Domain references bind
+SHA-256 and exact size; envelopes bind asset, history index, revision, parent and
+operation. The repository checks all bindings on selected access. No full-history
+hydration occurs on load/list. v1 inline data stays readable; successful writes
+retain full results before publishing v2 metadata. Legacy writeback preflights
+retention before replacing external source bytes; existing reconciliation remains.
+
+Application receipt resolution uses the repository port for CSV, workbook, Word
+tables/stories/notes, PDF annotations, images, rendition provenance and Wiki. API
+records and historical evidence stay complete. Integrity never implies an Agent
+semantic/visual verdict. Limits remain16MiB metadata and128MiB per full result.
+Source versions/references are unchanged. Public1.4.0,next consolidated1.4.1.
+
 ## Native ODS adapter (Unreleased / 1.4.x; MCP integration pending)
 
 Domain native_ods defines zero-based table/name/row/column locators and explicit
