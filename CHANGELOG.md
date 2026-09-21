@@ -7,6 +7,16 @@
 
 ## [Unreleased]
 
+- Added native PDF annotation catalogs/records and guarded create, metadata edit,
+  explicit appearance replacement and deletion for supported annotation kinds.
+  Full references support historical verification, selections, derivations,
+  CSL/custom citations and immutable linked Wiki notes; old page projections stay
+  intact. Actual page/semantic review remains the Agent's responsibility.
+- Fixed annotation body-pixel verification after a Highlight changed MuPDF's
+  compositing even with `annots=False`. Disposable annotation-free reader copies
+  retain exact comparisons; requested output and native graph checks are unchanged.
+  Public1.4.0; next consolidated1.4.1, no per-feature bump.
+
 - Added explicit native note ID remapping with atomic collision checks, complete
   old/new identity receipts and preserved content, formatting and historical refs.
   Actual Writer24.2.7 tests caught content misbinding missed by the older renderer;

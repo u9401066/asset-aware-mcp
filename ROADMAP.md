@@ -1,5 +1,10 @@
 # Roadmap
 
+- [x] Unreleased / 1.4.x: native PDF annotation records and guarded supported
+  create/update/delete, exact provenance, selections/derivations/citations and
+  immutable Wiki notes. Agent reviews actual appearance and meaning; arbitrary
+  rich annotation editing and universal viewer fidelity remain outside this scope.
+
 - [x] Unreleased / 1.4.x: native footnote/endnote content and definition CRUD, exact
   body anchors, preserved native IDs/formatting, explicit ID-remapping correction, complete paged receipts and immutable
   evidence/Wiki. Agent reviews actual numbering, placement and meaning; special

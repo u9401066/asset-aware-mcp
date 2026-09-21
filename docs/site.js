@@ -227,6 +227,20 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
   "native-file-assets": `## Native documents and versioned files — v1.4.0
 
+### Native PDF annotations (Unreleased)
+
+Discover pdf_annotations_enabled and assemble complete contract/schema pages. read_pdf_annotations pins asset_id/revision; read_pdf_annotation adds pdf_annotation_locator. Follow every annotation.text_excerpt at one text_sha256 for complete catalogs, records and operation receipts. Identity combines revision, page, zero-based annotation-array index and native object/generation; names alone are not identities.
+
+update_pdf_annotations takes expected_revision and pdf_annotations_update.edits: 1..32 create/update/delete operations, each existing target once at the input revision. Create takes a full page_reference and typed appearance. Update/delete use the whole annotation reference. Text uses point; FreeText/Square/Circle use rect; Line/PolyLine/Polygon use vertices; Ink uses strokes; Highlight/Underline/StrikeOut/Squiggly use quads in UL/UR/LL/LR order. Positions are displayed rotated CropBox fractions, top-left origin, 0–1. Unused style fields are rejected.
+
+Omitted metadata stays; null removes a key. Metadata edits preserve foreign appearance bytes. Visible FreeText changes require explicit same-kind replace_appearance. Annotation Contents is authored commentary, not the highlighted source quotation. FreeText may also enter page text extraction; inspect the separate annotation records. Unknown kinds, Links and Widgets are readable without implying arbitrary edit support.
+
+Delete requires scope:annotation_and_owned_popup. Surviving replies must be explicitly included. Shared arrays/objects, locks, signatures, Widget/standalone Popup edits and unsupported rich formatting retain guards. Exact native inverse checks, serialized readback and body pixels precede commit. Annotation-free disposable reader copies prevent Highlight transparency from changing the body comparison; exact comparisons and source bytes remain intact.
+
+Read the complete review_request, current references and actual affected page PNGs. Agents review glyphs, clipping, geometry, meaning and viewer behavior. Full refs support verify, selections, derivations and CSL/custom citations. Old evidence never migrates; deletion is not secure erasure. Annotated PDFs use pdf-annotations-v1 with exact PDF/page previews, annotation-catalog.json, annotations.jsonl and linked notes. Unannotated PDFs retain byte-identical legacy output and all historical Wikis remain preserved.
+
+See the [full annotation contract and upstream references](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/specs/native-pdf-annotations.md). Public release: 1.4.0; next consolidated patch: 1.4.1, with no per-feature bump.
+
 ### Native Word footnotes and endnotes (Unreleased)
 
 Discover docx_notes_enabled; read_docx supplies notes_request. read_docx_notes pins asset_id/revision and pages a complete catalog, independent catalog_sha256 and latest operation_result through note. Assemble every text_excerpt at one text_sha256. Roles follow actual w:type, not conventional IDs. Native IDs are distinct from displayed numbering and page locations.
@@ -679,6 +693,22 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+### Native PDF annotation evaluation (Unreleased)
+
+The synthetic suite covers all 12 appearance kinds, rotation/CropBox/UserUnit, foreign AP bytes, direct/shared arrays, dependencies, signatures, locks and stale references. Actual SDK2 balanced/compact lifecycle tests read complete schemas/records/receipts, compare real PNG pixels and retain historical references, selections, derivations and Wikis.
+
+On 2026-09-21, the default Codex model processed the original 17-page NIST SRM 1648a PDF: 399 successful MCP calls, 321.35 seconds, 4 managed revisions, 37 complete annotation records and 8 actual PNGs. It visually transcribed Aluminum (Al)(a,b) | 3.43 ± 0.13 | %, created Highlight/FreeText, replaced the FreeText appearance and deleted the Highlight. Independent audit checked all 17 pages' native streams/body pixels, 8 existing Links, actual image transport, source provenance and both Wikis. One invalid contract.text_limit call was recovered and retained. Visual review covered page indices 4/5 only.
+
+The original 359-page NASA Apollo 11 scan first failed safely: its body-reader copy bypassed the existing original-byte proof for equal duplicate Length declarations, so a writer warning prevented any committed revision. Reusing the strict native package check fixes the copy; 58 focused regressions passed and conflicting lengths still reject. The original failed run is retained. NIST numbers above precede that later correction and have a separate source fingerprint.
+
+The corrected NASA run passed: 238 successful calls plus 1 recovered parameter error, 379.19 seconds, 4 versions, 5 complete annotation records, 8 actual PNGs and 2 Wikis. The transcription is Lift-off | 00:00:00.6. Independent audit compared native body streams and annotation-free body pixels across all 359 pages, plus complete untouched-page images. Agent visual review covered indices 17/18 only; 357 other pages were not visually reviewed. Original source bytes stay unchanged; the managed creation receipt explicitly records equal-Length canonicalization. Installed Python 3.13 wheel and Python 3.12 Docker replays passed at final source fingerprint 74e3abc3…, with identical 4 versions/8 images/records/Wikis and src imported from site-packages.
+
+A mixed Highlight/FreeText fixture also exposed one-level MuPDF compositing drift with annots=False. Disposable annotation-free reader copies now retain exact body comparisons and native inverse checks. FreeText can enter ordinary page extraction; it is distinct from original body content.
+
+The final full suite passed 3,521 tests with 33 optional skips in 698.37 seconds, including Writer/CJK fonts, the real PDF corpus and both SDK2 annotation workflows. Ruff, type checks across 306 modules and the Bandit medium/high gate passed; 185 low-severity Bandit findings remain recorded. VSIX 199 tests, 64-file package checks, install/update and wheel/Docker MCP stdio passed. Local VS Code activation was unavailable because xvfb-run was missing; remote CI still checks it. Desktop/mobile documentation and both language switches passed without horizontal overflow or browser errors.
+
+Ordinary pytest never launches a model. Use uv run python -m tests.codex_pdf_annotations.run --corpus /path/to/verified-corpus --case nist-1648a --output /path/to/new-run; use --case apollo11 for the second original. No model override. Audits retain full contract/schema/record continuation and ordering, errors, actual images and limits. Public release: 1.4.0; next consolidated patch: 1.4.1.
 
 ### Native Word footnote/endnote evaluation (Unreleased)
 

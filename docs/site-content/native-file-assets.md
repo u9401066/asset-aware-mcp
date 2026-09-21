@@ -2,6 +2,52 @@
 
 # Native File Assets（v1.4.0）
 
+## Native PDF annotations (Unreleased)
+
+PDF 批註可以獨立讀取、編輯與引用。MCP 保留版本、定位、原生格式及操作紀錄；
+Agent 核對實際頁面，判斷標記是否圈到正確內容、文字是否正確、是否遮住原文。
+完整英文規格見 [Native PDF annotations](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/specs/native-pdf-annotations.md)。
+公開版 **1.4.0**，下次整合 **1.4.1**，不隨個別功能跳版。
+
+先探索 `pdf_annotations_enabled`，完整讀取分頁的 contract 與操作 schema。
+
+| 操作 | 輸入與結果 |
+| --- | --- |
+| `read_pdf_annotations` | 固定 `asset_id`、`revision`；完整清單、清單雜湊與操作 receipt。 |
+| `read_pdf_annotation` | 另給 `pdf_annotation_locator`；完整原生圖、內容、外觀、座標、關聯與引用。 |
+| `update_pdf_annotations` | 固定 `expected_revision`，`pdf_annotations_update.edits` 提供 1–32 個建立、更新或刪除操作。 |
+
+讀取回應的 `annotation` 需依 `next_text_offset` 組合全部 `text_excerpt`，核對
+`text_sha256`；清單預覽不等於完整紀錄。定位同時包含頁面物件、從 0 起算的批註
+索引、物件編號及 generation，不能只靠可重複的 `/NM` 名稱識別。
+
+建立給完整 `page_reference` 與 typed `appearance`；更新／刪除給完整批註 `reference`。
+整批引用都指向輸入版本，同一既有目標只操作一次。`Text` 用 `point`，
+`FreeText`／`Square`／`Circle` 用 `rect`，線段／折線／多邊形用 `vertices`，
+`Ink` 用 `strokes`，螢光／底線／刪除線／波浪線用 UL、UR、LL、LR 排列的 `quads`。
+位置是旋轉後顯示 CropBox 的 0–1 比例，左上起算；字級與邊寬是 points。
+完整 schema 列出每種外觀接受的欄位，不適用的欄位不可填入 null 或預設值。
+
+`metadata` 省略欄位保持原樣，明確 null 才移除。普通 metadata 修改保留外來外觀
+串流；FreeText 可見文字變更必須明確 `replace_appearance`，並維持原種類。
+批註 `Contents` 是作者留言，不是螢光標記底下原文的抄錄。FreeText 也可能出現在
+頁面文字擷取中，須配合批註紀錄辨識來源。原生批註圖可讀取未知種類、連結及表單；
+不代表它們都能透過一般批註 CRUD 修改。
+
+刪除明確給 `scope: annotation_and_owned_popup`。仍存活的回覆與其他相依會阻止刪除；
+需整串刪除時逐一列出。共享陣列／物件、鎖定、簽章、Widget、獨立 Popup、rich text
+及未建模外觀皆保留必要限制。來源與歷史 bytes 不變，刪除不是安全抹除。
+
+修改後完整讀回 `review_request`、新引用及受影響頁面的實際 PNG。原生圖反向核對、
+序列化讀回與正文像素檢查由 MCP 執行；語意、覆蓋範圍與閱讀器差異由 Agent 核對。
+正文像素以暫存的無批註副本比較，避免透明批註使 `annots=False` 的合成路徑產生
+1 色階差異；不放寬像素容差，也不改動實際輸出內容。
+
+引用可用於 `verify`、精確選取、轉製來源／目標及 CSL。自訂引用顯示包含頁碼、
+批註索引與物件身分。含批註 PDF 使用 `pdf-annotations-v1` Wiki，保留原始 PDF、
+頁面 PNG、`annotation-catalog.json`、`annotations.jsonl` 與 wikilink 批註筆記。
+無批註 PDF 維持原本的 `pdf-pages-v1`；歷史快照與人工筆記不覆蓋。
+
 ## Native Word footnotes and endnotes (Unreleased)
 
 註腳／尾註是獨立的原生內容，正文中的註號則是另一個參照。探索 `docx_notes_enabled`；

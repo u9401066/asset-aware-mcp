@@ -38,6 +38,23 @@ and LightRAG knowledge graph outputs.
 
 ## Native Files and Agent Review
 
+- When pdf_annotations_enabled is advertised, read_pdf_annotations pins asset/revision;
+  read_pdf_annotation also takes pdf_annotation_locator. Assemble ALL annotation
+  text pages at one text_sha256, including catalogs and complete operation receipts.
+  update_pdf_annotations pins expected_revision and full page/annotation references;
+  1..32 create/update/delete edits address the original revision, each target once.
+  Typed appearance positions use displayed rotated CropBox fractions, top-left;
+  markup quads use UL/UR/LL/LR. Metadata omitted keys stay; null removes. Visible
+  FreeText changes require explicit same-kind replace_appearance. Contents is a
+  comment, not underlying highlighted text; FreeText can enter page text extraction.
+  Delete scope:annotation_and_owned_popup; include dependent replies explicitly.
+  Shared arrays, locks, signatures, widgets, standalone popups and unsupported
+  rich/appearance edits retain guards. Read complete review_request/new refs and
+  actual affected page PNGs. Agent reviews geometry, meaning and viewer behavior.
+  Old refs/selections/derivations/citations/Wikis remain historical; no secure erasure.
+  Annotated PDFs use pdf-annotations-v1; no-annotation legacy Wiki stays unchanged.
+  Public1.4.0;next consolidated1.4.1;no per-feature version bump.
+
 - When docx_notes_enabled is advertised, read_docx_notes pins revision and pages
   full catalog/catalog_sha256/latest operation_result through note. read_docx_note
   takes docx_note_locator(part,note_kind,note_id); assemble ALL pages at text_sha256.

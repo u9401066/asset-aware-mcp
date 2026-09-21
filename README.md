@@ -1,5 +1,12 @@
 # asset-aware-mcp
 
+Unreleased PDF annotations now support complete native reads and guarded creation,
+comment edits, explicit appearance replacement and deletion. Historical references,
+CSL/custom citations and linked Wiki notes retain exact source revisions; Agents
+review actual pages and distinguish authored comments from underlying document text.
+See [PDF annotations](docs/specs/native-pdf-annotations.md).
+Public **1.4.0**; next consolidated **1.4.1**, with no per-feature version bump.
+
 Unreleased Word footnote/endnote workflows now read complete native definitions,
 create exact body anchors, edit content and delete notes with version/reference
 checks. Historical evidence, selections, citations and portable Wikis remain intact;

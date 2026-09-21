@@ -2,6 +2,58 @@
 
 # Release And Testing
 
+## Native PDF annotation evaluation (Unreleased)
+
+批註工作流分別測試原生物件、完整 MCP 傳輸、實際 Agent 圖片核對與可攜證據。
+合成測試涵蓋 12 種外觀、旋轉／CropBox／UserUnit、原生批註陣列、回覆相依、
+既有外觀 bytes、簽章／鎖定與 stale 引用；SDK 2.0 的 balanced／compact 設定
+均實際跑過建立、metadata／外觀更新、刪除、歷史選取／轉製與 Wiki。
+
+2026-09-21 的 NIST SRM 1648a 原始 17 頁 PDF 實測：Codex 預設模型完成
+**399 次成功 MCP 呼叫、321.35 秒、4 個管理版本、37 份完整批註紀錄、8 張 PNG**。
+它從第 5 頁表格辨讀 `Aluminum (Al)(a,b) | 3.43 ± 0.13 | %`，建立螢光標記與
+FreeText，修改 FreeText 外觀並刪除標記，再驗證已刪批註的歷史引用。
+獨立稽核比對全部 17 頁原文串流／正文像素、既有 8 個連結、實際傳輸 PNG、
+轉製來源與兩份 Wiki。一次不適用的 `contract.text_limit` 參數由 Agent 自行恢復，
+錯誤與完整呼叫紀錄保留。Agent 的視覺核對範圍是頁索引 4、5，非全份視覺審閱。
+
+同日的 NASA Apollo 11 原始 359 頁掃描報告先被正文核對副本的寫入警告攔下，
+沒有提交修改。原因是副本未沿用既有「原始 bytes 證明重複 Length 相等」流程。
+修正使用相同的嚴格 package 驗證後，聚焦回歸 **58 項通過**；衝突長度仍拒絕。
+原失敗執行與未完成的稽核保留。NIST 上述數字是此修正之前的執行，來源雜湊
+分開記錄；不能把先前通過結果直接當成後續程式的全套驗證。
+
+修正後 NASA 第二次實測通過：**238 次成功呼叫、1 次自行恢復的參數錯誤、
+379.19 秒、4 個版本、5 份完整批註紀錄、8 張 PNG、兩份 Wiki**。
+抄錄為 `Lift-off | 00:00:00.6`；所有 359 頁的原始正文串流與無批註副本像素均核對，
+未受影響頁面的完整畫面也保持一致。Agent 實際看的是頁索引 17、18，其他 357 頁
+未作 Agent 視覺核對。原始來源不變，管理版本明確記錄相同 Length 的正規化。
+最終程式雜湊 `74e3abc3…` 的安裝版 wheel（Python 3.13）與 Docker（Python 3.12）
+重播也通過，完整核對相同 4 個版本、8 張圖片、批註與 Wiki；沒有從開發目錄匯入 src。
+
+另有混合 Highlight／FreeText 案例發現 `annots=False` 仍因透明合成產生 1 色階差異。
+正文驗證改用無批註的暫存讀取副本，保留精確像素比較與原生圖反向檢查；實際輸出
+仍完整保有批註。一般頁面文字擷取可能包含 FreeText，不能當作未修改正文的判據。
+
+最終程式完整測試 **3,521 項通過、33 項選配略過（698.37 秒）**，包含 Writer／中英文
+字形、真實 PDF corpus 與兩種 SDK2 批註工作流。Ruff、306 個模組的型別檢查及
+Bandit 中高風險門檻皆通過；Bandit 另有 185 項低風險提示保留。
+VSIX **199 項測試**、64 檔套件檢查、安裝／更新與 wheel／Docker MCP stdio 均通過。
+本機缺少 xvfb-run，沒有執行 VS Code 視窗啟動驗證；該項仍由遠端 CI 驗證。
+文件頁面另檢查桌面／手機與中英切換，沒有橫向溢位或瀏覽器錯誤。
+
+一般 pytest 不啟動模型。使用已登入的預設 Codex、固定雜湊原始 corpus：
+
+```bash
+uv run python -m tests.codex_pdf_annotations.run \
+  --corpus /path/to/verified-corpus --case nist-1648a --output /path/to/new-run
+# 第二個原始案例：--case apollo11；output 必須是新的目錄。
+```
+
+runner 不指定模型；稽核完整 contract／schema／批註／receipt 分頁與呼叫順序，
+並保存模型錯誤及限制。獨立核對不等於通用閱讀器相容性或自動語意判斷。
+公開版 **1.4.0**，下次整合 **1.4.1**，不逐功能跳版。
+
 ## Native Word footnote/endnote evaluation (Unreleased)
 
 後續 CI 在 Writer 24.2.7 揭露真實內容錯配，原本的頁面斷言正確攔下。以官方 24.2.7.2

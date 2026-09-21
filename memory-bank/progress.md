@@ -1,5 +1,38 @@
 # Progress (Updated: 2026-09-21)
 
+## Native PDF annotations — local release gates complete, publication pending
+
+Runtime commits fdf9ba9, 0b117a9 and b2cbbfc remain local until this docs segment.
+Final source fingerprint: 74e3abc39b06170c0bedc7fa777654abfdb0d9138e638012c1da8293a27b25f5.
+Full suite: 3,521 passed, 33 optional skips, 698.37s; final docs: 28 passed, 0.18s.
+Ruff 728 files, mypy 306 modules, Bandit medium/high gate pass (185 low findings
+retained). VSIX 199 tests, 64 package files and install/update pass. Local activation
+unavailable: xvfb-run missing; required CI still must pass. Baseline 0.2.10 fixture
+and optional runtime diagnostics are not part of the local smoke result.
+
+Final NASA Apollo02 default Codex: 238 successful calls, one recovered contract
+parameter error, 379.19s, 359 original pages, four revisions, five complete records,
+eight actual PNGs and two Wikis. All body streams/pixels checked; Agent visually
+reviewed page indices 17/18 only. Created/final target PNGs independently viewed.
+NIST01 passed before final parser-copy correction; Apollo01 failed safely and its
+original evidence is preserved. No model overrides or retries to hide failures.
+Installed Python 3.13 wheel and Python 3.12 Docker replays both match final source
+and the same four revisions, eight images, annotation evidence and Wikis. Console
+and SDK2 stdio smoke pass for both installed distributions.
+
+Chinese/English docs, README, changelog, roadmap, full spec and five source/bundled
+assistant instructions updated. Eight desktop/mobile/language browser states pass;
+feature desktop Chinese/mobile English screenshots inspected. GitHub description
+and area:pdf label now include annotations; existing topics preserved.
+All 11 temporary hash/mtime-verified staged runs restored. Owned Docker image/builder
+and wheel environment removed; failed runs/probes retained. Docs HTTP port 8886
+still needs shutdown after publication. Original dirty checkout untouched.
+Validation proof: /run/user/1000/asset-aware-pdf-annotations-validation.json.
+Next: commit this 20-counted-file docs segment plus two MEM files, push main, require
+exact-head CI (10 jobs) and Pages (3), compare six live files and latest v1.4.0.
+Public remains 1.4.0; next consolidated patch 1.4.1, no feature-by-feature tag/bump.
+Broad all-format goal remains active. Author u9401066 <u9401066@gap.kmu.edu.tw>.
+
 ## Native PDF annotation real-Agent checks — rendering/parser copy corrections
 
 Local commits:fdf9ba9(core),0b117a9(22counted integration files+2MEM). Not pushed.
