@@ -12,7 +12,10 @@
   cell edits/clears and native creation. Preserve styles, source format versions
   and untouched package bytes. Actual Calc exposed stale formula caches; scoped
   invalidation now retains expressions/formatting and records affected ranges.
-  Calc rendering and independent odfdo reads pass. MCP/evidence/Wiki integration
+  Calc rendering and independent odfdo reads pass. Calc 7.3 and 24.2 checks use
+  independently authored expected workbooks, matching exported values/types and
+  complete rendered pages despite version-specific predicate/color encoding.
+  MCP/evidence/Wiki integration
   remains pending; no project version bump or new public operation yet.
 
 - Retain complete raster frame/catalog representations and generated PNG recipes

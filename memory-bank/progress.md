@@ -1,6 +1,45 @@
 # Progress (Updated: 2026-09-21)
 
-## ODS adapter — all local gates passed; ready for direct main publication
+## ODS Calc export oracle — local compatibility fix verified, ready to push
+
+Core commit e657fc3 CI35582830640 finished with eight passing jobs and one actual
+integration failure (204passed/1failed); final summary consequently failed. This
+was not a timeout. Retain both complete/failed CI logs and original run. Pages at
+that exact head passed all3jobs and five deployed files matched exact commit bytes.
+
+Original assertion B3.value is True failed because Calc24.2.7 exported the predicate
+as numeric1 while Calc7.3 exported BooleanTrue. Official TDF24.2.7.2 was downloaded,
+SHA256 be967ebc63cb15b831b4e8176492e83eb625dc00852eb96eda2b299b6e74bb74 verified,
+and extracted privately without installing packages. Original test reproduced the
+same1failed/1passed result. Independent expected workbooks authored with xlsxwriter
+and converted by the same Calc establish exact value/data-type agreement. A second
+old RGB-property assumption also failed; compare font metadata with the independent
+control and verify actual red glyphs. Whole-page dimensions, text and pixels must
+match the expected render; source bytes/mtime and unchanged-region checks remain.
+Explicit authored Boolean cells retain strict Boolean read-back. Runtime unchanged.
+
+Final Calc24.2 plus docs/hygiene:37passed6.40s; Calc7.3:2passed5.68s. Ruff and harness
+checks pass. Root viewed Calc24.2 before/after PNGs: red title, blue numeric cells,
+TRUE/high after recalculation, unchanged geometry and no clipping. Proof artifacts:
+/run/user/1000/asset-aware-ods-calc242-oracle-02 and
+/run/user/1000/asset-aware-ods-calc73-oracle-01. Failed local logs ending
+calc242-before.log and calc242-oracle-01.log retained. Private24.2 fixture:
+/dev/shm/asset-aware-calc242-fixture-01; retain until new CI passes, then remove only
+that owned fixture. Existing private7.3 fixture stays.
+
+Only test/spec/changelog plus both MEM change in this fix segment:3counted files.
+All332 runtime files exactly match manifest330734bc482e2ad861174f42c5a989a238b144478349e0370406c51accb9e81c;
+previous full3756passed/33skipped and wheel/Docker checks still cover identical
+runtime. No need to rerun unrelated local packaging/tests for this oracle-only fix.
+Next commit/push directmain with user author, then require all exact-head CI/Pages
+jobs. Public1.4.0,next consolidated1.4.1; no version/tag/release change.
+
+ODS MCP/reference/citation/Wiki work remains pending. Measured quadratic cache
+receipt scans and metadata-history growth (details below) must be resolved before
+broad exposure; do not drop provenance to satisfy budgets. No subagents or new
+model invocation; broad goal remains active and unproven complete.
+
+## ODS adapter — CI Calc24.2.7 predicate export failure under investigation
 
 Retained-raster publication at9a117f2 is complete: CI35576413197 all10 and
 Pages35576410855 all3 pass, five deployed files exact. Proof:
@@ -43,11 +82,18 @@ after all extension checks; package-lock unchanged, restore with npm ci in that
 directory when next needed. No actual/failed traces or unrelated files removed.
 Isolated odfdo fixture /dev/shm/asset-aware-ods-odfdo-325 remains until CI completes.
 
-26counted files plus2 MEM currently modified; no commit/push yet. README/Chinese
-README/changelog/spec/gap-analysis/architecture and architectural MEM updated.
-CI requires actual Calc and Python3.10 kernel checks. Next: user-author directmain
-commit/push and all exact-head CI/Pages results. Both package versions remain1.4.0;
-next consolidated1.4.1; no tag/bump, as explicitly reconfirmed by the user.
+26counted files plus2 MEM committed and pushed as e657fc378220ff06a5bafe3d51d341fc524da908
+with user author u9401066 <u9401066@gap.kmu.edu.tw>, directmain. CI35582830640
+at that exact head: eight jobs pass, integration and summary FAILED. Integration:
+204passed/1failed499.88s. tests/integration/test_native_ods_calc.py expected
+B3.value is True; Ubuntu24.04 Calc24.2.7 exports numeric1. Existing watcher2795
+exited1; authoritative run is terminal, not an observation timeout. Keep failed
+log:/run/user/1000/asset-aware-ods-adapter-ci-failed.log. Same-version control and
+actual render must distinguish export representation from lost display/type.
+Do not merely accept truthy values or restart the failed run. Pages35582828924
+all3jobs pass and five deployed files match exact commit bytes. Publication proof:
+/run/user/1000/asset-aware-ods-adapter-publication-proof.json. Both package versions
+remain1.4.0; next consolidated1.4.1; latest GitHub release remainsv1.4.0; no newtag.
 
 MCP/evidence/citations/Wiki wiring, ODS sheet/grid lifecycle/rich-run editing,
 recalculated renditions and actual default-model Codex remain required. Next wiring
@@ -56,6 +102,25 @@ process isolation, reference unions/evidence and Wiki; avoid treating compressed
 physical ranges as one logical cell. Cache receipt read-back should be indexed for
 large formula catalogs before broad exposure. Original dirty worktree untouched;
 no subagents. Full all-format goal remains active, not complete.
+
+Read-only integration inspection: NativeDelimitedOperations/ProcessNativeDelimited
+provide the revision/CAS/process pattern. ODS references must enter NativeDocumentRequest,
+NativeSelectionParent and NativeReference, then evidence, CSL/custom citations and
+Wiki. citation_format_service currently has no ODS locator rendering, so default
+source citation would have an empty required locator; add a canonical ODS branch.
+Compressed catalog ranges must not imply each logical cell was separately read;
+keep exact-cell identity distinct from physical repetition descriptions. A bounded
+formula scale probe completed successfully in session82056, log:
+/run/user/1000/asset-aware-ods-formula-scale-before.log. 1000/2000/4000 formulas
+took0.806/3.093/12.136s, with every cache before/after checked: measured quadratic
+rescan cost. Complete receipt sizes were2.62/5.23/10.47MB despite1.3/1.6/2.1KB
+compressed outputs. Avoid quadratic scans before MCP exposure; also account for
+NativeAssetRepository MAX_METADATA_BYTES16MiB across the entire history. Do not
+solve receipt growth by silently dropping provenance or pretending all formulas
+were checked. Full immutable source revisions and exact paged receipts must stay
+accessible; storage budget/precommit behavior needs explicit integration tests.
+Prioritize this actual CI failure before new runtime development. Current MEM update
+records this follow-up state; commit together with the next coherent segment.
 
 ## Retained raster release gates — ready to push main and verify remote jobs
 

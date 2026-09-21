@@ -83,8 +83,15 @@ the bounded kernel, compressed coordinates, literal types, namespace aliases
 `tests/integration/test_native_ods_calc.py` requires `NATIVE_ODS_RENDER_TEST=1`
 and actual Calc; `NATIVE_ODS_CALC_BIN` can select a private test installation.
 It checks numeric/Boolean/string formula read-back, styles, actual PDF content
-and unchanged-region geometry/pixels without resaving the source. CI installs
-Calc and requires these tests; Python 3.10 also runs the kernel tests.
+and unchanged-region geometry/pixels without resaving the source. Comparison
+formula caches can be exported as Boolean or numeric values by different Calc
+versions: use a separately authored expected workbook converted by the same Calc
+as the type/value and full-page rendering oracle. Do not accept arbitrary truthy
+values or infer a native Boolean from a comparison formula; explicitly authored
+Boolean cells still require Boolean read-back. Exported font metadata is checked
+against that independent control and the actual red PDF glyphs; a specific RGB
+storage field is not required. CI installs Calc and requires these tests;
+Python 3.10 also runs the kernel tests.
 
 `tests/integration/test_native_ods_odfdo.py` is an optional independent reader
 check with `NATIVE_ODS_ODFDO_TEST=1`; odfdo 3.25.0 was isolated outside the runtime

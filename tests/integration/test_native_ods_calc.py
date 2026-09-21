@@ -53,20 +53,32 @@ def convert(source, destination, output_format):
     return result
 
 
-def test_real_calc_creation_native_read_edit_and_render(tmp_path):
-    source = tmp_path / "original.xlsx"
+def write_fixture(source, title, amount):
+    """Author source and expected state independently of our ODS editor."""
     with xlsxwriter.Workbook(source) as book:
         sheet = book.add_worksheet("Sheet1")
         red = book.add_format({"font_color": "#FF0000", "font_size": 20, "bold": True})
         number = book.add_format({"num_format": "0.00", "font_color": "#0000FF"})
-        sheet.write("A1", "OLD TITLE", red)
-        sheet.write_number("A2", 3.43, number)
-        sheet.write_formula("B2", "=A2*2", number, 6.86)
-        sheet.write_formula("B3", "=A2>4", None, False)
-        sheet.write_formula("B4", '=IF(A2>4,"high","low")', None, "low")
+        sheet.write("A1", title, red)
+        sheet.write_number("A2", amount, number)
+        sheet.write_formula("B2", "=A2*2", number, amount * 2)
+        sheet.write_formula("B3", "=A2>4", None, amount > 4)
+        sheet.write_formula(
+            "B4", '=IF(A2>4,"high","low")', None, "high" if amount > 4 else "low"
+        )
         sheet.write("A4", "UNCHANGED")
         sheet.set_column("A:B", 25)
         sheet.print_area("A1:B4")
+
+
+def test_real_calc_creation_native_read_edit_and_render(tmp_path):
+    source = tmp_path / "original.xlsx"
+    write_fixture(source, "OLD TITLE", 3.43)
+    expected_source = tmp_path / "expected.xlsx"
+    write_fixture(expected_source, "NEW TITLE", 5.75)
+    expected_ods = convert(expected_source, tmp_path / "expected-ods", "ods")
+    expected_independent = convert(expected_ods, tmp_path / "expected-readback", "xlsx")
+    expected_readback = openpyxl.load_workbook(expected_independent, data_only=True)
     original_ods = convert(source, tmp_path / "source-ods", "ods")
     original = original_ods.read_bytes()
     mtime = original_ods.stat().st_mtime_ns
@@ -91,18 +103,37 @@ def test_real_calc_creation_native_read_edit_and_render(tmp_path):
     assert readback.active["A1"].value == "NEW TITLE"
     assert readback.active["A2"].value == 5.75
     assert readback.active["B2"].value == 11.5
-    assert readback.active["B3"].value is True
+    # Calc 7.3 exports this predicate as Boolean; 24.2 may export numeric 1.
+    # Require the independent same-version expected state, including its type.
+    assert expected_readback.active["B3"].value == 1
+    assert expected_readback.active["B3"].data_type in {"b", "n"}
+    for address in ("A1", "A2", "B2", "B3", "B4", "A4"):
+        actual, expected = readback.active[address], expected_readback.active[address]
+        assert (actual.value, actual.data_type) == (expected.value, expected.data_type)
     assert readback.active["B4"].value == "high"
     assert readback.active["A2"].number_format == "0.00"
     assert readback.active["A1"].font.bold
-    assert readback.active["A1"].font.color.rgb[-6:] == "FF0000"
+    # Compare exported font metadata with Calc's independent expected state.
+    # The actual red glyphs and complete rendered page are checked below.
+    assert readback.active["A1"].font.color == expected_readback.active["A1"].font.color
     assert readback.active["A4"].value == "UNCHANGED"
     pdf = convert(edited, tmp_path / "render", "pdf:calc_pdf_Export")
     original_pdf = convert(
         original_ods, tmp_path / "before-render", "pdf:calc_pdf_Export"
     )
-    with pymupdf.open(pdf) as rendered:
-        assert len(rendered) == 1
+    expected_pdf = convert(
+        expected_ods, tmp_path / "expected-render", "pdf:calc_pdf_Export"
+    )
+    with pymupdf.open(pdf) as rendered, pymupdf.open(expected_pdf) as expected_render:
+        assert len(rendered) == len(expected_render) == 1
+        assert rendered[0].rect == expected_render[0].rect
+        assert rendered[0].get_text() == expected_render[0].get_text()
+        assert (
+            rendered[0].get_pixmap().samples == expected_render[0].get_pixmap().samples
+        )
+        expected_render[0].get_pixmap(matrix=pymupdf.Matrix(1.5, 1.5)).save(
+            tmp_path / "expected-preview.png"
+        )
         text = rendered[0].get_text()
         assert all(
             item in text for item in ("NEW TITLE", "5.75", "11.50", "UNCHANGED", "high")
@@ -146,6 +177,10 @@ def test_real_calc_creation_native_read_edit_and_render(tmp_path):
             original_pdf,
             tmp_path / "edited-preview.png",
             tmp_path / "original-preview.png",
+            expected_ods,
+            expected_independent,
+            expected_pdf,
+            tmp_path / "expected-preview.png",
         ]
         hashes = {}
         for file in files:
@@ -161,6 +196,13 @@ def test_real_calc_creation_native_read_edit_and_render(tmp_path):
                     or office_binary("Calc"),
                     "source_unchanged": True,
                     "independent_formula_value": readback.active["B2"].value,
+                    "predicate_export": {
+                        "actual_value": readback.active["B3"].value,
+                        "actual_type": readback.active["B3"].data_type,
+                        "expected_value": expected_readback.active["B3"].value,
+                        "expected_type": expected_readback.active["B3"].data_type,
+                    },
+                    "full_page_matches_independent_expected": True,
                 },
                 indent=2,
             )
