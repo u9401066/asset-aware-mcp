@@ -1,5 +1,10 @@
 # Roadmap
 
+- [ ] Unreleased / 1.4.x: standalone raster assets with oriented frame/region
+  evidence, actual MCP previews, explicit composition/revision workflows and Wiki.
+  Internal kernel and focused regression tests exist; service, SDK2 and actual-Agent
+  integration remain in progress. This does not imply arbitrary image/layer editing.
+
 - [x] Unreleased / 1.4.x: native PDF annotation records and guarded supported
   create/update/delete, exact provenance, selections/derivations/citations and
   immutable Wiki notes. Agent reviews actual appearance and meaning; arbitrary

@@ -7,6 +7,13 @@
 
 ## [Unreleased]
 
+- Started the internal standalone raster kernel: complete oriented frame records,
+  explicit color-managed previews, source-bound regions, PNG/TIFF derivatives,
+  ordered TIFF composition and guarded exact-candidate revisions. Native sample,
+  palette/alpha, metadata, frame-count and worker limits have focused regressions.
+  MCP/evidence/Wiki/actual-Agent integration remains pending; no public image
+  operation is advertised yet. Public **1.4.0**, next consolidated **1.4.1**.
+
 - Added native PDF annotation catalogs/records and guarded create, metadata edit,
   explicit appearance replacement and deletion for supported annotation kinds.
   Full references support historical verification, selections, derivations,

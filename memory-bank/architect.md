@@ -1,5 +1,22 @@
 # System Architect
 
+## Standalone raster kernel (Unreleased / 1.4.x, integration pending)
+
+Domain native_image defines strict frame/region evidence, creation/extraction/TIFF
+composition requests and exhaustive candidate revision plans. Pure evidence helpers
+hash catalogs and full records and bind regions to displayed oriented geometry.
+Infrastructure splits complete decoding, typed metadata, container checks, previews,
+creation, composition and revision validation into focused modules. ProcessNativeImage
+uses the existing bounded atomic MessagePack worker transport without changing PDF
+behavior; Pillow objects and subclasses never cross the worker boundary.
+
+Full raw source bytes preserve unmodeled/private container data. Revisions preserve
+the exact candidate, while derivatives explicitly omit source metadata. RGBA8
+preview/projection is distinct from native high-precision samples. Existing PPTX
+native_raster_image PNG/JPEG embedding behavior stays intact. Application/MCP,
+evidence unions/citations/Wiki and actual Agent evaluation are the next segment;
+no configured raster capability is advertised by this kernel alone.
+
 ## Immutable ETL citation evidence (Unreleased / 1.4.x)
 
 Domain EtlEvidenceReference binds snapshot manifest hash, full evidence-record hash,

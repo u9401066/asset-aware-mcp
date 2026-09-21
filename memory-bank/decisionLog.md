@@ -1,5 +1,23 @@
 # Decision Log
 
+## [2026-09-21] Explicit image projections and exact candidate revisions
+
+Standalone rasters remain exact source files plus typed, revision-bound decoder
+projections. Native sample hashes alone miss palette/transparent-color changes;
+records also preserve decoded RGBA8 identity where conversion is defined. LAB
+samples remain readable without inventing an RGB profile. Unknown/downsampled
+source precision cannot prove source-sample preservation. Metadata retains typed
+binary/rational/surrogate values and PNG iTXt language/translated keywords.
+
+Creation/extraction/composition produce explicit new PNG/TIFF derivatives with a
+required pixels_only metadata policy and exact sample/color readback. Revisions
+accept exact independent candidate bytes with exhaustive before/after frame intent;
+never silently re-encode an original and assume metadata survived. Source catalog,
+file/frame refs and frame accounting are mechanical checks; Agent still reviews
+appearance/meaning. TIFF main-directory and GIF block/trailer checks prevent silent
+truncation. Decoding/encoding runs in bounded subprocesses. No new dependency,
+model override, public operation or version bump in this kernel segment.
+
 ## [2026-09-21] Separate annotation-free reader verification from requested PDF output
 
 Highlight transparency changed MuPDF body compositing even with annots=False; exact

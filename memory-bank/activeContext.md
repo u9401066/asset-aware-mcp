@@ -1,5 +1,39 @@
 # Active Context
 
+## Standalone raster kernel — focused verification passed, integration pending
+
+Previous PDF annotation milestone is fully published at main
+1d4eb416e40b0e8301d5dec3ef58aca5bd053ca5: final CI 35562614780 all ten jobs,
+Pages 35562614554 all three jobs and six exact deployed files; public v1.4.0.
+Authoritative proof: /tmp/asset-aware-pdf-annotations-publication-proof.json.
+The preceding pending-CI entry is historical; its owned Python 3.10 env was removed.
+
+New standalone-image kernel supplies complete oriented/typed frame records, source
+frame/region refs, previews, PNG/TIFF extraction, ordered TIFF composition and exact
+candidate revisions with complete frame accounting. PNG/APNG/JPEG/TIFF/GIF/WebP/BMP/
+AVIF reads have explicit decoder/precision limits. Palette/alpha changes are pixels;
+LAB samples need no invented RGB conversion. GIF truncation and TIFF main-chain
+corruption fail before pretending the sequence is complete. ProcessNativeImage
+bounds execution and transports plain typed records. Existing PPTX embedding and
+PDF worker behavior remain unchanged; no production wiring or advertised capability.
+
+Initial 52 tests passed. Expanded first run exposed iTXt MessagePack incompatibility
+and an incorrect test assumption about preserved palette transparency: retained
+/run/user/1000/asset-aware-native-image-core-second.log (63 pass, 2 fail). Fix retains
+international text/language/translated keyword as plain types; palette test checks
+actual alpha preservation. Final focused run: 76 passed in 7.63s (68 image cases,
+eight existing PDF worker cases), core-fifth.log. mypy-eighth.log: all eleven new
+source files pass. No dependency/version change. Six image test modules are now
+required in Python 3.10 CI and the release-harness audit before future publication.
+
+This is a local kernel segment, not a complete image feature or all-format outcome.
+Next: application/repository CAS, paged SDK2 records and actual PNGs, historical
+verification/selections/derivations/CSL/Wiki, real default-model Codex image evaluation,
+full release gates and final CI/Pages. Rewrite stale gap analysis (unmeasured 100% /
+94.5% / enterprise-share claims) from current code. Keep <=30 counted files per
+segment, original dirty checkout untouched, direct main author u9401066.
+Public 1.4.0; next consolidated 1.4.1, no per-feature tag or version bump.
+
 ## PDF annotation Python 3.10 CI — measured timeout correction, final rerun pending
 
 The coverage correction correctly exposed two 180-second timeouts on CI head
