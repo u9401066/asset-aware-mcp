@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from src.domain.native_docx_structure import NativeDocxStructureAdapter
     from src.domain.native_grid import NativeGridAdapter
     from src.domain.native_image import NativeImageAdapter
+    from src.domain.native_image_archive import NativeImageArchive
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_rendering import (
@@ -92,12 +93,14 @@ class NativeDocumentService:
         docx_stories: NativeDocxStoryAdapter | None = None,
         docx_notes: NativeDocxNoteAdapter | None = None,
         images: NativeImageAdapter | None = None,
+        image_archive: NativeImageArchive | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.images = images
+        self.image_archive = image_archive
         self.image_operations = (
-            NativeImageOperations(repository, images) if images else None
+            NativeImageOperations(repository, images, image_archive) if images else None
         )
         if workbook_renderer is not None and pdfs is None:
             raise ValueError("Workbook rendering requires native PDF read-back support")
@@ -173,6 +176,7 @@ class NativeDocumentService:
             docx_stories,
             docx_notes,
             images=images,
+            image_archive=image_archive,
         )
         self.derivations = (
             NativeDerivationService(derivations, self.evidence) if derivations else None
@@ -195,6 +199,7 @@ class NativeDocumentService:
                 docx_stories,
                 docx_notes,
                 images=images,
+                image_archive=image_archive,
             )
             if wiki_publisher is not None
             else None
@@ -360,6 +365,8 @@ class NativeDocumentService:
             docx_stories_enabled=self.docx_stories is not None,
             docx_notes_enabled=self.docx_notes is not None,
             images_enabled=self.images is not None,
+            image_evidence_retention_enabled=self.images is not None
+            and self.image_archive is not None,
             workbook_rendering_configured=self.rendition_operations.renderer
             is not None,
             docx_enabled=self.docx is not None,

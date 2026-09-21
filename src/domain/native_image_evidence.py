@@ -36,11 +36,17 @@ def image_frame_reference(
 
 
 def image_catalog(data: bytes, records: list[dict[str, Any]]) -> dict[str, Any]:
+    return image_catalog_for_revision(hashlib.sha256(data).hexdigest(), records)
+
+
+def image_catalog_for_revision(
+    revision: str, records: list[dict[str, Any]]
+) -> dict[str, Any]:
     if not records:
         raise ValueError("Raster catalog cannot be empty")
     result = {
         "schema_version": "native-image-catalog-v1",
-        "source_sha256": hashlib.sha256(data).hexdigest(),
+        "source_sha256": revision,
         "format": records[0]["format"],
         "frame_count": len(records),
         "frames": [

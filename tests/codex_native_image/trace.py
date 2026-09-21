@@ -5,7 +5,11 @@ import json
 from src.domain.native_image_evidence import image_catalog, image_frame_reference
 from src.infrastructure.native_image_document import NativeImage
 from tests.codex_docx_grid.audit import validate_receipt
-from tests.codex_native_image.checks import source_bytes, validate_preview
+from tests.codex_native_image.checks import (
+    source_bytes,
+    validate_preview,
+    validate_workbook_read,
+)
 from tests.codex_native_pdf.artifacts import load_asset
 from tests.codex_native_pdf.trace import canonical, digest, payload
 from tests.codex_pdf.trace import call_failed, require
@@ -43,6 +47,25 @@ MUTATIONS = {
 }
 
 
+def policy_operations(record, for_op):
+    require(
+        record.get("contract_version") == "native-contract-v2"
+        and record.get("for_op") == for_op
+        and record.get("images_enabled") is True,
+        "Incomplete image capability policy",
+    )
+    for key in ("image_policy", "workbook_policy"):
+        require(
+            isinstance(record.get(key), str) and record[key], "Missing operation policy"
+        )
+    advertised = {op for ops in record["formats"].values() for op in ops}
+    require(MUTATIONS - {"create"} <= advertised, "Missing image mutation capabilities")
+    require(set(record["operations"]) >= MUTATIONS, "Missing mutation inventory")
+    # A complete global contract contains the same operation policies. The
+    # independently paged schema must still be read for EACH actual mutation.
+    return MUTATIONS if for_op is None else {for_op}
+
+
 def calls_from(events):
     require(any(e["type"] == "turn.completed" for e in events), "Incomplete model turn")
     calls = []
@@ -63,7 +86,8 @@ def calls_from(events):
             "Unexpected server/tool",
         )
         require(
-            item["arguments"]["native_request"]["op"] in REQUIRED | {"inspect", "list"},
+            item["arguments"]["native_request"]["op"]
+            in REQUIRED | {"inspect", "list", "read_workbook"},
             "Unexpected operation",
         )
         if not call_failed(item):
@@ -126,6 +150,7 @@ def inspect_calls(calls, workspace, output, *, save_images=True):
             "read_image_frame",
             "read_derivations",
             "read_selection",
+            "read_workbook",
         }:
             record = read_page(
                 buffers,
@@ -143,11 +168,16 @@ def inspect_calls(calls, workspace, output, *, save_images=True):
                     == result.get("text_sha256", result.get("schema_sha256")),
                     "Discovery hash not pinned",
                 )
-                (policies if op == "contract_details" else schemas).add(
-                    args.get("for_op")
-                )
+                if op == "contract_details":
+                    policies.update(policy_operations(record, args.get("for_op")))
+                else:
+                    schemas.add(args.get("for_op"))
             elif op == "read_derivations":
                 ledgers.add(digest(canonical(record)))
+            elif op == "read_workbook":
+                key = (args["asset_id"], args["revision"])
+                validate_workbook_read(args, record, source_bytes(workspace, *key))
+                validate_receipt(record, load_asset(workspace, key[0]), key[1])
             elif op == "read_selection":
                 parent = canonical(record["parent"])
                 require(

@@ -27,7 +27,9 @@ def add_image_reference(
 ) -> dict[str, Any]:
     if evidence.images is None:
         raise ValueError("Image evidence renderer is not configured")
-    reader = NativeImageEvidence(evidence.repository, evidence.images)
+    reader = NativeImageEvidence(
+        evidence.repository, evidence.images, evidence.image_archive
+    )
     region = isinstance(reference, NativeImageRegionReference)
     raw = (
         reader.region(reference)

@@ -3,6 +3,22 @@
 Native Table creation: see [the Unreleased operation contract](specs/native-table-creation.md).
 Public remains 1.4.0, with development on 1.4.x.
 
+### Retained raster evidence (in progress, Unreleased 1.4.x)
+
+Persist complete source-bound frame records and catalogs when read, and exact
+bounded PNG previews when generated. Full historical references resolve these
+immutable representations after a decoder change; never remove decoder identity
+from hashes or silently replace old records. Verify source bytes and retained
+representation integrity separately from current-decoder reproduction and Agent
+semantic/visual review. A retained preview is available only for its exact full
+reference, render size and color policy. An uncaptured preview requires the current
+decoder to reproduce the referenced frame; otherwise report it unavailable.
+Allow read_image/export_wiki to pin image_catalog_sha256 and read_image_frame to
+pin its complete reference in addition to asset/revision/locator. New unpinned
+reads use the current decoder. Mutation preconditions remain current-decoder
+checks. Historical catalogs/previews and direct input references must also work in
+native and cross-format Wikis after restart. Partial/corrupt archives fail closed.
+
 ## Agent document collaboration contract (2026-09-18)
 
 The goal is native cross-format document CRUD: create, read, decompose, update,

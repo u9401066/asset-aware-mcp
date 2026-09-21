@@ -1,5 +1,61 @@
 # Active Context
 
+## Retained raster evidence — local runtime and actual Codex verification passed
+
+Complete frame/catalog records and exact preview recipes now persist beside native
+revisions. Historical full refs, regions, selections, derivations and pinned native/
+cross-format Wikis survive restart and decoder drift. Source hash checks remain;
+retained integrity is explicitly not fresh decoder reproduction. Missing historical
+preview recipes require a matching decoder. Current edit guards stay unchanged.
+Atomic files/markers/locks, bounded records/PNGs and symlink/hash/conflict checks
+fail closed. New optional catalog pins/full frame reads are advertised by contract.
+
+Actual Pillow12.2.0->12.3.0 SDK2 balanced/compact restart tests passed with isolated
+old package /dev/shm/asset-aware-image-retention-pillow122; no global dependency
+change. CI Python3.10 now installs that explicit test-only decoder and enforces the
+same test. New retention/SDK2 scope34passed7.74s. Full suite3682passed,33optional
+skips,706.74s. Final focused archive/retention/audit69passed2.59s; this includes14
+new audit cases added after full-suite collection. Ruff772files, mypy325sources,
+Bandit, zizmor and release-harness checks pass. No runtime changes after full-suite
+or actual-model launch. Source031a7a209b69748cc5eda1ca47a9c5f4dc9a74e2ecf0d171806bd36515d1a54c.
+
+Actual default Codex /run/user/1000/asset-aware-codex-image-retention-crud-01:
+CLIexit0,292.81s,175successful calls,zero toolerrors;15framePNGs,one region,three
+TIFF revisions,six literal cells,three Wikis. Independent audit attempt3 passes;
+attempt1 rejected legitimate read_workbook and attempt2 rejected the fully read
+global policy despite complete per-operation schemas. Corrected audit verifies
+complete source-bound workbook records and complete global capability/policy pages;
+per-mutation schemas, full receipts/pixels/lineage/required operations remain strict.
+Both failed attempts and original wrapperexit1 retained. New audit tests first
+omitted synthetic completed status, then treated operation inventory as a dict;
+corrected fixtures pass, all failure logs retained. Root viewed the actual full-row
+crop [254,422,796,454], confirming visible Aluminum,3.43 ± 0.13,% and method letters.
+
+Thirty counted files plus two MEM form this local implementation segment. README,
+Chinese README, changelog, specification and architecture updated. Next: detailed
+bilingual usage/assistant guidance/site sync, package/runtime gates, segmented main
+push and exact-head CI/Pages verification. No publication claim for this new code
+until those finish. Public1.4.0,next consolidated1.4.1; no per-feature bump/tag.
+Broader all-format goal stays active. Original dirty checkout remains untouched.
+
+## Raster evidence retention — implementation in progress
+
+Previous version-only turn made no implementation progress. Revalidated clean main
+at 1920d39. Its publication is complete: CI35571014125 all10jobs, including required
+Linux VSIX activation, and Pages35571013014 all3jobs succeeded. Seven live website
+files matched commit bytes; latest release remains v1.4.0. Proof:
+/tmp/asset-aware-native-image-publication-proof.json. Owned browser server and private
+Python3.10 environment were stopped/removed after success; all traces remain.
+
+Now preserving complete image frame/catalog records and generated previews across
+decoder changes. Existing hashes include decoder version and must remain unchanged.
+Archive integrity/source-byte checks are distinct from current reproduction and
+Agent semantic review. Current-decoder mutation checks stay intact. Specification
+updated before implementation. Runtime integration, corruption/drift regressions,
+actual MCP/Agent verification and release gates remain pending. Public1.4.0, next
+consolidated1.4.1; no per-feature bump. Work only in isolated agent-assets main;
+original dirty checkout untouched. Broad all-format goal remains active.
+
 ## Native raster local release gates — ready for exact-head publication checks
 
 Actual default-model Codex NIST derivative audit passes258calls/zeroerrors/304.08s,

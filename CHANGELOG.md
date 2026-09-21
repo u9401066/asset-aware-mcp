@@ -7,6 +7,13 @@
 
 ## [Unreleased]
 
+- Retain complete raster frame/catalog representations and generated PNG recipes
+  across decoder upgrades and process restarts. Pinned historical reads, regions,
+  selections, derivations and native/cross-format Wikis reuse exact evidence;
+  verification distinguishes retained integrity from current reproduction. Missing
+  historical previews require a matching decoder; corruption fails closed and
+  current-decoder mutation guards remain. No project version bump.
+
 - Added standalone raster MCP workflows: complete oriented frame/region evidence,
   actual color-managed PNG previews, explicit PNG/TIFF derivatives, ordered TIFF
   composition and guarded exact-candidate frame revisions. Full hash-paged receipts,

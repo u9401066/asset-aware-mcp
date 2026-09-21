@@ -253,6 +253,10 @@ revision-bound citations/Wikis. These Unreleased additions require the advertise
 runtime capabilities; public release remains **1.4.0**, next consolidated **1.4.1**.
 Standalone raster workflows now expose oriented frames/regions, actual PNG previews,
 explicit PNG/TIFF derivatives, guarded frame revisions and source-attached Wikis.
+Complete frame/catalog records and generated previews now persist across decoder
+changes. Historical reads/Wikis can pin saved representations; verification
+separates retained integrity from current-decoder reproduction. Uncaptured old
+previews require a matching decoder; mutation guards still use current records.
 An actual default-model Codex run on a real-PDF-derived image passed independent
 pixel/history/citation checks; this is scoped evidence, not general image fidelity.
 See [native usage and limits](docs/wiki/Native-File-Assets.md) and the

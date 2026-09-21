@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 from src.application.native_document_contract import native_asset_summary
 from src.application.native_image_evidence import IMAGE_REVIEW, NativeImageEvidence
 from src.domain.native_asset_models import MAX_NATIVE_BYTES
+from src.domain.native_image import NativeImageFrameReference
 from src.domain.native_image_evidence import (
     image_canonical,
     image_catalog,
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
         NativeFileAsset,
     )
     from src.domain.native_image import NativeImageAdapter
+    from src.domain.native_image_archive import NativeImageArchive
 
 MAX_IMAGE_READ_BYTES = 16 * 1024 * 1024
 RECEIPT_POLICY = "Latest stored operation for this matching file SHA; repeated bytes can have a newer receipt. Pin the complete text_sha256 across all read pages. A no-op retains the previous stored receipt."
@@ -53,9 +55,14 @@ def image_page(record: dict[str, Any], offset: int, limit: int) -> dict[str, Any
 
 
 class NativeImageOperations:
-    def __init__(self, repository: NativeAssetRepository, images: NativeImageAdapter):
+    def __init__(
+        self,
+        repository: NativeAssetRepository,
+        images: NativeImageAdapter,
+        archive: NativeImageArchive | None = None,
+    ):
         self.repository, self.images = repository, images
-        self.evidence = NativeImageEvidence(repository, images)
+        self.evidence = NativeImageEvidence(repository, images, archive)
 
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
         if request.op in {"create_image", "extract_image", "compose_images"}:
@@ -88,13 +95,33 @@ class NativeImageOperations:
         data = self.evidence.source(request.asset_id, request.revision)
         asset = self.repository.load(request.asset_id)
         if request.op == "read_image":
-            record = self.catalog(data, asset.asset_id)
+            _, frames = self.evidence.projection.records(
+                asset.asset_id, request.revision, request.image_catalog_sha256
+            )
+            record = self.catalog(data, asset.asset_id, frames)
         else:
             assert request.image_locator is not None
-            record = self.images.read_frame(data, request.image_locator)
-            record["evidence"] = image_frame_reference(
-                record, asset.asset_id, request.revision
-            ).model_dump(mode="json")
+            if request.reference is not None:
+                ref = request.reference
+                if not isinstance(ref, NativeImageFrameReference) or (
+                    ref.asset_id,
+                    ref.revision,
+                    ref.locator,
+                ) != (asset.asset_id, request.revision, request.image_locator):
+                    raise ValueError(
+                        "Pinned image frame reference must match asset, revision and locator"
+                    )
+                record = self.evidence.frame(ref)
+                if record["evidence"] != ref.model_dump(mode="json"):
+                    raise ValueError(
+                        "Requested frame is not retained and current decoder cannot reproduce it"
+                    )
+            else:
+                record = self.images.read_frame(data, request.image_locator)
+                ref = image_frame_reference(record, asset.asset_id, request.revision)
+                if self.evidence.projection.archive:
+                    self.evidence.projection.archive.retain_frame(ref, record)
+                record["evidence"] = ref.model_dump(mode="json")
         latest = next(
             item for item in reversed(asset.history) if item.sha256 == request.revision
         )
@@ -107,6 +134,13 @@ class NativeImageOperations:
             "asset_id": asset.asset_id,
             "inspected_revision": request.revision,
             "image": image_page(record, request.text_offset, request.text_limit),
+            "image_evidence_retention_enabled": self.evidence.projection.archive
+            is not None,
+            **(
+                {"image_catalog_sha256": record["catalog"]["catalog_sha256"]}
+                if request.op == "read_image"
+                else {}
+            ),
             "source_written": False,
             "review_required": IMAGE_REVIEW,
         }

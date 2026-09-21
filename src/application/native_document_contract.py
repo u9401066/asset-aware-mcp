@@ -142,12 +142,15 @@ def native_document_contract(
     docx_stories_enabled: bool = False,
     docx_notes_enabled: bool = False,
     images_enabled: bool = False,
+    image_evidence_retention_enabled: bool = False,
 ) -> dict[str, Any]:
     for_op = request.for_op if request is not None else None
     result = {
         "success": True,
         "contract_version": "native-contract-v2",
         "images_enabled": images_enabled,
+        "image_evidence_retention_enabled": image_evidence_retention_enabled,
+        "image_evidence_retention_policy": "When enabled, full frame records/catalogs and generated exact PNG preview recipes persist across restart and decoder changes. read_image/export_wiki may pin image_catalog_sha256; read_image_frame may pin a full frame reference matching asset/revision/locator. Verification checks immutable source bytes and retained representation integrity; retained projection/preview results explicitly do not re-run the current decoder. Uncaptured previews require matching current-decoder frame records. New unpinned reads and mutation preconditions use the current decoder. Retention does not certify decoding accuracy or semantic support; Agent reviews actual images.",
         "image_policy": "Pin source revision and read all image JSON pages at one text_sha256. Frame/region refs bind full decoder records; pixels are EXIF-oriented and animation-composited. Regions use displayed frame fractions rounded outward to pixels. Previews are RGBA8 with explicit ICC/unmanaged color policy. create_image creates PNG; extract_image creates PNG/TIFF, compose_images creates ordered TIFF, with required pixel and pixels_only metadata policies. update_image pins source catalog, exact candidate file ref and exhaustive old/new frame mappings with explicit pixel/metadata preservation or replacement. Source/history remain intact; read full receipts and actual PNGs. Agent reviews appearance, meaning, color, private fields and animation behavior. Decoder/version drift must not silently remap old evidence.",
         "delimited_enabled": delimited_enabled,
         "delimited_policy": "CSV/TSV strings; explicit dialect/encoding, no inferred headers/types. Pin revisions; assemble full JSON at one text_sha256. Cell edits need full refs; row/column edits preserve untouched bytes. Evidence/Wiki bind dialects.",

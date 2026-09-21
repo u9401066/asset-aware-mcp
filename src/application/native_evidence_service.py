@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from src.domain.native_docx_notes import NativeDocxNoteAdapter
     from src.domain.native_docx_stories import NativeDocxStoryAdapter
     from src.domain.native_image import NativeImageAdapter
+    from src.domain.native_image_archive import NativeImageArchive
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_selection import NativeSelectionParent
@@ -74,6 +75,7 @@ class NativeEvidenceService:
         docx_stories: NativeDocxStoryAdapter | None = None,
         docx_notes: NativeDocxNoteAdapter | None = None,
         images: NativeImageAdapter | None = None,
+        image_archive: NativeImageArchive | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
@@ -84,11 +86,12 @@ class NativeEvidenceService:
         self.docx_stories = docx_stories
         self.docx_notes = docx_notes
         self.images = images
+        self.image_archive = image_archive
 
     def _image_evidence(self) -> NativeImageEvidence:
         if self.images is None:
             raise ValueError("Native image adapter is not configured")
-        return NativeImageEvidence(self.repository, self.images)
+        return NativeImageEvidence(self.repository, self.images, self.image_archive)
 
     def read_parent_record(self, reference: NativeSelectionParent) -> dict[str, Any]:
         if isinstance(reference, NativeImageRegionReference):

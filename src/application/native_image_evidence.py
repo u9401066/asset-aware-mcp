@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from src.application.native_image_projection import NativeImageProjection
 from src.domain.native_image import (
-    IMAGE_EXTENSIONS,
     NativeImageFrameReference,
     NativeImageRegionReference,
 )
@@ -14,6 +14,7 @@ from src.domain.native_image_evidence import image_frame_reference, image_region
 if TYPE_CHECKING:
     from src.domain.native_assets import NativeAssetRepository, NativeDocumentRequest
     from src.domain.native_image import NativeImageAdapter, NativeImageRegionSelector
+    from src.domain.native_image_archive import NativeImageArchive
 
 IMAGE_REVIEW = [
     "actual_frame_appearance_and_region_coverage",
@@ -24,17 +25,20 @@ IMAGE_REVIEW = [
 
 
 class NativeImageEvidence:
-    def __init__(self, repository: NativeAssetRepository, images: NativeImageAdapter):
+    def __init__(
+        self,
+        repository: NativeAssetRepository,
+        images: NativeImageAdapter,
+        archive: NativeImageArchive | None = None,
+    ):
         self.repository, self.images = repository, images
+        self.projection = NativeImageProjection(repository, images, archive)
 
     def source(self, asset_id: str, revision: str) -> bytes:
-        if self.repository.load(asset_id).format not in IMAGE_EXTENSIONS:
-            raise ValueError("This asset has no native raster adapter")
-        return self.repository.read(asset_id, revision)
+        return self.projection.source(asset_id, revision)
 
     def frame(self, reference: NativeImageFrameReference) -> dict[str, Any]:
-        data = self.source(reference.asset_id, reference.revision)
-        record = self.images.read_frame(data, reference.locator)
+        record, _ = self.projection.frame(reference)
         return {
             **record,
             "evidence": image_frame_reference(
@@ -73,18 +77,20 @@ class NativeImageEvidence:
         self, reference: NativeImageFrameReference | NativeImageRegionReference
     ) -> dict[str, Any]:
         asset = self.repository.load(reference.asset_id)
-        if isinstance(reference, NativeImageRegionReference):
-            parent_valid = self.frame(reference.parent)[
-                "evidence"
-            ] == reference.parent.model_dump(mode="json")
-            valid = parent_valid and self.region(reference.parent, reference.selector)[
+        parent = (
+            reference.parent
+            if isinstance(reference, NativeImageRegionReference)
+            else reference
+        )
+        record, origin = self.projection.frame(parent)
+        parent_valid = (
+            image_frame_reference(record, parent.asset_id, parent.revision) == parent
+        )
+        valid = parent_valid
+        if valid and isinstance(reference, NativeImageRegionReference):
+            valid = image_region_record(parent, reference.selector, record)[
                 "evidence"
             ] == reference.model_dump(mode="json")
-        else:
-            parent_valid = True
-            valid = self.frame(reference)["evidence"] == reference.model_dump(
-                mode="json"
-            )
         return {
             "success": True,
             "valid": valid,
@@ -98,6 +104,12 @@ class NativeImageEvidence:
                 "parent_reference": parent_valid,
                 "representation_hash": valid,
             },
+            "representation_origin": origin,
+            "current_decoder_reproduction": "not_checked"
+            if origin == "retained_projection"
+            else "matched"
+            if valid
+            else "mismatched",
             "source_freshness": "not_checked; refresh tracks external human edits",
             "review_required": IMAGE_REVIEW,
         }
@@ -123,19 +135,8 @@ class NativeImageEvidence:
             parent = reference
             if self.frame(parent)["evidence"] != parent.model_dump(mode="json"):
                 raise ValueError("Image preview failed complete reference verification")
-        data = self.source(parent.asset_id, parent.revision)
-        preview = (
-            self.images.render_region(
-                data,
-                parent.locator,
-                bound.selector,
-                request.render_size,
-                request.image_color_policy,
-            )
-            if region
-            else self.images.render(
-                data, parent.locator, request.render_size, request.image_color_policy
-            )
+        preview, origin = self.projection.preview(
+            bound if region else parent, request.render_size, request.image_color_policy
         )
         return {
             "success": True,
@@ -145,6 +146,10 @@ class NativeImageEvidence:
             if region
             else parent.model_dump(mode="json"),
             **({"region": region} if region else {}),
+            "preview_origin": origin,
+            "current_decoder_reproduction": "not_checked"
+            if origin == "retained_preview"
+            else "matched",
             "image_png": preview["png"],
             "image_sha256": preview["png_sha256"],
             "source_pixel_bounds": preview["source_pixel_bounds"],

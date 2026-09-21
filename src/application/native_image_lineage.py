@@ -13,12 +13,14 @@ if TYPE_CHECKING:
     from src.application.native_image_wiki import NativeImageWikiContent
     from src.domain.native_assets import NativeAssetRepository
     from src.domain.native_image import NativeImageAdapter
+    from src.domain.native_image_archive import NativeImageArchive
 
 
 def add_image_inputs(
     content: NativeImageWikiContent,
     assets: NativeAssetRepository,
     images: NativeImageAdapter,
+    archive: NativeImageArchive | None = None,
 ) -> None:
     if content.operation is None:
         return
@@ -50,14 +52,23 @@ def add_image_inputs(
             if isinstance(reference, NativeImageFrameReference):
                 if asset.format not in IMAGE_EXTENSIONS:
                     raise ValueError("Image operation input has no raster adapter")
-                if key not in frame_refs:
+                retained = archive.frame(reference) if archive else None
+                if retained is None and key not in frame_refs:
+                    records = images.records(data)
+                    if archive:
+                        archive.retain_catalog(
+                            reference.asset_id, reference.revision, records
+                        )
                     frame_refs[key] = {
                         record["locator"]["frame_index"]: image_frame_reference(
                             record, reference.asset_id, reference.revision
                         )
-                        for record in images.records(data)
+                        for record in records
                     }
-                if frame_refs[key].get(reference.locator.frame_index) != reference:
+                if (
+                    retained is None
+                    and frame_refs[key].get(reference.locator.frame_index) != reference
+                ):
                     raise ValueError(
                         "Image operation input failed full frame verification"
                     )

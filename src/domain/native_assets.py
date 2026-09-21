@@ -220,6 +220,7 @@ class NativeDocumentRequest(NativeModel):
     image_create: NativeImageBlank | None = None
     image_extract: NativeImageExtract | None = None
     image_compose: NativeImageCompose | None = None
+    image_catalog_sha256: str | None = Field(default=None, pattern=SHA256_PATTERN)
     image_locator: NativeImageFrameLocator | None = None
     image_region: NativeImageRegionSelector | None = None
     image_update: NativeImageRevisionPlan | None = None

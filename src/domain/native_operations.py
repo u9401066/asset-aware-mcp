@@ -171,9 +171,11 @@ NATIVE_OPERATIONS = {
     "create_image": _fields("image_create"),
     "extract_image": _fields("image_extract"),
     "compose_images": _fields("image_compose"),
-    "read_image": _fields("asset_id revision", "text_offset text_limit"),
+    "read_image": _fields(
+        "asset_id revision", "text_offset text_limit image_catalog_sha256"
+    ),
     "read_image_frame": _fields(
-        "asset_id revision image_locator", "text_offset text_limit"
+        "asset_id revision image_locator", "text_offset text_limit reference"
     ),
     "render_image_frame": _fields("reference", "render_size image_color_policy"),
     "read_image_region": _fields(
@@ -256,7 +258,7 @@ NATIVE_OPERATIONS = {
     ),
     "export_wiki": _fields(
         "asset_id output_dir",
-        "revision citation_contract citation_metadata derivations_sha256 delimited_dialect image_color_policy",
+        "revision citation_contract citation_metadata derivations_sha256 delimited_dialect image_color_policy image_catalog_sha256",
     ),
     "update": _fields("asset_id expected_revision edits"),
     "history": _fields("asset_id", "offset limit"),

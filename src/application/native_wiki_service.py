@@ -14,6 +14,7 @@ from src.application.native_docx_story_wiki import NativeDocxStoryWikiContent
 from src.application.native_docx_wiki import NativeDocxWikiContent
 from src.application.native_evidence_service import attach_native_evidence
 from src.application.native_image_lineage import add_image_inputs
+from src.application.native_image_projection import NativeImageProjection
 from src.application.native_image_wiki import NativeImageWikiContent
 from src.application.native_pdf_annotation_operations import attach_annotation_evidence
 from src.application.native_pdf_annotation_wiki import NativePdfAnnotationWikiContent
@@ -31,7 +32,6 @@ from src.domain.native_image import (
     NativeImageFrameReference,
     NativeImageRegionReference,
 )
-from src.domain.native_image_evidence import image_catalog as build_image_catalog
 from src.domain.native_selection import NativeSelectionReference
 from src.domain.native_wiki import MAX_WIKI_CELLS
 
@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from src.domain.native_docx_notes import NativeDocxNoteAdapter
     from src.domain.native_docx_stories import NativeDocxStoryAdapter
     from src.domain.native_image import NativeImageAdapter
+    from src.domain.native_image_archive import NativeImageArchive
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_wiki import NativeWikiPublisher
@@ -70,6 +71,7 @@ class NativeWikiService:
         docx_stories: NativeDocxStoryAdapter | None = None,
         docx_notes: NativeDocxNoteAdapter | None = None,
         images: NativeImageAdapter | None = None,
+        image_archive: NativeImageArchive | None = None,
     ):
         self.repository = repository
         self.spreadsheets = spreadsheets
@@ -82,6 +84,7 @@ class NativeWikiService:
         self.docx_stories = docx_stories
         self.docx_notes = docx_notes
         self.images = images
+        self.image_archive = image_archive
 
     def export(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.asset_id is not None and request.output_dir is not None
@@ -123,6 +126,9 @@ class NativeWikiService:
             if asset.format == "pdf" and self.pdfs
             else None
         )
+        image_catalog, image_records = self._image_records(
+            asset, revision, request.image_catalog_sha256
+        )
         content = self._content(
             request,
             asset,
@@ -132,14 +138,12 @@ class NativeWikiService:
             catalog,
             notes,
             annotations_catalog,
-            build_image_catalog(data, self.images.records(data))
-            if asset.format in IMAGE_EXTENSIONS and self.images
-            else None,
+            image_catalog,
         )
         add_rendition(content, asset, self.repository)
-        self._populate(content, data)
+        self._populate(content, data, image_records)
         if isinstance(content, NativeImageWikiContent) and self.images:
-            add_image_inputs(content, self.repository, self.images)
+            add_image_inputs(content, self.repository, self.images, self.image_archive)
         if ledger is not None and self.derivations is not None:
             add_derivations(
                 content,
@@ -242,10 +246,36 @@ class NativeWikiService:
             )
         return builder(identity, contract, metadata)
 
-    def _populate(self, content: NativeWikiContent, data: bytes) -> None:
+    def _image_records(
+        self, asset: NativeFileAsset, revision: str, catalog_sha256: str | None
+    ) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+        if asset.format in IMAGE_EXTENSIONS and self.images:
+            return NativeImageProjection(
+                self.repository, self.images, self.image_archive
+            ).records(asset.asset_id, revision, catalog_sha256)
+        if catalog_sha256 is not None:
+            raise ValueError(
+                "image_catalog_sha256 requires a configured raster projection"
+            )
+        return None, []
+
+    def _populate(
+        self,
+        content: NativeWikiContent,
+        data: bytes,
+        image_records: list[dict[str, Any]],
+    ) -> None:
         identity = content.identity
         if isinstance(content, NativeImageWikiContent) and self.images:
-            content.add_frames(data, self.images.decompose(data, content.color_policy))
+            frames = NativeImageProjection(
+                self.repository, self.images, self.image_archive
+            ).wiki_frames(
+                identity["asset_id"],
+                identity["revision"],
+                image_records,
+                content.color_policy,
+            )
+            content.add_frames(data, frames)
         elif isinstance(content, NativePdfWikiContent) and self.pdfs:
             for item in self.pdfs.decompose(data):
                 attach_pdf_evidence(

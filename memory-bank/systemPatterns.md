@@ -1,5 +1,17 @@
 # System Patterns
 
+## Immutable raster projection archive (Unreleased / 1.4.x)
+
+Domain NativeImageArchive defines bounded frame/catalog/preview retention without IO.
+FileNativeImageArchive stores canonical content-addressed records beside immutable
+native revisions; atomic writes, commit markers, operation locks, byte budgets,
+full-reference/hash checks and symlink guards prevent partial or conflicting reuse.
+NativeImageProjection coordinates source verification, current reads and explicitly
+pinned historical reads. Production injects the archive into operations, evidence,
+lineage and Wiki services. Captured previews bind full reference, size and color
+policy; original rendering metadata remains. Current-decoder edit checks are
+unchanged. Archive integrity is not fresh reproduction or semantic verification.
+
 ## Native delimited file boundary
 
 Domain native_delimited defines explicit CSV/TSV dialects, string mutations and exact

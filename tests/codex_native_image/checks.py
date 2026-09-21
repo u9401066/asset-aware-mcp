@@ -20,6 +20,26 @@ def source_bytes(workspace, asset_id, revision):
     ).read_bytes()
 
 
+def validate_workbook_read(args, record, data):
+    from src.infrastructure.native_workbook_structure import NativeWorkbookStructure
+
+    require(
+        record.get("asset_id") == args["asset_id"]
+        and record.get("revision") == args["revision"]
+        and digest(data) == args["revision"],
+        "Workbook read is not bound to its requested source revision",
+    )
+    expected = NativeWorkbookStructure().read(
+        data, references=args.get("workbook_view", "structure") == "references"
+    )
+    actual = {
+        key: value
+        for key, value in record.items()
+        if key not in {"asset_id", "revision", "operation_result"}
+    }
+    require(actual == expected, "Complete workbook read differs from native source")
+
+
 def frames(data):
     result = []
     with Image.open(io.BytesIO(data)) as image:

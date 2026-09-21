@@ -139,3 +139,102 @@ def test_crop_audit_requires_whole_first_row_and_no_unrelated_rows(rect):
 def test_audit_rejects_incomplete_workflow_and_non_mcp_actions(events):
     with pytest.raises(ValueError):
         calls_from(events)
+
+
+@pytest.mark.parametrize(
+    "fault", [None, "asset", "revision", "source", "sheet", "omission"]
+)
+def test_optional_workbook_read_still_requires_complete_source_bound_structure(fault):
+    from src.infrastructure.native_workbook_structure import NativeWorkbookStructure
+    from tests.codex_native_image.checks import validate_workbook_read
+    from tests.native_workbook_helpers import build_workbook
+
+    data = build_workbook()
+    args = {
+        "op": "read_workbook",
+        "asset_id": "file_" + "a" * 32,
+        "revision": digest(data),
+    }
+    record = {
+        **NativeWorkbookStructure().read(data),
+        "asset_id": args["asset_id"],
+        "revision": args["revision"],
+        "operation_result": None,
+    }
+    if fault == "asset":
+        record["asset_id"] = "file_" + "b" * 32
+    elif fault == "revision":
+        record["revision"] = "b" * 64
+    elif fault == "source":
+        data += b"changed"
+    elif fault == "sheet":
+        record["worksheets"][0]["name"] = "wrong"
+    elif fault == "omission":
+        del record["defined_names"]
+    if fault:
+        with pytest.raises(ValueError):
+            validate_workbook_read(args, record, data)
+    else:
+        validate_workbook_read(args, record, data)
+
+
+@pytest.mark.parametrize("extra", ["read_workbook", "writeback"])
+def test_optional_workbook_read_does_not_allow_unrequested_mutations(extra):
+    from tests.codex_native_image.trace import REQUIRED
+
+    events = [{"type": "turn.completed"}] + [
+        {
+            "type": "item.completed",
+            "item": {
+                "type": "mcp_tool_call",
+                "status": "completed",
+                "server": "asset_aware_under_test",
+                "tool": "document",
+                "arguments": {"op": "native", "native_request": {"op": op}},
+            },
+        }
+        for op in [*REQUIRED, extra]
+    ]
+    if extra == "read_workbook":
+        assert len(calls_from(events)) == len(REQUIRED) + 1
+    else:
+        with pytest.raises(ValueError, match="Unexpected operation"):
+            calls_from(events)
+
+
+@pytest.mark.parametrize(
+    "fault", [None, "scope", "disabled", "policy", "inventory", "formats"]
+)
+def test_complete_global_policy_covers_operations_but_rejects_missing_capabilities(
+    fault,
+):
+    from src.application.native_document_contract import native_document_contract
+    from src.domain.native_assets import NativeDocumentRequest
+    from tests.codex_native_image.trace import MUTATIONS, policy_operations
+
+    response = native_document_contract(images_enabled=True)
+    buffers, offset = {}, 0
+    while True:
+        args = {**response["contract_request"], "text_offset": offset}
+        page = native_document_contract(
+            NativeDocumentRequest.model_validate(args), images_enabled=True
+        )
+        record = read_page(buffers, args, page)
+        if record is not None:
+            break
+        offset = page["next_text_offset"]
+    if fault == "scope":
+        record["for_op"] = "update_image"
+    elif fault == "disabled":
+        record["images_enabled"] = False
+    elif fault == "policy":
+        del record["image_policy"]
+    elif fault == "inventory":
+        record["operations"].remove("update_image")
+    elif fault == "formats":
+        record["formats"] = {}
+    if fault:
+        with pytest.raises(ValueError):
+            policy_operations(record, None)
+    else:
+        assert policy_operations(record, None) == MUTATIONS
