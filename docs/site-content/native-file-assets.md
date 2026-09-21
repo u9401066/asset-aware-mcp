@@ -38,8 +38,21 @@
 
 PNG 預覽是 RGBA8，不能證明原始高精度樣本、動畫播放或所有檢視器的外觀。
 損壞 ICC 需檢查後明確選擇 `image_color_policy:unmanaged`；解碼器未建模的圖層與
-私有欄位由原檔保存，並不表示能任意編輯。解碼器版本也參與影格表示；升級後
-若表示改變，舊引用可能需要原解碼器核對，不能靜默移到新表示。
+私有欄位由原檔保存，並不表示能任意編輯。解碼器版本也參與影格表示，
+不會因升級而靜默改寫既有引用。
+
+當 `image_evidence_retention_enabled` 為真，完整影格／目錄與實際產生的 PNG
+會保存。`read_image`／`export_wiki` 可用 `image_catalog_sha256` 指定歷史目錄；
+`read_image_frame` 可加完整 `reference`，且必須與 asset、revision、locator 相符。
+未指定表示雜湊時，讀取使用目前解碼器，可能產生新的影格引用。
+
+`verify` 的 `representation_origin:retained_projection` 表示核對原檔與已保存紀錄；
+`current_decoder_reproduction:not_checked` 明確指出沒有重新解碼。
+預覽的 `preview_origin:retained_preview` 保留當時 PNG 與 rendering 資訊；只有
+相同完整引用、尺寸與色彩政策才能直接沿用。未保存的歷史預覽需要相符解碼器，
+不會以新版畫面替代。更新操作仍以目前解碼器的完整紀錄檢查。
+服務重啟及 Pillow 12.2.0 → 12.3.0 已透過實際 SDK2 balanced／compact 驗證；
+這些機械檢查不代表內容、解碼品質或語意已核對。
 
 實際 Codex 以 NIST 原始 PDF 第五頁產生的測試圖片，完成方向核對、整列裁切、
 TIFF 影格重排／新增／刪除、獨立 XLSX 與區域到儲存格的引用。258 次成功呼叫、

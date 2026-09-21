@@ -53,7 +53,15 @@ verification.
   Historical evidence stays fixed. Wikis retain sources, frame/region records and
   previews, receipts and DIRECT operation inputs plus explicit derivations, not
   inferred recursive lineage. Decoder version can affect frame hashes; never silently
-  migrate references. Public1.4.0; next consolidated1.4.1; no per-feature bump.
+  migrate references. When image_evidence_retention_enabled, complete frame/catalog
+  records and generated PNG recipes persist. Pin image_catalog_sha256 for historical
+  read_image/export_wiki; read_image_frame may add a full reference matching its
+  asset/revision/locator. Unpinned reads use the current decoder. Retained integrity
+  reports current_decoder_reproduction:not_checked. Cached PNGs require the exact
+  reference/size/color policy and preserve original renderer metadata. Uncaptured
+  historical previews need a matching decoder; never substitute current pixels.
+  Mutation guards still use current records. Public1.4.0; next consolidated1.4.1;
+  no per-feature bump.
 
 - When pdf_annotations_enabled is advertised, read_pdf_annotations pins asset/revision;
   read_pdf_annotation also takes pdf_annotation_locator. Assemble ALL annotation

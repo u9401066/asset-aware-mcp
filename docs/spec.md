@@ -3,7 +3,7 @@
 Native Table creation: see [the Unreleased operation contract](specs/native-table-creation.md).
 Public remains 1.4.0, with development on 1.4.x.
 
-### Retained raster evidence (in progress, Unreleased 1.4.x)
+### Retained raster evidence (Unreleased 1.4.x)
 
 Persist complete source-bound frame records and catalogs when read, and exact
 bounded PNG previews when generated. Full historical references resolve these

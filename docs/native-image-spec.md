@@ -32,6 +32,24 @@ top-left origin; bounds round outward to whole pixels. Render size/color policy
 does not change region identity. PNG previews are RGBA8, optionally transformed
 from embedded ICC to sRGB, with no inferred HDR intensity scaling.
 
+With `image_evidence_retention_enabled`, reads retain complete canonical frame
+records/catalogs and generated preview recipes beside immutable native revisions.
+`read_image` and `export_wiki` accept `image_catalog_sha256`; `read_image_frame`
+accepts a full `reference` matching its asset/revision/locator. Unpinned reads use
+the current decoder. Source bytes are always checked before archive resolution.
+Retained hashes keep decoder identity unchanged. Verification reports retained
+integrity separately from current-decoder reproduction; no semantic truth is added.
+
+Exact cached PNGs bind full frame/region reference, render size and color policy.
+Their original renderer metadata stays intact. Missing historical previews require
+current decoding to reproduce the full referenced frame record; changed pixels,
+metadata or decoder identity cannot be substituted. Atomic content-addressed files,
+commit markers, operation locks, bounded reads and symlink/hash checks protect
+capture integrity. Catalog capture is limited to 128 ordered frames/16 MiB of
+records; each PNG is at most 3 MiB. Historical reads/Wikis reuse the archive;
+mutation guards continue checking current-decoder representations. This does not
+retroactively capture uncaptured old representations or certify decoding accuracy.
+
 `export_wiki` retains exact source attachments, all frame records and PNGs, complete
 catalogs and operation receipts, plus direct operation input attachments/references.
 This is mechanical provenance, not recursively inferred semantic lineage. Explicit

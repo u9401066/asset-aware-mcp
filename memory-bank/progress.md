@@ -1,5 +1,38 @@
 # Progress (Updated: 2026-09-21)
 
+## Retained raster release gates — ready to push main and verify remote jobs
+
+Core implementation committed fbdc592 with30counted files plus two MEM. Runtime
+source remains031a7a209b69748cc5eda1ca47a9c5f4dc9a74e2ecf0d171806bd36515d1a54c;
+actual default Codex source fingerprint matches. Full3682passed/33skipped and final
+focused69passed include actual old/new Pillow SDK2 restart and strict audit fixes.
+
+Built wheel (Python3.13) and Docker (Python3.12) replay the same175call Codex trace
+with exact source fingerprints and full independent image/history/citation/Wiki
+checks; console, doctor,30-tool listing and SDK2 stdio pass. VSIX199tests,64packaged
+content entries,66-file250.17KB package,install/update and all-artifact1.4.0 audit
+pass. Local activation remains unavailable without xvfb-run; required remote Linux
+activation must pass. Docs/hygiene35tests pass; source/bundled guides synchronized.
+Browser plugin unavailable; existing Playwright1.63.0/Chromium1234 with private libs
+passes eight bilingual desktop/mobile states, no overflow/console errors. Root
+visually inspected the Chinese retained-evidence section and English mobile page.
+
+Bilingual native usage/evaluation, raster specification and five source/bundled
+assistant guides now explain catalog/full-reference pins, exact preview recipes,
+retained integrity vs reproduction and unchanged mutation checks. Corrected the
+previous milestone's stale pending-publication wording using verified remote proof.
+GitHub description still matches scope; latest release verified v1.4.0. No new tag.
+
+19counted docs/assets/evaluation files plus two MEM comprise this second segment.
+Owned Docker9e03817c918c and builder3b6ac4e7dec2 removed after verification; clean
+wheel/replay envs removed. All11temporarily staged owned historical runs restored
+with exact bytes/mtimes (/tmp/asset-aware-image-retention-staging.json). Keep actual
+and failed traces, logs and isolated Pillow12.2 target until CI succeeds. Local
+proof:/run/user/1000/asset-aware-image-retention-local-proof.json. Next commit/push
+main, await every exact-head CI/Pages job, compare deployed files, then record final
+publication proof. Public1.4.0,next consolidated1.4.1; broad all-format goal active.
+Original dirty checkout remains untouched; no PR, branch, subagent or model override.
+
 ## Retained raster evidence — local runtime and actual Codex verification passed
 
 Complete frame/catalog records and exact preview recipes now persist beside native
