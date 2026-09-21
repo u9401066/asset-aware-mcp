@@ -1,5 +1,43 @@
 # Progress (Updated: 2026-09-21)
 
+## Native PDF annotation kernel — validated, MCP integration next
+
+Previous goal turn was substantive progress:96dd150 is fully published.
+Exact-head CI35554037436 all10pass, Pages35554036827 all3pass, six live files
+byte-identical; integration203pass445.69s, both SDK note cases pass.
+Proof:/tmp/asset-aware-docx-notes-publication-proof.json passed/fully_published.
+Private Writer24/py310 removed after CI; all11stagedruns restored; failures and
+Agent evidence retained. Redundant final remote probes had transient DNS errors;
+this turn a fresh GitHub REST main ref independently confirms96dd150.
+
+Eight new files implement native annotation core, NOT yet exposed through MCP:
+12 typed appearance kinds, complete catalog/record identity (including Popup,
+Widget, Link and unknown native graphs), create/metadata/explicit appearance/delete
+operations, exact inverse native preservation and bounded independent pixel checks.
+Batch refs are validated before mutation. Native array indirection, cross-page
+replies, IDs/content and original bytes are preserved. Owned-popup deletion is
+explicit; incoming dependencies, external/shared arrays, locks, signatures, field
+structures and unsupported rich/appearance edits retain guards. Annotation
+Contents is distinct from underlying highlighted text. Complete service receipts,
+reference verification, selection/derivation/Wiki integration remain next.
+
+Focused core plus existing PDF tests:131pass4.57s; Ruff and mypy304modules pass.
+Initial40pass/3Inkfail fixed with plain coordinate pairs. Indirect Annots regression
+first19pass/1fail, corrected without weakening external dependency checks.
+Coordinate suite first66pass/6fail exposed nonzero origins/UserUnit with rotation;
+actual pixels independently proved clipping/offset. Corrected disposable unrotated
+generation and scaled display transforms. Eight before/after PDFs, measurements
+and actual reviewed PNGs retained:/run/user/1000/asset-aware-pdf-annotation-geometry-probe.
+Post-fix maximum bounding error0.001389 (stroke/pixel boundary); no NumPy dependency.
+Logs:/run/user/1000/asset-aware-pdf-annotations-{records-first,dependencies-before,
+core-first,core-second,core-third,core-fourth,core-final,core-mypy*}.log.
+Next: NativePdf/process methods, typed MCP operations/contracts, complete paged
+reads/receipts, refs/selections/derivations and immutable Wiki; SDK2 and actual
+default-model Codex on original real PDFs, full validation/docs/Pages before push.
+This8-file core segment plus2MEM stays local until the complete feature is ready.
+Public1.4.0,next consolidated1.4.1; no tag/bump/PR/subagent. Broadgoal stays active.
+Original dirty detached checkout untouched; authoru9401066@gap.kmu.edu.tw.
+
 ## Native Word note ID correction documentation — ready for publication
 
 Runtime a8e8333 and recovery auditc7b8d10 are committed underu9401066.
