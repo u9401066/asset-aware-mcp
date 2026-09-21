@@ -1,5 +1,10 @@
 # asset-aware-mcp
 
+ODS 原生支援開發中：第一段底層實作可建立試算表、讀取壓縮儲存格區段、
+修改及清空型別化數值，保留儲存格樣式與未修改的套件內容。已用實際 Calc
+與獨立 odfdo 核對讀回、畫面及公式快取失效處理；MCP、引用與 Wiki 串接仍待完成。
+詳見 [ODS 規格](docs/native-ods-spec.md)。公開版 **1.4.0**，下次整合 **1.4.1**。
+
 Unreleased 已可完整讀取、建立、修改與刪除 Word 註腳／尾註，保留原生 ID、
 正文格式與歷史引用，並匯出可引用的 Wiki；Agent 負責核對實際編號、位置與語意。
 詳見 [Word 註腳與尾註](docs/wiki/Native-File-Assets.md#native-word-footnotes-and-endnotes-unreleased)。

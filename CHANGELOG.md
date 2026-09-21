@@ -7,6 +7,14 @@
 
 ## [Unreleased]
 
+- Began native ODS support with a bounded package/worksheet adapter: compressed
+  ranges, exact typed lexical values, explicit rich-display replacement, checked
+  cell edits/clears and native creation. Preserve styles, source format versions
+  and untouched package bytes. Actual Calc exposed stale formula caches; scoped
+  invalidation now retains expressions/formatting and records affected ranges.
+  Calc rendering and independent odfdo reads pass. MCP/evidence/Wiki integration
+  remains pending; no project version bump or new public operation yet.
+
 - Retain complete raster frame/catalog representations and generated PNG recipes
   across decoder upgrades and process restarts. Pinned historical reads, regions,
   selections, derivations and native/cross-format Wikis reuse exact evidence;

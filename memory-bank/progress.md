@@ -1,5 +1,62 @@
 # Progress (Updated: 2026-09-21)
 
+## ODS adapter — all local gates passed; ready for direct main publication
+
+Retained-raster publication at9a117f2 is complete: CI35576413197 all10 and
+Pages35576410855 all3 pass, five deployed files exact. Proof:
+/tmp/asset-aware-image-retention-publication-proof.json. Owned Pillow12.2 removed.
+
+ODS native package/reader/text/grid/editor and domain values/locators implement
+creation, compressed reads, scoped edits/clears and deterministic cache/column
+repairs. Real Calc caught stale6.86 after precedent5.75; typed cache invalidation
+retains formulas/styles/paragraphs and produces11.50,TRUE,high on independent read/
+render. Unchanged text geometry/pixels match. Root viewed before/after PNGs; final
+proof03 PNG hashes equal those inspected proof02 images. odfdo3.25.0 independently
+reads literal Unicode/Decimal/Boolean values and compressed ranges.
+
+First full3753passed/33skipped722.35s preceded a final Unicode formula-prefix fix.
+Added Chinese/combining-character namespace cases exposed wrong expression parsing;
+use actual XML NCName validation. Final focused60 ODS plus32 docs/hygiene =92passed
+4.14s. An old label-count18 assertion failed after area:opendocument was added; it
+now follows the complete explicit label fixture. Premature second full was stopped
+with SIGINT (28passed/9skipped) because its collection retained the stale assertion;
+all logs retained. FINAL full session93089 exited0:3756passed/33skipped757.02s.
+Log:/run/user/1000/asset-aware-ods-adapter-full-final-second.log. Source stayed frozen
+through final full, wheel and Docker verification; manifest rechecked exact.
+
+Final source-manifest SHA330734bc482e2ad861174f42c5a989a238b144478349e0370406c51accb9e81c
+covers332 source files. Final wheel3.13/Docker3.12 exact-source, exact ODS bytes/full
+receipt replay and import/doctor/30tools/SDK2 stdio pass. VSIX199tests,64contententries,
+package/install/update/artifact gates pass; localactivation unavailable; required
+remote Linux must pass. Ruff785files/mypy332/Bandit/zizmor/harness pass. Metadata
+description remains accurate; new area:opendocument remote label and sync script
+verified. Docs site remains synchronized; public capabilities do not claim ODS MCP.
+
+Final proof:/run/user/1000/asset-aware-ods-adapter-final-local-proof.json. Final own
+Dockere32fdb6784eb/builder999bea8023d4 and wheel env removed; previous own artifacts
+also removed. All11 temporarily staged historical runs are restored as ordinary
+directories at their original paths with exact hashes/mtimes independently checked.
+Manifests:/tmp/asset-aware-ods-final-staging.json and
+/run/user/1000/asset-aware-ods-adapter-final-space.json. Low root disk required
+removing only this worktree's ignored, rebuildable vscode-extension/node_modules
+after all extension checks; package-lock unchanged, restore with npm ci in that
+directory when next needed. No actual/failed traces or unrelated files removed.
+Isolated odfdo fixture /dev/shm/asset-aware-ods-odfdo-325 remains until CI completes.
+
+26counted files plus2 MEM currently modified; no commit/push yet. README/Chinese
+README/changelog/spec/gap-analysis/architecture and architectural MEM updated.
+CI requires actual Calc and Python3.10 kernel checks. Next: user-author directmain
+commit/push and all exact-head CI/Pages results. Both package versions remain1.4.0;
+next consolidated1.4.1; no tag/bump, as explicitly reconfirmed by the user.
+
+MCP/evidence/citations/Wiki wiring, ODS sheet/grid lifecycle/rich-run editing,
+recalculated renditions and actual default-model Codex remain required. Next wiring
+uses NativeDocumentRequest/native_schema/native_document_contract, operations,
+process isolation, reference unions/evidence and Wiki; avoid treating compressed
+physical ranges as one logical cell. Cache receipt read-back should be indexed for
+large formula catalogs before broad exposure. Original dirty worktree untouched;
+no subagents. Full all-format goal remains active, not complete.
+
 ## Retained raster release gates — ready to push main and verify remote jobs
 
 Core implementation committed fbdc592 with30counted files plus two MEM. Runtime

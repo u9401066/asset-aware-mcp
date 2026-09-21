@@ -54,6 +54,7 @@ MCP 不具備通用語意判斷能力，也不應自行宣稱已完成完整視�
 | PPTX | 獨立建立、投影片／支援圖形／表格／圖片操作、整頁預覽、原生引用與 Wiki | 複雜依賴會限制操作；靜態 Impress 預覽不是 PowerPoint 動畫或外觀一致性的證明 |
 | 獨立 PNG／JPEG／TIFF／GIF／WebP／BMP／AVIF | 影格／區域讀取與預覽、PNG／TIFF 衍生檔、TIFF 組合、完整候選版本修改，已接入 MCP／引用／Wiki | 寫入依明確像素／metadata 政策；不是任意格式重新編碼或圖層編輯。真實案例為 NIST PDF 衍生圖片；其他格式與精度案例有合成回歸測試，未證明任意文件外觀一致 |
 | DOC／ODT 等轉換入口 | 既有轉換流程可作特定文件的前處理 | 轉換後 DOCX 的能力不能等同原格式可逆 CRUD；不提供通用保真百分比 |
+| ODS 原生底層（開發中） | 建立、壓縮列／格讀取、型別數值修改／清空、樣式與套件保留；實際 Calc 與 odfdo 讀回驗證 | 尚未接入 MCP／引用／Wiki；工作表／格線結構與 Agent 流程仍待完成，不能視為完整 ODS 支援 |
 | HTML／EPUB／EML／MSG／LaTeX／其他格式 | 可保存檔案身分及原始位元組，部分上游工具有讀取能力 | 本專案尚未完成各格式的原生結構 CRUD、引用與 Wiki 契約 |
 
 詳細操作見 [Native File Assets](wiki/Native-File-Assets.md)、
@@ -78,6 +79,7 @@ MCP 不具備通用語意判斷能力，也不應自行宣稱已完成完整視�
 | [pdfplumber](https://github.com/jsvine/pdfplumber) | 字元、線條、矩形、文字與表格擷取 | 位置資訊及表格擷取結果的可視化核對 |
 | [OCRmyPDF](https://github.com/ocrmypdf/OCRmyPDF) | 對掃描 PDF 加入可搜尋的 OCR 文字層 | OCR 作為衍生版本，保留原圖與轉換記錄 |
 | [Pillow](https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html)／[libvips](https://github.com/libvips/libvips/blob/master/doc/multipage-and-animated-images.md) | 圖片格式與多頁／動畫處理 | 影格、EXIF、色彩／精度與 metadata 的明確邊界；新圖片核心使用既有 Pillow 依賴 |
+| [odfdo](https://github.com/jdum/odfdo) | OpenDocument 建立、解析及修改，Apache-2.0 | ODS 上游參考及獨立讀取驗證；原生修改仍須保留來源格式版本、套件內容及操作證據 |
 
 不用重寫所有解析器。我們要補齊的是來源身分、可控修改、完整回讀、Agent
 核對流程，以及長期可用的引用／Wiki。上游解析得更好時，應能替換 adapter，

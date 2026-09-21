@@ -2,6 +2,14 @@
 
 本專案採用 **Domain-Driven Design (DDD)** 架構，並透過 **Model Context Protocol (MCP)** 暴露功能給 AI Agent。
 
+ODS implementation is currently an infrastructure adapter with dedicated domain
+values/locators (`native_ods.py`). `native_odf_package.py` preserves package members;
+ODS reader/text/grid/editor modules separate compressed coordinates, display,
+guards and checked edits. Formula cache invalidation is deterministic and recorded,
+not a calculation or semantic verdict. Application/MCP/evidence/Wiki wiring is the
+next stage; this adapter is not yet an advertised native operation. See
+[the ODS specification](docs/native-ods-spec.md).
+
 ## 系統架構圖
 
 ```mermaid

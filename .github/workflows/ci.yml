@@ -185,6 +185,8 @@ jobs:
           tests/integration/test_native_image_stdio.py
           tests/unit/test_native_image_archive.py
           tests/unit/test_native_image_retention.py
+          tests/unit/test_native_odf_package.py
+          tests/unit/test_native_ods.py
           tests/integration/test_native_image_retention_stdio.py
           tests/unit/test_codex_pdf_annotations_audit.py
           tests/unit/test_real_pdf_corpus.py
@@ -639,8 +641,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
 
-      - name: Install optional Writer and Impress renderers for real image tests
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-impress libreoffice-writer fontconfig fonts-liberation
+      - name: Install Writer, Impress and Calc for real document tests
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-impress libreoffice-writer libreoffice-calc fontconfig fonts-liberation
 
       - name: Prepare private pinned CJK font fixture
         run: uv run python -m tests.codex_docx_structure.fonts --output "$RUNNER_TEMP/asset-aware-cjk-fonts"
@@ -652,6 +654,7 @@ jobs:
         env:
           NATIVE_PPTX_RENDER_TEST: "1"
           NATIVE_DOCX_RENDER_TEST: "1"
+          NATIVE_ODS_RENDER_TEST: "1"
           NATIVE_DOCX_FONT_FIXTURE: ${{ runner.temp }}/asset-aware-cjk-fonts
           ASSET_AWARE_REAL_PDF_CORPUS: ${{ runner.temp }}/asset-aware-real-pdf-corpus
         run: |
@@ -666,6 +669,7 @@ jobs:
             tests/integration/test_native_pdf_stdio.py \
             tests/integration/test_native_pdf_regions_stdio.py \
             tests/integration/test_native_delimited_stdio.py \
+            tests/integration/test_native_ods_calc.py \
             tests/integration/test_real_pdf_corpus_stdio.py \
             tests/integration/test_csl_citations_stdio.py \
             tests/integration/test_etl_citations_stdio.py \

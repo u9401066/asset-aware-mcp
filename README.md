@@ -1,5 +1,12 @@
 # asset-aware-mcp
 
+ODS native support is in development: the first adapter creates spreadsheets,
+reads compressed cell ranges and edits or clears typed values while retaining
+styles and untouched package members. Actual Calc and independent odfdo checks
+cover native read-back, rendering and formula cache invalidation. MCP, evidence
+and Wiki integration remain pending; see the [ODS specification](docs/native-ods-spec.md).
+Public **1.4.0**; next consolidated **1.4.1**, with no per-feature version bump.
+
 Unreleased PDF annotations now support complete native reads and guarded creation,
 comment edits, explicit appearance replacement and deletion. Historical references,
 CSL/custom citations and linked Wiki notes retain exact source revisions; Agents

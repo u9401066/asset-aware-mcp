@@ -1,5 +1,25 @@
 # Decision Log
 
+## Native ODS adapter (Unreleased / 1.4.x; MCP integration pending)
+
+Domain native_ods defines zero-based table/name/row/column locators and explicit
+lexical values, independent of OOXML IDs and Excel name rules. Infrastructure
+native_odf_package checks ZIP/MIME/manifest/XML budgets and untouched member bytes.
+ODS reader/text/grid/editor modules retain compressed repetitions, distinguish
+values/display/formulas, split only affected ranges, preserve cell/row attributes
+and reopen output. Grid growth extends column declarations without expansion.
+
+Actual Calc exposed stale cached formula results after a precedent edit. Invalidate
+only typed result attributes, retaining expressions, paragraph formatting and cell
+styles, and record full affected ranges. Cached display is explicitly unverified.
+Actual Calc confirms numeric11.50, BooleanTRUE and string high; independent odfdo
+3.25.0 confirms new/repeated native values. No new runtime dependency. Source ODF
+version stays; new files use1.3 for tested Calc7.3 compatibility.
+
+No MCP operation is advertised yet. Revision-bound application operations, evidence
+unions/citations/Wiki, sheet/grid lifecycle and actual Codex SDK2 evaluation remain
+required. Preserve the full all-format goal; public1.4.0,next consolidated1.4.1.
+
 ## Immutable raster projection archive (Unreleased / 1.4.x)
 
 Domain NativeImageArchive defines bounded frame/catalog/preview retention without IO.

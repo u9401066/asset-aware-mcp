@@ -37,6 +37,7 @@ area:citations\t0052cc\tCitation presentation contracts and academic/custom rend
 area:mcp\t5319e7\tMCP protocol, server, tools, resources, or clients
 area:pdf\t1d76db\tPDF page and annotation CRUD, extraction, OCR, layout, and preflight routing
 area:images\t1d76db\tNative raster frame/region evidence, derivatives, guarded edits and Wiki previews
+area:opendocument\t1d76db\tOpenDocument packages, ODS adapters, native styles and formula cache checks
 area:docx\t0e8a16\tDOCX, DFM, round-trip fidelity, or writeback
 area:wiki\t8250df\tFoam, LightRAG, knowledge graph, or reusable agent assets
 area:vsix\t006b75\tVS Code extension, packaging, installation, or UX
@@ -188,7 +189,7 @@ def test_label_apply_preserves_unmanaged_labels_and_verifies_managed_values(
 ) -> None:
     result, calls = _run_script("gh_sync_labels.sh", "--apply", tmp_path)
     assert result.returncode == 0, result.stderr
-    assert calls.count("label create") == 18
+    assert calls.count("label create") == len(LABEL_RECORDS)
     assert "label delete" not in calls
     assert "label list" in calls
 

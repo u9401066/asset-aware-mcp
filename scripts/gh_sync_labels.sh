@@ -22,6 +22,7 @@ LABELS=(
   "area:mcp|5319e7|MCP protocol, server, tools, resources, or clients"
   "area:pdf|1d76db|PDF page and annotation CRUD, extraction, OCR, layout, and preflight routing"
   "area:images|1d76db|Native raster frame/region evidence, derivatives, guarded edits and Wiki previews"
+  "area:opendocument|1d76db|OpenDocument packages, ODS adapters, native styles and formula cache checks"
   "area:docx|0e8a16|DOCX, DFM, round-trip fidelity, or writeback"
   "area:wiki|8250df|Foam, LightRAG, knowledge graph, or reusable agent assets"
   "area:vsix|006b75|VS Code extension, packaging, installation, or UX"
