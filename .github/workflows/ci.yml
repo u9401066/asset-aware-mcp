@@ -162,6 +162,12 @@ jobs:
           tests/unit/test_native_pdf_contract.py
           tests/unit/test_native_pdf_guards.py
           tests/unit/test_native_pdf_lengths.py
+          tests/unit/test_native_pdf_annotation_records.py
+          tests/unit/test_native_pdf_annotation_edits.py
+          tests/unit/test_native_pdf_annotation_service.py
+          tests/unit/test_native_pdf_annotation_contract.py
+          tests/unit/test_native_pdf_annotation_provenance.py
+          tests/unit/test_codex_pdf_annotations_audit.py
           tests/unit/test_real_pdf_corpus.py
           tests/unit/test_csl_processor.py
           tests/unit/test_csl_citation_service.py
@@ -194,6 +200,7 @@ jobs:
           tests/integration/test_native_pptx_slide_stdio.py
           tests/integration/test_native_derivation_stdio.py
           tests/integration/test_native_pdf_stdio.py
+          tests/integration/test_native_pdf_annotations_stdio.py
           tests/integration/test_csl_citations_stdio.py
           tests/integration/test_etl_citations_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py

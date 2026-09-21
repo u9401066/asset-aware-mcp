@@ -1,5 +1,24 @@
 # Active Context
 
+## Native PDF annotation CI coverage — all gates passed, adding persistent SDK2 coverage
+
+8b7e243 first publication checks passed: CI 35560131550 all ten jobs and Pages
+35560130943 all three jobs, six deployed files byte-identical; release stays v1.4.0.
+Proof: /tmp/asset-aware-pdf-annotations-first-remote-proof.json. Final review found
+that the explicit CI test list omitted the new annotation SDK2 lifecycle cases,
+although the full local suite already ran both. Added six focused annotation unit
+modules and tests/integration/test_native_pdf_annotations_stdio.py to the existing
+Python 3.10 job. This exercises balanced/compact on the minimum supported Python
+without adding load to the Writer/Impress integration job. No job/test timeout or
+runtime source change. Added seven required paths to the release-harness guard;
+it first failed on all seven missing entries, then passed with the workflow fix.
+Ruff and zizmor pass; collection confirms both existing SDK2 cases. Existing final
+runtime fingerprint, full suite, wheel/Docker and actual Codex proofs remain valid.
+Second exact-head CI/Pages verification is required after this two-file+two-MEM
+commit. Keep both runs and proofs; this is a coverage correction, not a retry to
+hide failures. Owned docs server stopped; all staged runs restored and own package
+test environments removed. Public 1.4.0; next consolidated 1.4.1. Broad goal active.
+
 ## Native PDF annotations — local release gates complete, publication pending
 
 Runtime commits fdf9ba9, 0b117a9 and b2cbbfc remain local until this docs segment.
