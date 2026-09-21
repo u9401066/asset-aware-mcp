@@ -1,5 +1,36 @@
 # Active Context
 
+## Actual Codex raster workflow — independent audit passed; release gates in progress
+
+Local integration committed as dc0b8d1 (30 counted files + two MEM). New evaluation
+uses default Codex CLI only, no model override/subagents/shell tools. Hash-pinned
+NIST SRM1648a original page index4 is explicitly rasterized into a benchmark PNG
+with EXIF orientation6; it is not claimed as an originally published NIST image.
+Source fingerprint remains de71fed018b653557674cd0d50623ae92eba7de3e336626c7244b2097f917a00.
+
+Actual run /run/user/1000/asset-aware-codex-native-image-nist-01 completed with CLI
+exit0 in304.08s:258 successful MCP calls, zero tool errors. Retained artifacts and
+independent audit prove15 actual full-frame PNGs, one region crop, three exact TIFF
+revisions (reorder/insert/delete), historical refs/selection, six literal XLSX cells,
+region-to-cell derivation and three source-attached custom-citation Wiki snapshots.
+The first wrapper failed AFTER the successful CLI turn with ModuleNotFoundError
+because the audit module was being completed; retain its run log. Separate completed
+audits pass. Import now precedes any model execution; prepared inputs/runtime are
+rechecked and prior traces cannot be overwritten. Numbered audit attempts retained.
+
+Independent positive/negative audit regression tests:23 passed0.28s; modified pixels,
+orientation/alpha/order/count/crop or incomplete/hash-invalid reads fail closed.
+Checkout replay verifies source fingerprint and passes. New audit test and all five
+image integration modules are required by Python3.10 CI/release-harness audit. Ruff,
+format and harness pass. Full suite is RUNNING: session51437, owned log
+/run/user/1000/asset-aware-native-image-full-suite-first.log; do not claim it passed.
+
+This evaluation/test/spec segment remains local. Next: bilingual docs and bundled
+assistant assets, full suite result, wheel/container replay/runtime/VSIX checks,
+browser/docs checks, exact staged commits/push and final all-job CI/Pages verification.
+Keep original worktree untouched, <=30 counted files per commit excluding two MEM,
+public1.4.0 and next consolidated1.4.1; no tag/per-feature bump. Broad goal active.
+
 ## Native image MCP integration — local verification passed, real Agent evaluation next
 
 Version policy reconfirmed: Python/VSIX remain 1.4.0; next consolidated release

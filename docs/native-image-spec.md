@@ -1,7 +1,7 @@
 # Native raster assets — implementation contract
 
-Status: local kernel, application, evidence/Wiki and SDK2 integration verified;
-actual-Agent and release validation remain pending. Public version **1.4.0**, next
+Status: local kernel, application, evidence/Wiki, SDK2 and actual default-model
+Codex evaluation verified; full release validation remains pending. Public **1.4.0**, next
 consolidated release **1.4.1**. These changes have not yet been pushed or released.
 
 The `images_enabled` contract flag controls `create_image`, `extract_image`,
@@ -62,8 +62,17 @@ Malformed/truncated TIFF main-directory chains cannot be accepted as shorter
 documents. Oversized output or failed readback stops before repository mutation.
 MCP handles identity, structural checks and inspectable receipts. The Agent checks
 actual images, meaning, color, frame correspondence and metadata changes, then
-coordinates corrections. This kernel alone does not complete MCP, evidence,
-citations, Wiki, SDK2 or actual-Agent integration.
+coordinates corrections. This scoped workflow does not provide arbitrary photo
+retouching, layer editing or universal animation/viewer fidelity.
+
+The real Codex evaluation uses an explicitly derived EXIF-oriented PNG from the
+hash-pinned NIST SRM1648a PDF page index4, not an originally published PNG. Its 258
+successful MCP calls delivered 15 full-frame PNGs and a region preview, completed
+three TIFF revisions, created six literal workbook cells and exported three Wiki
+snapshots. Independent source/pixel/history/region/citation checks passed. The first
+runner wrapper failed after the successful CLI turn because its audit module was
+not yet present; that failure is retained, and separate completed audits passed.
+See [the reproducible evaluation](../tests/codex_native_image/README.md).
 
 References informing these choices:
 

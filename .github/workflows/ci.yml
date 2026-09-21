@@ -176,7 +176,7 @@ jobs:
           tests/unit/test_native_image_service.py
           tests/unit/test_native_image_contract.py
           tests/unit/test_native_image_wiki.py
-          tests/unit/test_native_image_provenance.py
+          tests/unit/test_native_image_provenance.py tests/unit/test_codex_native_image_audit.py
           tests/integration/test_native_image_stdio.py
           tests/unit/test_codex_pdf_annotations_audit.py
           tests/unit/test_real_pdf_corpus.py
