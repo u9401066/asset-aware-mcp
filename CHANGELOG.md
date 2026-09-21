@@ -7,6 +7,13 @@
 
 ## [Unreleased]
 
+- Remove repeated ODS row-prefix scans during formula-cache invalidation and
+  read-back. Visit physical ranges directly, preserve all complete before/after
+  records and require every planned cache to match reopened output. Grouped and
+  repeated ranges retain exact locators and namespaces. A 5,000-formula local
+  replay fell from 19.5s to 0.34s with byte-identical output and full receipts.
+  ODS MCP/evidence/Wiki integration remains pending; public 1.4.0, next 1.4.1.
+
 - Store complete native operation receipts as immutable, hash-checked blobs bound
   to asset/history/revision/parent/operation, keeping the revision index bounded.
   Read legacy inline results without rewriting them; migrate on successful writes.

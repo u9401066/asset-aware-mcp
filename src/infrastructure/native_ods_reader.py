@@ -134,6 +134,18 @@ def cell_value(cell: etree._Element | None) -> dict[str, Any]:
     return result
 
 
+def cell_record(
+    locator: NativeODSCellLocator,
+    cell: etree._Element | None,
+    repetition: dict[str, int] | None,
+) -> dict[str, Any]:
+    return {
+        "locator": locator.model_dump(),
+        "repetition": repetition,
+        **cell_value(cell),
+    }
+
+
 class NativeODSReader:
     def __init__(self, data: bytes):
         self.package = NativeODFPackage(data)
@@ -196,11 +208,7 @@ class NativeODSReader:
 
     def read_cell(self, locator: NativeODSCellLocator) -> dict[str, Any]:
         _, cell, repetition = self.locate(locator)
-        return {
-            "locator": locator.model_dump(),
-            "repetition": repetition,
-            **cell_value(cell),
-        }
+        return cell_record(locator, cell, repetition)
 
     def inspect(self, *, offset: int = 0, limit: int = 200) -> dict[str, Any]:
         if offset < 0 or not 1 <= limit <= 1000:

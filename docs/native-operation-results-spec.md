@@ -94,7 +94,8 @@ are recorded separately; none imply arbitrary-document visual correctness.
 The reproducible 5,000-formula capacity replay is
 `tests/native_operation_results_artifact_smoke.py`; it verifies every cache
 before/after record, complete post-restart results and unchanged source bytes/mtime.
-ODS cache traversal performance and public MCP/evidence/Wiki wiring remain pending.
+ODS cache traversal optimization is tracked in `native-ods-spec.md`; public
+MCP/evidence/Wiki wiring remains pending.
 
 Local verification: full suite 3,775 passed / 44 skipped (571.83s), followed by
 15 passing optional cases (173.83s), covering the 11 additional environment skips

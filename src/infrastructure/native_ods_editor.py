@@ -10,7 +10,12 @@ from src.domain.native_asset_models import NativeEditResult
 from src.domain.native_ods import NativeODSCellLocator
 from src.infrastructure.native_odf_package import NS, q, xml_bytes
 from src.infrastructure.native_ods_grid import ensure_cell, ensure_columns, guard_edit
-from src.infrastructure.native_ods_reader import NativeODSReader, cells, rows
+from src.infrastructure.native_ods_reader import (
+    NativeODSReader,
+    cell_record,
+    cells,
+    rows,
+)
 from src.infrastructure.native_ods_text import display_paragraph
 
 if TYPE_CHECKING:
@@ -163,10 +168,8 @@ def edit_ods(
             if edit.locator.model_dump() == change["locator"]
         )
         change["after"] = checked.read_cell(locator)
-    for change in cache_changes:
-        change["after"] = checked.read_cell(
-            NativeODSCellLocator.model_validate(change["locator"])
-        )
+    if cache_changes:
+        _read_cache_changes(checked, cache_changes)
     return result, NativeEditResult(
         changed_parts=list(replacements),
         preserved_parts=len(book.package.parts) - len(replacements),
@@ -192,8 +195,8 @@ def edit_ods(
 def _invalidate_caches(book: NativeODSReader) -> list[dict[str, Any]]:
     changes: list[dict[str, Any]] = []
     for index, table in enumerate(book.tables):
-        for row_start, _, row in rows(table):
-            for column_start, _, cell in cells(row):
+        for row_start, row_count, row in rows(table):
+            for column_start, column_count, cell in cells(row):
                 if q("table", "formula") not in cell.attrib or not (
                     set(cell.attrib) & (VALUE_ATTRS | {CALC_VALUE_TYPE})
                 ):
@@ -210,7 +213,16 @@ def _invalidate_caches(book: NativeODSReader) -> list[dict[str, Any]]:
                     row=row_start,
                     column=column_start,
                 )
-                before = book.read_cell(locator)
+                before = cell_record(
+                    locator,
+                    cell,
+                    {
+                        "row_start": row_start,
+                        "row_count": row_count,
+                        "column_start": column_start,
+                        "column_count": column_count,
+                    },
+                )
                 for key in VALUE_ATTRS | {CALC_VALUE_TYPE}:
                     cell.attrib.pop(key, None)
                 changes.append(
@@ -221,3 +233,32 @@ def _invalidate_caches(book: NativeODSReader) -> list[dict[str, Any]]:
                     }
                 )
     return changes
+
+
+def _read_cache_changes(book: NativeODSReader, changes: list[dict[str, Any]]) -> None:
+    pending = {
+        (c["locator"]["table_index"], c["locator"]["row"], c["locator"]["column"]): c
+        for c in changes
+    }
+    if len(pending) != len(changes):
+        raise ValueError("Ambiguous ODS formula cache read-back plan")
+    for index, table in enumerate(book.tables):
+        for row_start, row_count, row in rows(table):
+            for column_start, column_count, cell in cells(row):
+                change = pending.pop((index, row_start, column_start), None)
+                if change is None:
+                    continue
+                locator = NativeODSCellLocator.model_validate(change["locator"])
+                if book.table(locator) is not table:
+                    raise ValueError("ODS formula cache table identity mismatch")
+                repetition = {
+                    "row_start": row_start,
+                    "row_count": row_count,
+                    "column_start": column_start,
+                    "column_count": column_count,
+                }
+                if repetition != change["before"]["repetition"]:
+                    raise ValueError("ODS formula cache range changed during read-back")
+                change["after"] = cell_record(locator, cell, repetition)
+    if pending:
+        raise ValueError("ODS formula cache read-back range is absent")

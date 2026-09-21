@@ -1,5 +1,19 @@
 # System Architect
 
+## ODS formula-cache traversal (Unreleased / 1.4.x)
+
+The cell_record function builds identical locator/repetition/value/XML evidence
+for both point reads and physical iteration. Cache invalidation reuses each visited
+row/cell instead of rescanning its prefix. Reopened output is traversed once against
+the complete planned locator map; table/range mismatches, duplicate or missing
+targets fail. Physical repetitions stay compressed. No mutable XML index is cached.
+Existing source/format/protection guards and complete before/after receipts remain.
+
+Deterministic walk-budget regressions and published output/receipt SHA goldens
+prove bounded traversal and exact evidence.5,000formulas improved19.5s→0.34s in
+a local replay; environment-dependent speed is supplementary, not a semantic or
+visual verdict. ODS MCP/evidence/Wiki wiring remains pending. Public1.4.0,next1.4.1.
+
 ## Immutable complete operation-result storage (Unreleased / 1.4.x)
 
 Native operation results move out of the bounded asset metadata index into canonical

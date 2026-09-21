@@ -10,7 +10,9 @@ consolidated **1.4.1**.
 ODS native support is in development: the first adapter creates spreadsheets,
 reads compressed cell ranges and edits or clears typed values while retaining
 styles and untouched package members. Actual Calc and independent odfdo checks
-cover native read-back, rendering and formula cache invalidation. MCP, evidence
+cover native read-back, rendering and formula cache invalidation. Cache receipts
+now use bounded physical traversal while retaining exact complete evidence; a
+5,000-formula replay improved from 19.5s to 0.34s in the local benchmark. MCP, evidence
 and Wiki integration remain pending; see the [ODS specification](docs/native-ods-spec.md).
 Public **1.4.0**; next consolidated **1.4.1**, with no per-feature version bump.
 

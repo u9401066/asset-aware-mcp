@@ -26,6 +26,14 @@
 公開版維持 **1.4.0**，下次整合 **1.4.1**。維護細節見
 [完整紀錄儲存規格](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/native-operation-results-spec.md)。
 
+## ODS 開發進度（Unreleased）
+
+ODS 的內部讀寫元件已保留完整公式操作紀錄，並改善大量公式時的處理速度。
+5,000 格公式的本機測試由約 19.5 秒降至 0.34 秒，輸出檔與完整紀錄一致；
+實際速度會依環境而異。ODS 的公開 MCP、引用與 Wiki 操作仍在開發，
+請以實際 contract 公告的能力為準。詳見
+[ODS 規格](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/native-ods-spec.md)。
+
 ## Native raster assets (Unreleased)
 
 獨立圖片可保留原檔、拆成影格與區域證據、建立 PNG／TIFF 衍生檔，再把轉錄

@@ -51,6 +51,7 @@ def main():
     parser.add_argument("--source-manifest", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--require-installed", action="store_true")
+    parser.add_argument("--baseline", type=Path)
     args = parser.parse_args()
     source = Path(src.__file__).resolve().parent
     if args.require_installed:
@@ -82,6 +83,19 @@ def main():
     start = time.monotonic()
     changed, result = NativeODS(original).edit([edit])
     edit_seconds = time.monotonic() - start
+    canonical = json.dumps(
+        result.model_dump(mode="json"),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    result_sha = hashlib.sha256(canonical).hexdigest()
+    output_sha = hashlib.sha256(changed).hexdigest()
+    if args.baseline is not None:
+        baseline = json.loads(args.baseline.read_text())
+        assert initial.revision == baseline["source_sha256"]
+        assert output_sha == baseline["output_sha256"]
+        assert result_sha == baseline["full_receipt_sha256"]
     caches = [
         c for c in result.changes if c["operation"] == "invalidate_typed_formula_cache"
     ]
@@ -115,6 +129,8 @@ def main():
         "native_seconds": edit_seconds,
         "source_bytes": len(original),
         "source_sha256": initial.revision,
+        "output_sha256": output_sha,
+        "full_receipt_sha256": result_sha,
         "legacy_metadata_bytes": legacy_bytes,
         "metadata_bytes": metadata.stat().st_size,
         "complete_result_bytes": loaded.history[-1].result_ref.size_bytes,

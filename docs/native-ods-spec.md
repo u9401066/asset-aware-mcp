@@ -99,3 +99,49 @@ environment. `tests/native_ods_artifact_smoke.py` compares all installed source
 files and replays exact ODS bytes/full receipts against the actual Calc fixture
 in clean wheel and Docker installations. Neither test substitutes for the
 still-pending MCP/Agent/evidence/Wiki integration.
+
+## Formula-cache traversal performance (Unreleased)
+
+Before this optimization, the 5,000-formula storage replay took about19.5s locally. Repeated
+`read_cell` scans inside cache invalidation and serialized cache readback make
+work quadratic in physical rows. Operation-result archives solve index capacity,
+but do not address this traversal cost.
+
+Require work proportional to physical row/cell records for cache collection and
+readback. Construct records from visited XML elements and exact compressed range
+coordinates, then verify every planned cache against one traversal of reopened
+output. Keep the existing edit guards, physical/logical budgets, namespaced XML,
+formula expressions, style metadata, repeated ranges and complete before/after
+receipts. Do not expand logical repetitions or omit cache evidence to save time.
+
+Verification must compare exact output bytes and complete receipts with the
+published implementation, prove bounded physical traversal without flaky timing
+thresholds, cover grouped/repeated rows and columns, and replay the 5,000-formula
+case in actual package artifacts. Wall-clock benchmarks supplement those checks.
+Public MCP/evidence/Wiki integration is still pending; public1.4.0,next1.4.1.
+
+Implementation now shares exact cell-record construction between point reads and
+physical traversal. Cache collection retains each visited record; reopened output
+is traversed once and matched to every planned locator/range. Missing, duplicate
+or changed targets fail. No mutable coordinate index or logical range expansion
+is introduced. Other point-read/edit costs are unchanged.
+
+The deterministic regression initially observed41,813physical row visits for200
+formulas and163,613for400. Both now satisfy a bound proportional to physical rows
+and match complete output/receipt hashes captured from published5093031. Grouped
+rows, repeated300columns*1000rows, rich cached display and Unicode formula aliases
+retain exact evidence. A5,000-formula replay measured0.335961s versus19.535553s,
+about58.15x in this run; timing varies by environment. Output SHA-256 remains
+`768d0e4360cd50b2e1d55cea290d672b998061a5ad6255e89b407ab31fc55695`; the complete
+12,387,293-byte canonical result hash remains
+`990a3f5790fe0e7b99aad61ba6a5f4ea82c141bb85694c9a756c9a6465f79b05`.
+
+Focused60kernel tests and actual Calc7.3/odfdo checks pass. Package replay can use
+`tests/native_operation_results_artifact_smoke.py --baseline <baseline.json>` to
+verify the same large output and complete result in an installed wheel/container.
+Full local validation passed: 3,789 tests / 33 environment skips (749.77s),
+including the optional existing Writer/CJK/Calc/odfdo/public-PDF fixtures.
+Python3.13 wheel and Python3.12 Docker match all335source files, the exact large
+result/output goldens and the Calc fixture; doctor,30tools and SDK2stdio pass.
+VSIX199tests,64packagedentries and install/update pass. Each publication also
+requires exact-head remote CI and deployed-byte verification.

@@ -1,5 +1,149 @@
 # Progress (Updated: 2026-09-21)
 
+## ODS performance — local gates COMPLETE; ready for user-author commit/push
+
+Full session4756 completed exit0:3789passed/33skipped/749.77s, with existing
+Writer/CJK/Calc/odfdo/publicPDF fixtures enabled. Log
+/run/user/1000/asset-aware-ods-performance-full.log. Focused60pass,Calc/odfdo3pass.
+Source335files remain exact manifest7c3704484d9befc0c43c839a9456a2a0c4d73ce5493c5606875feb422e23b2f8.
+Wheel3.13 and Docker3.12 pass exact5,000-formula source/output/full-receipt goldens,
+exact Calc fixture receipts, doctor,30tools and SDK2stdio. Timing0.382s/0.407s
+versus oldlocal19.536s; localoptimized0.336s. VSIX199tests/64contententries and
+install/update pass. Ruff792/mypy335/security/harness/artifact/docs gates pass.
+
+ALL12staged model evaluation directories restored as ordinary directories with
+exact hashes/mtimes; manifests performance-build-space.json and performance-space.json
+now mark allrestoredtrue. Generated .pyc caches in ONLY this worktree src/tests/
+.venv were removed after tests to recover space; runtime sources untouched. Own
+Docker/wheel/node_modules removed after checks. Do not remove source/packages or
+actual traces. Use PYTHONDONTWRITEBYTECODE=1 while space is tight.
+
+Machine proof /run/user/1000/asset-aware-ods-performance-local-proof.json. Exactly
+13countedfiles plus2MEM in performance-commit-paths.json. Source frozen; do not
+repeat full tests without new changes/failures. Next exact user-author main commit
+and push, then ALL exact-headCI/Pages and deployed bytes. No version/tag/release
+change: public1.4.0,next1.4.1. Previous5093031publication complete.
+
+After publication, proceed with ODS MCP/evidence/citations/Wiki integration;
+there has still been no actual Codex ODS evaluation because MCP is not exposed.
+Broad all-format goal remains active. Original dirty detached checkout untouched.
+
+## ODS performance — artifacts green; full suite4756 still running
+
+Source335files frozen at manifest
+/run/user/1000/asset-aware-ods-performance-source-manifest.json SHA
+7c3704484d9befc0c43c839a9456a2a0c4d73ce5493c5606875feb422e23b2f8.
+Focused60passed0.38s; actualCalc7.3/odfdo3passed5.48s. Ruff792files/mypy335,
+Bandit medium gate/zizmor,harness and artifact audits pass. Wheel3.13 measured
+0.381908s and Docker3.12 measured0.406752s for5,000formulas, matching published
+5093031 output/full-result SHAs exactly and preserving source/history/restart.
+Both also replay exact Calc fixture bytes/full receipts and pass doctor,30tools,
+SDK2stdio. VSIX199tests,64contententries,install/update pass; remoteactivation
+still required after push. Docs/readme/changelog/architecture updated and synced.
+
+Full pytest4756 includes existing private CJK/Writer/Calc/odfdo/publicPDF fixtures;
+log /run/user/1000/asset-aware-ods-performance-full.log. Do not stop/restart without
+actual failure or source change. Local proof
+/run/user/1000/asset-aware-ods-performance-local-proof.json is full_pending.
+No new Codex model run claimed: ODS still has no public MCP operations. Previous
+storage Codex proof belongs to published5093031, not this new source manifest.
+
+All install/build sessions terminalexit0. Own Docker3484709c872d and builder
+3fa3df12b6cd removed; own wheel env/cache/data and node_modules removed.
+Current13countedfiles+2MEM; tests/unit/test_native_ods_performance.py untracked.
+Root free~530MiB BEFORE trace restoration. ALL12trace dirs still staged: earlier
+11 via /run/user/1000/asset-aware-ods-performance-build-space.json in
+/dev/shm/asset-aware-ods-performance-build-staging, and newest storageCodex run via
+/run/user/1000/asset-aware-ods-performance-space.json in
+/run/user/1000/asset-aware-ods-performance-trace-staging. Originalpaths are symlinks;
+all bytes/mtimes verified before staging. Need restore ALL as ordinary dirs.
+
+Restoring needs~541MiB plus margin. Once full tests finish, remove ONLY generated
+.pyc caches from this alternate worktree src/tests/.venv (source files/packages
+stay): measured src6.4MB/tests9.5MB/ownvenv22MB. This is safe rebuildable test
+cache, unlike source or actual-model traces. Verify .venv resolves inside this
+worktree first. Avoid writing caches afterward with python -B/PYTHONDONTWRITEBYTECODE.
+Then restore12directories with full hash/mtime checks, record proof, finalize
+spec/MEM, exact user-author main commit/push and all exact-headCI/Pages.
+Public1.4.0,next1.4.1; no tags/releases. Broad goal active, original checkout untouched.
+
+## ODS cache traversal — implemented; focused proof passes, full gates pending
+
+Published storage head50930318c4d1b7ead69e64ef957d839a60f16ce3 is fully verified:
+CI35590907090 all10 and Pages35590906633 all3passed,6deployedfiles exact. Final
+proof /run/user/1000/asset-aware-native-results-publication-proof.json. Watch35099
+terminalexit0. No further waiting/rechecking necessary for that head.
+
+Next ODS performance spec was written first in docs/native-ods-spec.md. New
+tests/unit/test_native_ods_performance.py initially failed2cases:200formula rows
+walked41,813records,400walked163,613 (log performance-regression-before). Published
+5093031 output/complete-receipt golden SHAs were captured before editing runtime.
+The reader now exposes a shared cell_record helper; cache invalidation records
+visited physical nodes directly; checked output uses one full traversal matching
+planned locators/ranges and rejects missing/mismatched targets. Complete receipts,
+namespace context, compressed ranges and all existing guards are retained.
+
+Focused60passed0.38s, including exact200/400output/receipt goldens and grouped,
+repeated300columns*1000rows with Unicode formula prefixes/rich display.5,000formula
+replay now0.335961s versus19.535553s (~58.15x this run), with byte-identical output
+and full12,387,293-byte canonical receipt. Source unchanged. Baseline and proof:
+/run/user/1000/asset-aware-ods-performance-{baseline,after,goldens}.json. Artifact
+smoke now accepts --baseline to verify exact large result/output SHAs in installs.
+Mypy335passes; Calc7.3/odfdo focused tests running session32964.
+
+IMPORTANT space: root filled again. The NEW completed storage Codex run is now
+staged with exact hashes/mtimes at /run/user/1000/asset-aware-ods-performance-trace-staging;
+original /tmp/asset-aware-native-results-codex-delimited-01 is a symlink. Restore
+as an ordinary directory before finishing this phase using
+/run/user/1000/asset-aware-ods-performance-space.json. The earlier11historical
+runs remain ordinary/restored. PrivateCalc7.3,odfdo325 and CJK fixtures retained;
+privateCalc24.2 removed with origin proof saved. Node_modules absent.
+
+Need finish docs/readme/changelog/MEMarchitecture, freeze335sourcefiles with new
+manifest, full appropriate gates and exact installed artifact replay, then user-
+author directmain commit/push and all CI/Pages. <=30countedfiles, both MEM excluded.
+Product remains1.4.0,next consolidated1.4.1. ODS MCP/evidence/Wiki and broad formats
+remain pending; overall goal active, no subagents, original checkout untouched.
+
+## Native receipt archive — publication COMPLETE, all exact-head checks green
+
+Head50930318c4d1b7ead69e64ef957d839a60f16ce3 is published on main. CI35590907090
+passed ALL10jobs, including Python3.10, Linux/macOS/Windows, unit/integration.
+Pages35590906633 passed ALL3jobs. Six deployed files equal exact commit bytes:
+index.html,site.js,site-content.js,site-content/native-file-assets.md,
+site-content/release-testing.md,native-operation-results-spec.md. Final proof:
+/run/user/1000/asset-aware-native-results-publication-proof.json status
+published_verified. CI watcher35099 is terminal exit0; do not restart it.
+
+Local3775passed/44skipped plus15optionalpassed covering11extra skips; actualCodex
+188successfulcalls/4regionPNGs/6CSVrevisions/3derivations audited.335sourcefiles
+match wheel/Docker; VSIX199tests/install-update pass. All actual runs retained,
+all11staged historical runs restored exactly. No version/tag/release change:
+public1.4.0,next consolidated1.4.1. Root detached checkout still untouched.
+
+Next phase: remove quadratic ODS formula-cache traversal while preserving exact
+complete receipts, source bytes and compressed ranges. Then continue ODS MCP,
+evidence/citations/Wiki and broad format support. Overall goal remains active.
+
+## Native receipt archive — pushed5093031; exact-head remote verification pending
+
+Committed/pushed50930318c4d1b7ead69e64ef957d839a60f16ce3 directmain as user
+u9401066<u9401066@gap.kmu.edu.tw>,30countedfiles plus2MEM. Main/origin main equal;
+no tag/release/version bump. Exact-head CI35590907090 and Pages35590906633 started.
+Watch logs /run/user/1000/asset-aware-native-results-{ci,pages}-watch.log; proof
+/run/user/1000/asset-aware-native-results-publication-proof.json currently pending.
+Require ALL CI and Pages jobs, then compare deployed index/site.js/site-content.js,
+site-content/native-file-assets.md and native-operation-results-spec.md exact bytes.
+Fix genuine CI failures before further work. Do not overwrite failed run evidence.
+
+Local complete:3775passed/44skipped plus15optionalpassed covering11extra skips;
+actualCodex188calls/audit,source335wheel/Docker,VSIX199tests allpass. Full session
+89412 and optional1650 both terminal exit0. Original source manifest unchanged.
+All11old traces restored; new actual run retained; generated build environments
+removed. Current remaining work after publication is ODS cache traversal speed,
+then ODS public operations/evidence/citations/Wiki and broader format coverage.
+Goal remains active. Public1.4.0,next consolidated1.4.1; no per-feature bump.
+
 ## Native complete result storage — local gates complete; committing/publishing
 
 Full suite session89412 completed exit0:3775passed/44skipped/571.83s. The11extra
