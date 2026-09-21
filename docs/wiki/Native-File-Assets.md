@@ -24,12 +24,32 @@
 公開版維持 **1.4.0**，下次整合 **1.4.1**。維護細節見
 [完整紀錄儲存規格](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/native-operation-results-spec.md)。
 
-## ODS 開發進度（Unreleased）
+## 原生 ODS 與完整證據（Unreleased）
 
-ODS 的內部讀寫元件已保留完整公式操作紀錄，並改善大量公式時的處理速度。
-5,000 格公式的本機測試由約 19.5 秒降至 0.34 秒，輸出檔與完整紀錄一致；
-實際速度會依環境而異。ODS 的公開 MCP、引用與 Wiki 操作仍在開發，
-請以實際 contract 公告的能力為準。詳見
+確認實際 contract 的 `ods_enabled`，再讀取完整操作規格。
+
+| 操作 | 用途 |
+| --- | --- |
+| `create_ods` | 以檔名與 table 名稱建立獨立 ODS。 |
+| `read_ods` | 固定版本，讀取壓縮的實體儲存格區段與完整操作紀錄。 |
+| `read_ods_cell` | 依 content.xml、table 索引／名稱與邏輯列欄讀取完整儲存格引用。 |
+| `update_ods` | 以 expected_revision、完整原始引用、明確值型別與顯示替換政策更新；blank 清除值並保留格式。 |
+
+`read_ods` 的 `offset`／`limit` 選擇實體區段；每份 JSON 再依
+`next_text_offset` 讀完，以第一頁的 `text_sha256` 作為續頁的
+`ods_text_sha256`。拼接並核對 UTF-8 雜湊後，才跟隨 JSON 的 `next_offset`
+讀下一批區段。舊版本引用不會隨編輯搬移。
+
+重複一千列的區段仍是一筆實體記錄，其起點引用只識別該邏輯格。其他格與
+檔案中未存放的座標須另外讀取，不能視為已逐格核對。自訂引用會顯示 ODF
+part、table 索引／名稱與列欄；CSL 引用保留完整來源，顯示定位仍需 Agent 核對。
+
+Wiki 保留原始 `.ods`、完整區段、起點引用、操作紀錄與 wikilinks；衍生關係
+另保留實際引用的邏輯格，包括非起點與缺省格。公式快取與顯示文字不是重新
+計算的結果，Agent 須檢查實際 Calc 畫面、公式與語意。表／列／欄生命週期、
+依賴重映射與 MCP 內的 ODS 轉譯預覽仍是後續工作。
+
+公開版 **1.4.0**，下次整合 **1.4.1**，不逐項升版。詳見
 [ODS 規格](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/native-ods-spec.md)。
 
 ## Native raster assets (Unreleased)

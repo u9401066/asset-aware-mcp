@@ -27,6 +27,11 @@ from src.domain.native_image import (
     NativeImageFrameReference,
     NativeImageRegionReference,
 )
+from src.domain.native_ods import (
+    ODS_REVIEW,
+    NativeODSCellReference,
+    attach_ods_evidence,
+)
 from src.domain.native_pdf import NativePdfReference
 from src.domain.native_pdf_annotations import ANNOTATION_REVIEW, PdfAnnotationReference
 from src.domain.native_pdf_region import NativePdfRegionReference
@@ -44,6 +49,7 @@ if TYPE_CHECKING:
     from src.domain.native_docx_stories import NativeDocxStoryAdapter
     from src.domain.native_image import NativeImageAdapter
     from src.domain.native_image_archive import NativeImageArchive
+    from src.domain.native_ods import NativeODSAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_selection import NativeSelectionParent
@@ -76,7 +82,9 @@ class NativeEvidenceService:
         docx_notes: NativeDocxNoteAdapter | None = None,
         images: NativeImageAdapter | None = None,
         image_archive: NativeImageArchive | None = None,
+        ods: NativeODSAdapter | None = None,
     ):
+        self.ods = ods
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.docx = docx
@@ -102,7 +110,14 @@ class NativeEvidenceService:
             return NativePdfRegionService(self).record(reference)
         asset = self.repository.load(reference.asset_id)
         data = self.repository.read(reference.asset_id, reference.revision)
-        if isinstance(reference, NativeCellReference) and asset.format in {
+        if (
+            isinstance(reference, NativeODSCellReference)
+            and asset.format == "ods"
+            and self.ods
+        ):
+            record = self.ods.read_cell(data, reference.locator)
+            attach_ods_evidence(record, asset.asset_id, reference.revision)
+        elif isinstance(reference, NativeCellReference) and asset.format in {
             "xlsx",
             "xlsm",
         }:
@@ -179,6 +194,7 @@ class NativeEvidenceService:
         | PdfAnnotationReference
         | NativePdfRegionReference
         | NativeDelimitedReference
+        | NativeODSCellReference
         | NativeImageFrameReference
         | NativeImageRegionReference
         | NativeFileReference
@@ -234,6 +250,27 @@ class NativeEvidenceService:
             return NativeSelectionService(self).verify(reference)
         if isinstance(reference, NativePdfRegionReference):
             return NativePdfRegionService(self).verify(reference)
+        if isinstance(reference, NativeODSCellReference):
+            asset = self.repository.load(reference.asset_id)
+            record = self.read_parent_record(reference)
+            valid = record["evidence"] == reference.model_dump(mode="json")
+            return {
+                "success": True,
+                "valid": valid,
+                "asset_id": asset.asset_id,
+                "revision": reference.revision,
+                "is_current_managed_revision": asset.revision == reference.revision,
+                "archived": asset.archived,
+                "verification_scope": reference.verification_scope,
+                "checks": {
+                    "revision_hash": True,
+                    "native_locator": True,
+                    "cell_representation_hash": valid,
+                },
+                "source_freshness": "not_checked; refresh tracks external human edits",
+                "reference_scope": "one_logical_coordinate; repetition metadata is not coverage verification",
+                "review_required": list(ODS_REVIEW),
+            }
         if isinstance(reference, NativeDelimitedReference):
             return self._verify_delimited(reference)
         if isinstance(reference, NativeFileReference):

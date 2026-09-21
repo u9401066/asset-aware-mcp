@@ -1,13 +1,47 @@
 # Native OpenDocument spreadsheets
 
 Status: implementation in progress on main, public 1.4.0; next consolidated
-release 1.4.1. This specification does not advertise an installed MCP operation.
+release 1.4.1. Discover `ods_enabled` in the installed runtime before using ODS operations.
 
 ODS must remain ODS throughout native CRUD. An XLSX/CSV conversion is a separate
-derivative, with its own source relationship. The first implementation segment
-provides a bounded package/worksheet adapter; subsequent segments connect it to
-revision-bound MCP operations, evidence, citations, Wiki and actual Agent review.
-Those integrations are required before claiming the ODS workflow complete.
+derivative, with its own source relationship. The bounded package/worksheet adapter connects to revision-bound MCP operations,
+evidence, citations and Wiki. Actual Agent evaluation is scoped to the exercised
+operations; rendering and format lifecycle gaps remain explicit.
+
+## MCP, evidence and portable snapshots
+
+The integration adds `create_ods`, `read_ods`, `read_ods_cell` and `update_ods`.
+Reads require an immutable revision. `read_ods` pages physical ranges with
+`offset`/`limit`; each selected page includes the complete operation receipt and
+is independently serialized with hash-paged Unicode text. Continue text pages
+with the first page's `ods_text_sha256`; a changed receipt must fail continuation.
+Follow both text and physical-record continuations. Cell reads bind one logical
+coordinate, including explicit absence when no native cell exists.
+
+`native-ods-cell-ref-v1` binds asset, revision, content.xml, exact table index/name,
+logical row/column and a SHA-256 of the complete native record. A repeated-range
+anchor reference identifies that anchor only; it is not verification of all cells
+represented by the range. Selection, derivation and CSL inputs accept these full
+references. Custom citation locators display the ODF part, table index/name and
+one-based row/column, independently of caller bibliographic metadata.
+
+Updates require `expected_revision` and 1–100 full cell references, explicit typed
+values and rich-display replacement policy. All references address the original
+revision, each logical target occurs once, and every full record is checked before
+any edit. Clear uses a blank value; row/column deletion is not implied. Reopen the
+actual output and ensure the full report remains readable before one repository
+commit. Register/publish/writeback/refresh/archive retain existing source and CAS
+checks; creation is source-independent. ODS-specific source writeback is never an
+implicit side effect of a cell update.
+
+`ods-physical-ranges-v1` Wiki snapshots retain the exact .ods, complete physical
+range records, anchor references, operation receipt, citation presentations and
+explicit review limits. They never expand repeated ranges into invented records.
+Derivation endpoints additionally retain exact referenced logical cell records,
+including non-anchor and implicit coordinates. Receipt identity participates in
+snapshot identity, so distinct reports for identical file bytes cannot overwrite
+old snapshots. Formula caches/display, semantic support and actual Calc rendering
+remain Agent review work; native hashes do not certify them.
 
 ## Representation and preservation
 
@@ -53,11 +87,12 @@ separate reader/render must recalculate and review results; sources are not resa
 Tests must cover compressed ranges, namespace aliases, rich text, native value
 types, merged/covered cells, malformed packages, output preservation and an
 independent actual Calc read/render. MCP source/revision guards and complete
-hash-paged evidence will use the same adapter, with dedicated ODS locator types.
+hash-paged evidence use the same adapter, with dedicated ODS locator types.
 
 Remaining beyond the first adapter: sheet/row/column lifecycle and dependency
-remapping, rich-run edits, recalculated renditions, full evidence/Wiki integration,
-SDK2 round trips and actual default-model Codex evaluation. ODT/ODP and the other
+remapping, rich-run edits and recalculated renditions. SDK2 integration covers
+restart, full receipts,
+source preservation and unchanged portable snapshots. ODT/ODP and the other
 format gaps remain part of the broader goal.
 
 ## References and reuse choices
@@ -145,3 +180,30 @@ Python3.13 wheel and Python3.12 Docker match all335source files, the exact large
 result/output goldens and the Calc fixture; doctor,30tools and SDK2stdio pass.
 VSIX199tests,64packagedentries and install/update pass. Each publication also
 requires exact-head remote CI and deployed-byte verification.
+
+## Default-model ODS evaluation
+
+Run `uv run python -m tests.codex_native_ods --output /tmp/ods-evaluation-new`
+with explicit model-use authorization. The runner selects no model override,
+allows only this checkout's document MCP, and retains all events and artifacts.
+Replay with the same command plus `--audit-only` and the existing output directory.
+The XML/ZIP auditor is independent of the production ODS reader and verifies
+complete canonical reads, native values/styles, unchanged members, source mtime,
+history, derivation endpoints and snapshot file hashes.
+
+The 2026-09-21 successful final-source run completed 223 MCP calls with zero tool errors in
+197.33 seconds: 27 complete ODS reads, nine cell records, three source revisions,
+two independent-workbook revisions and three Wiki snapshots. Visual review and
+formula recalculation remain `not_checked`; this is a synthetic representation
+evaluation, not a general fidelity claim. The preceding run is retained as failed:
+its repeated rows contained formulas, so two edits correctly hit the mapping-aware
+guard and did not change the source. The success fixture uses repeated literal
+rows and a separate formula row; the guard was not relaxed. A still earlier wrapper
+import failure (optional defusedxml absent) is also retained; the standalone auditor
+now uses the installed XML parser with entities disabled and independent traversal.
+
+Installed wheel/Docker checks use `tests/native_ods_mcp_artifact_smoke.py` against
+a source manifest and the independently rendered Calc fixture. They require exact
+output bytes, full receipts, historical references and identical restart/Wiki
+artifacts. No-op transactions return their complete empty-change receipt inline;
+the repository does not append a new history event for unchanged bytes.

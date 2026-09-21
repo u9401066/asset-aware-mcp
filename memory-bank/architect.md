@@ -1,5 +1,24 @@
 # System Architect
 
+## ODS operations and evidence (Unreleased / 1.4.x)
+
+A dedicated NativeODSAdapter port exposes native creation, range inspection,
+logical cell reads, scoped edits and compressed decomposition. Application reads
+pin revision and page canonical UTF-8 JSON, requiring ods_text_sha256 for continued
+text reads. Range offsets and Unicode text offsets remain separate coordinates.
+Writes verify every full original logical cell reference before editing and one
+repository CAS commit; stale/foreign/tampered references and duplicate targets fail.
+No-op receipts return inline; changed receipts use existing immutable blob storage.
+
+NativeODSCellReference binds part/table index+name/logical row+column and the full
+record hash. Selection, derivation, CSL and custom locators preserve exact source
+identity. Wiki retains compressed physical ranges with anchor-only references,
+exact ODS bytes and complete operation reports; receipt hash participates in
+snapshot identity. Explicit derivation endpoints retain non-anchor/implicit cell
+records as separate artifacts. No formula evaluation or automatic semantic/visual
+verification is claimed. Repeated formulas still require a mapping-aware workflow.
+Public1.4.0,next consolidated1.4.1; no feature-specific bump/tag/release.
+
 ## ODS formula-cache traversal (Unreleased / 1.4.x)
 
 The cell_record function builds identical locator/repetition/value/XML evidence
@@ -12,7 +31,7 @@ Existing source/format/protection guards and complete before/after receipts rema
 Deterministic walk-budget regressions and published output/receipt SHA goldens
 prove bounded traversal and exact evidence.5,000formulas improved19.5s→0.34s in
 a local replay; environment-dependent speed is supplementary, not a semantic or
-visual verdict. ODS MCP/evidence/Wiki wiring remains pending. Public1.4.0,next1.4.1.
+visual verdict. ODS MCP/evidence/Wiki wiring is described above. Public1.4.0,next1.4.1.
 
 ## Immutable complete operation-result storage (Unreleased / 1.4.x)
 

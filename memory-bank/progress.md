@@ -1,5 +1,144 @@
 # Progress (Updated: 2026-09-21)
 
+## ODS MCP/evidence/Wiki — final local gates COMPLETE; ready for commit/push
+
+Final source337files frozen at manifestSHA
+b2b4d2b93ea634211f618fa54b02c0332d1a35ac06a26dfaa9a8c95b55385820.
+Full final suite35989 terminalexit0:3813passed/33skipped/764.61s. BOTH PDFannotation
+surfaces pass. Initial cold-cache full attempt81405 had1timeout/821passed/33skipped
+and was interrupted after3discovery fixes; logs retained. Cache-primed annotation
+follow-up11223 passed2cases/274.94s at unchanged300slimit;233discovery tests pass.
+No verification assertions or timeout limits were loosened.
+
+Final-source defaultCodex run04 passed:223successful calls,zeroerrors,197.33s,
+27complete ODS reads,9cell records,3source revisions,2independent-book revisions,
+3Wikis. Actual runtime/uv.lock hashes match. Visual/calculation review not_checked.
+Prior successful03 and guarded failure02 plus wrapper failure01 are all retained.
+Final wheel3.13/Docker3.12 exact337sourcefiles, exact independently rendered Calc
+output/full receipts, source protection, restart/Wiki identity, doctor/30tools/SDK2
+all pass. Final ownedimage5981977790f4/builder893fc0ceafda removed after checks;
+wheel env/cache removed. VSIX199tests/64entries/install-update pass; activation
+requires exact-headremoteCI. Ruff799/mypy337/security/harness/docs/sync-assets pass.
+
+All11prior modeltrace dirs RESTORED ordinary with exact hashes/mtimes. Finalspace
+manifest marks all restored; runtime bytecode is retained to avoid cold worker
+timeouts. Root~37MiB; atomic MEMwrites only, TMPDIR=/dev/shm, no global cleanup.
+Source originaldirtydetached checkout remains untouched. No subagents.
+
+Machineproof:/run/user/1000/asset-aware-ods-mcp-local-proof.json. Exactstageplan
+/run/user/1000/asset-aware-ods-mcp-commit-paths.json has30countedfiles+2MEM.
+Next:user-author u9401066<u9401066@gap.kmu.edu.tw>,directmain commit/push,thenALL
+exact-headCI/Pages and deployed bytes. No newcode before publication verification.
+Public1.4.0,next consolidated1.4.1; no version/tag/release increment.
+After publication: synchronize bundled ODS Agent guidance as a separate segment;
+ODS lifecycle/renditions and ODT/ODP/remainingformats still part of ACTIVE goal.
+Do not mark goal complete or blocked.
+
+
+## ODS MCP/evidence/Wiki — implementation complete; full-suite verification pending
+
+Current uncommitted segment wires create_ods/read_ods/read_ods_cell/update_ods with
+full original logical cell refs and revision CAS, typed edits/blank clears, complete
+hash-paged receipts, selections/derivations/CSL/custom locators and immutable ODS
+Wikis. Compressed range refs identify anchors only; derivation endpoints retain
+exact non-anchor/implicit cells. Complete receipts resolve external blob storage;
+receipt hash participates in Wiki identity. No-op reports are complete inline.
+Version remains public1.4.0,next consolidated1.4.1; no tag/release/bump.
+
+Actual default-model Codex run03 passed independent audit:212successful MCP calls,
+zero errors,25complete ODS reads,8cell records,3source revisions,2independent-book
+revisions,3Wikis,186.77s. Visual review/recalculation are explicitly not_checked.
+/run/user/1000/asset-aware-codex-ods-03. Retain run02 failure:repeated rows containing
+formulas correctly blocked2edits; model reported unchanged source. Success fixture
+uses repeated literal rows+separate formula row; no guard relaxation. Run01 wrapper
+failed on absent optionaldefusedxml before model invocation; log retained.
+
+Focusedkernel/service/performance60passed;241related/SDK2two-process tests passed.
+Wheel3.13/Docker3.12 exact337source files, independently-rendered Calc output/full
+receipt, restart/Wiki bytes, source mtime, oldrefs/create and doctor/30tools/SDK2 pass.
+VSIX199tests/64entries/install-update pass; localactivation skipped, remoteCI required.
+Ruff/mypy337/security/harness/docs checks pass. Source frozen at manifest SHA
+2c5ebaba7256b8ecccb1c4b648997b47794b675f2683a4786f5111dfae9a65d1.
+
+Full suite session81405 is STILL RUNNING; first PDF annotation case timed out300s
+with bytecode caches removed/disabled. Runtime imports were primed within this
+worktree; follow-up session11223 tests BOTH annotation tool surfaces under same
+300slimit. Do not call it fixed until actual results. Logs/proof use prefix
+/run/user/1000/asset-aware-ods-mcp-. Full source unchanged throughout gates.
+All11temporarily staged prior model runs are RESTORED ordinary dirs with exact
+hashes/mtimes; own Docker image/builder/wheel env/cache/node_modules/out removed.
+Cache priming generated .pyc in this worktree only; check space before MEMwrites.
+Use atomic MemoryBank writes; root~100MiB before priming. Originaldirtydetached
+checkout untouched. No subagents. Count29files+2MEM currently; exactstaging/user
+author/directmain only after verification, then ALL exact-headCI/Pages+deployedbytes.
+Bundled ODS Agent guidance still needs a separate coherent follow-up segment.
+Broader all-format goal remains ACTIVE; ODS lifecycle/renditions and ODT/ODP/etc
+remain. Do not mark complete or blocked.
+
+
+## ODS performance — publication COMPLETE; all exact-head checks green
+
+Headfcd107bbbb88f69007c8c13e3e6987d54f7e01bb is published on main as user author.
+CI35595051371 passed ALL10jobs; Pages35595050125 passed ALL3jobs. Six deployed
+files equal exact commit bytes:index.html,site.js,site-content.js,
+site-content/native-file-assets.md,native-ods-spec.md,native-operation-results-spec.md.
+Final proof /run/user/1000/asset-aware-ods-performance-publication-proof.json
+statuspublished_verified. CI watcher58722 terminalexit0; do not restart it.
+
+Full3789passed/33skipped/749.77s; focused60; Calc7.3/odfdo3; wheel3.13/Docker3.12
+source335files exact and large output/full-receipt goldens match published5093031.
+Local5,000formula19.536s→0.336s; wheel0.382s,Docker0.407s. VSIX199tests/64entries,
+install/update and now remote Linux activation all pass. Source manifest SHA
+7c3704484d9befc0c43c839a9456a2a0c4d73ce5493c5606875feb422e23b2f8 unchanged.
+Both storage5093031 and performancefcd107b segments are fully verified/published.
+
+All12actual-model trace directories are ordinary/restored with hashes/mtimes exact.
+Own Docker/wheel/node_modules/.pyc/dist/out/pytest-cache removed after checks.
+Root~26MiB; avoid cache regeneration:PYTHONDONTWRITEBYTECODE=1 uv run --no-sync
+python -B. Use atomic MemoryBank writes. The earlier374-character historical tail
+truncation was fully repaired before commit; both MEM diffs had zero deletions.
+
+NEXT: ODS MCP/reference/evidence/citation/Wiki integration. Cell locators must bind
+part/tableindex+name/row/column; distinguish physical repeated-range listings from
+logical cell refs. Canonical ODS citation formatting is still absent. Full reads
+and Wiki must retain complete external operation results through the repository.
+Stage coherent segments<=30countedfiles, update both MEM, user-author directmain
+commits/push with exact-headCI/Pages. Actual default-model Codex ODS evaluation
+remains required after public MCP wiring; no ODS model run has yet been claimed.
+Broader all-format goal remains ACTIVE; do not mark complete or blocked.
+Public/current1.4.0,next consolidated1.4.1; no per-feature bumps/tags/releases.
+Original dirty detached checkout remains untouched. No subagents.
+
+## ODS performance — pushed fcd107b; exact-head CI/Pages pending
+
+Headfcd107bbbb88f69007c8c13e3e6987d54f7e01bb committed/pushed directmain as
+u9401066<u9401066@gap.kmu.edu.tw>;13countedfiles plus2MEM. CI35595051371 and
+Pages35595050125 started. Watch logs:
+/run/user/1000/asset-aware-ods-performance-{ci,pages}-watch.log. Publication proof
+/run/user/1000/asset-aware-ods-performance-publication-proof.json is pending.
+Require all10CIjobs,3Pagesjobs and deployed index/site.js/site-content.js,
+site-content/native-file-assets.md,native-ods-spec.md,native-operation-results-spec.md
+exact commit bytes before further work. Fix any actual CI failure first.
+
+Local full3789passed/33skipped/749.77s; focused60,actualCalc7.3/odfdo3; exact335
+sourcefiles in wheel/Docker; 5,000formulas0.336s local/0.382s wheel/0.407s Docker
+versus19.536s baseline. Complete output and12,387,293-byte canonical receipt match
+published5093031 exactly. VSIX199tests/64entries/install-update pass. Source SHA
+7c3704484d9befc0c43c839a9456a2a0c4d73ce5493c5606875feb422e23b2f8 frozen.
+No ODS model evaluation yet; MCP/evidence/citations/Wiki still not exposed.
+
+ALL12actual-model traces are RESTORED ordinary dirs with exact hashes/mtimes. Own
+Docker/wheel/node_modules and generated .pyc/dist/out/pytest-cache removed after
+validation. Root is tight(~26MiB): use PYTHONDONTWRITEBYTECODE=1 and uv run --no-sync
+python -B. A MemoryBank write hit ENOSPC and truncated374characters from historical
+activeContext tail; fully recovered from verified5093031 tail using atomic staging.
+Both MEM diffs had ZERO deletions before commit. Preserve this history, avoid
+unsafe in-place long writes. Source and complete proof files were unaffected.
+
+Previous5093031publication is complete (all10CI/all3Pages/sixexactfiles). This new
+head needs its own verification. Public1.4.0,next consolidated1.4.1,no tags/releases.
+Overall all-format goal active. Original detached checkout untouched.
+
 ## ODS performance — local gates COMPLETE; ready for user-author commit/push
 
 Full session4756 completed exit0:3789passed/33skipped/749.77s, with existing

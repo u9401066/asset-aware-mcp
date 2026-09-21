@@ -30,6 +30,10 @@ NativeOperation = Literal[
     "reorder_worksheets",
     "delete_worksheets",
     "read_cell",
+    "create_ods",
+    "read_ods",
+    "read_ods_cell",
+    "update_ods",
     "create_delimited",
     "read_delimited",
     "read_delimited_cell",
@@ -136,6 +140,14 @@ NATIVE_OPERATIONS = {
     "create_workbook_from_table": _fields(
         "table_id expected_table_sha256 table_workbook", "workspace_reference"
     ),
+    "create_ods": _fields("ods_create"),
+    "read_ods": _fields(
+        "asset_id revision", "offset limit ods_text_sha256 text_offset text_limit"
+    ),
+    "read_ods_cell": _fields(
+        "asset_id revision ods_locator", "ods_text_sha256 text_offset text_limit"
+    ),
+    "update_ods": _fields("asset_id expected_revision ods_update"),
     "create_delimited": _fields("delimited_create"),
     "read_delimited": _fields(
         "asset_id revision", "delimited_dialect text_offset text_limit"

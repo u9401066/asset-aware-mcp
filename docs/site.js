@@ -233,6 +233,12 @@ Built-in model features may be sufficient for one-off summaries and questions. T
 
 Main has Unreleased operations for PDF, DOCX, workbooks, CSV/TSV and PPTX; discover the complete runtime contract before use. Standalone raster support now includes oriented frame/region evidence, actual PNGs, explicit derivatives, guarded frame revisions and source-attached Wikis. Public **1.4.0**; next consolidated **1.4.1**. See the [capability gaps and upstream references](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/agent-asset-gap-analysis.md) for format-specific limits and product claims still requiring comparative evaluation.
 
+### Native ODS evidence (Unreleased)
+
+Discover ods_enabled. create_ods creates native blank spreadsheets; read_ods lists compressed physical ranges and full operation receipts; read_ods_cell identifies one logical coordinate, including explicit absence. update_ods requires expected_revision and full original cell references, typed values and an explicit display replacement policy. Blank clears values while preserving cell style.
+
+Read every text page at one text_sha256, passing it as ods_text_sha256 on continuation; then follow the physical range next_offset. Anchor references identify only their logical coordinate. Wiki retains the exact .ods, compressed ranges, complete receipts and explicit derivation endpoints. Selections, CSL and custom citations preserve native identities. Formula caches, actual rendering and meaning require Agent review. Table/row/column lifecycle and ODS rendition previews remain further work. Public **1.4.0**; next consolidated **1.4.1**, without a feature-by-feature bump.
+
 ### Native raster assets (Unreleased)
 
 When image_evidence_retention_enabled is true, complete frame/catalog records and generated PNGs persist across restart and decoder changes. Pin image_catalog_sha256 in read_image/export_wiki, or add a full matching reference to read_image_frame. Unpinned reads use the current decoder. Retained verification reports current_decoder_reproduction:not_checked. Cached previews report preview_origin:retained_preview, preserve original renderer metadata and require the exact reference, size and color policy. Missing historical previews need a matching decoder. Current-decoder mutation guards remain. Actual SDK2 tests cover Pillow 12.2.0 to 12.3.0 on both tool surfaces.

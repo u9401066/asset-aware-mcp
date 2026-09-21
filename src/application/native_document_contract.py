@@ -28,6 +28,7 @@ def native_asset_summary(
     workbook_table_creation_enabled: bool = False,
     table_workspaces_enabled: bool = False,
     images_enabled: bool = False,
+    ods_enabled: bool = False,
 ) -> dict[str, Any]:
     return {
         "asset_id": asset.asset_id,
@@ -42,6 +43,9 @@ def native_asset_summary(
         "source": asset.source.model_dump() if asset.source else None,
         "revision_count": len(asset.history),
         "capabilities": {
+            "read_ods": asset.format == "ods" and ods_enabled,
+            "edit_ods": asset.format == "ods" and ods_enabled and not asset.archived,
+            "verify_ods_cells": asset.format == "ods" and ods_enabled,
             "read_image": asset.format in IMAGE_EXTENSIONS and images_enabled,
             "edit_image": asset.format in IMAGE_EXTENSIONS
             and images_enabled
@@ -142,12 +146,15 @@ def native_document_contract(
     docx_stories_enabled: bool = False,
     docx_notes_enabled: bool = False,
     images_enabled: bool = False,
+    ods_enabled: bool = False,
     image_evidence_retention_enabled: bool = False,
 ) -> dict[str, Any]:
     for_op = request.for_op if request is not None else None
     result = {
         "success": True,
         "contract_version": "native-contract-v2",
+        "ods_enabled": ods_enabled,
+        "ods_policy": "ODS reads pin revision. read_ods pages physical repeated ranges with offset/limit; assemble ALL text pages at one text_sha256 using ods_text_sha256 for continuation, then follow next_offset for ranges. read_ods_cell uses exact content.xml/table index/name/logical row/column and returns one full cell reference, including explicit absence. update_ods requires expected_revision and 1-100 full original cell refs with typed values and explicit replace_paragraphs_preserve_cell_style policy. Blank clears value only. Duplicate/stale/tampered refs fail before one commit. Read full operation_result and current refs; formula caches and display remain unverified. Wiki retains native .ods, physical ranges/anchor refs, full receipts and explicit derivation endpoints. MCP checks bytes/structure; Agent reviews meaning, rich text, formulas and actual Calc appearance. ODS row/table lifecycle and rendered recalculation are not provided by these cell operations.",
         "images_enabled": images_enabled,
         "image_evidence_retention_enabled": image_evidence_retention_enabled,
         "image_evidence_retention_policy": "When enabled, full frame records/catalogs and generated exact PNG preview recipes persist across restart and decoder changes. read_image/export_wiki may pin image_catalog_sha256; read_image_frame may pin a full frame reference matching asset/revision/locator. Verification checks immutable source bytes and retained representation integrity; retained projection/preview results explicitly do not re-run the current decoder. Uncaptured previews require matching current-decoder frame records. New unpinned reads and mutation preconditions use the current decoder. Retention does not certify decoding accuracy or semantic support; Agent reviews actual images.",
@@ -216,6 +223,7 @@ def native_document_contract(
             docx_stories_enabled,
             docx_notes_enabled,
             images_enabled,
+            ods_enabled,
         ),
         "verification": "MCP checks structure/integrity and deterministic repairs. Read full operation receipts. Agents verify semantics, rendered layout, dynamic references and calculated results; sources/history stay intact.",
         "docx_notes_enabled": docx_notes_enabled,
@@ -246,6 +254,14 @@ def native_document_contract(
 
 
 def _edit_constraints(format_name: str) -> list[str]:
+    if format_name == "ods":
+        return [
+            "full original logical cell references and expected revision",
+            "explicit typed values and rich-display replacement policy",
+            "signed/encrypted/protected/tracked content",
+            "repeated objects/formulas/merges require mapping-aware edits",
+            "Agent reviews formula recalculation, rich text and actual Calc layout",
+        ]
     if format_name in {"csv", "tsv"}:
         return [
             "explicit dialect and strict encoding",
@@ -312,6 +328,7 @@ def _formats(
     docx_stories_enabled: bool = False,
     docx_notes_enabled: bool = False,
     images_enabled: bool = False,
+    ods_enabled: bool = False,
 ) -> dict[str, list[str]]:
     workbook_ops = (
         [
@@ -441,6 +458,17 @@ def _formats(
             *workbook_ops,
             *(["create_workbook_rendition"] if workbook_rendering_configured else []),
         ],
+        "ods": [
+            "create_ods",
+            "read_ods",
+            "read_ods_cell",
+            "update_ods",
+            "read_selection",
+            "verify",
+            "export_wiki",
+        ]
+        if ods_enabled
+        else [],
         "xlsm": ["inspect_cells", "edit_cells", "read_selection", *workbook_ops],
         **{
             kind: (

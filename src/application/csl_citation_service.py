@@ -230,6 +230,7 @@ class CslCitationService:
                 "pdf",
                 "docx",
                 "pptx",
+                "ods",
                 "xlsx",
                 "xlsm",
                 "csv",

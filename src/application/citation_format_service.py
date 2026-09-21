@@ -85,6 +85,12 @@ def render_citation(
         location.append(
             f"row {locator['row'] + 1}, column {locator['column'] + 1}; bytes [{locator['byte_start']},{locator['byte_end']})"
         )
+    if part == "content.xml" and all(
+        key in locator for key in ("table_index", "table_name", "row", "column")
+    ):
+        location.append(
+            f"{part}, table index {locator['table_index']} (zero-based) {locator['table_name']!r}, row {locator['row'] + 1}, column {locator['column'] + 1}"
+        )
     line_range = locator.get("line_range")
     if line_range and all(x is not None for x in line_range):
         location.append(f"lines {line_range[0] + 1}-{line_range[1]}")

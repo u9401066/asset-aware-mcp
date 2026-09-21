@@ -7,13 +7,12 @@ write. Back up the entire asset directory. See the
 [storage contract](docs/native-operation-results-spec.md). Public **1.4.0**; next
 consolidated **1.4.1**.
 
-ODS native support is in development: the first adapter creates spreadsheets,
-reads compressed cell ranges and edits or clears typed values while retaining
-styles and untouched package members. Actual Calc and independent odfdo checks
-cover native read-back, rendering and formula cache invalidation. Cache receipts
-now use bounded physical traversal while retaining exact complete evidence; a
-5,000-formula replay improved from 19.5s to 0.34s in the local benchmark. MCP, evidence
-and Wiki integration remain pending; see the [ODS specification](docs/native-ods-spec.md).
+Unreleased ODS workflows now create native spreadsheets, read exact logical cells,
+edit or clear typed values using full revision-bound references, and retain complete
+receipts in portable Wikis. Repeated ranges remain compressed; anchor references
+identify one coordinate, not verified coverage of every represented cell. Selections,
+derivations, CSL citations and custom locators retain exact ODS sources. Agents
+review formulas and actual rendering. See the [ODS specification](docs/native-ods-spec.md).
 Public **1.4.0**; next consolidated **1.4.1**, with no per-feature version bump.
 
 Unreleased PDF annotations now support complete native reads and guarded creation,

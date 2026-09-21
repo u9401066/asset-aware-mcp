@@ -7,12 +7,20 @@
 
 ## [Unreleased]
 
+- Add native ODS MCP creation, complete hash-paged physical-range/logical-cell reads,
+  and cell edits/clears guarded by full original references and expected revisions.
+  Integrate exact ODS evidence with selections, derivations, CSL/custom citations
+  and immutable Wiki snapshots containing sources, receipts and compressed ranges.
+  Non-anchor derivation endpoints retain their exact logical records. MCP checks
+  bytes/structure; Agent reviews meaning, formulas and actual rendering. Public
+  **1.4.0**, next consolidated **1.4.1**; no per-feature version bump.
+
 - Remove repeated ODS row-prefix scans during formula-cache invalidation and
   read-back. Visit physical ranges directly, preserve all complete before/after
   records and require every planned cache to match reopened output. Grouped and
   repeated ranges retain exact locators and namespaces. A 5,000-formula local
   replay fell from 19.5s to 0.34s with byte-identical output and full receipts.
-  ODS MCP/evidence/Wiki integration remains pending; public 1.4.0, next 1.4.1.
+  ODS MCP/evidence/Wiki integration follows below; public 1.4.0, next 1.4.1.
 
 - Store complete native operation receipts as immutable, hash-checked blobs bound
   to asset/history/revision/parent/operation, keeping the revision index bounded.

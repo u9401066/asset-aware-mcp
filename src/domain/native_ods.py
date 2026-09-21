@@ -2,20 +2,36 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Literal
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from pydantic import Field, field_validator, model_validator
 
-from src.domain.native_asset_models import NativeModel
+from src.domain.native_asset_models import (
+    ASSET_ID_PATTERN,
+    SHA256_PATTERN,
+    NativeEditResult,
+    NativeModel,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 # Operational bounds, not limits imposed by the OpenDocument specification.
 MAX_ODS_ROWS = 1_048_576
 MAX_ODS_COLUMNS = 16_384
 MAX_ODS_RECORDS = 20_000
 MAX_ODS_TEXT = 32_767
+ODS_REVIEW = [
+    "semantic_accuracy",
+    "rendered_layout",
+    "formula_results",
+    "rich_text_replacement",
+]
 
 
 def ods_text(value: str) -> str:
@@ -107,6 +123,52 @@ class NativeODSCellEdit(NativeModel):
     display_policy: Literal["replace_paragraphs_preserve_cell_style"]
 
 
+class NativeODSCellReference(NativeModel):
+    schema_version: Literal["native-ods-cell-ref-v1"] = "native-ods-cell-ref-v1"
+    asset_id: str = Field(pattern=ASSET_ID_PATTERN)
+    revision: str = Field(pattern=SHA256_PATTERN)
+    locator: NativeODSCellLocator
+    value_sha256: str = Field(pattern=SHA256_PATTERN)
+    verification_scope: Literal["immutable_native_representation"] = (
+        "immutable_native_representation"
+    )
+
+
+def attach_ods_evidence(record: dict[str, Any], asset_id: str, revision: str) -> None:
+    data = json.dumps(
+        record,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    record["evidence"] = NativeODSCellReference(
+        asset_id=asset_id,
+        revision=revision,
+        locator=NativeODSCellLocator.model_validate(record["locator"]),
+        value_sha256=hashlib.sha256(data).hexdigest(),
+    ).model_dump(mode="json")
+
+
+class NativeODSCellUpdate(NativeModel):
+    reference: NativeODSCellReference
+    value: NativeODSValue
+    display_policy: Literal["replace_paragraphs_preserve_cell_style"]
+
+
+class NativeODSUpdate(NativeModel):
+    cells: list[NativeODSCellUpdate] = Field(min_length=1, max_length=100)
+
+    @model_validator(mode="after")
+    def distinct_targets(self) -> NativeODSUpdate:
+        keys = [
+            tuple(item.reference.locator.model_dump().values()) for item in self.cells
+        ]
+        if len(keys) != len(set(keys)):
+            raise ValueError("Each ODS logical cell must be targeted once")
+        return self
+
+
 class NativeODSCreate(NativeModel):
     name: str = Field(default="workbook.ods", min_length=5, max_length=200)
     tables: list[str] = Field(
@@ -129,3 +191,15 @@ class NativeODSCreate(NativeModel):
             if not name or len(name) > 1024:
                 raise ValueError("ODS table name must contain 1-1024 characters")
         return self
+
+
+class NativeODSAdapter(Protocol):
+    def create(self, request: NativeODSCreate) -> bytes: ...
+    def inspect(self, data: bytes, *, offset: int, limit: int) -> dict[str, Any]: ...
+    def read_cell(
+        self, data: bytes, locator: NativeODSCellLocator
+    ) -> dict[str, Any]: ...
+    def edit(
+        self, data: bytes, edits: list[NativeODSCellEdit]
+    ) -> tuple[bytes, NativeEditResult]: ...
+    def decompose(self, data: bytes) -> Iterator[dict[str, Any]]: ...

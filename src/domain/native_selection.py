@@ -23,6 +23,7 @@ from src.domain.native_image import (
     NativeImageFrameReference,
     NativeImageRegionReference,
 )
+from src.domain.native_ods import NativeODSCellReference
 from src.domain.native_pdf import NativePdfReference
 from src.domain.native_pdf_annotations import PdfAnnotationReference
 from src.domain.native_pdf_region import NativePdfRegionReference
@@ -38,6 +39,7 @@ NativeSelectionParent = (
     | PdfAnnotationReference
     | NativePdfRegionReference
     | NativeDelimitedReference
+    | NativeODSCellReference
     | NativeImageFrameReference
     | NativeImageRegionReference
 )

@@ -81,6 +81,12 @@ from src.domain.native_image import (  # noqa: TC001 -- Pydantic schema
 from src.domain.native_layout import (
     NativeLayoutUpdate,  # noqa: TC001 -- Pydantic schema
 )
+from src.domain.native_ods import (  # noqa: TC001 -- Pydantic schema
+    NativeODSCellLocator,
+    NativeODSCellReference,
+    NativeODSCreate,
+    NativeODSUpdate,
+)
 from src.domain.native_operations import (
     NativeOperation,
     operation_fields,
@@ -212,6 +218,10 @@ class NativeDocumentRequest(NativeModel):
         default_factory=list, max_length=256
     )
     allow_3d_membership_change: bool = Field(default=False, strict=True)
+    ods_create: NativeODSCreate | None = None
+    ods_locator: NativeODSCellLocator | None = None
+    ods_update: NativeODSUpdate | None = None
+    ods_text_sha256: str | None = Field(default=None, pattern=SHA256_PATTERN)
     delimited_create: NativeDelimitedCreate | None = None
     delimited_dialect: NativeDelimitedDialect | None = None
     delimited_row: int | None = Field(default=None, ge=0, lt=20_000, strict=True)
@@ -291,6 +301,7 @@ class NativeDocumentRequest(NativeModel):
         | PdfAnnotationReference
         | NativePdfRegionReference
         | NativeDelimitedReference
+        | NativeODSCellReference
         | NativeImageFrameReference
         | NativeImageRegionReference
         | NativeFileReference
@@ -374,4 +385,10 @@ class NativeDocumentRequest(NativeModel):
             raise ValueError(
                 "Derivation verification continuation requires derivations_sha256"
             )
+        if (
+            self.op in {"read_ods", "read_ods_cell"}
+            and self.text_offset
+            and not self.ods_text_sha256
+        ):
+            raise ValueError("ODS text continuation requires ods_text_sha256")
         return self

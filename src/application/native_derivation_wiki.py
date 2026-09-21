@@ -15,6 +15,7 @@ from src.domain.native_image import (
     NativeImageFrameReference,
     NativeImageRegionReference,
 )
+from src.domain.native_ods import NativeODSCellReference
 from src.domain.native_pdf_region import NativePdfRegionReference
 from src.domain.native_selection import NativeSelectionReference, canonical_selection
 
@@ -22,6 +23,7 @@ SOURCE_SUFFIXES = {
     "pdf",
     "docx",
     "pptx",
+    "ods",
     "xlsx",
     "xlsm",
     "png",
@@ -61,6 +63,7 @@ def add_derivations(
     selections: dict[str, Any] = {}
     regions: dict[str, Any] = {}
     image_records: dict[str, Any] = {}
+    ods_records: dict[str, Any] = {}
     for record in records:
         service.require_valid(record.derivation.target)
         links = []
@@ -98,6 +101,23 @@ def add_derivations(
             )
         for ref in [record.derivation.target, *record.derivation.sources]:
             region = ref.parent if isinstance(ref, NativeSelectionReference) else ref
+            if isinstance(region, NativeODSCellReference):
+                key = fingerprint(region)
+                if key not in ods_records:
+                    exact = service.evidence.read_parent_record(region)
+                    if exact["evidence"] != region.model_dump(mode="json"):
+                        raise ValueError(
+                            "ODS derivation endpoint failed integrity verification"
+                        )
+                    name = f"{content.prefix}-ods-cell-{key}.json"
+                    content.add_file(name, canonical_selection(exact) + b"\n")
+                    ods_records[key] = {
+                        "reference": region.model_dump(mode="json"),
+                        "record_file": name,
+                    }
+                links.append(
+                    f"- [Exact ODS logical cell {key[:12]}]({ods_records[key]['record_file']})"
+                )
             if isinstance(
                 region, NativeImageFrameReference | NativeImageRegionReference
             ):
@@ -154,6 +174,7 @@ def add_derivations(
         **({"selection_records": selections} if selections else {}),
         **({"region_records": regions} if regions else {}),
         **({"image_records": image_records} if image_records else {}),
+        **({"ods_cell_records": ods_records} if ods_records else {}),
         "verification_scope": "immutable_endpoint_references; active records for exported revision only",
         "review_boundary": REVIEW_BOUNDARY,
     }

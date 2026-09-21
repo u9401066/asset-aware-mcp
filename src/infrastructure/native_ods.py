@@ -4,15 +4,23 @@ from __future__ import annotations
 
 import io
 import zipfile
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from lxml import etree
 
+from src.domain.native_ods import NativeODSCellLocator
 from src.infrastructure.native_odf_package import NS, ODS_MIME, q, xml_bytes
 from src.infrastructure.native_ods_editor import edit_ods
-from src.infrastructure.native_ods_reader import NativeODSReader
+from src.infrastructure.native_ods_reader import (
+    NativeODSReader,
+    cell_record,
+    cells,
+    rows,
+)
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from src.domain.native_asset_models import NativeEditResult
     from src.domain.native_ods import NativeODSCellEdit, NativeODSCreate
 
@@ -20,6 +28,44 @@ if TYPE_CHECKING:
 class NativeODS(NativeODSReader):
     def edit(self, edits: list[NativeODSCellEdit]) -> tuple[bytes, NativeEditResult]:
         return edit_ods(self.package.original, edits)
+
+
+class NativeODSFileAdapter:
+    def create(self, request: NativeODSCreate) -> bytes:
+        return create_native_ods(request)
+
+    def inspect(self, data: bytes, *, offset: int, limit: int) -> dict[str, Any]:
+        return NativeODS(data).inspect(offset=offset, limit=limit)
+
+    def read_cell(self, data: bytes, locator: NativeODSCellLocator) -> dict[str, Any]:
+        return NativeODS(data).read_cell(locator)
+
+    def edit(
+        self, data: bytes, edits: list[NativeODSCellEdit]
+    ) -> tuple[bytes, NativeEditResult]:
+        return edit_ods(data, edits)
+
+    def decompose(self, data: bytes) -> Iterator[dict[str, Any]]:
+        book = NativeODS(data)
+        for index, table in enumerate(book.tables):
+            for row_start, row_count, row in rows(table):
+                for column_start, column_count, cell in cells(row):
+                    locator = NativeODSCellLocator(
+                        table_index=index,
+                        table_name=table.get(q("table", "name")),
+                        row=row_start,
+                        column=column_start,
+                    )
+                    yield cell_record(
+                        locator,
+                        cell,
+                        {
+                            "row_start": row_start,
+                            "row_count": row_count,
+                            "column_start": column_start,
+                            "column_count": column_count,
+                        },
+                    )
 
 
 def create_native_ods(request: NativeODSCreate) -> bytes:

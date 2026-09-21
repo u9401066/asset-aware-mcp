@@ -16,6 +16,7 @@ from src.application.native_evidence_service import attach_native_evidence
 from src.application.native_image_lineage import add_image_inputs
 from src.application.native_image_projection import NativeImageProjection
 from src.application.native_image_wiki import NativeImageWikiContent
+from src.application.native_ods_wiki import NativeODSWikiContent
 from src.application.native_operation_results import revision_result_dict
 from src.application.native_pdf_annotation_operations import attach_annotation_evidence
 from src.application.native_pdf_annotation_wiki import NativePdfAnnotationWikiContent
@@ -33,6 +34,7 @@ from src.domain.native_image import (
     NativeImageFrameReference,
     NativeImageRegionReference,
 )
+from src.domain.native_ods import attach_ods_evidence
 from src.domain.native_selection import NativeSelectionReference
 from src.domain.native_wiki import MAX_WIKI_CELLS
 
@@ -53,6 +55,7 @@ if TYPE_CHECKING:
     from src.domain.native_docx_stories import NativeDocxStoryAdapter
     from src.domain.native_image import NativeImageAdapter
     from src.domain.native_image_archive import NativeImageArchive
+    from src.domain.native_ods import NativeODSAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_wiki import NativeWikiPublisher
@@ -73,7 +76,9 @@ class NativeWikiService:
         docx_notes: NativeDocxNoteAdapter | None = None,
         images: NativeImageAdapter | None = None,
         image_archive: NativeImageArchive | None = None,
+        ods: NativeODSAdapter | None = None,
     ):
+        self.ods = ods
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.publisher = publisher
@@ -130,6 +135,11 @@ class NativeWikiService:
         image_catalog, image_records = self._image_records(
             asset, revision, request.image_catalog_sha256
         )
+        ods_structure = None
+        if asset.format == "ods" and self.ods:
+            ods_structure = self.ods.inspect(data, offset=0, limit=1)
+            ods_structure.pop("records")
+            ods_structure.pop("next_offset")
         content = self._content(
             request,
             asset,
@@ -140,6 +150,7 @@ class NativeWikiService:
             notes,
             annotations_catalog,
             image_catalog,
+            ods_structure,
         )
         add_rendition(content, asset, self.repository)
         self._populate(content, data, image_records)
@@ -179,6 +190,7 @@ class NativeWikiService:
         notes_catalog: dict[str, Any] | None = None,
         annotations_catalog: dict[str, Any] | None = None,
         image_catalog: dict[str, Any] | None = None,
+        ods_structure: dict[str, Any] | None = None,
     ) -> NativeWikiContent:
         contract = resolve_citation_format(
             request.citation_contract.model_dump(mode="json")
@@ -217,6 +229,17 @@ class NativeWikiService:
             for ref in [event.derivation.target, *event.derivation.sources]
         ):
             identity["image_color_policy"] = request.image_color_policy
+        if ods_structure is not None:
+            latest = next(
+                item for item in reversed(asset.history) if item.sha256 == revision
+            )
+            return NativeODSWikiContent(
+                identity,
+                contract,
+                metadata,
+                ods_structure,
+                revision_result_dict(self.repository, asset, latest),
+            )
         if image_catalog is not None:
             latest = next(
                 item for item in reversed(asset.history) if item.sha256 == revision
@@ -296,6 +319,12 @@ class NativeWikiService:
                     field, identity["asset_id"], identity["revision"]
                 )
                 content.add_field(field)
+        elif isinstance(content, NativeODSWikiContent) and self.ods:
+            for count, record in enumerate(self.ods.decompose(data), start=1):
+                if count > MAX_WIKI_CELLS:
+                    raise ValueError("ODS Wiki exceeds the physical-range limit")
+                attach_ods_evidence(record, identity["asset_id"], identity["revision"])
+                content.add_range(record)
         elif identity["format"] in {"xlsx", "xlsm"}:
             for count, cell in enumerate(self.spreadsheets.iter_cells(data), start=1):
                 if count > MAX_WIKI_CELLS:

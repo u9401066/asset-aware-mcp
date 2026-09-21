@@ -22,6 +22,7 @@ from src.application.native_evidence_service import (
     attach_native_evidence,
 )
 from src.application.native_image_operations import NativeImageOperations
+from src.application.native_ods_operations import NativeODSOperations
 from src.application.native_pdf_annotation_operations import (
     NativePdfAnnotationOperations,
 )
@@ -52,6 +53,7 @@ if TYPE_CHECKING:
     from src.domain.native_grid import NativeGridAdapter
     from src.domain.native_image import NativeImageAdapter
     from src.domain.native_image_archive import NativeImageArchive
+    from src.domain.native_ods import NativeODSAdapter
     from src.domain.native_pdf import NativePdfAdapter
     from src.domain.native_pptx import NativePresentationAdapter
     from src.domain.native_rendering import (
@@ -94,7 +96,12 @@ class NativeDocumentService:
         docx_notes: NativeDocxNoteAdapter | None = None,
         images: NativeImageAdapter | None = None,
         image_archive: NativeImageArchive | None = None,
+        ods: NativeODSAdapter | None = None,
     ):
+        self.ods = ods
+        self.ods_operations = (
+            NativeODSOperations(repository, ods, self._summary) if ods else None
+        )
         self.repository = repository
         self.spreadsheets = spreadsheets
         self.images = images
@@ -177,6 +184,7 @@ class NativeDocumentService:
             docx_notes,
             images=images,
             image_archive=image_archive,
+            ods=ods,
         )
         self.derivations = (
             NativeDerivationService(derivations, self.evidence) if derivations else None
@@ -200,6 +208,7 @@ class NativeDocumentService:
                 docx_notes,
                 images=images,
                 image_archive=image_archive,
+                ods=ods,
             )
             if wiki_publisher is not None
             else None
@@ -218,6 +227,7 @@ class NativeDocumentService:
             workbook_table_creation_enabled=self.workbook_table_creation is not None,
             table_workspaces_enabled=self.table_operations is not None,
             images_enabled=self.images is not None,
+            ods_enabled=self.ods is not None,
         )
 
     def execute(self, request: NativeDocumentRequest) -> dict[str, Any]:
@@ -246,6 +256,10 @@ class NativeDocumentService:
             "rename_worksheet": self._workbook_operation,
             "reorder_worksheets": self._workbook_operation,
             "delete_worksheets": self._workbook_operation,
+            "create_ods": self._ods_operation,
+            "read_ods": self._ods_operation,
+            "read_ods_cell": self._ods_operation,
+            "update_ods": self._ods_operation,
             "create_delimited": self._delimited_operation,
             "read_delimited": self._delimited_operation,
             "read_delimited_cell": self._delimited_operation,
@@ -355,6 +369,11 @@ class NativeDocumentService:
             request
         )
 
+    def _ods_operation(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        if self.ods_operations is None:
+            raise ValueError("Native ODS adapter is not configured")
+        return self.ods_operations.execute(request)
+
     def _verify(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.reference is not None
         return self.evidence.verify(request.reference)
@@ -365,6 +384,7 @@ class NativeDocumentService:
             docx_stories_enabled=self.docx_stories is not None,
             docx_notes_enabled=self.docx_notes is not None,
             images_enabled=self.images is not None,
+            ods_enabled=self.ods is not None,
             image_evidence_retention_enabled=self.images is not None
             and self.image_archive is not None,
             workbook_rendering_configured=self.rendition_operations.renderer
@@ -480,6 +500,12 @@ class NativeDocumentService:
             )
             for cell in result["content"]["cells"]:
                 attach_native_evidence(cell, asset_id, revision)
+        elif asset.format == "ods" and self.ods is not None:
+            result["content"] = {
+                "representation": "ods_package",
+                "size_bytes": len(data),
+                "read_operation": "read_ods",
+            }
         elif asset.format in {"csv", "tsv"} and self.delimited is not None:
             result["content"] = {
                 "representation": "delimited_table",
