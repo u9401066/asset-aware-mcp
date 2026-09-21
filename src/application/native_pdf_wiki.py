@@ -18,8 +18,11 @@ class NativePdfWikiContent(NativeWikiContent):
         identity: dict[str, str],
         contract: CitationFormatContract,
         metadata: CitationMetadata,
+        *,
+        projection: str = "pdf-pages-v1",
     ):
-        super().__init__(identity, contract, metadata, projection="pdf-pages-v1")
+        super().__init__(identity, contract, metadata, projection=projection)
+        self.projection = projection
         self.source_name = self.prefix + ".pdf"
 
     def add_page(self, record: dict[str, Any], png: bytes) -> None:
@@ -74,7 +77,7 @@ class NativePdfWikiContent(NativeWikiContent):
         return {
             **self.record_counts(),
             "representation": "pdf_pages",
-            "projection": "pdf-pages-v1",
+            "projection": self.projection,
             "extraction_scope": "native text blocks, bounded PDF object graphs, previews and exact source bytes; no OCR",
         }
 

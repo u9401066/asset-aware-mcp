@@ -29,9 +29,15 @@ PDF_OPERATIONS = frozenset(
         "render",
         "render_region",
         "decompose",
+        "inspect_annotations",
+        "read_annotation",
+        "decompose_annotations",
+        "edit_annotations",
     }
 )
-MUTATIONS = frozenset({"create", "insert", "edit", "delete", "reorder"})
+MUTATIONS = frozenset(
+    {"create", "insert", "edit", "delete", "reorder", "edit_annotations"}
+)
 MAX_RESULT_BYTES = 128 * 1024 * 1024
 
 
@@ -101,6 +107,18 @@ class ProcessNativePdf:
 
     def inspect(self, data: bytes) -> Any:
         return self._run("inspect", data)
+
+    def inspect_annotations(self, data: bytes) -> Any:
+        return self._run("inspect_annotations", data)
+
+    def read_annotation(self, data: bytes, locator: Any) -> Any:
+        return self._run("read_annotation", data, locator)
+
+    def decompose_annotations(self, data: bytes) -> Any:
+        return self._run("decompose_annotations", data)
+
+    def edit_annotations(self, data: bytes, request: Any) -> Any:
+        return self._run("edit_annotations", data, request)
 
     def decompose(self, data: bytes) -> Any:
         return self._run("decompose", data)

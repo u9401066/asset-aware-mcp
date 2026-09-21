@@ -1,5 +1,33 @@
 # Progress (Updated: 2026-09-21)
 
+## Native PDF annotation MCP integration — SDK2 and provenance validated
+
+The22-file runtime/service/test segment exposes complete hash-pinned catalogs and
+records, guarded create/update/delete, per-kind schemas, source/history checks and
+isolated PDF worker operations. Annotation refs support verify, selections,
+derivation source/target endpoints and CSL. Wiki pdf-annotations-v1 retains exact
+PDFs, page previews, full annotation records and custom precise locators;
+no-annotation PDFs remain byte-identical legacy pdf-pages-v1. Historical snapshots
+and human notes survive edits/deletion. Comments are distinct from underlying text.
+
+Focused core/service/provenance/schema/existing-PDF tests:111pass, then both SDK2
+balanced/compact lifecycle cases pass248.32s. SDK covers complete policy/schema,
+all records/receipts, create→metadata/appearance→delete, actual PNG pixel equality,
+old refs/selections, derivation history and immutable Wikis. Ruff and mypy306pass.
+New test-only defects retained:missing publish source_path, wrong verify_derivation
+key, native /Text spelling and listing-versus-full-page evidence; fixed assertions
+and reran only relevant checks. Logs:/run/user/1000/asset-aware-pdf-annotations-
+service-{second,third}.log, sdk-{second,third}.log, service-mypy-final.log.
+
+Corefdf9ba9 and this integration segment stay LOCAL pending complete feature proof.
+Real originals inspected:NIST1648a17pages/8Link annotations;NASA Apollo11359pages/
+no annotations with already-supported identical duplicate Length declarations.
+Actual cached NISTpage4/NASApage17 images viewed. New default-model Codex annotation
+runner/auditor is being prepared in uncommitted tests/codex_pdf_annotations; actual
+Agent runs, full regression/release/docs/CI/Pages publication remain outstanding.
+Public1.4.0;next consolidated1.4.1. User reiterated stay1.4.x;no per-feature bump/tag.
+Broad goal remains active; no subagent/PR; authoru9401066@gap.kmu.edu.tw.
+
 ## Native PDF annotation kernel — validated, MCP integration next
 
 Previous goal turn was substantive progress:96dd150 is fully published.

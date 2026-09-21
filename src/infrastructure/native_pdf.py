@@ -8,6 +8,12 @@ import pikepdf
 import pymupdf
 
 from src.domain.native_pdf import MAX_PDF_BATCH, MAX_PDF_PAGES
+from src.infrastructure.native_pdf_annotation_edits import edit_annotations
+from src.infrastructure.native_pdf_annotations import (
+    decompose_annotations,
+    inspect_annotations,
+    read_annotation,
+)
 from src.infrastructure.native_pdf_checks import verify_reference
 from src.infrastructure.native_pdf_graph import canonical
 from src.infrastructure.native_pdf_mutation import PdfMutation, insert_pages
@@ -39,6 +45,10 @@ def _targets(
 
 
 class NativePdf:
+    inspect_annotations = staticmethod(inspect_annotations)
+    read_annotation = staticmethod(read_annotation)
+    decompose_annotations = staticmethod(decompose_annotations)
+    edit_annotations = staticmethod(edit_annotations)
     render_region = staticmethod(render_region)
 
     def decompose(self, data: bytes) -> list[dict[str, Any]]:

@@ -13,6 +13,8 @@ from src.application.native_docx_story_operations import attach_story_evidence
 from src.application.native_docx_story_wiki import NativeDocxStoryWikiContent
 from src.application.native_docx_wiki import NativeDocxWikiContent
 from src.application.native_evidence_service import attach_native_evidence
+from src.application.native_pdf_annotation_operations import attach_annotation_evidence
+from src.application.native_pdf_annotation_wiki import NativePdfAnnotationWikiContent
 from src.application.native_pdf_operations import attach_pdf_evidence
 from src.application.native_pdf_wiki import NativePdfWikiContent
 from src.application.native_pptx_operations import attach_pptx_evidence
@@ -104,8 +106,20 @@ class NativeWikiService:
             if asset.format == "docx" and self.docx and self.docx_notes
             else None
         )
+        annotations_catalog = (
+            self.pdfs.inspect_annotations(data)
+            if asset.format == "pdf" and self.pdfs
+            else None
+        )
         content = self._content(
-            request, asset, revision, ledger, structure, catalog, notes
+            request,
+            asset,
+            revision,
+            ledger,
+            structure,
+            catalog,
+            notes,
+            annotations_catalog,
         )
         add_rendition(content, asset, self.repository)
         self._populate(content, data)
@@ -135,6 +149,7 @@ class NativeWikiService:
         delimited_structure: dict[str, Any] | None = None,
         story_catalog: dict[str, Any] | None = None,
         notes_catalog: dict[str, Any] | None = None,
+        annotations_catalog: dict[str, Any] | None = None,
     ) -> NativeWikiContent:
         contract = resolve_citation_format(
             request.citation_contract.model_dump(mode="json")
@@ -163,6 +178,10 @@ class NativeWikiService:
             ),
         }
         metadata = request.citation_metadata or CitationMetadata()
+        if annotations_catalog and annotations_catalog["annotations"]:
+            return NativePdfAnnotationWikiContent(
+                identity, contract, metadata, annotations_catalog
+            )
         if delimited_structure is not None:
             return NativeDelimitedWikiContent(
                 identity, contract, metadata, delimited_structure
@@ -185,6 +204,13 @@ class NativeWikiService:
                     item["record"], identity["asset_id"], identity["revision"]
                 )
                 content.add_page(item["record"], item["png"])
+            if isinstance(content, NativePdfAnnotationWikiContent):
+                annotation_records = self.pdfs.decompose_annotations(data)
+                for record in annotation_records:
+                    attach_annotation_evidence(
+                        record, identity["asset_id"], identity["revision"]
+                    )
+                content.add_annotations(annotation_records)
         elif isinstance(content, NativeDelimitedWikiContent) and self.delimited:
             for field in self.delimited.decompose(data, content.dialect):
                 attach_delimited_evidence(

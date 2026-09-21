@@ -20,6 +20,7 @@ from src.domain.native_docx_notes import DocxNoteReference
 from src.domain.native_docx_stories import DocxStoryReference
 from src.domain.native_file_reference import NativeFileReference
 from src.domain.native_pdf import NativePdfReference
+from src.domain.native_pdf_annotations import PdfAnnotationReference
 from src.domain.native_pdf_region import NativePdfRegionReference
 from src.domain.native_pptx import NativePptxReference
 from src.domain.native_selection import NativeSelectionReference
@@ -31,6 +32,7 @@ NativeReference = (
     | DocxNoteReference
     | NativePptxReference
     | NativePdfReference
+    | PdfAnnotationReference
     | NativePdfRegionReference
     | NativeDelimitedReference
     | NativeFileReference

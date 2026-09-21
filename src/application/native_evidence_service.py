@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from src.application.native_docx_note_operations import attach_note_evidence
 from src.application.native_docx_story_operations import attach_story_evidence
+from src.application.native_pdf_annotation_operations import attach_annotation_evidence
 from src.application.native_pdf_operations import PDF_REVIEW, attach_pdf_evidence
 from src.application.native_pdf_region_service import NativePdfRegionService
 from src.application.native_pptx_operations import attach_pptx_evidence
@@ -22,6 +23,7 @@ from src.domain.native_docx_notes import NOTE_REVIEW, DocxNoteReference
 from src.domain.native_docx_stories import STORY_REVIEW, DocxStoryReference
 from src.domain.native_file_reference import NativeFileReference
 from src.domain.native_pdf import NativePdfReference
+from src.domain.native_pdf_annotations import ANNOTATION_REVIEW, PdfAnnotationReference
 from src.domain.native_pdf_region import NativePdfRegionReference
 from src.domain.native_pptx import NativePptxReference
 from src.domain.native_selection import NativeSelectionReference
@@ -120,6 +122,13 @@ class NativeEvidenceService:
             record = self.presentations.read_shape(data, reference.locator)
             attach_pptx_evidence(record, asset.asset_id, reference.revision)
         elif (
+            isinstance(reference, PdfAnnotationReference)
+            and asset.format == "pdf"
+            and self.pdfs
+        ):
+            record = self.pdfs.read_annotation(data, reference.locator)
+            attach_annotation_evidence(record, asset.asset_id, reference.revision)
+        elif (
             isinstance(reference, NativePdfReference)
             and asset.format == "pdf"
             and self.pdfs
@@ -147,11 +156,31 @@ class NativeEvidenceService:
         | DocxNoteReference
         | NativePptxReference
         | NativePdfReference
+        | PdfAnnotationReference
         | NativePdfRegionReference
         | NativeDelimitedReference
         | NativeFileReference
         | NativeSelectionReference,
     ) -> dict[str, Any]:
+        if isinstance(reference, PdfAnnotationReference):
+            asset = self.repository.load(reference.asset_id)
+            record = self.read_parent_record(reference)
+            valid = record["evidence"] == reference.model_dump()
+            return {
+                "success": True,
+                "valid": valid,
+                "asset_id": asset.asset_id,
+                "revision": reference.revision,
+                "is_current_managed_revision": asset.revision == reference.revision,
+                "archived": asset.archived,
+                "verification_scope": "immutable_native_representation",
+                "checks": {
+                    "revision_hash": True,
+                    "annotation_representation_hash": valid,
+                },
+                "source_freshness": "not_checked; refresh tracks external human edits",
+                "review_required": ANNOTATION_REVIEW,
+            }
         if isinstance(reference, (DocxStoryReference, DocxNoteReference)):
             asset = self.repository.load(reference.asset_id)
             record = self.read_parent_record(reference)

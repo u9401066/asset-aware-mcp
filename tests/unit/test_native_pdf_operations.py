@@ -133,7 +133,10 @@ def test_pdf_wiki_keeps_opaque_and_historical_snapshots(managed_pdf, tmp_path):
     )
     path = Path(exported["output_dir"])
     manifest = json.loads((path / "manifest.json").read_text())
-    assert manifest["projection"] == "pdf-pages-v1" and exported["page_count"] == 3
+    assert (
+        manifest["projection"] == "pdf-annotations-v1" and exported["page_count"] == 3
+    )
+    assert exported["annotation_count"] == 8
     assert (path / manifest["source_attachment"]).read_bytes() == source.read_bytes()
     records = [json.loads(s) for s in (path / "records.jsonl").read_text().splitlines()]
     for record in records:

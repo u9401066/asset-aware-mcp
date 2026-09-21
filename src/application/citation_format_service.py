@@ -34,6 +34,13 @@ def render_citation(
     location: list[str] = []
     if page is not None:
         location.append(f"p. {page}")
+    if "annotation_index" in locator:
+        location.append(f"annotation index {locator['annotation_index']} (zero-based)")
+        if "annotation_object" in locator and "generation" in locator:
+            location.append(
+                f"object {locator['annotation_object']} {locator['generation']}"
+                + (" (direct dictionary)" if locator["annotation_object"] == 0 else "")
+            )
     region = locator.get("pdf_region")
     if region is not None:
         location.append(

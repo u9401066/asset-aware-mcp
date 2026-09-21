@@ -9,6 +9,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 if TYPE_CHECKING:
     from src.domain.native_assets import NativeEditResult
+    from src.domain.native_pdf_annotations import (
+        PdfAnnotationLocator,
+        PdfAnnotationsUpdate,
+    )
     from src.domain.native_pdf_region import NativePdfRegionSelector
 
 MAX_PDF_PAGES = 2000
@@ -122,6 +126,14 @@ class NativePdfPageEdit(PdfModel):
 
 
 class NativePdfAdapter(Protocol):
+    def inspect_annotations(self, data: bytes) -> dict[str, Any]: ...
+    def read_annotation(
+        self, data: bytes, locator: PdfAnnotationLocator
+    ) -> dict[str, Any]: ...
+    def decompose_annotations(self, data: bytes) -> list[dict[str, Any]]: ...
+    def edit_annotations(
+        self, data: bytes, request: PdfAnnotationsUpdate
+    ) -> tuple[bytes, NativeEditResult]: ...
     def decompose(self, data: bytes) -> list[dict[str, Any]]: ...
     def inspect(self, data: bytes) -> dict[str, Any]: ...
     def read_page(

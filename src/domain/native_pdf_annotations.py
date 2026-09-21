@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
 from src.domain.native_asset_models import ASSET_ID_PATTERN, SHA256_PATTERN, NativeModel
 from src.domain.native_pdf import (  # noqa: TC001 -- Pydantic runtime schema
@@ -56,8 +56,58 @@ class PdfAnnotationMetadata(NativeModel):
     modified: str | None = Field(default=None, max_length=256)
 
 
+def appearance_fields(kind: str) -> tuple[str, set[str]]:
+    geometry = {
+        "Text": "point",
+        "FreeText": "rect",
+        "Square": "rect",
+        "Circle": "rect",
+        "Line": "vertices",
+        "PolyLine": "vertices",
+        "Polygon": "vertices",
+        "Ink": "strokes",
+    }.get(kind, "quads")
+    allowed = {"kind", geometry, "opacity", "stroke_color"}
+    if kind == "Text":
+        allowed.add("icon")
+    if kind in {"FreeText", "Square", "Circle", "Polygon"}:
+        allowed.add("fill_color")
+    if kind in {"FreeText", "Square", "Circle", "Polygon", "PolyLine", "Line", "Ink"}:
+        allowed.add("border_width")
+    if kind == "FreeText":
+        allowed.update({"text", "font_size", "text_color"})
+    return geometry, allowed
+
+
+def appearance_schema(schema: dict[str, Any]) -> None:
+    branches = []
+    for kind in schema["properties"]["kind"]["enum"]:
+        geometry, allowed = appearance_fields(kind)
+        positions: dict[str, Any] = {"not": {"type": "null"}, "minItems": 1}
+        if geometry == "vertices":
+            positions["minItems"] = 3 if kind == "Polygon" else 2
+        if kind == "Line":
+            positions["maxItems"] = 2
+        branches.append(
+            {
+                "required": [geometry],
+                "properties": {"kind": {"const": kind}, geometry: positions},
+                "not": {
+                    "anyOf": [
+                        {"required": [name]}
+                        for name in schema["properties"]
+                        if name not in allowed
+                    ]
+                },
+            }
+        )
+    schema["oneOf"] = branches
+
+
 class PdfAnnotationAppearance(NativeModel):
     """Coordinates are fractions of the displayed, rotated CropBox."""
+
+    model_config = ConfigDict(json_schema_extra=appearance_schema)
 
     kind: Literal[
         "Text",
@@ -101,35 +151,9 @@ class PdfAnnotationAppearance(NativeModel):
 
     @model_validator(mode="after")
     def geometry_and_scope(self) -> PdfAnnotationAppearance:
-        geometry = {
-            "Text": "point",
-            "FreeText": "rect",
-            "Square": "rect",
-            "Circle": "rect",
-            "Line": "vertices",
-            "PolyLine": "vertices",
-            "Polygon": "vertices",
-            "Ink": "strokes",
-        }.get(self.kind, "quads")
+        geometry, allowed = appearance_fields(self.kind)
         if not getattr(self, geometry):
             raise ValueError(f"{self.kind} requires {geometry}")
-        allowed = {"kind", geometry, "opacity", "stroke_color"}
-        if self.kind == "Text":
-            allowed.add("icon")
-        if self.kind in {"FreeText", "Square", "Circle", "Polygon"}:
-            allowed.add("fill_color")
-        if self.kind in {
-            "FreeText",
-            "Square",
-            "Circle",
-            "Polygon",
-            "PolyLine",
-            "Line",
-            "Ink",
-        }:
-            allowed.add("border_width")
-        if self.kind == "FreeText":
-            allowed.update({"text", "font_size", "text_color"})
         if self.model_fields_set - allowed:
             raise ValueError("Appearance fields are not used by this annotation kind")
         if self.rect and (self.rect[0] >= self.rect[2] or self.rect[1] >= self.rect[3]):

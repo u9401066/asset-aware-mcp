@@ -21,6 +21,9 @@ from src.application.native_evidence_service import (
     NativeEvidenceService,
     attach_native_evidence,
 )
+from src.application.native_pdf_annotation_operations import (
+    NativePdfAnnotationOperations,
+)
 from src.application.native_pdf_operations import NativePdfOperations
 from src.application.native_pdf_region_service import NativePdfRegionService
 from src.application.native_pptx_operations import NativePptxOperations
@@ -235,6 +238,9 @@ class NativeDocumentService:
             "read_pdf": self._pdf_operation,
             "read_pdf_page": self._pdf_operation,
             "read_pdf_region": NativePdfRegionService(self.evidence).read,
+            "read_pdf_annotations": self._pdf_annotation_operation,
+            "read_pdf_annotation": self._pdf_annotation_operation,
+            "update_pdf_annotations": self._pdf_annotation_operation,
             "render_pdf_page": self._pdf_operation,
             "add_pdf_pages": self._pdf_operation,
             "update_pdf": self._pdf_operation,
@@ -310,6 +316,15 @@ class NativeDocumentService:
         if self.pdf_operations is None:
             raise ValueError("Native PDF adapter is not configured")
         return self.pdf_operations.execute(request)
+
+    def _pdf_annotation_operation(
+        self, request: NativeDocumentRequest
+    ) -> dict[str, Any]:
+        if self.pdfs is None:
+            raise ValueError("Native PDF adapter is not configured")
+        return NativePdfAnnotationOperations(self.repository, self.pdfs).execute(
+            request
+        )
 
     def _verify(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.reference is not None

@@ -81,6 +81,11 @@ from src.domain.native_pdf import (  # noqa: TC001 -- Pydantic runtime models
     NativePdfPageLocator,
     NativePdfReference,
 )
+from src.domain.native_pdf_annotations import (  # noqa: TC001 -- Pydantic runtime schema
+    PdfAnnotationLocator,
+    PdfAnnotationReference,
+    PdfAnnotationsUpdate,
+)
 from src.domain.native_pdf_region import (  # noqa: TC001 -- Pydantic runtime models
     NativePdfRegionReference,
     NativePdfRegionSelector,
@@ -220,6 +225,8 @@ class NativeDocumentRequest(NativeModel):
     )
     presentation: NativePresentationCreate | None = None
     pdf_create: NativePdfCreate | None = None
+    pdf_annotation_locator: PdfAnnotationLocator | None = None
+    pdf_annotations_update: PdfAnnotationsUpdate | None = None
     pdf_insert: NativePdfInsert | None = None
     pdf_locator: NativePdfPageLocator | None = None
     pdf_edits: list[NativePdfPageEdit] = Field(default_factory=list, max_length=100)
@@ -262,6 +269,7 @@ class NativeDocumentRequest(NativeModel):
         | DocxNoteReference
         | NativePptxReference
         | NativePdfReference
+        | PdfAnnotationReference
         | NativePdfRegionReference
         | NativeDelimitedReference
         | NativeFileReference
