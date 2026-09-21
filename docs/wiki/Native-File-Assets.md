@@ -1,5 +1,18 @@
 # Native File Assets（v1.4.0）
 
+## 文件分析之後：持續操作與可重用證據
+
+單次摘要與問答可以使用模型內建功能。這個工作流著重修改後的原生文件、
+完整來源版本與可檢查的操作結果，讓下一個 Agent 仍能沿用引用與 Wiki。
+例如掃描內容 `007` 建成 Excel 字串後，即使新版本改成 `008`，舊引用仍指向
+當時的來源與數值。MCP 檢查來源、版本與格式；Agent 核對畫面、語意並修正。
+
+目前 main 的 Unreleased 已涵蓋 PDF、DOCX、試算表、CSV／TSV 與 PPTX 的
+指定操作，使用前須完整讀取實際 contract。獨立圖片仍是內部核心，MCP、
+引用與 Wiki 串接尚未完成。公開版 **1.4.0**，下次整合 **1.4.1**。
+各格式限制、待驗證的產品價值及上游專案見
+[能力與缺口分析](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/agent-asset-gap-analysis.md)。
+
 ## Native PDF annotations (Unreleased)
 
 PDF 批註可以獨立讀取、編輯與引用。MCP 保留版本、定位、原生格式及操作紀錄；

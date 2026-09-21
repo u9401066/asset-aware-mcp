@@ -227,6 +227,12 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
   "native-file-assets": `## Native documents and versioned files — v1.4.0
 
+### Continuing work after document analysis
+
+Built-in model features may be sufficient for one-off summaries and questions. This workflow focuses on editable native documents, exact source revisions and inspectable operation results that another Agent can reuse through citations and Wiki notes. If a scanned 007 becomes an Excel string and a later version changes it to 008, the old reference still identifies the original source and value. MCP checks source identity, versions and format constraints; the Agent reviews actual images and meaning and coordinates corrections.
+
+Main has Unreleased operations for PDF, DOCX, workbooks, CSV/TSV and PPTX; discover the complete runtime contract before use. Standalone raster support is an internal kernel awaiting MCP, evidence and Wiki integration. Public **1.4.0**; next consolidated **1.4.1**. See the [capability gaps and upstream references](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/agent-asset-gap-analysis.md) for format-specific limits and product claims still requiring comparative evaluation.
+
 ### Native PDF annotations (Unreleased)
 
 Discover pdf_annotations_enabled and assemble complete contract/schema pages. read_pdf_annotations pins asset_id/revision; read_pdf_annotation adds pdf_annotation_locator. Follow every annotation.text_excerpt at one text_sha256 for complete catalogs, records and operation receipts. Identity combines revision, page, zero-based annotation-array index and native object/generation; names alone are not identities.

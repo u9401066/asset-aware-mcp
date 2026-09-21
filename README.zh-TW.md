@@ -158,7 +158,7 @@ CRUD、Excel 與資產包，並修正實測發現的旋轉圖片裁切問題。�
 - 驗證完整解析區塊的引用；文字分段仍保留完整證據 hash。
 - 匯出區塊筆記、原始 DOCX 與各套件檔案的原始位元組；保留舊快照及連結。
 - MCP 檢查來源與格式，Agent 核對語意、Word 版面、欄位及抽取完整性。
-  結構插刪與完整 CSL 引用仍待實作。
+  後續 Unreleased 已加入指定範圍的結構插刪與文稿 CSL 引用，依目前 contract 使用。
 
 ## v1.2.0 原生證據 Wiki 與筆記保護
 
@@ -168,7 +168,7 @@ CRUD、Excel 與資產包，並修正實測發現的旋轉圖片裁切問題。�
 - 保留既有原生快照，PDF bundle 遇到人工修改會拒絕替換；通過核對的更新保留備份，
   相同內容直接重用。
 - 延續固定資產 ID、XLSX 建立、局部儲存格編輯與 MCP SDK 2.2.0。
-  語意、畫面、公式結果仍由 Agent 核對；完整 CSL 仍待實作。
+  語意、畫面、公式結果仍由 Agent 核對；文稿 CSL 引用已加入後續 Unreleased。
 
 ## v1.0.1 可靠性翻新
 
@@ -199,17 +199,21 @@ Agent 需要操作原生文件、可編輯元件與可重用證據，包含獨�
 目標是跨格式 CRUD 與格式保留。MCP 提供來源／版本、格式保護及操作結果的必要檢查；
 Agent 負責完整的語意與視覺核對，依據可檢查的結果協調修正。
 
-目前覆蓋 PDF 讀取／拆解／可攜資產匯出、DOCX/DFM 局部編修與獨立 A2T 表格。
-v1.1.0 新增原生檔案登錄、不可變版本、獨立 XLSX 建立、XLSX/XLSM 局部儲存格編輯、
-明確來源回寫與外部修改同步。詳見[原生文件用法與限制](docs/wiki/Native-File-Assets.md)。
-更廣泛的原生 CRUD、各格式必要檢查與 Agent 核對流程仍在開發；有轉檔工具不代表保真回寫。
-詳見[規格與 contract](docs/spec.md)及[路線圖](ROADMAP.md)。
+目前 main 已有 PDF 頁面／區域／批註、指定範圍的 DOCX 編輯、試算表與
+CSV／TSV、PPTX 元件、獨立 A2T 表格，以及固定版本的引用與 Wiki。
+這些 Unreleased 能力以實際 contract 為準；公開版 **1.4.0**，下次整合 **1.4.1**。
+獨立圖片仍是內部核心，MCP／引用／Wiki 串接尚未完成。詳見
+[原生文件用法與限制](docs/wiki/Native-File-Assets.md)及
+[能力缺口與上游參考](docs/agent-asset-gap-analysis.md)。
+更廣泛的原生 CRUD 仍在開發；有轉檔工具不代表保真回寫。詳見
+[規格與 contract](docs/spec.md)及[路線圖](ROADMAP.md)。
 
 Asset 包含身分、版本、原生定位、表示、關係、操作能力與驗證狀態。Wiki 筆記是
 連回資產的文本投影；人類引用格式可擴充，底層證據引用保持獨立。
 
 v1.1.0 已加入引用格式 contract：支援來源標籤、作者／年份、指定編號與自訂範本，
-套用到證據與 Foam 匯出時保留原始來源資訊；完整 APA/CSL 渲染仍待實作。
+套用到證據與 Foam 匯出時保留原始來源資訊；main 的 Unreleased 已另提供
+完整文稿的 CSL 引用與參考文獻流程，來源驗證與引用排版維持分開。
 詳見[用法與限制](docs/wiki/LLM-Wiki-Knowledge-Base.md#citation-format-contracts)。
 
 1.2.0 新增原生引用驗證與 `native/export_wiki`：版本固定的筆記、

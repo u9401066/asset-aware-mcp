@@ -200,7 +200,7 @@ See [DOCX creation and structure](docs/wiki/Native-File-Assets.md#docx-creation-
 - Export DOCX block notes, original documents and exact package-part attachments.
   Existing opaque DOCX and spreadsheet snapshots retain their identities and content.
 - Source/package checks remain mechanical; agents review meaning, Word layout,
-  fields and extraction coverage. Structural edits and full CSL remain planned.
+  fields and extraction coverage. Later Unreleased work adds scoped structural edits and document-level CSL; see the current capability contract.
 
 ## v1.2.0 native evidence wikis and note preservation
 
@@ -210,7 +210,7 @@ See [DOCX creation and structure](docs/wiki/Native-File-Assets.md#docx-creation-
 - Preserve existing native snapshots and detect manually changed PDF bundle notes;
   verified PDF bundle updates retain backups, while identical exports reuse files.
 - Builds on stable native file IDs, XLSX creation and scoped cell edits with MCP SDK 2.2.0.
-  Agents still review semantics, rendered layout and formulas; full CSL remains planned.
+  Agents still review semantics, rendered layout and formulas; document-level CSL is now available in Unreleased.
 
 ## v1.0.1 reliability refresh
 
@@ -247,12 +247,15 @@ The direction is cross-format CRUD with format preservation. MCP checks source
 versions, format constraints and operation results; the agent verifies meaning
 and visual layout and coordinates corrections using inspectable evidence.
 
-Current coverage: PDF ingestion/decomposition/portable export, DOCX/DFM scoped
-editing and independent A2T tables. Version 1.1.0 adds native file
-registration, immutable revisions, XLSX creation and scoped XLSX/XLSM cell edits,
-with explicit source writeback and refresh. See [native usage and limits](docs/wiki/Native-File-Assets.md).
-Broader native CRUD, per-format checks and agent review workflows remain ongoing;
-conversion is not evidence of a faithful round trip. See [contracts](docs/spec.md) and [roadmap](ROADMAP.md).
+Current main coverage includes PDF pages/regions/annotations, scoped DOCX editing,
+native workbook and CSV/TSV workflows, PPTX components, independent A2T tables and
+revision-bound citations/Wikis. These Unreleased additions require the advertised
+runtime capabilities; public release remains **1.4.0**, next consolidated **1.4.1**.
+Standalone raster processing is an internal kernel awaiting MCP/evidence/Wiki
+integration. See [native usage and limits](docs/wiki/Native-File-Assets.md) and the
+[capability gaps and upstream references](docs/agent-asset-gap-analysis.md).
+Broader native CRUD and per-format review remain ongoing; conversion does not prove
+a faithful round trip. See [contracts](docs/spec.md) and [roadmap](ROADMAP.md).
 
 Assets carry identity, revision, native locators, representations, relationships,
 capabilities and validation state. Wiki notes are linked projections; configurable
@@ -260,7 +263,7 @@ citation display must preserve the underlying evidence references.
 
 Version 1.1.0 includes citation format contracts: source,
 author/year, explicit numbering and custom templates for evidence/Foam exports.
-They preserve canonical provenance; full APA/CSL rendering remains future work.
+They preserve canonical provenance; Unreleased also adds document-level CSL citations and bibliography rendering, separately from source verification.
 See [usage and limits](docs/wiki/LLM-Wiki-Knowledge-Base.md#citation-format-contracts).
 
 Version 1.2.0 adds native reference verification and `native/export_wiki`:

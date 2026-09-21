@@ -1,5 +1,31 @@
 # Progress (Updated: 2026-09-21)
 
+## Product scope documentation — capability matrix and honest comparison criteria
+
+Local kernel commit 46e0494 contains 25 counted files plus two MEM files, author
+u9401066 <u9401066@gap.kmu.edu.tw>, on main. It is not pushed yet; production MCP
+wiring remains unchanged. Image/PDF worker focused tests pass 76/76, mypy eleven
+sources, Ruff, release-harness and workflow security audits pass. Full release and
+actual-Agent validation must follow integration, not be borrowed from the older
+PDF publication proof.
+
+Rewrote docs/agent-asset-gap-analysis.md from current contracts/implementation:
+removed unsupported 100%/94.5% fidelity and enterprise-share percentages; documented
+per-format capabilities and explicit unknowns. Built-in model analysis may suffice
+for summaries/Q&A; continued native editing, immutable evidence and reusable Wiki
+are the value proposition to test, not an asserted benchmark victory. Comparison
+must include a coding Agent with existing libraries, not only model file upload.
+Official Docling, PyMuPDF, pikepdf, pypdf, pdfplumber, OCRmyPDF, Pillow and libvips
+references are linked with distinct roles. No new dependencies installed.
+
+README/Chinese README now describe current main separately from public1.4.0 and
+remove stale pending-CSL claims. Chinese wiki and English native-file page explain
+responsibilities and pending raster integration. Regenerated Pages payload; 28 docs
+checks pass in 0.18s, node --check docs/site.js and diff hygiene pass. Nine counted
+doc files plus two MEM files in this segment. Local only; do not claim new Pages
+publication. Next remains image application/MCP/evidence/Wiki and SDK2/actual Codex,
+then full local release gates and exact-head CI/Pages checks. Next release1.4.1.
+
 ## Standalone raster kernel — focused verification passed, integration pending
 
 Previous PDF annotation milestone is fully published at main
