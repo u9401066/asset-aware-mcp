@@ -80,8 +80,20 @@ class DocxNoteDelete(NativeModel):
     literal_body_text: Literal["preserve"]
 
 
+class DocxNoteIdChange(NativeModel):
+    note_id: NoteId
+    new_note_id: int = Field(ge=1, le=2**31 - 1)
+
+
+class DocxNoteRemap(NativeModel):
+    op: Literal["remap_ids"]
+    note_kind: NoteKind
+    part: str = Field(min_length=1, max_length=1024)
+    mappings: list[DocxNoteIdChange] = Field(min_length=1, max_length=20_000)
+
+
 NoteStructureEdit = Annotated[
-    DocxNoteCreate | DocxNoteDelete, Field(discriminator="op")
+    DocxNoteCreate | DocxNoteDelete | DocxNoteRemap, Field(discriminator="op")
 ]
 
 

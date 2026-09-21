@@ -18,8 +18,10 @@ from tests.codex_docx_structure.fonts import environment, snapshot
 from tests.codex_docx_structure.renders import replay
 from tests.integration.test_native_docx_stdio_e2e import _native
 from tests.native_docx_note_lifecycle_helpers import (
+    assert_native_id_correction,
     assert_native_stages,
     edits,
+    id_correction,
     inspect_pages,
     text_edit,
 )
@@ -168,6 +170,34 @@ async def test_note_lifecycle_over_sdk2(tmp_path, render):
         assert (await native(op="verify", reference=selection["evidence"]))["valid"]
         final = (revisions / asset["revision"]).read_bytes()
         assert_native_stages(original, intermediate, final)
+        historical_new = await read(locator(identity=11))
+        historical_end = await read(locator(kind="endnote", identity=5))
+        corrected = await native(
+            op="update_docx_notes",
+            asset_id=asset["asset_id"],
+            expected_revision=asset["revision"],
+            docx_notes_update={
+                "scope": "definitions_and_native_body_references",
+                "expected_catalog_sha256": listing["catalog_sha256"],
+                "edits": id_correction(),
+            },
+        )
+        assert corrected["success"], corrected
+        reviewed = await complete(native, corrected["review_request"])
+        assert len(reviewed["operation_result"]["changes"]) == 2
+        asset = corrected["asset"]
+        repaired = (revisions / asset["revision"]).read_bytes()
+        assert_native_id_correction(final, repaired)
+        final = repaired
+        for entry in reviewed["catalog"]["notes"]:
+            await read(entry["locator"])
+        for record in [historical_new, historical_end]:
+            assert (await native(op="verify", reference=record["evidence"]))["valid"]
+        assert "NEW FOOTNOTE" in (await read(locator(identity=1)))["text"]
+        assert (
+            "ENDNOTE 1,234.50"
+            in (await read(locator(kind="endnote", identity=2)))["text"]
+        )
         second = await native(
             op="export_wiki",
             asset_id=asset["asset_id"],
@@ -227,6 +257,6 @@ async def test_note_lifecycle_over_sdk2(tmp_path, render):
         assert published["success"] and target.read_bytes() == final
         assert (
             len((await native(op="history", asset_id=asset["asset_id"]))["history"])
-            == 3
+            == 4
         )
         assert source.read_bytes() == original and source.stat().st_mtime_ns == mtime

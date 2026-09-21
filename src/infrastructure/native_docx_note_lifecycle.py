@@ -15,10 +15,12 @@ from src.domain.native_docx_notes import (
     DocxNoteCreate,
     DocxNoteDelete,
     DocxNoteLocator,
+    DocxNoteRemap,
     DocxNotesUpdate,
 )
 from src.infrastructure.native_docx_builder import build_blocks
 from src.infrastructure.native_docx_note_anchors import insert_anchor, marker_run
+from src.infrastructure.native_docx_note_remap import remap_note_ids
 from src.infrastructure.native_docx_notes import (
     TYPES,
     catalog,
@@ -238,11 +240,12 @@ def change_notes(
     for edit in request.edits:
         package = checked_docx(current, for_edit=True)
         before = catalog(package)
-        roots, receipt = (
-            create_note(package, edit)
-            if isinstance(edit, DocxNoteCreate)
-            else delete_note(package, edit)
-        )
+        if isinstance(edit, DocxNoteCreate):
+            roots, receipt = create_note(package, edit)
+        elif isinstance(edit, DocxNoteRemap):
+            roots, receipt = remap_note_ids(package, edit)
+        else:
+            roots, receipt = delete_note(package, edit)
         expected = {part: canonical(root) for part, root in roots.items()}
         values = {**package.parts, **{p: xml_bytes(n) for p, n in roots.items()}}
         current = write_package(package, values)

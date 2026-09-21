@@ -64,6 +64,48 @@ def text_edit(record):
     }
 
 
+def id_correction():
+    return [
+        {
+            "op": "remap_ids",
+            "part": part,
+            "note_kind": kind,
+            "mappings": [{"note_id": old, "new_note_id": new} for old, new in pairs],
+        }
+        for part, kind, pairs in [
+            (FOOT, "footnote", [(11, 1)]),
+            (END, "endnote", [(12, 1), (5, 2)]),
+        ]
+    ]
+
+
+def assert_native_id_correction(before, after):
+    original, corrected = parts(before), parts(after)
+    assert original.keys() == corrected.keys()
+    assert {p for p in original if original[p] != corrected[p]} == {
+        FOOT,
+        END,
+        "word/document.xml",
+    }
+    expected = {
+        p: etree.fromstring(original[p]) for p in [FOOT, END, "word/document.xml"]
+    }
+    for part, kind, mapping in [
+        (FOOT, "footnote", {11: 1}),
+        (END, "endnote", {12: 1, 5: 2}),
+    ]:
+        for n in expected[part]:
+            old = int(n.get(W + "id"))
+            if old in mapping:
+                n.set(W + "id", str(mapping[old]))
+        for n in expected["word/document.xml"].iter(W + kind + "Reference"):
+            old = int(n.get(W + "id"))
+            if old in mapping:
+                n.set(W + "id", str(mapping[old]))
+    for part, root in expected.items():
+        assert canonical(root) == canonical(etree.fromstring(corrected[part]))
+
+
 def canonical(node):
     return etree.tostring(node, method="c14n", exclusive=True)
 
@@ -143,4 +185,17 @@ def inspect_pages(data, *, final):
             assert "REMOVE OLD FOOTNOTE" in texts[1]
             assert "NEW FOOTNOTE" not in "".join(texts)
         assert pdf[0].search_for("FOOTNOTE")[0].y0 > pdf[0].rect.height / 2
+    return pdf_data, texts
+
+
+def inspect_id_mismatch(data):
+    """Retain the actual Writer24 failure before the explicit corrective edit."""
+    pdf_data = independent_pdf(data)
+    with pymupdf.open(stream=pdf_data, filetype="pdf") as pdf:
+        texts = [page.get_text() for page in pdf]
+        assert len(texts) == 3, texts
+        assert "1 VERIFIED FOOTNOTE" in texts[0], texts[0]
+        assert "i ENDNOTE 1,234.50" in texts[2], texts[2]
+        assert texts[0].index("VERIFIED FOOTNOTE") < texts[0].index("NEW FOOTNOTE")
+        assert texts[2].index("ENDNOTE 1,234.50") < texts[2].index("NEW ENDNOTE")
     return pdf_data, texts

@@ -1,5 +1,48 @@
 # Active Context
 
+## Native Word note ID correction — validated runtime/spec/tests
+
+Prior notes main aff334e CI35457459127 failed honestly: npm503 maintenance and a
+real Writer24.2.7 note-content binding error (202pass/1fail integration423.87s).
+Pages35457458636 all3pass and6publicfilesexact; all other functional/platform jobs
+passed. npm service recovered; both locked npm audits now0 findings. Do not rerun
+old integration unchanged or weaken the original page assertions.
+Official isolated24.2.7.2 independently reproduced the wrong footnote/endnote
+contents. Eight controlled runs show body-ordered definitions plus body-aligned
+IDs pass both7.3.7 and24.2.7. Probe files/first CI failure remain retained under
+/run/user/1000/asset-aware-docx-notes-lo24-replay and matching CI-log prefixes.
+Added explicit remap_ids inside update_docx_notes: bounded part/kind/old-new maps,
+atomic swaps/collision checks, normal-role/main-body scope, exact inverse XML
+preservation checks and full mapping/reference receipts. Ordinary edits keepIDs;
+only explicit mapping changes them. Source and historical refs/Wikis remain intact.
+No hidden preview transformation; actual exported DOCX is the reviewed source.
+Final production22b65b0de604570966f520b6860bec439813d71fd0751c0bd5b2331fddfc6758.
+Default Codex03 on24.2.7.2:211success+2recovered input errors/282.24s;24complete notes,
+4catalogs,13contracts,4managed revisions,2Wikis,9actual PNGs independently replayed.
+Agent saw wrong contents, applied explicit maps and reviewed all corrected pages;
+old foot11/end5/deletedfoot8 refs still verify. Viewed before/after page1 and final
+page3 locally. No model override, no Microsoft Word or universal-fidelity claim.
+Full3403pass/33optional skips/426.69s on7.3 withCJK andNIST/NASA; focused74/18.06s;
+SDK24 bothconfigs+16initialremaptests18pass27.25s; final19remaptests in full suite.
+Python3.10 79pass/1optional skip28.60s. Wheel/Docker outsidecheckout both reproduce
+24notes/4catalogs/2exactWikis at same source. Standardpip/doctor/tools/SDK2 pass.
+Ruff707/mypy298/Bandit/harness/sync/allartifacts,uv214packages andnpm audits pass.
+VSIX199tests/64files/install-update pass; GUI activation to exact-head CI.
+Browser8desktop/mobile zh/en states pass,actualdesktopzh/mobileen reviewed; cached
+CDN assets used. First throwaway browser expectation accidentally renamed product
+projection token; fixed harness-only, original failed log retained. Docs25pass.
+Dockerdebf32b86c2e andbuilderab576b5192d1 removed; all11owned stagedruns restored
+with exacthashes/mtimes. OwnedHTTP8886 stopped. Privatepy310 retaineduntilCI.
+IsolatedWriter24 fixture moved with fullhash/mtime/symlink verification into
+/dev/shm/asset-aware-docx-notes-lo24; original/run path is a symlink. Official
+archiveSHAbe967ebc63cb15b831b4e8176492e83eb625dc00852eb96eda2b299b6e74bb74;
+downloadedarchive removed after verification, rendered evidence retained.
+Proof /run/user/1000/asset-aware-docx-notes-remap-validation.json. Thisruntime7file
+segment plus2MEM precedes separate2fileactualaudit and20filedocs/harness segments.
+Then pushmain and verify all10CI jobs,3Pages jobs,sixlivefiles. Broadgoal active.
+Public1.4.0,nextconsolidated1.4.1; no version/tag/modeloverride/subagents/PR.
+Original dirty detached checkout untouched; authoru9401066@gap.kmu.edu.tw.
+
 ## Native Word notes documentation — ready for publication
 
 Runtime c074858 and actual-agent audit37a513d are committed under u9401066.
