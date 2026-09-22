@@ -7,6 +7,18 @@
 
 ## [Unreleased]
 
+- Implement the internal native PDF field core: exact tree/object references,
+  duplicate names, hidden values, complete widget coverage and checked CRUD for
+  text, choice, checkbox/radio fields and nested groups. Preserve button appearance
+  streams; require explicit complete styles for visible text/choice replacement.
+  Verify serialized and inverse native graphs, source content and untouched pages;
+  retain every removed field in receipts. Cover Unicode, multiselect indices,
+  font reuse, no-op bytes, rotation/crop/UserUnit, malformed dependencies and writer
+  corruption. Real upstream trials retained a rejected overflow and an Agent
+  correction of an unwanted border. This core is not yet exposed through MCP;
+  managed evidence/Wiki and default Codex form evaluation remain required. Public
+  **1.4.0**, next consolidated **1.4.1**; no version bump in this segment.
+
 - Fix VSIX install smoke tests accepting remote terminal launchers that ignore
   isolation directories. Require supported CLI isolation options, an actual
   installed manifest inside the isolated directory and exact installed Agent guide

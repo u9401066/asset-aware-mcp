@@ -1,5 +1,284 @@
 # Active Context
 
+## Native PDF field core — full local verification passed; publication next
+
+Current goal turn: PROGRESS. Public/version declarations stay1.4.0; next consolidated
+release1.4.1, no per-feature bump/tag. Internal core only: field MCP contract,
+managed evidence/citations/Wiki and default Codex field evaluation remain pending.
+Full current suite:4084passed/49optional-environment skips/3intentional malformed
+fixture warnings/598.37s. Session40006 completed exit0. Final80 field tests are
+included; all349runtime hashes match the focused core proof, wheel and Docker.
+Ruff/format826/mypy349/Bandit/zizmor, release-harness audit, allartifact/metadata
+checks, docs generation, asset synchronization and diff hygiene pass.
+Installed Python3.13 wheel AND actual Dockerfile Python3.12 image reproduced all
+five reviewed synthetic/upstream CRUD outputs and COMPLETE receipts exactly;
+doctor/tool listing/SDK2 stdio also pass. These are internal adapter/package checks,
+NOT a field MCP/default Codex evaluation. Extension and bundled harness bytes are
+unchanged from82061f7: prior205local tests reused, new-head remote activation needed.
+Local proof:/run/user/1000/asset-aware-pdf-field-local-proof.json; full/source/artifact
+and replay logs/manifests use the same prefix. Completed passing fulltest temp
+781586800bytes removed with manifest; previous3passing PDF temps likewise removed.
+First cleanup inventory blocked on an intentional FIFO fixture; only its owned
+cleanup shell/child stopped (86725 exit143), file-type-aware inventory completed.
+The full TEST run passed first time; no assertion/timeout change. All failed prior
+core/model/visual logs remain. Docker imagea51949f4341d/builder459f9b5febab and own
+wheel venv removed. All11 historical trace trees temporarily staged for buildspace
+were restored with exact bytes/size/mtime; no other project/cache cleanup.
+Next: exactstage14counted+2MEM, commit/push directmain asu9401066, noPR/tag, then all
+10CI jobs/3Pages jobs/8deployed bytechecks before furtherdevelopment. Prepared watcher
+/run/user/1000/asset-aware-pdf-field-verify-publication.py takes the new full HEAD.
+Parent82061f7 stays fullypublished; original dirty checkout remains untouched.
+
+## Native PDF field CRUD core — verified; MCP integration/publication next
+
+Current goal turn: PROGRESS. Internal native creation/update/deletion now exists;
+this is no longer only a read catalog. The complete user objective stays ACTIVE.
+Public version remains 1.4.0; next consolidated release 1.4.1, no feature bump/tag.
+Designated agent-assets main HEAD remains 82061f7; no commit/push attempted here.
+Original dirty worktree untouched. Current segment: 14 counted files + both MEM,
+all under the 30-file cap. Exact source hashes and verification scope are at
+/run/user/1000/asset-aware-pdf-field-core-proof.json. Prior foundation proof is
+historical and does NOT describe the newly extended domain model/current sources.
+
+New files/modules: native_pdf_field_appearance.py (disposable HTML/Unicode form
+XObjects, glyph/fit checks, point/UserUnit/rotation conversion, font reuse),
+native_pdf_field_journal.py (planned-key/array undo, incoming dependencies and
+bounded edge scanning), native_pdf_field_values.py (typed V/AS/Opt/I updates),
+native_pdf_field_edits.py (atomic CRUD, serialized/inverse graph and pixel checks),
+and test_native_pdf_field_edits.py. Existing new domain model now has typed edits,
+styles, definitions and explicit new_groups creation. README, CHANGELOG and the
+human gap analysis link the expanded native-pdf-fields-spec and clearly mark the
+core as INTERNAL, not an advertised MCP operation.
+
+Core supports text/choice/checkbox/radio creation, multiple widgets, hidden values,
+root/child/new nested group creation, exact-reference value/style updates and
+subtree deletion with ALL removed field records. Visible text/choice edits need
+explicit styles for every widget; existing rectangles and widget rotations stay.
+Buttons preserve appearance stream bytes and update all AS with V. Choice indices
+and duplicate export values survive. Multiline/comb and single-line fit are distinct;
+no silent truncation, glyph replacement, wrapping or automatic font-size reduction.
+Identical value/style yields original bytes; source fonts/resources are reused.
+Existing scripts/actions are preserved, not executed or semantically verified.
+Guards retain source encryption/signatures/XFA, ambiguous/direct/shared ownership,
+locks/read-only/tags, NeedAppearances reconciliation, rich/password/file-select value
+workflows, ambiguous radio state ownership and inherited-choice clearing limits.
+
+Verification on final current core: 80 focused tests passed (33 record + 47 edit),
+7.01s; the 3 warnings are intentional malformed fixtures. Earlier broad PDF suite:
+314 passed, 22.39s, BEFORE the last edge-accounting regression/fix; final 80 include
+that last change. Full Ruff passed, format826 files passed, mypy349 sources passed,
+25 docs tests passed, site generation check current, diff check passed. No full
+release harness or form MCP stdio/default Codex test yet. No task subprocess remains:
+sessions 21713/24905/26650/49859/37729/54105/70106/35148/53976/78501/27950 all terminal.
+
+Retained direct-adapter visual exercise: /dev/shm/asset-aware-pdf-field-visual-01,
+original/created/changed/deleted PDFs and all 8 actual page images viewed. Both
+visible fields changed from 中文007µgα to 更新008µgβ, with source content retained.
+Final code reproduced all three prior output PDFs byte-exact; proof is
+/run/user/1000/asset-aware-pdf-field-final-reproduction-01.json. Current complete
+receipts are receipts-final.json; original receipts remain. This is NOT the user-
+required default Codex/MCP evaluation.
+
+Pinned real upstream form.pdf received Chinese text, /Yes checkbox and /Choice2
+radio updates, then text deletion. Attempt01 rejected 12pt overflow (log retained).
+Attempt02 used explicit 8pt and passed native checks, but actual visual comparison
+revealed its default border1 added an unwanted black frame. Original field MK was
+empty with no BS/Border/AP; Agent explicitly corrected border_width=0 in attempt03.
+ALL 3 final images were viewed: no added border, fitting text, native checkbox/radio
+appearance retained. Source bytes unchanged. Final /dev/shm/asset-aware-pdf-field-
+upstream-edits-03/proof.json marks this scoped visual review; attempt02 PDFs/images
+and attempt01 failure remain. In total14 images viewed (8 synthetic, 3 attempt02,
+3 corrected attempt03). No general form/viewer fidelity claim.
+
+Also retained failed edits-test-02: an empty no-border draw still emitted an S
+stroke through PyMuPDF. Skipping that draw fixed it; original pixel equality test
+now passes. Do not relax it. pikepdf items() includes null entries that keys() omits;
+style/resource shallow copies filter those semantically absent values and have a
+regression. Dependency accounting now counts repeated indirect EDGES, not just
+container nodes; a regression proves the budget cannot be bypassed by an array of
+references. Full logs: /run/user/1000/asset-aware-pdf-field-*.
+
+Next work: finish the appropriate segment release checks and publish this coherent
+core before expansion exceeds30 files, then integrate paged MCP field reads/CRUD,
+worker/adapter methods, managed receipts/full refs, selections/derivations/citations/
+Wiki and actual default Codex review/correction. No MCP enabled flag is present yet.
+Read-only integration reconnaissance found NativePdfAnnotationOperations in
+src/application/native_pdf_annotation_operations.py; op routing is in
+native_document_service.py, native_document_contract.py and domain/native_operations.py.
+Reference unions additionally touch domain/native_assets.py/native_pdf.py/
+native_selection.py/native_derivation.py and application/native_evidence_service.py.
+Preserve full objective including ODS lifecycle and other formats; do not declare
+completion based on this backend or substitute a read-only-only endpoint.
+
+Rules persist: direct main, author AND committer u9401066 <u9401066@gap.kmu.edu.tw>,
+no PR/subagents, exact staging, atomic both MEM, <=30 counted files excluding ONLY
+both MEM. After any push verify exact-head 10 CI jobs, 3 Pages jobs and deployed
+bytes before further development. Prior82061f7 publication gate is complete. No
+source writeback or original worktree mutation. Safe isolated VSIX CLI is retained
+/dev/shm/asset-aware-ods-guides-cli-02/code; never use remote-cli launcher. Current
+owned PDF test/visual fixtures remain retained; do not clean other projects/caches.
+
+
+## Native PDF field identities — tested foundation; CRUD remains active
+
+Current goal turn: PROGRESS. Public version is still 1.4.0; next consolidated
+release is 1.4.1. All seven version values (Python project/module/uv root package,
+Docker and extension manifest/lock/root lock entry) were re-read and agree.
+Do not bump a version per feature. No new tag or release was created.
+
+Six uncommitted counted files now implement and document the internal PDF field
+read/identity foundation: src/domain/native_pdf_fields.py;
+src/infrastructure/native_pdf_field_tree.py; src/infrastructure/native_pdf_fields.py;
+tests/native_pdf_field_helpers.py; tests/unit/test_native_pdf_field_records.py;
+docs/native-pdf-fields-spec.md. Both MEM are modified as required; HEAD/main and
+origin/main remain 82061f7. Original dirty worktree remains untouched. No new MCP
+operation/flag is advertised yet. This is NOT delivered form CRUD or overall goal
+completion. Continue native creation/update/deletion, checked serialized readback,
+MCP/evidence/Wiki, then actual default Codex visual review/correction. Keep ODS
+lifecycle and the broader format objective in scope.
+
+Implementation: physical Fields/Kids index paths + original object identities;
+full refs pin revision/record hash, never names alone. Raw traversal retains radio
+owners and every page Widget occurrence, duplicate names, hidden fields, ancestor
+origins, multiselect Opt/V/I/TI, original appearance graphs/resources and unknown
+properties. Parent links, detached/orphan/direct widgets and ambiguity remain
+explicit. Cycles/shared tree ownership/invalid arrays and bounded count/depth/size
+fail instead of implicit repair. Catalog includes form-properties and full record
+hashes; group records do not recursively claim descendant values. Native encryption,
+signature and XFA mutation guards are unchanged. Reader never calls form repair.
+
+Validation completed: 33 new field-record regressions; 268 PDF-related unit/audit
+tests passed in 16.39s, including those 33. Three PageCopyWarning observations are
+from intentionally malformed orphan/direct/bad-Fields fixtures. Full repository
+Ruff check passed; format check 821 files passed; mypy all 345 source files passed.
+No full release harness, new form stdio workflow or actual Codex form run yet.
+No commit/push has been attempted for this segment. Logs/proof:
+/run/user/1000/asset-aware-pdf-field-foundation-proof.json
+/run/user/1000/asset-aware-pdf-field-unit-01.log
+/run/user/1000/asset-aware-pdf-fields-version-proof.json
+Owned pytest fixture directory: /dev/shm/asset-aware-pdf-field-unit-01 (retain).
+Session 89463 completed exit 0; no live task subprocess remains.
+
+Pinned upstream checks on final current source: form.pdf gives 4 logical fields /
+5 widgets, zero orphans; form_210966.pdf gives 64 nodes / 61 terminal fields /
+69 widgets, zero orphans, XFA retained. Source bytes and complete native graphs
+stay unchanged. IMPORTANT correction: form_dd0293.pdf is encrypted (empty user
+password permits low-level pikepdf opening); our existing NativePdfPackage guard
+rejects it. Prior raw upstream lookup was not proof of native package acceptance.
+The first catalog experiment stopped on that guard after two successful inputs;
+its observation is retained as asset-aware-pdf-field-upstream-catalog-01-failure.json
+(explicitly reconstructed from original tool result, not an original stdout log).
+The follow-up catalog-02.json and foundation proof distinguish the guarded input;
+never strip encryption/XFA or claim this input passed our native workflow.
+
+Latest published 82061f7 remains fully verified: 10 CI jobs, 3 Pages jobs and all
+7 deployed files. Newly inspected exact-head integration log reports 212 passed /
+556.06s. No publication gate remains for that prior commit. Current runtime changes
+need their own appropriate checks before future publication; do not inherit the
+prior unchanged-runtime release proof for these new Python modules.
+
+Remain on designated agent-assets main; author and committer must both be
+u9401066 <u9401066@gap.kmu.edu.tw>. At most 30 counted files per segment, excluding
+only both MEM; exact staging and atomic MEM updates. No subagents, PR, source
+writeback, or changes in the original dirty worktree. Full goal remains ACTIVE.
+
+
+## 82061f7 publication verified — native PDF fields next
+
+Watcher 84347 completed with exit 0. ALL 10 CI jobs, ALL 3 Pages jobs and all 7
+deployed files match 82061f7b9412c7a122d74f76255538a2f512c0a1. The publication gate
+is complete; next development is allowed. Exact-head remote evidence: Linux and
+macOS 205 extension passes plus installed activation; Windows 204 passes / 1 existing
+platform skip, all 6 new isolation regressions and actual isolated installation;
+3,755 Python unit passes / 1 skip; Python 3.10 1,611 passes / 4 skips / 924.23s;
+integration success in its retained log. Proofs/logs: /run/user/1000/asset-aware-ods-guides-*.
+Completed owned npm dependencies/cache were removed after all platform checks;
+workspace node_modules link was already absent. Safe CLI shim remains at
+/dev/shm/asset-aware-ods-guides-cli-02/code, pointing to LOCAL code-server-insiders.
+Never use the remote terminal launcher for future local install smoke.
+
+Current focus is native PDF AcroForm CRUD, preserving exact field identity, all page
+Widget occurrences and appearance/value consistency, followed by MCP/evidence/Wiki
+and actual default Codex review/correction. Keep ODS remaining lifecycle and all other
+formats in scope. No PDF runtime files have been edited yet. Do not replace this
+objective with read-only catalog support or claim the whole goal complete.
+
+Upstream pinned reference inputs are at /dev/shm/asset-aware-pdf-forms-upstream-01;
+manifest /run/user/1000/asset-aware-pdf-forms-upstream-fixtures-01.json has tag,
+git blob IDs and SHA-256. form.pdf: 1 page, 4 root fields, 5 Widgets, no XFA;
+form_210966.pdf: 2 pages, 69 Widgets, XFA; form_dd0293.pdf: 4 pages, 102 Widgets,
+XFA. Preserve dual representation; do not strip XFA to claim AcroForm compatibility.
+Read-only native lookup left object graph hashes unchanged for all 3 PDFs.
+New concrete upstream issue: low-level AcroForm.fields enumerates the two radio
+Widgets as separate terminal fields; get_annotations_for_field on their logical
+parent returns zero in form.pdf. High-level Form special-cases this via names, which
+cannot bind duplicate names safely. Walk the raw Fields/Kids tree with original
+physical paths/object IDs and actual page Annots; keep group and widget identities
+separate. Hidden/nonvisual fields must remain represented. Existing exact-page and
+annotation geometry/object-graph helpers can be reused. AcroForm.validate defaults
+repair=True; readonly validation must explicitly disable it. Other limits and sources
+are retained in asset-aware-pdf-forms-upstream-research-01.json.
+
+Version 1.4.0; next consolidated 1.4.1. Direct main, author/committer u9401066
+<u9401066@gap.kmu.edu.tw>, <=30 counted files per segment excluding only both MEM.
+No subagents/PRs. Original dirty worktree remains untouched. Full goal ACTIVE.
+
+## Pushed 82061f7 — publication verification pending
+
+Committed and pushed directly to main as u9401066 <u9401066@gap.kmu.edu.tw>
+(author and committer), 22 counted files + both MEM. HEAD, origin/main and remote
+main all verified as 82061f7b9412c7a122d74f76255538a2f512c0a1. Public version remains
+1.4.0; next consolidated release 1.4.1; no tag/release/version bump.
+
+Live watcher session 84347 runs /run/user/1000/asset-aware-ods-guides-verify-publication.py.
+It was re-polled directly and remains running. CI 35640530886 currently has 7
+successful jobs. Pages 35640529346 passed all 3 jobs and all 7 deployed files
+match this commit exactly, including the human gap analysis. Do not start further
+development until all 10 CI jobs succeed. Keep polling this handle; do not restart
+on an observation timeout. Proof: /run/user/1000/asset-aware-ods-guides-publication-proof.json.
+
+Fresh Linux CI evidence at this exact head is now retained in
+/run/user/1000/asset-aware-ods-guides-ci-linux-vsix.log: 205 unit passes, isolated
+installation manifest/guide-file checks, and actual installed extension activation
+all passed. This supplies new-head activation evidence; local activation remains
+not run. Other jobs are still pending. Current continuation is a VERIFIED WAIT:
+session 84347 was directly observed for 60 seconds and remains live. No new
+runtime, tests or guide edits during this gate. Previous goal turn was PROGRESS.
+
+Further exact-head evidence: macOS 205 unit passes and 2 actual activation tests;
+Windows 204 unit passes / 1 pre-existing platform skip (Codex config symlink test),
+with all 6 new isolation regressions passing and isolated installation verified.
+Windows activation is skipped. Python unit suite: 3,755 passed / 1 skipped, 515.21s.
+Fresh macos/windows/unit logs and hashes are retained under the ods-guides prefix.
+
+Read-only PDF follow-up research changed the implementation approach: installed and
+locked pikepdf 10.13.0.post1 already provides Form and Pdf.acroform. Its name-based
+MultipleFieldProxy writes only the first duplicate field, high-level multiselect is
+single-select, and built-in appearance generators have limited encodings (multiline
+fallback can replace unsupported characters). Use exact field object identity and
+all Widgets, including hidden/nonvisual fields; do not blindly wrap those defaults.
+AcroForm.validate defaults repair=True: readonly analysis must explicitly pass False.
+Evidence, source hash/paths and official URLs are stored in
+/run/user/1000/asset-aware-pdf-forms-upstream-research-01.json. This is research only;
+no PDF field implementation or new runtime/test/guidance edits during the gate.
+Previous goal turn was VERIFIED WAIT; this continuation re-observed live session
+84347 for 60 seconds and collected these new results. Full goal remains ACTIVE.
+
+This turn made concrete progress: delivered guides/docs and fixed false-positive
+VSIX smoke isolation. Final 205 tests, 29 docs/contract tests, 37 packaged AND
+installed bundled assets, real same-version update and 65 unchanged live extension
+files are recorded below and in the local proof. All local test/model/build handles
+are terminal; only watcher 84347 remains. Earlier local smoke passes that used the
+same remote launcher cannot prove isolated installation. Keep the failed trace and
+restoration evidence; remote CI is separate evidence. Actual source workspace files
+in the original dirty checkout were not modified.
+
+After this gate, continue the full format/CRUD/provenance/Wiki goal: ODS remaining
+sheet/grid lifecycle, PDF fields/body operations (field tree plus all Widgets),
+ODT/ODP/HTML/EPUB/email/LaTeX and other stated gaps. The guide segment is not goal
+completion. No subagents, PRs or version jumps. Retained owned npm dependencies:
+/dev/shm/asset-aware-ods-guides-node-01; the workspace node_modules symlink is removed.
+
 ## ODS guidance and isolated VSIX smoke fix — ready for main
 
 This goal turn is PROGRESS. The previous wait completed: watcher 9479 exited 0;

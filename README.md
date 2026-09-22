@@ -296,6 +296,11 @@ See [native usage and limits](docs/wiki/Native-File-Assets.md) and the
 Broader native CRUD and per-format review remain ongoing; conversion does not prove
 a faithful round trip. See [contracts](docs/spec.md) and [roadmap](ROADMAP.md).
 
+The internal [PDF form core](docs/native-pdf-fields-spec.md) now reads exact field
+identities and performs checked native text/choice/checkbox/radio CRUD, including
+shared widgets and nested groups. It is **not yet exposed through MCP**; managed
+evidence/Wiki integration and default Codex evaluation remain in progress.
+
 Assets carry identity, revision, native locators, representations, relationships,
 capabilities and validation state. Wiki notes are linked projections; configurable
 citation display must preserve the underlying evidence references.

@@ -91,12 +91,16 @@ ODS 的實際預設 Codex 測試已完成原始、改名後與公式修正後三
 核對流程，以及長期可用的引用／Wiki。上游解析得更好時，應能替換 adapter，
 而不必丟棄已有的原檔與歷史證據。
 
-PDF 表單是尚待實作的具體例子：[pypdf 表單文件](https://pypdf.readthedocs.io/en/latest/user/forms.html)
+PDF 表單是尚待完成整合的具體例子：[pypdf 表單文件](https://pypdf.readthedocs.io/en/latest/user/forms.html)
 區分文件層的欄位樹與頁面 Widget，同一欄位可以在多頁顯示；
 [PyMuPDF Widget 文件](https://pymupdf.readthedocs.io/en/latest/widget.html)
-提供欄位狀態及更新介面。我們需要把欄位身分、所有顯示位置、值與外觀納入
-同一操作，保留修改前證據，再讓 Agent 核對各頁。這是依上游結構提出的
-實作方向，目前的批註 CRUD 尚不能直接操作 Widget。
+提供欄位狀態及更新介面。[表單原生核心](native-pdf-fields-spec.md)已實作精確
+欄位身分、所有 Widget 位置，以及文字／選項／checkbox／radio 的原生 CRUD，
+但**尚未接入 MCP、版本證據及 Wiki 工作流**，不能視為已交付的 MCP 能力。
+真實上游樣本曾因文字放不下而被檢查拒絕；Agent 調整字級後，又從實際頁面
+發現預設外觀多加了邊框，再依原始欄位設定明確移除。這個例子說明機械檢查
+與視覺／意圖核對的分工；尚不是預設 Codex 透過 MCP 完成的評估。
+既有批註 CRUD 仍不能直接操作 Widget。
 
 ## 下一步與驗收方式
 
