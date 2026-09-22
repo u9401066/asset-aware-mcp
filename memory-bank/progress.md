@@ -1,5 +1,68 @@
 # Progress (Updated: 2026-09-22)
 
+## 1.4.1 formally published and public artifacts verified — 2026-09-22
+
+Goal PROGRESS, not complete. The user explicitly requested formal publication.
+Keep the 1.4.x line and consolidate changes; do not bump for each feature.
+The public release is now v1.4.1, not v1.4.0. No additional release/tag is needed.
+
+Annotated v1.4.1 tag object 5ec98a283ad9f6aced181e25912a3ad20fc492be points to
+fa0e3489f83ea5922f06cb6b26bf0726872690c1. Tagger, author and committer are
+u9401066 <u9401066@gap.kmu.edu.tw>. Remote tag object and peeled commit verified.
+That exact main commit passed all 10 CI jobs, all 3 Pages jobs and all 37 deployed
+file byte comparisons. Main watcher67560 is TERMINAL0; do not restart it.
+Python3.10: 1750 passed/4 skipped/3 warnings in930.84s. Unit:3892 passed/1 skipped;
+integration:212 passed in569.99s. Previous 20-minute cancellation remains recorded;
+the repair changed only overall CI job headroom, never test commands or assertions.
+
+Release workflow35672349968 completed all 8 jobs successfully. Its complete pytest
+run passed4143/49 optional skips/3 warnings in1421.60s; extension205 passed.
+Linux/macOS installed activation passed; Windows install/update passed, activation
+was skipped by the workflow. Fresh wheel, artifact audits, Docker runtime/SDK2,
+Marketplace publish rights, and actual published PyPI installation/SDK2 checks passed.
+
+GitHub latest release is non-draft/non-prerelease v1.4.1, targeting the exact tag
+commit. Its published notes contain the exact tagged1.4.1 changelog section.
+PyPI wheel source351 files and author/version metadata match the released source.
+Public wheel SHA256: bef354836a237f7b3284d46cf1430c8b04d3667bc5de23182a0cafcb0448135d.
+Actual GitHub and Marketplace VSIX downloads are identical266182-byte artifacts:
+SHA25610415e138871d6161a1334eae544950f3c057d6a9a46f335886e0bff653cf3b1.
+Marketplace version/publisher and all five bundled Agent guides match the tag.
+
+The first read-only release verifier16114 terminated1 after all8 publisher jobs
+passed: Marketplace returned HTTP Content-Encoding:gzip and the verifier treated
+compressed transport bytes as a ZIP. Original failed proof/log01 remain preserved.
+Observed response was saved, gzip decoded, ZIP CRCs checked and exact GitHub digest
+matched. Read-only verifier02 (session80808 TERMINAL0) then completed every original
+publication check; no publisher rerun, version change or integrity relaxation.
+Proofs under /run/user/1000/asset-aware-release-141-:
+release-proof-02.json, public-release-final-01.json, http-gzip-proof-01.json,
+release-install-proof-01.json, ci-log-evidence-02.json and local-proof-01.json.
+Release: https://github.com/u9401066/asset-aware-mcp/releases/tag/v1.4.1
+Workflow: https://github.com/u9401066/asset-aware-mcp/actions/runs/35672349968
+
+This checkpoint changes only these two MEM files; runtime, docs and version stay
+at the verified release. Push it directly to main as the user, then follow the new
+exact-head gate with /run/user/1000/asset-aware-release-141-verify-main-03.py HEAD
+and main-publication-proof-03.json. It expects public latestv1.4.1. Require all10 CI,
+3 Pages and37 deployed bytes before further development; do not recreate v1.4.1.
+
+Broader goal remains ACTIVE: ODS worksheet/grid lifecycle, PDF body editing and
+other native formats remain incomplete; retain the documented operation boundaries.
+MCP supplies necessary mechanical/source/version checks; Agent owns complete
+semantic/visual review and corrections. Keep default Codex evidence and failed runs.
+Original dirty workspace stays untouched. Seven traces staged during this release
+were restored exactly; four earlier completed traces remain accessible by symlink
+(table-edit03, docx-render01, docx-structure01, workbook01). Preserve their manifests
+and targets. Check available disk before further builds; never perform global cleanup.
+
+A full root filesystem interrupted the initial atomic MEM write before any replace;
+both original MEM files stayed unchanged. Inventoried and removed only3048 own
+alternate-worktree virtualenv __pycache__ bytecode files (45600944 bytes); package
+sources, release artifacts, every model trace and other projects were preserved.
+Manifest: /run/user/1000/asset-aware-release-141-own-bytecode-cleanup-01.json.
+
+
 ## 1.4.1 publication gate repair — Python3.10 overall CI budget
 
 Goal PROGRESS. Current main/origin71a827c2844c3ffaf1a500e91b97b2b4e1ee76da contains
