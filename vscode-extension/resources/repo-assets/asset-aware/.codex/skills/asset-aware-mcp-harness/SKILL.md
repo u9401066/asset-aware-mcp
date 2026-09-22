@@ -47,17 +47,36 @@ verification.
   identify ONE logical coordinate, never every cell represented by a repeated range.
   update_ods requires expected_revision and 1..100 unique full original cell refs,
   typed values and explicit replace_paragraphs_preserve_cell_style display_policy.
+  Formula input uses value.kind="formula" and value.value beginning with "=";
+  native XML prefixes such as "of:=" are not part of this typed input.
   Blank clears value only; strings stay literal. Review any rich-paragraph replacement.
   Read complete review_request receipts and new cell refs; no-op receipts are inline
   and create no history entry. Formula caches and display remain unverified.
   MCP checks source/revision/native structure; Agent reviews meaning, rich text,
   recalculated formula results and actual Calc appearance. Cell operations do not
-  render automatically or implement row/column/table lifecycle. When
+  render automatically; worksheet rename uses the separate operation below. When
   workbook_rendering.source_formats includes ods, use the rendition workflow below.
   Repeated formulas/objects retain mapping-aware edit guards. Wiki retains exact
   .ods, physical ranges, anchor-only refs, full receipts and exact logical derivation
   endpoints. Historical evidence
   stays fixed. Public1.4.0; next consolidated1.4.1; no per-feature version bump.
+
+- When ods_table_rename_enabled is advertised, read ALL read_ods_dependencies text
+  pages at one asset/revision and text_sha256, using ods_text_sha256 to continue.
+  The assembled inventory_sha256 is the separate mutation guard. rename_ods_table
+  takes expected_revision and ods_table_rename with the original zero-based
+  table_index, exact table_name, new_name and dependencies_sha256=inventory_sha256.
+  Supported static formulas, named/conditional references, chart sources and sheet
+  settings change together. Unresolved dependency owners, sources or grammars must
+  be resolved before mutation; do not guess mappings. Read complete review_request
+  receipts, the new dependencies_request inventory and current logical cell refs.
+  Original refs and Wiki attachments retain their original revisions and names.
+  Render original and changed revisions and inspect every actual page, including
+  formula results and charts. Literal strings such as INDIRECT("Source.B2") retain
+  their text; Agent checks intended meaning, corrects through update_ods with current
+  refs, then renders again. Successful mapping does not prove semantic correctness.
+  Rename does not provide worksheet insertion/deletion/reordering or row/column
+  lifecycle. Source writeback stays explicit; unchanged names create no history.
 
 - When images_enabled is advertised, read_image/read_image_frame pin asset/revision;
   frame reads add image_locator. Assemble ALL image.text_excerpt pages at one

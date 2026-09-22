@@ -1,6 +1,6 @@
 # Agent 資產能力與缺口分析
 
-更新：2026-09-21。正式版維持 **1.4.0**；本文件將 main 上的 Unreleased
+更新：2026-09-22。正式版維持 **1.4.0**；本文件將 main 上的 Unreleased
 能力與仍在開發的工作分開，下一次整合發版使用 **1.4.1**。
 
 ## 專案的存在價值
@@ -54,12 +54,18 @@ MCP 不具備通用語意判斷能力，也不應自行宣稱已完成完整視�
 | PPTX | 獨立建立、投影片／支援圖形／表格／圖片操作、整頁預覽、原生引用與 Wiki | 複雜依賴會限制操作；靜態 Impress 預覽不是 PowerPoint 動畫或外觀一致性的證明 |
 | 獨立 PNG／JPEG／TIFF／GIF／WebP／BMP／AVIF | 影格／區域讀取與預覽、PNG／TIFF 衍生檔、TIFF 組合、完整候選版本修改，已接入 MCP／引用／Wiki | 寫入依明確像素／metadata 政策；不是任意格式重新編碼或圖層編輯。真實案例為 NIST PDF 衍生圖片；其他格式與精度案例有合成回歸測試，未證明任意文件外觀一致 |
 | DOC／ODT 等轉換入口 | 既有轉換流程可作特定文件的前處理 | 轉換後 DOCX 的能力不能等同原格式可逆 CRUD；不提供通用保真百分比 |
-| ODS 原生底層（開發中） | 建立、壓縮列／格讀取、型別數值修改／清空、樣式與套件保留；實際 Calc 與 odfdo 讀回驗證 | 尚未接入 MCP／引用／Wiki；工作表／格線結構與 Agent 流程仍待完成，不能視為完整 ODS 支援 |
+| ODS | 獨立建立、壓縮區段及精確邏輯格讀取、型別儲存格修改／清空、相依清單與工作表改名、Calc PDF 預覽；已接入 MCP、版本引用、CSL／自訂引用及 Wiki | 新增／刪除／重排工作表與列欄 CRUD 仍待完成；改名只映射支援的原生參照，INDIRECT 等文字參照、公式結果與圖表外觀由 Agent 核對及修正 |
 | HTML／EPUB／EML／MSG／LaTeX／其他格式 | 可保存檔案身分及原始位元組，部分上游工具有讀取能力 | 本專案尚未完成各格式的原生結構 CRUD、引用與 Wiki 契約 |
 
 詳細操作見 [Native File Assets](wiki/Native-File-Assets.md)、
 [規格](spec.md)、[Roadmap](../ROADMAP.md) 與
-[圖片核心規格](native-image-spec.md)。
+[圖片核心規格](native-image-spec.md) 與 [ODS 規格](native-ods-spec.md)。
+
+ODS 的實際預設 Codex 測試已完成原始、改名後與公式修正後三版的 MCP 操作，
+查看六張實際頁面圖片，並保留歷史引用及原始／最終 Wiki。獨立稽核比對
+原檔、完整操作紀錄及同版本 Calc 的參照、數值與完整頁面。這證明該案例能
+完成 Agent 核對與修正，不能推論所有 ODS 文件皆能保真或語意正確。
+失敗測試與修正紀錄仍保留；詳細範圍見 ODS 規格的 worksheet rename 段落。
 
 舊版分析中的「DOCX 100% round-trip」、「DOC／ODT 94.5%」及「缺口占企業
 文件 30–40%」沒有在此文件中提供可重現的測量方法，因此移除。
@@ -75,7 +81,7 @@ MCP 不具備通用語意判斷能力，也不應自行宣稱已完成完整視�
 | [Docling](https://github.com/docling-project/docling) | 多格式解析、PDF 版面與表格、統一文件表示、OCR 與 MCP | 解析 adapter、結構／定位輸出、多格式測試資料；本專案已有 Docling adapter |
 | [PyMuPDF](https://github.com/pymupdf/PyMuPDF) | PDF 讀取、擷取、呈現與操作 | 原生頁面／批註及實際 PNG 核對；本專案已有使用 |
 | [pikepdf](https://github.com/pikepdf/pikepdf) | 以 QPDF 為基礎的 PDF 讀寫 | 物件／資源關係、結構檢查與組合策略 |
-| [pypdf](https://github.com/py-pdf/pypdf) | 純 Python 的拆分、合併、裁切與頁面轉換 | 頁面操作契約、異常文件與互通測試；不能用它代替視覺核對 |
+| [pypdf](https://github.com/py-pdf/pypdf) | 純 Python 的拆分、合併、裁切、頁面轉換與表單欄位讀寫 | 頁面／欄位操作契約、異常文件與互通測試；不能用它代替視覺核對 |
 | [pdfplumber](https://github.com/jsvine/pdfplumber) | 字元、線條、矩形、文字與表格擷取 | 位置資訊及表格擷取結果的可視化核對 |
 | [OCRmyPDF](https://github.com/ocrmypdf/OCRmyPDF) | 對掃描 PDF 加入可搜尋的 OCR 文字層 | OCR 作為衍生版本，保留原圖與轉換記錄 |
 | [Pillow](https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html)／[libvips](https://github.com/libvips/libvips/blob/master/doc/multipage-and-animated-images.md) | 圖片格式與多頁／動畫處理 | 影格、EXIF、色彩／精度與 metadata 的明確邊界；新圖片核心使用既有 Pillow 依賴 |
@@ -85,10 +91,18 @@ MCP 不具備通用語意判斷能力，也不應自行宣稱已完成完整視�
 核對流程，以及長期可用的引用／Wiki。上游解析得更好時，應能替換 adapter，
 而不必丟棄已有的原檔與歷史證據。
 
+PDF 表單是尚待實作的具體例子：[pypdf 表單文件](https://pypdf.readthedocs.io/en/latest/user/forms.html)
+區分文件層的欄位樹與頁面 Widget，同一欄位可以在多頁顯示；
+[PyMuPDF Widget 文件](https://pymupdf.readthedocs.io/en/latest/widget.html)
+提供欄位狀態及更新介面。我們需要把欄位身分、所有顯示位置、值與外觀納入
+同一操作，保留修改前證據，再讓 Agent 核對各頁。這是依上游結構提出的
+實作方向，目前的批註 CRUD 尚不能直接操作 Widget。
+
 ## 下一步與驗收方式
 
-1. 完成已接入 MCP／證據／Wiki 的獨立圖片發布驗證，擴充來源與解碼器版本的
-   真實案例；目前 NIST PDF 衍生圖片的實際 Codex 操作已通過獨立稽核。
+1. 延伸 ODS 工作表與列欄 CRUD、PDF 欄位／內文操作及其他格式的原生工作流，
+   同時擴充既有圖片與文件能力的真實案例。ODS 改名與 NIST PDF 衍生圖片的
+   實際 Codex 操作已有獨立稽核，仍不能代表其餘操作或任意格式已完成。
 2. 使用真實文件與實際 Codex MCP 操作，保留失敗紀錄；將結構檢查、圖片
    核對及語意判斷各自記錄，不能把程序成功當成理解正確。
 3. 增加轉換型格式時，先說清楚「唯讀解析／有損轉換／原生回寫」的範圍，

@@ -133,6 +133,8 @@ their exact original revisions and names; source writeback remains separate.
 Render a new recalculated PDF and inspect every actual page. Quoted literals such
 as `INDIRECT("Source.B2")` retain their text. The Agent determines their intended
 meaning and can correct the current formula through `update_ods`, then render again.
+Typed formula edits use `value.kind="formula"` and a `value.value` beginning with
+`=`. Do not copy the stored ODF namespace prefix, such as `of:=`, into that input.
 MCP does not infer that a successful rename or equality to a Calc control proves
 semantic correctness. Deletion is especially different: observed Calc chart
 rebinding to another worksheet must not be silently adopted as correct meaning.
@@ -163,6 +165,13 @@ expression handling now keeps the same resource-loading guards, including Calc's
 conditional extension. A separate initial audit failure assumed PDF text reading
 order identified a cell; it now checks the fixture's cell geometry, with regressions
 that reject substitution of a chart-axis value. These are scoped fixture checks.
+
+The default-model evidence above uses LibreOffice 7.3.7.2. The
+[integration job for commit 8d6c38b](https://github.com/u9401066/asset-aware-mcp/actions/runs/35636438898/job/106458260424)
+installed Calc 24.2.7 and passed the complete native rename/reimport comparison,
+including named ranges and charts, within 212 passing integration tests. That job
+adds coverage of the native transaction and both rendered control pages on the CI
+Calc environment; the actual Agent run remains the separately recorded 7.3 case.
 
 ## Native ODS renditions (Unreleased)
 

@@ -53,6 +53,14 @@ This is required before release. Activation smoke is required for release enviro
 - Linux install/update only: run `npm run test:install-smoke`
 - Linux with activation required: run `xvfb-run -a npm run test:install-smoke -- --require-activation` (requires `xvfb` and a few desktop libs)
 
+The install smoke requires a CLI that honors `--user-data-dir` and
+`--extensions-dir`. Remote terminal launchers under `remote-cli/` are rejected
+before installing; a supported desktop CLI can be downloaded as the fallback.
+Success also requires the manifest and current Agent guide bytes to exist inside
+the isolated extension directory. A CLI success message alone is insufficient.
+An absent legacy VSIX skips that baseline upgrade; record that separately from
+fresh installation and actual activation results.
+
 ## Step 3: Docker smoke import
 <execute_command>
 <command>docker build -t asset-aware-mcp:smoke .</command>

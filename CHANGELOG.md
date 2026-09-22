@@ -7,6 +7,20 @@
 
 ## [Unreleased]
 
+- Fix VSIX install smoke tests accepting remote terminal launchers that ignore
+  isolation directories. Require supported CLI isolation options, an actual
+  installed manifest inside the isolated directory and exact installed Agent guide
+  bytes. Reject remote launchers before installation, including symlink aliases;
+  retain the supported desktop CLI fallback. Public **1.4.0**, next consolidated
+  **1.4.1**; no per-feature version bump.
+
+- Synchronize Codex, Cline, Copilot and bundled Agent guidance with ODS dependency
+  reads, checked worksheet rename and actual-page review/correction. Clarify typed
+  formula input and distinguish the text-pagination hash from the inventory guard.
+  Update the human capability analysis with current ODS MCP/citation/Wiki support,
+  actual Agent evidence and the remaining format gaps. Public **1.4.0**; next
+  consolidated **1.4.1**, without a version bump in this segment.
+
 - Add native ODS worksheet rename through `read_ods_dependencies` and
   `rename_ods_table`, binding the source revision, exact table identity and complete
   dependency inventory. Update supported formulas, named expressions, conditional

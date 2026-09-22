@@ -1,5 +1,89 @@
 # Active Context
 
+## ODS guidance and isolated VSIX smoke fix — ready for main
+
+This goal turn is PROGRESS. The previous wait completed: watcher 9479 exited 0;
+8d6c38b passed all 10 CI jobs, all 3 Pages jobs and 6 exact deployed file checks.
+Fresh remote suites: 3,755 unit passes / 1 skip; 1,611 Python 3.10 passes / 4 skips;
+212 integration passes in 557.74 seconds. CI installed Calc 24.2.7 and passed the
+complete ODS rename/native-reference/typed-cell/full-page comparison. The actual
+Agent run remains the separate recorded Calc 7.3.7.2 case. Old publication/local
+proofs under /run/user/1000/asset-aware-ods-rename-* now record completion.
+
+Current segment: 22 counted files + both MEM. Five canonical Agent guides and
+bundled copies cover complete dependency inventory pagination, distinct inventory
+hash guard, rename identity/revision, receipts/current refs and actual page/formula
+correction. Typed formula input begins '=' (not stored XML 'of:='). Updated README,
+changelog, human gap analysis, ODS spec, Wiki and generated website. ODS remaining
+sheet insertion/deletion/reorder, row/column lifecycle and all other format gaps
+remain explicit. PDF form research from official pypdf/PyMuPDF docs shows fields
+and multi-page Widgets need one coherent model; current annotation edits reject
+Widgets. This is pending implementation, not claimed PDF form CRUD.
+
+Actual test discovery: the host remote code-insiders launcher ignores isolation
+flags but reports success. Initial extension-install-01 is INVALID as isolation
+proof. upgrade-01 caught empty isolated directories after installing the baseline
+into the live extension. The current 1.4.0 package was restored immediately and
+all five live guide hashes matched current source. We did not capture the live
+package before the first legacy smoke; do not claim restoration to an unknown
+pre-turn artifact. Keep cli-restoration.log, install-01 and failed upgrade-01 logs.
+
+Fix: installSmokeIsolation.ts rejects remote-cli paths and resolved aliases before
+invocation, requires both isolation flags in help, and checks the installed manifest
+and current five guide bytes inside the isolated directory. installSmoke.ts uses
+these checks before install and when verifying results; warnings about ignored flags
+fail. Six behavioral regressions cover rejection before invocation, aliasing, missing
+options, absent/wrong installed manifest and stale/missing installed guides. Full-check
+workflow and its bundled copy explain the required evidence.
+
+Fresh final extension CI: 205 passed, 64 package-content entries; actual VSIX has
+66 entries and all 37 bundled assets equal sources. The corrected install smoke
+passed through an explicit local code-server-insiders shim (not remote-cli), with
+installed filesystem checks. No display: local activation skipped; legacy 0.2.10
+baseline absent. Separate real same-version 1.4.0 baseline -> current replay passed:
+all 37 installed assets match, test settings preserved, and all 65 live extension
+files retain hash/size/mtime. The baseline is a constructed package restoring the
+five prior-head guide files; this is not a previously published VSIX. Proofs/scripts/
+logs under /run/user/1000/asset-aware-ods-guides-*; actual isolated tree under
+/dev/shm/asset-aware-ods-guides-upgrade-03. Failed upgrade-01 remains retained.
+
+29 docs/contract tests passed; both skill validators, docs sync, asset sync, release
+harness, metadata/VSIX audit and diff hygiene passed. Python runtime's 342 source
+hashes equal fully verified 8d6c38b: reuse that runtime/full-suite/wheel/Docker/Agent
+evidence, not a new Python or Agent run. GitHub description/homepage/20 topics still
+accurate. Public 1.4.0; next consolidated 1.4.1; no bump/tag/release. Node dependency
+symlink removed; owned /dev/shm/asset-aware-ods-guides-node-01 and npm-cache-01
+remain available for follow-up tests. Other projects and original dirty worktree
+untouched. No local jobs remain active. Next: exact staging, user-author direct-main
+commit/push, then verify every new-head CI/Pages job and deployed bytes before more
+development. Goal remains ACTIVE and full scope unchanged; no subagents or PRs.
+
+## ODS rename committed/pushed — exact-head publication gate pending
+
+Commit8d6c38b014e2f9f90c3eb6f9d9e1ed7668a607d0 is on main/origin as
+u9401066<u9401066@gap.kmu.edu.tw>, exactly30countedfiles+2MEM. No bump/tag/release:
+public1.4.0,nextconsolidated1.4.1. Full4004pass/49skip599.67s; optional Calc
+6passes plus unchanged-font-environment rerun1pass23.55s. Installedwheel/Docker,
+SDK2, actual default Codex323successfulcalls/sixPNG and native/history/Wiki proofs
+passed as detailed below. All4temporarily staged historic traces restored exactly.
+All local tests/builds/model processes finished; onlypublicationwatcher remains.
+
+Active watcher session9479 runs
+/run/user/1000/asset-aware-ods-rename-verify-publication.py
+CI35636438898 and Pages35636437551, exacthead8d6c38b. First API retry recovered
+from transient connectivity; push succeeded. The watcher requires ALL10CI jobs,
+ALL3Pages jobs and6deployed files byte-exact, plus remote main identity. Proof:
+/run/user/1000/asset-aware-ods-rename-publication-proof.json. Read/wait existing
+session; do not create a duplicate watcher. Do NOT begin new development until
+this gate is verified. If a job fails, retain exact logs and resolve its cause.
+Local proofstatus pushed_remote_verification_pending; update it afterallpass.
+No new release/version is authorized by a per-feature milestone.
+
+Goal ACTIVE, this turnPROGRESS. Oncegatespass, updateMEM and continue fullscope:
+ODS table/row/column lifecycle, remainingformatCRUD/evidence/Wiki, actual Agent
+review. Bundled assistant guide refresh needs next<=30countedfile segment.
+OnlypostpushMEM files may be dirty. Original dirtydetachedcheckout remains untouched.
+
 ## ODS checked worksheet rename — locally verified, direct-main commit pending
 
 Public/latest release1.4.0; next consolidated1.4.1. NO version/tag/release change.

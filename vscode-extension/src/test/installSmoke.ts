@@ -22,6 +22,11 @@ import {
     getUvxLaunch,
     PREFERRED_RUNTIME_PYTHON,
 } from '../uv';
+import {
+    isolatedExtensionDirectory,
+    supportsIsolatedInstall,
+    verifyInstalledAssistantAssets,
+} from './installSmokeIsolation';
 
 const execFileAsync = promisify(execFile);
 
@@ -56,6 +61,7 @@ async function runCommand(
     args: string[],
     cwd?: string,
     env: NodeJS.ProcessEnv = process.env,
+    timeout?: number,
 ): Promise<string> {
     const maxBuffer = 1024 * 1024 * 10;
     const isWindowsCmd = process.platform === 'win32' && path.extname(command).toLowerCase() === '.cmd';
@@ -75,6 +81,7 @@ async function runCommand(
             cwd,
             env,
             maxBuffer,
+            timeout,
         });
 
         return `${stdout}${stderr}`.trim();
@@ -84,6 +91,7 @@ async function runCommand(
         cwd,
         env,
         maxBuffer,
+        timeout,
     });
 
     return `${stdout}${stderr}`.trim();
@@ -100,7 +108,7 @@ async function packageCurrentVsix(): Promise<string> {
     return vsixPath;
 }
 
-function findAvailableCli(quality: VSCodeQuality): string | null {
+async function findAvailableCli(quality: VSCodeQuality): Promise<string | null> {
     const candidates = process.platform === 'win32'
         ? (quality === 'insiders' ? ['code-insiders.cmd'] : ['code.cmd', 'code-insiders.cmd'])
         : (quality === 'insiders' ? ['code-insiders'] : ['code', 'codium', 'code-insiders']);
@@ -109,8 +117,11 @@ function findAvailableCli(quality: VSCodeQuality): string | null {
         try {
             const command = process.platform === 'win32' ? 'where' : 'which';
             const output = execFileSync(command, [candidate], { encoding: 'utf8' }).trim();
-            if (output) {
-                return output.split(/\r?\n/)[0];
+            for (const cliPath of output.split(/\r?\n/).filter(Boolean)) {
+                if (await supportsIsolatedInstall(cliPath, readCliHelp)) {
+                    return cliPath;
+                }
+                console.log(`Skipping CLI without isolated installation support: ${cliPath}`);
             }
         } catch {
             // Try the next CLI candidate.
@@ -118,6 +129,10 @@ function findAvailableCli(quality: VSCodeQuality): string | null {
     }
 
     return null;
+}
+
+async function readCliHelp(cliPath: string): Promise<string> {
+    return await runCommand(cliPath, ['--help'], undefined, process.env, 15000);
 }
 
 function createIsolatedDirs(prefix: string): { baseDir: string; userDataDir: string; extensionsDir: string; workspaceDir: string } {
@@ -141,12 +156,15 @@ function createIsolatedDirs(prefix: string): { baseDir: string; userDataDir: str
 }
 
 async function installVsix(cliPath: string, vsixPath: string, userDataDir: string, extensionsDir: string): Promise<void> {
-    await runCommand(cliPath, [
+    const output = await runCommand(cliPath, [
         '--user-data-dir', userDataDir,
         '--extensions-dir', extensionsDir,
         '--install-extension', vsixPath,
         '--force',
     ]);
+    if (/Ignoring option ['"]?(?:user-data-dir|extensions-dir)/i.test(output)) {
+        throw new Error(`VS Code CLI ignored an installation isolation option: ${output}`);
+    }
 }
 
 async function listInstalledVersions(cliPath: string, userDataDir: string, extensionsDir: string): Promise<string[]> {
@@ -331,7 +349,7 @@ async function main(): Promise<void> {
     }
 
     let vscodeExecutablePath: string | undefined;
-    const localCliPath = findAvailableCli(vscodeQuality);
+    const localCliPath = await findAvailableCli(vscodeQuality);
     let cliPath = localCliPath;
 
     if (
@@ -346,11 +364,18 @@ async function main(): Promise<void> {
     if (!cliPath) {
         throw new Error('Could not find a VS Code CLI for install smoke testing.');
     }
+    if (!await supportsIsolatedInstall(cliPath, readCliHelp)) {
+        throw new Error('VSIX install smoke requires a CLI that supports --user-data-dir and --extensions-dir; remote terminal launchers cannot isolate installs.');
+    }
 
     const fresh = createIsolatedDirs('asset-aware-fresh');
     await installVsix(cliPath, currentVsixPath, fresh.userDataDir, fresh.extensionsDir);
     const freshVersions = await listInstalledVersions(cliPath, fresh.userDataDir, fresh.extensionsDir);
     assertInstalledVersion(freshVersions, currentVersion);
+    verifyInstalledAssistantAssets(
+        isolatedExtensionDirectory(fresh.extensionsDir, publisherExtensionId, currentVersion),
+        extensionRoot,
+    );
     console.log(`Fresh install verified: ${publisherExtensionId}@${currentVersion}`);
 
     const update = createIsolatedDirs('asset-aware-update');
@@ -358,6 +383,7 @@ async function main(): Promise<void> {
         await installVsix(cliPath, oldVsixPath, update.userDataDir, update.extensionsDir);
         const beforeUpdate = await listInstalledVersions(cliPath, update.userDataDir, update.extensionsDir);
         assertInstalledVersion(beforeUpdate, '0.2.10');
+        isolatedExtensionDirectory(update.extensionsDir, publisherExtensionId, '0.2.10');
         console.log('Baseline install verified: u9401066.asset-aware-mcp@0.2.10');
     } else {
         console.log('Skipping baseline update verification because asset-aware-mcp-0.2.10.vsix is not available.');
@@ -366,6 +392,10 @@ async function main(): Promise<void> {
     await installVsix(cliPath, currentVsixPath, update.userDataDir, update.extensionsDir);
     const afterUpdate = await listInstalledVersions(cliPath, update.userDataDir, update.extensionsDir);
     assertInstalledVersion(afterUpdate, currentVersion);
+    verifyInstalledAssistantAssets(
+        isolatedExtensionDirectory(update.extensionsDir, publisherExtensionId, currentVersion),
+        extensionRoot,
+    );
     console.log(`Update install verified: ${publisherExtensionId}@${currentVersion}`);
 
     if (shouldRunActivation && vscodeExecutablePath) {
