@@ -1,4 +1,6 @@
-# Native Excel Table creation (Unreleased / 1.4.x)
+<a id="native-excel-table-creation-unreleased-14x"></a>
+
+# Native Excel Table creation (1.4.1)
 
 ## User outcome
 
@@ -73,6 +75,5 @@ typed strings, formulas, source identity, historical evidence and Wiki output.
 - [Excel Table names](https://support.microsoft.com/en-US/Excel/rename-an-excel-table)
 - [Open XML Table structure](https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/working-with-tables)
 
-No new dependency or version bump. Public remains 1.4.0; all development is
-Unreleased on the 1.4.x line. Existing Table totals-row lifecycle and row/column
-identity moves remain separate outstanding parts of the broader goal.
+This operation adds no dependency. Totals-row lifecycle is supported by its
+separate contract; arbitrary row/column identity moves remain outside this operation.

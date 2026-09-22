@@ -1,6 +1,6 @@
 # Native PDF region evidence
 
-Status: implemented and SDK2/default-Codex validated, Unreleased within 1.4.x; public stays 1.4.0.
+Release scope: **1.4.1**. Use the installed runtime contract and the limits below.
 
 Goal: an Agent viewing a scanned PDF can identify a visual table cell/figure/label,
 read a detailed crop, and link that exact source region to a typed target cell or

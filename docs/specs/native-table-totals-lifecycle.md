@@ -1,4 +1,6 @@
-# Native Table totals-row lifecycle (Unreleased / 1.4.x)
+<a id="native-table-totals-row-lifecycle-unreleased-14x"></a>
+
+# Native Table totals-row lifecycle (1.4.1)
 
 Extend `update_workbook_table` with `table_update.totals_row`. Existing column edits
 remain compatible; `columns` may be empty only when a totals transition is given.
@@ -68,5 +70,5 @@ Primary sources:
 - [Excel structured references and #Totals](https://support.microsoft.com/en-us/excel/using-structured-references-with-excel-tables)
 - [Excel ShowTotals](https://learn.microsoft.com/en-us/office/vba/api/excel.listobject.showtotals)
 
-Public remains 1.4.0; development accumulates Unreleased for 1.4.x. This is part of
+ This is part of
 the active cross-format CRUD, fidelity and evidence goal, not its completion.

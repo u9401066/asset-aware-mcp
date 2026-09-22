@@ -1,11 +1,9 @@
 # Native PDF field CRUD — managed MCP integration
 
-Public version remains **1.4.0**; the next consolidated release is **1.4.1**.
-The working implementation exposes complete paged field reads and checked native
-CRUD through MCP, with managed revisions, evidence and Wiki integration. These are
-Unreleased capabilities. The default Codex form evaluation has passed independent
-audit, and Agent guidance is synchronized. Full artifact/publication checks remain
-separate from these development results.
+Release scope: **1.4.1**. Complete paged field reads and checked native CRUD
+connect managed revisions, evidence and Wiki through MCP. The default Codex form
+evaluation passed an independent audit; static previews do not prove interactive
+viewer parity. Publication status is listed in GitHub Releases.
 
 ## Managed operations and evidence
 

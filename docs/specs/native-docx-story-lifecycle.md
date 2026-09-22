@@ -1,6 +1,6 @@
 # Native Word story definition lifecycle
 
-Status: Unreleased / 1.4.x. Public 1.4.0; next consolidated patch 1.4.1.
+Release scope: **1.4.1**. Use the installed runtime contract and the limits below.
 
 Complete header/footer content CRUD needs definition lifecycle and explicit section
 inheritance. `read_docx_story_structure` returns the full catalog, its independent

@@ -1,6 +1,6 @@
 # Native CSV / TSV assets
 
-Status: implemented and locally verified, Unreleased within 1.4.x; public remains 1.4.0.
+Release scope: **1.4.1**. Use the installed runtime contract and the limits below.
 
 Purpose: human CSV/TSV files become editable native table assets with retained source
 bytes, exact field evidence, complete review receipts and portable Wiki snapshots.

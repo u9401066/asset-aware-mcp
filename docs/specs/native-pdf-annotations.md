@@ -1,6 +1,6 @@
-# Native PDF annotations (Unreleased / 1.4.x)
+<a id="native-pdf-annotations-unreleased-14x"></a>
 
-Public version remains **1.4.0**; the next consolidated patch is **1.4.1**.
+# Native PDF annotations (1.4.1)
 
 Annotations are independently addressable assets within a PDF revision. A comment,
 its visible appearance and the text underneath a highlight are different objects.

@@ -1,6 +1,6 @@
 # Immutable native operation results
 
-Status: implemented and locally validated on the Unreleased development line. Public 1.4.0, next consolidated 1.4.1; no per-feature version bump.
+Release scope: **1.4.1**; implemented with complete receipt and storage checks.
 
 ## Problem and required outcome
 

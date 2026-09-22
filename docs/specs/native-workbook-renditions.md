@@ -1,6 +1,6 @@
 # Immutable workbook renditions
 
-Status: development, Unreleased within 1.4.x. Public version remains 1.4.0.
+Release scope: **1.4.1**. Use the installed runtime contract and the limits below.
 
 `create_workbook_rendition` takes `asset_id`, explicit `revision`, and
 `workbook_rendition` with a PDF filename, required `mode` (`print` or

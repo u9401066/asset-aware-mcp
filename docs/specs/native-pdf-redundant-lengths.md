@@ -44,4 +44,3 @@ must then pass through actual SDK2. Actual Codex remains separate visual evidenc
 References: [pikepdf main API](https://pikepdf.readthedocs.io/en/latest/api/main.html),
 [QPDF checks](https://qpdf.readthedocs.io/en/stable/cli.html#option-check).
 Warning text is not a stable API; fail closed if an upstream update changes it.
-Public1.4.0 / Unreleased1.4.x; no new version or tag.

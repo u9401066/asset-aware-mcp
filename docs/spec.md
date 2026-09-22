@@ -1,9 +1,10 @@
 # Asset-Aware MCP: Agent Document Collaboration Specification
 
-Native Table creation: see [the Unreleased operation contract](specs/native-table-creation.md).
-Public remains 1.4.0, with development on 1.4.x.
+Native Table creation: see [the operation contract](specs/native-table-creation.md).
 
-### Retained raster evidence (Unreleased 1.4.x)
+<a id="retained-raster-evidence-unreleased-14x"></a>
+
+### Retained raster evidence (1.4.1)
 
 Persist complete source-bound frame records and catalogs when read, and exact
 bounded PNG previews when generated. Full historical references resolve these
@@ -52,7 +53,9 @@ it is not a promise of complete automatic correction or layout verification.
 Verification coverage and unperformed checks must remain explicit. Structural
 validity alone must never be reported as semantic correctness or full fidelity.
 
-### Native worksheet grid transformations (in progress, Unreleased, 1.4.x)
+<a id="native-worksheet-grid-transformations-in-progress-unreleased-14x"></a>
+
+### Native worksheet grid transformations (1.4.1)
 
 Extend native workbook collaboration with sequential row/column insertion and
 deletion at an exact worksheet key and expected revision. Operate on the original
@@ -156,7 +159,7 @@ a revision-pinned `read_workbook` review request for the complete operation rece
 Source writeback stays explicit. The contract advertises `workbook_grid_enabled`
 only when configured. SDK2 and actual Codex cover direct grid editing and the A2T
 insertion/deletion bridge below. Broader table/move fidelity remains open;
-development stays Unreleased/1.4.x.
+this operation is included in 1.4.1.
 
 Named pivot/consolidation sources must resolve worksheet-scoped and workbook-scoped
 name chains, exact A1 rectangles and explicit table selectors against each current
@@ -165,7 +168,9 @@ before/after each edit; pivot fields require the same column schema and survivin
 header. Cyclic names, ambiguous scopes and formulas requiring evaluation must fail
 with an explicit dependency error rather than retain stale field identities.
 
-### Native workbook/A2T correspondence (Unreleased, 1.4.x)
+<a id="native-workbooka2t-correspondence-unreleased-14x"></a>
+
+### Native workbook/A2T correspondence (1.4.1)
 
 Expose project_workbook_table, read_table_workspace, apply_table_workspace and
 create_workbook_from_table through native_request. Projection requires an exact
@@ -209,7 +214,9 @@ reviews meaning, dynamic references, formula results and rendered layout. Regres
 SDK2 and actual Codex must verify literal scan data, typed edits, original bytes,
 source and table preconditions, complete readback and persistent historical evidence.
 
-### Structural A2T application (Unreleased, 1.4.x)
+<a id="structural-a2t-application-unreleased-14x"></a>
+
+### Structural A2T application (1.4.1)
 
 New TableContext instances carry stable column_ids as well as row_ids. Rename keeps
 column identity; new appended rows and columns receive fresh IDs, including after
@@ -236,7 +243,9 @@ Native Table edge insertion requires explicit expand_tables to extend membership
 calculated columns and partial array structures retain their dedicated edit boundaries.
 No structural preview claims semantic, recalculation or visual completeness.
 
-### Native Table column edits (Unreleased, 1.4.x)
+<a id="native-table-column-edits-unreleased-14x"></a>
+
+### Native Table column edits (1.4.1)
 
 `update_workbook_table` selects one exact worksheet key, active Table part and
 `expected_ref`, with the normal file `expected_revision`. Each column edit uses
@@ -271,11 +280,13 @@ Receipt cell `before` values come from the original revision, even when existing
 formulas were renamed during a private intermediate stage before formula edits.
 Agent checks meaning,
 rendered headers, filter visibility, formula results and totals semantics. Old
-evidence and A2T bindings stay revision-scoped; public stays 1.4.0.
+evidence and A2T bindings stay revision-scoped.
 Primary references: [SpreadsheetML tableColumn](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.tablecolumn)
 and [XlsxWriter tables](https://xlsxwriter.readthedocs.io/working_with_tables.html).
 
-### Explicit native Table expansion (Unreleased, 1.4.x)
+<a id="explicit-native-table-expansion-unreleased-14x"></a>
+
+### Explicit native Table expansion (1.4.1)
 
 read_workbook.tables exposes worksheet/part identity, attributes, column IDs, raw
 part SHA-256 and complete parsed XML even for non-UTF-8 source definitions.
@@ -300,7 +311,9 @@ Reference designs: [Microsoft SpreadsheetML tables](https://learn.microsoft.com/
 and [XlsxWriter tables](https://xlsxwriter.readthedocs.io/working_with_tables.html).
 Table definitions and sheet cells are distinct package parts; both must agree.
 
-### Native workbook sheet structure (Unreleased, 1.4.x)
+<a id="native-workbook-sheet-structure-unreleased-14x"></a>
+
+### Native workbook sheet structure (1.4.1)
 
 Provide revision-pinned read_workbook structure/reference inventories and managed
 add_worksheets, rename_worksheet, reorder_worksheets and delete_worksheets. Keys use
@@ -336,7 +349,9 @@ references and delete dependencies. Exercise real SDK2 and actual Codex scan-to-
 sheet lifecycle, selection/history/Wiki and source preservation. Full publication
 gates and docs/harness sync remain required; no automatic version bump/tag.
 
-### Native selection evidence (Unreleased, 1.4.x)
+<a id="native-selection-evidence-unreleased-14x"></a>
+
+### Native selection evidence (1.4.1)
 
 Add read_selection over full verified native cell/block/shape/page references.
 Use RFC6901 JSON-string pointers (no URI-fragment decoding), zero-based array
@@ -363,7 +378,9 @@ review remain necessary. Test every supported parent format, locator/hash tamper
 equal-value wrong paths, Unicode codepoints, merged/changed tables, complete paging,
 portable wiki evidence and actual Codex use against scanned source plus native table.
 
-### CJK preview environment correction (Unreleased, 1.4.x)
+<a id="cjk-preview-environment-correction-unreleased-14x"></a>
+
+### CJK preview environment correction (1.4.1)
 
 Provide an opt-in, private Linux Fontconfig evaluation fixture with exact upstream
 Noto font hashes, original font licenses and hashes of copied local Latin fonts.
@@ -376,7 +393,9 @@ Nonzero glyph IDs or extracted Unicode alone do not certify correct appearance.
 Ordinary tests never download fonts or start a model. Document this bounded Linux
 fixture without claiming Microsoft Word fidelity or universal script coverage.
 
-### Native DOCX page previews (Unreleased, 1.4.x)
+<a id="native-docx-page-previews-unreleased-14x"></a>
+
+### Native DOCX page previews (1.4.1)
 
 `render_docx_page` requires an asset ID, explicit immutable revision and zero-based
 `docx_page_index`. A separate renderer port returns an actual MCP PNG, image hash,
@@ -404,7 +423,9 @@ Test real SDK2 images across multiple pages and historical revisions, page bound
 resource guards, unavailable Writer/missing output, source integrity and actual
 Codex scan-to-DOCX visual review with independent pixel comparison.
 
-### Native DOCX creation and body structure (Unreleased, 1.4.x)
+<a id="native-docx-creation-and-body-structure-unreleased-14x"></a>
+
+### Native DOCX creation and body structure (1.4.1)
 
 Provide create_docx from typed rich paragraphs and rectangular/merged tables, with
 explicit page dimensions/margins and literal display strings. No precursor PDF or
@@ -429,7 +450,9 @@ Existing nested structures remain intact outside an explicit selected deletion.
 MCP checks source/package/representation integrity; Agent checks semantics, page
 flow, inherited styles, rendered layout and updated Word fields/viewer caches.
 
-### Native whole-slide previews (Unreleased, 1.4.x)
+<a id="native-whole-slide-previews-unreleased-14x"></a>
+
+### Native whole-slide previews (1.4.1)
 
 `render_pptx_slide` requires an asset ID, explicit immutable revision and exact
 `pptx_slide_key={slide_id,part}`. A separately injected rendering port returns a
@@ -468,7 +491,9 @@ and its hash alongside notes/bundles. Style changes preserve evidence identities
 and wikilink targets. Locator validity, extraction accuracy and semantic support
 are distinct concepts.
 
-### Canonical A2T citation readback (1.4.x development)
+<a id="canonical-a2t-citation-readback-14x-development"></a>
+
+### Canonical A2T citation readback (1.4.1)
 
 Keep table_cite get as the compatible cell/row/table summary. Add read for one
 cell selected by table_id, column_name and row_id (preferred) or row_index.
@@ -506,7 +531,9 @@ target. Cell-history labels use the validated stable row ID when supplied. This
 changes result metadata/presentation only; row identity, data, citation invalidation
 and history semantics remain unchanged. Regress after deleting an earlier row.
 
-### Native PPTX shape structure (1.4.x development)
+<a id="native-pptx-shape-structure-14x-development"></a>
+
+### Native PPTX shape structure (1.4.1)
 
 Add add_pptx_shapes and delete_pptx_shapes under document/native, preserving the
 existing native-contract-v2 discovery flow. Both require asset_id and expected_revision,
@@ -653,7 +680,6 @@ XLSX and v1.3 DOCX artifact digests are regression guarded. Source/revision/CAS
 checks are mechanical; visual bounds, inherited formatting, text overflow and
 semantic accuracy require agent review. Legacy .ppt, macro .pptm and strict
 PresentationML are outside the native editor's current scope.
-
 
 ### Native DOCX / DFM bridge (v1.3.0)
 
@@ -939,8 +965,9 @@ asset-aware-mcp/
   table extraction and parsing evaluation. Selection requires local real-file
   evaluation; repository claims alone do not establish fidelity.
 
+<a id="native-pdf-page-assets-and-structural-crud-14x-development"></a>
 
-## Native PDF page assets and structural CRUD (1.4.x development)
+## Native PDF page assets and structural CRUD (1.4.1)
 
 Goal: extend the immutable native asset registry to PDF pages, including native
 read/decompose/render, independent creation, page insertion/copy/deletion/reorder,
@@ -971,8 +998,7 @@ Pikepdf compatibility, universal lock security, Python 3.10 and SDK2 transport m
 be tested before enabling the adapter. Required tests include positive mixed
 content CRUD, rendering/text preservation, internal links/forms/page labels,
 negative corruption/dependency/stale writes, prior evidence/wiki stability, and
-actual Codex MCP use. Keep public version 1.4.0 and accumulate Unreleased for 1.4.x.
-
+actual Codex MCP use. Included in the consolidated 1.4.1 release scope.
 
 PDF copying must also check annotation graph backreferences. The initial pinned
 pikepdf form-aware copy experiment duplicated note/popup graph objects and broke
@@ -989,11 +1015,12 @@ worker deadline. Serialize NativeEditResult as plain data, then validate it in t
 parent. Reject missing/partial/corrupt/oversized results and reap children before
 removing their private temporary directory.
 
-## Native PPTX image assets and picture CRUD (1.4.x development)
+<a id="native-pptx-image-assets-and-picture-crud-14x-development"></a>
 
-The next cross-format capability is moving immutable human image assets into and
-out of native presentations. Keep public 1.4.0, accumulate Unreleased, and keep
-MCP necessary checks distinct from the agent's complete semantic/visual review.
+## Native PPTX image assets and picture CRUD (1.4.1)
+
+Native picture operations move immutable image assets into and out of presentations.
+MCP provides necessary checks; the Agent completes semantic/visual review.
 
 - A native-file-ref-v1 identifies complete immutable file bytes by asset ID and
   revision SHA-256. It does not assert image meaning. Register remains the entry
@@ -1033,7 +1060,9 @@ MCP necessary checks distinct from the agent's complete semantic/visual review.
   decompression-bomb limits. Use these libraries behind native ports, not a
   load-and-save of the user's whole presentation.
 
-### Native PPTX table creation (Unreleased, 1.4.x)
+<a id="native-pptx-table-creation-unreleased-14x"></a>
+
+### Native PPTX table creation (1.4.1)
 
 `add_pptx_tables` accepts asset_id, expected_revision and 1–100 `pptx_tables`.
 Each item identifies an existing slide/notes/nonzero-group container and a table
@@ -1075,7 +1104,9 @@ fields. Valid existing JSON inputs remain accepted; native wiki passes the typed
 model's JSON representation to the existing resolver. Canonical source references
 are separate from display contracts and cannot be overridden by formatting input.
 
-### Native derivation ledger (Unreleased, 1.4.x)
+<a id="native-derivation-ledger-unreleased-14x"></a>
+
+### Native derivation ledger (1.4.1)
 
 An agent may record that a revision-pinned native component/file was derived from
 one or more other native references. `record_derivation` verifies the target and
@@ -1113,8 +1144,9 @@ References: [W3C PROV-O derivation](https://www.w3.org/TR/prov-o/#Derivation) an
 [Docling Graph provenance ledger](https://github.com/docling-project/docling-graph/blob/main/docs/fundamentals/graph-management/provenance.md).
 This API uses those concepts; it does not claim complete PROV-O/RDF conformance.
 
+<a id="native-pptx-table-grid-editing-unreleased-14x"></a>
 
-### Native PPTX table grid editing (Unreleased, 1.4.x)
+### Native PPTX table grid editing (1.4.1)
 
 `update_pptx_table_grid` accepts `asset_id`, `expected_revision` and
 `pptx_table_grid`: one full current shape `reference` plus 1..32 sequential
@@ -1148,8 +1180,9 @@ remain Agent review. Package retention/deletion is not secure erasure.
 Reference design: [python-pptx merge grid semantics](https://python-pptx.readthedocs.io/en/latest/user/table.html)
 and [DrawingML row structure](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.tablerow).
 
+<a id="native-pptx-mergesplit-edits-unreleased-14x"></a>
 
-### Native PPTX merge/split edits (Unreleased, 1.4.x)
+### Native PPTX merge/split edits (1.4.1)
 
 Extend `update_pptx_table_grid.pptx_table_grid.edits` with two discriminated edits:
 
@@ -1182,8 +1215,9 @@ rendered output. No arbitrary finer grid is invented by split; insert rows/colum
 explicitly when additional subdivisions are needed. Reference:
 https://python-pptx.readthedocs.io/en/latest/user/table.html#un-merging-a-cell .
 
+<a id="native-pptx-slide-structure-unreleased-14x"></a>
 
-### Native PPTX slide structure (Unreleased, 1.4.x)
+### Native PPTX slide structure (1.4.1)
 
 `read_pptx_layouts` returns revision-pinned, paged layout identities discovered via
 all presentation masters, including names, type and placeholder counts. New slides

@@ -1,6 +1,6 @@
 # Real PDF corpus and actual Agent evaluation
 
-Status: implemented, real SDK2 and actual Agent verification completed; public version stays 1.4.0, Unreleased 1.4.x.
+Release scope: **1.4.1**. Use the installed runtime contract and the limits below.
 
 ## Purpose and evidence boundary
 

@@ -1,6 +1,6 @@
 # Native Word header/footer stories
 
-Status: Unreleased / 1.4.x; public 1.4.0. Next consolidated patch 1.4.1.
+Release scope: **1.4.1**. Use the installed runtime contract and the limits below.
 
 The legacy DFM projection preserves header/footer parts but exposes only a short
 preview and guesses their variant from filenames. Keep its historical evidence

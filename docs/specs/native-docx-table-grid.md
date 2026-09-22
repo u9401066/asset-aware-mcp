@@ -1,6 +1,6 @@
 # Native DOCX table grid operations
 
-Status: Unreleased, accumulated within 1.4.x; public version remains 1.4.0.
+Release scope: **1.4.1**. Use the installed runtime contract and the limits below.
 
 ## Purpose and responsibility
 

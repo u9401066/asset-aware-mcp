@@ -1,4 +1,6 @@
-# ETL evidence snapshots for CSL (Unreleased / 1.4.x)
+<a id="etl-evidence-snapshots-for-csl-unreleased-14x"></a>
+
+# ETL evidence snapshots for CSL (1.4.1)
 
 ## Problem and boundary
 
@@ -8,7 +10,7 @@ silently resolve a changed extraction or lose its original evidence after deleti
 Capture an explicitly requested, verified ETL reference as an immutable managed
 snapshot, then use that snapshot alongside native sources in one CSL document.
 DOCX DFM ingestion is a separate representation; existing native DOCX block refs
-remain its CSL route. Public version stays 1.4.0, with no per-feature tag.
+remain its CSL route.
 
 The snapshot proves exact original bytes, captured extraction content and locator
 consistency. It cannot prove extraction accuracy, semantic support, bibliographic

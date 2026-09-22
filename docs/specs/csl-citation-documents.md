@@ -1,4 +1,6 @@
-# CSL citation documents (Unreleased, 1.4.x)
+<a id="csl-citation-documents-unreleased-14x"></a>
+
+# CSL citation documents (1.4.1)
 
 ## Purpose and boundary
 
@@ -8,7 +10,7 @@ citeproc-js processor and pinned official CSL styles/locales. Existing
 template is not an APA or Chicago implementation. MCP checks input structure,
 source references, resource identities and deterministic output; the Agent checks
 bibliographic truth, source support, the correspondence of printed locators and
-actual rendering. Public version remains 1.4.0.
+actual rendering.
 
 ## Contract
 

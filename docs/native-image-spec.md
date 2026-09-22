@@ -1,9 +1,8 @@
 # Native raster assets — implementation contract
 
-Status: local kernel, application, evidence/Wiki, SDK2 and actual default-model
-Codex evaluation and local release gates verified; remote publication checks remain
-pending. Public **1.4.0**, next
-consolidated release **1.4.1**. These changes have not yet been pushed or released.
+Release scope: **1.4.1**. Kernel, application, evidence/Wiki, SDK2 and an actual
+default Codex evaluation have been verified. The evaluation covers the exercised
+samples, not universal image fidelity. Publication status is listed in GitHub Releases.
 
 The `images_enabled` contract flag controls `create_image`, `extract_image`,
 `compose_images`, `read_image`, `read_image_frame`, `render_image_frame`,

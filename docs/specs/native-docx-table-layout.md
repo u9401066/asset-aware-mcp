@@ -1,6 +1,6 @@
 # Native Word table pagination
 
-Status: Unreleased / 1.4.x; public version remains 1.4.0.
+Release scope: **1.4.1**. Use the installed runtime contract and the limits below.
 
 An Agent must be able to correct clipped table text and missing repeated headers
 after viewing actual pages. Extend the existing `update_docx_table_grid` batch,

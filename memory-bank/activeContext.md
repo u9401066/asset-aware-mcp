@@ -1,5 +1,21 @@
 # Active Context
 
+## 1.4.1 release preparation — technical contracts and capability limits
+
+Goal PROGRESS; no push/tag yet. Local e568ab9 prepared26counted release metadata/
+README/Agent-guide files after current published7b32301 gate passed. This segment
+updates21technical documents only, plus both MEM. Consolidated1.4.1 scope replaces
+stale per-feature release statuses; old Unreleased heading anchors are retained
+as explicit HTML IDs. ODS lifecycle/PDF body and viewer parity remain open.
+Native Table creation doc now points to implemented separate totals lifecycle;
+no arbitrary row/column identity-move claim. Changelog historical tail unchanged.
+Docs builder --check and diff hygiene pass; source behavior/dependencies unchanged.
+Next: canonical Wiki + English site status updates/generated payload, then complete
+1.4.1 source/artifact/security/install/Docker gates, one direct-main push and exact
+remote CI/Pages/deployed verification before tag. Author/committer user; original
+workspace untouched. All earlier traces/logs and four staged old traces retained.
+
+
 ## Consolidated 1.4.1 release preparation — version/readme/Agent guides
 
 Goal turn PROGRESS. Prior exact-head gate for 7b32301c9c983eb261ff7fb5bc832184e19561cd

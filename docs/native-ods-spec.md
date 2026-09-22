@@ -1,7 +1,8 @@
 # Native OpenDocument spreadsheets
 
-Status: implementation in progress on main, public 1.4.0; next consolidated
-release 1.4.1. Discover `ods_enabled` in the installed runtime before using ODS operations.
+Release scope: **1.4.1** for creation, logical-cell operations, dependency-checked
+worksheet rename and optional Calc renditions. Discover the installed capabilities.
+Worksheet insertion/deletion/reordering and row/column lifecycle remain open.
 
 ODS must remain ODS throughout native CRUD. An XLSX/CSV conversion is a separate
 derivative, with its own source relationship. The bounded package/worksheet adapter connects to revision-bound MCP operations,
@@ -96,7 +97,9 @@ restart, full receipts,
 source preservation and unchanged portable snapshots. ODT/ODP and the other
 format gaps remain part of the broader goal.
 
-## Native worksheet rename (Unreleased)
+<a id="native-worksheet-rename-unreleased"></a>
+
+## Native worksheet rename (1.4.1)
 
 Discover `ods_table_rename_enabled`. Read every `read_ods_dependencies` text page
 at a fixed asset/revision, continuing with `ods_text_sha256`. The complete inventory
@@ -152,7 +155,7 @@ It exercises rename, actual original/renamed/corrected page images, Agent formul
 correction, full receipts, historical evidence and original/final Wikis. Its audit
 also reimports the actual native outputs against independently authored controls.
 Retain failed traces; image delivery and pixel equality do not certify arbitrary
-spreadsheet semantics or cross-reader fidelity. Public1.4.0; next consolidated1.4.1.
+spreadsheet semantics or cross-reader fidelity.
 
 The 2026-09-22 default-model run completed in255.95s with323successful MCP calls
 and three corrected invocation errors. Its trace contains all six actual PNGs
@@ -173,7 +176,9 @@ including named ranges and charts, within 212 passing integration tests. That jo
 adds coverage of the native transaction and both rendered control pages on the CI
 Calc environment; the actual Agent run remains the separately recorded 7.3 case.
 
-## Native ODS renditions (Unreleased)
+<a id="native-ods-renditions-unreleased"></a>
+
+## Native ODS renditions (1.4.1)
 
 Discover `workbook_rendering.source_formats`; `ods` enables the existing
 `create_workbook_rendition` request with an exact asset/revision, explicit
@@ -225,7 +230,9 @@ every actual PDF page, distinguishes requested calculation policy from observed
 results, and leaves semantic/visual correction with the Agent. A stored preview
 does not recalculate when read; new PDF edits do not inherit old sheet mappings.
 
-## Structural reference mapping foundation (Unreleased)
+<a id="structural-reference-mapping-foundation-unreleased"></a>
+
+## Structural reference mapping foundation (1.4.1)
 
 `src/domain/native_ods_references.py` supplies the first structural-edit primitive.
 It parses native OpenFormula points and ranges, whole-row/column references,
@@ -319,7 +326,9 @@ files and replays exact ODS bytes/full receipts against the actual Calc fixture
 in clean wheel and Docker installations. These kernel checks complement the
 MCP/Agent/evidence/Wiki verification described below.
 
-## Formula-cache traversal performance (Unreleased)
+<a id="formula-cache-traversal-performance-unreleased"></a>
+
+## Formula-cache traversal performance (1.4.1)
 
 Before this optimization, the 5,000-formula storage replay took about19.5s locally. Repeated
 `read_cell` scans inside cache invalidation and serialized cache readback make
@@ -337,7 +346,7 @@ Verification must compare exact output bytes and complete receipts with the
 published implementation, prove bounded physical traversal without flaky timing
 thresholds, cover grouped/repeated rows and columns, and replay the 5,000-formula
 case in actual package artifacts. Wall-clock benchmarks supplement those checks.
-The MCP/evidence/Wiki integration above now uses this traversal. Public1.4.0,next1.4.1.
+The MCP/evidence/Wiki integration above now uses this traversal.
 
 Implementation now shares exact cell-record construction between point reads and
 physical traversal. Cache collection retains each visited record; reopened output

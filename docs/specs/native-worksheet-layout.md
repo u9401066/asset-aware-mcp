@@ -1,6 +1,6 @@
 # Native worksheet layout correction
 
-Status: development, Unreleased within 1.4.x. Public version stays 1.4.0.
+Release scope: **1.4.1**. Use the installed runtime contract and the limits below.
 
 The Agent reads an immutable workbook rendition, identifies clipped text, reads
 native dimensions, chooses explicit corrections and renders a new revision. MCP
