@@ -1,6 +1,11 @@
 # Release And Testing
 
-## Native raster evaluation (Unreleased)
+以下保存納入 **1.4.1** 的實際評估與限制；各次測試保留原始範圍、失敗與修正。
+測試成功不等於任意文件保真，正式發布狀態以 GitHub Releases 為準。
+
+<a id="native-raster-evaluation-unreleased"></a>
+
+## Native raster evaluation (1.4.1)
 
 新增保存證據測試：實際 Pillow 12.2.0 → 12.3.0、SDK2 balanced／compact 服務
 重啟後，完整歷史影格、區域、PNG 與 Wiki 保持一致；未保存的歷史預覽不會
@@ -36,10 +41,12 @@
 xvfb-run，本機未驗證 VSIX activation，發布 CI 必須另外通過。遠端 CI／Pages
 在該批已通過所有工作及部署核對；後續每批仍需重新驗證。本案例不代表任意
 照片、圖層、動畫或 Excel 外觀一致。
-公開 **1.4.0**，下次整合 **1.4.1**。詳見
+詳見
 [可重跑流程](https://github.com/u9401066/asset-aware-mcp/blob/main/tests/codex_native_image/README.md)。
 
-## Native PDF annotation evaluation (Unreleased)
+<a id="native-pdf-annotation-evaluation-unreleased"></a>
+
+## Native PDF annotation evaluation (1.4.1)
 
 批註工作流分別測試原生物件、完整 MCP 傳輸、實際 Agent 圖片核對與可攜證據。
 合成測試涵蓋 12 種外觀、旋轉／CropBox／UserUnit、原生批註陣列、回覆相依、
@@ -96,9 +103,10 @@ uv run python -m tests.codex_pdf_annotations.run \
 
 runner 不指定模型；稽核完整 contract／schema／批註／receipt 分頁與呼叫順序，
 並保存模型錯誤及限制。獨立核對不等於通用閱讀器相容性或自動語意判斷。
-公開版 **1.4.0**，下次整合 **1.4.1**，不逐功能跳版。
 
-## Native Word footnote/endnote evaluation (Unreleased)
+<a id="native-word-footnoteendnote-evaluation-unreleased"></a>
+
+## Native Word footnote/endnote evaluation (1.4.1)
 
 後續 CI 在 Writer 24.2.7 揭露真實內容錯配，原本的頁面斷言正確攔下。以官方 24.2.7.2
 隔離程式重播相同 DOCX，確認不是空白或文字擷取差異。八次控制實驗比較定義次序與
@@ -172,9 +180,11 @@ python /path/to/scripts/smoke_docx_note_runtime.py /absolute/new-word-notes-run/
 
 一般 pytest 不啟動模型。此案例使用選配 Writer、固定私有字體；未驗證 Microsoft Word、
 任意真實文件、所有自訂註號／特殊設定／修訂相依。MCP 提供必要版本、來源與結構檢查，
-Agent 完整核對語意、視覺與修正。公開 **1.4.0**，下次整合 **1.4.1**。
+Agent 完整核對語意、視覺與修正。
 
-## Native Word story lifecycle evaluation (Unreleased)
+<a id="native-word-story-lifecycle-evaluation-unreleased"></a>
+
+## Native Word story lifecycle evaluation (1.4.1)
 
 實際 Codex 預設模型處理一份 **四頁、三節**的合成 Word 文件，完整讀取來源頁首頁尾、
 節綁定及 contract 分頁，並查看四張初始頁面。Agent 複製頁首、建立頁尾，將中間節
@@ -212,10 +222,11 @@ VSIX **199 項**測試、64 檔套件檢查與安裝／更新通過；本地 act
 
 一般 pytest 不啟動模型。此案例使用選配 LibreOffice Writer，沒有測試 Microsoft Word；
 未涵蓋任意真實文件、所有特殊依賴的複製或註腳／尾註。MCP 核對來源、版本與結構，
-Agent 負責完整語意、視覺核對及修正。公開版 **1.4.0**，變更累積於 **Unreleased／1.4.x**，
-下一次統整發布為 **1.4.1**。
+Agent 負責完整語意、視覺核對及修正。
 
-## Native Word header/footer evaluation (Unreleased)
+<a id="native-word-headerfooter-evaluation-unreleased"></a>
+
+## Native Word header/footer evaluation (1.4.1)
 
 實際 Codex 預設模型處理一份 **三頁、兩節**的合成 Word 文件：首頁獨立頁首、空白頁尾，
 第二、三頁共用頁首頁尾；共用頁首刻意使用非標準檔名。Agent 先完整讀取節綁定與內容，
@@ -242,10 +253,11 @@ Python 3.10 **43 通過、1 個選配渲染項目跳過**。乾淨安裝的 whee
 8 份完整內容、2 份清單及兩份 byte-identical 歷史 Wiki，程式雜湊與實際 Codex 執行一致。
 
 此案例沒有測試 Microsoft Word，也沒有建立／刪除整個頁首頁尾定義、重新連結節，或處理註腳／尾註。
-MCP 核對來源、版本與結構；Agent 負責完整語意和視覺核對。公開版仍為 **1.4.0**，
-變更累積於 **Unreleased／1.4.x**，下一次統整發布為 **1.4.1**。
+MCP 核對來源、版本與結構；Agent 負責完整語意和視覺核對。
 
-## Native Word pagination evaluation (Unreleased)
+<a id="native-word-pagination-evaluation-unreleased"></a>
+
+## Native Word pagination evaluation (1.4.1)
 
 實際 Codex 預設模型接收一份列高裁字、未設定重複標題的原生 Word 表格，先查看
 完整資料及一張實際頁面，再調整標題前綴、內容列自動高度與列跨頁策略。
@@ -273,9 +285,10 @@ uv run python -m tests.codex_docx_layout.audit /absolute/new-word-layout-run
 Writer 頁面、中英文字形與 NIST／NASA PDF。新分頁／稽核／SDK2 群組 **34 通過**；
 Python 3.10 **33 通過、1 個選配渲染項目跳過**。VSIX **199 項**測試、64 檔套件
 檢查及安裝／更新通過；本地 activation 跳過，由 CI 執行。
-公開版 **1.4.0**，開發累積於 **Unreleased／1.4.x**。
 
-## Native Word grid evaluation (Unreleased)
+<a id="native-word-grid-evaluation-unreleased"></a>
+
+## Native Word grid evaluation (1.4.1)
 
 最終程式包含可分頁讀回的完整修改紀錄。初次模型執行的 61 次成功呼叫／174.05 秒
 仍保留；之後長紀錄回歸測試重現截斷問題，修正後才重新執行下列驗證，沒有隱藏原始失敗。
@@ -304,9 +317,10 @@ Writer 頁面、中英文字形與 NIST／NASA PDF 案例；Python 3.10 重點�
 一般 pytest 不啟動模型；實測要求已登入的 Codex 與選配 LibreOffice Writer。
 `--font-fixture` 沿用受固定 hash 檢查的私有中英文字體，不更改系統字體設定。
 MCP 負責來源／版本／結構檢查，完整語意與視覺核對由 Agent 協調。
-公開版 **1.4.0**，改動累積於 **Unreleased／1.4.x**。
 
-## Captured ETL citation evaluation (Unreleased)
+<a id="captured-etl-citation-evaluation-unreleased"></a>
+
+## Captured ETL citation evaluation (1.4.1)
 
 2026-09-19 真實 Codex 預設模型完成一頁虛構書目 PDF 的文字／表格／圖片擷取、
 三份完整證據快照、字串 `007` 的原生 Excel 儲存格，以及混合來源 APA Wiki。
@@ -331,7 +345,7 @@ python /path/to/scripts/smoke_etl_snapshot_runtime.py /absolute/new-etl-csl-run/
 **1 passed（38.65 秒）**；完整套件含 NIST／NASA corpus 為 **3,110 passed／35
 optional skipped（289.41 秒）**，後補的 **7 項稽核回歸**另行通過。此合成案例
 不證明任意 PDF 擷取正確性、學術書目真實性或語意支持。MCP 做必要內容／來源
-檢查，完整語意及視覺核對仍由 Agent 負責。公開版維持 **1.4.0／後續 1.4.x**。
+檢查，完整語意及視覺核對仍由 Agent 負責。
 
 乾淨 Python 3.10 wheel 與 Docker 的已安裝程式，在 checkout 外重播相同證據，
 三張歷史來源頁及整份 Wiki 位元組一致，原始碼指紋也與 Codex 實測一致。
@@ -346,7 +360,9 @@ Codex／wheel／Docker 原始碼指紋不變。修正後 Python 3.10 的快照�
 共 **44 passed（49.37 秒）**，Python 3.13 的稽核／SDK2 **10 passed（40.13 秒）**。
 首輪 CI 失敗紀錄保留。
 
-## CSL citation document evaluation (Unreleased)
+<a id="csl-citation-document-evaluation-unreleased"></a>
+
+## CSL citation document evaluation (1.4.1)
 
 2026-09-19 的真實 **Codex 預設模型**透過 MCP 完成 APA／Vancouver 引用文件與
 兩份不可變 Wiki：**38 次成功呼叫、1 次恢復的工具錯誤、192.75 秒**。Agent 查看
@@ -379,10 +395,11 @@ wheel、實際 Codex、Docker 與原始碼雜湊一致。基礎容器未包含 N
 瀏覽器驗證涵蓋 1440×1000／390×844、中英指南切換與 APA／Vancouver 排版預覽，
 檢查非空內容、無水平溢出、斜體及 APA 懸掛縮排，留存八張截圖。
 這些範例不涵蓋所有期刊規則、語言或書目欄位組合；書目真實性、來源語意支持、
-印刷頁碼對應與最終版面仍由 Agent 核對。公開版 **1.4.0**，功能保留於
-**Unreleased／1.4.x**，沒有新增版本標籤。
+印刷頁碼對應與最終版面仍由 Agent 核對。
 
-## Real PDF corpus (Unreleased)
+<a id="real-pdf-corpus-unreleased"></a>
+
+## Real PDF corpus (1.4.1)
 
 2026-09-19 的 **Codex 預設模型**直接透過本工作樹 MCP 處理以下原始公開文件，
 沒有預先提供表格答案，也沒有另指定模型：
@@ -433,9 +450,11 @@ Corpus／trace／報告均明確使用 UTF-8，另新增預設非 UTF-8 環境�
 VSIX 199 項測試、安裝／更新與 Docker SDK2 smoke 均通過；原始碼、wheel、
 實際 Agent 與容器的來源雜湊一致。
 兩份文件仍不足以證明任意 PDF 的 OCR、語意、版面或回寫忠實度；跨格式總目標
-繼續進行。公開版 **1.4.0**，新增工作列於 **Unreleased／1.4.x**。
+繼續進行。
 
-## Native CSV/TSV evaluation (Unreleased)
+<a id="native-csvtsv-evaluation-unreleased"></a>
+
+## Native CSV/TSV evaluation (1.4.1)
 
 真實 Codex **預設模型**於 2026-09-19 完成 **103 次成功 MCP 呼叫、零工具錯誤、
 210.09 秒、4 張實際區域 PNG**。它自行從合成掃描 PDF 選取 Count、Reading、Unit，
@@ -470,9 +489,10 @@ uv run python -m tests.codex_delimited.run --output /absolute/new/run-dir
 
 一般 pytest 不會啟動模型。此測試是合成掃描／CSV fixture，不能推論任意文件 OCR
 或試算表顯示保真；語意審核欄位仍是 Agent 聲明，MCP 檢查可機械驗證的部分。
-公開版維持 **1.4.0**，功能累積於 **Unreleased／1.4.x**。
 
-## PDF region evidence evaluation (Unreleased)
+<a id="pdf-region-evidence-evaluation-unreleased"></a>
+
+## PDF region evidence evaluation (1.4.1)
 
 真實 Codex **預設模型**於 2026-09-19 完成 **82 次成功 MCP 呼叫、零工具錯誤、
 218.02 秒、5 張實際區域 PNG**。它從合成掃描 PDF 第一資料列自行選取 Count、
@@ -500,10 +520,11 @@ SDK2 整合測試直接傳輸實際 PNG，核對來源格、轉製帳本、Wiki 
 完整測試 **2,967 項通過、35 項選配略過**，另以真實 SDK2 驗證上述流程。
 
 重現：`uv run python -m tests.codex_pdf_regions.run --output /absolute/new/run-dir`；
-普通 pytest 不啟動模型。公開版 **1.4.0**，變更累積 **Unreleased／1.4.x**。
+普通 pytest 不啟動模型。
 
+<a id="worksheet-layout-correction-evaluation-unreleased"></a>
 
-## Worksheet layout correction evaluation (Unreleased)
+## Worksheet layout correction evaluation (1.4.1)
 
 選配 Calc／SDK2 測試已核對尺寸修改前後的 PDF、實際 MCP PNG、來源版本與
 歷史影像。以 `NATIVE_WORKBOOK_RENDER_TEST=1` 執行
@@ -526,9 +547,11 @@ SDK2 整合測試直接傳輸實際 PNG，核對來源格、轉製帳本、Wiki 
 
 重現：`uv run python -m tests.codex_workbook_layout.run --output /absolute/new/run-dir`。
 完整測試 2,931 項通過、35 項選配略過；Calc／SDK2 測試另外啟用並通過。
-普通 pytest 不啟動模型。來源檔及舊 PDF 保持不變，公開版仍 **1.4.0／Unreleased 1.4.x**。
+普通 pytest 不啟動模型。來源檔及舊 PDF 保持不變，
 
-## Workbook rendition evaluation (Unreleased)
+<a id="workbook-rendition-evaluation-unreleased"></a>
+
+## Workbook rendition evaluation (1.4.1)
 
 選配真實 Calc／SDK2 測試通過：四種列印／整張工作表與快取／重算組合，
 核對實際 PNG 像素、列印範圍、隱藏及空白工作表、來源位元組與 mtime、歷史
@@ -545,9 +568,11 @@ SDK2 整合測試直接傳輸實際 PNG，核對來源格、轉製帳本、Wiki 
 Agent 實際指出整張工作表的標題上緣與隱藏頁文字右緣截斷；測試沒有假稱已修正。
 完整頁數不等於版面保真，Calc 結果也不是 Excel 認證。上述後續尺寸修正測試已
 補上這份樣本的截斷修正；更廣語料核對仍待完成。重現：`uv run python -m tests.codex_workbook_rendition.run --output /absolute/new/run-dir`。
-普通 pytest 不會啟動模型。公開版 **1.4.0**，此項為 **Unreleased／1.4.x**。
+普通 pytest 不會啟動模型。
 
-## Native Table totals lifecycle evaluation (Unreleased)
+<a id="native-table-totals-lifecycle-evaluation-unreleased"></a>
+
+## Native Table totals lifecycle evaluation (1.4.1)
 
 實際預設模型 Codex 完成 **201 次成功 MCP 呼叫、零工具錯誤**，耗時
 **181.76 秒**。透過 MCP PNG 閱讀合成掃描 PDF，建立獨立 XLSX 與原生 Table，
@@ -567,9 +592,11 @@ Agent 實際指出整張工作表的標題上緣與隱藏頁文字右緣截斷�
 直接樣式繼承只使用預設樣式，沒有驗證 Excel 畫面或公式計算結果。
 
 重現：`uv run python -m tests.codex_table_totals.run --output /absolute/new/run-dir`。
-普通 pytest 不啟動模型。公開版維持 **1.4.0**，開發累積 **Unreleased／1.4.x**。
+普通 pytest 不啟動模型。
 
-## Native Table creation evaluation (Unreleased)
+<a id="native-table-creation-evaluation-unreleased"></a>
+
+## Native Table creation evaluation (1.4.1)
 
 實際 Codex CLI 從 MCP PNG 閱讀合成掃描 PDF，透過 `create` 自行建立 XLSX，
 再以 `add_workbook_table` 建立原生 Inventory Table。共 **73 次成功 MCP 呼叫、
@@ -585,9 +612,10 @@ Table／filter 範圍、計算欄、合計列與樣式；另核對完整分頁�
 此次只驗證合成掃描第一頁及建立工作流，Excel 畫面與公式計算結果尚未驗證。
 重現：`uv run python -m tests.codex_table_create.run --output /absolute/new/run-dir`。
 普通 pytest 不啟動模型；runner 使用預設 Codex 模型，audit 獨立核對證據。
-公開版仍為 **1.4.0**，此項累積於 **Unreleased／1.4.x**。
 
-## Native Table column editing evaluation (Unreleased)
+<a id="native-table-column-editing-evaluation-unreleased"></a>
+
+## Native Table column editing evaluation (1.4.1)
 
 實際 Codex CLI 完成 **66 次成功 MCP 呼叫、零工具錯誤**，耗時 **132.75 秒**。
 先以真實 MCP PNG 閱讀合成掃描，再把 10 個資料格逐字轉錄為原生 Table 字串。
@@ -605,9 +633,10 @@ before 來自原版、after 來自新版。完整公開讀回的合併容量也�
 這次使用既有 Table 範本，不算 MCP 建表；Excel 畫面與公式計算結果尚未驗證。
 重現：`uv run python -m tests.codex_table_edit.run --output /absolute/new/run-dir`。
 普通 pytest 不啟動模型；runner 使用預設 Codex 模型，audit 獨立核對證據。
-公開版仍 1.4.0，功能列於 Unreleased／1.4.x。
 
-## Native Table expansion evaluation (Unreleased)
+<a id="native-table-expansion-evaluation-unreleased"></a>
+
+## Native Table expansion evaluation (1.4.1)
 
 實際 Codex CLI 以 MCP SDK2 完成 **82 次成功呼叫、零錯誤**，耗時 150.48 秒。
 用 MCP PNG 讀取合成掃描 PDF 第一頁，將 10 個資料格保留為原樣字串，填入既有
@@ -627,9 +656,10 @@ native_generated 保留 F4 計算公式與 G1 新標題。一次原生提交後�
 重現：`uv run python -m tests.codex_table_expansion.run --output /absolute/new/run-dir`。
 runner 使用隔離設定及目前 checkout，普通 pytest 不會啟動模型；完成後使用獨立
 `tests.codex_table_expansion.audit` 稽核。測試保留 default model，不自行覆寫模型。
-公開版仍為 **1.4.0**，此項累積於 **1.4.x Unreleased**。
 
-## Structural A2T writeback evaluation (Unreleased)
+<a id="structural-a2t-writeback-evaluation-unreleased"></a>
+
+## Structural A2T writeback evaluation (1.4.1)
 
 `tests/unit/test_native_table_grid_apply.py` 與
 `tests/integration/test_native_table_grid_stdio.py` 驗證欄位改名／重建身分、刪除後
@@ -651,9 +681,10 @@ A2T 快照、原 PDF 位元組／mtime，以及兩份歷史 Wiki。舊主張沒�
 它只接受原生操作名稱，其他工具使用 MCP 已提供的工具 schema。CLI
 0.154.0-alpha.6.1 使用預設模型。這次實際模型案例沒有原生 Excel Table 物件，
 也未驗證一般 OCR、公式求值或 Excel 渲染；富文字／公式保留另由原生測試覆蓋。
-公開版維持 1.4.0，變更列於 Unreleased／1.4.x。
 
-## Native worksheet grid evaluation (Unreleased)
+<a id="native-worksheet-grid-evaluation-unreleased"></a>
+
+## Native worksheet grid evaluation (1.4.1)
 
 `tests/unit/test_native_grid_*.py`、`tests/unit/test_native_workbook_grid.py`
 及 `tests/integration/test_native_grid_stdio.py` 涵蓋原生列欄插刪、公式與表格
@@ -674,9 +705,11 @@ PNG，建立 15 個字面值儲存格，將 B2 的 007 改成 008，插入再刪
 初版稽核誤拒先前的探索讀取；修正後允許探索，但每次修改前仍必須完整讀取
 固定版本。回歸測試會拒絕漏讀當次紀錄、缺少修改前讀取或沿用舊的同 SHA 證明。
 CLI 0.154.0-alpha.6.1 使用預設模型；此合成案例不代表一般 OCR、Excel 渲染、
-公式求值或 A2T 結構回寫已驗證。公開版仍為 1.4.0，開發列於 Unreleased／1.4.x。
+公式求值或 A2T 結構回寫已驗證。
 
-## Native A2T correspondence evaluation (Unreleased)
+<a id="native-a2t-correspondence-evaluation-unreleased"></a>
+
+## Native A2T correspondence evaluation (1.4.1)
 
 `tests/unit/test_native_table_*.py` 與 `tests/integration/test_native_table_stdio.py`
 涵蓋 typed cells、原生格式／未修改 parts、合併與富文字保護、過期版本、獨立新建、
@@ -697,9 +730,10 @@ Codex 改用合法分頁後完成。稽核測試會拒絕事後補讀、漏讀�
 
 CLI 0.154.0-alpha.6.1 使用預設模型；此合成案例不代表一般 OCR、公式求值或
 Excel 渲染已驗證。舊的 007 主張不會遷移到 008；新工作簿版面另行核對。
-公開版仍為 1.4.0，開發列於 Unreleased／1.4.x。
 
-## Native workbook structure evaluation (Unreleased)
+<a id="native-workbook-structure-evaluation-unreleased"></a>
+
+## Native workbook structure evaluation (1.4.1)
 
 執行 `tests/unit/test_native_workbook_*.py`、`tests/unit/test_codex_workbook_audit.py`
 及 `tests/integration/test_native_workbook_stdio.py`，涵蓋真實 XLSX 的公式、樣式、
@@ -722,10 +756,11 @@ Wiki 都由獨立稽核核對。稽核另有拒絕事後補讀、偽造版本轉
 Codex CLI 0.154.0-alpha.6.1 使用預設模型，沒有固定模型版本。
 
 這是合成掃描案例，不代表一般 OCR、Excel 渲染或公式求值已驗證。來源為整頁引用，
-產物為精確文字選取；舊主張不遷移到新版。公開版保持 1.4.0，功能列於 Unreleased／1.4.x。
+產物為精確文字選取；舊主張不遷移到新版。
 
+<a id="native-selection-evaluation-unreleased"></a>
 
-## Native selection evaluation (Unreleased)
+## Native selection evaluation (1.4.1)
 
 ```bash
 uv run pytest tests/unit/test_native_selection.py tests/unit/test_native_selection_service.py tests/unit/test_codex_selection_audit.py tests/integration/test_native_selection_stdio.py -q
@@ -744,9 +779,11 @@ SDK2 測試以合併標題的 PPTX 表格核對精確 run 選取、修改後歷�
 四種父格式、Unicode codepoint／UTF-8 範圍、空值型別、錯誤位置、分頁大小、
 帳本與不可變 Wiki 均有回歸測試。CLI 使用現有登入狀態及預設模型，未固定模型；
 一般 pytest 不啟動模型。本評估為合成資料，不代表一般 OCR、像素區域證據、
-Excel 視覺保真或跨儲存格自動對應已完成。公開版仍 1.4.0／後續 1.4.x。
+Excel 視覺保真或跨儲存格自動對應已完成。
 
-## CJK font correction evaluation (Unreleased)
+<a id="cjk-font-correction-evaluation-unreleased"></a>
+
+## CJK font correction evaluation (1.4.1)
 
 The first Writer evaluation found boxes for 「研究」. No Chinese font was available;
 Arial resolved to Liberation Sans. Even those boxes had nonzero PDF glyph IDs and
@@ -788,14 +825,15 @@ actual appearance is reviewed by the Agent. Word compatibility, different instal
 fonts, repeated-header pagination and real-corpus coverage still require evaluation.
 The original missing-glyph run below is retained as historical evidence; the private
 fixture corrects that case without changing the machine's default font environment.
-Public remains **1.4.0**, with new work Unreleased for **1.4.x**.
 
 Local CJK gates passed **2,221 Python tests** (33 optional skips), the **37-test**
 focused run including actual CJK SDK2 images, **199 extension tests**, lint/type,
 workflow/dependency/harness checks and desktop/mobile zh/en browser review. Runtime
 source and dependencies are unchanged from the previously verified page renderer.
 
-## DOCX page rendering evaluation (Unreleased)
+<a id="docx-page-rendering-evaluation-unreleased"></a>
+
+## DOCX page rendering evaluation (1.4.1)
 
 Add `--render` to `tests.codex_docx_structure.run` to make Codex view every page
 of the final DOCX and the historical revision with the temporary `008` Count.
@@ -827,9 +865,11 @@ Final page-preview gates on 2026-09-19 passed **2,210 Python tests** (32 optiona
 skips; Writer and Impress SDK2 image tests also passed separately), **199 extension
 tests**, source/type/security/dependency checks, clean-wheel CLI/SDK2, Docker
 CLI/SDK2, artifact audits and fresh/update VSIX install. Local GUI activation was
-unavailable; remote CI covers that check. Public remains 1.4.0, with no new tag.
+unavailable; remote CI covers that check.
 
-## Native DOCX structure evaluation (Unreleased)
+<a id="native-docx-structure-evaluation-unreleased"></a>
+
+## Native DOCX structure evaluation (1.4.1)
 
 The real Codex CLI can transcribe a synthetic scanned PDF page into a newly created,
 editable DOCX table, change and restore a cell, insert/delete disposable body blocks,
@@ -846,8 +886,7 @@ uv run python -m tests.codex_docx_structure.audit /tmp/docx-codex-structure
 The independent auditor checks actual source PNG pixels, exact strings, leading
 zeros, run formatting, column/row grids, merges, managed history, complete DFM reads
 before edits, full references, source bytes/mtime and wiki part attachments. This
-does not establish full Word rendering fidelity or real-corpus coverage. Public
-version remains 1.4.0; new features accumulate Unreleased for 1.4.x.
+does not establish full Word rendering fidelity or real-corpus coverage.
 
 Run 01 on 2026-09-19 completed **45 MCP calls with zero tool errors**, one actual
 source PNG and complete DFM readback for all five managed DOCX revisions. Exact
@@ -857,13 +896,14 @@ passed independent checks. Codex also exported a source PDF wiki and verified a
 whole-file reference; the auditor accepts these additional valid outputs. It
 explicitly reported that DOCX page rendering/page flow were not reviewed.
 
-
 Final local gates passed on 2026-09-19: **2,156 Python tests passed, 31 optional
 skipped**; extension **199 passed**. Ruff, mypy, dependency/security gates, Docker
 CLI/SDK2 stdio, fresh/update VSIX install and clean-wheel CLI/stdio checks passed.
 Local GUI activation was unavailable; CI runs that check. No public version bump.
 
-## Whole-slide rendering evaluation (Unreleased)
+<a id="whole-slide-rendering-evaluation-unreleased"></a>
+
+## Whole-slide rendering evaluation (1.4.1)
 
 Use `--render` with `tests.codex_pptx_tables.run` to make the real Codex CLI view
 both the final slide and a historical slide through `render_pptx_slide`.
@@ -889,7 +929,7 @@ and reordered-slide colors plus historical image stability; enable it with
 `NATIVE_PPTX_RENDER_TEST=1` and a usable Impress installation. CI installs Impress
 for that test. Ordinary pytest never starts Codex. Full local suite: **2,095 passed,
 30 optional skipped**; extension: **199 passed**. No PowerPoint, animations, media
-playback, general OCR or real-corpus coverage is claimed. Public version stays 1.4.0.
+playback, general OCR or real-corpus coverage is claimed.
 
 ## Focused Checks
 
@@ -1152,7 +1192,9 @@ Docker build context 已忽略 local uv/runtime caches、assistant harness folde
 目前 Dockerfile 刻意不使用 BuildKit cache mount，以保留 legacy builder
 相容性；這個 build 不會單因 Dockerfile 而要求 `docker buildx`。
 
-## Codex native PDF evaluation (Unreleased)
+<a id="codex-native-pdf-evaluation-unreleased"></a>
+
+## Codex native PDF evaluation (1.4.1)
 
 原生頁面路徑另有 opt-in 實測，普通 pytest 不會呼叫模型：
 
@@ -1180,7 +1222,9 @@ artifacts；失敗或修正不能改成首次全對。此測資與固定 rendere
 Wiki 核對。MCP 圖片另外比對其固定版本的獨立渲染像素。較早 run 01 的
 171 次呼叫與通過結果另行保留；呼叫數受模型分段讀取策略影響。
 
-## Codex PPTX picture evaluation (Unreleased)
+<a id="codex-pptx-picture-evaluation-unreleased"></a>
+
+## Codex PPTX picture evaluation (1.4.1)
 
 ```bash
 uv run pytest tests/unit/test_native_pptx_picture*.py tests/integration/test_native_pptx_picture_stdio.py
@@ -1200,7 +1244,9 @@ MCP 工具。模型須登錄圖片／簡報、插入兩張共用圖片、完整�
 來源 A101／007 與替換 C301／001 的辨讀相符；此為合成案例，不能外推一般
 OCR 正確率或完整簡報版面。執行紀錄保留來源與 lock hash，可比對實測版本。
 
-## Codex scanned PDF to PPTX table evaluation (Unreleased)
+<a id="codex-scanned-pdf-to-pptx-table-evaluation-unreleased"></a>
+
+## Codex scanned PDF to PPTX table evaluation (1.4.1)
 
 ```bash
 uv run python -m tests.codex_pptx_tables.run \
@@ -1222,7 +1268,9 @@ uv run python -m tests.codex_pptx_tables.run \
 初次轉錄完全正確；1 張實際掃描 PNG、4 份不同版本／定位的完整證據紀錄
 （重複讀取另計）。兩次的最終 PPTX／Wiki 與歷史還原稽核都通過。
 
-## Codex native derivation evaluation (Unreleased)
+<a id="codex-native-derivation-evaluation-unreleased"></a>
+
+## Codex native derivation evaluation (1.4.1)
 
 在已登入的 Codex CLI 執行：
 
@@ -1253,8 +1301,9 @@ Wiki。稽核以實際 MCP 回應和原生產物判斷：引用需先完整讀�
 案例，仍要求完整覆蓋與正確 hash，原始失敗報告保留。模型另自述修正過一次
 過度跳脫的字型診斷；此聲明亦獨立保留，不作為伺服器或版面正確性的證明。
 
+<a id="codex-native-table-grid-exercise-unreleased"></a>
 
-### Codex native table grid exercise (Unreleased)
+### Codex native table grid exercise (1.4.1)
 
 以 `tests.codex_pptx_tables.run --grid` 啟用實際模型的列欄流程。Codex 先查看
 掃描頁 PNG、建立並核對表格，接著逐次插欄、插列、調整列高／欄寬、刪列、刪欄。
@@ -1271,7 +1320,9 @@ Wiki。`--derivations` 可另外組合；一般 pytest 不會啟動模型。
 發布檔與 Wiki 亦通過。完整 pytest：1,971 passed、30 optional skipped；
 擴充套件：199 tests。這些結果仍不代表完成投影片畫面核對。
 
-### Codex native table merge/split exercise (Unreleased)
+<a id="codex-native-table-mergesplit-exercise-unreleased"></a>
+
+### Codex native table merge/split exercise (1.4.1)
 
 使用 `tests.codex_pptx_tables.run --merges`，也可組合 `--grid`／`--derivations`。
 Agent 完成掃描表格後，插入帶有前導零、正負號、粗斜體的暫存列，合併其內容、
@@ -1290,7 +1341,9 @@ Agent 完成掃描表格後，插入帶有前導零、正負號、粗斜體的�
 skipped，之後新增「起點缺少可選文字框」案例並通過含該案例的 18 項測試；
 production source 未變更。VSIX 199 tests 通過。
 
-### Codex native slide structure exercise (Unreleased)
+<a id="codex-native-slide-structure-exercise-unreleased"></a>
+
+### Codex native slide structure exercise (1.4.1)
 
 使用 `tests.codex_pptx_tables.run --slides`，可與格網、合併／拆分及轉製帳本流程
 組合。Agent 查看掃描頁並完成可編輯表格後，探索目前版型、插入兩頁帶格式文字框、
@@ -1308,8 +1361,9 @@ python-pptx 在記憶體中重新命名後的 part 路徑取代原始檔案身�
 也通過。完整 pytest：2,068 passed、30 optional skipped；VSIX：199 tests。
 沒有執行完整投影片檢視器渲染，因此不宣稱完整畫面保真。
 
+<a id="codex-native-pdf-field-evaluation-unreleased"></a>
 
-## Codex native PDF field evaluation (Unreleased)
+## Codex native PDF field evaluation (1.4.1)
 
 ```bash
 uv run python -m tests.codex_pdf_fields --source /absolute/path/to/form.pdf --output /tmp/pdf-fields-run
@@ -1342,5 +1396,4 @@ Text1 設為 `中文 007 µg`、checkbox 勾選、radio 選右側，再建立 Re
 
 這是固定上游表單與 MuPDF 靜態預覽；未驗證其他檢視器的互動編輯、重建外觀
 或任意表單。副本來自 Agent 新填入的文字，不能視為原始空白表單的事實證據。
-MCP 負責必要機械檢查，Agent 負責完整語意／視覺核對與修正。公開 **1.4.0**，
-下一次整合發版 **1.4.1**。
+MCP 負責必要機械檢查，Agent 負責完整語意／視覺核對與修正。

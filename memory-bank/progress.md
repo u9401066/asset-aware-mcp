@@ -1,5 +1,25 @@
 # Progress (Updated: 2026-09-22)
 
+## 1.4.1 release preparation — Wiki and bilingual website aligned
+
+Goal PROGRESS; local main ahead2, no new push/tag. This10counted-file segment plus
+both MEM synchronizes four canonical Wiki chapters, generated counterparts and
+site payload/English reader. Current capability/release status references1.4.1;
+old Unreleased heading links remain usable via explicit anchors. Historical test
+scope/failures remain, and current native worksheet/A2T/rendition statements no
+longer repeat superseded gaps. ODS full lifecycle/PDF-body/viewer gaps remain.
+43docs/artifact/harness/GitHub hygiene tests pass; JS syntax/docs builder/diff pass.
+Locked Python214packages audit found no known vulnerabilities/adverse status.
+
+Npmci failed ENOSPC before completing node_modules; preserve log01 and npm cache.
+No source behavior/dependency upgrade. Full1.4.1 tests/security/artifacts remain.
+Current root180MB/shm533MB; inspect own completed test artifacts before safe cleanup
+or using task-owned tmpfs dependency installation. Never global prune/other work.
+Failed npm session69252 terminal228. Original workspace untouched, main direct,
+user author/committer. Current public1.4.0 until gated consolidated1.4.1 release.
+All prior publication proof and actual Codex evaluation evidence remain preserved.
+
+
 ## 1.4.1 release preparation — technical contracts and capability limits
 
 Goal PROGRESS; no push/tag yet. Local e568ab9 prepared26counted release metadata/

@@ -2,12 +2,13 @@
 
 # Citation Provenance
 
-## Captured ETL evidence (Unreleased)
+<a id="captured-etl-evidence-unreleased"></a>
+
+## Captured ETL evidence (1.4.1)
 
 PDF 擷取後的文字、表格與圖片原本指向可變動的 ETL 目錄。需要長期保存或加入
 CSL 文稿時，先明確建立不可變的證據快照；原始 PDF、擷取文字、blocks、manifest
 及所選圖片都會保留。刪除或重新擷取 ETL 資料後，已保存的證據仍可讀取與檢視。
-公開版維持 **1.4.0**；此功能累積於 **Unreleased／1.4.x**。
 
 先讀完 `evidence(op="csl_contract")` 的分頁契約，再依序操作：
 
@@ -48,9 +49,9 @@ Agent 必須比較全文、表格、實際來源頁影像及書目資料，再�
 解碼及 LF 換行規則。單份快照最多 128 MiB，單個 metadata／圖片最多 20 MiB，
 完整證據紀錄最多 2 MiB。DOCX DFM 是另一條管線，CSL 使用既有原生 DOCX 引用。
 
-## CSL citation documents (Unreleased)
+<a id="csl-citation-documents-unreleased"></a>
 
-公開版維持 **1.4.0**，新功能累積於 **Unreleased／1.4.x**。
+## CSL citation documents (1.4.1)
 
 學術引用以整份文稿為單位處理：同作者同年份消歧、群組排序、編號與重複註解
 會影響其他引用，不能逐筆套模板。`evidence(op="csl_contract")` 提供固定 hash 的
@@ -116,7 +117,6 @@ page、region／CSV field／selection／whole-file 引用。每一筆固定 revi
 [CSL 規格](https://docs.citationstyles.org/en/stable/specification.html)、
 [官方樣式](https://github.com/citation-style-language/styles)。
 
-
 ## 目標
 
 Citation-ready 在此專案中表示：每個引用都能追溯到具體文件、block/span、locator、hash 與周邊 context。不能只保存一段文字，因為文件轉換、OCR、DFM 編輯或 table persistence 都可能讓 locator 漂移。
@@ -174,7 +174,7 @@ A2T table cell 可掛 citation refs。當 cited cell 或 row 被更新時，舊 
 `verify_citation_ref` 的 canonical AssetRef；超過 1,000 字元的 span 為了守住 MCP
 response cap，只回 `asset-ref-preview-v1`（`canonical_asset_ref=false`），沒有 canonical
 locator／range，也不能拿去 verify。公開版的完整 exact quote、hash 與 locator 保存於
-寫入磁碟的 citation／agent-asset bundle；Unreleased 另可用上述
+寫入磁碟的 citation／agent-asset bundle；亦可用上述
 `inspect_etl_source` 分頁讀取完整引用，不必先匯出。若要給人類文件、KG answer 或外部審查使用，
 建議用 `citation_bundle(output_format="json")` 或 `evidence(op="bundle")` 取得有界回應，
 需要完整引用則指定 `wiki_root`／`output_path` 寫入 persisted bundle 後再驗證其中 AssetRef。

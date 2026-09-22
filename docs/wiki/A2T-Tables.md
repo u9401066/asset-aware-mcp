@@ -7,9 +7,10 @@
 原生 XLSX 套用 A2T 修改後，可用 `create_workbook_rendition` 將該版本固定成
 PDF，完整讀取 `read_rendition`，再以實際頁面核對公式與版面。列印範圍、隱藏
 工作表及快取政策會影響結果；詳見 [工作簿版面核對](Native-File-Assets)。
-公開版維持 1.4.0，本項為 Unreleased／1.4.x。
 
-## Native Table totals lifecycle (Unreleased)
+<a id="native-table-totals-lifecycle-unreleased"></a>
+
+## Native Table totals lifecycle (1.4.1)
 
 `table_totals_lifecycle_enabled` 啟用時，以 `update_workbook_table` 的
 `table_update.totals_row` 明確新增或移除合計列。仍須提供目前版本、worksheet key、
@@ -37,10 +38,11 @@ MCP 檢查空間、合併格、特殊公式、保護與來源依賴；篩選／�
 引用計數可隨清除操作重新計算。操作紀錄含原始 before 值、範圍與明確選項。
 
 完整讀回新 references、儲存格及 operation_result 後，Agent 核對語意、未來公式
-範圍、篩選、計算結果及實際畫面。舊證據與 Wiki 不自動遷移；公開版維持
-**1.4.0**，這些變更累積於 **Unreleased／1.4.x**。
+範圍、篩選、計算結果及實際畫面。舊證據與 Wiki 不自動遷移。
 
-## Native Table creation (Unreleased)
+<a id="native-table-creation-unreleased"></a>
+
+## Native Table creation (1.4.1)
 
 `workbook_table_creation_enabled` 啟用時，可先用 `create` 建立獨立 XLSX，
 或註冊既有工作簿，再以 `add_workbook_table` 將指定範圍建立成原生 Excel Table。
@@ -67,9 +69,10 @@ ref 包含標題、至少一筆資料及選用合計列；操作不插入工作�
 一次提交後，完整讀回 created_table、欄位 ID、header_cells、before／after
 及機械檢查紀錄，再核對語意、篩選、公式結果與實際畫面。MCP 請求重算，
 不宣稱已執行 Excel 計算。歷史引用、Wiki 與 A2T 綁定不會自動轉成新版。
-公開版維持 **1.4.0**，此項累積於 **Unreleased／1.4.x**。
 
-## Native Table column edits (Unreleased)
+<a id="native-table-column-edits-unreleased"></a>
+
+## Native Table column edits (1.4.1)
 
 `workbook_table_edit_enabled` 啟用時，先完整讀取目前版本的
 `read_workbook(workbook_view="references")`，再使用 `update_workbook_table`。
@@ -93,11 +96,12 @@ asset_id／expected_revision。每個 columns 項目固定 column_id／expected_
 需要對應操作；樞紐來源標題與映射／查詢結構須先協調欄位身分。修改會清除過期
 公式／圖表快取並請求重算；核對完整 operation_result 與新舊引用後，Agent 再核對
 語意、篩選狀態、公式結果及實際畫面。舊引用與 A2T 綁定不自動前進。
-公開版仍 **1.4.0**，此功能列於 **Unreleased／1.4.x**。
 
-## Native workbook workspaces (Unreleased)
+<a id="native-workbook-workspaces-unreleased"></a>
 
-公開版仍為 **1.4.0**，此功能累積於 **1.4.x**。先查原生 `contract` 的
+## Native workbook workspaces (1.4.1)
+
+先查原生 `contract` 的
 `table_workspaces_enabled` 與各操作的 `for_op` schema。
 
 1. `read_workbook` 取得固定 revision 的工作表 `sheet_id`／`part`。
@@ -132,7 +136,9 @@ native 欄位不可經舊的 Excel renderer 字串化輸出。
 它支持修改後的語意；既有 PDF／DFM CellCitation 另行保留。Agent 仍需核對語意、
 公式計算與畫面；來源引用不會自動變成修改後內容的證據。
 
-## Structural A2T writeback (Unreleased)
+<a id="structural-a2t-writeback-unreleased"></a>
+
+## Structural A2T writeback (1.4.1)
 
 先確認 `contract(for_op="apply_table_workspace")` 的 `table_grid_apply_enabled`。
 新工作區保存 row_ids 與 column_ids；欄位改名保留身分，刪除再建立同名欄位會
@@ -165,7 +171,9 @@ document(op="native", native_request={
 Table 邊界需要下節的明確 expand_tables 指定；表格成員、動態引用、公式求值及
 實際畫面仍由 Agent 核對。獨立建立工作簿可另外使用 create_workbook_from_table。
 
-## Native Table expansion (Unreleased)
+<a id="native-table-expansion-unreleased"></a>
+
+## Native Table expansion (1.4.1)
 
 先確認 `table_expansion_enabled`。完整 `read_workbook` 的 `tables` 會列出
 Table 的 part、worksheet、attributes、column IDs、原始 part SHA-256 與完整
@@ -245,7 +253,9 @@ A2T 是 Anything to Table。它用 `TableContext` 表示可由文件、DOCX 表�
 - 移除 stale citation。
 - 將 table 轉 Markdown/HTML 時保留 footnote-like refs。
 
-### 完整引用讀回（main 開發中，尚未發布）
+<a id="完整引用讀回main-開發中尚未發布"></a>
+
+### 完整引用讀回（1.4.1）
 
 `get` 保留原有 cell／row／table 摘要。當安裝版本的工具規格列出 `read` 時，
 可讀回完整儲存格值、來源引用、notes 與 confidence：

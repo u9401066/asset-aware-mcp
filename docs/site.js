@@ -106,7 +106,7 @@ const UI_COPY = {
     releaseSequence: "Release sequence (evidence-oriented)",
     securityPosture: "Current security posture",
     largeSpanTitle: "Large-span transport contract",
-    largeSpanCopy: "Large spans use an explicit asset-ref-preview-v1 over MCP with canonical_asset_ref=false. The exact quote and self-verifying AssetRef remain in persisted bundles; Unreleased inspect_etl_source also reads complete references through hash paging without exporting.",
+    largeSpanCopy: "Large spans use an explicit asset-ref-preview-v1 over MCP with canonical_asset_ref=false. The exact quote and self-verifying AssetRef remain in persisted bundles; inspect_etl_source also reads complete references through hash paging without exporting.",
     githubBand: "Code, issues, and releases live on GitHub",
     openGithub: "Open GitHub",
     viewReleases: "View releases",
@@ -192,7 +192,7 @@ const UI_COPY = {
     releaseSequence: "發布序列（證據導向）",
     securityPosture: "目前安全策略",
     largeSpanTitle: "Large-span transport contract",
-    largeSpanCopy: "大型 span 的 MCP 回應只提供 asset-ref-preview-v1，且 canonical_asset_ref=false；完整 exact quote 與可自我驗證 AssetRef 留在持久化 bundle；Unreleased 另可用 inspect_etl_source 分頁讀取，不必先匯出。",
+    largeSpanCopy: "大型 span 的 MCP 回應只提供 asset-ref-preview-v1，且 canonical_asset_ref=false；完整 exact quote 與可自我驗證 AssetRef 留在持久化 bundle；亦可用 inspect_etl_source 分頁讀取，不必先匯出。",
     githubBand: "程式碼、issue 與 release 都在 GitHub",
     openGithub: "開啟 GitHub",
     viewReleases: "查看 Releases",
@@ -225,21 +225,25 @@ The VS Code extension provides the native MCP provider and can configure Cline, 
 
 ## Verify preservation
 Confirm activation, provider discovery, and preservation of custom settings before relying on an updated VSIX.`,
-  "native-file-assets": `## Native documents and versioned files — v1.4.0
+  "native-file-assets": `## Native documents and versioned files — v1.4.1
 
 ### Continuing work after document analysis
 
 Built-in model features may be sufficient for one-off summaries and questions. This workflow focuses on editable native documents, exact source revisions and inspectable operation results that another Agent can reuse through citations and Wiki notes. If a scanned 007 becomes an Excel string and a later version changes it to 008, the old reference still identifies the original source and value. MCP checks source identity, versions and format constraints; the Agent reviews actual images and meaning and coordinates corrections.
 
-Main has Unreleased operations for PDF, DOCX, workbooks, CSV/TSV and PPTX; discover the complete runtime contract before use. Standalone raster support now includes oriented frame/region evidence, actual PNGs, explicit derivatives, guarded frame revisions and source-attached Wikis. Public **1.4.0**; next consolidated **1.4.1**. See the [capability gaps and upstream references](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/agent-asset-gap-analysis.md) for format-specific limits and product claims still requiring comparative evaluation.
+Version 1.4.1 includes scoped operations for PDF, DOCX, workbooks, CSV/TSV and PPTX; discover the complete runtime contract before use. Standalone raster support now includes oriented frame/region evidence, actual PNGs, explicit derivatives, guarded frame revisions and source-attached Wikis.  See the [capability gaps and upstream references](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/agent-asset-gap-analysis.md) for format-specific limits and product claims still requiring comparative evaluation.
 
-### Native ODS evidence (Unreleased)
+<a id="native-ods-evidence-unreleased"></a>
+
+### Native ODS evidence (1.4.1)
 
 Discover ods_enabled. create_ods creates native blank spreadsheets; read_ods lists compressed physical ranges and full operation receipts; read_ods_cell identifies one logical coordinate, including explicit absence. update_ods requires expected_revision and full original cell references, typed values and an explicit display replacement policy. Blank clears values while preserving cell style.
 
-Read every text page at one text_sha256, passing it as ods_text_sha256 on continuation; then follow the physical range next_offset. Anchor references identify only their logical coordinate. Wiki retains the exact .ods, compressed ranges, complete receipts and explicit derivation endpoints. Selections, CSL and custom citations preserve native identities. Formula caches, actual rendering and meaning require Agent review. Table/row/column lifecycle and ODS rendition previews remain further work. Public **1.4.0**; next consolidated **1.4.1**, without a feature-by-feature bump.
+Read every text page at one text_sha256, passing it as ods_text_sha256 on continuation; then follow the physical range next_offset. Anchor references identify only their logical coordinate. Wiki retains the exact .ods, compressed ranges, complete receipts and explicit derivation endpoints. Selections, CSL and custom citations preserve native identities. Formula caches, actual rendering and meaning require Agent review. Worksheet insertion/deletion/reordering and row/column lifecycle remain further work; optional Calc renditions are supported.
 
-### Native raster assets (Unreleased)
+<a id="native-raster-assets-unreleased"></a>
+
+### Native raster assets (1.4.1)
 
 When image_evidence_retention_enabled is true, complete frame/catalog records and generated PNGs persist across restart and decoder changes. Pin image_catalog_sha256 in read_image/export_wiki, or add a full matching reference to read_image_frame. Unpinned reads use the current decoder. Retained verification reports current_decoder_reproduction:not_checked. Cached previews report preview_origin:retained_preview, preserve original renderer metadata and require the exact reference, size and color policy. Missing historical previews need a matching decoder. Current-decoder mutation guards remain. Actual SDK2 tests cover Pillow 12.2.0 to 12.3.0 on both tool surfaces.
 
@@ -253,7 +257,9 @@ Historical frame/region/selection references and cross-format derivations remain
 
 An actual default-model Codex run used an explicitly derived EXIF-oriented image from the original NIST PDF page index4: 258 successful calls, 15 full-frame PNGs, one region preview, three TIFF revisions, six literal workbook cells and three Wikis passed independent checks. This is scoped evidence from a benchmark derivative, not an originally published NIST PNG or a general image-fidelity claim. See the [image contract](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/native-image-spec.md) and [evaluation, including the retained wrapper failure](https://github.com/u9401066/asset-aware-mcp/blob/main/tests/codex_native_image/README.md).
 
-## Native PDF annotations (Unreleased)
+<a id="native-pdf-annotations-unreleased"></a>
+
+## Native PDF annotations (1.4.1)
 
 Discover pdf_annotations_enabled and assemble complete contract/schema pages. read_pdf_annotations pins asset_id/revision; read_pdf_annotation adds pdf_annotation_locator. Follow every annotation.text_excerpt at one text_sha256 for complete catalogs, records and operation receipts. Identity combines revision, page, zero-based annotation-array index and native object/generation; names alone are not identities.
 
@@ -265,9 +271,11 @@ Delete requires scope:annotation_and_owned_popup. Surviving replies must be expl
 
 Read the complete review_request, current references and actual affected page PNGs. Agents review glyphs, clipping, geometry, meaning and viewer behavior. Full refs support verify, selections, derivations and CSL/custom citations. Old evidence never migrates; deletion is not secure erasure. Annotated PDFs use pdf-annotations-v1 with exact PDF/page previews, annotation-catalog.json, annotations.jsonl and linked notes. Unannotated PDFs retain byte-identical legacy output and all historical Wikis remain preserved.
 
-See the [full annotation contract and upstream references](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/specs/native-pdf-annotations.md). Public release: 1.4.0; next consolidated patch: 1.4.1, with no per-feature bump.
+See the [full annotation contract and upstream references](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/specs/native-pdf-annotations.md).
 
-### Native Word footnotes and endnotes (Unreleased)
+<a id="native-word-footnotes-and-endnotes-unreleased"></a>
+
+### Native Word footnotes and endnotes (1.4.1)
 
 Discover docx_notes_enabled; read_docx supplies notes_request. read_docx_notes pins asset_id/revision and pages a complete catalog, independent catalog_sha256 and latest operation_result through note. Assemble every text_excerpt at one text_sha256. Roles follow actual w:type, not conventional IDs. Native IDs are distinct from displayed numbering and page locations.
 
@@ -281,13 +289,15 @@ Deletion requires locator, expected_note_sha256 and literal_body_text:preserve. 
 
 Read complete review_request receipts, every affected note and all actual page PNGs. MCP checks source/version/structure and deliverable receipts; Agent reviews semantics, placement, displayed numbering, fields and custom marks. Historical references remain verifiable and work with selections, derivations, CSL and custom citation templates. The distinct docx-notes-v1 Wiki contains complete notes.jsonl/note-catalog.json, stories, original DOCX and package parts; documents without notes retain legacy snapshots unchanged. A note adapter without the optional header/footer story adapter uses the distinct docx-notes-content-v1 projection, preventing different content from sharing one snapshot identity.
 
-The identity/reference model draws on the official [Open XML FootnoteReference](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.footnotereference?view=openxml-3.0.1) documentation and [eigenpal/docx-editor note nodes](https://github.com/eigenpal/docx-editor/blob/main/packages/core/src/store/package/note-nodes.ts), without importing code or a new dependency. Public1.4.0; next consolidated1.4.1.
+The identity/reference model draws on the official [Open XML FootnoteReference](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.footnotereference?view=openxml-3.0.1) documentation and [eigenpal/docx-editor note nodes](https://github.com/eigenpal/docx-editor/blob/main/packages/core/src/store/package/note-nodes.ts), without importing code or a new dependency.
 
 Explicit remap_ids edits inside update_docx_notes accept the current main-linked part, note_kind and mappings:[{note_id:11,new_note_id:1}]. They atomically update normal definitions and all editable main-body references, including ID swaps. Unlisted IDs, definition order, special roles, literal content/marks and formatting stay intact. Duplicate old IDs, target collisions, special definitions and references outside that scope reject the edit. New IDs are positive. Complete receipts retain old/new locators, definition hashes and reference changes; read new references before further edits. Old references remain tied to their historical revision.
 
 Controlled Writer 7.3.7/24.2.7 tests exposed different note-import behavior: definition order alone was insufficient. Explicitly aligning IDs with body order corrected both tested readers. This changes the managed DOCX and exported file; previews render its actual bytes. Agent review of all pages, bindings and meaning remains required.
 
-### Native Word story lifecycle (Unreleased)
+<a id="native-word-story-lifecycle-unreleased"></a>
+
+### Native Word story lifecycle (1.4.1)
 
 Discover docx_story_structure_enabled. read_docx_story_structure pins asset_id/revision and returns the complete catalog, independent catalog_sha256 and latest operation_result in hash-paged story_structure JSON. Assemble every text_excerpt at one text_sha256 before editing.
 
@@ -297,9 +307,11 @@ Null binding resumes inheritance; it does not produce blank content. Create/bind
 
 Clones preserve native runs, tables, field caches and media bytes, relocate relationship targets and allocate distinct supported paragraph/drawing identities. Known ranges, controls, revisions, notes and embedded dependencies require further identity-aware clone support and are explicitly rejected. New names are bounded ASCII XML paths under word/, without _rels directories, collisions or existing dangling targets.
 
-Deletion checks retained parts and historical section XML, removes the definition and its own relationships, and retains referenced media; this is not secure erasure. Complete receipts must be deliverable before atomic commit. Source bytes/mtime, unrelated XML/parts, historical references, selections and Wikis remain intact. No-op batches add no history. Agent reviews every full receipt/story and actual page. Footnote/endnote CRUD uses the separate operations above; Microsoft Word parity remains further work. Public1.4.0; next consolidated1.4.1.
+Deletion checks retained parts and historical section XML, removes the definition and its own relationships, and retains referenced media; this is not secure erasure. Complete receipts must be deliverable before atomic commit. Source bytes/mtime, unrelated XML/parts, historical references, selections and Wikis remain intact. No-op batches add no history. Agent reviews every full receipt/story and actual page. Footnote/endnote CRUD uses the separate operations above; Microsoft Word parity remains further work.
 
-### Native Word header/footer stories (Unreleased)
+<a id="native-word-headerfooter-stories-unreleased"></a>
+
+### Native Word header/footer stories (1.4.1)
 
 Discover docx_stories_enabled. read_docx_stories pins asset_id/revision and returns complete section definitions, inherited/shared bindings and header/footer parts based on actual content types and relationships. Never infer variants from filenames. Legacy DFM header/footer fields are abbreviated projections; read_docx supplies header_footer_request for complete native discovery while retaining historical references.
 
@@ -309,9 +321,11 @@ update_docx_story requires expected_revision, the complete docx_story_reference 
 
 Native runs/styles, unrelated XML and other package parts remain intact. Field, range, revision and bound/locked-control checks apply. Literal text includes field caches and alternate/revision branches, not evaluated results or reading order. Read every review_request page and the complete operation_result, then inspect every affected actual PNG. A recurring file SHA may have a newer receipt; verify the complete text hash. No-op edits create no history entry.
 
-Historical story references participate in verification, JSON selections, derivations and custom/CSL citations. Wikis containing stories use the distinct docx-stories-v1 projection with stories.jsonl, story-catalog.json, the original DOCX and every package part. Legacy snapshots remain intact. Whole-definition lifecycle and section links use the operations above; remaining identity-aware clone dependencies and footnote/endnote editing require further work. Public 1.4.0; next consolidated patch 1.4.1.
+Historical story references participate in verification, JSON selections, derivations and custom/CSL citations. Wikis containing stories use the distinct docx-stories-v1 projection with stories.jsonl, story-catalog.json, the original DOCX and every package part. Legacy snapshots remain intact. Whole-definition lifecycle and section links use the operations above; remaining identity-aware clone dependencies and footnote/endnote editing require further work.
 
-### Native Word table pagination (Unreleased)
+<a id="native-word-table-pagination-unreleased"></a>
+
+### Native Word table pagination (1.4.1)
 
 Exact row heights can hide text that remains in the native file. Discover docx_table_layout_enabled, read the complete table and actual pages, then use update_docx_table_grid with the full reference, expected_revision and sequential edits.
 
@@ -319,9 +333,11 @@ set_header_rows takes count: a contiguous prefix from the first row, with zero d
 
 Omitted settings stay intact; inherit removes a direct property so styles/defaults apply. auto requests content-driven height. Exact heights can still clip text; prevent keeps a row together when it fits, but oversized rows can span pages. Read row_layout and repeat_header_prefix_length; repeat_header_rows also retains noncontiguous declarations, which do not extend the repeating prefix. Unknown split values remain unknown.
 
-MCP verifies requested property readback and unchanged native content, other properties, versions and package bytes before an atomic commit. Full before/after operation_result is paged through review_request. Relevant tracked row properties require a revision-aware workflow; pure layout edits retain fields, while structural dependency checks remain in place. Review every new actual page. Historical refs, source files and Wiki snapshots stay intact. This does not establish Microsoft Word rendering parity. Public1.4.0 / Unreleased1.4.x.
+MCP verifies requested property readback and unchanged native content, other properties, versions and package bytes before an atomic commit. Full before/after operation_result is paged through review_request. Relevant tracked row properties require a revision-aware workflow; pure layout edits retain fields, while structural dependency checks remain in place. Review every new actual page. Historical refs, source files and Wiki snapshots stay intact. This does not establish Microsoft Word rendering parity.
 
-### Native Word table grids (Unreleased)
+<a id="native-word-table-grids-unreleased"></a>
+
+### Native Word table grids (1.4.1)
 
 Discover docx_table_grid_enabled. read_docx_table requires asset_id, revision and a complete docx_table_reference from read_docx. Follow every next_text_offset at one text_sha256 to inspect the layout grid, physical cells, omitted positions, merges and full native XML. This is a table block reference, not a new cell evidence type; DFM character offsets are not grid coordinates.
 
@@ -331,15 +347,19 @@ Insertion inside merges expands them; covered input positions must be default em
 
 Mutation summaries are bounded; full operation_result is in paged table reads. The latest matching history entry supplies the receipt; repeated file SHAs may have newer receipts, so verify complete text_sha256. No-op changes add no history or receipt.
 
-One batch commits atomically after structural, serialized XML and untouched-part checks. Follow the complete review_request, then render_docx_page through all actual pages. Historical references, source bytes and Wiki snapshots remain unchanged. Coverage follows tables exposed by the current extractor: body/nested tables and ordinary unlocked body controls. Bound controls, range/field/revision dependencies and unextracted stories need dedicated handling. MCP checks mechanics; Agent checks meaning and visual layout. No Microsoft Word fidelity claim. Public1.4.0 / Unreleased1.4.x.
+One batch commits atomically after structural, serialized XML and untouched-part checks. Follow the complete review_request, then render_docx_page through all actual pages. Historical references, source bytes and Wiki snapshots remain unchanged. Coverage follows tables exposed by the current extractor: body/nested tables and ordinary unlocked body controls. Bound controls, range/field/revision dependencies and unextracted stories need dedicated handling. MCP checks mechanics; Agent checks meaning and visual layout. No Microsoft Word fidelity claim.
 
-### Checked historical PDF syntax (Unreleased)
+<a id="checked-historical-pdf-syntax-unreleased"></a>
+
+### Checked historical PDF syntax (1.4.1)
 
 Some historical scans contain duplicate stream Length declarations. Native PDF reads accept this case only after independently checking every original dictionary value is the same direct integer and matches the raw stream bytes and boundaries. Listings and complete page records retain parser_checks with policy, counts and proof digest; source bytes remain unchanged. Conflicting/indirect lengths, other parser warnings and unsupported dictionaries still require separate handling.
 
-Requested page edits or copies serialize a single Length and record canonicalized_equal_duplicate_stream_lengths in repairs, retaining existing graph/render checks and immutable source history. Agents still review actual glyphs and meaning. See [real PDF validation](#/release-testing). Public1.4.0 / Unreleased1.4.x.
+Requested page edits or copies serialize a single Length and record canonicalized_equal_duplicate_stream_lengths in repairs, retaining existing graph/render checks and immutable source history. Agents still review actual glyphs and meaning. See [real PDF validation](#/release-testing).
 
-### Native CSV/TSV files (Unreleased)
+<a id="native-csvtsv-files-unreleased"></a>
+
+### Native CSV/TSV files (1.4.1)
 
 Register human CSV/TSV files or create independent string tables with create_delimited. Query delimited_enabled and contract.for_op. read_delimited and read_delimited_cell require asset_id/revision; delimited_row/column are zero-based logical coordinates. Assemble all text_excerpt chunks at one text_sha256 and verify UTF-8 SHA-256. Fields retain values, raw spelling, byte/character/physical-line spans, context and full native-delimited-cell-ref-v1 references. No header, number or formula inference.
 
@@ -349,9 +369,11 @@ Byte splices preserve untouched encoding, quoting, escape spelling and mixed CRL
 
 CSV defaults comma, TSV tab, with double-quote quoting. delimited_dialect explicitly controls delimiter/quotechar/escapechar/doublequote/encoding. UTF BOMs are detected, otherwise UTF-8; UTF-16 LE/BE, CP950, CP1252 and Latin-1 are available. Custom dialects/encodings must accompany later reads, edits and Wiki export; review_request includes the resolved dialect. NUL values survive Python3.10 and newer runtimes with original bytes/positions intact. No sniffing or replacement decoding. Bounded child processes isolate csv.field_size_limit.
 
-verify, parsed selections and derivations accept full fields. Wiki binds its projection to the resolved dialect and keeps exact CSV/TSV bytes, structure, JSONL, notes and custom citations. Historical refs never migrate; curated notes remain. Agent chooses PDF regions, views actual PNGs, transcribes strings and checks downstream meaning/rendering. Source refresh, publish and backed-up writeback retain their existing checks. Based on [Python csv](https://docs.python.org/3/library/csv.html); [CleverCSV](https://github.com/alan-turing-institute/CleverCSV) informs dialect discovery, not authoritative writes. Public1.4.0 / Unreleased1.4.x.
+verify, parsed selections and derivations accept full fields. Wiki binds its projection to the resolved dialect and keeps exact CSV/TSV bytes, structure, JSONL, notes and custom citations. Historical refs never migrate; curated notes remain. Agent chooses PDF regions, views actual PNGs, transcribes strings and checks downstream meaning/rendering. Source refresh, publish and backed-up writeback retain their existing checks. Based on [Python csv](https://docs.python.org/3/library/csv.html); [CleverCSV](https://github.com/alan-turing-institute/CleverCSV) informs dialect discovery, not authoritative writes.
 
-### PDF region evidence (Unreleased)
+<a id="pdf-region-evidence-unreleased"></a>
+
+### PDF region evidence (1.4.1)
 
 read_pdf_region connects an explicitly selected scanned cell to its typed target value. Query pdf_regions_enabled and contract.for_op, read the complete PDF page record, then pass its full reference and pdf_region={rect:[0.2,0.25,0.4,0.3]}. Fractions address the displayed CropBox AFTER rotation, from the top-left, right/down positive, within 0–1. This differs from native bottom-left PDF crop coordinates and unrotated text-block coordinates.
 
@@ -359,10 +381,11 @@ The response contains a complete region record, actual MCP PNG, image hash and r
 
 verify checks source/geometry; read_selection can select region JSON values. Agent views the image, checks glyph coverage, transcribes typed cells and records an explicit derivation per region/cell. Later edits never migrate assertions. Wiki retains region JSON/PNG/render metadata, source PDFs and wikilinks. The chosen citation contract receives page and rectangle in locator. External sources do not borrow target authors/year/reference numbers; missing fields produce citation_unavailable while preserving the full reference and selected contract.
 
-Partial scan resampling, renderer/fonts and preview detail may change pixels; region identity is not a universal pixel identity or OCR verdict. Agent reviews meaning, layout and results. See [evaluation](#/release-testing). Public1.4.0 / Unreleased1.4.x.
+Partial scan resampling, renderer/fonts and preview detail may change pixels; region identity is not a universal pixel identity or OCR verdict. Agent reviews meaning, layout and results. See [evaluation](#/release-testing).
 
+<a id="worksheet-layout-correction-unreleased"></a>
 
-### Worksheet layout correction (Unreleased)
+### Worksheet layout correction (1.4.1)
 
 Read an actual workbook PDF, identify clipping, then correct native dimensions and render a new revision. When worksheet_layout_enabled is advertised, read_worksheet_layout requires asset_id, revision and worksheet_key. Assemble every JSON chunk at one text_sha256.
 
@@ -370,9 +393,11 @@ update_worksheet_layout requires expected_revision and worksheet_layout with wor
 
 Cell identities, content, styles, merged ranges and Tables stay intact. DrawingML and legacy notes follow authored move/resize anchoring with complete geometry receipts. Nondefault font geometry needs explicit calibration; collapsed objects reject unless preserve_size is requested. Worksheet protection must permit formatting the affected axes. Existing workbook and unsupported-object checks still apply.
 
-Width or visibility changes can affect formulas, so formula/chart caches are invalidated and recalculation requested. Follow the complete review_request, then create_workbook_rendition with recalculate and inspect actual pages. Source files, historical PDFs and evidence remain unchanged. MCP mechanical checks do not certify layout or Excel fidelity. Public1.4.0 / Unreleased1.4.x.
+Width or visibility changes can affect formulas, so formula/chart caches are invalidated and recalculation requested. Follow the complete review_request, then create_workbook_rendition with recalculate and inspect actual pages. Source files, historical PDFs and evidence remain unchanged. MCP mechanical checks do not certify layout or Excel fidelity.
 
-### Workbook renditions (Unreleased)
+<a id="workbook-renditions-unreleased"></a>
+
+### Workbook renditions (1.4.1)
 
 create_workbook_rendition converts an exact XLSX asset_id/revision into a separate native PDF using optional LibreOffice Calc. workbook_rendition requires mode (print or whole_sheet) and calculation (recalculate or prefer_cache); name defaults to workbook-preview.pdf. Original workbook bytes, formula caches and history stay unchanged.
 
@@ -380,22 +405,27 @@ Follow review_request and read complete read_rendition chunks at one PDF revisio
 
 Print honors print ranges and paper settings, so hidden/blank sheets or out-of-range cells may be absent; no guessed page-to-sheet mapping. Whole-sheet ignores those settings and includes hidden sheets, requiring one page per source worksheet before mapping. Blank pages may be tiny and overflowing text or objects can still be clipped. Compare native cells with actual print and whole-sheet views. Requested recalculation is not a formula correctness verdict; missing caches, volatile formulas and unsupported functions need review.
 
-export_wiki includes rendition.json, the exact input XLSX and PDF page evidence. This is mechanical conversion provenance, without invented Agent review. Install Calc separately and optionally set LIBREOFFICE_BIN. Initially supports 1–100 ordinary worksheets in transitional XLSX; linked resources, macros and embedded OLE need dedicated workflows. Agent reviews semantics, fonts, layout and results. Use the native dimension operations above to correct widths/heights and review a fresh PDF. This is not Microsoft Excel fidelity certification. Public1.4.0 / Unreleased1.4.x.
+export_wiki includes rendition.json, the exact input XLSX and PDF page evidence. This is mechanical conversion provenance, without invented Agent review. Install Calc separately and optionally set LIBREOFFICE_BIN. Initially supports 1–100 ordinary worksheets in transitional XLSX; linked resources, macros and embedded OLE need dedicated workflows. Agent reviews semantics, fonts, layout and results. Use the native dimension operations above to correct widths/heights and review a fresh PDF. This is not Microsoft Excel fidelity certification.
 
+<a id="native-table-workspaces-unreleased"></a>
 
-### Native table workspaces (Unreleased)
+### Native table workspaces (1.4.1)
 
-Project an exact workbook range into A2T, read complete typed cells and source references, then edit through table_data/table_manage. With table_grid_apply_enabled, an explicit identity-checked worksheet_grid plan applies row/column insertion and deletion together with value edits in one native commit. Renaming retains column identity; deleted/recreated rows and columns receive new identities. Applied inputs remain immutable workspace_reference snapshots. Whole worksheet axes move; native table membership and specialized edits have explicit limits. See the A2T guide. Public stays 1.4.0, with development within 1.4.x.
+Project an exact workbook range into A2T, read complete typed cells and source references, then edit through table_data/table_manage. With table_grid_apply_enabled, an explicit identity-checked worksheet_grid plan applies row/column insertion and deletion together with value edits in one native commit. Renaming retains column identity; deleted/recreated rows and columns receive new identities. Applied inputs remain immutable workspace_reference snapshots. Whole worksheet axes move; native table membership and specialized edits have explicit limits. See the A2T guide.
 
-### Worksheet grid operations (Unreleased)
+<a id="worksheet-grid-operations-unreleased"></a>
+
+### Worksheet grid operations (1.4.1)
 
 Discover update_worksheet_grid and workbook_grid_enabled. Assemble any paged schema, then read complete current workbook references. Supply asset_id, expected_revision and worksheet_grid={worksheet:current_key,edits:[{axis:"row",operation:"insert",at:2,count:1}]}. Coordinates are one-based; up to 32 sequential edits each affect at most 1,024 rows or columns. Later edits use the intermediate grid.
 
 Insertion uses inherit_format to inherit formatting from before (default), after or none. Deletion preserves a removed merged anchor's payload by default unless that would overwrite surviving content; merged_anchor="delete" discards it. collapsed_objects selects preserve_size (default) or reject when deletion would collapse an image. Cells/styles, table column identities and supported formulas, names, filters, charts, notes and views move together. Deleted references become explicit #REF!; stale formula/chart caches are cleared and recalculation requested.
 
-Drawing geometry records 96-DPI assumptions. Non-default fonts may require measured column_digit_width/default_column_pixels/default_row_height_points. Dynamic named sources needing evaluation, partial array/pivot edits, protected or unmodeled structures report explicit limits. Agents review automatic row heights, rotated/grouped objects, rendering and actual formula results. Complete the returned review_request and inspect the full operation receipt. Old references and Wiki assertions remain historical; A2T insertion/deletion uses its explicit structural plan. Source writeback is explicit. Public stays 1.4.0 / Unreleased for 1.4.x.
+Drawing geometry records 96-DPI assumptions. Non-default fonts may require measured column_digit_width/default_column_pixels/default_row_height_points. Dynamic named sources needing evaluation, partial array/pivot edits, protected or unmodeled structures report explicit limits. Agents review automatic row heights, rotated/grouped objects, rendering and actual formula results. Complete the returned review_request and inspect the full operation receipt. Old references and Wiki assertions remain historical; A2T insertion/deletion uses its explicit structural plan. Source writeback is explicit.
 
-### Workbook sheet structure (Unreleased)
+<a id="workbook-sheet-structure-unreleased"></a>
+
+### Workbook sheet structure (1.4.1)
 
 Query contract.for_op for workbook_structure_enabled. read_workbook returns complete, hash-pinned JSON for workbook_view="structure" or "references". Pin revision and view, assemble every text_excerpt through next_text_offset, and verify UTF-8 SHA-256. Structure includes sheet identities/order/visibility, names and views; references adds explicit formula, chart, validation, conditional-format, hyperlink, pivot and consolidation fields. Use read_cell for cell contents.
 
@@ -403,9 +433,11 @@ add_worksheets takes worksheet_insert={index:0,names:["Review"]}. rename_workshe
 
 Renaming preserves IDs and updates supported explicit local references without altering string literals or external workbook references. Deletion fails when retained formulas, tables, pivots or package links depend on removed sheets. At least one visible worksheet must remain. Insertion/reordering preserve 3D-reference membership by default; explicitly allow_3d_membership_change only after reviewing the intended formula scope.
 
-Untouched native package parts retain their exact bytes. Scope/view indices follow sheet identity; stale calculation-chain links are detached, recalculation requested, and optional stale sheet-title caches cleared. Detached sheets, media and chain parts remain; deletion is not secure erasure. Historical cell/selection references and Wiki assertions never migrate automatically. Protected, signed, VBA/ActiveX, revision and unknown workbook-extension structures require dedicated workflows. Agents review dynamic references, calculated results and Excel rendering. The openpyxl tokenizer identifies formula spans only; it never resaves source workbooks. Public remains 1.4.0, with this work Unreleased for 1.4.x.
+Untouched native package parts retain their exact bytes. Scope/view indices follow sheet identity; stale calculation-chain links are detached, recalculation requested, and optional stale sheet-title caches cleared. Detached sheets, media and chain parts remain; deletion is not secure erasure. Historical cell/selection references and Wiki assertions never migrate automatically. Protected, signed, VBA/ActiveX, revision and unknown workbook-extension structures require dedicated workflows. Agents review dynamic references, calculated results and Excel rendering. The openpyxl tokenizer identifies formula spans only; it never resaves source workbooks.
 
-### Native selections (Unreleased)
+<a id="native-selections-unreleased"></a>
+
+### Native selections (1.4.1)
 
 read_selection identifies exact JSON values or Unicode text spans inside full native cell, DOCX block, PPTX shape or PDF page references. Start with an empty selector to discover the complete parsed parent record without added evidence metadata. Then supply an actual RFC6901 pointer, such as /value for a cell, and optionally char_range={start:0,end:3}. DOCX table text is a projection, not a complete native cell geometry model.
 
@@ -413,7 +445,7 @@ Follow next_text_offset and retain one text_sha256 while assembling the complete
 
 verify and derivation ledgers accept complete selection references. Wiki exports attach active selection records under manifest.derivations.selection_records, alongside original source files. New revisions do not inherit assertions; historical evidence remains verifiable. Re-reading a selection cannot override its selector. No opaque-file or nested selection parents. Limits: 2,048 pointer characters, 64 levels, 16 MiB record; missing keys, bad types and out-of-range spans fail explicitly.
 
-Agents choose spans and review semantic support and rendering. Selection checks do not infer OCR, scan pixel regions or cell correspondence. See [RFC6901](https://www.rfc-editor.org/rfc/rfc6901) for pointer syntax and [W3C selectors](https://www.w3.org/TR/annotation-model/#selectors) for conceptual guidance; this is not a JSON-LD implementation. Public stays 1.4.0; future work remains 1.4.x.
+Agents choose spans and review semantic support and rendering. Selection checks do not infer OCR, scan pixel regions or cell correspondence. See [RFC6901](https://www.rfc-editor.org/rfc/rfc6901) for pointer syntax and [W3C selectors](https://www.w3.org/TR/annotation-model/#selectors) for conceptual guidance; this is not a JSON-LD implementation.
 
 Use the document tool with op="native" and a typed native_request. Start with native_request={"op":"contract"} to discover the schema.
 
@@ -430,9 +462,11 @@ Version 1.2.0 adds verify and export_wiki. Export a revision-pinned Foam index a
 New revisions create new snapshots. Existing notes are verified and never replaced; modified or unexpected files stop reuse. Put human synthesis in adjacent notes. A new citation style for the same revision requires a separate wiki directory. The 20,000-cell and 128 MiB limits reject incomplete exports. Interrupted publication retains files and reports reconciliation_required. Document-context CSL citations use evidence csl_contract/render_citations; the native export_wiki projection retains display templates. Rendered verification still requires Agent review.
 
 ## v1.3.0: native DOCX
-Version 1.3.0 adds read_docx and update_docx using the existing DFM checks. Read all excerpts at a fixed revision, preserve frontmatter and block markers, then submit complete edits to create a managed revision. Untouched OOXML parts are checked byte for byte; source writeback stays explicit. DOCX block references now support bounded read_docx_block and native verification. A distinct docx-blocks-v1 wiki projection includes full parsed block records, the original DOCX and exact package-part attachments, preserving previous snapshots. Integrity does not prove extraction completeness. Unreleased body creation and insertion/deletion are described below. Document-wide styles and full layout verification remain separate work.
+Version 1.3.0 adds read_docx and update_docx using the existing DFM checks. Read all excerpts at a fixed revision, preserve frontmatter and block markers, then submit complete edits to create a managed revision. Untouched OOXML parts are checked byte for byte; source writeback stays explicit. DOCX block references now support bounded read_docx_block and native verification. A distinct docx-blocks-v1 wiki projection includes full parsed block records, the original DOCX and exact package-part attachments, preserving previous snapshots. Integrity does not prove extraction completeness. Body creation and insertion/deletion are described below. Document-wide styles and full layout verification remain separate work.
 
-### DOCX page previews (Unreleased)
+<a id="docx-page-previews-unreleased"></a>
+
+### DOCX page previews (1.4.1)
 
 render_docx_page requires asset_id, an explicit revision and zero-based docx_page_index. Optional LibreOffice Writer converts exact original DOCX bytes and returns an actual MCP PNG plus page count/geometry, continuation, renderer identity and image/PDF hashes. Start at page 0 and follow next_page_index; compare current and historical pages with complete DFM content. LIBREOFFICE_BIN can select the executable; missing Writer fails explicitly.
 
@@ -440,9 +474,11 @@ Each request converts the complete document in a fresh private profile, retainin
 
 Known external resource relationships, resource-loading fields, embedded OLE/chunks, linked VML and SVG fail before conversion. Macro-disabled profiles, process/output budgets and source-copy checks protect the operation; this is not an OS sandbox. Sources and managed revisions stay intact. Limits: 2,000 pages, 64 MiB converted PDF, 64–2,048 pixel previews. See [LibreOffice PDF export](https://help.libreoffice.org/latest/en-US/text/shared/guide/pdf_params.html) and [actual evaluation](#/release-testing).
 
-### DOCX creation and body structure (Unreleased)
+<a id="docx-creation-and-body-structure-unreleased"></a>
 
-Public version stays 1.4.0; this work is on main for 1.4.x. Query contract(for_op="create_docx") for docx_structure_enabled. create_docx creates independent native Word paragraphs and editable tables, with rich runs, half-point sizes, explicit twip grids, merged cells, shading and repeating headers. Covered merged cells must be default/empty.
+### DOCX creation and body structure (1.4.1)
+
+ Query contract(for_op="create_docx") for docx_structure_enabled. create_docx creates independent native Word paragraphs and editable tables, with rich runs, half-point sizes, explicit twip grids, merged cells, shading and repeating headers. Covered merged cells must be default/empty.
 
 add_docx_blocks inserts at start/end or before/after a current full block reference. delete_docx_blocks takes docx_block_refs for complete top-level body paragraphs/tables. Pin expected_revision; read all DFM chunks and block listings after each mutation. update_docx still edits existing blocks using complete DFM and original markers.
 
@@ -450,15 +486,17 @@ Known section, range, field, revision and embedded-content dependencies block un
 
 ### v1.4.0: native PPTX and schema discovery
 
-Native PPTX supports create_pptx, read_pptx, read_pptx_shape and update_pptx. Creation uses explicit text boxes, styled runs and notes; updates target existing native runs with revision and text-hash preconditions. Shape references support verify. The pptx-shapes-v1 wiki projection retains complete shape JSON/XML and exact package attachments, including media, charts, layouts, masters and relationships. Older snapshots remain unchanged. Agents review rendering, overflow, inherited formatting and semantic accuracy; Unreleased structural operations are described below; legacy or macro formats remain outside this adapter.
+Native PPTX supports create_pptx, read_pptx, read_pptx_shape and update_pptx. Creation uses explicit text boxes, styled runs and notes; updates target existing native runs with revision and text-hash preconditions. Shape references support verify. The pptx-shapes-v1 wiki projection retains complete shape JSON/XML and exact package attachments, including media, charts, layouts, masters and relationships. Older snapshots remain unchanged. Agents review rendering, overflow, inherited formatting and semantic accuracy; Structural operations are described below; legacy or macro formats remain outside this adapter.
 
-Unreleased discovery also advertises contract_delivery. If paged, follow contract_request to contract_details, preserving contract_sha256 and for_op, then assemble every text_excerpt and verify UTF-8 SHA-256. The compact index retains all enabled flags, format/operation lists and schema continuation; complete policies remain in these pages. Capability/scope changes require rediscovery. This is separate from schema_delivery/schema_request; read both when advertised.
+Discovery also advertises contract_delivery. If paged, follow contract_request to contract_details, preserving contract_sha256 and for_op, then assemble every text_excerpt and verify UTF-8 SHA-256. The compact index retains all enabled flags, format/operation lists and schema continuation; complete policies remain in these pages. Capability/scope changes require rediscovery. This is separate from schema_delivery/schema_request; read both when advertised.
 
 The native-contract-v2 discovery response supports for_op. Check schema_delivery; follow schema_request for complete JSON pages, preserve schema_sha256 and for_op, then verify the assembled UTF-8 hash. Existing native document inputs are unchanged. Version 1.4.0 includes this discovery migration; clients must no longer assume that the full schema is always inline.
 
-### PPTX shape operations (Unreleased)
+<a id="pptx-shape-operations-unreleased"></a>
 
-Development on main adds add_pptx_shapes and delete_pptx_shapes. Public version remains 1.4.0; subsequent development stays on 1.4.x. Query the installed contract before use. Both operations require asset_id and expected_revision and accept 1–100 targets per atomic batch.
+### PPTX shape operations (1.4.1)
+
+Development on main adds add_pptx_shapes and delete_pptx_shapes.  Query the installed contract before use. Both operations require asset_id and expected_revision and accept 1–100 targets per atomic batch.
 
 add_pptx_shapes takes pptx_shapes with container (slide_id, part, region and optional group_shape_id) and a typed textbox. Existing slide, notes and nonzero-extent group containers are supported. Positions use local EMU coordinates; group transforms remain unchanged. New textboxes append at the top of the container's z-order. Batch limits are 20,000 runs and 4 MiB of UTF-8 text. Image/chart creation, slide creation/reordering and arbitrary insertion positions are outside these operations.
 
@@ -468,7 +506,9 @@ delete_pptx_shapes takes pptx_shape_refs containing complete native-pptx-shape-r
 
 MCP verifies package inventory, untouched member bytes, IDs and XML outside requested nodes by reversing the planned changes for comparison. Relationships, media and embedded parts remain even when orphaned; deletion is not secure erasure. Historical evidence and wiki snapshots remain available. Edits stage managed revisions; explicit writeback retains source checks and backups. Agents perform the full semantic and visual review and correction.
 
-### PPTX slide structure (Unreleased)
+<a id="pptx-slide-structure-unreleased"></a>
+
+### PPTX slide structure (1.4.1)
 
 read_pptx_layouts discovers layouts across all destination masters using asset_id, revision, offset and limit. Follow next_offset at one revision. Records include part, master_part, name, type and placeholder_count; layout indices are never assumed.
 
@@ -480,9 +520,11 @@ Surviving slide IDs, parts, media, charts, notes and XML remain intact. Deletion
 
 Limits: 2,000 slides, 20,000 new runs / 4 MiB UTF-8 per batch, plus existing package/component budgets. MCP checks revisions, dependencies, ordering, relationships, new content and untouched parts, and updates known slide/notes count properties. Agents review actual rendering, overflow, inherited styles, interactions and other cached viewer properties. Historical evidence/wiki and guarded explicit source writeback remain available. See [python-pptx layout semantics](https://python-pptx.readthedocs.io/en/latest/user/slides.html) and [Microsoft slide deletion](https://learn.microsoft.com/en-us/office/open-xml/presentation/how-to-delete-a-slide-from-a-presentation).
 
-### Native PDF pages (Unreleased)
+<a id="native-pdf-pages-unreleased"></a>
 
-Main adds create_pdf, read_pdf, read_pdf_page, render_pdf_page, add_pdf_pages, update_pdf, delete_pdf_pages and reorder_pdf_pages. Public version remains 1.4.0 on the 1.4.x development line. Discover each installed operation through contract.for_op. Creation takes pdf_create with a name and pages, each specifying exactly one blank or full source reference. Insertion takes pdf_insert with position and pages. Mutations require asset_id and expected_revision; deletion uses pdf_page_refs, reordering uses pdf_order with every page exactly once, and geometry edits use pdf_edits with reference and absolute rotation or crop_box.
+### Native PDF pages (1.4.1)
+
+Main adds create_pdf, read_pdf, read_pdf_page, render_pdf_page, add_pdf_pages, update_pdf, delete_pdf_pages and reorder_pdf_pages.  Discover each installed operation through contract.for_op. Creation takes pdf_create with a name and pages, each specifying exactly one blank or full source reference. Insertion takes pdf_insert with position and pages. Mutations require asset_id and expected_revision; deletion uses pdf_page_refs, reordering uses pdf_order with every page exactly once, and geometry edits use pdf_edits with reference and absolute rotation or crop_box.
 
 Page indices are zero-based. Locators combine page_index, object_id and generation at one immutable revision; read fresh references after writes. Assemble every read_pdf_page text_excerpt at one revision using next_text_offset and verify UTF-8 text_sha256 before parsing. render_pdf_page returns actual MCP PNG images with a longest edge of 64–2048 pixels. Native text extraction is not OCR. Scanned-page interpretation remains an agent/OCR task.
 
@@ -494,17 +536,21 @@ Within-document edits retain checked bookmarks/links, labels, forms, metadata an
 
 verify retains historical page evidence. export_wiki creates an immutable pdf-pages-v1 projection with complete JSONL, page notes, 768-pixel previews, citation contracts and the exact PDF attachment. Old opaque snapshots remain; modified managed notes block reuse. Publish/writeback are explicit, with source checks and backups. See [native PDF evaluation](#/release-testing) for real Codex MCP calls and independent audits.
 
-### PPTX whole-slide previews (Unreleased)
+<a id="pptx-whole-slide-previews-unreleased"></a>
+
+### PPTX whole-slide previews (1.4.1)
 
 render_pptx_slide requires asset_id, explicit revision and pptx_slide_key={slide_id,part} from read_pptx. It returns an actual whole-slide MCP PNG, image hash, source slide index, hidden status and LibreOffice renderer version. Historical revisions can also be viewed without changing managed or human files.
 
 Install LibreOffice with Impress separately; LIBREOFFICE_BIN can select its executable. The contract's pptx_rendering.configured describes adapter wiring, while availability is checked per request. Writer alone cannot convert PPTX. Temporary full-deck export includes hidden slides and excludes notes pages, preserving slide-number context. PDF page counts and exact source keys are checked before bounded rendering. Limits: 100 slides, 64–2048 pixel longest edge and a 60-second deadline, with normal package/PDF byte budgets. Linked external content, SVG media and alternative show selections require separate workflows. Ordinary hyperlinks are supported. Private processes/profiles are not an OS sandbox.
 
-Agents compare native content and rendered images for overlapping shapes, clipping, layout and meaning, then coordinate corrections. A static LibreOffice image does not establish PowerPoint fidelity, installed-font equivalence, animation or media playback. read_pptx_picture remains an embedded-image preview. Public packages stay 1.4.0; this work is Unreleased for 1.4.x.
+Agents compare native content and rendered images for overlapping shapes, clipping, layout and meaning, then coordinate corrections. A static LibreOffice image does not establish PowerPoint fidelity, installed-font equivalence, animation or media playback. read_pptx_picture remains an embedded-image preview.
 
-### PPTX picture assets (Unreleased)
+<a id="pptx-picture-assets-unreleased"></a>
 
-Main adds add_pptx_pictures, replace_pptx_pictures, read_pptx_picture and extract_pptx_picture. Public version remains 1.4.0; development continues on 1.4.x. Register human PNG/JPEG files, then use their native-file-ref-v1 file_reference. verify checks immutable whole-file bytes; it does not prove semantic interpretation or live source freshness.
+### PPTX picture assets (1.4.1)
+
+Main adds add_pptx_pictures, replace_pptx_pictures, read_pptx_picture and extract_pptx_picture.  Register human PNG/JPEG files, then use their native-file-ref-v1 file_reference. verify checks immutable whole-file bytes; it does not prove semantic interpretation or live source freshness.
 
 Creation accepts an existing slide, notes or nonzero-extent group container, local EMU left/top/width/height, fit=contain/cover/stretch, name and description. Mutation requires asset_id and expected_revision. Replacement takes full current shape references and mapping=preserve_existing: only the image relationship changes; crop, geometry, rotation, flips, effects and stacking order remain. Original image bytes are embedded exactly, and shared media is never overwritten. Different aspect ratios still require visual review.
 
@@ -512,7 +558,9 @@ read_pptx_picture returns an actual MCP PNG and separate original-image and prev
 
 Sources must be single-frame PNG/JPEG without EXIF rotation. Linked/alternate image representations, ambiguous content types and unsupported formats are rejected. Limits: 16 MiB / 16 million pixels per image, 1–100 pictures and 32 MiB / 64 million pixels per batch, counting repeated uses. Package limits still apply. MCP checks source/revision/CAS, image integrity, exact new parts, untouched bytes and XML outside the operation. Agents review semantics, actual slide rendering, crop, accessibility and color. pptx-shapes-v1 wiki snapshots retain all media/relationships and exact PPTX files; publish/writeback remain explicit.
 
-### Native PPTX tables (Unreleased)
+<a id="native-pptx-tables-unreleased"></a>
+
+### Native PPTX tables (1.4.1)
 
 add_pptx_tables takes asset_id, expected_revision and pptx_tables. Each item has an existing container and table with local EMU left/top, column_widths, row_heights and a matching rectangular cells matrix. Cells contain paragraphs of formatted runs plus alignment, vertical_anchor, margin and optional six-digit RGB fill_rgb/text_rgb. Name/description provide identity and alt text. Numbers, leading zeros and formula-like strings remain literal text.
 
@@ -522,7 +570,9 @@ Read complete tables with read_pptx_shape; update_pptx edits anchor cell runs an
 
 Native export_wiki now exposes citation_contract as a typed union: source/author-year/numeric preset, or custom inline_template and reference_template. Valid existing JSON remains compatible. Display contracts do not store source references, proof reports or arbitrary transcription data; canonical evidence remains separate.
 
-### Table grid CRUD (Unreleased)
+<a id="table-grid-crud-unreleased"></a>
+
+### Table grid CRUD (1.4.1)
 
 update_pptx_table_grid takes asset_id, expected_revision and pptx_table_grid={reference, edits}. Supply the complete current shape reference and 1–32 sequential edits. Each uses op insert/delete/resize, axis row/column and a zero-based index in the current intermediate grid. Insert/resize use EMU sizes; delete uses count. Optional inserted cells use the existing typed cell contract in row-major order, matching the inserted slice. Omitted cells are blank.
 
@@ -530,7 +580,9 @@ Insertions inside merges expand them; insertion at the start shifts them. Partia
 
 Existing cell XML, row/column metadata, styles and untouched package parts are retained, except explicit deletion, changed merge flags and anchor promotion replacing covered-cell formatting. Position stays fixed; frame extents follow grid totals at the existing scale. Limits apply at every intermediate step: 1–100 rows/columns, 10,000 cells, 20,000 runs, 4 MiB text and 100,000,000 EMU dimensions/frame; at most 10,000 cells inserted per batch. Old evidence remains valid; coordinates and derivation assertions do not migrate automatically. Agents review rendering, overflow, banding and semantics. Cell merge/split is described below.
 
-### Table cell merge/split (Unreleased)
+<a id="table-cell-mergesplit-unreleased"></a>
+
+### Table cell merge/split (1.4.1)
 
 The same update_pptx_table_grid edits accept merge with row, column, end_row, end_column and required content_policy; split takes the existing merge origin row and column. Coordinates are zero-based and inclusive; a merge must span at least two cells.
 
@@ -538,9 +590,11 @@ require_empty rejects meaningful non-anchor content, including whitespace text, 
 
 Existing merges must be wholly contained by the new rectangle; partial intersections require splitting first. Split removes the merge flags and keeps all migrated text at the anchor; it does not reconstruct earlier content distribution. Split, row/column insertion and merge can be composed within one checked batch. This follows [python-pptx merge/split semantics](https://python-pptx.readthedocs.io/en/latest/user/table.html#un-merging-a-cell), with explicit content policies and version checks.
 
-MCP checks current full references, unchanged paragraph XML during migration, merge structure, serialized results and untouched parts. Agents read the complete updated shape and review paragraph order, meaning, rendered borders/styles and overflow. Managed revisions precede explicit source writeback. Public packages remain 1.4.0; these changes stay Unreleased for 1.4.x.
+MCP checks current full references, unchanged paragraph XML during migration, merge structure, serialized results and untouched parts. Agents read the complete updated shape and review paragraph order, meaning, rendered borders/styles and overflow. Managed revisions precede explicit source writeback.
 
-### Native derivations (Unreleased)
+<a id="native-derivations-unreleased"></a>
+
+### Native derivations (1.4.1)
 
 record_derivation connects full immutable native file/cell/DOCX-block/PPTX-shape/PDF-page references. It records the activity and agent review while mechanically checking both endpoints. Agent identity and semantic/layout/formula review are caller assertions. A valid reference can coexist with a failed semantic review. Source and target versions remain explicit; new file revisions never inherit old claims automatically.
 
@@ -596,7 +650,9 @@ DOCX ingest creates a DFM representation with Word-origin block and run metadata
 
 ## Respect format boundaries
 Use validation and conversion tools for supported round trips, and review structural table edits before writeback.`,
-  "citation-provenance": `## Captured ETL evidence (Unreleased)
+  "citation-provenance": `<a id="captured-etl-evidence-unreleased"></a>
+
+## Captured ETL evidence (1.4.1)
 
 Legacy PDF extraction references bind mutable ETL files. First inspect_etl_source using ref={doc_id,source_type,source_id}, where source_type is span, table or figure. Read all hash-pinned result pages to obtain the full current asset_ref without writing a snapshot. Pass that complete reference to capture_etl_source and retain its full etl-citation-ref-v1. Previews, partial/stale refs and mismatched expected hashes are rejected before publication.
 
@@ -604,9 +660,11 @@ read_etl_source verifies every captured artifact and returns the complete origin
 
 Put captured references alongside native references in a CSL document's sources and bind each cite with source_keys. Raw mutable ETL refs require capture first. Wiki exports include all original bytes, extraction artifacts, selected images, complete evidence JSON and citation-note links. Historical paths in captured manifests are descriptive, never used to resolve immutable readbacks. Existing native DOCX refs remain the route for Word; DOCX DFM is a separate pipeline.
 
-Snapshots check source bytes, hashes and locator consistency. Agents compare full extraction content, tables, actual source-page images and bibliographic data before citing or correcting. Raw bytes and decoded/BOM-stripped/LF-normalized text hashes remain distinct. Limits: 128 MiB per snapshot, 20 MiB per metadata/image file, 2 MiB per complete evidence record. Public stays 1.4.0; this work is Unreleased within 1.4.x.
+Snapshots check source bytes, hashes and locator consistency. Agents compare full extraction content, tables, actual source-page images and bibliographic data before citing or correcting. Raw bytes and decoded/BOM-stripped/LF-normalized text hashes remain distinct. Limits: 128 MiB per snapshot, 20 MiB per metadata/image file, 2 MiB per complete evidence record.
 
-## CSL citation documents (Unreleased)
+<a id="csl-citation-documents-unreleased"></a>
+
+## CSL citation documents (1.4.1)
 Render a complete document through evidence(op="render_citations", citation_document=...). Discover the hash-paged csl_contract first. Pinned citeproc-js and official styles support APA7, Chicago18 author-date/notes and Vancouver-NLM citation sequence. Document context handles retroactive year suffixes, repeat citations and bibliography ordering; sorting within a group follows the selected style. Existing citation-format-v1 custom templates remain available.
 
 Provide structured CSL-JSON items, ordered clusters and optional uncited_ids. Chicago notes require positive ordered note_index values; in-text styles use zero. locales are en-US and zh-TW, with bundled zh-CN base fallback. Missing author/date/title fields are reported; no bibliographic data is invented. Optional local Node.js >=20 is required only for this operation (use a supported Node24 LTS). No runtime network downloads or installs. The bundled npm release is 2.4.63; its internal processor version is 1.4.61, recorded separately with exact resource hashes and upstream licenses.
@@ -615,7 +673,7 @@ Place full native references in sources, then connect each cite through source_k
 
 Read every text_excerpt page at one text_sha256 and verify UTF-8 SHA-256. expected_text_sha256 rejects changed content before publication. Optional wiki_root creates an immutable citation snapshot with exact source attachments, complete citations.json, per-cluster wikilinks and references.html typography preview. Identical snapshots require exact byte/inventory checks before reuse; curated notes and historical citations remain intact after native edits. This is a document citation snapshot; existing native export_wiki projections remain unchanged.
 
-Limits:500 bibliography items,1000 clusters,2MiB input,8MiB result,128MiB total Wiki output. Bounded Node processing fails explicitly on timeout or invalid input. Public1.4.0 / Unreleased1.4.x.
+Limits:500 bibliography items,1000 clusters,2MiB input,8MiB result,128MiB total Wiki output. Bounded Node processing fails explicitly on timeout or invalid input.
 
 ## Preserve exact evidence
 A canonical AssetRef ties an exact quote to document identity, revision, line or character ranges, context, and hashes. Verification fails closed when the current source no longer matches those fields.
@@ -625,7 +683,9 @@ A bounded asset-ref-preview-v1 response is not canonical and must not be submitt
   "a2t-tables": `## Build reusable tables
 Plan schemas, manage tables, query stable rows, attach cell citations, and use durable drafts for interrupted work. Table history records changes while render operations produce reusable artifacts.
 
-## Native workbook workspaces (Unreleased)
+<a id="native-workbook-workspaces-unreleased"></a>
+
+## Native workbook workspaces (1.4.1)
 Discover table_workspaces_enabled and each operation with contract.for_op. Read the workbook's exact sheet_id/part, then project_workbook_table with asset_id, revision and table_projection={worksheet:key,start_cell:"A1",end_cell:"E3"}. All rows remain data, including headers. Columns use Excel letters; types are never guessed.
 
 Read the complete read_table_workspace JSON through next_text_offset, pin table_sha256 on continuation, and verify the assembled UTF-8 text_sha256. Limits are 20,000 cells, 16 MiB per complete representation and 4,000 characters per page. Use table_data.update_cell with stable row_id, column_name and tagged value={kind:"string",value:"007"}. Strings, numbers, booleans, formulas and blanks remain distinct; source_only values cannot be written without choosing a supported type.
@@ -634,9 +694,11 @@ After another complete read, apply_table_workspace requires table_id, expected_t
 
 Applied/exported input is retained as an immutable workspace_reference: verify it or pass it to read_table_workspace after the live table changes or is deleted. Bindings never auto-advance; project the new revision for a subsequent synchronized edit. Source references describe extraction origin and do not assert support for edited values.
 
-Changed correspondence requires the explicit structural plan below. create_workbook_from_table can also create an independent XLSX with table_workbook={name:"table.xlsx",sheet:"Data",include_headers:false}, the table ID/hash, and an optional frozen workspace_reference. It retains typed data and formula text, with row/column mapping in the stored operation result. Source styles and formula relocation are not copied to independent workbooks. Ordinary scalar A2T tables are also supported. Agent review covers meaning, formula results and layout. Public stays 1.4.0; this is Unreleased development for 1.4.x.
+Changed correspondence requires the explicit structural plan below. create_workbook_from_table can also create an independent XLSX with table_workbook={name:"table.xlsx",sheet:"Data",include_headers:false}, the table ID/hash, and an optional frozen workspace_reference. It retains typed data and formula text, with row/column mapping in the stored operation result. Source styles and formula relocation are not copied to independent workbooks. Ordinary scalar A2T tables are also supported. Agent review covers meaning, formula results and layout.
 
-### Structural A2T writeback (Unreleased)
+<a id="structural-a2t-writeback-unreleased"></a>
+
+### Structural A2T writeback (1.4.1)
 
 Check table_grid_apply_enabled on contract(for_op="apply_table_workspace"). New workspaces retain row_ids and column_ids. Renaming preserves identity; deleting/recreating a same-name column creates a new identity. table_manage accepts typed JSON default_value for native columns. Historical snapshots retain their hashes; ambiguous legacy column history needs a fresh explicit correspondence.
 
@@ -644,31 +706,39 @@ After table_data/table_manage edits, read the COMPLETE workspace again. Review s
 
 Unchanged source cells follow native relocation, preserving supported formulas, rich text and styles. Edited/new formulas use destination coordinates; missing new values mean blank. Plans move WHOLE worksheet rows/columns, including content outside the projection, and discard deleted merged anchors. Reordering existing identities requires native move support. Native Table headers/calculated columns, partial arrays and unmodeled structures retain their checks; table-boundary membership requires explicit expand_tables as described below. Agent review covers membership, dynamic references, calculated results and actual rendering.
 
-### Native Table totals lifecycle (Unreleased)
+<a id="native-table-totals-lifecycle-unreleased"></a>
+
+### Native Table totals lifecycle (1.4.1)
 
 When table_totals_lifecycle_enabled is advertised, update_workbook_table accepts table_update.totals_row with exact revision, worksheet key, Table part and expected_ref. columns may be omitted for a totals-only transition. Add uses {action:"add",reuse_definitions:true,cell_styles:"preserve"}; it requires blank cells directly below the Table and restores hidden totals definitions. Set reuse_definitions:false for blanks, or override columns[].totals. Optional cell_styles:"last_data_row" copies direct cell styles only.
 
 Remove uses {action:"remove",cells:"clear"|"keep_cells",retain_definitions:true}. Clear removes contents while retaining styles; keep retains text/runs and freezes only the retained cells' own Table references to absolute pre-removal ranges. Other workbook formulas keep structured references, including #Totals. Set retain_definitions:false to discard hidden definitions. Neither transition moves worksheet rows; compose update_worksheet_grid explicitly if physical space must change.
 
-Data membership and filter/sort ranges remain stable. Overlaps, special formulas, protection and source dependencies retain checks, including pivots over detached totals cells. Current-row selectors (#This Row / [@Column]) in kept totals formulas require explicit correction because they have no data-row intersection. Shared strings retain content/runs while reference counts may be recomputed. Read the complete operation receipt and updated references. Agent review covers future formula membership, results and rendering; historical evidence never migrates. Public stays 1.4.0 / Unreleased within 1.4.x.
+Data membership and filter/sort ranges remain stable. Overlaps, special formulas, protection and source dependencies retain checks, including pivots over detached totals cells. Current-row selectors (#This Row / [@Column]) in kept totals formulas require explicit correction because they have no data-row intersection. Shared strings retain content/runs while reference counts may be recomputed. Read the complete operation receipt and updated references. Agent review covers future formula membership, results and rendering; historical evidence never migrates.
 
-### Native Table creation (Unreleased)
+<a id="native-table-creation-unreleased"></a>
+
+### Native Table creation (1.4.1)
 
 When workbook_table_creation_enabled is advertised, add_workbook_table turns an explicit worksheet range into a native Excel Table. Use create for an independent workbook or register an existing XLSX. Pin expected_revision and the worksheet key from complete read_workbook references. table_create provides ref, unique name, ordered columns, header_row, totals_row, autofilter and style.
 
 Matching headers retain rich/shared strings. header_policy=fill_blank additionally fills blank headers, never silently renaming existing values. Headerless Tables require autofilter=false. Ranges include at least one data row and any explicit totals row; totals must start blank and no worksheet rows are inserted. New calculated columns use require_matching for blanks or explicit replace_all. Choose built-in/existing Table styles; ordinary data, leading zeros, cell formats and untouched package parts remain intact.
 
-Read the complete created_table identity, header_cells and operation receipt. Name/ID/relationship allocation reserves retained detached Table parts. Overlaps, special formulas and active protection retain checks; empty/disabled workbookProtection is accepted. Historical evidence and A2T bindings never migrate. Agent review covers meaning, actual layout, filter behavior and recalculated results. Public stays 1.4.0 / Unreleased on 1.4.x.
+Read the complete created_table identity, header_cells and operation receipt. Name/ID/relationship allocation reserves retained detached Table parts. Overlaps, special formulas and active protection retain checks; empty/disabled workbookProtection is accepted. Historical evidence and A2T bindings never migrate. Agent review covers meaning, actual layout, filter behavior and recalculated results.
 
-### Native Table column edits (Unreleased)
+<a id="native-table-column-edits-unreleased"></a>
+
+### Native Table column edits (1.4.1)
 
 When workbook_table_edit_enabled is advertised, update_workbook_table pins the exact worksheet key, Table part, expected_ref and file expected_revision. Each column edit identifies column_id and expected_name. name updates the header and existing structured references by original identity. Complete read_workbook.tables[].header_cells exposes native cell and resolved shared-string XML. Rich headers require header_runs matching the original run count and concatenating to the new name; run formatting survives and shared strings are cloned.
 
 calculated uses a scalar formula beginning with =, anchored at the first data row. require_matching accepts blank cells or formulas matching the previous column formula; replace_all explicitly replaces ordinary values/formulas. Null formula with keep_cells removes automatic-fill metadata while retaining cells. totals edits an EXISTING totals row using blank, label, formula or function (sum, average, count, countNums, min, max, stdDev, var). New formulas use final names. Bounds, column IDs and styles remain intact.
 
-Read the complete new references and operation_result. Protected/merged cells, unsupported text/formula features and mapped/query source schemas retain checks; pivot header changes need coordinated field identities. Caches are invalidated and recalculation requested. Agent review covers actual results, filtering and rendered layout. Historical evidence and A2T bindings never migrate. Public stays 1.4.0 / Unreleased for 1.4.x.
+Read the complete new references and operation_result. Protected/merged cells, unsupported text/formula features and mapped/query source schemas retain checks; pivot header changes need coordinated field identities. Caches are invalidated and recalculation requested. Agent review covers actual results, filtering and rendered layout. Historical evidence and A2T bindings never migrate.
 
-### Native Table expansion (Unreleased)
+<a id="native-table-expansion-unreleased"></a>
+
+### Native Table expansion (1.4.1)
 
 When table_expansion_enabled is advertised, complete read_workbook.tables exposes worksheet/part identities, attributes, column IDs, original part SHA-256 and complete parsed XML. Each insert edit can supply expand_tables=[{part:"xl/tables/table1.xml",expected_ref:"A1:F3"}]. expected_ref names the table range BEFORE that intermediate step. Extend first/last data boundaries or left/right column boundaries; insert before totals. Adjacent Tables are not selected implicitly. Whole worksheet axes still move.
 
@@ -676,7 +746,7 @@ Table/filter/sort extents are coordinated, surviving column IDs retained, new ID
 
 Use the tagged A2T value {"kind":"native_generated","value":null} ONLY to retain a header/calculated cell generated by this structural operation. Missing or blank values remain blank. Ordinary/surviving cells and direct independent exports cannot use the placeholder. Read generated_table_cells and resolve_native_generated_values in the full operation receipt; frozen workspaces retain input intent. Reproject the result to obtain resolved values. Source bindings and historical evidence remain unchanged.
 
-Specialized Table header/calculated/totals editing, mapped/pivot source schema changes and native identity reordering retain their own boundaries. Public remains 1.4.0, with this work Unreleased for 1.4.x. Design references: [Microsoft SpreadsheetML tables](https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/working-with-tables) and [XlsxWriter tables](https://xlsxwriter.readthedocs.io/working_with_tables.html).
+Specialized Table header/calculated/totals editing, mapped/pivot source schema changes and native identity reordering retain their own boundaries.  Design references: [Microsoft SpreadsheetML tables](https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/working-with-tables) and [XlsxWriter tables](https://xlsxwriter.readthedocs.io/working_with_tables.html).
 
 ## Keep row evidence explicit
 Use stable row identifiers and cell-level AssetRefs so every comparison can return to its source.
@@ -720,7 +790,9 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
 
-### Native raster evaluation (Unreleased)
+<a id="native-raster-evaluation-unreleased"></a>
+
+### Native raster evaluation (1.4.1)
 
 Retained evidence now has actual Pillow 12.2.0 to 12.3.0 SDK2 restart tests on balanced and compact surfaces, plus corruption, source, lock, geometry/color recipe and historical mutation regressions. A fresh default-model Codex run completed 175 successful calls in 292.81 seconds with zero tool errors, 15 frame PNGs, one region, three TIFF revisions, six literal cells and three Wikis. Audit attempts 1 and 2 rejected an extra valid workbook read and a fully read global contract; both failures remain. Source-bound workbook checks and complete global capability/policy recognition now pass attempt 3 while preserving per-mutation schemas and all artifact checks. Latest full suite: 3,682 passed, 33 optional skips, 706.74 seconds; final retention/audit scope: 69 passed. The 258-call baseline below remains retained as a separate run.
 
@@ -728,9 +800,11 @@ Synthetic regressions cover all eight EXIF orientations, palette/alpha, high pre
 
 A default-model Codex run used an explicitly derived EXIF-orientation6 benchmark PNG from hash-pinned NIST SRM1648a PDF page index4. In 304.08 seconds it completed 258 successful calls with zero tool errors: 15 frame PNGs, one region preview, three TIFF revisions through reorder/insert/delete, six literal XLSX cells, historical references/selection, a region-to-cell derivation and three Wikis. Independent checks compare original PDF rasterization, native stage pixels, exact candidate bytes, literal cells and source attachments. Twenty-three positive/negative audit regressions reject changed pixels/orientation/alpha/order/crops and incomplete or corrupt readback.
 
-The first runner wrapper failed AFTER the successful CLI turn because its audit module did not exist yet. That log is retained; subsequent independent audits passed. The runner now imports its audit before model execution and refuses existing traces. Local full suite: 3,648 passed, 33 optional skips, 726.48 seconds. Python3.10 image/SDK2 scope: 111 passed in 41.10 seconds. Installed wheel/Docker replay the same source fingerprint and complete TIFF/frame/evidence/Wiki artifacts; MCP stdio, 199 VSIX tests and install/update pass. Local activation was unavailable without xvfb-run; that baseline subsequently passed required CI activation and all CI/Pages publication checks. Every later batch requires its own checks. This fixture does not establish arbitrary image, layer, animation or workbook-viewer fidelity. Public **1.4.0**; next consolidated **1.4.1**. See the [reproducible evaluation](https://github.com/u9401066/asset-aware-mcp/blob/main/tests/codex_native_image/README.md).
+The first runner wrapper failed AFTER the successful CLI turn because its audit module did not exist yet. That log is retained; subsequent independent audits passed. The runner now imports its audit before model execution and refuses existing traces. Local full suite: 3,648 passed, 33 optional skips, 726.48 seconds. Python3.10 image/SDK2 scope: 111 passed in 41.10 seconds. Installed wheel/Docker replay the same source fingerprint and complete TIFF/frame/evidence/Wiki artifacts; MCP stdio, 199 VSIX tests and install/update pass. Local activation was unavailable without xvfb-run; that baseline subsequently passed required CI activation and all CI/Pages publication checks. Every later batch requires its own checks. This fixture does not establish arbitrary image, layer, animation or workbook-viewer fidelity.  See the [reproducible evaluation](https://github.com/u9401066/asset-aware-mcp/blob/main/tests/codex_native_image/README.md).
 
-### Native PDF annotation evaluation (Unreleased)
+<a id="native-pdf-annotation-evaluation-unreleased"></a>
+
+### Native PDF annotation evaluation (1.4.1)
 
 The synthetic suite covers all 12 appearance kinds, rotation/CropBox/UserUnit, foreign AP bytes, direct/shared arrays, dependencies, signatures, locks and stale references. Actual SDK2 balanced/compact lifecycle tests read complete schemas/records/receipts, compare real PNG pixels and retain historical references, selections, derivations and Wikis.
 
@@ -746,9 +820,11 @@ The final full suite passed 3,521 tests with 33 optional skips in 698.37 seconds
 
 Adding both annotation workflows to the explicit Python 3.10 CI list exposed the original 180-second test limit: that run retained 1,157 passes, four skips and two timeout failures. An isolated Python 3.10 diagnostic completed all original assertions and 408 MCP calls in 142.51 seconds. Only these two cases now allow 300 seconds, with a 20-minute enclosing CI job and slow-test duration reporting. Other test limits, runtime code, complete pagination and every content-integrity assertion remain unchanged. Both configurations then passed the isolated Python 3.10 pytest run: two tests in 266.20 seconds.
 
-Ordinary pytest never launches a model. Use uv run python -m tests.codex_pdf_annotations.run --corpus /path/to/verified-corpus --case nist-1648a --output /path/to/new-run; use --case apollo11 for the second original. No model override. Audits retain full contract/schema/record continuation and ordering, errors, actual images and limits. Public release: 1.4.0; next consolidated patch: 1.4.1.
+Ordinary pytest never launches a model. Use uv run python -m tests.codex_pdf_annotations.run --corpus /path/to/verified-corpus --case nist-1648a --output /path/to/new-run; use --case apollo11 for the second original. No model override. Audits retain full contract/schema/record continuation and ordering, errors, actual images and limits.
 
-### Native Word footnote/endnote evaluation (Unreleased)
+<a id="native-word-footnoteendnote-evaluation-unreleased"></a>
+
+### Native Word footnote/endnote evaluation (1.4.1)
 
 Subsequent CI correctly caught actual note-content misbinding in Writer 24.2.7. Replaying the same DOCX with the official isolated 24.2.7.2 runtime proved this was not whitespace extraction. Eight controlled runs compared definition order and ID mappings: body-ordered definitions with aligned IDs passed both 7.3.7 and 24.2.7. Explicit remap_ids lets the Agent inspect the mismatch and apply a checked correction while preserving source, native content/styles and historical references. Original failing PDFs/PNGs, CI logs and probes remain retained.
 
@@ -772,9 +848,11 @@ Reproduce with the native note unit/SDK2 tests, tests.codex_docx_notes.run --out
 
 Previous full suite:3,384 passed,33 optional skips in396.74 seconds, including Writer/CJK and NIST/NASA PDFs. Python3.10:60 passed,one optional rendering skip in23.43 seconds. Its first private test harness lacked locked backports-asyncio-runner; installing that exact dependency resolved it, with the original log retained. The clean wheel outside checkout reproduces sixteen full notes,three catalogs and both byte-identical Wikis at the exact final-Codex source fingerprint. VSIX:199 tests,64-file package check and install/update pass; GUI activation is delegated to CI. Local Impress/Calc are absent and their optional tests skip. Standard pip wheel installation and MCP stdio pass. The installed Docker runtime reproduces the same sixteen notes,three catalogs and both byte-identical Wikis with the exact source fingerprint. Eight desktop/mobile zh/en website states pass interactions and overflow checks with no console errors; cached CDN scripts do not establish live CDN availability.
 
-This synthetic case uses optional Writer and private pinned fonts. Microsoft Word, arbitrary real documents and every custom mark/special setting/revision dependency remain unverified. MCP supplies source/version/structure checks; Agent owns full semantic and visual review and correction. Public1.4.0; next consolidated1.4.1.
+This synthetic case uses optional Writer and private pinned fonts. Microsoft Word, arbitrary real documents and every custom mark/special setting/revision dependency remain unverified. MCP supplies source/version/structure checks; Agent owns full semantic and visual review and correction.
 
-### Native Word story lifecycle evaluation (Unreleased)
+<a id="native-word-story-lifecycle-evaluation-unreleased"></a>
+
+### Native Word story lifecycle evaluation (1.4.1)
 
 Actual default-model Codex processed a synthetic four-page, three-section Word document. It assembled complete story, binding and contract records and reviewed all four initial pages, cloned a header, created a footer, bound the middle section, explicitly retained the following section's original definitions, deleted an unused definition and corrected the new header text. The run completed 98 successful MCP calls, zero tool errors and 222.28 seconds, without a model override.
 
@@ -786,9 +864,11 @@ Opt in with python -m tests.codex_story_lifecycle.run --output /absolute/new-sto
 
 Final full suite: 3,315 passed, 33 optional skips in 357.08 seconds, including Writer/CJK and NIST/NASA PDFs. Python 3.10 focused group: 36 passed, one optional rendering skip. A clean wheel outside checkout reproduces ten complete stories, three structure records and both byte-identical historical Wikis at the exact actual-Codex source fingerprint; standard pip installation and SDK2 smoke also pass. VSIX: 199 tests, 64-file package check and install/update pass; local activation is delegated to CI. Local Impress/Calc are absent, so their three optional integration cases are skipped. Earlier full attempts encountered an expired corpus path, a legacy contract consumer and temporary-storage exhaustion; corrected wiring and per-test cleanup of successful temporary fixtures resolve them. Original error logs remain retained.
 
-This synthetic case uses optional LibreOffice Writer and does not establish Microsoft Word fidelity, arbitrary-document coverage, every special clone dependency or footnote/endnote support. MCP checks source, version and structure; Agent owns full semantic/visual review and correction. Public 1.4.0 / Unreleased 1.4.x; next consolidated release 1.4.1.
+This synthetic case uses optional LibreOffice Writer and does not establish Microsoft Word fidelity, arbitrary-document coverage, every special clone dependency or footnote/endnote support. MCP checks source, version and structure; Agent owns full semantic/visual review and correction.
 
-### Native Word header/footer evaluation (Unreleased)
+<a id="native-word-headerfooter-evaluation-unreleased"></a>
+
+### Native Word header/footer evaluation (1.4.1)
 
 Actual default-model Codex processed a synthetic three-page, two-section Word document: a separate first-page header and blank footer, plus shared default stories on pages two and three. The shared header deliberately used a nonstandard part filename. After complete binding/content reads and initial page review, the Agent edited shared text, inserted and deleted paragraphs, and changed the page-number prefix. The run completed 75 successful MCP calls, zero tool errors and 165.22 seconds without a model override.
 
@@ -798,9 +878,11 @@ Opt in with python -m tests.codex_docx_stories.run --output /absolute/new-word-s
 
 Final full suite: 3,268 passed, 33 optional skips in 325.91 seconds, including existing Writer/CJK and NIST/NASA PDF cases. New unit tests: 42 passed; SDK2 with both rendering configurations: two passed. Python 3.10: 43 passed and one optional rendering skip. A clean installed wheel outside checkout reproduces eight complete story records, two catalogs and both byte-identical historical Wikis, with the same source fingerprint as actual Codex.
 
-This case does not test Microsoft Word, whole-definition creation/removal, section relinking or footnote/endnote stories. MCP checks source, version and structure; Agent owns full semantic/visual review. Public 1.4.0 / Unreleased 1.4.x; next consolidated release 1.4.1.
+This case does not test Microsoft Word, whole-definition creation/removal, section relinking or footnote/endnote stories. MCP checks source, version and structure; Agent owns full semantic/visual review.
 
-### Native Word pagination evaluation (Unreleased)
+<a id="native-word-pagination-evaluation-unreleased"></a>
+
+### Native Word pagination evaluation (1.4.1)
 
 Actual default-model Codex received a native Word table with clipped rows and missing repeated headers. It read complete records and the initial page, then set the two-row header prefix, automatic body heights and prevent-split policy. The run completed 74 successful MCP calls with one recovered input error in 200.83 seconds, without a model override. A schema read requested text_limit12000 above the4000 limit; the Agent corrected it. Original errors remain retained, with no model rerun to erase them.
 
@@ -810,9 +892,11 @@ This synthetic14-row case establishes that particular multi-page correction. Ove
 
 Opt in with python -m tests.codex_docx_layout.run --output /absolute/new-word-layout-run --font-fixture /absolute/pinned-font-fixture; audit with python -m tests.codex_docx_layout.audit /absolute/new-word-layout-run. Ordinary pytest never invokes a model. Actual runs require authenticated Codex, optional Writer and the pinned private font fixture.
 
-Final full suite: 3,218 passed, 33 optional skips in 305.27 seconds, including actual Writer pages, CJK glyphs and NIST/NASA PDFs. New pagination/audit/SDK2 group: 34 passed; Python 3.10: 33 passed and one optional rendering skip. VSIX: 199 tests, 64-file package check and install/update passed; local activation was skipped and is required in CI. Public 1.4.0 / Unreleased 1.4.x.
+Final full suite: 3,218 passed, 33 optional skips in 305.27 seconds, including actual Writer pages, CJK glyphs and NIST/NASA PDFs. New pagination/audit/SDK2 group: 34 passed; Python 3.10: 33 passed and one optional rendering skip. VSIX: 199 tests, 64-file package check and install/update passed; local activation was skipped and is required in CI.
 
-### Native Word grid evaluation (Unreleased)
+<a id="native-word-grid-evaluation-unreleased"></a>
+
+### Native Word grid evaluation (1.4.1)
 
 The final source includes complete paged mutation receipts. Initial run01 (61 successful calls / 174.05 seconds) remains retained. A long-receipt regression then exposed truncated delivery; the production fix justified the new run below, with the original failure preserved.
 
@@ -822,17 +906,21 @@ One original scan PNG and two intermediate/final Writer page PNGs were delivered
 
 The final full suite passed 3,184 tests with 33 optional skips in 290.27 seconds, including actual Writer/CJK and NIST/NASA PDF cases. The Python 3.10 focused group passed 59 tests. Regressions cover long receipts, recurring file hashes with newer receipts and rejection before committing an oversized complete review.
 
-Opt in with python -m tests.codex_docx_grid.run --output /absolute/new-word-grid-run --font-fixture /absolute/pinned-font-fixture; audit with python -m tests.codex_docx_grid.audit /absolute/new-word-grid-run. Ordinary pytest never launches a model. Actual runs require authenticated Codex and optional LibreOffice Writer; the private font fixture changes no system settings. MCP checks mechanics; Agent coordinates full semantic/visual review. Public1.4.0 / Unreleased1.4.x.
+Opt in with python -m tests.codex_docx_grid.run --output /absolute/new-word-grid-run --font-fixture /absolute/pinned-font-fixture; audit with python -m tests.codex_docx_grid.audit /absolute/new-word-grid-run. Ordinary pytest never launches a model. Actual runs require authenticated Codex and optional LibreOffice Writer; the private font fixture changes no system settings. MCP checks mechanics; Agent coordinates full semantic/visual review.
 
-### Captured ETL citation evaluation (Unreleased)
+<a id="captured-etl-citation-evaluation-unreleased"></a>
+
+### Captured ETL citation evaluation (1.4.1)
 
 Actual default-model Codex on 2026-09-19 completed 52 successful MCP calls, two recovered input errors and 223.68 seconds. A fictional one-page PDF produced full span/table/figure snapshots, an XLSX string cell preserving 007 and one mixed-source APA Wiki. All three sources were read and viewed again after ETL deletion; six actual PNGs match independent original-page pixels. Source bytes/mtime, every portable attachment, full hash-paged readback, bibliography and unchanged Wiki reuse pass independent audit. The Agent visually identified the raster reading -0.50 mg/L; general extraction and semantic correctness are not established.
 
 The two rejected calls supplied text_limit to native contract; complete schema discovery recovered. Initial auditing used mime_type instead of the actual MCP wire key mimeType and omitted read-only schema discovery. Both auditor assumptions were corrected with regressions, then the same retained trace passed; no model rerun erased the initial failure.
 
-Reproduce with uv run python -m tests.codex_etl_csl.run --output /absolute/new-etl-run and replay tests.codex_etl_csl.audit. Ordinary pytest never starts a model. scripts/smoke_etl_snapshot_runtime.py replays retained evidence with an installed runtime outside checkout. Unit snapshots: 34 passed; real SDK2 ingestion/history: one passed in 38.65s. Full suite with NIST/NASA: 3,110 passed / 35 optional skipped in 289.41s, followed by seven passing auditor regressions. Public stays 1.4.0 / Unreleased1.4.x. Clean Python3.10 wheel and Docker replay all three historical images and the byte-identical Wiki outside checkout; source fingerprints match actual Codex. Docker uses read-only evidence, matching UID and optional Node without changing source permissions. VSIX199 tests, 64-file packaging and install/update pass; activation remains a CI check. Desktop/mobile zh/en guides and APA preview pass six retained browser screens. The first CI Python3.10 job exposed a test decoder treating SDK structured content as image metadata. Local reproduction confirmed it; the integration test now parses actual TextContent, checks PNG hashes and source refs, and covers both list-wrapped and unwrapped responses plus altered images. Production bytes and the actual/wheel/Docker source fingerprint are unchanged. Corrected Python3.10 snapshot/auditor/SDK2 group: 44 passed in 49.37s; Python3.13 auditor/SDK2: 10 passed in 40.13s. The initial failure is retained.
+Reproduce with uv run python -m tests.codex_etl_csl.run --output /absolute/new-etl-run and replay tests.codex_etl_csl.audit. Ordinary pytest never starts a model. scripts/smoke_etl_snapshot_runtime.py replays retained evidence with an installed runtime outside checkout. Unit snapshots: 34 passed; real SDK2 ingestion/history: one passed in 38.65s. Full suite with NIST/NASA: 3,110 passed / 35 optional skipped in 289.41s, followed by seven passing auditor regressions.  Clean Python3.10 wheel and Docker replay all three historical images and the byte-identical Wiki outside checkout; source fingerprints match actual Codex. Docker uses read-only evidence, matching UID and optional Node without changing source permissions. VSIX199 tests, 64-file packaging and install/update pass; activation remains a CI check. Desktop/mobile zh/en guides and APA preview pass six retained browser screens. The first CI Python3.10 job exposed a test decoder treating SDK structured content as image metadata. Local reproduction confirmed it; the integration test now parses actual TextContent, checks PNG hashes and source refs, and covers both list-wrapped and unwrapped responses plus altered images. Production bytes and the actual/wheel/Docker source fingerprint are unchanged. Corrected Python3.10 snapshot/auditor/SDK2 group: 44 passed in 49.37s; Python3.13 auditor/SDK2: 10 passed in 40.13s. The initial failure is retained.
 
-### CSL citation document evaluation (Unreleased)
+<a id="csl-citation-document-evaluation-unreleased"></a>
+
+### CSL citation document evaluation (1.4.1)
 
 On 2026-09-19 the actual default Codex model completed APA/Vancouver citation documents and two immutable Wikis in 38 successful MCP calls, one recovered tool error and 192.75 seconds. It viewed four PDF images before/after rotation, read the complete contract, page records and citation pages, and checked APA same-author/year disambiguation, ordering, bibliography and historical references. A truncated native schema hash was rejected and retrieved again; this was not a zero-error run. Human PDF bytes/mtime stayed unchanged and the original APA snapshot remained reusable after the managed source changed.
 
@@ -840,9 +928,11 @@ The first run is also retained: 167 successful calls, one recovered error and 22
 
 Reproduce with uv run python -m tests.codex_csl.run --output /absolute/new-csl-run; ordinary pytest never starts a model. scripts/smoke_csl_runtime.py checks the installed optional Node.js processor. Full suite: 3,075 passed / 35 optional skipped in 221.04s, including the actual NIST/NASA corpus. Clean Python3.10 CSL unit/audit/SDK2 group: 31 passed in 23.30s. Three outdated GitHub description fixtures were synchronized after an earlier full-suite failure; the complete rerun passed. Source hashes match checkout, wheel, actual Codex and Docker. The base container explicitly reports Node.js unconfigured; mounting an optional Node executable read-only passes real APA rendering. VSIX199 tests and install/update pass; local extension activation is unavailable and remains a CI check.
 
-Browser checks cover 1440x1000 and390x844, Chinese/English guide switching, APA/Vancouver previews, nonblank content, no horizontal overflow, italics and APA hanging indent, with eight screenshots retained. These cases do not establish every journal, language or metadata combination. Agent review still owns bibliographic truth, semantic support, printed locator correspondence and final typography. Public1.4.0 / Unreleased1.4.x, with no new version tag.
+Browser checks cover 1440x1000 and390x844, Chinese/English guide switching, APA/Vancouver previews, nonblank content, no horizontal overflow, italics and APA hanging indent, with eight screenshots retained. These cases do not establish every journal, language or metadata combination. Agent review still owns bibliographic truth, semantic support, printed locator correspondence and final typography.
 
-### Real PDF corpus (Unreleased)
+<a id="real-pdf-corpus-unreleased"></a>
+
+### Real PDF corpus (1.4.1)
 
 On 2026-09-19 the actual default Codex model used this checkout's MCP on unchanged public PDFs: [NIST SRM 1648a](https://tsapps.nist.gov/srmext/certificates/1648a.pdf), Table1 on PDF index4, and the [NASA Apollo11 mission report](https://ntrs.nasa.gov/citations/19700008096), Table3-I across indices17/18. NIST completed 234 successful calls, zero tool errors, 75 exact data cells in 283.58 seconds; NASA completed 232/0, 68 exact cells in 251.22 seconds. Source sizes, hashes and page counts are pinned. NASA retains its historical scan and imperfect OCR layer; expected strings were separately image-reviewed, never supplied to the model.
 
@@ -850,9 +940,11 @@ Agents viewed three complete pages and three chosen table regions, read all init
 
 Preserve the failed NIST first workflow: transcription75/75 was correct, but the Agent edited the first column when the second was required (237 calls,256.27s); the byte audit rejected it. The retry explicitly states zero-based coordinates. NASA's initial SDK2 run exposed359 duplicated Length dictionaries, now proven against original stream bytes and reported; copied pages record canonicalization. Scan clip/full-page raster sampling also differs: exact independent direct-source pixels are required; full-page crop mean differences4.726/3.847 are diagnostic, not a universal less-than-one gate. Both paths use MuPDF; glyph bounds and complete string truth are separate checks.
 
-Run tests.real_pdf.corpus with --directory /absolute/corpus --fetch explicitly; set ASSET_AWARE_REAL_PDF_CORPUS for tests/integration/test_real_pdf_corpus_stdio.py. Actual model runs use python -m tests.real_pdf.run --corpus /absolute/corpus --case nist-1648a (or apollo11) --output /absolute/new-run. Normal pytest downloads nothing and invokes no model. CI explicitly fetches/verifies both sources; offline parser/oracle cases run on Python3.10/macOS/Windows. Focused parser/oracle/SDK2: 31 passed in 72.10s. Full suite: 3,044 passed / 35 optional skipped in 198.26s. Clean Python 3.10: 31 passed in 74.86s plus installed-wheel CLI/SDK2 smoke. Corpus/trace/report IO explicitly uses UTF-8, with an additional non-UTF-8-locale subprocess regression. VSIX 199 tests, install/update and Docker SDK2 smoke pass; source hashes match checkout, wheel, actual Agent runs and container. These documents do not prove arbitrary-PDF fidelity. Public1.4.0 / Unreleased1.4.x.
+Run tests.real_pdf.corpus with --directory /absolute/corpus --fetch explicitly; set ASSET_AWARE_REAL_PDF_CORPUS for tests/integration/test_real_pdf_corpus_stdio.py. Actual model runs use python -m tests.real_pdf.run --corpus /absolute/corpus --case nist-1648a (or apollo11) --output /absolute/new-run. Normal pytest downloads nothing and invokes no model. CI explicitly fetches/verifies both sources; offline parser/oracle cases run on Python3.10/macOS/Windows. Focused parser/oracle/SDK2: 31 passed in 72.10s. Full suite: 3,044 passed / 35 optional skipped in 198.26s. Clean Python 3.10: 31 passed in 74.86s plus installed-wheel CLI/SDK2 smoke. Corpus/trace/report IO explicitly uses UTF-8, with an additional non-UTF-8-locale subprocess regression. VSIX 199 tests, install/update and Docker SDK2 smoke pass; source hashes match checkout, wheel, actual Agent runs and container. These documents do not prove arbitrary-PDF fidelity.
 
-### Native CSV/TSV evaluation (Unreleased)
+<a id="native-csvtsv-evaluation-unreleased"></a>
+
+### Native CSV/TSV evaluation (1.4.1)
 
 The actual default Codex model completed 103 successful MCP calls, zero tool errors, 210.09 seconds and four actual region PNGs. It independently selected Count/Reading/Unit in an image-only synthetic PDF, reviewed two detail levels for Count, created a UTF-8-BOM/CRLF CSV with exact strings 007, -0.50 and mg/L, and recorded three region-to-field derivations.
 
@@ -860,18 +952,21 @@ Five native updates changed Count to 008, inserted a row, inserted a column, the
 
 Regressions cover strict UTF-8/BOM/UTF-16/CP950/CP1252/Latin-1, mixed EOL/multiline/empty/ragged records, byte splices, source refresh/backed-up writeback, dialect-bound snapshots and long paged fields. Sole surviving empty fields retain required quoting. Rehashed wrong spans or numeric coercion still fail the independent auditor. All-enabled schema discovery remains within its existing response cap.
 
-Full suite: 3,012 passed, 35 optional skips, 126.86 seconds. Clean Python3.10 SDK2 plus its focused unit group: 37 passed in13.91 seconds. Reproduce with uv run python -m tests.codex_delimited.run --output /absolute/new/run-dir; ordinary pytest never starts a model. The first remote CI exposed an outdated fake GitHub description after the documentation update; the fixture was synchronized and the final full suite passed. CSV regressions also join the explicit Python3.10/macOS/Windows inventories. That coverage exposed legacy [CSV NUL rejection](https://github.com/python/cpython/issues/97503); reversible one-character masking around the parser preserves original values, bytes and positions. Marker collisions and dialect variants are covered; actual Codex and package proofs were rerun. This synthetic scan/CSV fixture establishes no arbitrary OCR or spreadsheet rendering guarantee. Agent owns meaning and downstream interpretation. Public1.4.0 / Unreleased1.4.x.
+Full suite: 3,012 passed, 35 optional skips, 126.86 seconds. Clean Python3.10 SDK2 plus its focused unit group: 37 passed in13.91 seconds. Reproduce with uv run python -m tests.codex_delimited.run --output /absolute/new/run-dir; ordinary pytest never starts a model. The first remote CI exposed an outdated fake GitHub description after the documentation update; the fixture was synchronized and the final full suite passed. CSV regressions also join the explicit Python3.10/macOS/Windows inventories. That coverage exposed legacy [CSV NUL rejection](https://github.com/python/cpython/issues/97503); reversible one-character masking around the parser preserves original values, bytes and positions. Marker collisions and dialect variants are covered; actual Codex and package proofs were rerun. This synthetic scan/CSV fixture establishes no arbitrary OCR or spreadsheet rendering guarantee. Agent owns meaning and downstream interpretation.
 
-### PDF region evidence evaluation (Unreleased)
+<a id="pdf-region-evidence-evaluation-unreleased"></a>
+
+### PDF region evidence evaluation (1.4.1)
 
 Actual default-model Codex completed 82 successful MCP calls, zero tool errors, 218.02 seconds and 5 actual region PNGs. It selected three scanned cells, preserved strings 007, -0.50 and mg/L in a new workbook, and recorded three region-to-cell derivations. Higher-detail previews retained region identity. Changing A2 to 008 and rotating the managed PDF preserved the human source and historical evidence. Two Wiki snapshots retained original assertions without inheriting them into the new workbook revision.
 
 Independent audits check complete page/cell/ledger readbacks, source bytes/mtime, glyph coverage, published XLSX and Wiki JSON/PNG/source attachments. Sixteen vector geometry cases compare exact full-page raster crops. Actual scan PNGs require exact independent direct-render replay plus full-page crop dimensions/mean-error comparison; partial embedded-image resampling and edge antialiasing can differ. The first audit rejected the completed run because it assumed universal pixel equality; the corrected audit rechecked the same raw trace. A regression rejects a one-pixel image shift even with an updated PNG hash. SDK2 additionally checks a fixed scan crop within 2/255 maximum and 0.1/255 mean error.
 
-Full suite: 2,967 passed and 35 optional skips. Reproduce with uv run python -m tests.codex_pdf_regions.run --output /absolute/new/run-dir. Ordinary pytest never starts a model. This synthetic fixture does not certify arbitrary PDF or Excel fidelity; broad real-file coverage remains open. Public1.4.0 / Unreleased1.4.x.
+Full suite: 2,967 passed and 35 optional skips. Reproduce with uv run python -m tests.codex_pdf_regions.run --output /absolute/new/run-dir. Ordinary pytest never starts a model. This synthetic fixture does not certify arbitrary PDF or Excel fidelity; broad real-file coverage remains open.
 
+<a id="worksheet-layout-correction-evaluation-unreleased"></a>
 
-### Worksheet layout correction evaluation (Unreleased)
+### Worksheet layout correction evaluation (1.4.1)
 
 Optional real Calc/SDK2 testing compares before/after PDFs, delivered MCP PNGs, exact source revisions and historical images. Set NATIVE_WORKBOOK_RENDER_TEST=1 and run tests/integration/test_native_worksheet_layout_stdio.py, with Calc installed or LIBREOFFICE_BIN set. Separate unit cases cover rich text, Tables, merges, styles, authored picture/note anchors, protection permissions and default-hidden rows.
 
@@ -879,41 +974,51 @@ Actual default-model Codex on the final source completed **125 successful MCP ca
 
 An earlier run completed136 successful calls in170.34 seconds with **14 rejected schema requests** using text_limit12000. The limit is4000; contract schema_request supplies2000. Codex corrected the arguments and completed the workflow; the audit retains every failed call. After improving sparse row lookup, final-source testing produced the125-call zero-error result above. Neither run certifies Excel fidelity. Visual coverage is limited to this synthetic workbook; picture/note geometry is covered by separate unit cases.
 
-Full pytest passed2,931 tests with35 optional skips; real Calc/SDK2 testing passed separately. Run uv run python -m tests.codex_workbook_layout.run --output /absolute/new/run-dir. Ordinary pytest never starts a model. Human sources and old PDFs remain unchanged. Public1.4.0 / Unreleased1.4.x.
+Full pytest passed2,931 tests with35 optional skips; real Calc/SDK2 testing passed separately. Run uv run python -m tests.codex_workbook_layout.run --output /absolute/new/run-dir. Ordinary pytest never starts a model. Human sources and old PDFs remain unchanged.
 
-### Workbook rendition evaluation (Unreleased)
+<a id="workbook-rendition-evaluation-unreleased"></a>
+
+### Workbook rendition evaluation (1.4.1)
 
 The optional real Calc/SDK2 test covers all four print/whole-sheet and prefer-cache/recalculate combinations, actual PNG pixels, print areas, hidden/blank sheets, source bytes/mtime, historical revisions and portable Wiki provenance. Set NATIVE_WORKBOOK_RENDER_TEST=1 and run tests/integration/test_native_workbook_rendition_stdio.py with Calc installed; optionally set LIBREOFFICE_BIN.
 
 On 2026-09-19 actual default-model Codex completed **232 successful MCP calls with zero tool errors in184.70 seconds**, receiving **11 actual MCP PNGs** across ten pages and one historical reread. It created cached print, recalculated whole-sheet and updated-formula PDFs, checked displayed999/3/5, complete source receipts/page records and historical cell evidence, then published three PDFs, one XLSX and a PDF Wiki retaining exact conversion inputs. Independent audit checks source immutability, both workbook revisions, PDF bytes, complete page records, delivered pixels and Wiki attachments.
 
-Codex identified top-edge heading clipping and right-edge hidden-sheet text clipping in whole-sheet output. That earlier run left clipping uncorrected; the subsequent layout evaluation above now corrects this sample. Complete page counts do not certify visual fidelity, and broader corpus coverage remains open. Run uv run python -m tests.codex_workbook_rendition.run --output /absolute/new/run-dir. Ordinary pytest never starts a model. Public1.4.0 / Unreleased1.4.x.
+Codex identified top-edge heading clipping and right-edge hidden-sheet text clipping in whole-sheet output. That earlier run left clipping uncorrected; the subsequent layout evaluation above now corrects this sample. Complete page counts do not certify visual fidelity, and broader corpus coverage remains open. Run uv run python -m tests.codex_workbook_rendition.run --output /absolute/new/run-dir. Ordinary pytest never starts a model.
 
-### Native Table totals lifecycle evaluation (Unreleased)
+<a id="native-table-totals-lifecycle-evaluation-unreleased"></a>
+
+### Native Table totals lifecycle evaluation (1.4.1)
 
 Actual default-model Codex completed 201 successful MCP calls with zero tool errors in 181.76 seconds. It viewed a synthetic scanned PDF through an MCP PNG, created an independent workbook/Table, removed and cleared totals, restored retained definitions, then removed totals while keeping cells.
 
 Independent openpyxl/ZIP/trace audits checked five history entries, complete reference/receipt reads between mutations, ten exact source strings/types, column IDs, filter ranges, formulas and styles. The retained totals formula uses absolute pre-removal data coordinates. Historical 007 evidence, original PDF bytes/mtime, final XLSX and two immutable Wiki attachments all passed. The suite passed 2,834 tests with 33 optional skips, including SDK2, CAS conflicts and public readback budget rejection.
 
-This actual Codex fixture uses default direct cell styles; richer styles have separate unit coverage. Excel rendering and calculated results were not verified. Reproduce with uv run python -m tests.codex_table_totals.run --output /absolute/new/run-dir. Ordinary pytest never launches a model. Public stays 1.4.0 / Unreleased within 1.4.x.
+This actual Codex fixture uses default direct cell styles; richer styles have separate unit coverage. Excel rendering and calculated results were not verified. Reproduce with uv run python -m tests.codex_table_totals.run --output /absolute/new/run-dir. Ordinary pytest never launches a model.
 
-### Native Table creation evaluation (Unreleased)
+<a id="native-table-creation-evaluation-unreleased"></a>
+
+### Native Table creation evaluation (1.4.1)
 
 Actual default-model Codex viewed a synthetic scanned PDF through an MCP PNG, created an independent XLSX and added a native Inventory Table through add_workbook_table. The run completed 73 successful MCP calls with zero tool errors in 109.47 seconds. No prebuilt Table template was supplied.
 
 Independent openpyxl/ZIP and trace audits checked ten exact source strings and types, leading zeros, six column IDs, Table/filter ranges, calculated/totals formulas, Table style and preserved cell formats/parts. Complete paged reads, the original historical 007 reference, source PDF bytes/mtime and both revision Wikis with exact attachments passed. The full suite passed 2,764 tests with 33 optional skips. An openpyxl empty workbookProtection compatibility failure was reproduced and fixed while retaining active/password/unknown protection guards.
 
-This synthetic first-page workflow does not establish general OCR accuracy, Excel rendering or recalculated results. Reproduce with uv run python -m tests.codex_table_create.run --output /absolute/new/run-dir. Ordinary pytest never launches a model. Public remains 1.4.0 / Unreleased within 1.4.x.
+This synthetic first-page workflow does not establish general OCR accuracy, Excel rendering or recalculated results. Reproduce with uv run python -m tests.codex_table_create.run --output /absolute/new/run-dir. Ordinary pytest never launches a model.
 
-### Native Table column editing evaluation (Unreleased)
+<a id="native-table-column-editing-evaluation-unreleased"></a>
+
+### Native Table column editing evaluation (1.4.1)
 
 Actual Codex completed 66 successful MCP calls, zero tool errors, in 132.75 seconds. It viewed the synthetic scan through an actual PNG, transcribed ten data cells as exact strings into a supplied Table, then renamed the rich Count header to Quantity, changed the calculated formula and edited existing totals in one specialized operation. Bold/italic run formats, source data, native styles, column IDs and Table/filter bounds survived. Existing formula/defined-name references followed the renamed identity.
 
 Independent openpyxl/ZIP and trace audits checked complete reads, receipts, historical Count/007 references, original PDF/XLSX bytes and mtimes, and two revision Wikis with exact attachments. The first audit incorrectly named the schema operation; a later check caught an intermediate formula recorded as before. The corrected implementation was rerun and now proves original-revision before values. Combined public readback size is checked before commit. The final source passed 2,716 tests with 33 optional skips and matches the wheel and Docker code. This uses a supplied Table and does not establish native Table creation, Excel rendering or recalculated results.
 
-Reproduce with: uv run python -m tests.codex_table_edit.run --output /absolute/new/run-dir. Ordinary pytest never launches a model. Public remains 1.4.0 / Unreleased within 1.4.x.
+Reproduce with: uv run python -m tests.codex_table_edit.run --output /absolute/new/run-dir. Ordinary pytest never launches a model.
 
-### Native Table expansion evaluation (Unreleased)
+<a id="native-table-expansion-evaluation-unreleased"></a>
+
+### Native Table expansion evaluation (1.4.1)
 
 Actual Codex CLI completed 82 successful MCP calls with zero tool errors in 150.48 seconds. It viewed the synthetic scan through an actual MCP PNG and transcribed ten data cells as exact strings into a supplied Inventory Table template with a CountLength calculated column. Template preparation is not counted as native MCP table creation.
 
@@ -921,48 +1026,57 @@ The agent read complete table definitions/references, projected A2T, changed 007
 
 The audit checks complete paged reads, current receipts, frozen and live A2T, historical 007 evidence, unchanged source PDF/XLSX bytes and mtimes, and two native revision Wikis with attachment hashes. Native Excel rendering and calculated results were not evaluated. Regression fixtures additionally cover totals, sorting, adjacent Tables, non-UTF-8 definitions, boundaries, pivot/mapping guards, stale revisions and invalid generated intent.
 
-Reproduce with: uv run python -m tests.codex_table_expansion.run --output /absolute/new/run-dir. Ordinary pytest never starts a model. The isolated runner uses the current checkout and default Codex model; tests.codex_table_expansion.audit verifies results independently. Public stays 1.4.0, with development Unreleased for 1.4.x.
+Reproduce with: uv run python -m tests.codex_table_expansion.run --output /absolute/new/run-dir. Ordinary pytest never starts a model. The isolated runner uses the current checkout and default Codex model; tests.codex_table_expansion.audit verifies results independently.
 
-### Structural A2T writeback evaluation (Unreleased)
+<a id="structural-a2t-writeback-evaluation-unreleased"></a>
+
+### Structural A2T writeback evaluation (1.4.1)
 
 Run tests/unit/test_native_table_grid_apply.py and tests/integration/test_native_table_grid_stdio.py for renamed/recreated identities, identical row recreation, native formula relocation, rich text/styles, complete destination reads, version conflicts and historical snapshots. SDK2 sends typed JSON column defaults and checks one native commit.
 
 Explicit model run: uv run python -m tests.codex_native_selection.run --table-grid --output /tmp/table-grid-codex; replay tests.codex_native_selection.audit. Run 01 on 2026-09-19 made **86 tool calls: 84 successful and two recovered input errors**, in **178.67 seconds**. Codex viewed the scan PNG, retained the original 007 selection/derivation, edited B2 to 008 in A2T, deleted/recreated a row and column, added manual data and applied everything in one native commit. Independent audit checks the original 15 and final 20 literal cells, stable identities, complete before/after reads, the native operation receipt, frozen A2T input, source PDF bytes/mtime and two historical Wikis. Old assertions never migrate.
 
-The two rejected discovery calls passed table_data/table_manage to native contract.for_op, which accepts only native operation names; Codex recovered using their exposed MCP tool schemas. CLI 0.154.0-alpha.6.1 uses its default model. This actual model fixture has no native Excel Table object and does not certify general OCR, formula evaluation or Excel rendering. Rich native formulas/styles have separate package tests. Public stays 1.4.0 / Unreleased within 1.4.x.
+The two rejected discovery calls passed table_data/table_manage to native contract.for_op, which accepts only native operation names; Codex recovered using their exposed MCP tool schemas. CLI 0.154.0-alpha.6.1 uses its default model. This actual model fixture has no native Excel Table object and does not certify general OCR, formula evaluation or Excel rendering. Rich native formulas/styles have separate package tests.
 
-### Native worksheet grid evaluation (Unreleased)
+<a id="native-worksheet-grid-evaluation-unreleased"></a>
+
+### Native worksheet grid evaluation (1.4.1)
 
 Run tests/unit/test_native_grid_*.py, tests/unit/test_native_workbook_grid.py and tests/integration/test_native_grid_stdio.py. They cover native row/column insertion and deletion, formula and table identities, merges, notes/drawing geometry, named sources, complete paged readback and version conflicts. Independent openpyxl inspection never resaves the source package.
 
 Explicit model run: uv run python -m tests.codex_native_selection.run --grid --output /tmp/grid-codex; replay tests.codex_native_selection.audit. Run 01 on 2026-09-19 completed **126 successful MCP calls, zero tool errors, 175.95 seconds**. Codex viewed the actual scan PNG, created 15 literal cells, changed B2 from 007 to 008, then inserted and deleted rows/columns. Independent audit verifies all intermediate values/blanks, complete pinned reads, current operation receipts, history, source bytes/mtime, old references/derivations and two revision-specific Wikis.
 
-Deleting the newly inserted blanks returned to an earlier content SHA. The auditor therefore checks the current history event as well as immutable bytes. An initial auditor bug rejected exploratory reads; corrected auditing permits exploration but still requires complete pinned reads before every mutation. Regressions reject missing current receipts and reused proof for repeated hashes. CLI 0.154.0-alpha.6.1 uses its default model. This synthetic case does not certify general OCR, Excel rendering, formula evaluation or structural A2T writeback. Public stays 1.4.0; development remains Unreleased for 1.4.x.
+Deleting the newly inserted blanks returned to an earlier content SHA. The auditor therefore checks the current history event as well as immutable bytes. An initial auditor bug rejected exploratory reads; corrected auditing permits exploration but still requires complete pinned reads before every mutation. Regressions reject missing current receipts and reused proof for repeated hashes. CLI 0.154.0-alpha.6.1 uses its default model. This synthetic case does not certify general OCR, Excel rendering, formula evaluation or structural A2T writeback.
 
-### Native A2T correspondence evaluation (Unreleased)
+<a id="native-a2t-correspondence-evaluation-unreleased"></a>
+
+### Native A2T correspondence evaluation (1.4.1)
 
 Run tests/unit/test_native_table_*.py, tests/unit/test_codex_table_audit.py and tests/integration/test_native_table_stdio.py. They cover typed JSON tool inputs, exact source-cell evidence, unchanged native parts, rich-text/merge guards, stale revisions, independent creation and frozen input recovery after live table deletion.
 
 Explicit model run: uv run python -m tests.codex_native_selection.run --tables --output /tmp/a2t-codex; replay tests.codex_native_selection.audit. Run 01 on 2026-09-19 made **90 MCP calls: 89 successful and one recovered input error**, in **145.14 seconds**. Codex viewed the scan PNG, transcribed all 15 literal cells, projected A2T, changed string 007 to 008, applied it to the original workbook and created an independent XLSX from its frozen input. The rejected schema request used text_limit=20000; subsequent valid paging completed the workflow.
 
-Independent audit verifies complete reads before writes, typed values, source references, immutable A2T snapshots, original PDF bytes/mtime, native history, unchanged parts, both outputs and two revision-specific Wikis. The old 007 assertion never migrates to 008. CLI 0.154.0-alpha.6.1 uses its default model; no general OCR, formula evaluation or Excel rendering guarantee. Public stays 1.4.0; development remains Unreleased for 1.4.x.
+Independent audit verifies complete reads before writes, typed values, source references, immutable A2T snapshots, original PDF bytes/mtime, native history, unchanged parts, both outputs and two revision-specific Wikis. The old 007 assertion never migrates to 008. CLI 0.154.0-alpha.6.1 uses its default model; no general OCR, formula evaluation or Excel rendering guarantee.
 
+<a id="native-workbook-structure-evaluation-unreleased"></a>
 
-### Native workbook structure evaluation (Unreleased)
+### Native workbook structure evaluation (1.4.1)
 
 Run tests/unit/test_native_workbook_*.py, tests/unit/test_codex_workbook_audit.py and tests/integration/test_native_workbook_stdio.py. Rich native fixtures cover formulas, styles, comments, merges, charts, pivots/consolidation, 3D ranges and source/version preservation. SDK2 exercises complete paged read-back, worksheet CRUD and historical selected-value verification with independent workbook inspection.
 
 Explicitly opt into the real model with uv run python -m tests.codex_native_selection.run --worksheets --output /tmp/workbook-codex. Replay tests.codex_native_selection.audit against that directory. Run 01 on 2026-09-19 completed **115 MCP calls, zero tool errors, 160.49 seconds**. Codex viewed an actual scan PNG, created all 15 literal XLSX cells, retained the original 007 selection and updated B2 to 008. It added Review/Temporary sheets and a native cross-sheet formula, renamed Sheet1 to 資料 O'Brien, reordered the workbook and deleted Temporary.
 
-Independent audit checks all seven native revisions, literal values, stable sheet IDs/parts, exact formula rewriting, unchanged parts, complete reads before/after edits, source bytes/mtime, published output and two revision-specific Wiki snapshots. Regression tests reject late reads, forged revision transitions and hashes. Codex CLI 0.154.0-alpha.6.1 used its default model, not a pinned model. No general OCR, formula evaluation or Excel rendering claim; source evidence covers the whole scanned page. Ordinary pytest never starts Codex. Public remains 1.4.0 / future 1.4.x.
+Independent audit checks all seven native revisions, literal values, stable sheet IDs/parts, exact formula rewriting, unchanged parts, complete reads before/after edits, source bytes/mtime, published output and two revision-specific Wiki snapshots. Regression tests reject late reads, forged revision transitions and hashes. Codex CLI 0.154.0-alpha.6.1 used its default model, not a pinned model. No general OCR, formula evaluation or Excel rendering claim; source evidence covers the whole scanned page. Ordinary pytest never starts Codex.
 
-### Native selection evaluation (Unreleased)
+<a id="native-selection-evaluation-unreleased"></a>
+
+### Native selection evaluation (1.4.1)
 
 Run tests/unit/test_native_selection.py, tests/unit/test_native_selection_service.py, tests/unit/test_codex_selection_audit.py and tests/integration/test_native_selection_stdio.py. Explicitly opt into a real model with uv run python -m tests.codex_native_selection.run --output /tmp/selection-codex; replay with tests.codex_native_selection.audit. Ordinary pytest never starts Codex.
 
 Run 01 on 2026-09-19 completed **58 MCP calls, zero tool errors, 130.45 seconds**. Codex viewed a real scan PNG, transcribed all 15 literal XLSX cells, selected B2's original count and changed B2 to 008. The old 007 selection remained historical. Independent audits checked complete PNG pixels, every native string, source bytes/mtime, paged parent/selection/ledger reads, context hashes, published output and two revision-specific Wiki snapshots. The historical Wiki retains selection JSON and the exact source PDF; the current Wiki inherits no old assertion. Rehashed forged values, locators and context fail the auditor's regression tests.
 
-SDK2 separately exercises precise text in a merged-title PPTX table, edits, historical proof and source preservation. All four parent formats and Unicode/UTF-8 spans have regressions. Codex CLI 0.154.0-alpha.6.1 used its default model, not a pinned model. Synthetic coverage does not establish general OCR, pixel-region evidence, automatic cell alignment or Excel visual fidelity. Public remains 1.4.0 / future 1.4.x.
+SDK2 separately exercises precise text in a merged-title PPTX table, edits, historical proof and source preservation. All four parent formats and Unicode/UTF-8 spans have regressions. Codex CLI 0.154.0-alpha.6.1 used its default model, not a pinned model. Synthetic coverage does not establish general OCR, pixel-region evidence, automatic cell alignment or Excel visual fidelity.
 A release candidate must pass lint, formatting, types, full tests, documentation checks, security audits, package audits, VSIX tests, and artifact verification. Install and activation smoke tests validate the production extension path.
 
 ## Codex PDF evaluation
@@ -974,22 +1088,30 @@ Main development adds \`citation_readback_required\`: after all corrections, Cod
 
 Recovered tool errors remain visible as \`passed_with_recoveries\`; \`first_transcription_exact\` distinguishes initial extraction from a corrected final result. The three-page corpus covers digital, scanned and mixed pages, rotation/cropbox offsets, leading zeros, signs and units. It does not establish general OCR accuracy, handwriting support or PDF layout writeback fidelity.
 
-## Codex native PDF evaluation (Unreleased)
+<a id="codex-native-pdf-evaluation-unreleased"></a>
+
+## Codex native PDF evaluation (1.4.1)
 Run \`uv run python -m tests.codex_native_pdf.run --codex /absolute/path/to/codex --output /tmp/native-pdf-run\` for the separate native page workflow. Three image-only pages require actual MCP PNG delivery, complete page JSON, a new composed PDF, two blank insertions, rotation, deletion, reordering, historical verification, publication and wiki export. The original source must remain unchanged. Ordinary pytest never invokes a model.
 
 Re-audit with \`uv run python -m tests.codex_native_pdf.audit /tmp/native-pdf-run\`. Independent checks inspect actual image pixels, contiguous reference readbacks, persisted lineage/history, source hash/mtime, final page order/geometry/pixels, wiki files and exact string transcription. Unicode µ/μ is not normalized. Keep raw events, runtime/lock hashes, artifacts and tool errors, including failed runs. These synthetic checks do not establish arbitrary PDF fidelity or general OCR accuracy.
 
 On 2026-09-18, native scanned run 02 against the final worker completed 49 MCP calls with zero tool errors. All seven independent checks passed, including ten full page records, six actual original/final images, and exact final transcription of seven rows/35 cells. Images were independently compared to their pinned-revision render pixels. Earlier run 01 retained 171 calls and its passing evidence; call counts depend on the model's paging strategy.
 
-## Codex PPTX picture evaluation (Unreleased)
+<a id="codex-pptx-picture-evaluation-unreleased"></a>
+
+## Codex PPTX picture evaluation (1.4.1)
 Run \`uv run python -m tests.codex_pptx_pictures.run --codex /absolute/path/to/codex --output /tmp/pptx-picture-run\`. The logged-in CLI uses only the native document MCP tool. A synthetic raster with leading zeros is inserted twice into a complex deck, viewed as actual MCP images, extracted, replaced on only one shape and deleted on the other. Full shape reads, historical references, exact image bytes, shared-media isolation, unchanged shapes/parts and wiki artifacts are independently audited. Ordinary pytest never starts Codex. Embedded-image verification does not establish slide rendering or general OCR accuracy. Two runs on 2026-09-18 each completed 38 MCP calls with zero tool errors, three actual image deliveries and two complete shape records; exact leading-zero visual transcription and the independent package audit passed.
 
-## Codex scanned PDF to PPTX table evaluation (Unreleased)
+<a id="codex-scanned-pdf-to-pptx-table-evaluation-unreleased"></a>
+
+## Codex scanned PDF to PPTX table evaluation (1.4.1)
 Run \`uv run python -m tests.codex_pptx_tables.run --codex /absolute/path/to/codex --output /tmp/pptx-table-run\`. The actual CLI views a scanned first-page PNG, creates editable tables with a merged title, reads full native representations, edits/restores a cell, deletes a duplicate, verifies old/source evidence and publishes PPTX/wiki. Independent audits check exact strings, pixels, grids/merges, reference chronology and managed history. Ordinary pytest never starts a model.
 
 Run 01 on 2026-09-18 made 67 attempts / 66 successful calls, with exact initial transcription and one recovered citation-format input error. The agent initially put source proof objects into citation_contract; the typed display schema now advertises the valid selectors/templates. Recovery remains visible as passed_with_recoveries. Run 02 with the typed schema completed 66 calls with zero tool errors, exact first transcription, one actual scanned PNG and four distinct complete evidence records. Both runs pass the final PPTX/wiki/history audit. This synthetic case does not establish general OCR accuracy or complete slide visual fidelity.
 
-## Codex native derivation evaluation (Unreleased)
+<a id="codex-native-derivation-evaluation-unreleased"></a>
+
+## Codex native derivation evaluation (1.4.1)
 Add \`--derivations\` to the scanned-table runner. The actual agent reads final table/page evidence and complete ledgers, records and supersedes a source-to-table assertion, adds/retracts a temporary assertion, verifies historical/active states and exports exact source attachments. Independent checks bind operations to prior complete readbacks, ledger hashes and actual MCP results. Ordinary tests never start a model; semantic support and full slide rendering remain agent review work.
 
 On 2026-09-18, derivations run 02 completed 93 MCP calls with zero MCP tool errors and exact first transcription. Independent checks passed for one scanned PNG, five full component records, four ledger events, one retained assertion and exact source PDF attachment. The agent separately reported correcting a local orchestration syntax error; the event stream has no independent tool record for it, so the statement remains in agent_reported_limitations rather than being counted as an observed MCP error.
@@ -998,19 +1120,25 @@ A second run (03) against the same initial ledger runtime completed 92 MCP calls
 
 Run 04 against the final runtime preserving native source extensions completed 96 MCP calls with zero MCP tool errors and exact first transcription. Table/ledger/source audits passed. An initial auditor incorrectly rejected a preview followed by a fresh complete read from offset zero; three regressions now accept that restart while still rejecting gaps and wrong hashes. The original failed audit is retained. The model separately reported correcting an over-escaped font diagnostic; this remains a caller statement, not proof of slide fidelity.
 
-## Native table grid exercise (Unreleased)
+<a id="native-table-grid-exercise-unreleased"></a>
+
+## Native table grid exercise (1.4.1)
 
 Add --grid to tests.codex_pptx_tables.run for five actual Codex mutations after scanned-table creation: insert a column, insert a temporary row, resize both dimensions, delete the row and delete the column. Every mutation uses a current full reference and complete readback. Independent checks open all five intermediate PPTX revisions and compare literal strings, merged title coverage, dimensions, surviving cell XML/formatting, surrounding XML and untouched parts. Final source/history/wiki checks still apply. It can be combined with --derivations. This synthetic scan does not establish full slide rendering or real-corpus coverage.
 
 Grid run 01 on 2026-09-19 completed 123 MCP calls with zero tool errors, exact first transcription, one actual PNG and nine complete records. All five intermediate grids passed independent content, merge, geometry and preserved-XML audits, together with source/history/published-file/wiki checks. The full Python suite passed 1,971 tests with 30 optional skips; extension tests passed 199. No full-slide rendering claim is made.
 
-## Native table merge/split exercise (Unreleased)
+<a id="native-table-mergesplit-exercise-unreleased"></a>
+
+## Native table merge/split exercise (1.4.1)
 
 Add --merges to tests.codex_pptx_tables.run, optionally with --grid and --derivations. Six mutations insert a temporary formatted row, merge its five cells with explicit paragraph migration, split it while keeping all text at the anchor, delete it, then split and remerge the original title. Each mutation uses a complete current reference and full readback. Independent audits inspect every intermediate PPTX for exact paragraph XML, rich formatting, ordering, original scanned cells, grid/frame/merge geometry and untouched XML/parts. Auditor regressions deliberately corrupt leading zeros, formatting, merge coverage and split content. Ordinary pytest never starts a model; live events, transcription errors and recoveries remain separate. Full slide rendering remains a separate check.
 
 Merge run 01 on 2026-09-19 (--grid --merges) completed 180 MCP calls with zero tool errors, exact first transcription, one actual PNG and thirteen complete records. Five grid and six merge/split intermediate revisions passed independent audits of paragraph XML, original strings/styles, source, published files and wiki. No full-slide rendering was performed. Full pytest passed 2,015 tests with 30 optional skips; one subsequent absent-anchor-body regression passed within an 18-test focused run, with production source unchanged. VSIX tests passed 199.
 
-## CJK font correction evaluation (Unreleased)
+<a id="cjk-font-correction-evaluation-unreleased"></a>
+
+## CJK font correction evaluation (1.4.1)
 
 The first Writer evaluation found boxes for 「研究」. No Chinese font was available;
 Arial resolved to Liberation Sans. Even those boxes had nonzero PDF glyph IDs and
@@ -1052,14 +1180,15 @@ actual appearance is reviewed by the Agent. Word compatibility, different instal
 fonts, repeated-header pagination and real-corpus coverage still require evaluation.
 The original missing-glyph run below is retained as historical evidence; the private
 fixture corrects that case without changing the machine's default font environment.
-Public remains **1.4.0**, with new work Unreleased for **1.4.x**.
 
 Local CJK gates passed **2,221 Python tests** (33 optional skips), the **37-test**
 focused run including actual CJK SDK2 images, **199 extension tests**, lint/type,
 workflow/dependency/harness checks and desktop/mobile zh/en browser review. Runtime
 source and dependencies are unchanged from the previously verified page renderer.
 
-## DOCX page rendering evaluation (Unreleased)
+<a id="docx-page-rendering-evaluation-unreleased"></a>
+
+## DOCX page rendering evaluation (1.4.1)
 
 Add \`--render\` to \`tests.codex_docx_structure.run\` to make Codex view every page
 of the final DOCX and the historical revision with the temporary \`008\` Count.
@@ -1091,13 +1220,15 @@ Final page-preview gates on 2026-09-19 passed **2,210 Python tests** (32 optiona
 skips; Writer and Impress SDK2 image tests also passed separately), **199 extension
 tests**, source/type/security/dependency checks, clean-wheel CLI/SDK2, Docker
 CLI/SDK2, artifact audits and fresh/update VSIX install. Local GUI activation was
-unavailable; remote CI covers that check. Public remains 1.4.0, with no new tag.
+unavailable; remote CI covers that check.
 
-## Native DOCX structure evaluation (Unreleased)
+<a id="native-docx-structure-evaluation-unreleased"></a>
+
+## Native DOCX structure evaluation (1.4.1)
 
 Run tests.codex_docx_structure.run with a new --output directory to have the logged-in Codex CLI transcribe a synthetic scanned PDF page into a new editable DOCX table. It changes/restores a cell, inserts/deletes disposable body blocks, verifies old evidence and exports a wiki. Only native document MCP access is enabled; ordinary pytest never invokes Codex.
 
-The independent tests.codex_docx_structure.audit checks actual source PNG pixels, exact strings, rich formatting, grids, merges, every managed revision, complete DFM reads before edits, full references, published bytes and wiki attachments. Add --render for the page review described below; real-corpus coverage remains open. Public stays 1.4.0 / Unreleased for 1.4.x.
+The independent tests.codex_docx_structure.audit checks actual source PNG pixels, exact strings, rich formatting, grids, merges, every managed revision, complete DFM reads before edits, full references, published bytes and wiki attachments. Add --render for the page review described below; real-corpus coverage remains open.
 
 Run 01 on 2026-09-19 completed **45 MCP calls with zero tool errors**, one actual
 source PNG and complete DFM readback for all five managed DOCX revisions. Exact
@@ -1107,13 +1238,14 @@ passed independent checks. Codex also exported a source PDF wiki and verified a
 whole-file reference; the auditor accepts these additional valid outputs. It
 explicitly reported that DOCX page rendering/page flow were not reviewed.
 
-
 Final local gates passed on 2026-09-19: **2,156 Python tests passed, 31 optional
 skipped**; extension **199 passed**. Ruff, mypy, dependency/security gates, Docker
 CLI/SDK2 stdio, fresh/update VSIX install and clean-wheel CLI/stdio checks passed.
 Local GUI activation was unavailable; CI runs that check. No public version bump.
 
-## Whole-slide rendering evaluation (Unreleased)
+<a id="whole-slide-rendering-evaluation-unreleased"></a>
+
+## Whole-slide rendering evaluation (1.4.1)
 
 Use --render with tests.codex_pptx_tables.run to make the real Codex CLI view
 both the final slide and a historical slide through render_pptx_slide.
@@ -1139,15 +1271,15 @@ and reordered-slide colors plus historical image stability; enable it with
 NATIVE_PPTX_RENDER_TEST=1 and a usable Impress installation. CI installs Impress
 for that test. Ordinary pytest never starts Codex. Full local suite: **2,095 passed,
 30 optional skipped**; extension: **199 passed**. No PowerPoint, animations, media
-playback, general OCR or real-corpus coverage is claimed. Public version stays 1.4.0.
+playback, general OCR or real-corpus coverage is claimed.
 
-## Native slide structure exercise (Unreleased)
+<a id="native-slide-structure-exercise-unreleased"></a>
+
+## Native slide structure exercise (1.4.1)
 
 Add --slides to tests.codex_pptx_tables.run, optionally with grid/merge/derivation exercises. After scanned-table creation, Codex discovers layouts, inserts two formatted temporary slides, reorders all slide identities and deletes the temporary slides. It fully reads slide listings before/after each mutation, complete temporary shapes and the original table, then verifies deleted-shape historical evidence. Independent audits inspect raw ZIP relationships/XML for all intermediate slide IDs/order, exact strings/leading zeros, formatting/geometry, original parts, content types, relationships and count properties. A regression exposed python-pptx's in-memory slide-part renaming after reorder; the auditor now reads original package relationships. Synthetic scan results do not establish general OCR accuracy or full slide rendering.
 
 Slides run 01 on 2026-09-19 completed 96 MCP calls with zero tool errors, exact first transcription, one actual PNG and eight complete shape/page records. All three intermediate presentations passed independent identity/order, rich text, preserved-parts, historical evidence and final published-file/wiki audits. Full pytest passed 2,068 tests with 30 optional skips; VSIX tests passed 199. No presentation-viewer rendering was performed.
-
-
 
 ## Publish in order
 Confirm built artifacts and runtime diagnostics before tagging, then verify each public registry after publication.`,
@@ -1201,7 +1333,7 @@ function defineTool(name, category, summary, inputs, outcome, example, module) {
 }
 
 const TOOLS = [
-  defineTool("document", "document", "Document facade for PDF workflows, native file versions, DOCX/PPTX evidence and wiki snapshots (v1.4.0).", "op, pdf_path, doc_id, file_paths, output_dir, native_request", "PDF assets or native file revisions with explicit preservation checks", 'document(op="export_assets", doc_id="doc_...", output_dir="agent-assets")', "document_tools.py"),
+  defineTool("document", "document", "Document facade for PDF workflows, native file versions, DOCX/PPTX evidence and wiki snapshots.", "op, pdf_path, doc_id, file_paths, output_dir, native_request", "PDF assets or native file revisions with explicit preservation checks", 'document(op="export_assets", doc_id="doc_...", output_dir="agent-assets")', "document_tools.py"),
   defineTool("document_asset", "document", "Fetch document assets, navigate sections, and write table or figure Foam notes.", "op, doc_id, asset_type, asset_id, path", "Bounded asset content or provenance-rich Foam notes", 'document_asset(op="foam_notes", doc_id="doc_...", asset_type="all")', "document_tools.py"),
   defineTool("section", "document", "Browse, search, and read a document section tree.", "op, doc_id, path, query, limit", "Section hierarchy, detail, content, or bounded blocks", 'section(op="tree", doc_id="doc_...", max_depth=3)', "section_tools.py"),
   defineTool("ingest_documents", "document", "High-frequency PDF ingest shortcut with background-job semantics.", "file_paths, async_mode, use_marker, ocr_enabled, ocr_language", "Job id and per-file progress without blocking stdio", 'ingest_documents(file_paths=["/papers/source.pdf"])', "document_tools.py"),

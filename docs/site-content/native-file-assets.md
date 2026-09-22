@@ -1,6 +1,9 @@
 <!-- Generated from Native-File-Assets.md by scripts/build_docs_site.py -->
 
-# Native File Assets（v1.4.0）
+# Native File Assets（v1.4.1）
+
+本文件對應整合版 **1.4.1**；實際發布狀態見 GitHub Releases。
+版本維持 **1.4.x**，完整核對累積改動後統一發版。
 
 ## 文件分析之後：持續操作與可重用證據
 
@@ -9,13 +12,15 @@
 例如掃描內容 `007` 建成 Excel 字串後，即使新版本改成 `008`，舊引用仍指向
 當時的來源與數值。MCP 檢查來源、版本與格式；Agent 核對畫面、語意並修正。
 
-目前 main 的 Unreleased 已涵蓋 PDF、DOCX、試算表、CSV／TSV 與 PPTX 的
+1.4.1 涵蓋 PDF、DOCX、試算表、CSV／TSV 與 PPTX 的
 指定操作與獨立圖片工作流，使用前須完整讀取實際 contract。
-公開版 **1.4.0**，下次整合 **1.4.1**。
+
 各格式限制、待驗證的產品價值及上游專案見
 [能力與缺口分析](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/agent-asset-gap-analysis.md)。
 
-## 完整操作紀錄與備份（Unreleased）
+<a id="完整操作紀錄與備份unreleased"></a>
+
+## 完整操作紀錄與備份(1.4.1)
 
 操作紀錄會保留修改前後的完整內容、格式檢查、修復及待 Agent 核對事項。
 大型紀錄與版本索引分開儲存，讀取與 Wiki 匯出仍提供完整內容；遺失或損毀
@@ -23,10 +28,12 @@
 
 備份請複製整個資產目錄，包含原生文件版本與操作紀錄；只備份索引不足以
 還原證據。雜湊與版本檢查不代表語意、畫面或公式已通過 Agent 核對。
-公開版維持 **1.4.0**，下次整合 **1.4.1**。維護細節見
+維護細節見
 [完整紀錄儲存規格](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/native-operation-results-spec.md)。
 
-## 原生 ODS 與完整證據（Unreleased）
+<a id="原生-ods-與完整證據unreleased"></a>
+
+## 原生 ODS 與完整證據(1.4.1)
 
 確認實際 contract 的 `ods_enabled`，再讀取完整操作規格。
 
@@ -69,10 +76,12 @@ Wiki 保留原始 `.ods`、完整區段、起點引用、操作紀錄與 wikilin
 `prefer_cache` 是匯入偏好；缺少明確樣式等情況仍可能觸發 Calc 計算。
 列印可能省略隱藏／空白表，整表模式可能裁切溢出的文字，均須 Agent 核對。
 
-公開版 **1.4.0**，下次整合 **1.4.1**，不逐項升版。詳見
+詳見
 [ODS 規格](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/native-ods-spec.md)。
 
-## Native raster assets (Unreleased)
+<a id="native-raster-assets-unreleased"></a>
+
+## Native raster assets (1.4.1)
 
 獨立圖片可保留原檔、拆成影格與區域證據、建立 PNG／TIFF 衍生檔，再把轉錄
 結果連到獨立表格與 Wiki。MCP 檢查來源、版本、像素／metadata 政策與完整影格
@@ -118,9 +127,11 @@ PDF 衍生圖片，並非 NIST 發布的 PNG，也不是任意照片／動畫的
 詳見[規格](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/native-image-spec.md)與
 [測試流程及保留的失敗](https://github.com/u9401066/asset-aware-mcp/blob/main/tests/codex_native_image/README.md)。
 
-## Native PDF fields (Unreleased)
+<a id="native-pdf-fields-unreleased"></a>
 
-公開版本維持 **1.4.0**，下次整合發版為 **1.4.1**。開發中的表單工作流已接入
+## Native PDF fields (1.4.1)
+
+開發中的表單工作流已接入
 MCP、版本證據與 Wiki；兩種工具配置的 SDK2 測試及預設 Codex 的真實上游
 表單評估已通過。四個版本、四張實際頁面圖、歷史引用與 Wiki 經獨立核對；
 保留兩次工具錯誤及重試，互動檢視器行為仍未驗證。完整範圍見
@@ -163,12 +174,13 @@ MCP、版本證據與 Wiki；兩種工具配置的 SDK2 測試及預設 Codex �
 核對值與外觀是否一致、文字是否截斷，以及互動檢視器／腳本行為。這項能力
 不代表任意 PDF 內文可編輯，也不代表靜態 PNG 已證明所有檢視器一致。
 
-## Native PDF annotations (Unreleased)
+<a id="native-pdf-annotations-unreleased"></a>
+
+## Native PDF annotations (1.4.1)
 
 PDF 批註可以獨立讀取、編輯與引用。MCP 保留版本、定位、原生格式及操作紀錄；
 Agent 核對實際頁面，判斷標記是否圈到正確內容、文字是否正確、是否遮住原文。
 完整英文規格見 [Native PDF annotations](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/specs/native-pdf-annotations.md)。
-公開版 **1.4.0**，下次整合 **1.4.1**，不隨個別功能跳版。
 
 先探索 `pdf_annotations_enabled`，完整讀取分頁的 contract 與操作 schema。
 
@@ -210,7 +222,9 @@ Agent 核對實際頁面，判斷標記是否圈到正確內容、文字是否�
 沒有批註或表單的 PDF 維持原本的 `pdf-pages-v1`；歷史快照與人工筆記不覆蓋。
 含表單的文件使用上節欄位 Wiki，並保留完整批註紀錄。
 
-## Native Word footnotes and endnotes (Unreleased)
+<a id="native-word-footnotes-and-endnotes-unreleased"></a>
+
+## Native Word footnotes and endnotes (1.4.1)
 
 註腳／尾註是獨立的原生內容，正文中的註號則是另一個參照。探索 `docx_notes_enabled`；
 `read_docx` 會附 `notes_request`。以 `asset_id`／`revision` 完整讀取 `read_docx_notes`，
@@ -248,7 +262,6 @@ Agent 核對實際頁面，判斷標記是否圈到正確內容、文字是否�
 此操作修改管理版本與最後匯出的 DOCX；預覽仍渲染該版本的真實 bytes。
 Agent 必須再查看全部頁面，確認註號、內容、位置及語意；不能把 ID 修正當成通用視覺保證。
 
-
 刪除需要完整 `locator`、`expected_note_sha256` 及明確 `literal_body_text: preserve`。
 只刪除一般定義與可編輯的正文原生參照；其他位置仍引用、範圍／修訂／鎖定控制項等
 相依會阻止操作。正文普通文字保持原樣，因此自訂的字面註號可能留下，須由 Agent
@@ -265,9 +278,11 @@ Agent 須完整讀取 `review_request`、受影響註解與全部實際頁面，
 
 身分與參照模型參考 [Open XML FootnoteReference](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.footnotereference?view=openxml-3.0.1)
 及 [eigenpal/docx-editor 的 note nodes](https://github.com/eigenpal/docx-editor/blob/main/packages/core/src/store/package/note-nodes.ts)；
-未新增該專案依賴或複製其程式碼。公開版 **1.4.0**，下次整合 **1.4.1**。
+未新增該專案依賴或複製其程式碼。
 
-## Native Word story lifecycle (Unreleased)
+<a id="native-word-story-lifecycle-unreleased"></a>
+
+## Native Word story lifecycle (1.4.1)
 
 要讓某節有獨立頁首，必須同時處理定義與繼承關係。查詢 `docx_story_structure_enabled`，
 先完整讀取 `read_docx_story_structure`：指定 `asset_id`／`revision`，在 `story_structure`
@@ -300,9 +315,11 @@ Agent 須完整讀取 `review_request`、受影響註解與全部實際頁面，
 被引用的媒體仍保留，不是安全抹除。完整修改紀錄須能分頁讀回，才會原子提交新版本；
 未修改 XML／parts、來源 bytes／mtime 與歷史引用保持不變，無變更不新增歷史。
 刪除前的定義仍可引用、選取或從舊 Wiki 核對。Agent 必須完整讀回並查看全部受影響頁面。
-註腳／尾註使用上方獨立操作；Microsoft Word 顯示一致性仍需擴充。公開 **1.4.0**，下次統整 **1.4.1**。
+註腳／尾註使用上方獨立操作；Microsoft Word 顯示一致性仍需擴充。
 
-## Native Word header/footer stories (Unreleased)
+<a id="native-word-headerfooter-stories-unreleased"></a>
+
+## Native Word header/footer stories (1.4.1)
 
 頁首頁尾可能跨節共用，也可能只有首頁或偶數頁使用。查詢 `docx_stories_enabled`，
 以實際 content types、relationships 與節設定探索；不可依 `header2.xml` 等檔名猜用途。
@@ -335,9 +352,10 @@ Agent 須完整讀取 `review_request`、受影響註解與全部實際頁面，
 含完整頁首頁尾的 Wiki 使用獨立 `docx-stories-v1` 投影，帶走 `stories.jsonl`、
 `story-catalog.json`、原始 DOCX 與每個 part；舊 Wiki 不被覆蓋。
 整份定義與節連結可使用上方的生命週期操作；註腳／尾註另有獨立操作，複雜身分依賴仍需擴充。
-公開版 **1.4.0**，下次整合發布 **1.4.1**。
 
-## Native Word table pagination (Unreleased)
+<a id="native-word-table-pagination-unreleased"></a>
+
+## Native Word table pagination (1.4.1)
 
 固定列高可能把儲存格文字裁掉，檔案內容仍存在卻無法在頁面上完整看見。
 Agent 可先讀完整表格與實際頁面，再修改原生列高、跨頁標題及列分頁策略。
@@ -362,9 +380,11 @@ MCP 核對指定屬性讀回、未修改的原生內容／其他屬性、版本�
 相關列屬性有追蹤修訂時需專門處理；純排版操作保留欄位內容，結構編輯仍保留原有相依檢查。
 
 修正後讀取所有新版本資料並查看每張 `render_docx_page` PNG；舊引用、來源檔及 Wiki
-保留各自歷史。這些檢查不代表 Microsoft Word 渲染一致性。公開版 **1.4.0**，開發 **1.4.x**。
+保留各自歷史。這些檢查不代表 Microsoft Word 渲染一致性。
 
-## Native Word table grids (Unreleased)
+<a id="native-word-table-grids-unreleased"></a>
+
+## Native Word table grids (1.4.1)
 
 Word 的「表格格網」與實際儲存格數量可能不同：合併格可跨數欄／列，一列也可能
 省略前後位置。`read_docx_table` 固定 `asset_id`、`revision` 與完整
@@ -397,9 +417,9 @@ Word 的「表格格網」與實際儲存格數量可能不同：合併格可跨
 欄位／範圍／追蹤修訂相依及尚未抽出的故事區域仍需專門流程。MCP 的 XML 與版本檢查
 不等於 Microsoft Word 保真；語意、繼承樣式、標題重複及分頁由 Agent 核對。
 
-公開版仍 **1.4.0**，功能累積於 **Unreleased／1.4.x**。
+<a id="checked-historical-pdf-syntax-unreleased"></a>
 
-## Checked historical PDF syntax (Unreleased)
+## Checked historical PDF syntax (1.4.1)
 
 部分歷史 PDF 的串流字典會重複宣告同一個 `/Length`。原生讀取現在會從原始
 位元組逐一核對：每個值都是相同的直接整數，且與串流長度、實際內容及結束位置
@@ -412,11 +432,12 @@ Word 的「表格格網」與實際儲存格數量可能不同：合併格可跨
 這是格式上的可確定檢查，字形、OCR、意義與完整畫面由 Agent 核對。
 詳見 [真實 PDF 驗證](Release-And-Testing#real-pdf-corpus-unreleased)。
 
-## Native CSV/TSV files (Unreleased)
+<a id="native-csvtsv-files-unreleased"></a>
+
+## Native CSV/TSV files (1.4.1)
 
 CSV／TSV 檔案現在可成為有穩定身分、版本與逐格證據的原生資產。先查詢
-`delimited_enabled` 及各操作的 `contract.for_op`；公開版仍為 **1.4.0**，
-此功能累積於 **Unreleased／1.4.x**。
+`delimited_enabled` 及各操作的 `contract.for_op`；
 
 | 操作 | 用途與條件 |
 | --- | --- |
@@ -480,7 +501,9 @@ Agent 負責表頭與型別解讀、語意及下游試算表顯示／公式行�
 [CleverCSV](https://github.com/alan-turing-institute/CleverCSV) 可參考其 dialect
 探索方式，但猜測結果不作為寫入契約。逐格 byte 定位與版本證據由本專案串接。
 
-## PDF region evidence (Unreleased)
+<a id="pdf-region-evidence-unreleased"></a>
+
+## PDF region evidence (1.4.1)
 
 掃描表格中的單一格，可透過 `read_pdf_region` 連到轉錄結果的完整原生引用。
 先查 `pdf_regions_enabled` 與 `contract.for_op`，讀完整 `read_pdf_page` JSON，
@@ -524,14 +547,14 @@ Wiki 匯出會附區域 JSON、PNG、渲染資訊與完整來源 PDF，並建立
 PNG 屬於當次渲染，字型／渲染器更新或掃描圖片的局部取樣可能改變少量像素；
 引用身分不宣稱跨渲染器像素恆等。MCP 不判定內容真假或語意支持，Agent 負責
 轉錄、語意、版面及公式結果。範例與實測見 [Release And Testing](#/release-testing)。
-公開版 **1.4.0**，此功能屬 **Unreleased／1.4.x**。
 
 底層沿用 [PyMuPDF 區域渲染](https://pymupdf.readthedocs.io/en/latest/recipes-images.html)
 與 [pikepdf 頁面操作](https://pikepdf.readthedocs.io/en/latest/topics/pages.html)：
 前者提供畫面，後者處理物件／頁面；本專案再保留版本、證據及 Agent 操作結果。
 
+<a id="worksheet-layout-correction-unreleased"></a>
 
-## Worksheet layout correction (Unreleased)
+## Worksheet layout correction (1.4.1)
 
 Agent 可先看工作簿 PDF，找出文字截斷，再調整原生欄寬或列高，建立新版預覽。
 先查 `worksheet_layout_enabled`，以 `read_worksheet_layout` 固定 `asset_id`、
@@ -567,9 +590,10 @@ Agent 可先看工作簿 PDF，找出文字截斷，再調整原生欄寬或列�
 建立新的獨立 PDF。Agent 核對文字、物件與結果；來源檔、舊 revision、PDF 及
 證據引用保持不變。這些機械檢查不代替實際畫面核對。
 [OOXML 欄寬定義](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.column?view=openxml-3.0.1)。
-公開版維持 **1.4.0**，開發累積 **Unreleased／1.4.x**。
 
-## Workbook renditions (Unreleased)
+<a id="workbook-renditions-unreleased"></a>
+
+## Workbook renditions (1.4.1)
 
 `create_workbook_rendition` 將固定 `asset_id`／`revision` 的 XLSX 經由選配
 LibreOffice Calc 轉為獨立 PDF。`workbook_rendition` 必須明確指定 `mode` 與
@@ -607,29 +631,28 @@ LibreOffice Calc 轉為獨立 PDF。`workbook_rendition` 必須明確指定 `mod
 整張工作表模式仍可能截斷溢出文字；Agent 應比較原儲存格及列印模式，檢查字型、
 物件和公式結果。這不是 Microsoft Excel 保真認證，欄寬／列高可透過上述原生尺寸操作修正後重新預覽。
 參考 [LibreOffice 官方 PDF 參數](https://help.libreoffice.org/latest/en-US/text/shared/guide/pdf_params.html)。
-公開版 **1.4.0**，本功能列於 **Unreleased／1.4.x**。
 
-Unreleased 的原生 Table 合計列現在可新增、移除及重用定義。透過
+1.4.1 的原生 Table 合計列現在可新增、移除及重用定義。透過
 `table_update.totals_row` 明確選擇清空或保留儲存格，保留既有資料與樣式；完整讀回
 操作紀錄，再由 Agent 核對公式範圍、結果與畫面。詳見 [合計列流程](#/a2t-tables)。
-公開版維持 **1.4.0／後續 1.4.x**。
 
 `add_workbook_table` 將明確範圍建立為原生 Excel Table；可搭配 `create`
 獨立建立工作簿，或使用既有檔案。欄名、計算欄、合計列與樣式都有明確契約，
 並保留歷史證據。詳見 [原生 Table 建立](#/a2t-tables)。
 
-Unreleased 的 `update_workbook_table` 可同步修改欄名、富文字標題、計算欄與
+1.4.1 的 `update_workbook_table` 可同步修改欄名、富文字標題、計算欄與
 既有總計列。先讀完整 Table／header_cells 與引用，固定版本、part、範圍和欄位 ID，
 核對回傳操作紀錄及新版內容；詳見 [原生 Table 編輯](#/a2t-tables)。
-Agent 核對公式結果與畫面，公開版仍為 1.4.0／後續 1.4.x。
+Agent 核對公式結果與畫面，
 
-Table 邊界擴展與 A2T 生成值已加入 Unreleased：先完整讀取 `read_workbook.tables`，
+Table 邊界擴展與 A2T 生成值已納入 1.4.1：先完整讀取 `read_workbook.tables`，
 每個 insert 以 `expand_tables` 固定 part／當步 expected_ref，保留欄位身分並同步
 篩選、排序範圍與計算欄。A2T 的 `native_generated` 明確保留新生成的標題／公式；
 讀回實際值與凍結輸入，舊證據不遷移。詳見 [A2T Tables](#/a2t-tables)。
-公開版仍為 1.4.0，後續維持 1.4.x。
 
-## Native table workspaces (Unreleased)
+<a id="native-table-workspaces-unreleased"></a>
+
+## Native table workspaces (1.4.1)
 
 原生工作簿可投影指定範圍到 A2T，以帶型別的值與完整原始儲存格引用協作。
 `project_workbook_table`／`read_table_workspace`／`apply_table_workspace`／
@@ -637,9 +660,10 @@ Table 邊界擴展與 A2T 生成值已加入 Unreleased：先完整讀取 `read_
 [A2T 原生工作區](#/a2t-tables)。套用輸入保留
 不可變快照，來源綁定不自動前進。`table_grid_apply_enabled` 啟用時，可依穩定列欄
 身分與明確計畫，將 A2T 增刪列欄一次套回原檔；原生 Table 邊界及畫面另需核對。
-公開版維持 1.4.0，後續使用 1.4.x。
 
-## Worksheet grid operations (Unreleased)
+<a id="worksheet-grid-operations-unreleased"></a>
+
+## Worksheet grid operations (1.4.1)
 
 先查 `contract(for_op="update_worksheet_grid")` 的 `workbook_grid_enabled`。
 若 schema 分頁，沿 `schema_request` 取得完整內容並固定 `schema_sha256`。
@@ -680,10 +704,11 @@ document(op="native", native_request={
 修改先建立受管理版本，原始檔不會自動覆寫。沿回傳的 `review_request` 完整讀取
 `read_workbook.operation_result`，核對新位置的值與必要的版面／公式結果。舊引用與
 Wiki 主張仍固定歷史版本。A2T 工作區的原始綁定不會自動跟隨列欄搬移；增刪回寫
-使用 [A2T 結構計畫](#/a2t-tables)。公開版維持
-1.4.0，這些工作累積於 Unreleased／1.4.x。
+使用 [A2T 結構計畫](#/a2t-tables)。
 
-## Workbook sheet structure (Unreleased)
+<a id="workbook-sheet-structure-unreleased"></a>
+
+## Workbook sheet structure (1.4.1)
 
 先查 `contract(for_op="read_workbook")` 的 `workbook_structure_enabled`。
 `read_workbook` 可使用 `workbook_view="structure"` 或 `"references"`，回傳完整
@@ -719,9 +744,10 @@ Agent 確認用途後可在該次請求指定 `allow_3d_membership_change=true`�
 [樞紐來源欄位](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.worksheetsource?view=openxml-3.0.1)
 與 [openpyxl 公式 tokenizer](https://openpyxl.readthedocs.io/en/stable/formula.html)。
 Tokenizer 僅協助定位原公式片段；不是計算引擎，也不拿來重存來源檔。
-公開版仍為 **1.4.0**，功能累積於 **Unreleased／1.4.x**。
 
-## Native selections (Unreleased)
+<a id="native-selections-unreleased"></a>
+
+## Native selections (1.4.1)
 
 `read_selection` 將完整原生儲存格、DOCX 區塊、PPTX 形狀或 PDF 頁面引用，
 細化為解析資料中的值或文字範圍。先以空 `selection` 讀回完整父記錄，再選擇
@@ -771,7 +797,7 @@ before using the new operations.
 
 ## Contract v2 (1.4.0)
 
-Unreleased 增加 `contract_delivery`。若為 `paged`，先完整讀取 `contract_request`
+1.4.1 增加 `contract_delivery`。若為 `paged`，先完整讀取 `contract_request`
 所指定的 `contract_details`，固定 `contract_sha256` 與 `for_op`，組合所有
 `text_excerpt` 並核對 UTF-8 雜湊。精簡索引保留所有能力旗標、格式／操作清單與 schema
 續讀方式；完整操作說明在此分頁內。能力或範圍改變會拒絕舊雜湊，必須重新探索。
@@ -877,7 +903,8 @@ Agent 檢查來源和備份後，可用 `refresh` 同步 metadata。
 非 anchor、shared／array／data-table formula 範圍、rich text、table header／totals／
 calculated columns、帶有特殊 metadata 的 cell 與已簽章 package，會拒絕不受支援的修改。
 XLSM 中未動到的 VBA parts 保留，但工具不執行巨集，也不驗證巨集行為。
-尚未提供插刪 rows／columns、格式設計、整張 sheet CRUD、原生表格／A2T 橋接或公式引擎。
+1.4.1 的列欄、工作表、原生 Table 與 A2T 操作另有專用契約，見本頁對應章節。
+一般值更新不等於格式設計或公式引擎；公式結果與畫面由 Agent 核對。
 
 儲存格值與 `style_index` 代表原生資料，不是 Excel 渲染後的顯示字串；日期、百分比
 及貨幣等顯示需結合 number formats 解讀。公式 cached value 一律標示未驗證，
@@ -968,10 +995,10 @@ Native exports preserve immutable source bytes and full cell references, while
 custom citation templates only affect presentation. Existing snapshots are never
 replaced. Agents retain responsibility for semantic, rendered and formula review.
 
+<a id="docx-page-previews-unreleased"></a>
 
-## DOCX page previews (Unreleased)
+## DOCX page previews (1.4.1)
 
-公開版仍為 **1.4.0**；此功能在 main 累積，後續沿用 **1.4.x**。
 先查 `contract(for_op="render_docx_page")` 的 `docx_rendering`。需另外安裝
 LibreOffice Writer；可用 `LIBREOFFICE_BIN` 指定可執行檔。缺少 Writer 或未產生
 有效 PDF 會明確失敗，`configured` 只表示已接上 renderer，不保證本機安裝完整。
@@ -1005,9 +1032,11 @@ altChunk、外連 VML、SVG 等會拒絕，普通超連結可保留。這些是�
 與 [啟動參數](https://help.libreoffice.org/latest/en-US/text/shared/guide/start_parameters.html)。
 實際 Codex 看圖及獨立像素比對方式見 [驗證流程](Release-And-Testing#docx-page-rendering-evaluation-unreleased)。
 
-## DOCX creation and body structure (Unreleased)
+<a id="docx-creation-and-body-structure-unreleased"></a>
 
-公開版仍維持 **1.4.0**；以下累積在 main，供後續 **1.4.x**。先用
+## DOCX creation and body structure (1.4.1)
+
+先用
 `contract(for_op="create_docx")` 查安裝版本是否提供 `docx_structure_enabled`。
 
 - `create_docx` 獨立建立原生 Word 文件，接受具型別的段落與可編輯表格，
@@ -1131,7 +1160,6 @@ DOCX Wiki 使用 `docx-blocks-v1` projection，包含各區塊的 Foam note、�
 完整性通過僅代表紀錄可對回指定版本的解析表示，不代表 parser 抽取了每個特徵，
 也不代表該段內容支持某項結論。Agent 仍須核對語意、Word 版面、欄位與修訂追蹤。
 
-
 ## Native PPTX (1.4.0)
 
 1.4.0 新增原生簡報能力。先查安裝版本的 `contract`。
@@ -1197,9 +1225,11 @@ shape trees are parsed; unsupported and inherited features remain in exact sourc
 attachments. Package preservation does not prove semantic accuracy, visual fidelity
 or extraction completeness. Agents perform the complete review and correction.
 
-## PPTX shape operations (Unreleased)
+<a id="pptx-shape-operations-unreleased"></a>
 
-目前僅 `main` 開發版提供，公開版仍是 1.4.0，後續沿用 1.4.x。
+## PPTX shape operations (1.4.1)
+
+目前僅 `main` 開發版提供，
 先查 `contract(for_op="add_pptx_shapes")` 或 `delete_pptx_shapes`，確認安裝版本
 有提供操作。兩者都要求 `asset_id` 與 `expected_revision`，每批 1–100 個。
 
@@ -1256,7 +1286,9 @@ MCP 重新讀回新套件，檢查 ID、套件檔案清單、未修改 part 的�
 仍可讀取及驗證。操作只建立受管理版本；來源檔另行 `writeback`，保留備份與
 來源衝突檢查。MCP 負責這些必要檢查，Agent 負責完整語意／視覺核對與修正。
 
-## PPTX whole-slide previews (Unreleased)
+<a id="pptx-whole-slide-previews-unreleased"></a>
+
+## PPTX whole-slide previews (1.4.1)
 
 `render_pptx_slide` 回傳整張投影片的實際 PNG，讓 Agent 核對文字、表格遮擋、溢出與版面。
 先查 contract 的 `pptx_rendering`，再從 `read_pptx` 取得固定版本的 slide ID／part：
@@ -1281,9 +1313,10 @@ MCP 不會把「產生圖片成功」視為「視覺驗證通過」。Agent 應�
 內容，必要時提出後續修改。`read_pptx_picture` 則只顯示內嵌圖片，兩者用途不同。
 參考 [LibreOffice PDF 匯出選項](https://help.libreoffice.org/latest/en-US/text/shared/guide/pdf_params.html)
 與 [獨立 profile 參數](https://help.libreoffice.org/latest/en-US/text/shared/guide/start_parameters.html)。
-公開版本仍為 **1.4.0**，這項功能累積於 **1.4.x／Unreleased**。
 
-## PPTX slide structure (Unreleased)
+<a id="pptx-slide-structure-unreleased"></a>
+
+## PPTX slide structure (1.4.1)
 
 先查安裝版本的 contract。`read_pptx_layouts` 以 `asset_id`、`revision` 與
 `offset`／`limit` 探索所有母片下的版型；沿用同一版本並追蹤 `next_offset`。
@@ -1331,10 +1364,11 @@ document(op="native", native_request={
 實作參考 [python-pptx 版型語意](https://python-pptx.readthedocs.io/en/latest/user/slides.html)
 與 [Microsoft 刪頁相依說明](https://learn.microsoft.com/en-us/office/open-xml/presentation/how-to-delete-a-slide-from-a-presentation)。
 
-## Native PDF pages (Unreleased)
+<a id="native-pdf-pages-unreleased"></a>
 
-`main` 開發版提供原生 PDF 頁面協作；公開套件仍是 **1.4.0**，後續沿用
-**1.4.x**。先用 `contract(for_op="create_pdf")` 確認安裝版本有這些操作。
+## Native PDF pages (1.4.1)
+
+`main` 開發版提供原生 PDF 頁面協作；先用 `contract(for_op="create_pdf")` 確認安裝版本有這些操作。
 
 | 操作 | 用途與必要輸入 |
 |------|----------------|
@@ -1401,9 +1435,11 @@ records.jsonl、768 px 預覽與完整 PDF 附件，支援既有 citation contra
 這個頁面操作範圍；裁切／刪頁不是 secure redaction。Agent 負責完整解析度
 版面、語意、表單／檢視器行為、腳本頁索引、閱讀順序與可及性的完整核對與修正。
 
-## PPTX picture assets (Unreleased)
+<a id="pptx-picture-assets-unreleased"></a>
 
-公開版仍是 **1.4.0**，以下是 `main` 的 **1.4.x** 開發內容。先查安裝版本的
+## PPTX picture assets (1.4.1)
+
+先查安裝版本的
 `contract.for_op`。人類圖片經 `register` 成為固定 asset_id 與 SHA-256 版本；
 回傳的 `file_reference`（`native-file-ref-v1`）代表完整不可變檔案位元組。
 任何格式均可用 `verify` 核對這種引用，但檔案 hash 正確不代表模型理解內容，
@@ -1467,10 +1503,12 @@ MCP 檢查來源與目標版本、圖片內容、關聯、content type、完整�
 仍可驗證，既有快照不會改寫。來源 publish／writeback 沿用明確操作、備份與
 衝突檢查。Agent 負責實際簡報畫面、語意、替代文字、裁切與色彩的完整核對。
 
-## Native PPTX tables (Unreleased)
+<a id="native-pptx-tables-unreleased"></a>
+
+## Native PPTX tables (1.4.1)
 
 `add_pptx_tables` 可在既有投影片、備註或非零大小的群組中新增可編輯表格。
-公開版仍是 **1.4.0**，此功能屬於 `main` 的 **1.4.x** 開發內容；先查
+先查
 `contract.for_op="add_pptx_tables"`，需要時完整讀回分頁 schema。
 
 ```python
@@ -1523,7 +1561,9 @@ document(op="native", native_request={
 與 4 MiB UTF-8 文字。每個尺寸及合計寬／高最多 100,000,000 EMU。超界、
 來源版本過期、並行更新或任一表格失敗時，不提交部分版本。
 
-### Table grid CRUD (Unreleased)
+<a id="table-grid-crud-unreleased"></a>
+
+### Table grid CRUD (1.4.1)
 
 `update_pptx_table_grid` 可插入、刪除列欄與調整尺寸。先完整讀取目標表格的
 `read_pptx_shape` JSON，使用目前完整引用和 `expected_revision`：
@@ -1562,7 +1602,9 @@ row-major 矩陣：插列為「新增列數 × 現有欄數」，插欄為「現
 MCP 核對引用、合併拓樸、尺寸與序列化結果；Agent 仍需核對實際畫面、文字溢出、
 主題／條紋樣式及內容意義。合併／拆分見下節；刪除不等同安全抹除。
 
-### Table cell merge/split (Unreleased)
+<a id="table-cell-mergesplit-unreleased"></a>
+
+### Table cell merge/split (1.4.1)
 
 同一個 `update_pptx_table_grid` 的 `edits` 也接受合併與拆分：
 
@@ -1593,7 +1635,9 @@ parts。Agent 需重新完整讀取形狀，核對段落順序、格子意義、
 [python-pptx 的合併／拆分語意](https://python-pptx.readthedocs.io/en/latest/user/table.html#un-merging-a-cell)，
 並增加明確內容策略與版本檢查。
 
-### Citation display schema (Unreleased)
+<a id="citation-display-schema-unreleased"></a>
+
+### Citation display schema (1.4.1)
 
 原生 `export_wiki` 的 `citation_contract` 現在有可探索的型別規格：
 `{"preset":"source"}`、`author-year`／`numeric` 預設，或同時提供
@@ -1601,12 +1645,14 @@ parts。Agent 需重新完整讀取形狀，核對段落順序、格子意義、
 這是**引用顯示格式**，不能放入來源引用、驗證報告或任意轉錄資料；正規證據
 仍保存在版本、locator、hash 與 Wiki records 中，不能用格式欄位覆寫。
 
-## Native derivations (Unreleased)
+<a id="native-derivations-unreleased"></a>
+
+## Native derivations (1.4.1)
 
 Agent 把掃描 PDF 轉成可編輯表格後，兩份檔案各有完整引用，仍需要明確
 記錄「產物來自哪裡」。`record_derivation` 保存這個關係；MCP 核對兩端
 的不可變版本與定位，Agent 則說明轉製活動，以及實際完成了哪些核對。
-公開版仍是 1.4.0；先查目前安裝版本是否宣告 `derivations_enabled`。
+先查目前安裝版本是否宣告 `derivations_enabled`。
 
 對 Agent 而言，可重用的資產需要身分、版本、可讀的表示、可操作能力與
 來源關係。帳本補上最後一部分；它保存可檢查的主張，不會自行理解或證明
