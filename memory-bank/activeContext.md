@@ -1,5 +1,60 @@
 # Active Context
 
+## PDF fields publication gate — repair stale GitHub metadata test fixture
+
+Current goal turn: PROGRESS. Published main/origin3c2adcfa11dfe6cce0fdd479d59b50d299774cff
+contains all field integration/guides and completed local artifact checks. Public
+release stays1.4.0; next consolidated1.4.1. DO NOT advance version/release until
+current publication gate passes. Author AND committer u9401066 <u9401066@gap.kmu.edu.tw>.
+This repair changes ONLY1counted test file plus both MEM, no production or artifact
+bytes. Original workspace untouched; direct main, no PR/subagents/model override.
+
+Previous goal turn was PROGRESS: Docker Python3.12 installed replay/stdio passed,
+metadata applied, main pushed, Pages all3jobs and10deployed files verified. Gate
+watcher89554 is now TERMINAL1, NOT LIVE; do not poll or restart it. Its exact-head
+CI35663541391 failed unit job106544224456:3889passed/3failed/1skip590.80s. All three
+failures are hygiene-script tests: scripts/gh_update_repo_metadata.sh intentionally
+added PDF forms, but fake gh's canonical description still had pages/annotations.
+The earlier local full suite predates that metadata-script edit. Comparing only
+351runtime source hashes did NOT cover the changed shell script; this was a missed
+focused test, not a PDF runtime failure. Keep original CI log and failed proof.
+Integration job skipped due dependency; do not call it an executed test failure.
+
+Fix: tests/unit/test_github_hygiene_scripts.py independent mock description now
+includes /forms. All existing read-only, drift, explicit apply, label preservation,
+and shell-injection assertions remain unchanged. Complete hygiene7tests plus
+32docs/harness and28Codex field-audit regressions =67passed5.28s, session92200
+TERMINAL0. Ruff/format/diff and actual remote metadata --check pass. No new model
+run, artifact rebuild or runtime check needed for this test-fixture-only change;
+new exact-head full CI remains required. Proof:/run/user/1000/asset-aware-pdf-fields-
+ci-fixture-repair-proof.json. Failure and correction logs retained separately.
+
+On original3c2adcf, Linux205unit+2activation passed; macOS1072native/4skip,
+205extension+2activation passed; Windows1069native/7skip,204extension and actual
+isolated install/update passed. Windows activation was skipped by its workflow;
+do not claim it ran. Python3.10 was still running when unit failure stopped watcher;
+inspect authoritative job state if needed. Next push may supersede that old run.
+Pages35663540353 all3success and10exact deployed files apply ONLY3c2adcf.
+Original gate proof:/run/user/1000/asset-aware-pdf-fields-integration-publication-proof.json.
+
+Resource correction: build-space-03 all8directories restored byte/size/mtime exact.
+Of earlier6traces, table-edit01 and02 have ALSO now been restored; root-space-01
+manifest records true for those2. Four remain staged through accessible original
+/tmp symlinks: table-edit03,docx-render01,docx-structure01,workbook01. Do not replay
+old11dir restoration. Root free space dropped while working; latest~70MB,shm451MB,
+run154MB. Restoration stopped before consuming the64MBworking margin. Own Docker
+runtime/builder removed; no global cleanup. Failed/PASSED model/replay output stays.
+Node modules still removed, built VSIX/dist/out and installed wheel target retained.
+
+NEXT: exact-stage1test+both MEM, commit/push directmain once. Start NEW watcher
+/run/user/1000/asset-aware-pdf-fields-integration-verify-publication-02.py with
+new full HEAD (not started yet). New proof path:asset-aware-pdf-fields-integration-
+publication-proof-02.json. Verify all10CI +3Pages +10deployed bytes for NEW HEAD
+before release/version/feature development. Preserve old failed results. Then
+prepare ONE consolidated1.4.1 release for accumulated verified work; broader
+ODS/PDF-body/other-format requirements remain active and incomplete.
+
+
 ## PDF field integration — all local artifact checks passed, main publication next
 
 Current goal turn: PROGRESS. Previous turn was PROGRESS: a9b6d8e973ef5a69fbd6d7e1b53591547681b04f
