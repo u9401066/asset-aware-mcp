@@ -1,5 +1,62 @@
 # Progress (Updated: 2026-09-22)
 
+## 1.4.1 publication gate repair — Python3.10 overall CI budget
+
+Goal PROGRESS. Current main/origin71a827c2844c3ffaf1a500e91b97b2b4e1ee76da contains
+consolidated1.4.1 metadata/docs/guides. Publicrelease remainsv1.4.0; NO1.4.1TAG.
+User wants1.4.x, no per-feature bump. All previous local release gates remain valid:
+4143pass/49optional skip,205extension, freshwheel/SDK2, actualDocker/installedform
+replays and fullartifact/metadata/security/browser checks. Source351 unchanged.
+
+CI35669105694 completed CANCELLED, not all-pass. Eight jobs passed: static/docs/npm,
+Linux/macOS/Windows, unit3892pass/1skip605.07s and integration212pass356.38s.
+Linux/macOS actualactivation pass; Windows1069pass/7skip+204extension and install/
+update pass; Windowsactivation skipped by workflow. Pages35669106601 all3pass,
+37deployed docs exact, for71a827c ONLY. Preserve failed gate proof:
+/run/user/1000/asset-aware-release-141-main-publication-proof-01.json.
+Watcher40685 TERMINAL1; DO NOT poll/restart it. One transient API query recovered.
+
+Python3.10 job106561340303 started23:47:00Z, cancelled00:07:15Z by its20minute
+job budget. No failed pytest case before cancellation: both annotation and both
+field SDK2 cases completed; CSL passed, later tests still running. Expanded batch
+reached99%. Current annotation pair507s/fieldpair251s versus earlier successful
+389s/192s; unchanged runtime on a slower runner exhausted overall headroom.
+The final summary failed because its required job was cancelled. Keep exact log
+asset-aware-release-141-ci-python310-cancelled-01.log; never call it a pass.
+
+This repair changes ONLY1counted workflow file +both MEM: Python3.10 job budget
+20->30minutes and an explanatory comment. Every test command and per-test/request
+limit is byte-identical to71a827c. PDF annotations retain300s and fields420s test
+limits; no source/locator assertions, coverage or SDK2 surfaces removed. Existing
+36focused docs/artifact/harness tests, releaseharness, zizmor regular/high, all
+artifact audit and diffcheck pass. Source351hashes exact; workflow is excluded
+from sdist, so no runtime/artifact rebuild needed for this scheduling-only repair.
+
+Supplementary install check PASSED: downloaded real publicv1.4.0 GitHubVSIX,
+installed it in isolated profile then upgraded same profile to local1.4.1; actual
+manifests/listing and fivecurrentbundledguides exact. This did NOT run activation.
+Proof:/dev/shm/asset-aware-release-141-public-upgrade-01/proof.json, also linked in
+localproof. Local first missing0.2.10baseline remains correctly recorded as skipped.
+
+NEXT exactstage/commit/push this1file+MEM directmain as user author/committer, then
+start NEW /run/user/1000/asset-aware-release-141-verify-main-02.py NEW_HEAD,
+proof asset-aware-release-141-main-publication-proof-02.json (not started yet).
+Require NEW_HEAD all10CI/all3Pages/37deployedbytes before tag. No other development
+until this repair gate passes. Version remains1.4.1 throughout; no1.4.2 bump.
+After gate, create annotateduser v1.4.1 tag, push and start prepared release watcher
+/run/user/1000/asset-aware-release-141-verify-release-01.py HEAD; it validates all8
+Releasejobs, GitHublatest, actualPyPIwheel351sourcefiles and Marketplaceversion+
+5guides. It is NOT STARTED and requires a fresh releaseproof path. Final release
+verification must finish before claiming publication. Broader format goal stays
+ACTIVE: ODSsheet/gridlifecycle, PDFbody, otherformats incomplete.
+
+Only alternateworktree edited; original dirtyworkspace untouched. Runtime/builder
+Dockerimages removed after proven smoke. Ownnode_modules removed after fullchecks.
+All7traces staged THISrelease restored exact;4earlier traces remain symlink-staged
+(table-edit03/docx-render01/docx-structure01/workbook01) in old manifests. No global
+cleanup. All failed traces/logs preserved. Checkdisk before any build/install.
+
+
 ## Consolidated 1.4.1 — all local release gates passed, one main push next
 
 Goal PROGRESS. Latest user requires1.4.x, no feature-by-feature bumps. This release
