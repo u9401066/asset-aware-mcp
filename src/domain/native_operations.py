@@ -55,6 +55,9 @@ NativeOperation = Literal[
     "read_pdf_annotations",
     "read_pdf_annotation",
     "update_pdf_annotations",
+    "read_pdf_fields",
+    "read_pdf_field",
+    "update_pdf_fields",
     "render_pdf_page",
     "add_pdf_pages",
     "update_pdf",
@@ -211,6 +214,14 @@ NATIVE_OPERATIONS = {
     "update_pdf_annotations": _fields(
         "asset_id expected_revision pdf_annotations_update"
     ),
+    "read_pdf_fields": _fields(
+        "asset_id revision", "text_offset text_limit pdf_field_text_sha256"
+    ),
+    "read_pdf_field": _fields(
+        "asset_id revision pdf_field_locator",
+        "text_offset text_limit pdf_field_text_sha256",
+    ),
+    "update_pdf_fields": _fields("asset_id expected_revision pdf_fields_update"),
     "add_pdf_pages": _fields("asset_id expected_revision pdf_insert"),
     "update_pdf": _fields("asset_id expected_revision pdf_edits"),
     "delete_pdf_pages": _fields("asset_id expected_revision pdf_page_refs"),

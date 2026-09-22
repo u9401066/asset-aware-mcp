@@ -60,6 +60,10 @@ def native_asset_summary(
             and delimited_enabled,
             "read_pdf": asset.format == "pdf" and pdf_enabled,
             "read_pdf_annotations": asset.format == "pdf" and pdf_enabled,
+            "read_pdf_fields": asset.format == "pdf" and pdf_enabled,
+            "edit_pdf_fields": asset.format == "pdf"
+            and pdf_enabled
+            and not asset.archived,
             "edit_pdf_annotations": asset.format == "pdf"
             and pdf_enabled
             and not asset.archived,
@@ -166,6 +170,8 @@ def native_document_contract(
         "delimited_policy": "CSV/TSV strings; explicit dialect/encoding, no inferred headers/types. Pin revisions; assemble full JSON at one text_sha256. Cell edits need full refs; row/column edits preserve untouched bytes. Evidence/Wiki bind dialects.",
         "pdf_regions_enabled": pdf_enabled,
         "pdf_annotations_enabled": pdf_enabled,
+        "pdf_fields_enabled": pdf_enabled,
+        "pdf_fields_policy": "read_pdf_fields and read_pdf_field pin asset/revision; field reads add the exact pdf_field_locator. Assemble ALL text_excerpt pages at one text_sha256; send pdf_field_text_sha256 on every continuation. The catalog_sha256 inside the assembled catalog is the separate update guard. Names are labels, not identity: field_path traverses original Fields/Kids indices and object/generation. update_pdf_fields requires expected_revision and pdf_fields_update with expected_catalog_sha256 and1..32 original-reference create/update/delete edits. Create binds every widget page_reference and optional parent_reference to this same asset/revision; new_groups explicitly creates new ancestors. Text/choice updates require replace_all_widget_appearances with a style for EVERY original widget_path; omitted style values use defaults. Button updates use preserve_native_button_states; hidden values use no_widgets. Choice indices preserve native option identity and multiselect arrays. Delete scope is field_subtree_and_all_widgets; overlapping targets and incoming dependencies fail. Read complete read_pdf_fields operation_result, including every removed field and final catalog, then all current field records and every affected actual page PNG. No-op full_result is inline and creates no history. Encryption/signature/XFA, ownership/lock/tag and unmodeled appearance/value limits remain. Existing scripts/actions are preserved without execution. MCP checks source/native mechanics; Agent reviews and corrects values, all appearances, fonts, clipping, offscreen choices and viewer behavior. Historical references stay fixed; source writeback is explicit; deletion is not secure erasure.",
         "pdf_annotations_policy": "Pin asset/revision and assemble complete read_pdf_annotations catalog and read_pdf_annotation records at one text_sha256. Locators bind page object, annotation array index and object/generation, never NM names alone. update_pdf_annotations accepts 1..32 create/update/delete edits, each existing target once, with full original-revision refs. Create requires a page_reference and typed appearance; Text uses point, FreeText/Square/Circle rect, Line/PolyLine/Polygon vertices, Ink strokes, text markers quads (UL/UR/LL/LR). All positions are displayed rotated CropBox fractions 0..1, top-left; font/border sizes are points. Read geometry retains out-of-crop values. Metadata omitted keys stay; null removes a key. Contents is annotation text, not text beneath markup. Page text extraction can include FreeText appearances; inspect annotation records to distinguish authored comments from the original body. FreeText content changes need replace_appearance of the same kind; it explicitly rebuilds geometry/style. Other metadata updates retain native appearance streams. Delete scope:annotation_and_owned_popup; replies must be explicitly included and outside dependencies, shared arrays, locks, signatures and Widget/standalone Popup edits are guarded. Rich comment formatting/unmodeled appearance features remain restricted. Source/history stay unchanged; deletion is not secure erasure. Read all paged receipts/current refs and all affected actual page PNGs; Agent reviews position, appearance, meaning and viewer behavior. Historical refs, selections, derivations and Wiki stay bound to original revisions.",
         "pdf_region_policy": "Full page ref + displayed CropBox fractions [x0,y0,x1,y1] (0..1, top-left, after rotation), or existing region ref. Actual PNG + source record; render_size changes detail, not identity. Agent checks coverage/transcription.",
         "operations": list(NATIVE_OPERATIONS),
@@ -381,6 +387,9 @@ def _formats(
             "read_pdf_annotations",
             "read_pdf_annotation",
             "update_pdf_annotations",
+            "read_pdf_fields",
+            "read_pdf_field",
+            "update_pdf_fields",
             "read_selection",
             "render_pdf_page",
             "add_pdf_pages",

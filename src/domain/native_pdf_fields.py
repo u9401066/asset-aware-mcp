@@ -15,6 +15,13 @@ from src.domain.native_pdf_annotations import (  # noqa: TC001 -- runtime schema
 
 MAX_PDF_FIELDS = 20_000
 MAX_FIELD_DEPTH = 64
+FIELD_REVIEW = [
+    "actual_affected_page_images_and_value_appearance_consistency",
+    "explicit_replacement_font_style_wrapping_and_offscreen_choices",
+    "native_viewer_editing_and_appearance_regeneration",
+    "preserved_actions_scripts_and_calculation_dependencies_not_executed",
+    "historical_references_do_not_migrate; deletion_is_not_secure_erasure",
+]
 FieldIndex = Annotated[int, Field(ge=0, lt=MAX_PDF_FIELDS)]
 Digest = Annotated[str, Field(pattern=SHA256_PATTERN)]
 

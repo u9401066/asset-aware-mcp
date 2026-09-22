@@ -22,8 +22,10 @@ class NativePdfAnnotationWikiContent(NativePdfWikiContent):
         contract: CitationFormatContract,
         metadata: CitationMetadata,
         catalog: dict[str, Any],
+        *,
+        projection: str = "pdf-annotations-v1",
     ):
-        super().__init__(identity, contract, metadata, projection="pdf-annotations-v1")
+        super().__init__(identity, contract, metadata, projection=projection)
         self.annotations_catalog = catalog
         self.annotation_links: list[str] = []
         self.page_notes: dict[int, str] = {}

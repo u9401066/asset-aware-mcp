@@ -47,7 +47,7 @@ MCP 不具備通用語意判斷能力，也不應自行宣稱已完成完整視�
 
 | 格式／工作流 | main 已有能力 | 明確限制或後續工作 |
 |---|---|---|
-| PDF | ingest／拆解、頁面讀取與預覽、組合／排序／刪除、區域證據、支援種類的批註 CRUD、來源快照與 Wiki | 掃描語意由 Agent 判讀；不是任意排版重建或 PDF 內文編輯器；簽章、表單及複雜物件有保護限制 |
+| PDF | ingest／拆解、頁面讀取與預覽、組合／排序／刪除、區域證據、支援種類的批註及表單欄位 CRUD、版本引用與 Wiki | 表單已有 SDK2 自動化驗證，預設 Codex 視覺評估待完成；不是任意排版重建或 PDF 內文編輯器；簽章、XFA 及複雜相依保留限制 |
 | DOCX／DFM | 獨立建立、區塊／表格讀寫、表格結構與版面、頁首頁尾與註腳／尾註、實際頁面預覽、證據與 Wiki | 只在已建模的操作範圍內保護格式；複雜欄位／修訂／依賴與 Word 分頁一致性仍須檢查 |
 | XLSX／XLSM | 獨立 XLSX 建立、型別儲存格、工作表／格線／Table 操作、A2T 對應、版面與試算表呈現、證據與 Wiki | XLSM 支援依操作契約而異；不等同 VBA 編輯器或所有 Excel 公式／物件皆受支援 |
 | CSV／TSV | 明確方言與編碼、字串欄位及列欄 CRUD、保留未修改位元組、引用與 Wiki | 不推測標頭、數值型別或公式；顯示與解釋由 Agent 核對 |
@@ -91,12 +91,15 @@ ODS 的實際預設 Codex 測試已完成原始、改名後與公式修正後三
 核對流程，以及長期可用的引用／Wiki。上游解析得更好時，應能替換 adapter，
 而不必丟棄已有的原檔與歷史證據。
 
-PDF 表單是尚待完成整合的具體例子：[pypdf 表單文件](https://pypdf.readthedocs.io/en/latest/user/forms.html)
+PDF 表單是這種整合的具體例子：[pypdf 表單文件](https://pypdf.readthedocs.io/en/latest/user/forms.html)
 區分文件層的欄位樹與頁面 Widget，同一欄位可以在多頁顯示；
 [PyMuPDF Widget 文件](https://pymupdf.readthedocs.io/en/latest/widget.html)
-提供欄位狀態及更新介面。[表單原生核心](native-pdf-fields-spec.md)已實作精確
+提供欄位狀態及更新介面。[表單工作流](native-pdf-fields-spec.md)已實作精確
 欄位身分、所有 Widget 位置，以及文字／選項／checkbox／radio 的原生 CRUD，
-但**尚未接入 MCP、版本證據及 Wiki 工作流**，不能視為已交付的 MCP 能力。
+並接入 MCP 分頁讀取、版本證據、CSL／自訂引用及 Wiki。重名、隱藏欄位與多頁
+Widget 不會因轉成文字而合併或漏掉；欄位刪除後，原始引用仍可核對。
+這是 Unreleased 整合，SDK2 自動化 CRUD／影像測試已通過，仍待預設 Codex
+實際視覺評估與 Agent 指引同步後再發布。
 真實上游樣本曾因文字放不下而被檢查拒絕；Agent 調整字級後，又從實際頁面
 發現預設外觀多加了邊框，再依原始欄位設定明確移除。這個例子說明機械檢查
 與視覺／意圖核對的分工；尚不是預設 Codex 透過 MCP 完成的評估。

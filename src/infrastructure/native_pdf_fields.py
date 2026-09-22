@@ -289,3 +289,17 @@ def inspect_fields(data: bytes) -> dict[str, Any]:
 def read_field(data: bytes, locator: PdfFieldLocator) -> dict[str, Any]:
     with NativePdfPackage(data) as package:
         return FieldCatalog(package).record(locator)
+
+
+def decompose_fields(data: bytes) -> list[dict[str, Any]]:
+    with NativePdfPackage(data) as package:
+        catalog = FieldCatalog(package)
+        records = []
+        size = 0
+        for node in catalog.tree.nodes.values():
+            record = catalog.record(node.locator)
+            size += len(canonical(record))
+            if size > MAX_NATIVE_RESULT_BYTES:
+                raise ValueError("PDF field records exceed the aggregate limit")
+            records.append(record)
+        return records

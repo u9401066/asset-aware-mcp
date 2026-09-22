@@ -20,6 +20,8 @@ from src.application.native_ods_wiki import NativeODSWikiContent
 from src.application.native_operation_results import revision_result_dict
 from src.application.native_pdf_annotation_operations import attach_annotation_evidence
 from src.application.native_pdf_annotation_wiki import NativePdfAnnotationWikiContent
+from src.application.native_pdf_field_operations import attach_field_evidence
+from src.application.native_pdf_field_wiki import NativePdfFieldWikiContent
 from src.application.native_pdf_operations import attach_pdf_evidence
 from src.application.native_pdf_wiki import NativePdfWikiContent
 from src.application.native_pptx_operations import attach_pptx_evidence
@@ -132,6 +134,11 @@ class NativeWikiService:
             if asset.format == "pdf" and self.pdfs
             else None
         )
+        fields_catalog = (
+            self.pdfs.inspect_fields(data)
+            if asset.format == "pdf" and self.pdfs
+            else None
+        )
         image_catalog, image_records = self._image_records(
             asset, revision, request.image_catalog_sha256
         )
@@ -151,6 +158,7 @@ class NativeWikiService:
             annotations_catalog,
             image_catalog,
             ods_structure,
+            fields_catalog,
         )
         add_rendition(content, asset, self.repository)
         self._populate(content, data, image_records)
@@ -191,6 +199,7 @@ class NativeWikiService:
         annotations_catalog: dict[str, Any] | None = None,
         image_catalog: dict[str, Any] | None = None,
         ods_structure: dict[str, Any] | None = None,
+        fields_catalog: dict[str, Any] | None = None,
     ) -> NativeWikiContent:
         contract = resolve_citation_format(
             request.citation_contract.model_dump(mode="json")
@@ -251,6 +260,19 @@ class NativeWikiService:
                 image_catalog,
                 revision_result_dict(self.repository, asset, latest),
                 request.image_color_policy,
+            )
+        if fields_catalog and (
+            fields_catalog["acroform_present"] or fields_catalog["orphan_page_widgets"]
+        ):
+            assert annotations_catalog is not None
+            latest = next(h for h in reversed(asset.history) if h.sha256 == revision)
+            return NativePdfFieldWikiContent(
+                identity,
+                contract,
+                metadata,
+                annotations_catalog,
+                fields_catalog,
+                revision_result_dict(self.repository, asset, latest),
             )
         if annotations_catalog and annotations_catalog["annotations"]:
             return NativePdfAnnotationWikiContent(
@@ -313,6 +335,13 @@ class NativeWikiService:
                         record, identity["asset_id"], identity["revision"]
                     )
                 content.add_annotations(annotation_records)
+            if isinstance(content, NativePdfFieldWikiContent):
+                fields = self.pdfs.decompose_fields(data)
+                for record in fields:
+                    attach_field_evidence(
+                        record, identity["asset_id"], identity["revision"]
+                    )
+                content.add_fields(fields)
         elif isinstance(content, NativeDelimitedWikiContent) and self.delimited:
             for field in self.delimited.decompose(data, content.dialect):
                 attach_delimited_evidence(

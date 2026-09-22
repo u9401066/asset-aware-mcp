@@ -172,6 +172,10 @@ jobs:
           tests/unit/test_native_pdf_annotation_service.py
           tests/unit/test_native_pdf_annotation_contract.py
           tests/unit/test_native_pdf_annotation_provenance.py
+          tests/unit/test_native_pdf_field_records.py
+          tests/unit/test_native_pdf_field_edits.py
+          tests/unit/test_native_pdf_field_service.py
+          tests/unit/test_native_pdf_field_provenance.py
           tests/unit/test_native_image_records.py
           tests/unit/test_native_image_creation.py
           tests/unit/test_native_image_revision.py
@@ -226,6 +230,7 @@ jobs:
           tests/integration/test_native_derivation_stdio.py
           tests/integration/test_native_pdf_stdio.py
           tests/integration/test_native_pdf_annotations_stdio.py
+          tests/integration/test_native_pdf_fields_stdio.py
           tests/integration/test_csl_citations_stdio.py
           tests/integration/test_etl_citations_stdio.py
           tests/integration/test_native_docx_stdio_e2e.py

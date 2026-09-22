@@ -11,6 +11,7 @@ import pymupdf
 
 from src.domain.native_asset_models import NativeEditResult
 from src.domain.native_pdf_fields import (
+    FIELD_REVIEW,
     PdfFieldButtonValue,
     PdfFieldCreate,
     PdfFieldDelete,
@@ -35,14 +36,6 @@ from src.infrastructure.native_pdf_package import NativePdfPackage
 if TYPE_CHECKING:
     from src.domain.native_pdf_fields import PdfFieldStyle
     from src.infrastructure.native_pdf_field_tree import FieldNode, FieldWidget
-
-FIELD_REVIEW = [
-    "actual_affected_page_images_and_value_appearance_consistency",
-    "explicit_replacement_font_style_wrapping_and_offscreen_choices",
-    "native_viewer_editing_and_appearance_regeneration",
-    "preserved_actions_scripts_and_calculation_dependencies_not_executed",
-    "historical_references_do_not_migrate; deletion_is_not_secure_erasure",
-]
 
 
 class FieldMutation:

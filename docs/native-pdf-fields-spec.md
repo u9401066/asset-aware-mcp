@@ -1,10 +1,43 @@
-# Native PDF field CRUD — internal implementation in progress
+# Native PDF field CRUD — managed MCP integration
 
 Public version remains **1.4.0**; the next consolidated release is **1.4.1**.
-This document describes the internal read/identity and native CRUD implementation.
-No field operation is advertised through the MCP contract yet. MCP integration,
-managed history/source writeback, evidence/Wiki integration and actual default
-Codex evaluation remain required before delivering the form workflow.
+The working implementation exposes complete paged field reads and checked native
+CRUD through MCP, with managed revisions, evidence and Wiki integration. These are
+Unreleased capabilities; the default Codex form evaluation and synchronized Agent
+guidance remain required before publishing this integration.
+
+## Managed operations and evidence
+
+Discover `read_pdf_fields`, `read_pdf_field` and `update_pdf_fields` through the
+native contract and their complete operation schemas. Reads require `asset_id`
+and `revision`; a single-field read also requires its exact `pdf_field_locator`.
+Assemble every top-level `text_excerpt` using Unicode character offsets, verify
+the complete UTF-8 `text_sha256`, and send `pdf_field_text_sha256` on continuation.
+The catalog's `catalog_sha256` is a separate guard for mutation. Catalog reads
+include the complete latest operation receipt for that exact file revision.
+
+Updates require `expected_revision` and `pdf_fields_update`, which contains
+`expected_catalog_sha256` and the typed edits described below. Every existing
+field, create parent and create widget page must refer to the same asset and
+original revision. After a successful change, read the complete `review_request`
+and reacquire current references from the serialized PDF. Object numbers can
+change during serialization; never transfer old object numbers to a new revision.
+No-op receipts are returned inline, without appending history. External source
+files are untouched; source writeback remains a separate explicit operation.
+
+Full `native-pdf-field-ref-v1` references can be verified, selected with a JSON
+Pointer/character range, cited through CSL, or used as derivation sources and
+targets. Historical references remain bound to their original bytes after editing
+or deletion. Custom citation text identifies the physical field path and object;
+display names never replace these identities.
+
+PDFs with an AcroForm or orphan page widgets use a `pdf-fields-v1:<receipt hash>`
+Wiki projection. It retains exact PDF bytes, complete field and annotation
+catalogs/records, operation receipts, distinct notes for duplicate names, hidden
+values, child-field links and every actual widget-page preview. Empty AcroForms
+retain the final deletion receipt. Returning to identical PDF bytes with a new
+operation receipt produces a separate Wiki snapshot; old snapshots stay intact.
+PDFs without AcroForm/widget evidence retain their existing projection.
 
 ## Implemented native operations
 
@@ -161,10 +194,17 @@ no-border regression initially exposed a PyMuPDF drawing call emitting a stroke
 even with no requested color; skipping the empty frame draw fixed it, and the
 original pixel-equality assertion now passes.
 
-## Remaining delivery work
+## Verification and remaining delivery work
 
-MCP needs complete paged discovery/readback and source/version/format checks;
-evidence, custom/CSL citations and Wiki must retain the original and changed native
-records. Default Codex evaluation must inspect actual affected page images,
-compare values with appearances and correct any discrepancies. Agent owns that
-semantic/visual review; hashes and structural checks do not certify it.
+Focused tests cover managed source/version checks, complete reads/no-op receipts,
+CSL/custom citations, selected substrings, derivation endpoints, all-field deletion
+and receipt-sensitive Wiki identity. Real SDK2 stdio tests pass for both balanced
+and compact tool surfaces, including contract discovery, hidden-value updates,
+Unicode field creation across two pages, deletion, complete readback and actual
+page-image comparisons against the committed revisions.
+
+These automated checks do not substitute for the pending default Codex evaluation.
+That evaluation must inspect actual affected page images, compare values with
+appearances and correct discrepancies. Agent owns semantic/visual review;
+hashes and structural checks do not certify it. Full release checks and synchronized
+Agent/site guidance are also required before publishing this integration.

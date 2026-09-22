@@ -7,6 +7,15 @@
 
 ## [Unreleased]
 
+- Integrate native PDF fields with complete hash-pinned MCP reads, checked managed
+  CRUD and immutable field references. Retain selections, derivation endpoints,
+  CSL/custom citations and full field/Wiki records across updates and deletion.
+  Distinguish duplicate names, hidden values, child fields and every widget page;
+  retain complete operation receipts, including empty forms and repeated file
+  revisions with different histories. Both SDK2 tool surfaces pass automated
+  CRUD/image checks. Default Codex evaluation and synchronized Agent guidance
+  remain pending before publication. Public **1.4.0**, next consolidated **1.4.1**.
+
 - Implement the internal native PDF field core: exact tree/object references,
   duplicate names, hidden values, complete widget coverage and checked CRUD for
   text, choice, checkbox/radio fields and nested groups. Preserve button appearance
@@ -15,8 +24,8 @@
   retain every removed field in receipts. Cover Unicode, multiselect indices,
   font reuse, no-op bytes, rotation/crop/UserUnit, malformed dependencies and writer
   corruption. Real upstream trials retained a rejected overflow and an Agent
-  correction of an unwanted border. This core is not yet exposed through MCP;
-  managed evidence/Wiki and default Codex form evaluation remain required. Public
+  correction of an unwanted border. Managed MCP/evidence/Wiki integration is
+  described above; default Codex form evaluation remains required. Public
   **1.4.0**, next consolidated **1.4.1**; no version bump in this segment.
 
 - Fix VSIX install smoke tests accepting remote terminal launchers that ignore

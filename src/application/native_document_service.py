@@ -26,6 +26,7 @@ from src.application.native_ods_operations import NativeODSOperations
 from src.application.native_pdf_annotation_operations import (
     NativePdfAnnotationOperations,
 )
+from src.application.native_pdf_field_operations import NativePdfFieldOperations
 from src.application.native_pdf_operations import NativePdfOperations
 from src.application.native_pdf_region_service import NativePdfRegionService
 from src.application.native_pptx_operations import NativePptxOperations
@@ -282,6 +283,9 @@ class NativeDocumentService:
             "read_pdf_annotations": self._pdf_annotation_operation,
             "read_pdf_annotation": self._pdf_annotation_operation,
             "update_pdf_annotations": self._pdf_annotation_operation,
+            "read_pdf_fields": self._pdf_field_operation,
+            "read_pdf_field": self._pdf_field_operation,
+            "update_pdf_fields": self._pdf_field_operation,
             "render_pdf_page": self._pdf_operation,
             "add_pdf_pages": self._pdf_operation,
             "update_pdf": self._pdf_operation,
@@ -376,6 +380,11 @@ class NativeDocumentService:
         if self.ods_operations is None:
             raise ValueError("Native ODS adapter is not configured")
         return self.ods_operations.execute(request)
+
+    def _pdf_field_operation(self, request: NativeDocumentRequest) -> dict[str, Any]:
+        if self.pdfs is None:
+            raise ValueError("Native PDF adapter is not configured")
+        return NativePdfFieldOperations(self.repository, self.pdfs).execute(request)
 
     def _verify(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.reference is not None

@@ -104,6 +104,11 @@ from src.domain.native_pdf_annotations import (  # noqa: TC001 -- Pydantic runti
     PdfAnnotationReference,
     PdfAnnotationsUpdate,
 )
+from src.domain.native_pdf_fields import (  # noqa: TC001 -- Pydantic runtime schema
+    PdfFieldLocator,
+    PdfFieldReference,
+    PdfFieldsUpdate,
+)
 from src.domain.native_pdf_region import (  # noqa: TC001 -- Pydantic runtime models
     NativePdfRegionReference,
     NativePdfRegionSelector,
@@ -258,6 +263,13 @@ class NativeDocumentRequest(NativeModel):
     pdf_create: NativePdfCreate | None = None
     pdf_annotation_locator: PdfAnnotationLocator | None = None
     pdf_annotations_update: PdfAnnotationsUpdate | None = None
+    pdf_field_locator: PdfFieldLocator | None = None
+    pdf_fields_update: PdfFieldsUpdate | None = None
+    pdf_field_text_sha256: str | None = Field(
+        default=None,
+        pattern=SHA256_PATTERN,
+        description="Complete PDF field response hash; required for text continuation.",
+    )
     pdf_insert: NativePdfInsert | None = None
     pdf_locator: NativePdfPageLocator | None = None
     pdf_edits: list[NativePdfPageEdit] = Field(default_factory=list, max_length=100)
@@ -301,6 +313,7 @@ class NativeDocumentRequest(NativeModel):
         | NativePptxReference
         | NativePdfReference
         | PdfAnnotationReference
+        | PdfFieldReference
         | NativePdfRegionReference
         | NativeDelimitedReference
         | NativeODSCellReference

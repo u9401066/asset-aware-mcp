@@ -26,6 +26,7 @@ from src.domain.native_image import (
 from src.domain.native_ods import NativeODSCellReference
 from src.domain.native_pdf import NativePdfReference
 from src.domain.native_pdf_annotations import PdfAnnotationReference
+from src.domain.native_pdf_fields import PdfFieldReference
 from src.domain.native_pdf_region import NativePdfRegionReference
 from src.domain.native_pptx import NativePptxReference
 
@@ -37,6 +38,7 @@ NativeSelectionParent = (
     | NativePptxReference
     | NativePdfReference
     | PdfAnnotationReference
+    | PdfFieldReference
     | NativePdfRegionReference
     | NativeDelimitedReference
     | NativeODSCellReference

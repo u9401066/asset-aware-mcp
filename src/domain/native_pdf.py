@@ -13,6 +13,7 @@ if TYPE_CHECKING:
         PdfAnnotationLocator,
         PdfAnnotationsUpdate,
     )
+    from src.domain.native_pdf_fields import PdfFieldLocator, PdfFieldsUpdate
     from src.domain.native_pdf_region import NativePdfRegionSelector
 
 MAX_PDF_PAGES = 2000
@@ -126,6 +127,12 @@ class NativePdfPageEdit(PdfModel):
 
 
 class NativePdfAdapter(Protocol):
+    def inspect_fields(self, data: bytes) -> dict[str, Any]: ...
+    def read_field(self, data: bytes, locator: PdfFieldLocator) -> dict[str, Any]: ...
+    def decompose_fields(self, data: bytes) -> list[dict[str, Any]]: ...
+    def edit_fields(
+        self, data: bytes, request: PdfFieldsUpdate
+    ) -> tuple[bytes, NativeEditResult]: ...
     def inspect_annotations(self, data: bytes) -> dict[str, Any]: ...
     def read_annotation(
         self, data: bytes, locator: PdfAnnotationLocator

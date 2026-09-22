@@ -1,5 +1,262 @@
 # Progress (Updated: 2026-09-22)
 
+## PDF field MCP/evidence/Wiki checkpoint verified locally — publication pending
+
+Current goal turn: PROGRESS. This checkpoint contains30counted files +both MEM,
+for a direct local main commit by author AND committer u9401066
+<u9401066@gap.kmu.edu.tw>. No push/tag/release in this segment. Public/current
+version remains1.4.0 in ALL7version sources; next consolidated1.4.1, never a
+per-feature bump. Published baseline main/origin remains e953542ea7acf70ac42a22c8c15e2dfdab5211cd;
+its10CI+3Pages+8deployed bytes were already verified. Use git log for local checkpoint
+hash; /run/user/1000/asset-aware-pdf-fields-integration-proof.json records exact
+30file/351source hashes, tests, prior failures, image review and commit state.
+
+Implemented complete MCP field reads/CRUD, full field refs/selections/derivations/
+CSL/custom citations, source/revision guards, ProcessNativePdf field workers and
+receipt-sensitive field Wiki. Every logical group/hidden/duplicate field and every
+Widget page retains identity; complete receipts survive all-field deletion and
+repeated file bytes. Object IDs can remap on serialization: new refs come from final
+bytes, historical refs remain original. README/CHANGELOG/spec/capability analysis,
+Native-File-Assets Wiki+site source and generated site-content.js now describe the
+Unreleased scope; default Codex form evaluation and Agent-guide synchronization
+are explicitly pending. No native PDF body-edit/general-format completion claim.
+
+Verification COMPLETE, all sessions TERMINAL:
+- Effective full Python suite4115passed/49optional-environment skipped/3intentional
+  malformed-fixture warnings. No runtime source changed between phases.
+- First unit/infrastructure/ALL5root-test phase:4052pass/1fail/1skip180.18s,
+  session91387 TERMINAL1. Only failed old test expected pdf-annotations-v1 for a
+  fixture that contains forms. Updated to fields projection, kept every old page/
+  source/opaque-Wiki/human-note assertion and added full field-ref checks. Complete
+  corrected module8passed0.57s, so effective unique unit/root4053pass/1skip.
+  Original failure log and failed fixture directory retained. All other completed
+  passing phase fixtures455541608bytes inventoried with hashes before cleanup;
+  failed test_pdf_wiki_keeps_opaque_and0 and its current symlink remain.
+- ALLintegration tests:62passed/48skipped600.88s, session13667 TERMINAL0. Includes
+  both new field SDK2 surfaces and both prior annotation surfaces. Complete own
+  integration fixtures363177702bytes hash-inventoried then removed after success.
+- Focused338passed/3warnings60.63s; separately both field SDK2 configurations
+  2passed143.97s. Original focused failures and logs remain preserved.
+- New human-doc/site/harness tests32passed0.20s after doc changes; docs build/check,
+  release harness, sync-assets:check pass. Ruff all,831formatted files, mypy351src,
+  Bandit medium/high(session55551 TERMINAL0), zizmor offline all pass.
+Logs/manifests: /run/user/1000/asset-aware-pdf-fields-full-check-01-{unit-and-root,
+integration}.{log or related fixtures.json}; focused provenance-01/02, legacy-wiki-
+01 and human-docs-01 paths are recorded in authoritative integration-proof.json.
+The old full-check-01.json intentionally retains original failed first-phase state;
+use integration-proof.json for the corrected full outcome. Never restart these
+finished sessions or mistake the old first-phase proof for unresolved failure.
+
+Root Agent additionally viewed FOUR actual compact SDK2 fixture Wiki PNGs:
+original/created page indices0,2. New 中文009µgβ is legible/not clipped on both;
+original headings, shapes and icons visually retained. Exact PNG hashes/findings
+are in integration-proof.json; fixtures /dev/shm/asset-aware-pdf-fields-stdio-01.
+This is NOT default Codex CLI evaluation. Original synthetic Widget appearances
+are authored colored blocks, not a promise that their stored values are rendered.
+One local apply_patch write failed and left the previously-clean Wiki file empty;
+it was immediately restored byte-exact from HEAD, then all intended human docs
+were atomically written and verified. Cause unknown; do not invent a disk diagnosis.
+Observation/recovery hashes are in proof; final32docs tests passed, no data loss.
+
+NEXT SEGMENT: implement/run actual DEFAULT Codex PDF-field MCP evaluation with
+independent audit and actual page review/correction, then synchronize Agent guides
+and bundled assets. Reuse tests/codex_pdf.run command/execute (no model override),
+tests/codex_pdf_annotations/run.py +audit.py patterns, tests/codex_native_pdf.trace
+and artifacts helpers. Pinned real pikepdf form.pdf is available at
+/dev/shm/asset-aware-pdf-field-upstream-edits-03/source.pdf,
+SHA2566e2b7541acc922d4c046621becd8cb91a63b358b72c875e58080d373946b4b93.
+Old direct-adapter trials and14images are retained; they do not substitute for
+Codex/MCP. Upstream original image has a gray text area, checkbox and two radio
+buttons; prior adapter12pt request failed fit,8pt plus explicit border_width0
+corrected unwanted border. Preserve failures; do not manufacture visual verdicts.
+No new Codex field harness has been created or run yet.
+
+After guides/model evaluation: refresh necessary artifact/wheel/Docker/VSIX checks,
+update metadata as appropriate, then ONE direct main push with both local segments.
+After EVERYpush verify exact-head10CI+3Pages+deployed-byte gate before further code.
+Full release requirements remain before publication; current localPython checks
+are not a replacement for pending default-Codex/artifact/remote verification.
+Keep <=30counted files per segment, excluding ONLY both MEM. Current segment has
+reached30; put additional files in the next commit. No PR/new branches/subagents.
+
+Resources: four OWN historical Codex trace dirs remain staged via original /tmp
+symlinks in /dev/shm/asset-aware-pdf-field-root-space-01:table-edit-01/02/03 and
+ docx-render-01. Manifest /run/user/1000/asset-aware-pdf-field-root-space-01.json.
+Bytes/mtime preserved, NOT restored. Restore only when root has~160MB+64MBmargin;
+last root~97MB cannot satisfy that. Old11-directory build-space move was fully
+restored; never replay that old restoration. Clean only completed OWN artifacts
+with inventories; never live servers/original dirty workspace/global caches.
+All work stays in asset-aware-mcp-agent-assets; original asset-aware-mcp untouched.
+
+## PDF fields MCP/evidence/Wiki integration — full-suite verification running
+
+Current goal turn: PROGRESS. Public/current version remains1.4.0; next consolidated
+1.4.1. No version bump/tag/release or push in this integration segment. HEAD/main/
+origin is still e953542ea7acf70ac42a22c8c15e2dfdab5211cd, whose exact-head10CI/3Pages/
+8deployed-file gate is already complete. Work ONLY in this agent-assets worktree.
+Author/committer u9401066 <u9401066@gap.kmu.edu.tw>; no PR/subagents or model override.
+
+Current working changes:25counted files plus both MEM. New field operations expose
+complete hash-pinned read_pdf_fields/read_pdf_field and checked update_pdf_fields,
+with all create-parent/widget and update/delete references bound to asset/revision.
+ProcessNativePdf supports four field operations. Full references support selection,
+derivation source/target and CSL. Field Wiki retains exact PDF, every field/group/
+hidden record and widget page, complete catalog/receipt, escaped native strings and
+custom physical-path/object citations. Receipt hash participates in Wiki identity,
+including repeated identical PDF bytes with different operation history. Empty
+AcroForms retain final deletion receipts; no-form legacy projection remains intact.
+
+Focused verification:338passed/3intentional malformed-fixture warnings60.63s;
+/run/user/1000/asset-aware-pdf-field-provenance-02.log, session41572 TERMINAL0.
+ALL16service +7provenance +80core cases plus schema/annotation regressions passed.
+Earlier provenance-01 had34pass/1test-assumption failure: complete receipt has a
+final field_catalog_readback entry, not another deleted_fields entry. Corrected
+assertion checks that final catalog separately and all7removed records. Original
+failure log/fixtures preserved; session91092 TERMINAL1. Previous service-01 object's
+renumbering test failure is also preserved; final tests retain full historical ref
+verification and compare native value plus the new locator, not old object IDs.
+Ordinary test reads now use4000chars; dedicated79-char continuation guards remain.
+
+Real SDK2 stdio: BOTHbalanced/compact configurations passed2tests143.97s;
+/run/user/1000/asset-aware-pdf-fields-stdio-01.log, session12314 TERMINAL0. Actual
+ProcessNativePdf: full contracts/schemas, hidden007->008 update, no-op/foreign/stale
+checks, CJK field create with2widgets, complete receipts, all3page PNG comparisons
+at original/update/create/delete stages, field Wiki/custom citations, deletion and
+old refs/selections/Wikis/source bytes+mtime preservation. This is automated SDK2
+verification, NOT the required actual default Codex field evaluation.
+
+Ruff all pass;831files formatted; mypy351src pass; docs site payload up-to-date;
+release harness audit and assistant sync-assets:check pass. Bandit session55551
+was running at this checkpoint; poll once to capture terminal state. README,
+CHANGELOG and docs/native-pdf-fields-spec.md reflect current Unreleased integration
+and explicitly pending default Codex evaluation/Agent-site guidance/publication.
+CI Python3.10 focused suite now includes all4field unit modules and field stdio.
+
+Full pytest is running in TWO sequential phases to keep peak owned temp usage
+within current disk limits; no tests intentionally omitted. Session91387 ACTIVE:
+/run/user/1000/asset-aware-pdf-fields-full-check-01.py records status/hash/inventory
+in matching.json. Phase1 includes tests/unit, tests/infrastructure and ALL5root
+test modules; phase2 tests/integration. Each successful phase retains full logs
+and a lstat-safe file/hash manifest, then deletes ONLY its completed own basetemp.
+On failure it stops and preserves that phase's fixtures. No source change planned
+while this snapshot runs. Do not start duplicate full suites or misreport a running
+phase as passed. Logs prefix asset-aware-pdf-fields-full-check-01-{phase}.log.
+
+Next: resolve full-suite failures if any; audit current code; make <=30-file local
+core commit if needed before separate guides/default-Codex harness segment. Multiple
+local commits may precede ONE publication push, but full checks/artifacts/default
+Codex field review and synchronized human/Agent/site guidance remain before that
+push. After EVERYpush, exact-head10CI+3Pages+deployed bytes before further code.
+Do not claim broad all-format goal complete; PDF body CRUD and other gaps remain.
+
+Resources: four historical OWN Codex trace directories are CURRENTLY staged in
+/dev/shm/asset-aware-pdf-field-root-space-01 with original /tmp paths as symlinks:
+table-edit-01/02/03 and docx-render-01. Manifest is /run/user/1000/asset-aware-pdf-
+field-root-space-01.json; all bytes/mtime verified. NOT restored; restore only when
+root has their~160MB plus64MBworking margin. Old build-space restoration is complete
+and must not be reused. Never clean other worktrees, live servers, global caches or
+unrelated output. Last free root132MB/shm620MB/run307MB before full suite. Failed
+and actual Codex traces remain preserved; only completed owned test fixtures are
+eligible for manifest-backed cleanup. Original workspace remains untouched.
+
+## PDF field core publication verified — MCP integration is next
+
+Current goal turn: PROGRESS. HEAD e953542ea7acf70ac42a22c8c15e2dfdab5211cd is fully
+verified on main/origin. ALL10 CI jobs35652655180, ALL3 Pages jobs35652654911 and
+ALL8 deployed files passed. Watcher58944 TERMINAL exit0; DO NOT restart or poll.
+Remote logs: unit3835pass/1skip/3warnings506.15s (all80new field tests), Python3.10
+1611pass/4skip916.07s, integration212pass568.72s. Linux/macOS205extension tests and
+2actual installed activation tests each; Windows204pass/1skip and isolatedinstall/
+update passed, activation explicitly skipped. Logs/hashes plus exact publication
+state are in /run/user/1000/asset-aware-pdf-field-local-proof.json and publication-
+proof.json. Local checks remain4084pass/49skip, installed wheel/Docker exact5PDF/
+complete receipt replay, SDK2 and349source hashes. All capture sessions TERMINAL.
+Public/latest release stays1.4.0; next consolidated1.4.1; no version bump/tag.
+
+New development may now proceed: field MCP paged reads/CRUD, full managed refs,
+source/revision checks for every create parent/widget page and every existing field,
+complete no-op receipts, selections/derivations/citations/Wiki, and actual default
+Codex image review/correction. Keep full all-format goal active. Multiple <=30-file
+local commits may precede one push if needed to deliver code + synchronized guides;
+still run full checks before publishing and exact-head CI/Pages after every push.
+
+Read-only upstream body-edit research (no implementation/test claim) retained at
+/run/user/1000/asset-aware-pdf-body-upstream-research-01.json. Primary sources:
+https://pikepdf.readthedocs.io/en/latest/api/filters.html (parser/unparser loses
+lexical details; token filters for mutation), PyMuPDF page redactions (possible
+collateral links/images/characters and shrinking/omitted replacement text), Story
+HTML/CSS DOM (new layout, not recovery of arbitrary source PDF structure). Verify
+actual flag semantics before implementation. Body CRUD remains in broad scope;
+form/annotation work does not complete it. Immediate task remains form integration.
+
+Resource warning persists: FOUR own historical traces currently staged via original
+/tmp symlinks under /dev/shm/asset-aware-pdf-field-root-space-01. Use its NEW manifest
+/run/user/1000/asset-aware-pdf-field-root-space-01.json; do not reuse older buildspace
+restoration. Root about152MB free, below full restore plus margin. All exactbytes/
+size/mtime preserved, originals accessible. Restore when space permits. Do not
+clean any other project/cache or touch original dirty checkout. Work exclusively
+in agent-assets main. Only both MEM dirty at this checkpoint; no integration edits
+yet. Author/committer u9401066 <u9401066@gap.kmu.edu.tw>, noPR/subagents, exactstaging.
+
+## PDF field core pushed — exact-head CI gate still running
+
+Current goal turn: PROGRESS. Main/origin HEAD is
+`e953542ea7acf70ac42a22c8c15e2dfdab5211cd` (feat(pdf): add checked native form field
+CRUD core), author AND committer u9401066 <u9401066@gap.kmu.edu.tw>.
+14 counted files + both MEM committed and pushed directly under existing user
+permission. GitHub reported the expected PR/status-check rule bypass. No tag or
+release. All seven version declarations/public release remain 1.4.0; next
+consolidated release is 1.4.1. User version constraint persists.
+
+Local current verification is complete: 4084 passed / 49 optional-environment
+skips / 3 intentional malformed-fixture warnings, 598.37s; all80 field regressions
+included. Ruff/format826/mypy349/Bandit/zizmor, docs/site/harness/sync/artifact checks
+pass. Installed Python3.13 wheel and actual Dockerfile Python3.12 both reproduce
+five exact native CRUD PDFs AND complete receipts; doctor/30tools/SDK2 stdio pass.
+This is INTERNAL core only. No field MCP capability/default Codex evaluation yet.
+
+ACTIVE watcher session58944 runs
+/run/user/1000/asset-aware-pdf-field-verify-publication.py for this exact HEAD.
+DO NOT restart it or begin new development before the publication gate completes.
+Latest observation: CI35652655180 still running,4completed jobs all successful
+(static/docs/npm/LinuxVSIX); macOS,Windows,Python3.10 andunit running. Integration
+and summary follow. Pages35652654911 ALL3jobs passed. ALL8 deployed files match
+exact commit bytes, including native-pdf-fields-spec.md. Proof:
+/run/user/1000/asset-aware-pdf-field-publication-proof.json. Poll the SAME58944;
+then inspect any failure or verify all10CIjobs,3Pagesjobs and8deployed files plus
+latest releasev1.4.0. Capture relevant CI test/activation logs, update local proof
+and both MEM. Broader goal remains ACTIVE; do not call complete/blocked.
+
+Resource state: current completed full-test fixture tree781586800bytes and three
+passed PDF unit trees removed with manifests. All prior failure/visual/model logs
+retained. Current owned Docker image/builder and wheel venv removed. Build-space
+staging restored ALL11 trace trees byte/size/mtime exact. AFTER that restoration,
+root available space reached0 again. A NEW preservation manifest at
+/run/user/1000/asset-aware-pdf-field-root-space-01.json now retains FOUR owned
+historical traces under /dev/shm/asset-aware-pdf-field-root-space-01, reachable at
+the original /tmp paths via symlinks (three table-edit runs and docx-render01).
+They are currently STAGED, not restored; old build-space manifest remains historical.
+About162MB root became available. Restore these four using the NEW manifest only
+when root has enough bytes for all files plus working margin. Never delete logs,
+other projects/caches or original dirty worktree. All local process sessions are
+terminal except publication watcher58944. Cleanup-only86725 stopped on intentional
+FIFO (exit143); revised20329 passed; full pytest itself passed first try.
+
+Read-only next integration reconnaissance: application/native_pdf_field_operations
+will need new paged catalog/record/CRUD routing; domain/native_assets.py request/ref
+union and native_operations.py schemas; native_pdf.py protocol/facade plus
+infrastructure/native_pdf_process.py operation whitelist/MUTATIONS/methods.
+Validate create parent AND every widget page ref against managed asset/revision;
+update/delete refs likewise. Pin continuation content hashes and retain complete
+no-op reports inline. Selection/derivation unions and native_evidence_service.py
+must resolve full field records. Wiki projection must retain field catalog/records,
+all field-to-page links, hidden fields, existing annotations, full receipts and
+exact source attachment; preserve historical snapshots. Citation display needs
+physical field path/object identity, with names as labels. Add explicit new field
+cases to Python3.10 focused CI, actual SDK2 tests and default Codex image review/
+correction. Keep <=30 counted files per segment; guides/model harness can follow
+separately without version bumps. ODS lifecycle and remaining formats stay in scope.
+
 ## Native PDF field core — full local verification passed; publication next
 
 Current goal turn: PROGRESS. Public/version declarations stay1.4.0; next consolidated

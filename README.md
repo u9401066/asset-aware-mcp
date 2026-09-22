@@ -296,10 +296,13 @@ See [native usage and limits](docs/wiki/Native-File-Assets.md) and the
 Broader native CRUD and per-format review remain ongoing; conversion does not prove
 a faithful round trip. See [contracts](docs/spec.md) and [roadmap](ROADMAP.md).
 
-The internal [PDF form core](docs/native-pdf-fields-spec.md) now reads exact field
-identities and performs checked native text/choice/checkbox/radio CRUD, including
-shared widgets and nested groups. It is **not yet exposed through MCP**; managed
-evidence/Wiki integration and default Codex evaluation remain in progress.
+The Unreleased [PDF form workflow](docs/native-pdf-fields-spec.md) now connects
+checked text/choice/checkbox/radio CRUD to paged MCP reads, managed revisions,
+CSL/custom citations and source-attached Wikis. Duplicate names, hidden values,
+shared widgets and nested groups retain distinct native identities and historical
+evidence. Both SDK2 tool surfaces pass automated CRUD/image checks; default Codex
+evaluation and synchronized Agent guidance are still pending before publication.
+Public **1.4.0**; next consolidated **1.4.1**, without a per-feature version bump.
 
 Assets carry identity, revision, native locators, representations, relationships,
 capabilities and validation state. Wiki notes are linked projections; configurable

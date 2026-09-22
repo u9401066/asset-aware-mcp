@@ -219,7 +219,9 @@ def test_annotated_wiki_keeps_legacy_projection_and_custom_citation_evidence(
     root = Path(exported["output_dir"])
     assert root != old_root and exported["annotation_count"] == 8
     manifest = json.loads((root / "manifest.json").read_text())
-    assert manifest["projection"] == "pdf-annotations-v1"
+    assert manifest["projection"].startswith("pdf-fields-v1:")
+    assert manifest["field_count"] > 0
+    assert (root / "fields.jsonl").is_file()
     assert (root / manifest["source_attachment"]).read_bytes() == source.read_bytes()
     records = [
         json.loads(line)

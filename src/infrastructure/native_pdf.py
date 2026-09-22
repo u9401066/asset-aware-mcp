@@ -15,6 +15,12 @@ from src.infrastructure.native_pdf_annotations import (
     read_annotation,
 )
 from src.infrastructure.native_pdf_checks import verify_reference
+from src.infrastructure.native_pdf_field_edits import edit_fields
+from src.infrastructure.native_pdf_fields import (
+    decompose_fields,
+    inspect_fields,
+    read_field,
+)
 from src.infrastructure.native_pdf_graph import canonical
 from src.infrastructure.native_pdf_mutation import PdfMutation, insert_pages
 from src.infrastructure.native_pdf_package import NativePdfPackage
@@ -45,6 +51,10 @@ def _targets(
 
 
 class NativePdf:
+    inspect_fields = staticmethod(inspect_fields)
+    read_field = staticmethod(read_field)
+    decompose_fields = staticmethod(decompose_fields)
+    edit_fields = staticmethod(edit_fields)
     inspect_annotations = staticmethod(inspect_annotations)
     read_annotation = staticmethod(read_annotation)
     decompose_annotations = staticmethod(decompose_annotations)

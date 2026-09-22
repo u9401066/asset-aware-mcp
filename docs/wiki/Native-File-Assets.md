@@ -116,6 +116,50 @@ PDF 衍生圖片，並非 NIST 發布的 PNG，也不是任意照片／動畫的
 詳見[規格](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/native-image-spec.md)與
 [測試流程及保留的失敗](https://github.com/u9401066/asset-aware-mcp/blob/main/tests/codex_native_image/README.md)。
 
+## Native PDF fields (Unreleased)
+
+公開版本維持 **1.4.0**，下次整合發版為 **1.4.1**。開發中的表單工作流已接入
+MCP、版本證據與 Wiki；兩種工具配置的 SDK2 自動化測試已通過，預設 Codex
+的實際表單視覺核對仍待完成。完整範圍見
+[PDF field specification](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/native-pdf-fields-spec.md)。
+
+| 操作 | 必要輸入與回讀 |
+|---|---|
+| `read_pdf_fields` | `asset_id`、`revision`；完整欄位目錄、目錄雜湊與該版本的完整操作紀錄 |
+| `read_pdf_field` | 相同版本，加上目錄提供的 `pdf_field_locator`；完整欄位、繼承來源、所有 Widget 與引用 |
+| `update_pdf_fields` | `expected_revision`、`pdf_fields_update.expected_catalog_sha256` 與 1–32 項 typed edits |
+
+先讀完整 contract／schema。欄位讀取的 `text_excerpt` 在回應最外層；
+用 Unicode 字元 offset 讀完全部片段，核對 UTF-8 `text_sha256`，
+每次續讀都送 `pdf_field_text_sha256`。目錄內的 `catalog_sha256` 才是修改
+前置檢查使用的雜湊，不能拿文字分頁雜湊代替。
+
+欄位名稱只是標籤；重名欄位仍有不同的樹路徑及物件編號。更新／刪除使用
+完整 `native-pdf-field-ref-v1`。建立可指定完整父欄位引用與明確的
+`new_groups`；每個新 Widget 使用完整頁面引用，全部必須屬於同一原始版本。
+
+文字、選項、checkbox 與 radio 有各自的 typed value。可見文字／選項更新
+指定 `replace_all_widget_appearances`，並為每個原始 `widget_path` 提供 style；
+這會明確重建外觀，省略的樣式值採預設值，須核對字型、字級、邊框與換行。
+按鈕使用 `preserve_native_button_states`，隱藏值使用 `no_widgets`。
+刪除指定 `field_subtree_and_all_widgets`，操作紀錄保留每個被刪欄位。
+
+修改後讀完 `review_request` 的紀錄，重新取得當前欄位與頁面引用，再查看
+所有受影響頁面的實際 PNG。PDF 存檔可能重排物件編號，不能將舊定位直接套用
+到新版本。No-op 的完整紀錄在當次回應內，且不新增歷史；原始來源檔不會自動回寫。
+
+完整欄位引用與其 JSON Pointer／字元選取可連結 CSL、自訂引用及轉製帳本。
+含 AcroForm 或孤立 Widget 的 Wiki 使用 `pdf-fields-v1:<receipt hash>`，
+保留原始 PDF、欄位與批註完整紀錄、所有頁面圖、子欄位連結及操作紀錄。
+沒有頁面外觀的隱藏欄位也會有筆記，重名欄位不合併。刪光欄位後仍保留最後
+的刪除紀錄；相同 PDF 位元組若有新的操作紀錄，會產生不同快照。舊引用、
+舊 Wiki 與人工筆記維持原狀。
+
+簽章、加密、XFA、鎖定、標籤結構、所有權歧義及未建模的值／外觀相依仍有
+保護限制。既有腳本保留但不執行。MCP 檢查來源與原生機械完整性；Agent
+核對值與外觀是否一致、文字是否截斷，以及互動檢視器／腳本行為。這項能力
+不代表任意 PDF 內文可編輯，也不代表靜態 PNG 已證明所有檢視器一致。
+
 ## Native PDF annotations (Unreleased)
 
 PDF 批註可以獨立讀取、編輯與引用。MCP 保留版本、定位、原生格式及操作紀錄；
@@ -158,9 +202,10 @@ Agent 核對實際頁面，判斷標記是否圈到正確內容、文字是否�
 1 色階差異；不放寬像素容差，也不改動實際輸出內容。
 
 引用可用於 `verify`、精確選取、轉製來源／目標及 CSL。自訂引用顯示包含頁碼、
-批註索引與物件身分。含批註 PDF 使用 `pdf-annotations-v1` Wiki，保留原始 PDF、
+批註索引與物件身分。沒有表單／Widget 的含批註 PDF 使用 `pdf-annotations-v1` Wiki，保留原始 PDF、
 頁面 PNG、`annotation-catalog.json`、`annotations.jsonl` 與 wikilink 批註筆記。
-無批註 PDF 維持原本的 `pdf-pages-v1`；歷史快照與人工筆記不覆蓋。
+沒有批註或表單的 PDF 維持原本的 `pdf-pages-v1`；歷史快照與人工筆記不覆蓋。
+含表單的文件使用上節欄位 Wiki，並保留完整批註紀錄。
 
 ## Native Word footnotes and endnotes (Unreleased)
 

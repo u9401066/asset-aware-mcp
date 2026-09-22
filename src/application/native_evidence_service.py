@@ -10,6 +10,7 @@ from src.application.native_docx_note_operations import attach_note_evidence
 from src.application.native_docx_story_operations import attach_story_evidence
 from src.application.native_image_evidence import NativeImageEvidence
 from src.application.native_pdf_annotation_operations import attach_annotation_evidence
+from src.application.native_pdf_field_operations import attach_field_evidence
 from src.application.native_pdf_operations import PDF_REVIEW, attach_pdf_evidence
 from src.application.native_pdf_region_service import NativePdfRegionService
 from src.application.native_pptx_operations import attach_pptx_evidence
@@ -34,6 +35,7 @@ from src.domain.native_ods import (
 )
 from src.domain.native_pdf import NativePdfReference
 from src.domain.native_pdf_annotations import ANNOTATION_REVIEW, PdfAnnotationReference
+from src.domain.native_pdf_fields import FIELD_REVIEW, PdfFieldReference
 from src.domain.native_pdf_region import NativePdfRegionReference
 from src.domain.native_pptx import NativePptxReference
 from src.domain.native_selection import NativeSelectionReference
@@ -157,6 +159,13 @@ class NativeEvidenceService:
             record = self.presentations.read_shape(data, reference.locator)
             attach_pptx_evidence(record, asset.asset_id, reference.revision)
         elif (
+            isinstance(reference, PdfFieldReference)
+            and asset.format == "pdf"
+            and self.pdfs
+        ):
+            record = self.pdfs.read_field(data, reference.locator)
+            attach_field_evidence(record, asset.asset_id, reference.revision)
+        elif (
             isinstance(reference, PdfAnnotationReference)
             and asset.format == "pdf"
             and self.pdfs
@@ -192,6 +201,7 @@ class NativeEvidenceService:
         | NativePptxReference
         | NativePdfReference
         | PdfAnnotationReference
+        | PdfFieldReference
         | NativePdfRegionReference
         | NativeDelimitedReference
         | NativeODSCellReference
@@ -204,7 +214,7 @@ class NativeEvidenceService:
             reference, NativeImageFrameReference | NativeImageRegionReference
         ):
             return self._image_evidence().verify(reference)
-        if isinstance(reference, PdfAnnotationReference):
+        if isinstance(reference, (PdfAnnotationReference, PdfFieldReference)):
             asset = self.repository.load(reference.asset_id)
             record = self.read_parent_record(reference)
             valid = record["evidence"] == reference.model_dump()
@@ -218,10 +228,14 @@ class NativeEvidenceService:
                 "verification_scope": "immutable_native_representation",
                 "checks": {
                     "revision_hash": True,
-                    "annotation_representation_hash": valid,
+                    "field_representation_hash"
+                    if isinstance(reference, PdfFieldReference)
+                    else "annotation_representation_hash": valid,
                 },
                 "source_freshness": "not_checked; refresh tracks external human edits",
-                "review_required": ANNOTATION_REVIEW,
+                "review_required": FIELD_REVIEW
+                if isinstance(reference, PdfFieldReference)
+                else ANNOTATION_REVIEW,
             }
         if isinstance(reference, (DocxStoryReference, DocxNoteReference)):
             asset = self.repository.load(reference.asset_id)
