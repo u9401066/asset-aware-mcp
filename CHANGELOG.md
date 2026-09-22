@@ -7,6 +7,18 @@
 
 ## [Unreleased]
 
+- Add native ODS worksheet rename through `read_ods_dependencies` and
+  `rename_ods_table`, binding the source revision, exact table identity and complete
+  dependency inventory. Update supported formulas, named expressions, conditional
+  references, chart source/cache addresses and sheet settings in one managed revision.
+  Preserve compressed ranges, styles, unrelated package members, historical refs
+  and Wiki snapshots; retain full change/cache receipts. Unknown owners and source
+  identities require resolution before mutation. Accept native named/conditional
+  expression prefixes during preview while retaining external-resource guards.
+  Agents review actual Calc pages
+  and correct literal/dynamic references; table/row/column lifecycle remains in progress.
+  Public **1.4.0**, next consolidated **1.4.1**; no version bump in this segment.
+
 - Build the ODS structural reference-mapping foundation: parse native OpenFormula
   addresses, map row/column insertions and deletions and sheet renames/deletions,
   preserve literals and dollar flags, and retain original formula change spans.

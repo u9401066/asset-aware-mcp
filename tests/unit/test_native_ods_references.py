@@ -9,10 +9,51 @@ from src.domain.native_ods_references import (
     ODSAxisEdit,
     ODSSheetDelete,
     ODSSheetRename,
+    map_ods_expression_references,
     parse_ods_reference,
     rewrite_ods_formula,
     rewrite_ods_reference,
 )
+
+
+@pytest.mark.parametrize(
+    "expression,start",
+    [
+        ('SUM([Source.A1])+LEN("[Source.A1]")', 0),
+        ("of:cell-content-is-in-list([Source.A1:.A3])", 3),
+        ("is-true-formula([Source.A1]>0)", 0),
+        ("formula-is([Source.A1]>0)", 0),
+    ],
+)
+def test_native_owner_expressions_keep_original_spans_and_literals(expression, start):
+    result, changes = map_ods_expression_references(
+        expression,
+        start=start,
+        mapper=lambda ref: rewrite_ods_reference(
+            ref, formula_sheet="Source", edit=ODSSheetRename("Source", "New 中文")
+        ),
+    )
+    rebuilt, end = [], 0
+    for change in changes:
+        assert expression[change.start : change.end] == change.before
+        rebuilt.extend((expression[end : change.start], change.after))
+        end = change.end
+    assert "".join([*rebuilt, expression[end:]]) == result
+    assert "['New 中文'.A1" in result
+    if '"[Source.A1]"' in expression:
+        assert '"[Source.A1]"' in result
+
+
+@pytest.mark.parametrize("replacement", [".A1]+1+[.B2", ".A1:.B2:.C3", "[.A1]", ""])
+def test_expression_mapper_cannot_inject_formula_syntax(replacement):
+    with pytest.raises(ValueError):
+        map_ods_expression_references("[.A1]", start=0, mapper=lambda _: replacement)
+
+
+@pytest.mark.parametrize("start", [-1, True, 7])
+def test_expression_mapper_requires_valid_original_prefix_boundary(start):
+    with pytest.raises(ValueError, match="prefix boundary"):
+        map_ods_expression_references("[.A1]", start=start, mapper=lambda value: value)
 
 
 def rewrite(text, edit=None, *, sheet="Source"):

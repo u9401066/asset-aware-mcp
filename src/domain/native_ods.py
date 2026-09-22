@@ -50,6 +50,17 @@ class NativeODSCellLocator(NativeModel):
     _name = field_validator("table_name")(ods_text)
 
 
+class NativeODSTableRename(NativeModel):
+    """One revision-bound table identity and the complete dependency inventory."""
+
+    table_index: int = Field(ge=0, le=255)
+    table_name: str = Field(min_length=1, max_length=1024)
+    new_name: str = Field(min_length=1, max_length=1024)
+    dependencies_sha256: str = Field(pattern=SHA256_PATTERN)
+
+    _names = field_validator("table_name", "new_name")(ods_text)
+
+
 class NativeODSValue(NativeModel):
     kind: Literal[
         "string",
@@ -203,3 +214,7 @@ class NativeODSAdapter(Protocol):
         self, data: bytes, edits: list[NativeODSCellEdit]
     ) -> tuple[bytes, NativeEditResult]: ...
     def decompose(self, data: bytes) -> Iterator[dict[str, Any]]: ...
+    def dependencies(self, data: bytes) -> dict[str, Any]: ...
+    def rename_table(
+        self, data: bytes, request: NativeODSTableRename
+    ) -> tuple[bytes, NativeEditResult]: ...

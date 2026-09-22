@@ -1,5 +1,188 @@
 # Progress (Updated: 2026-09-22)
 
+## ODS checked worksheet rename — locally verified, direct-main commit pending
+
+Public/latest release1.4.0; next consolidated1.4.1. NO version/tag/release change.
+Previous main/origin ddf4a9af03e95ca6b6d1fae4a42199abb655021d fullyverified.
+This segment contains30countedfiles+2MEM; userauthor/committer
+u9401066<u9401066@gap.kmu.edu.tw>, directmain, no PR/branch/subagents.
+Work onlyagent-assets/main; original dirty detached checkout/servers untouched.
+Goal ACTIVE. This is PROGRESS, not full all-format/table-row-column completion.
+MCP checks native/source/version mechanics; Agent reviews and corrects meaning,
+actual appearance and calculated formulas. No new permissions are needed.
+
+New read_ods_dependencies inventory pins owners, XML paths/attributes, namespaces,
+source contexts and whole-inventory SHA; rename_ods_table pins revision plus exact
+table index/name and inventory. Supported cell/named/conditional/chart/settings
+references map together, including Calc chart-cache provenance (svg:desc/legacyid),
+while embedded-local references and ordinary literals/captions remain distinct.
+Complete plans/snapshots checked before apply, native XML reopened before onecommit.
+Unknown owners/aliases/sources, xmlbase, opaque/revision-aware/protected/signed data
+retain guards. Typed formula caches invalidate; cache receipts label intermediate
+post-rename identity. Styles, compressed ranges, unrelated members, sourcebytes/
+mtime and historical references/Wikis remain fixed. No-op creates no history.
+No sheet insertion/deletion/reordering or row/column lifecycle exposed yet.
+
+Validation: full suite4004passed/49environment skips/599.67s, exit0.
+/run/user/1000/asset-aware-ods-rename-full-02.log; session98900 CLOSED.
+Owned completed full02temp781596303bytes removed afterproof. Earlier full01
+hit PDF annotation timeout after owned bytecode cleanup under diskpressure; retained
+log and byte-verified1793file fixture archive17,307,287bytes SHA
+45a46770a7c9f554d9479d080565fd1c7a919ea71bb34ac52d583313340b157e.
+Only that timed-out owned process tree stopped (session42183 exit143). Venv/src
+bytecode rebuilt; isolated unchanged annotation2passed/276.16s then full02passed.
+Do not weaken timeout/assertions or claim the initial run passed.
+
+ODS focused131passed; SDK2 rename/restart2passed5.39s. Real Calc7.3 rename/reimport
+compares supported cross-part references, typed cells and both full page images.
+After fixing native named/conditional preview grammar (including calcext:value),
+102focusedpassed3.78s and77render/audit tests passed. External-resource/unknown-
+prefix/dynamic-INDIRECT guards retained. Optional final Calc batch6passed/1failed:
+private CJK font environment clipped LAST PRINT to LAST PRIN in an existing
+whole-sheet fixture; preserve outputs/logs. SAME unchanged test in normal fontenv
+passed23.55s (session89488 closed). All7 optional tests therefore exercised; source
+and assertions unchanged. Font-specific clipping remains a real reviewed limitation.
+Current transaction actual24.2 notrerun; prior captured24.2owner observations are
+not interchangeable with current kernel/render proof. All failure traces retained.
+
+Default Codex run02 /dev/shm/asset-aware-codex-ods-rename-02:255.95s,
+323successful MCP calls/3corrected invocation errors, six actual PNGs, three native
+revisions, two native Wikis. Agent detects #REF afterrename, corrects INDIRECT's
+literal to quoted new sheet, verifies rendered1 and chartA/B/C1/2/3; old refs and
+sourcebytes/mtime remain intact. audit.json PASSED; source342hashes EXACTLY match
+current runtime, wheel and Docker. Independent Calc reimport for BOTH edits matches
+36reference/settings records/19typedcells/two full PDF pages each. Root additionally
+viewed both delivered finalPNG; root-visual-review.json records CJK/header/data/
+chart findings. First modelrun01 failed preview's old prefix check (no actualpages),
+retained. Run02 first audit wrongly used PDF text order for cell identity; retained
+audit-01-reading-order-failure.json. Corrected geometry audit +2regressions reject
+chart-axis substitution. No modeloverride and no false general fidelity claim.
+
+New CI/unit/realCalc/SDK2 tests, README/CHANGELOG/native-ods-spec, Wiki and generated
+site updated. Bundled assistant guide refresh belongs to NEXT segment(30filelimit).
+Ruff/format816files/mypy342/banditmedium/metadata/releaseharness/docs generation/
+29docs-contract tests/asset sync/diff passed. Extension sources/assets unchanged;
+reuse prior199tests/64entries as prior evidence, NOT a fresh local run. New exact-
+head remote extension packaging/activation remains required before further work.
+GitHub description/topics re-read stillaccurate; latest releasev1.4.0.
+
+Wheel/sdist /dev/shm/asset-aware-ods-rename-dist-01 match342source hashes.
+Temporary repo dist symlink REMOVED (it was not ignored as a symlink). Installed
+Python3.13 wheel and actual Dockerfile Python3.12 image pass exact native output/
+full receipt/dependency inventory/restart/history/Wiki, doctor,30tools andSDK2stdio.
+/run/user/1000/asset-aware-ods-rename-local-proof.json records logs/hashes/scope.
+Artifact smoke/golden/source manifest outside repo under sameprefix.
+Owned Dockeraaf27162420e/builder54b7d511f54b and wheelenv removed. Four owned
+historic traces temporarily staged with NEW rename-space manifest have ALL been
+restored to exact bytes/size/mtime; other7untouched. Do not rerun old stage scripts.
+Current7.3runtime and private CJKfont fixture stay for future checks. No24.2runtime.
+No live local tests/builds/model jobs remain. Source/style checks did not alter
+user caches or original checkout. No generated artifacts staged/committed.
+
+Next: exactstage30+2MEM, commit/push directmain asuser; then verify ALL exact-head
+10CI jobs,3Pages jobs and6deployed files byte-for-byte BEFORE new development.
+Use a NEW publication proof/watcher, keep all failed logs and do not bump version.
+After publication gate, update MEM with exacthead/results and continue broader goal.
+
+## ODS reference publication verified; lifecycle observations retained
+
+Head ddf4a9af03e95ca6b6d1fae4a42199abb655021d is fully verified on main/origin.
+ALL 10 CI jobs 35625034811, ALL 3 Pages jobs 35625033365 and all 6 deployed
+files passed exact-head/byte checks. Watcher 15248 completed with exit 0; do not
+restart it. Publication proof is /run/user/1000/asset-aware-ods-reference-publication-proof.json.
+The matching local-proof.json now records local_and_publication_verified. Remote
+logs under the same prefix record 3673 unit passes/1 skip/408.11s, 1514 Python3.10
+passes/4 skips/917.08s, 209 integration passes/536.39s (including actual Calc
+reference test), and actual installed Linux VSIX activation. Their hashes are in
+local proof. All 340 current runtime files still match the tested artifact source
+manifest. Seven version declarations and public docs remain 1.4.0; latest GitHub
+release re-read v1.4.0. Next consolidated release 1.4.1; no bump/tag/release.
+User author/committer and direct-main instructions remain unchanged.
+
+After the publication gate completed, independent generated Calc fixtures explored
+three operations in each of Calc7.3.7.2 and24.2.7.2: sheet rename, sheet deletion,
+and deletion of all three data rows. Six before/after ODS files per version (12
+native files total) retain global/local named ranges, named expressions, conditional
+formatting, validation, print ranges, chart dependencies and per-sheet settings.
+These are observations, NOT production candidate/MCP/visual proof or a universal
+correctness oracle. No repository runtime or tests changed in this turn.
+
+Both versions in these fixtures: rename changes references in content.xml,
+ChartEvidence/content.xml and settings.xml; named expressions/validation/style
+conditions use expression forms without the cell formula's leading '='. Sheet
+deletion leaves surviving named ranges as named-range elements with #REF! address,
+but chart addresses become Observer ranges at the former Source coordinates.
+Deleting the data rows makes absolute named ranges #REF! while the relative named
+range retains Source.A2:.B4; chart addresses also retain original coordinates.
+Do not blindly reproduce these chart bindings as correct semantic behavior.
+The package transaction needs owner-specific dependency policies and Agent review.
+Exact native packages are retained, including the data behind those observations.
+
+Probe scripts/logs/directories:
+/run/user/1000/asset-aware-ods-lifecycle-probe-02 (Calc7.3)
+/run/user/1000/asset-aware-ods-lifecycle-probe-03 (Calc24.2, matching bundledPython)
+The -01 failed attempt used nonexistent UNO ValidationType.CELLRANGE; its script
+and traceback are retained. -02 uses the documented LIST enumeration and passes.
+Combined observations: /run/user/1000/asset-aware-ods-lifecycle-observations-01.json.
+Complete hashes/scope/cleanup: /run/user/1000/asset-aware-ods-lifecycle-local-observation-proof-01.json.
+Probe02 dependency-attributes.json additionally indexes selected native reference
+attributes with qualified XML paths; it is not a complete schema/semantic catalog.
+Private24.2 install verified the pinned official archive plus42 packages, used no
+system package install, and removed its owned698068071-byte runtime afterward.
+All three owned Calc profiles removed; native fixtures/logs/proofs and preexisting
+Calc7.3 remain. Install98524 and probe2695 both completed exit0. No live watcher or
+experiment remains. Original dirty detached checkout and its servers untouched.
+
+Read-only upstream planning checked LibreOffice sc/source/core/tool/refupdat.cxx,
+Office/Calc.xcs ExpandReference (default false, application preference), OASIS named
+range/base-address semantics, UNO XNamedRanges/XTableCharts and ValidationType.
+Future axis transactions need an explicit compatible expansion policy, workbook
+sheet identity/source resolution, relative named-range/base semantics, compressed
+row/column/style/merge maps, and chart/drawing/conditional/settings dependencies.
+Next implementation remains the ODS native structural package/transaction layer
+and MCP integration with immutable receipts, history/Wiki and actual Agent review.
+Do not advertise lifecycle support from this reference primitive or these probes.
+All-format ODT/ODP/HTML/EPUB/email/LaTeX work remains in scope. MCP necessary checks;
+Agent full semantic/visual/formula review and correction. No subagents.
+
+Previous turn and this turn are PROGRESS; goal remains ACTIVE, not complete or
+blocked. Work only agent-assets/main. Only two post-publication MEM files are dirty
+for the next <=30-counted-file segment; retain all historical sections below.
+
+## ODS structural references — ddf4a9a pushed; exact-head checks pending
+
+Head ddf4a9af03e95ca6b6d1fae4a42199abb655021d is committed/pushed directmain as
+u9401066<u9401066@gap.kmu.edu.tw>,10countedfiles+2MEM. No bump/tag/release:
+public1.4.0,nextconsolidated1.4.1. Parent eeb7510 fullyverified.
+
+LIVE publication watcher15248. Poll this samehandle; do not duplicate/restart just
+because observation expires. CI35625034811 requires ALL10jobs; Pages35625033365
+requires ALL3jobs plus6deployed files byte-exact. Current proof remains pending.
+Script /run/user/1000/asset-aware-ods-reference-verify-publication.py
+Log /run/user/1000/asset-aware-ods-reference-publication-watch.log
+Proof /run/user/1000/asset-aware-ods-reference-publication-proof.json
+No new development until exact-head verification completes.
+
+Localfull3922passed/47environment-skips/604.03s; separately6actualWord/ODSrender
+casespassed/41.10s. New77focusedpassed. Calc7.3/24.2 each16operations/304formulas,
+with SAME-version native candidate/control reimport and exact complete-formula
+comparison. Wheel3.13/Docker3.12 each340sourcehashes+608capturedCalc replays,
+lockedSDK2.2doctor/30tools/actualstdio pass; no actualCalc-in-artifact claim.
+Allprior339runtimefiles unchanged; new pure domain reference primitive not yet
+MCP lifecycle CRUD. No new modelrun claimed. New CI requires OS pyuno actual
+reference test and Python3.10 kernel tests. README/CHANGELOG/spec explicitly retain
+native package/dependency/transaction/Agent lifecycle work as next scope.
+Ruff/format809/mypy340/bandit/docs/sync/artifactmetadata/diff checks passed.
+Extensionassets unchanged, parent199tests/64entries reused; currentremoteactivation
+still required. GitHubdescription/homepage/20topics re-read accurate, unchanged.
+
+All11historical modeltrace dirs restoredordinary with exacthash/size/mtime.
+OwnedCalc24.2runtime, wheelvenv/data, Dockerimage/builder and completedtesttemps
+removed; logs/proofs/dist/preexisting7.3/warmbytecode retained. Original dirty
+checkout untouched. No subagents. Goal ACTIVE; this turn is PROGRESS, not completion.
+Only post-push2MEM checkpoints remain dirty for the next segment.
+
+
 ## ODS structural references — locally verified, ready to commit
 
 Current10countedfiles+2MEM implement an internal OpenFormula reference-mapping

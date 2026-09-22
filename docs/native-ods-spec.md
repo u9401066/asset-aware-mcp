@@ -89,11 +89,80 @@ types, merged/covered cells, malformed packages, output preservation and an
 independent actual Calc read/render. MCP source/revision guards and complete
 hash-paged evidence use the same adapter, with dedicated ODS locator types.
 
-Remaining beyond the first adapter: sheet/row/column lifecycle and dependency
-remapping and rich-run edits. Recalculated renditions are described below. SDK2 integration covers
+Remaining beyond the first adapter and guarded rename: sheet insertion/deletion/
+reordering, row/column lifecycle, their dependency mapping and rich-run edits.
+Recalculated renditions are described below. SDK2 integration covers
 restart, full receipts,
 source preservation and unchanged portable snapshots. ODT/ODP and the other
 format gaps remain part of the broader goal.
+
+## Native worksheet rename (Unreleased)
+
+Discover `ods_table_rename_enabled`. Read every `read_ods_dependencies` text page
+at a fixed asset/revision, continuing with `ods_text_sha256`. The complete inventory
+includes native owners, qualified XML paths/attributes, namespace bindings, source
+context, parsed-part hashes and unresolved inspection issues. Its `inventory_sha256`
+binds that whole record. It is a supported-dependency inventory, not a complete ODF
+semantic or conformance judgment.
+
+Call `rename_ods_table` with `expected_revision` and `ods_table_rename` containing
+the original zero-based `table_index`, exact `table_name`, `new_name`, and
+`dependencies_sha256` from that inventory. Static OpenFormula references, named
+ranges/expressions, conditional/validation expressions, print/drawing addresses,
+supported embedded-chart references and sheet settings are mapped together.
+Relative chart-local data is distinguished from parent-workbook references.
+Calc chart caches can carry source ranges in specific `draw:g/svg:desc` or legacy
+`text:p/@text:id` owners; ordinary captions are not rewritten. This owner distinction
+follows [LibreOffice's chart table importer](https://github.com/LibreOffice/core/blob/master/xmloff/source/chart/SchXMLTableContext.cxx).
+
+Original XML snapshots and the complete plan are checked before applying changes;
+the output is reopened and checked against planned XML before one managed commit.
+Unchanged package members retain their exact bytes. Existing styles, grid positions
+and compressed repetitions remain. Stale identities, case-insensitive collisions,
+protection, signatures, unresolved sources/aliases, unknown reference grammars,
+embedded foreign documents and opaque/revision-aware owners retain explicit guards.
+A true no-op retains original ZIP bytes and creates no history entry.
+
+Read the full `read_ods.operation_result`, then the new `dependencies_request` and
+current cell references. Mapping spans address the original dependency text; cache
+receipts explicitly address the intermediate state after mapping and table rename.
+Typed formula caches are invalidated, while display strings and chart fallback
+appearance remain unverified. Historical references and Wiki attachments retain
+their exact original revisions and names; source writeback remains separate.
+
+Render a new recalculated PDF and inspect every actual page. Quoted literals such
+as `INDIRECT("Source.B2")` retain their text. The Agent determines their intended
+meaning and can correct the current formula through `update_ods`, then render again.
+MCP does not infer that a successful rename or equality to a Calc control proves
+semantic correctness. Deletion is especially different: observed Calc chart
+rebinding to another worksheet must not be silently adopted as correct meaning.
+
+`tests/integration/test_native_ods_rename_calc.py` uses independent UNO-authored
+fixtures and same-version reimport of candidate/control ODS files. It compares
+native references, typed cells and both complete rendered pages, including the
+intentional dynamic-reference error. Enable it with `NATIVE_ODS_REFERENCE_TEST=1`
+and matching `NATIVE_ODS_UNO_PYTHON`/`NATIVE_ODS_CALC_BIN`. SDK2 tests cover full
+inventory/receipt reads and historical references after server restart.
+
+The opted-in default Agent workflow is
+`python -m tests.codex_ods_rename --output <new-directory>` with Calc configured.
+It exercises rename, actual original/renamed/corrected page images, Agent formula
+correction, full receipts, historical evidence and original/final Wikis. Its audit
+also reimports the actual native outputs against independently authored controls.
+Retain failed traces; image delivery and pixel equality do not certify arbitrary
+spreadsheet semantics or cross-reader fidelity. Public1.4.0; next consolidated1.4.1.
+
+The 2026-09-22 default-model run completed in255.95s with323successful MCP calls
+and three corrected invocation errors. Its trace contains all six actual PNGs
+for the original, renamed and formula-corrected documents. Independent same-Calc
+reimport matches36reference/settings records,19typed cells and two full pages
+for each edited revision. Historical references, original/final Wikis and original
+bytes/mtime pass the audit. The first run is retained as failed: preview incorrectly
+required a cell-formula prefix on an unqualified named expression. Named/conditional
+expression handling now keeps the same resource-loading guards, including Calc's
+conditional extension. A separate initial audit failure assumed PDF text reading
+order identified a cell; it now checks the fixture's cell geometry, with regressions
+that reject substitution of a chart-axis value. These are scoped fixture checks.
 
 ## Native ODS renditions (Unreleased)
 

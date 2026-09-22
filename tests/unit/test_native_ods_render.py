@@ -33,6 +33,32 @@ from tests.unit.test_native_ods_service import cell, update
 from tests.unit.test_native_workbook_rendition import create, read
 
 
+def test_rename_visual_audit_uses_cell_geometry_instead_of_pdf_reading_order():
+    import pymupdf
+
+    from tests.codex_ods_rename_audit import check_observer_values
+
+    with pymupdf.open() as pdf:
+        page = pdf.new_page()
+        page.insert_text((200, 700), "Page 2")  # Authored before body; read first.
+        for y, value in ((84, "6"), (97, "6"), (110, "A"), (123, "1")):
+            page.insert_text((110, y), value, fontsize=10)
+        check_observer_values(page, broken=False)
+
+
+def test_rename_visual_audit_cannot_substitute_chart_axis_for_missing_formula_value():
+    import pymupdf
+
+    from tests.codex_ods_rename_audit import check_observer_values
+
+    with pymupdf.open() as pdf:
+        page = pdf.new_page()
+        for y, value in ((84, "6"), (97, "6"), (110, "A"), (123, "9"), (250, "1")):
+            page.insert_text((110, y), value, fontsize=10)
+        with pytest.raises(ValueError, match="Observer cell values"):
+            check_observer_values(page, broken=False)
+
+
 def formula_source(expression, *, alias="of", namespace=None):
     root = etree.Element("root", nsmap={**NS, alias: namespace or NS["of"]})
     row = etree.SubElement(root, q("table", "table-row"))
@@ -70,6 +96,52 @@ def test_formula_namespace_alias_is_resolved_not_guessed():
         rendering_source(
             formula_source("[.A1]*2", namespace="urn:unrecognized:formula")
         )
+
+
+@pytest.mark.parametrize("owner", ["named", "validation", "style", "calcext"])
+@pytest.mark.parametrize(
+    "expression,allowed",
+    [
+        ("SUM([Sheet1.A1:.B4])", True),
+        ("of:SUM([Sheet1.A1:.B4])", True),
+        ('is-true-formula([Sheet1.A1]>0)+LEN("WEBSERVICE(")', True),
+        ("unknown:SUM([Sheet1.A1:.B4])", False),
+        ('WEBSERVICE("https://example.invalid")', False),
+        ('of:WEBSERVICE("https://example.invalid")', False),
+        ("SUM(['file:///tmp/external.ods'#$Sheet1.A1])", False),
+        ('INDIRECT("file:///tmp/external.ods#$Sheet1.A1")', False),
+        ('INDIRECT("Sheet"&[.A1])', False),
+    ],
+)
+def test_named_conditional_expressions_allow_native_prefix_forms_but_keep_resource_guards(
+    monkeypatch,
+    owner,
+    expression,
+    allowed,
+):
+    book = NativeODS(create_native_ods(NativeODSCreate()))
+    extension = "{urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0}"
+    tag, attribute = {
+        "named": (q("table", "named-expression"), q("table", "expression")),
+        "validation": (q("table", "content-validation"), q("table", "condition")),
+        "style": (q("style", "map"), q("style", "condition")),
+        "calcext": (extension + "condition", extension + "value"),
+    }[owner]
+    etree.SubElement(book.body, tag, {attribute: expression})
+    data = book.package.replace({"content.xml": xml_bytes(book.root)})
+    if allowed:
+        assert rendering_source(data)
+    else:
+        calls = []
+        monkeypatch.setattr(
+            rendering, "office_binary", lambda *_: calls.append("office")
+        )
+        with pytest.raises(ValueError):
+            rendering.LibreOfficeODSRenderer().convert(
+                data,
+                NativeWorkbookRendition(mode="print", calculation="recalculate"),
+            )
+        assert calls == []
 
 
 @pytest.mark.parametrize("axis", ["rows", "columns"])

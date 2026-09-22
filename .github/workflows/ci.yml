@@ -188,6 +188,8 @@ jobs:
           tests/unit/test_native_odf_package.py
           tests/unit/test_native_ods.py
           tests/unit/test_native_ods_references.py
+          tests/unit/test_native_ods_dependencies.py
+          tests/unit/test_native_ods_service.py
           tests/unit/test_native_ods_render.py
           tests/integration/test_native_image_retention_stdio.py
           tests/unit/test_codex_pdf_annotations_audit.py
@@ -674,6 +676,8 @@ jobs:
             tests/integration/test_native_delimited_stdio.py \
             tests/integration/test_native_ods_calc.py \
             tests/integration/test_native_ods_reference_calc.py \
+            tests/integration/test_native_ods_rename_calc.py \
+            tests/integration/test_native_ods_stdio.py \
             tests/integration/test_real_pdf_corpus_stdio.py \
             tests/integration/test_csl_citations_stdio.py \
             tests/integration/test_etl_citations_stdio.py \

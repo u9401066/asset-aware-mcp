@@ -36,6 +36,8 @@
 | `read_ods` | 固定版本，讀取壓縮的實體儲存格區段與完整操作紀錄。 |
 | `read_ods_cell` | 依 content.xml、table 索引／名稱與邏輯列欄讀取完整儲存格引用。 |
 | `update_ods` | 以 expected_revision、完整原始引用、明確值型別與顯示替換政策更新；blank 清除值並保留格式。 |
+| `read_ods_dependencies` | 固定版本，完整讀取原生參照、來源脈絡、相依位置與清單雜湊。 |
+| `rename_ods_table` | 固定版本、原始 table 索引／名稱及相依清單雜湊，一次改名並更新支援的參照。 |
 
 `read_ods` 的 `offset`／`limit` 選擇實體區段；每份 JSON 再依
 `next_text_offset` 讀完，以第一頁的 `text_sha256` 作為續頁的
@@ -48,8 +50,15 @@ part、table 索引／名稱與列欄；CSL 引用保留完整來源，顯示定
 
 Wiki 保留原始 `.ods`、完整區段、起點引用、操作紀錄與 wikilinks；衍生關係
 另保留實際引用的邏輯格，包括非起點與缺省格。公式快取與顯示文字不是重新
-計算的結果，Agent 須檢查實際 Calc 畫面、公式與語意。表／列／欄生命週期、
-依賴重映射仍是後續工作。
+計算的結果，Agent 須檢查實際 Calc 畫面、公式與語意。
+
+確認 `ods_table_rename_enabled` 後，先讀完相依清單，再以 `inventory_sha256`
+作為 `ods_table_rename.dependencies_sha256`。改名會同步處理支援的公式、命名
+範圍、條件、圖表參照與工作表設定，保留格式與舊版證據。未知相依或過期身分
+須先處理；完整操作紀錄可讀回核對。
+例如 `INDIRECT("Source.B2")` 的文字不會自動改寫：Agent 比較改名前後畫面，
+依原意修正目前版本的公式，再重新計算與核對。新增／刪除／重排工作表與列欄
+生命週期仍在開發，改名不代表這些操作已完成。
 
 當 `workbook_rendering.source_formats` 包含 `ods`，可用
 `create_workbook_rendition` 固定 ODS 版本，選擇 `print`／`whole_sheet` 與

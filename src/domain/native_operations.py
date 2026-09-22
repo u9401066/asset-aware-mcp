@@ -34,6 +34,8 @@ NativeOperation = Literal[
     "read_ods",
     "read_ods_cell",
     "update_ods",
+    "read_ods_dependencies",
+    "rename_ods_table",
     "create_delimited",
     "read_delimited",
     "read_delimited_cell",
@@ -148,6 +150,10 @@ NATIVE_OPERATIONS = {
         "asset_id revision ods_locator", "ods_text_sha256 text_offset text_limit"
     ),
     "update_ods": _fields("asset_id expected_revision ods_update"),
+    "read_ods_dependencies": _fields(
+        "asset_id revision", "ods_text_sha256 text_offset text_limit"
+    ),
+    "rename_ods_table": _fields("asset_id expected_revision ods_table_rename"),
     "create_delimited": _fields("delimited_create"),
     "read_delimited": _fields(
         "asset_id revision", "delimited_dialect text_offset text_limit"

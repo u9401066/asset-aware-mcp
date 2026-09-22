@@ -10,6 +10,7 @@ from lxml import etree
 
 from src.domain.native_ods import NativeODSCellLocator
 from src.infrastructure.native_odf_package import NS, ODS_MIME, q, xml_bytes
+from src.infrastructure.native_ods_dependencies import ODSDependencies
 from src.infrastructure.native_ods_editor import edit_ods
 from src.infrastructure.native_ods_reader import (
     NativeODSReader,
@@ -17,12 +18,17 @@ from src.infrastructure.native_ods_reader import (
     cells,
     rows,
 )
+from src.infrastructure.native_ods_structure import rename_ods_table
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from src.domain.native_asset_models import NativeEditResult
-    from src.domain.native_ods import NativeODSCellEdit, NativeODSCreate
+    from src.domain.native_ods import (
+        NativeODSCellEdit,
+        NativeODSCreate,
+        NativeODSTableRename,
+    )
 
 
 class NativeODS(NativeODSReader):
@@ -44,6 +50,14 @@ class NativeODSFileAdapter:
         self, data: bytes, edits: list[NativeODSCellEdit]
     ) -> tuple[bytes, NativeEditResult]:
         return edit_ods(data, edits)
+
+    def dependencies(self, data: bytes) -> dict[str, Any]:
+        return ODSDependencies(NativeODSReader(data)).catalog()
+
+    def rename_table(
+        self, data: bytes, request: NativeODSTableRename
+    ) -> tuple[bytes, NativeEditResult]:
+        return rename_ods_table(data, request)
 
     def decompose(self, data: bytes) -> Iterator[dict[str, Any]]:
         book = NativeODS(data)

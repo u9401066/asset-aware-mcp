@@ -12,6 +12,7 @@ from mcp.client.stdio import stdio_client
 
 from tests.integration.test_native_pdf_regions_stdio import native
 from tests.native_ods_helpers import fixture, locator
+from tests.unit.test_native_ods_dependencies import source as dependency_source
 
 
 async def complete(client, **request):
@@ -46,6 +47,70 @@ async def cell(client, asset, row=0, column=0, name="Sheet1"):
             ods_locator=locator(row, column, name).model_dump(),
         )
     )["cell"]
+
+
+@pytest.mark.timeout(120)
+async def test_native_ods_rename_discovery_dependencies_and_history_over_sdk2(tmp_path):
+    source = tmp_path / "source.ods"
+    source.write_bytes(dependency_source().package.original)
+    original, mtime = source.read_bytes(), source.stat().st_mtime_ns
+    params = StdioServerParameters(
+        command=sys.executable,
+        args=["-m", "src.server"],
+        env={
+            **os.environ,
+            "DATA_DIR": str(tmp_path / "data"),
+            "ENABLE_LIGHTRAG": "false",
+            "ASSET_AWARE_DISABLE_DOTENV": "true",
+            "ASSET_AWARE_MCP_TOOL_SURFACE": "balanced",
+        },
+    )
+    async with Client(stdio_client(params)) as client:
+        contract = await native(client, op="contract", for_op="rename_ods_table")
+        assert contract["ods_table_rename_enabled"]
+        assert {"read_ods_dependencies", "rename_ods_table"} <= set(
+            contract["formats"]["ods"]
+        )
+        asset = (await native(client, op="register", source_path=str(source)))["asset"]
+        old = await cell(client, asset)
+        dependencies_request = {
+            "op": "read_ods_dependencies",
+            "asset_id": asset["asset_id"],
+            "revision": asset["revision"],
+        }
+        inventory = await complete(client, **dependencies_request)
+        changed = await native(
+            client,
+            op="rename_ods_table",
+            asset_id=asset["asset_id"],
+            expected_revision=asset["revision"],
+            ods_table_rename={
+                "table_index": 0,
+                "table_name": "Sheet1",
+                "new_name": "New 中文 O'Brien",
+                "dependencies_sha256": inventory["inventory_sha256"],
+            },
+        )
+        assert changed["success"] and changed["new_revision_created"], changed
+        receipt = await complete(client, **changed["review_request"])
+        assert (
+            receipt["operation_result"]["changes"][0]["operation"] == "rename_ods_table"
+        )
+        current = await cell(client, changed["asset"], name="New 中文 O'Brien")
+        assert 'LEN("[Sheet1.A1]")' in current["formula"]["expression"]
+        fresh = await complete(client, **changed["dependencies_request"])
+        assert fresh["sheets"] == ["New 中文 O'Brien"]
+        assert fresh["inventory_sha256"] != inventory["inventory_sha256"]
+    async with Client(stdio_client(params)) as client:
+        assert await complete(client, **dependencies_request) == inventory
+        assert await complete(client, **changed["review_request"]) == receipt
+        assert await complete(client, **changed["dependencies_request"]) == fresh
+        historical = await native(client, op="verify", reference=old["evidence"])
+        assert historical["valid"] and not historical["is_current_managed_revision"]
+        assert (await native(client, op="verify", reference=current["evidence"]))[
+            "valid"
+        ]
+    assert (source.read_bytes(), source.stat().st_mtime_ns) == (original, mtime)
 
 
 @pytest.mark.timeout(120)

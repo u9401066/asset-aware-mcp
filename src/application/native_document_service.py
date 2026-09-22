@@ -261,6 +261,8 @@ class NativeDocumentService:
             "read_ods": self._ods_operation,
             "read_ods_cell": self._ods_operation,
             "update_ods": self._ods_operation,
+            "read_ods_dependencies": self._ods_operation,
+            "rename_ods_table": self._ods_operation,
             "create_delimited": self._delimited_operation,
             "read_delimited": self._delimited_operation,
             "read_delimited_cell": self._delimited_operation,

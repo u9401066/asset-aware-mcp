@@ -25,6 +25,7 @@ from tests.native_derivation_helpers import record
 from tests.native_ods_helpers import fixture, locator
 from tests.native_workbook_helpers import _call
 from tests.unit.test_csl_processor import document
+from tests.unit.test_native_ods_dependencies import source as dependency_source
 
 
 def service_at(root):
@@ -95,6 +96,141 @@ def update(service, asset, ref, value="new", kind="string"):
 
 def create(service):
     return _call(service, op="create_ods", ods_create={})["asset"]
+
+
+def test_rename_dependencies_receipt_refs_and_wiki_survive_restart(service, tmp_path):
+    source = tmp_path / "dependencies.ods"
+    source.write_bytes(dependency_source().package.original)
+    original, mtime = source.read_bytes(), source.stat().st_mtime_ns
+    asset = _call(service, op="register", source_path=str(source))["asset"]
+    old_ref = cell(service, asset)["evidence"]
+    request = {
+        "op": "read_ods_dependencies",
+        "asset_id": asset["asset_id"],
+        "revision": asset["revision"],
+    }
+    inventory = complete(service, **request)
+    assert inventory["sheets"] == ["Sheet1"] and len(inventory["dependencies"]) > 10
+    wiki_request = {
+        "op": "export_wiki",
+        "asset_id": asset["asset_id"],
+        "revision": asset["revision"],
+        "output_dir": str(tmp_path / "wiki"),
+    }
+    old_wiki = Path(_call(service, **wiki_request)["output_dir"])
+    old_files = {p.name: p.read_bytes() for p in old_wiki.iterdir()}
+    rename = {
+        "op": "rename_ods_table",
+        "asset_id": asset["asset_id"],
+        "expected_revision": asset["revision"],
+        "ods_table_rename": {
+            "table_index": 0,
+            "table_name": "Sheet1",
+            "new_name": "New 中文 O'Brien",
+            "dependencies_sha256": inventory["inventory_sha256"],
+        },
+    }
+    Draft202012Validator(request_schema("rename_ods_table")).validate(rename)
+    changed = _call(service, **rename)
+    assert changed["new_revision_created"] and not changed["source_written"]
+    current = changed["asset"]
+    receipt = complete(service, **changed["review_request"])["operation_result"]
+    assert receipt["changes"][0]["operation"] == "rename_ods_table"
+    assert "literal_and_dynamic_formula_references" in receipt["review_required"]
+    new_inventory = complete(service, **changed["dependencies_request"])
+    assert new_inventory["sheets"] == ["New 中文 O'Brien"]
+    assert new_inventory["inventory_sha256"] != inventory["inventory_sha256"]
+    new_ref = cell(service, current, name="New 中文 O'Brien")["evidence"]
+    assert _call(service, op="verify", reference=new_ref)["valid"]
+    old_verified = _call(service, op="verify", reference=old_ref)
+    assert old_verified["valid"] and not old_verified["is_current_managed_revision"]
+    before_failed = service.repository.load(asset["asset_id"]).model_dump()
+    with pytest.raises(ValueError, match="stale"):
+        _call(service, **rename)
+    with pytest.raises(ValueError, match="inventory changed"):
+        _call(
+            service,
+            **{
+                **rename,
+                "expected_revision": current["revision"],
+                "ods_table_rename": {
+                    **rename["ods_table_rename"],
+                    "table_name": "New 中文 O'Brien",
+                },
+            },
+        )
+    assert service.repository.load(asset["asset_id"]).model_dump() == before_failed
+    noop = _call(
+        service,
+        **{
+            **rename,
+            "expected_revision": current["revision"],
+            "ods_table_rename": {
+                **rename["ods_table_rename"],
+                "table_name": "New 中文 O'Brien",
+                "dependencies_sha256": new_inventory["inventory_sha256"],
+            },
+        },
+    )
+    assert not noop["new_revision_created"] and noop["asset"]["revision_count"] == 2
+    new_wiki = Path(
+        _call(service, **{**wiki_request, "revision": current["revision"]})[
+            "output_dir"
+        ]
+    )
+    assert new_wiki != old_wiki
+    assert json.loads((new_wiki / "operation-result.json").read_text()) == receipt
+    manifest = json.loads((new_wiki / "manifest.json").read_text())
+    assert (
+        new_wiki / manifest["source_attachment"]
+    ).read_bytes() == service.repository.read(asset["asset_id"])
+    restored = service_at(tmp_path / "store")
+    assert complete(restored, **request) == inventory
+    assert complete(restored, **changed["dependencies_request"]) == new_inventory
+    assert (
+        complete(restored, **changed["review_request"])["operation_result"] == receipt
+    )
+    assert _call(restored, op="verify", reference=old_ref)["valid"]
+    assert _call(restored, **wiki_request)["reused"]
+    assert old_files == {p.name: p.read_bytes() for p in old_wiki.iterdir()}
+    assert (source.read_bytes(), source.stat().st_mtime_ns) == (original, mtime)
+
+
+def test_unresolved_rename_never_commits_and_archive_still_guards(service, tmp_path):
+    source = tmp_path / "unknown.ods"
+    source.write_bytes(
+        dependency_source(formula="unknown:=[Sheet1.A1]").package.original
+    )
+    asset = _call(service, op="register", source_path=str(source))["asset"]
+    inventory = complete(
+        service,
+        op="read_ods_dependencies",
+        asset_id=asset["asset_id"],
+        revision=asset["revision"],
+    )
+    args = {
+        "op": "rename_ods_table",
+        "asset_id": asset["asset_id"],
+        "expected_revision": asset["revision"],
+        "ods_table_rename": {
+            "table_index": 0,
+            "table_name": "Sheet1",
+            "new_name": "Next",
+            "dependencies_sha256": inventory["inventory_sha256"],
+        },
+    }
+    before = service.repository.load(asset["asset_id"]).model_dump()
+    with pytest.raises(ValueError, match="unresolved"):
+        _call(service, **args)
+    assert service.repository.load(asset["asset_id"]).model_dump() == before
+    _call(
+        service,
+        op="archive",
+        asset_id=asset["asset_id"],
+        expected_revision=asset["revision"],
+    )
+    with pytest.raises(ValueError, match="Archived"):
+        _call(service, **args)
 
 
 def test_create_full_unicode_pages_noop_history_and_clear(service, tmp_path):
@@ -228,7 +364,9 @@ def test_paging_guards_duplicate_edits_archive_wrong_format_and_disabled_adapter
     assert _call(service, op="verify", reference=ref)["valid"]
 
 
-@pytest.mark.parametrize("operation", ["read_ods", "read_ods_cell"])
+@pytest.mark.parametrize(
+    "operation", ["read_ods", "read_ods_cell", "read_ods_dependencies"]
+)
 def test_ods_inspection_and_schema_advertise_real_reader_and_continuation_guards(
     service, operation
 ):

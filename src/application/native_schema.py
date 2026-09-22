@@ -82,12 +82,13 @@ def request_schema(for_op: str | None = None) -> dict[str, Any]:
         "verify_derivation",
         "read_ods",
         "read_ods_cell",
+        "read_ods_dependencies",
     }:
         hash_field = (
             "schema_sha256"
             if for_op == "schema"
             else "ods_text_sha256"
-            if for_op in {"read_ods", "read_ods_cell"}
+            if for_op in {"read_ods", "read_ods_cell", "read_ods_dependencies"}
             else "derivations_sha256"
         )
         offset_field = "offset" if for_op == "verify_derivation" else "text_offset"

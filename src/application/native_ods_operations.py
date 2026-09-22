@@ -102,7 +102,7 @@ class NativeODSOperations:
         asset = self.repository.load(request.asset_id)
         if asset.format != "ods":
             raise ValueError("ODS operations require an ODS asset")
-        if request.op in {"read_ods", "read_ods_cell"}:
+        if request.op in {"read_ods", "read_ods_cell", "read_ods_dependencies"}:
             assert request.revision is not None
             data = self.repository.read(asset.asset_id, request.revision)
             payload: dict[str, Any]
@@ -112,6 +112,8 @@ class NativeODSOperations:
                 attach_ods_evidence(record, asset.asset_id, request.revision)
                 # The envelope is deliberately outside the canonical cell record.
                 payload = {"schema_version": "native-ods-cell-v1", "cell": record}
+            elif request.op == "read_ods_dependencies":
+                payload = self.adapter.dependencies(data)
             else:
                 payload = self.adapter.inspect(
                     data, offset=request.offset, limit=request.limit
@@ -127,12 +129,33 @@ class NativeODSOperations:
                     ),
                 )
             return _page(payload, request)
-        if request.op != "update_ods":
+        if request.op not in {"update_ods", "rename_ods_table"}:
             raise ValueError("Unknown ODS operation")
-        assert request.expected_revision is not None and request.ods_update is not None
+        assert request.expected_revision is not None
         if asset.archived or asset.revision != request.expected_revision:
             raise ValueError("Archived or stale ODS asset; inspect before editing")
         data = self.repository.read(asset.asset_id, request.expected_revision)
+        if request.op == "rename_ods_table":
+            assert request.ods_table_rename is not None
+            changed, report = self.adapter.rename_table(data, request.ods_table_rename)
+            ods_record_text(
+                {
+                    **self.adapter.inspect(changed, offset=0, limit=1),
+                    "operation_result": report.model_dump(mode="json"),
+                }
+            )
+            ods_record_text(self.adapter.dependencies(changed))
+            committed = self.repository.commit(
+                asset.asset_id, request.expected_revision, changed, report
+            )
+            result = self._result(committed, report, changed != data)
+            result["dependencies_request"] = {
+                "op": "read_ods_dependencies",
+                "asset_id": committed.asset_id,
+                "revision": committed.revision,
+            }
+            return result
+        assert request.ods_update is not None
         edits = []
         for update in request.ods_update.cells:
             ref = update.reference

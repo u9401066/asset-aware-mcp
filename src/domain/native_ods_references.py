@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Literal
 from src.domain.native_ods import MAX_ODS_COLUMNS, MAX_ODS_ROWS, ods_text
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
 OPENFORMULA = "urn:oasis:names:tc:opendocument:xmlns:of:1.2"
 MAX_REFERENCE_TEXT = 65_536
@@ -346,9 +346,21 @@ def rewrite_ods_formula(
     namespaces: Mapping[str | None, str],
 ) -> tuple[str, list[ODSReferenceChange]]:
     """Rewrite bracketed references only; quoted values/labels remain exact."""
+    _name(formula_sheet)
+    index = ods_formula_start(formula, namespaces=namespaces)
+    return map_ods_expression_references(
+        formula,
+        start=index,
+        mapper=lambda value: rewrite_ods_reference(
+            value, formula_sheet=formula_sheet, edit=edit
+        ),
+    )
+
+
+def ods_formula_start(formula: str, *, namespaces: Mapping[str | None, str]) -> int:
+    """Validate the native cell formula prefix and return its expression offset."""
     if not isinstance(formula, str) or not 2 <= len(formula) <= MAX_REFERENCE_TEXT:
         raise ValueError("ODS formula exceeds its inspection budget")
-    _name(formula_sheet)
     ods_text(formula)
     if formula.startswith("="):
         index = 1
@@ -365,6 +377,29 @@ def rewrite_ods_formula(
                 "ODS structural edits require a known OpenFormula namespace"
             )
         index = len(prefix) + 2
+    return index
+
+
+def map_ods_expression_references(
+    expression: str, *, start: int, mapper: Callable[[str], str]
+) -> tuple[str, list[ODSReferenceChange]]:
+    """Map bracketed references after an independently validated grammar prefix.
+
+    Native owners have distinct grammars: cell formulas start with '=', whereas
+    named expressions and validation/conditional predicates need not. The caller
+    validates that owner/namespace grammar; this scanner preserves every other
+    character, including quoted labels and literal strings. Spans address the
+    complete original expression, including its prefix.
+    """
+    if (
+        not isinstance(expression, str)
+        or not 1 <= len(expression) <= MAX_REFERENCE_TEXT
+    ):
+        raise ValueError("ODS expression exceeds its inspection budget")
+    if type(start) is not int or not 0 <= start < len(expression):
+        raise ValueError("Invalid ODS expression prefix boundary")
+    ods_text(expression)
+    formula, index = expression, start
     changes: list[ODSReferenceChange] = []
     pieces: list[str] = []
     copied, output_length = 0, len(formula)
@@ -391,13 +426,10 @@ def rewrite_ods_formula(
             raise ValueError("Unterminated ODS formula reference")
         index += 1
         before = formula[start:index]
-        after = (
-            "["
-            + rewrite_ods_reference(
-                before[1:-1], formula_sheet=formula_sheet, edit=edit
-            )
-            + "]"
-        )
+        mapped = mapper(before[1:-1])
+        # A mapping callback returns exactly one reference, never formula syntax.
+        parse_ods_reference(mapped)
+        after = "[" + mapped + "]"
         if before != after:
             output_length += len(after) - len(before)
             if output_length > MAX_REFERENCE_TEXT:

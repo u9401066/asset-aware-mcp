@@ -57,6 +57,15 @@ def check_formula(text: str, node: etree._Element, *, qualified: bool) -> None:
         text = expression
     if qualified and not text.startswith("="):
         raise ValueError("ODS OpenFormula expression must begin with equals")
+    if not qualified:
+        # Native named/conditional expressions can omit both the prefix and '='.
+        # A colon inside a range/literal is not a QName delimiter. If a leading
+        # QName is present it must still bind the known OpenFormula namespace.
+        prefix, separator, expression = text.partition(":")
+        if separator and re.fullmatch(r"[^\W\d][\w.-]*", prefix, re.UNICODE):
+            if node.nsmap.get(prefix) != NS["of"]:
+                raise ValueError("ODS preview requires a known OpenFormula namespace")
+            text = expression
     visible, index = list(text), 0
     while index < len(text):
         start = index

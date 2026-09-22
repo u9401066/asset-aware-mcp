@@ -21,9 +21,12 @@ Bundled Agent instructions cover native XLSX/ODS rendition discovery, complete
 receipts, every actual page, cache-policy limits and clipped-content review.
 Discover `ods_enabled` for cell operations and `workbook_rendering.source_formats`
 for previews in the installed runtime.
-Sheet/row/column lifecycle is still in development. Its reference-mapping foundation
-is checked against actual Calc insert/delete/rename operations; it is not yet a
-public MCP structural-edit operation.
+When `ods_table_rename_enabled` is advertised, read the complete
+`read_ods_dependencies` inventory and use its hash with `rename_ods_table` to rename
+one exact worksheet. Supported formula, named-range, chart and settings references
+change together; full receipts and historical evidence remain available. Agents
+review actual pages and correct dynamic references such as `INDIRECT` literals.
+Worksheet insertion/deletion/reordering and row/column lifecycle remain in development.
 Public **1.4.0**; next consolidated **1.4.1**, with no per-feature version bump.
 
 Unreleased PDF annotations now support complete native reads and guarded creation,

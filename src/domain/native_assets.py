@@ -85,6 +85,7 @@ from src.domain.native_ods import (  # noqa: TC001 -- Pydantic schema
     NativeODSCellLocator,
     NativeODSCellReference,
     NativeODSCreate,
+    NativeODSTableRename,
     NativeODSUpdate,
 )
 from src.domain.native_operations import (
@@ -221,6 +222,7 @@ class NativeDocumentRequest(NativeModel):
     ods_create: NativeODSCreate | None = None
     ods_locator: NativeODSCellLocator | None = None
     ods_update: NativeODSUpdate | None = None
+    ods_table_rename: NativeODSTableRename | None = None
     ods_text_sha256: str | None = Field(default=None, pattern=SHA256_PATTERN)
     delimited_create: NativeDelimitedCreate | None = None
     delimited_dialect: NativeDelimitedDialect | None = None
@@ -386,7 +388,7 @@ class NativeDocumentRequest(NativeModel):
                 "Derivation verification continuation requires derivations_sha256"
             )
         if (
-            self.op in {"read_ods", "read_ods_cell"}
+            self.op in {"read_ods", "read_ods_cell", "read_ods_dependencies"}
             and self.text_offset
             and not self.ods_text_sha256
         ):

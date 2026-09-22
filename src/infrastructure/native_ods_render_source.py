@@ -230,9 +230,14 @@ def rendering_source(data: bytes) -> list[dict[str, Any]]:
                 _image(binary)
             for attribute, value in node.attrib.items():
                 local = etree.QName(attribute).localname
-                if attribute in {q("table", "formula"), q("table", "expression")}:
+                if attribute == q("table", "formula"):
                     check_formula(value, node, qualified=True)
-                elif local in {"condition", "formula", "expression"}:
+                elif local in {"condition", "formula", "expression"} or (
+                    node.tag
+                    == "{urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0}condition"
+                    and attribute
+                    == "{urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0}value"
+                ):
                     check_formula(value, node, qualified=False)
                 elif (
                     local.endswith(("cell-address", "cell-range-address"))
