@@ -1,5 +1,65 @@
 # Active Context
 
+## PDF field integration — all local artifact checks passed, main publication next
+
+Current goal turn: PROGRESS. Previous turn was PROGRESS: a9b6d8e973ef5a69fbd6d7e1b53591547681b04f
+committed26counted files +both MEM, completing default Codex field audit/guides.
+Together with5bb28af5504ce87173f3dbdc743cf8bae3f65767 field MCP integration, local
+main is ahead2 of published e953542ea7acf70ac42a22c8c15e2dfdab5211cd. This checkpoint
+adds ONLY both MEM before ONE direct main push. User author AND committer:
+u9401066 <u9401066@gap.kmu.edu.tw>. No PR, branch, model override or source-worktree
+changes. All runtime351source hashes remain those of the4115pass/49skip full check;
+new28audit regressions +32docs checks pass separately. Current/public remains1.4.0;
+next consolidated1.4.1. Remote releases/latest rechecked: v1.4.0. No new tag/release.
+
+Docker validation NOW COMPLETE (do not reuse old349source core proof):
+Actual unchanged Dockerfile/frozen lock built Python3.12.13, image d9b5181e7136;
+/run/user/1000/asset-aware-pdf-fields-docker-images-01.json retains full runtime/
+builder IDs. Build session76977 TERMINAL0. Installed import/doctor/list-tools/
+real SDK2 stdio and installed-service replay all0, session80151 TERMINAL0.
+All351installed Python source hashes match the verified checkout. Reproduced exact
+4PDF versions and all3complete operation receipts,17historical field records,
+final4Wiki records, custom citations and original source bytes/mtime. Docker uses
+installed site-packages src, only test harness bind-mounted readonly; source checkout
+is not mounted as production code. Replay at /dev/shm/asset-aware-pdf-fields-docker-
+smoke-01/replay/replay.json; commands/runs.json and complete logs retained.
+Together with the already-passed installed Python3.13wheel, actual default Codex
+trace audit,205extensiontests and isolated fresh/update VSIX checks, local artifact
+checks are complete. Local VSIX activation not run (no display/xvfb); exact-head
+remote platform activation remains required. All-artifact audit1.4.0 rechecked pass.
+
+GitHub metadata applied AND verified: description now includes PDF forms,
+homepage and all20canonical topics synchronized. Log:/run/user/1000/asset-aware-
+pdf-fields-github-metadata-01.log. No messages sent to others. Source/Docs/Agent
+changes remain exactly a9b6d8e. Consolidated authoritative local proof updated:
+/run/user/1000/asset-aware-pdf-fields-agent-evaluation-proof.json.
+
+Resource housekeeping completed with exact manifests. Eight more OWN completed
+historical traces were staged, original paths retained via symlinks, then ALL8
+restored with exact bytes/size/mtime after Docker checks: a2t01,a2t-grid01,native-
+grid01,selection01,docx-cjk01,pptx-merge01,pptx-render01,pptx-slides01. Original
+3PPTX run/audit return0/true verified before staging. Total354165115bytes;
+/run/user/1000/asset-aware-pdf-fields-build-space-03.json all restored:true.
+Staging35004 and restore/metadata/cleanup88682 TERMINAL0. Only owned Docker
+runtime/builder IDs removed after verifying no containers used them; no global
+prune, unrelated images or caches touched. Logs/trace/native outputs retained.
+Earlier6traces are STILL staged in root-space-01 and build-space-02 with original
+/tmp paths available, NOT restored. Never replay historical11dir restore manifest.
+Last free root287MB/shm431MB/run~155MB; restoring all6needs~268MB+64MBmargin.
+node_modules remains removed after successful VSIX checks; dist/VSIX/out retained.
+
+NEXT: exact-stage both MEM, commit by user, push ALL local main checkpoints once.
+Then run /run/user/1000/asset-aware-pdf-fields-integration-verify-publication.py
+with the pushed full HEAD; proof path is asset-aware-pdf-fields-integration-
+publication-proof.json (currently absent). Verify exact-head ALL10CI +3Pages
+jobs,10deployed files including release-testing source/pages, main SHA and public
+v1.4.0. No additional feature development before this gate. Poll the SAME live
+watcher; observation timeout is not terminal. After gate, plan the consolidated
+1.4.1 release for the accumulated verified capabilities; keep remaining ODS
+worksheet/grid CRUD, PDF body CRUD and other formats in the full ACTIVE goal.
+Current progress does NOT establish all-format completion or universal fidelity.
+
+
 ## Default Codex PDF field evaluation and Agent guides — local artifact checkpoint
 
 Current goal turn: PROGRESS. Public/current version stays1.4.0, next consolidated
