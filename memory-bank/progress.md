@@ -1,4 +1,144 @@
-# Progress (Updated: 2026-09-21)
+# Progress (Updated: 2026-09-22)
+
+## ODS structural references — locally verified, ready to commit
+
+Current10countedfiles+2MEM implement an internal OpenFormula reference-mapping
+foundation, independent Calc UNO oracle/reimport comparison and artifact replay;
+CI+releaseharness now require OS pyuno/actual edits and Python3.10 kernel tests.
+README/CHANGELOG/native-ods-spec describe the remaining MCP lifecycle gap. No
+schema/dependency/version change; all7declarations1.4.0,nextconsolidated1.4.1.
+No new model run: no MCP structural operation is exposed by this segment.
+The broader native package/lifecycle/dependency/Agent evaluation work remains.
+
+Local full3922passed/47skips/604.03s, plus6actualWord/ODSrender cases/41.10s that
+were disabled in that full run; no merged/full-count claim. New77focusedpassed/
+5.43s. Calc7.3 and24.2 each16actualstructuraloperations/304formulas. Candidate and
+independent control BOTH reopen in the SAME Calc; complete formulas then match.
+Rawspellingdifferences retained:0in7.3,2in24.2. Allfailedlogs remain. Proof dirs
+/run/user/1000/asset-aware-ods-reference-calc{73,242}-proof contain original/control/
+candidateODS and hashes. 24.2 uses its matching bundledPython; system7.3pyuno was
+incompatible. Domain340-source manifest matches wheel/sdist and installed artifacts;
+allprior339sourcefiles identical to published eeb7510. WheelPython3.13 and Docker
+Python3.12 each608captured-Calc candidate replays, lockedSDK2.2doctor,30tools and
+actualSDK2stdio pass. They do not claim actualCalc installation in artifacts.
+
+Ruff/format809,mypy340,banditmedium,35docs/artifactchecks, releaseharness, generated
+docs,sync-assets,allversionmetadata and diffhygiene pass. Extension/source/Agent
+assets byte-identical to verified eeb7510: reuse199tests/64entries/install proof;
+no new localextensionrun claimed. Exact-head remoteactivation still required.
+GitHubdescription/homepage/20topics reread accurate, unchanged. Public1.4.0 only.
+Localproof /run/user/1000/asset-aware-ods-reference-local-proof.json.
+
+Fullrunner82635, build60790, Docker53691, render26053 and allartifact/cleanup
+processes terminal0. OwnedCalc24.2extraction, wheelvenv/data, Docker9d737e5766f6/
+builder42879215b15c and completedfull/supplementaltemps removed. All11historical
+modeltrace dirs restoredordinary with exactfilehash/size/mtime via two current
+space manifests. Warmbytecode and preexistingCalc7.3 retained. Logs/proofs/dist
+retained; original dirtydetached checkout untouched. No subagents. Goal ACTIVE.
+
+Next exactstage10+2MEM, userauthor/committer u9401066<u9401066@gap.kmu.edu.tw>,
+directmaincommit/push; ALL10CI/3Pages/6deployedbytechecks before newdevelopment.
+Then integrate nativeODS table/row/column operations and dependent native objects;
+ODT/ODP/HTML/EPUB/email/LaTeX/allformats remain in scope. Do not mark complete.
+
+
+## ODS structural references — implementation and verification in progress
+
+Previous goal turn was PROGRESS: eeb7510 publication all10CI/3Pages/6deployed
+files verified. This turn re-read live GitHub main and CI; exacthead unchanged.
+Goal remains ACTIVE; all-format scope unchanged, no subagents. Work ONLY
+agent-assets/main. Public1.4.0, nextconsolidated1.4.1; no per-feature version bump.
+
+New pure domain primitive src/domain/native_ods_references.py parses OpenFormula
+points/ranges/wholeaxes, quoted/Unicode names, external sources and errors; maps
+row/column insert/delete and sheet rename/delete. Exact literals/namespace spelling/
+dollar flags and original Unicode change spans retained. Explicit grid limits,
+range contraction, sticky final-grid endpoints and #REF! behavior verified with
+real Calc UNO edits. This is NOT yet an advertised MCP structural operation.
+Package rows/columns/styles/merges/names/object dependencies, full transactions,
+receipts/history/Wiki and Agent lifecycle evaluation are still required. Multi-
+sheet/nested-table axis edits need explicit context; source fragments need resolver.
+
+Current changes: domain module, unit tests, independent OS/bundled-Python UNO
+oracle and integration/artifact replay scripts; CI+releaseharness guard, README/
+CHANGELOG/native-ods-spec. <=30countedfiles. No public schema or runtime dependency
+changes. No new model run claimed; model evaluation follows MCP lifecycle wiring.
+Calc7.3 final77focusedpassed/5.43s (76unit+1integration); Calc24.2 independent
+integrationpassed/9.77s. Each exercises16actualoperations/304formulas. Both sides
+are reimported into the SAME Calc before exact complete-formula comparison;
+raw spelling differences retained (7.3:0,24.2:2), not numerical-equivalence checks.
+Proofs /run/user/1000/asset-aware-ods-reference-calc{73,242}-proof retain generated
+ODS/control/candidate files+hashed inventory. System7.3pyuno could not drive24.2;
+24.2 bundledPython works. Allfailedlogs retained under sameprefix; use -06 final
+24.2 log. Python3.8-compatible oracle serialization fixed; no expectation weakening.
+
+Full suite RUNNING session82635, log /run/user/1000/asset-aware-ods-reference-full-01.log,
+owned basetemp /dev/shm/asset-aware-ods-reference-full-01. Poll samehandle; do not
+restart on observation timeout. It enables actual7.3reference oracle. Warm bytecode
+retained. Wheel/sdist build session60790; poll it. Sources340, mypy340passed; Ruff/
+format809,35docs/artifacttests, releaseharness/versionmetadata/sync checks passed.
+Private24.2 extraction removed after success; preexisting7.3 untouched. Artifacts/
+oldmodeltraces preserved; no root/global cleanup. Before new artifacts/checks inspect
+space. No commit/push yet. Remaining: fullresult, installedwheel/Docker608formula
+captured-Calc replay+sourcehashes, relevant package checks, finalreview/MEM/exactstage,
+userauthor directmaincommit/push, thenALLexact-head10CI/3Pages/6deployedbytes.
+
+
+## ODS rendition guidance — publication COMPLETE, eeb7510 verified
+
+Head eeb751055c122d26a799316f4203685b1142f7cb remains main/origin with user author
+and committer u9401066<u9401066@gap.kmu.edu.tw>. ALL10CI jobs35617320856 and
+ALL3Pages jobs35617319164 passed; all6deployed files match exactcommit bytes.
+Watcher51323 completed; no duplicate watcher was started. Publicationproof and
+localproof under /run/user/1000/asset-aware-ods-rendition-guides now record success.
+No runtime changes in this checkpoint; guide commit13countedfiles+2MEM remains
+the latest published segment. Local55focused/199extension tests and packaged5guide
+checks remain recorded; unchanged runtime339files reuse parent full3847/41 and
+actualdefaultCodex208calls/11PNGs evidence, not a new local full/model run.
+Downloaded exacthead remote logs separately prove3597unitpassed/1skip/467.74s,
+1438Python3.10passed/4skips/918.68s and installedLinuxextensionactivationpassed.
+Logs retained at sameprefix-ci-{unit,python310,linux-vsix}.log; hashes in localproof.
+
+Seven project version declarations rechecked: ALL1.4.0. GitHub latest release
+re-read v1.4.0; next consolidated1.4.1. No per-feature bump/tag/release.
+Version correction remains binding; MCP SDK dependency version is independent.
+One git ls-remote attempt encountered transient DNS failure; authoritative GitHub
+API confirmed main at this exacthead, and publication verifier completed normally.
+
+Read-only preparation reviewed existing ODS compressed-grid/editor/service and
+upstream odfdo table/cache plus OASIS1.4 OpenFormula reference grammar. Upstream
+odfdo main observed c7d320fd5010898856913d6462ebea25139984d0. Structural insertion
+alone does not establish dependency preservation; next segment must cover table/
+row/column identity, formulas, ranges, object anchors and actual Calc comparisons.
+No lifecycle implementation or new behavioral test is claimed in this checkpoint.
+Broader ODS lifecycle/rich-runs and ODT/ODP/HTML/EPUB/email/LaTeX/all-format work
+remain active. MCP mechanical checks; Agent semantic/visual/result correction.
+Work ONLY agent-assets/main; original dirtydetached checkout untouched. No
+subagents. Only two MEM checkpoint files dirty for the next <=30countedfile segment.
+Goal ACTIVE, not complete/blocked. This turn makes publication-verification progress.
+
+
+## ODS rendition guidance — eeb7510 pushed; exact-head checks pending
+
+Head eeb751055c122d26a799316f4203685b1142f7cb is committed/pushed directmain as
+u9401066<u9401066@gap.kmu.edu.tw>,13countedfiles+2MEM. CI35617320856 and
+Pages35617319164 require ALL10/ALL3jobs and6deployed exactbyte checks.
+LIVE watcher51323; poll samehandle, do not duplicate.
+Script /run/user/1000/asset-aware-ods-rendition-guides-verify-publication.py
+Log /run/user/1000/asset-aware-ods-rendition-guides-publication-watch.log
+Proof /run/user/1000/asset-aware-ods-rendition-guides-publication-proof.json
+No new development until exact-head verification completes.
+
+FiveAgent sources+fivebundledcopies align ODS rendition/source_formats discovery,
+complete receipts/actualpage review, cache/clipping and MCP/Agent responsibilities.
+README/CHANGELOG/native-ods-spec updated. Currentfocused55passed, VSIX199tests/
+64entries/install-update,5actualpackagedguides byte-equal. Allversiondeclarations
+remain1.4.0; nextconsolidated1.4.1, no bump/tag/release. Parent e5950c1 fullyverified.
+Runtime339/dependencies/tests/extensionimplementation unchanged; parentfull3847/41,
+actualdefaultCodex208calls/11PNGs and wheel/Docker proof explicitly reused, no new
+full/modelrun claimed. Localproof sameprefix-local-proof.json.
+All11historicaltrace dirs restoredexactly; owned npmdeps/cache/out removed.
+Original dirtydetached checkout untouched; goalACTIVE; no subagents.
 
 ## ODS rendition guidance — locally verified; ready to publish
 

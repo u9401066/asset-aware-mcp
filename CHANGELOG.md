@@ -7,6 +7,14 @@
 
 ## [Unreleased]
 
+- Build the ODS structural reference-mapping foundation: parse native OpenFormula
+  addresses, map row/column insertions and deletions and sheet renames/deletions,
+  preserve literals and dollar flags, and retain original formula change spans.
+  Independent Calc UNO edits exercise range contraction, invalid references and
+  explicit grid boundaries. This internal primitive does not yet expose workbook
+  structure CRUD through MCP; package dependencies and transactions remain next.
+  Public **1.4.0**, next consolidated **1.4.1**; no per-feature version bump.
+
 - Synchronize Codex, Cline, Copilot and bundled Agent guidance with native ODS
   renditions. Discover supported source formats, read complete conversion receipts
   and actual PDF pages, and review cache differences and clipped content. Keep

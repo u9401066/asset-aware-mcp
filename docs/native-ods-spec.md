@@ -147,6 +147,60 @@ every actual PDF page, distinguishes requested calculation policy from observed
 results, and leaves semantic/visual correction with the Agent. A stored preview
 does not recalculate when read; new PDF edits do not inherit old sheet mappings.
 
+## Structural reference mapping foundation (Unreleased)
+
+`src/domain/native_ods_references.py` supplies the first structural-edit primitive.
+It parses native OpenFormula points and ranges, whole-row/column references,
+quoted Unicode sheet names, dollar flags, external source prefixes and existing
+reference errors. Row/column insertions and deletions map static references;
+sheet renames/deletions retain or invalidate the appropriate identities. Formula
+rewrites touch bracketed references only. String literals, quoted labels,
+namespace spelling and untouched formula text remain exact. Changes retain
+Unicode spans in the original decoded formula, not byte offsets in content.xml.
+
+The editor's grid bounds are explicit and independent of the ODF version. Actual
+Calc edits establish behavior at insertion edges, partially deleted ranges,
+single-cell errors, full-axis ranges and ranges ending at the last row/column.
+For example, deleting row3 changes A1:A5 to A1:A4 and A3:A3 to #REF!, while a
+multi-cell range ending at the last row can retain that endpoint. These mappings
+do not prove calculation results or semantic equivalence. INDIRECT string
+arguments remain literal; the Agent must review the recalculated result.
+
+This is not a public MCP lifecycle operation or a complete package transaction.
+The next layer must preserve compressed native rows/columns and styles, map
+named expressions/ranges, merges, drawing/chart anchors and other XML dependencies,
+check revision-bound identities, invalidate caches, reopen output and retain full
+receipts/history/Wiki evidence. Multi-sheet axis changes need a sheet-order/range
+map; nested-table changes need their own coordinate map. These cases currently
+fail explicitly rather than producing a partial formula rewrite. Same-document
+source fragments require identity resolution. Other source-prefixed references
+are retained without loading resources; the package layer must resolve source
+identity before deciding whether a reference is external. A #REF! formula token
+must not be inserted blindly into unrelated XML address properties.
+
+`tests/native_ods_formula_oracle.py` independently authors, edits and exports
+generated spreadsheets through Calc's UNO API, using a private profile/process
+and a matching OS or bundled Python/pyuno package. It imports no production ODS
+code. The integration test compares complete before/after formulas for 16 actual
+structural operations and 304 formula cases, including Unicode/apostrophe sheet
+renaming and last-grid-boundary behavior. It reopens native ODS candidates through
+the same Calc before requiring exact formula equality against a separately
+reopened, byte-identical control workbook, retaining raw spelling
+differences: Calc 24.2 can serialize a full-axis range with shorthand where 7.3
+uses explicit bounds. Reimport can also change the spelling of an existing #REF!
+token; both candidates and controls undergo the same cycle. Numeric agreement
+alone is insufficient. CI installs
+python3-uno and requires
+this check. Run it with `NATIVE_ODS_REFERENCE_TEST=1`; optionally select the OS
+Python with `NATIVE_ODS_UNO_PYTHON` and Calc with `NATIVE_ODS_CALC_BIN`. This is
+formula-mapping evidence, not a new Agent/MCP CRUD or visual-fidelity evaluation.
+
+The grammar follows [OASIS OpenFormula 5.8](https://docs.oasis-open.org/office/OpenDocument/v1.4/os/part4-formula/OpenDocument-v1.4-os-part4-formula.html).
+Independent edits use the [LibreOffice row API](https://api.libreoffice.org/docs/idl/ref/interfacecom_1_1sun_1_1star_1_1table_1_1XTableRows.html)
+and its column/sheet counterparts. The compressed-range work also references
+[odfdo's table cache](https://github.com/jdum/odfdo/blob/c7d320fd5010898856913d6462ebea25139984d0/src/odfdo/table_cache.py).
+No upstream implementation is copied and no runtime dependency or version changes.
+
 ## References and reuse choices
 
 - [OASIS ODF packages](https://docs.oasis-open.org/office/OpenDocument/v1.4/os/part2-packages/OpenDocument-v1.4-os-part2-packages.html):

@@ -21,6 +21,9 @@ Bundled Agent instructions cover native XLSX/ODS rendition discovery, complete
 receipts, every actual page, cache-policy limits and clipped-content review.
 Discover `ods_enabled` for cell operations and `workbook_rendering.source_formats`
 for previews in the installed runtime.
+Sheet/row/column lifecycle is still in development. Its reference-mapping foundation
+is checked against actual Calc insert/delete/rename operations; it is not yet a
+public MCP structural-edit operation.
 Public **1.4.0**; next consolidated **1.4.1**, with no per-feature version bump.
 
 Unreleased PDF annotations now support complete native reads and guarded creation,
