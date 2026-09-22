@@ -13,8 +13,13 @@
   Distinguish duplicate names, hidden values, child fields and every widget page;
   retain complete operation receipts, including empty forms and repeated file
   revisions with different histories. Both SDK2 tool surfaces pass automated
-  CRUD/image checks. Default Codex evaluation and synchronized Agent guidance
-  remain pending before publication. Public **1.4.0**, next consolidated **1.4.1**.
+  CRUD/image checks. A default Codex run on an upstream form passed independent
+  checks of four versions, 17 complete field records, four actual page images,
+  historical selections, derivation and Wikis. Preserve both recovered tool errors
+  and the initial audit failure; correct saved-selection reread validation without
+  rerunning the model. Synchronize Agent guides and add audit rejection regressions.
+  Static previews do not verify interactive viewer behavior. Public **1.4.0**,
+  next consolidated **1.4.1**.
 
 - Implement the internal native PDF field core: exact tree/object references,
   duplicate names, hidden values, complete widget coverage and checked CRUD for

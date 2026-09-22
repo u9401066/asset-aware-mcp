@@ -1307,3 +1307,40 @@ python-pptx 在記憶體中重新命名後的 part 路徑取代原始檔案身�
 新增文字格式與原始 parts 均通過獨立稽核，刪頁後歷史證據及最終發布檔／Wiki
 也通過。完整 pytest：2,068 passed、30 optional skipped；VSIX：199 tests。
 沒有執行完整投影片檢視器渲染，因此不宣稱完整畫面保真。
+
+
+## Codex native PDF field evaluation (Unreleased)
+
+```bash
+uv run python -m tests.codex_pdf_fields --source /absolute/path/to/form.pdf --output /tmp/pdf-fields-run
+uv run python -m tests.codex_pdf_fields_audit /tmp/pdf-fields-run
+uv run pytest tests/unit/test_codex_pdf_fields_audit.py
+```
+
+Runner 使用預設 Codex，沒有模型覆寫，只開放本 checkout 的 native document
+MCP 工具。來源為規格中固定版本的 pikepdf `form.pdf`，SHA-256 必須是
+`6e2b7541acc922d4c046621becd8cb91a63b358b72c875e58080d373946b4b93`。
+使用新輸出目錄；一般 pytest 不會啟動模型。
+
+Codex 完整探索 contract／schema，讀回所有欄位與頁面，查看實際 PNG，將
+Text1 設為 `中文 007 µg`、checkbox 勾選、radio 選右側，再建立 ReviewCopy
+副本並刪除原 Text1。每步完整核對紀錄、新引用與圖片；最後驗證刪除前的
+欄位選取、記錄副本的轉製來源，發布 PDF 與原始／最終 Wiki，保持來源不變。
+
+本次實測完成 **426 次成功 MCP 呼叫、2 次已恢復的工具錯誤**；獨立稽核
+通過 **4 個受管理版本、17 份完整欄位紀錄、4 張實際頁面圖**。原生欄位值、
+按鈕狀態／外觀、未改正文位元組與像素、完整操作紀錄、來源 hash／mtime、
+歷史選取、轉製帳本、自訂引用與 Wiki 附件均核對一致。Agent 另逐張查看四圖，
+確認文字完整可讀、原欄位刪除後副本保留，灰色 pushbutton 與其他按鈕外觀保留。
+
+第一個工具錯誤是 contract 的多餘參數，第二個是新欄位文字放不下；Codex
+明確將字級從 5 調成 4 後成功。模型本身正常結束，但初版稽核錯誤拒絕以
+既有 selection reference 重讀，讓 runner 回報失敗；原始報告保留。修正後
+逐一檢查完整父紀錄、JSON Pointer、選取內容、前後文、Unicode／UTF-8 範圍
+與 hash，補上錯誤父引用／值／上下文／selector 覆寫等回歸案例，再核對同一份
+未變操作紀錄即通過，沒有重跑模型消除失敗。
+
+這是固定上游表單與 MuPDF 靜態預覽；未驗證其他檢視器的互動編輯、重建外觀
+或任意表單。副本來自 Agent 新填入的文字，不能視為原始空白表單的事實證據。
+MCP 負責必要機械檢查，Agent 負責完整語意／視覺核對與修正。公開 **1.4.0**，
+下一次整合發版 **1.4.1**。

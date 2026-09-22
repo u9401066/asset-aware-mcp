@@ -300,8 +300,11 @@ The Unreleased [PDF form workflow](docs/native-pdf-fields-spec.md) now connects
 checked text/choice/checkbox/radio CRUD to paged MCP reads, managed revisions,
 CSL/custom citations and source-attached Wikis. Duplicate names, hidden values,
 shared widgets and nested groups retain distinct native identities and historical
-evidence. Both SDK2 tool surfaces pass automated CRUD/image checks; default Codex
-evaluation and synchronized Agent guidance are still pending before publication.
+evidence. Both SDK2 tool surfaces pass automated CRUD/image checks. An actual
+default Codex run on an upstream form also passed independent checks of four PDF
+versions, four page images, historical evidence and Wikis, retaining two recovered
+tool errors. Agent guides are synchronized; interactive viewer behavior remains
+unverified. See the [evaluation record](docs/site-content/release-testing.md#codex-native-pdf-field-evaluation-unreleased).
 Public **1.4.0**; next consolidated **1.4.1**, without a per-feature version bump.
 
 Assets carry identity, revision, native locators, representations, relationships,

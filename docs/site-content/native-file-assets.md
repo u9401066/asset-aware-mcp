@@ -121,8 +121,9 @@ PDF 衍生圖片，並非 NIST 發布的 PNG，也不是任意照片／動畫的
 ## Native PDF fields (Unreleased)
 
 公開版本維持 **1.4.0**，下次整合發版為 **1.4.1**。開發中的表單工作流已接入
-MCP、版本證據與 Wiki；兩種工具配置的 SDK2 自動化測試已通過，預設 Codex
-的實際表單視覺核對仍待完成。完整範圍見
+MCP、版本證據與 Wiki；兩種工具配置的 SDK2 測試及預設 Codex 的真實上游
+表單評估已通過。四個版本、四張實際頁面圖、歷史引用與 Wiki 經獨立核對；
+保留兩次工具錯誤及重試，互動檢視器行為仍未驗證。完整範圍見
 [PDF field specification](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/native-pdf-fields-spec.md)。
 
 | 操作 | 必要輸入與回讀 |

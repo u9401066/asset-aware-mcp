@@ -1,5 +1,103 @@
 # Active Context
 
+## Default Codex PDF field evaluation and Agent guides — local artifact checkpoint
+
+Current goal turn: PROGRESS. Public/current version stays1.4.0, next consolidated
+1.4.1; no per-feature bump/tag/release. All7version sources and built artifacts
+agree. User explicitly reiterated the1.4.x policy. Work ONLY in agent-assets main;
+original dirty asset-aware-mcp worktree untouched. Author AND committer must be
+u9401066 <u9401066@gap.kmu.edu.tw>. This segment has26counted files +both MEM,
+within30; exact hashes and tests in /run/user/1000/asset-aware-pdf-fields-agent-
+evaluation-proof.json. Parent local main5bb28af5504ce87173f3dbdc743cf8bae3f65767
+already contains field MCP/evidence/Wiki and is ahead1 of published origin e953542.
+This segment is another local checkpoint; NO PUSH yet. Both checkpoints should
+ship together after remaining Docker/publication checks. Use git log for its hash.
+Do not infer goal completion; broader format CRUD and PDF body work remain.
+
+Actual DEFAULT Codex evaluation COMPLETE; no model override/subagents:
+/dev/shm/asset-aware-codex-pdf-fields-01. Model return0,342.15s,not timed out.
+Runner session42506 TERMINAL1 because initial auditor rejected a legitimate saved
+selection-reference reread. Original audit-before-selection-read-fix.json retained;
+stronger complete parent/selector/value/context/Unicode-byte-range/hash checks plus
+10regressions resolve it. Model trace unchanged, NOT rerun to erase failure.
+Current audit.json PASSED:426successful/428total MCP calls,4managed PDF versions,
+17complete field records,4actual MCP images, original/final Wiki. Two retained
+errors: unused contract text_limit; ReviewCopy font5 did not fit, explicit4retry
+succeeded. Full source hash/mtime, native values/button AS/AP, unchanged body bytes/
+pixels/pushbutton, exact receipts, historical selections, derivation and Wiki checked.
+Standalone audit CLI now exits1 for missing/invalid trace; new CLI regression passes.
+Final reauditor session85773 TERMINAL0; audit-before-cli-exit-fix.json also retained.
+
+Root Agent ACTUALLY VIEWED all4default-Codex PNGs individually this segment.
+/run/user/1000/asset-aware-pdf-fields-root-visual-review.json records exact hashes
+and observations: text legible/unclipped; checkbox checked/right radio selected;
+ReviewCopy appears above gray PUSHBUTTON; only original Text1 disappears on delete.
+Correction to historical MEM below: gray rectangle is Button2 pushbutton, NOT a
+text area. Root confirmed all4images; earlier batch tool output was truncated and
+did not count as review. Static MuPDF only, no interactive-viewer fidelity claim;
+ReviewCopy contains authored text, not a fact from the original blank source.
+
+Added5harness files: tests/codex_pdf_fields.py, codex_pdf_fields_audit.py,
+codex_pdf_fields_checks.py, codex_pdf_fields_replay.py and unit/test_codex_pdf_fields_audit.py.
+Synchronized5Agent guide sources +5bundled copies; expected_catalog_sha256 belongs
+inside pdf_fields_update. Full ref/hash paging, borders/styles, historical refs,
+Agent review and version policy explicit. README/CHANGELOG/spec/gap analysis,
+Native-File-Assets Wiki/site and canonical Release-And-Testing Wiki/site plus
+site-content.js reflect actual evaluation. edit canonical Wiki, not generated
+site-content/release-testing.md alone: builder regenerates it. CI Python3.10 adds
+new audit unit module. Metadata script adds PDF forms; remote apply still pending.
+
+Checks COMPLETE; all related sessions terminal, do not restart:
+- New28audit regressions +32docs/harness =60passed4.87s, session63302 TERMINAL0;
+  final canonical docs32passed0.20s after restoring new section at canonical source.
+- Ruff all pass;836files formatted. All351runtime source hashes EXACTLY match
+  prior full-suite checkpoint:4115pass/49optional skip. New28audit tests separately
+  passed; do not claim a new single full run. Prior failures stay in old proof.
+- npm test:ci205tests passed, session30857 TERMINAL0. Latest guides also passed
+  sync/package artifact audit and actual isolated fresh/update VSIX installs,
+  session87289 TERMINAL0. Legacy0.2.10upgrade skipped (no baseline); no local
+  activation because no display/xvfb. Exact installed manifest/current guide bytes
+  verified. Safe PATH CLI /dev/shm/asset-aware-ods-guides-cli-02/code retained.
+- uv build sdist+wheel1.4.0, session34753 TERMINAL0; metadata/all-artifact audit,
+  docs check, release harness, sync, git diff check pass. Zizmor offline at CI's
+  regular/high policy pass. Initial default-threshold command exit11 was ONE
+  informational existing softprops release-action advisory; retained log, no high.
+- Real installed wheel --no-deps target /dev/shm/asset-aware-pdf-fields-wheel-target-01/
+  site-packages, uses locked existing Python3.13deps. src location asserted installed;
+  every351file hash compared. Installed service replay02 session2860 TERMINAL0:
+  same4PDF bytes, all3full receipts,17historical field records, final4Wiki fields,
+  exact PDF/receipt/custom citations and unchanged source. Source-based tests cannot
+  substitute for this installed import assertion. First replay01 session94996
+  TERMINAL1: harness protected whole output root, Wiki guard rejected overlap.
+  Corrected protected path to actual store; failed log/output kept, guards unchanged.
+- Installed console help/doctor/list-tools +real SDK2 stdio all0, session5669 TERMINAL0.
+  /dev/shm/asset-aware-pdf-fields-wheel-diagnostics-01/runs.json records exact commands.
+  Runtime and replay outputs retained; no Docker smoke yet for this integration.
+
+Resources: own completed node_modules/npm/build-cache and passing current test
+fixtures were hash-inventoried then removed, session94079 TERMINAL0. All5roots
+show removed:true in /run/user/1000/asset-aware-pdf-fields-completed-cleanup-01.json.
+Observed free space after cleanup:root289MB,shm443MB,run155MB. NEVER delete global caches or others' data. Source dist/VSIX/out,
+failed replay01, passing replay02, actual Codex trace and installed target remain.
+Six OWN historical traces remain staged with original /tmp symlinks, all bytes/
+mtime verified; NOT restored: table-edit01/02/03+docx-render01 via root-space-01
+manifest; docx-structure01+workbook01 via pdf-fields-build-space-02.json. Old11dir
+pdf-field-build-space.json is historical restored state; NEVER replay old restore.
+Remaining5previously-restored own trace candidates total~245MB can be staged with
+fresh hashes/manifests if Docker build needs capacity; inspect current disk first.
+Restore only with remaining size +64MB working margin. No active unrelated work
+may be cleaned. Node removal is for task-owned rebuildable dependencies only.
+
+NEXT: finish fresh Dockerfile Python3.12 build and diagnostics/stdio +installed
+service replay using tests.codex_pdf_fields_replay (--trace, --output, --manifest,
+--installed-dir). Root disk scarce; inspect before build, preserve completed trace
+paths via checked staging if needed. No repeated model run/full suite justified
+unless code changes. Before ONE push of both local commits complete required
+artifact checks; then exact-head10CI+3Pages+deployed bytes gate before new code.
+Apply/verify GitHub metadata forms description with publication. Preserve1.4.0
+until consolidated1.4.1 release; do not tag per feature or request approval again.
+
+
 ## PDF field MCP/evidence/Wiki checkpoint verified locally — publication pending
 
 Current goal turn: PROGRESS. This checkpoint contains30counted files +both MEM,

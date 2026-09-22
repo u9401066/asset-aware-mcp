@@ -3,8 +3,9 @@
 Public version remains **1.4.0**; the next consolidated release is **1.4.1**.
 The working implementation exposes complete paged field reads and checked native
 CRUD through MCP, with managed revisions, evidence and Wiki integration. These are
-Unreleased capabilities; the default Codex form evaluation and synchronized Agent
-guidance remain required before publishing this integration.
+Unreleased capabilities. The default Codex form evaluation has passed independent
+audit, and Agent guidance is synchronized. Full artifact/publication checks remain
+separate from these development results.
 
 ## Managed operations and evidence
 
@@ -203,8 +204,34 @@ and compact tool surfaces, including contract discovery, hidden-value updates,
 Unicode field creation across two pages, deletion, complete readback and actual
 page-image comparisons against the committed revisions.
 
-These automated checks do not substitute for the pending default Codex evaluation.
-That evaluation must inspect actual affected page images, compare values with
-appearances and correct discrepancies. Agent owns semantic/visual review;
-hashes and structural checks do not certify it. Full release checks and synchronized
-Agent/site guidance are also required before publishing this integration.
+The actual default Codex CLI evaluation used the pinned upstream form above,
+without a model override, with only the native MCP document tool. It updated text,
+checkbox and radio values, copied the authored text into a new visible field,
+deleted the original field, and retained its historical selection as a derivation
+source. It read complete contracts, schemas, catalogs, fields and receipts before
+continuing, viewed four actual page images, and exported original/final Wikis.
+
+Independent audit passed: 426 successful MCP calls, two recovered tool errors,
+four managed versions, 17 complete field records and four actual page images.
+The first error was an unused contract parameter; the second rejected a new field
+whose text did not fit. Codex explicitly reduced its font size from 5 to 4 points.
+Native values/button states, untouched body bytes/pixels, pushbutton and button
+appearances, exact receipts, source bytes/mtime, selections and derivation were
+checked. The root Agent also inspected all four images: text was legible and
+unclipped, deletion removed only the original text, and native button appearances
+retained their geometry and intended states.
+
+The model completed successfully; the initial audit failed because it incorrectly
+rejected rereading an existing selection reference. The original report is retained.
+Corrected audit verifies the complete selection against its already-read parent,
+JSON Pointer, context, Unicode/UTF-8 ranges and hashes, with regression tests for
+invalid values, parents, contexts and selector overrides. Reauditing the unchanged
+trace passed; the model was not rerun to erase a failure. The standalone audit CLI
+also returns a failure exit status when the trace is missing or invalid.
+
+Reproduction commands and scope are recorded in the
+[evaluation guide](site-content/release-testing.md#codex-native-pdf-field-evaluation-unreleased).
+Static MuPDF previews do not verify interactive editing or regeneration in other
+viewers. The copied text is an authored value, not evidence from the originally
+blank form. Agent owns semantic/visual review; hashes do not certify it. Full
+artifact and publication checks remain required.

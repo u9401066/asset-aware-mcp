@@ -105,6 +105,35 @@ and LightRAG knowledge graph outputs.
   Mutation guards still use current records. Public1.4.0; next consolidated1.4.1;
   no per-feature bump.
 
+- When pdf_fields_enabled is advertised, read_pdf_fields/read_pdf_field pin
+  asset/revision; single-field reads add the exact pdf_field_locator. Assemble ALL
+  top-level text_excerpt pages at one text_sha256; every continuation supplies
+  pdf_field_text_sha256. The assembled catalog_sha256 is the separate edit guard.
+  Names are labels, never identity: full refs bind original Fields/Kids path,
+  object/generation, revision and record hash. Hidden/group/duplicate fields and
+  every owned Widget page remain distinct. update_pdf_fields requires expected_revision
+  and pdf_fields_update containing expected_catalog_sha256 and1..32 typed edits.
+  Every create
+  parent_reference/widget page_reference and existing field ref must use the same
+  original asset/revision; new_groups explicitly creates ancestors. Visible text/
+  choice updates require replace_all_widget_appearances and styles for EVERY
+  original widget_path. Omitted style properties take defaults: inspect original
+  borders/fonts and explicitly set the intended replacement, including border_width0
+  for a reviewed borderless appearance. Buttons use preserve_native_button_states;
+  hidden values use no_widgets. Delete scope:field_subtree_and_all_widgets. Read
+  every complete review_request receipt and current field record, then inspect
+  ALL affected actual page PNGs before continuing. Reacquire refs after each new
+  revision: serialization can renumber objects. No-op full receipts are inline and
+  add no history. Source writeback remains explicit. MCP checks native mechanics;
+  Agent reviews/corrects value/appearance consistency, clipping, style and viewer
+  behavior. Existing scripts stay unexecuted; XFA/locks/signatures/ownership and
+  unmodeled dependencies retain guards. Fields/selections/derivations/CSL/custom
+  citations keep original evidence after deletion. AcroForm/orphan-widget Wikis use
+  pdf-fields-v1 plus receipt hash, retaining exact PDF, all fields/widget pages and
+  full receipts, including empty forms and repeated bytes with new history. Old
+  snapshots/human notes stay intact. Static previews do not prove viewer parity.
+  Public1.4.0; next consolidated1.4.1; no per-feature version bump.
+
 - When pdf_annotations_enabled is advertised, read_pdf_annotations pins asset/revision;
   read_pdf_annotation also takes pdf_annotation_locator. Assemble ALL annotation
   text pages at one text_sha256, including catalogs and complete operation receipts.
@@ -119,7 +148,8 @@ and LightRAG knowledge graph outputs.
   rich/appearance edits retain guards. Read complete review_request/new refs and
   actual affected page PNGs. Agent reviews geometry, meaning and viewer behavior.
   Old refs/selections/derivations/citations/Wikis remain historical; no secure erasure.
-  Annotated PDFs use pdf-annotations-v1; no-annotation legacy Wiki stays unchanged.
+  Without form/widget evidence, annotated PDFs use pdf-annotations-v1 and plain
+  pages keep pdf-pages-v1. Form/widget PDFs use the field Wiki with annotations.
   Public1.4.0;next consolidated1.4.1;no per-feature version bump.
 
 - When docx_notes_enabled is advertised, read_docx_notes pins revision and pages
