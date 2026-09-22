@@ -241,6 +241,20 @@ Discover ods_enabled. create_ods creates native blank spreadsheets; read_ods lis
 
 Read every text page at one text_sha256, passing it as ods_text_sha256 on continuation; then follow the physical range next_offset. Anchor references identify only their logical coordinate. Wiki retains the exact .ods, compressed ranges, complete receipts and explicit derivation endpoints. Selections, CSL and custom citations preserve native identities. Formula caches, actual rendering and meaning require Agent review. Worksheet insertion/deletion/reordering and row/column lifecycle remain further work; optional Calc renditions are supported.
 
+When ods_table_rename_enabled is advertised, read every read_ods_dependencies page at one text_sha256 using ods_text_sha256 for continuation. The assembled inventory_sha256 is the separate dependencies_sha256 mutation guard. rename_ods_table pins expected_revision, the exact original table_index/table_name and new_name. Supported formulas, named/conditional references, chart sources and settings change together. Read complete receipts and new references, render each revision and inspect every page. Literal dynamic references such as INDIRECT strings need Agent correction; old references and Wikis keep their original revisions.
+
+<a id="native-pdf-fields-unreleased"></a>
+
+## Native PDF fields (1.4.1)
+
+Discover pdf_fields_enabled and the complete read_pdf_fields, read_pdf_field and update_pdf_fields contracts. Pin asset/revision and exact field locators. Assemble ALL text_excerpt pages at one text_sha256, sending pdf_field_text_sha256 on continuation. The assembled catalog_sha256 is a separate edit guard. Full references bind Fields/Kids path, object/generation, revision and record hash; names are labels. Duplicate names, hidden/group fields and every owned Widget page remain distinct.
+
+update_pdf_fields uses expected_revision and pdf_fields_update with expected_catalog_sha256 and 1–32 typed edits. Existing targets and new parent/widget page references must use the same original revision. Text/choice replacement requires explicit styles for every widget and replace_all_widget_appearances; button edits preserve native button states. Delete scope is field_subtree_and_all_widgets. Reacquire references after each managed revision because serialization may renumber objects. No-op receipts are complete and inline, with no added history.
+
+Read every full review_request receipt, all changed records and actual affected page PNGs. MCP checks source versions, native ownership, dependencies and serialization; the Agent reviews values, clipping, styles and interactive behavior. XFA, signatures, locks and unsupported dependencies retain guards. Source writeback remains explicit. Historical selections, derivations and CSL/custom citations remain bound to the original fields after deletion.
+
+Forms/orphan widgets use the pdf-fields-v1 Wiki projection bound to the complete receipt hash. It retains exact PDFs, all fields and widget-page previews, annotations and receipts, including empty forms and repeated file bytes with new history. Static previews do not prove interactive viewer parity. See the [field contract](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/native-pdf-fields-spec.md) and [actual evaluation](#/release-testing).
+
 <a id="native-raster-assets-unreleased"></a>
 
 ### Native raster assets (1.4.1)
@@ -269,7 +283,7 @@ Omitted metadata stays; null removes a key. Metadata edits preserve foreign appe
 
 Delete requires scope:annotation_and_owned_popup. Surviving replies must be explicitly included. Shared arrays/objects, locks, signatures, Widget/standalone Popup edits and unsupported rich formatting retain guards. Exact native inverse checks, serialized readback and body pixels precede commit. Annotation-free disposable reader copies prevent Highlight transparency from changing the body comparison; exact comparisons and source bytes remain intact.
 
-Read the complete review_request, current references and actual affected page PNGs. Agents review glyphs, clipping, geometry, meaning and viewer behavior. Full refs support verify, selections, derivations and CSL/custom citations. Old evidence never migrates; deletion is not secure erasure. Annotated PDFs use pdf-annotations-v1 with exact PDF/page previews, annotation-catalog.json, annotations.jsonl and linked notes. Unannotated PDFs retain byte-identical legacy output and all historical Wikis remain preserved.
+Read the complete review_request, current references and actual affected page PNGs. Agents review glyphs, clipping, geometry, meaning and viewer behavior. Full refs support verify, selections, derivations and CSL/custom citations. Old evidence never migrates; deletion is not secure erasure. Annotated PDFs use pdf-annotations-v1 with exact PDF/page previews, annotation-catalog.json, annotations.jsonl and linked notes. PDFs with forms/widgets use the field projection, including their annotations. Other unannotated PDFs retain byte-identical legacy output; historical Wikis remain preserved.
 
 See the [full annotation contract and upstream references](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/specs/native-pdf-annotations.md).
 
@@ -789,6 +803,19 @@ Domain code stays free of I/O, application services coordinate use cases, infras
 ## Validate the integrated product
 Run Python checks, documentation generation, extension tests, asset parity, and relevant smoke tests before handoff.`,
   "release-testing": `## Run release gates
+
+
+<a id="codex-native-pdf-field-evaluation-unreleased"></a>
+
+## Codex native PDF field evaluation (1.4.1)
+
+Run uv run python -m tests.codex_pdf_fields --source /absolute/path/form.pdf --output /absolute/new/run, then tests.codex_pdf_fields_audit on that directory. The runner uses default Codex without a model override and only this checkout's native MCP tool. The pikepdf upstream form is pinned to SHA-256 6e2b7541acc922d4c046621becd8cb91a63b358b72c875e58080d373946b4b93. Ordinary pytest never starts a model.
+
+The actual run completed 426 successful MCP calls and two recovered tool errors, with four managed versions, seventeen complete field records and four inspected actual PNGs. Codex filled Text1 with Chinese text, 007 and µg, checked the checkbox, selected the right radio, created ReviewCopy, then deleted Text1. Independent checks cover native values/button appearances, unchanged body bytes/pixels, complete receipts, source hash/mtime, historical selections, derivation, custom citations and Wiki attachments.
+
+An unused contract parameter was corrected; an overflowing new field was retried with font size 4 instead of 5. The model finished normally, but the first auditor wrongly rejected rereading a saved selection reference. Its failure is retained. Complete parent/pointer/value/context/range/hash checks and rejection regressions corrected the auditor; the same immutable trace then passed without another model run. Agent review inspected all four PNGs, including the preserved gray pushbutton and visible copy after Text1 deletion.
+
+This is one pinned upstream form with static MuPDF previews, not interactive viewer parity or universal form fidelity. The copied text was authored during the run, not a fact extracted from the originally blank form. MCP provides mechanical checks; the Agent completes semantic/visual review and corrections.
 
 <a id="native-raster-evaluation-unreleased"></a>
 

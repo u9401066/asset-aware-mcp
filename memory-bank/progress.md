@@ -1,5 +1,70 @@
 # Progress (Updated: 2026-09-22)
 
+## Consolidated 1.4.1 — all local release gates passed, one main push next
+
+Goal PROGRESS. Latest user requires1.4.x, no feature-by-feature bumps. This release
+consolidates accumulated native document/evidence work; no new runtime behavior.
+Published base7b32301 gate complete(all10CI/all3Pages/10deployed bytes), public1.4.0.
+Three local <=30-counted segments: e568ab9 metadata/guides26,7816f20 contracts21,
+237fbf1 Wiki/site10. This final local segment adds4docs files +both MEM, then ONE
+push. Author AND committer u9401066 <u9401066@gap.kmu.edu.tw>, directmain/noPR.
+Original dirty workspace untouched. This goal is not complete.
+
+All1.4.1 local gates passed. Fullpytest session23429 TERMINAL0:
+4143passed/49optional-skipped/3warnings782.82s. One complete invocation, passing
+tmp_path fixtures removed by pytest retention policy; no selected subset or model.
+Ruff836formatted, mypy351, Banditmedium/high, docs, Cline18skills, harness,
+metadata/allartifact audits, uvlock, locked214package vulnerability audit and npm
+vulnerability audit passed. GitHub actual metadata/labels --check both pass.
+43focused docs/artifact/harness/metadata tests pass; final docs32pass as well.
+
+Extension205tests and64file contents check pass. VSIX1.4.1 isolated fresh/update
+manifest/current-guide verification pass. Legacy0.2.10baseline absent/skipped;
+local activation skipped(no display), exact-head Linux/macOS CI required.
+Built wheel/sdist/VSIX1.4.1. Freshcleanvenv pip installation of wheel with current
+supported dependency versions passes help/doctor/list-tools/realSDK2stdio; venv
+removed by smoke script after success. Separate installedwheel service replay uses
+locked host deps, matches351sourcefiles,4PDFrevisions/17historicalfieldrecords,
+fullreceipts/customcite/Wiki/source. Rebuilt finalwheel's375payloadfiles exactly
+match that tested installation (installer-owned RECORD excluded).
+
+Actual unchangedDockerfile with1.4.1label built runtimec1aa42a34a92 and builder
+76bc6c2cd96e; import/doctor/tools/realSDK2stdio/fullinstalledformreplay pass, all351
+sourcefiles exact. Only tests mounted readonly; installedsrc used. ExactOWNruntime
+andbuilder images now removed; no unrelated Docker cleanup. Image/fullIDs proof
+/run/user/1000/asset-aware-release-141-docker-images-01.json.
+
+Browser caught existing English site omission of PDF field workflow/evaluation.
+Added English full-field/hash/receipt/Widget/Agent-review guide, actual evaluation
+and ODS rename explanation. Fixed forms-vs-annotation Wiki projection description.
+Desktop/mobile x zh/en DOM/overflow/old-anchor checks pass. Root viewed desktopZH
+and mobileEN actual PNGs; readable/no overlap. Preserved first missinglib failure
+and second missingEnglishheading failure, corrected thirdrun passed. Final tiny
+Chinese status wording updated; docs builder regenerated. No new model run:
+immutable previous Codex trace reused honestly, failures retained.
+
+Authoritative localproof: /run/user/1000/asset-aware-release-141-local-proof-01.json
+statuslocal_gates_passed. Logs/hashes/source manifest same release-141 prefix.
+Fresh publication watcher PREPARED NOT STARTED:
+/run/user/1000/asset-aware-release-141-verify-main-01.py HEAD
+newproof:asset-aware-release-141-main-publication-proof-01.json.
+It requires exact-head all10CI/all3Pages and every changed docs file deployed byte
+exact, plus mainSHA/publicv1.4.0 before tagging. Commit/push finalcheckpoint first,
+then start watcher and complete gate BEFORE any further development or v1.4.1 tag.
+After gate: annotated user-authored v1.4.1 tag, push, verify Release workflow and
+PyPI/Marketplace/GitHub visibility. No new version or tag is published yet.
+
+Disk: initialnpmci ENOSPC retained; secondnpmci passed after own space staging.
+Three old PASS synthetic SDK fixture trees were hash-inventoried/removed; all
+model/failure evidence retained. Completed currentnode_modules now inventoried/
+removed. Seven traces staged for THIS release have ALL been restored byte/hash/
+mtime exact; release-141-build-space-01/02 manifests allrestoredtrue. Four earlier
+traces remain staged via original /tmp symlinks in oldroot-space-01/build-space-02:
+table-edit03,docx-render01,docx-structure01,workbook01. Do not rerestore others.
+Root~194MB/shm864MB after ownDocker cleanup/restoration; check fresh. No global
+cleanup. Broader ODS lifecycle/PDF body/other-format work remains incomplete.
+
+
 ## 1.4.1 release preparation — Wiki and bilingual website aligned
 
 Goal PROGRESS; local main ahead2, no new push/tag. This10counted-file segment plus
