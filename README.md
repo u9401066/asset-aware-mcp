@@ -1,326 +1,54 @@
 # asset-aware-mcp
 
-Unreleased native operation receipts now use separate immutable storage, preserving
-complete before/after evidence as histories grow. Existing reads and Wiki exports
-retain full receipts; old stored assets remain readable and migrate on a successful
-write. Back up the entire asset directory. See the
-[storage contract](docs/native-operation-results-spec.md). Public **1.4.0**; next
-consolidated **1.4.1**.
-
-Unreleased ODS workflows now create native spreadsheets, read exact logical cells,
-edit or clear typed values using full revision-bound references, and retain complete
-receipts in portable Wikis. Repeated ranges remain compressed; anchor references
-identify one coordinate, not verified coverage of every represented cell. Selections,
-derivations, CSL citations and custom locators retain exact ODS sources. Agents
-review formulas and actual rendering. See the [ODS specification](docs/native-ods-spec.md).
-When `workbook_rendering.source_formats` includes `ods`, the optional Calc renderer
-creates an independent PDF from an exact ODS revision. Read its complete conversion
-receipt and every actual page; Wikis retain the original `.ods`. Print and whole-sheet
-modes expose different content, and preferring caches does not guarantee frozen values.
-Bundled Agent instructions cover native XLSX/ODS rendition discovery, complete
-receipts, every actual page, cache-policy limits and clipped-content review.
-Discover `ods_enabled` for cell operations and `workbook_rendering.source_formats`
-for previews in the installed runtime.
-When `ods_table_rename_enabled` is advertised, read the complete
-`read_ods_dependencies` inventory and use its hash with `rename_ods_table` to rename
-one exact worksheet. Supported formula, named-range, chart and settings references
-change together; full receipts and historical evidence remain available. Agents
-review actual pages and correct dynamic references such as `INDIRECT` literals.
-Bundled Codex, Cline and Copilot guidance now covers the complete dependency
-inventory, rename guards and correction workflow. Typed formula input begins with
-`=`; native XML prefixes such as `of:=` belong to stored ODF expressions.
-Worksheet insertion/deletion/reordering and row/column lifecycle remain in development.
-Public **1.4.0**; next consolidated **1.4.1**, with no per-feature version bump.
-
-Unreleased PDF annotations now support complete native reads and guarded creation,
-comment edits, explicit appearance replacement and deletion. Historical references,
-CSL/custom citations and linked Wiki notes retain exact source revisions; Agents
-review actual pages and distinguish authored comments from underlying document text.
-See [PDF annotations](docs/specs/native-pdf-annotations.md).
-Public **1.4.0**; next consolidated **1.4.1**, with no per-feature version bump.
-
-Unreleased Word footnote/endnote workflows now read complete native definitions,
-create exact body anchors, edit content and delete notes with version/reference
-checks. Historical evidence, selections, citations and portable Wikis remain intact;
-Agents review actual numbering, placement and meaning. See
-[Word notes](docs/wiki/Native-File-Assets.md#native-word-footnotes-and-endnotes-unreleased).
-Explicit note ID remapping now supports Agent corrections for reader-specific content
-binding errors, with complete old/new identity receipts and preserved historical refs.
-Public **1.4.0**; next consolidated **1.4.1**, without per-feature version bumps.
-
-Unreleased Word header/footer workflows now create, clone, bind/unlink and delete
-whole definitions, alongside native text and paragraph/table edits. Explicit
-inheritance scope and full receipts let Agents isolate a section while preserving
-following sections, then review every actual page. Deleted definitions remain
-verifiable in historical sources and Wikis. Complete capability policies use
-hash-pinned contract pages when needed. See
-[Word story lifecycle](docs/wiki/Native-File-Assets.md#native-word-story-lifecycle-unreleased).
-Public **1.4.0**; next consolidated patch **1.4.1**, with no per-feature bump.
-
-Unreleased Word table layout controls let Agents correct clipped text, set repeated
-header rows and control row splitting after viewing actual pages. Edits retain
-native cells/styles and expose complete before/after receipts; source files and
-historical Wiki snapshots stay intact. See
-[Word table pagination](docs/wiki/Native-File-Assets.md#native-word-table-pagination-unreleased).
-Public **1.4.0**; changes accumulate within **1.4.x**.
-
-Unreleased native Word table operations read complete grids and insert/delete/resize
-rows or columns, merge cells with an explicit content policy, and split merges.
-Rich paragraphs, nested tables, historical references and source files are retained
-through checked native edits. Agents review actual page previews. See
-[Word table grids](docs/wiki/Native-File-Assets.md#native-word-table-grids-unreleased).
-Public **1.4.0**; development remains **Unreleased / 1.4.x**.
-
-Unreleased PDF evidence snapshots preserve full text, table and figure references,
-original source bytes and extraction artifacts. Read and view saved evidence after
-ETL data changes or deletion, then combine it with native references in a citation
-Wiki. Agents review extraction accuracy, meaning and the actual original page.
-See [captured ETL evidence](docs/wiki/Citation-Provenance.md#captured-etl-evidence-unreleased).
-
-Unreleased CSL citation documents now render APA 7, Chicago 18 and Vancouver/NLM
-with complete document context, including disambiguation and repeated citations.
-Portable Wiki snapshots retain exact native sources and a typography preview;
-existing custom templates remain available. See
-[academic citation documents](docs/wiki/Citation-Provenance.md#csl-citation-documents-unreleased).
-Public **1.4.0**; changes accumulate within **1.4.x**.
-
-Real PDF regression now includes a NIST certificate and the original Apollo 11
-scans, with pinned source bytes, complete table-string oracles and actual Codex
-evaluation. See [real-document validation](docs/wiki/Release-And-Testing.md#real-pdf-corpus-unreleased).
-Public **1.4.0**; development remains **Unreleased / 1.4.x**.
-
-Unreleased CSV/TSV assets now support independent creation, complete field reads,
-cell edits and row/column insertion/deletion. Edits preserve original encoding,
-quotes and line endings outside checked byte patches; field references connect
-PDF transcriptions to portable Wiki evidence. See
-[native CSV/TSV](docs/wiki/Native-File-Assets.md#native-csvtsv-files-unreleased).
-Public **1.4.0**; changes accumulate within **1.4.x**, without a feature-by-feature bump.
-
-Unreleased PDF regions connect a visible scanned cell to a typed target value:
-`read_pdf_region` returns an actual PNG and an immutable page/rectangle reference.
-Verification, derivation ledgers and Wiki exports retain that precise source.
-MCP checks identity and geometry; Agent reviews transcription and meaning.
-See [PDF region evidence](docs/wiki/Native-File-Assets.md#pdf-region-evidence-unreleased).
-Public stays **1.4.0**; development stays **Unreleased / 1.4.x**.
-
-
-Unreleased worksheet layout operations let Agents read native dimensions, adjust
-row heights or column widths, and review a new immutable PDF. Cell content/styles,
-historical previews and evidence stay intact. See
-[layout correction](docs/wiki/Native-File-Assets.md#worksheet-layout-correction-unreleased).
-Public remains **1.4.0**; development accumulates **Unreleased within 1.4.x**.
-
-
-> Citation-ready document infrastructure for AI agents: turn PDFs, DOCX/PPTX files,
-> tables, figures, and evidence spans into reusable assets and Foam/LightRAG wikis.
+> Citation-ready document infrastructure for AI agents: editable native documents,
+> reusable evidence, and portable Foam/LightRAG wikis.
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-🌐 [繁體中文](README.zh-TW.md) · [Docs Site](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
+🌐 [繁體中文](README.zh-TW.md) · [Docs Site](https://u9401066.github.io/asset-aware-mcp/#/overview) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
-Unreleased `add_workbook_table` creates native Excel Tables in existing or
-independently created workbooks, with explicit headers, calculated columns, totals
-and Table styles. Existing typed data and cell formats survive; read the complete
-creation receipt and review actual layout and formula results. See
-[native Table creation](docs/wiki/A2T-Tables.md#native-table-creation-unreleased).
-Public stays **1.4.0**, with development on **1.4.x**.
+## v1.4.1 Consolidated native-document release
 
-Unreleased native Excel/A2T workspaces preserve typed values and exact source-cell
-references. Edit projected cells in A2T, then apply them to the original workbook at
-checked table/file revisions; each applied input remains an immutable snapshot.
-With table_grid_apply_enabled, explicit identity-checked plans also apply A2T row/
-column insertion and deletion in one native commit. Column renaming keeps identity;
-deleted/recreated rows and columns receive new identities. Whole worksheet axes
-move. Native Table expansion uses explicit part/range checks, keeps column IDs and
-coordinates filters and calculated columns. A2T native_generated values request
-new native headers/formulas; complete readback separates intent from resolved values. See
-[native table workspaces](docs/wiki/A2T-Tables.md#native-workbook-workspaces-unreleased).
-`update_workbook_table` also coordinates native column names, rich headers,
-calculated formulas and existing totals. Explicit policies protect exceptions;
-agents inspect complete header XML and review formula results and layout.
-Public stays **1.4.0**; development continues within **1.4.x**.
+This release brings together the document and evidence work below. We keep the
+**1.4.x** line and consolidate verified changes instead of releasing each feature.
+Check [GitHub Releases](https://github.com/u9401066/asset-aware-mcp/releases) for
+publication status and the [changelog](CHANGELOG.md#141---2026-09-22) for details.
 
-Unreleased workbook operations read complete sheet/reference inventories and add,
-rename, reorder or delete worksheets. `update_worksheet_grid` inserts/deletes rows
-and columns while preserving native cells/styles and relocating modeled references,
-tables, pictures and notes. Read the complete operation receipt; Agent review covers
-formula results and layout. See [grid operations](docs/wiki/Native-File-Assets.md#worksheet-grid-operations-unreleased).
-Public version remains **1.4.0**, with these changes planned for **1.4.x**.
+| Format | Supported workflows |
+|---|---|
+| PDF | Pages/regions, page assembly, annotations, AcroForm fields, actual previews, historical evidence |
+| DOCX | Creation, scoped body/table edits, table grids/layout, headers/footers, footnotes/endnotes |
+| XLSX/XLSM | Cells, worksheet/grid/layout operations, native Tables, A2T application and independent XLSX creation |
+| ODS | Creation, exact logical-cell edits/clearing, dependency-checked worksheet rename and optional Calc previews |
+| CSV/TSV | Literal fields and row/column CRUD with explicit dialects and byte-preservation checks |
+| PPTX | Slides, text, notes, pictures, editable tables and optional whole-slide previews |
+| Raster images | Frames/regions, PNG/TIFF derivatives, composition and checked candidate revisions |
+| Evidence/Wiki | Immutable selections/derivations, complete receipts, CSL/custom citations and exact source attachments |
 
-Unreleased `read_selection` binds exact native values or text spans to their source
-revision. Verification, derivation ledgers and Wiki attachments retain the full
-selection evidence; edits do not migrate old assertions. See
-[precise selections](docs/wiki/Native-File-Assets.md#native-selections-unreleased).
-Public version stays **1.4.0**, with development on **1.4.x**.
-
-Unreleased DOCX page previews now return actual MCP PNGs from exact stored revisions
-using optional LibreOffice Writer. Agents can review every page and compare history;
-page numbering belongs to each rendition, and Word fidelity still requires review.
-See [DOCX page previews](docs/wiki/Native-File-Assets.md#docx-page-previews-unreleased).
-A private Linux font fixture reproduces and corrects missing Chinese glyphs without
-changing DOCX bytes. Actual Codex images and independent pixel checks cover the
-correction; see [CJK font review](docs/wiki/Release-And-Testing.md#cjk-font-correction-evaluation-unreleased).
-
-## v1.4.0 native presentations and discovery migration
-
-Unreleased whole-slide previews use optional LibreOffice Impress and return actual
-MCP images pinned to exact revisions and slide identities. Agents can compare
-layout, overlap and overflow; static previews are not PowerPoint fidelity verdicts.
-See [slide previews](docs/wiki/Native-File-Assets.md#pptx-whole-slide-previews-unreleased).
-
-Development on `main` adds complete, hash-pinned A2T citation readback through
-`table_cite(operation="read")`; this is not yet in a published package. See
-[canonical readback](docs/wiki/A2T-Tables.md) for paging and verification boundaries.
-Unreleased work also adds guarded PPTX text-box insertion and shape deletion, plus
-resolved A2T row IDs in operation results. See [shape operations](docs/wiki/Native-File-Assets.md#pptx-shape-operations-unreleased).
-The published version remains **1.4.0**; development stays on the **1.4.x** line.
-Unreleased picture operations now insert and replace exact PNG/JPEG assets in PPTX,
-preview embedded images through MCP, and extract them as independent versioned files.
-Shared media remains intact; source references persist in history. See
-[picture assets](docs/wiki/Native-File-Assets.md#pptx-picture-assets-unreleased).
-
-Unreleased slide operations discover layouts across masters, insert slides with
-empty inherited placeholders and formatted textboxes, reorder stable slide IDs,
-and delete slides after dependency checks. Original parts remain available. See
-[slide structure](docs/wiki/Native-File-Assets.md#pptx-slide-structure-unreleased).
-
-Unreleased table grids support revision-bound row/column insertion, deletion and
-resizing, including merge expansion/shrinkage and checked anchor promotion.
-Cells can also be merged with an explicit empty-only or paragraph-migration policy;
-splitting keeps migrated text at the anchor. Rich paragraph XML remains intact.
-Unreleased native tables can be inserted with explicit grids, merged cells and
-rich text, then read/edited/deleted through existing native shape operations.
-Citation display presets/templates now have typed discovery. See
-[native tables](docs/wiki/Native-File-Assets.md#native-pptx-tables-unreleased).
-
-Unreleased derivation ledgers connect exact native source and target references,
-retain corrections/retractions, and carry source attachments into evidence wikis.
-Machine integrity checks and agent review claims remain separate. See
-[source-to-asset provenance](docs/wiki/Native-File-Assets.md#native-derivations-unreleased).
-
-Native PDF page collaboration is also **Unreleased**: read/render pages, compose
-new PDFs, insert/copy/delete/reorder pages, and change rotation/crop in managed
-revisions. Page evidence and wiki previews retain exact source attachments.
-See [PDF operations and limits](docs/wiki/Native-File-Assets.md#native-pdf-pages-unreleased).
-MCP checks object graphs, source revisions and bounded independent render readback;
-agents review meaning, full-resolution layout and viewer behavior.
-
-`native/contract` now supports `for_op`; `native-contract-v2` declares whether the
-schema is inline or paged. Follow `schema_request` and preserve `schema_sha256`
-across pages. Clients must migrate from assuming an inline schema; see the
-[discovery guide](docs/wiki/Native-File-Assets.md#contract-v2-140).
-Native PPTX creation, slide/notes shapes, precise run edits and revision-pinned
-references extend native document collaboration. Wiki snapshots retain full shape XML and exact
-package attachments. Untouched content is checked; agents review rendered layout,
-overflow and inherited formatting. See the [PPTX guide](docs/wiki/Native-File-Assets.md#native-pptx-140).
-
-PDF validation now includes real Codex MCP runs over scanned and mixed pages,
-with independent transcription, citation, CRUD, Excel and bundle checks. These
-runs exposed and fixed rotated figure cropping. See [reproduce the evaluation](docs/wiki/Release-And-Testing.md#codex-pdf-evaluation);
-synthetic results do not establish general OCR accuracy or PDF writeback fidelity.
-
-## v1.3.0 native DOCX revisions and evidence
-
-Unreleased work for **1.4.x** adds independent `create_docx` plus
-`add_docx_blocks` / `delete_docx_blocks` for body paragraphs and editable tables.
-Rich runs, merged cells and explicit grids receive serialized checks; current
-block references protect structural edits. Agents review pagination and layout.
-See [DOCX creation and structure](docs/wiki/Native-File-Assets.md#docx-creation-and-body-structure-unreleased).
-
-- Read revision-bound DOCX/DFM and stage checked edits before explicit source writeback.
-- Verify complete parsed block references; bounded excerpts retain full evidence hashes.
-- Export DOCX block notes, original documents and exact package-part attachments.
-  Existing opaque DOCX and spreadsheet snapshots retain their identities and content.
-- Source/package checks remain mechanical; agents review meaning, Word layout,
-  fields and extraction coverage. Later Unreleased work adds scoped structural edits and document-level CSL; see the current capability contract.
-
-## v1.2.0 native evidence wikis and note preservation
-
-- Verify native cell references against immutable source revisions, including old versions.
-- Export XLSX/XLSM evidence as revision-pinned Foam notes, original attachments and
-  complete JSONL references. Citation display stays separate from canonical evidence.
-- Preserve existing native snapshots and detect manually changed PDF bundle notes;
-  verified PDF bundle updates retain backups, while identical exports reuse files.
-- Builds on stable native file IDs, XLSX creation and scoped cell edits with MCP SDK 2.2.0.
-  Agents still review semantics, rendered layout and formulas; document-level CSL is now available in Unreleased.
-
-## v1.0.1 reliability refresh
-
-- Large PDF text/table/figure results use a private, atomic, size-bounded
-  MessagePack handoff instead of a multiprocessing pipe or executable pickle.
-  This keeps multi-megabyte raster assets moving without pipe backpressure and
-  fails closed on partial, oversized, malformed, or crashed worker output.
-  Worker timeout environment values must be finite; `NaN`/infinities fall back
-  to safe defaults. Finite values `<=0` retain the historical explicit direct
-  mode for compatibility and should not be used by managed production launchers.
-- Codex-managed MCP configuration is validated as real TOML, preserves custom
-  and unrelated tables, uses 180/900-second startup/tool timeouts, and never
-  writes credential values. Its isolated working directory plus
-  `ASSET_AWARE_DISABLE_DOTENV=true` prevents a managed server from silently
-  reloading an unrelated workspace `.env`.
-- Global Codex/Cline/Copilot config writes are workspace-trust gated and always
-  use the exact published extension version plus isolated global storage. A
-  lookalike repository cannot persist its local Python or `.env` values into a
-  global agent launcher.
-- MCP SDK 2 operational logs stay on stderr, empty/blank ingest requests are
-  rejected before job persistence, and a true-stdio regression now verifies a
-  large figure, a table, citation-ready evidence, complete bundle hashes, Foam
-  notes, deterministic re-export, and an unchanged source PDF.
-- GitHub Pages now provides a bilingual responsive Evidence Rail workflow,
-  exact 30-tool explorer, install/development guidance, generated docs reader,
-  and direct GitHub/Release/Issue links instead of stale raster architecture
-  screenshots.
+Discover the installed runtime's complete contract and enabled flags before acting.
+Since v1.4.0, `native-contract-v2` can page schemas: inspect `schema_delivery`, select
+`for_op`, or follow the hash-pinned `schema_request`. Follow `contract_request` for
+paged policies too; abbreviated previews are not complete operation instructions.
 
 ## 🎯 Why Asset-Aware MCP?
 
-Agents need native documents, editable components and reusable evidence.
-Asset-Aware supports document/asset workflows and independent table creation.
-The direction is cross-format CRUD with format preservation. MCP checks source
-versions, format constraints and operation results; the agent verifies meaning
-and visual layout and coordinates corrections using inspectable evidence.
+Model document analysis may be enough for summaries and questions. This project's
+purpose is ongoing work on native documents with reusable, checkable results:
+which source revision was used, which component changed, what stayed intact, and
+which evidence still supports a claim after later edits or a change of model.
 
-Current main coverage includes PDF pages/regions/annotations, scoped DOCX editing,
-native workbook and CSV/TSV workflows, PPTX components, independent A2T tables and
-revision-bound citations/Wikis. These Unreleased additions require the advertised
-runtime capabilities; public release remains **1.4.0**, next consolidated **1.4.1**.
-Standalone raster workflows now expose oriented frames/regions, actual PNG previews,
-explicit PNG/TIFF derivatives, guarded frame revisions and source-attached Wikis.
-Complete frame/catalog records and generated previews now persist across decoder
-changes. Historical reads/Wikis can pin saved representations; verification
-separates retained integrity from current-decoder reproduction. Uncaptured old
-previews require a matching decoder; mutation guards still use current records.
-An actual default-model Codex run on a real-PDF-derived image passed independent
-pixel/history/citation checks; this is scoped evidence, not general image fidelity.
-See [native usage and limits](docs/wiki/Native-File-Assets.md) and the
-[capability gaps and upstream references](docs/agent-asset-gap-analysis.md).
-Broader native CRUD and per-format review remain ongoing; conversion does not prove
-a faithful round trip. See [contracts](docs/spec.md) and [roadmap](ROADMAP.md).
+An asset carries identity, revision, native locators, representations, relationships,
+available operations and validation state. Wiki notes link these assets; citation
+formatting preserves the underlying evidence. Complete operation receipts and
+historical sources remain available after component edits or deletion.
 
-The Unreleased [PDF form workflow](docs/native-pdf-fields-spec.md) now connects
-checked text/choice/checkbox/radio CRUD to paged MCP reads, managed revisions,
-CSL/custom citations and source-attached Wikis. Duplicate names, hidden values,
-shared widgets and nested groups retain distinct native identities and historical
-evidence. Both SDK2 tool surfaces pass automated CRUD/image checks. An actual
-default Codex run on an upstream form also passed independent checks of four PDF
-versions, four page images, historical evidence and Wikis, retaining two recovered
-tool errors. Agent guides are synchronized; interactive viewer behavior remains
-unverified. See the [evaluation record](docs/site-content/release-testing.md#codex-native-pdf-field-evaluation-unreleased).
-Public **1.4.0**; next consolidated **1.4.1**, without a per-feature version bump.
-
-Assets carry identity, revision, native locators, representations, relationships,
-capabilities and validation state. Wiki notes are linked projections; configurable
-citation display must preserve the underlying evidence references.
-
-Version 1.1.0 includes citation format contracts: source,
-author/year, explicit numbering and custom templates for evidence/Foam exports.
-They preserve canonical provenance; Unreleased also adds document-level CSL citations and bibliography rendering, separately from source verification.
-See [usage and limits](docs/wiki/LLM-Wiki-Knowledge-Base.md#citation-format-contracts).
-
-Version 1.2.0 adds native reference verification and `native/export_wiki`:
-revision-pinned notes, original attachments, full cell evidence and custom citation
-display. Exports preserve old snapshots and reject modified files; see the native
-operation guide. Version 1.2.0 also protects PDF bundle notes with inventory/hash checks and retained
-backups when a verified generated bundle is replaced.
+**MCP checks source/version integrity, native constraints and operation results.
+The Agent performs complete semantic and visual review and coordinates corrections.**
+Static previews do not establish interactive viewer parity or universal fidelity.
+Arbitrary PDF body editing and ODS worksheet/grid lifecycle remain open work.
+See [native usage and limits](docs/wiki/Native-File-Assets.md),
+[capability gaps and upstream references](docs/agent-asset-gap-analysis.md),
+[actual Agent evaluations](docs/wiki/Release-And-Testing.md) and [contracts](docs/spec.md).
 
 ## ✨ Features
 

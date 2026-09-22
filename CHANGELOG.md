@@ -7,444 +7,91 @@
 
 ## [Unreleased]
 
-- Integrate native PDF fields with complete hash-pinned MCP reads, checked managed
-  CRUD and immutable field references. Retain selections, derivation endpoints,
-  CSL/custom citations and full field/Wiki records across updates and deletion.
-  Distinguish duplicate names, hidden values, child fields and every widget page;
-  retain complete operation receipts, including empty forms and repeated file
-  revisions with different histories. Both SDK2 tool surfaces pass automated
-  CRUD/image checks. A default Codex run on an upstream form passed independent
-  checks of four versions, 17 complete field records, four actual page images,
-  historical selections, derivation and Wikis. Preserve both recovered tool errors
-  and the initial audit failure; correct saved-selection reread validation without
-  rerunning the model. Synchronize Agent guides and add audit rejection regressions.
-  Static previews do not verify interactive viewer behavior. Public **1.4.0**,
-  next consolidated **1.4.1**.
+Changes accumulate on the 1.4.x line; individual features do not trigger releases.
 
-- Implement the internal native PDF field core: exact tree/object references,
-  duplicate names, hidden values, complete widget coverage and checked CRUD for
-  text, choice, checkbox/radio fields and nested groups. Preserve button appearance
-  streams; require explicit complete styles for visible text/choice replacement.
-  Verify serialized and inverse native graphs, source content and untouched pages;
-  retain every removed field in receipts. Cover Unicode, multiselect indices,
-  font reuse, no-op bytes, rotation/crop/UserUnit, malformed dependencies and writer
-  corruption. Real upstream trials retained a rejected overflow and an Agent
-  correction of an unwanted border. Managed MCP/evidence/Wiki integration is
-  described above; default Codex form evaluation remains required. Public
-  **1.4.0**, next consolidated **1.4.1**; no version bump in this segment.
+## [1.4.1] - 2026-09-22
 
-- Fix VSIX install smoke tests accepting remote terminal launchers that ignore
-  isolation directories. Require supported CLI isolation options, an actual
-  installed manifest inside the isolated directory and exact installed Agent guide
-  bytes. Reject remote launchers before installation, including symlink aliases;
-  retain the supported desktop CLI fallback. Public **1.4.0**, next consolidated
-  **1.4.1**; no per-feature version bump.
-
-- Synchronize Codex, Cline, Copilot and bundled Agent guidance with ODS dependency
-  reads, checked worksheet rename and actual-page review/correction. Clarify typed
-  formula input and distinguish the text-pagination hash from the inventory guard.
-  Update the human capability analysis with current ODS MCP/citation/Wiki support,
-  actual Agent evidence and the remaining format gaps. Public **1.4.0**; next
-  consolidated **1.4.1**, without a version bump in this segment.
-
-- Add native ODS worksheet rename through `read_ods_dependencies` and
-  `rename_ods_table`, binding the source revision, exact table identity and complete
-  dependency inventory. Update supported formulas, named expressions, conditional
-  references, chart source/cache addresses and sheet settings in one managed revision.
-  Preserve compressed ranges, styles, unrelated package members, historical refs
-  and Wiki snapshots; retain full change/cache receipts. Unknown owners and source
-  identities require resolution before mutation. Accept native named/conditional
-  expression prefixes during preview while retaining external-resource guards.
-  Agents review actual Calc pages
-  and correct literal/dynamic references; table/row/column lifecycle remains in progress.
-  Public **1.4.0**, next consolidated **1.4.1**; no version bump in this segment.
-
-- Build the ODS structural reference-mapping foundation: parse native OpenFormula
-  addresses, map row/column insertions and deletions and sheet renames/deletions,
-  preserve literals and dollar flags, and retain original formula change spans.
-  Independent Calc UNO edits exercise range contraction, invalid references and
-  explicit grid boundaries. This internal primitive does not yet expose workbook
-  structure CRUD through MCP; package dependencies and transactions remain next.
-  Public **1.4.0**, next consolidated **1.4.1**; no per-feature version bump.
-
-- Synchronize Codex, Cline, Copilot and bundled Agent guidance with native ODS
-  renditions. Discover supported source formats, read complete conversion receipts
-  and actual PDF pages, and review cache differences and clipped content. Keep
-  source/history identities and the MCP/Agent responsibility boundary explicit.
-  Public **1.4.0**, next consolidated **1.4.1**; no per-feature version bump.
-
-- Add revision-bound native ODS PDF renditions through the existing workbook
-  operation, with ODF-specific resource/formula checks and Calc import policies.
-  Keep exact source bytes, complete receipts and `.ods` Wiki attachments. Real
-  Calc 7.3/24.2 checks cover both calculation policies, printed/whole-sheet output,
-  charts/images, SDK2 restart and independent full-page pixel comparisons.
-  Fix the ODF drawing namespace so real drawing objects retain repetition guards.
-  MCP checks integrity; Agent reviews formulas, clipping and actual appearance.
-  Public **1.4.0**, next consolidated **1.4.1**; no per-feature version bump.
-
-- Synchronize ODS complete-read, exact-cell-reference and Agent-review guidance
-  across Codex, Cline, Copilot and bundled extension assets. Clarify physical-range
-  versus text pagination, inline no-op receipts and the remaining lifecycle/rendering
-  limits. Correct stale ODS integration status and keep optional Node.js checks
-  scoped to the ODS CSL test. Public **1.4.0**, next consolidated **1.4.1**.
-
-- Add native ODS MCP creation, complete hash-paged physical-range/logical-cell reads,
-  and cell edits/clears guarded by full original references and expected revisions.
-  Integrate exact ODS evidence with selections, derivations, CSL/custom citations
-  and immutable Wiki snapshots containing sources, receipts and compressed ranges.
-  Non-anchor derivation endpoints retain their exact logical records. MCP checks
-  bytes/structure; Agent reviews meaning, formulas and actual rendering. Public
-  **1.4.0**, next consolidated **1.4.1**; no per-feature version bump.
-
-- Remove repeated ODS row-prefix scans during formula-cache invalidation and
-  read-back. Visit physical ranges directly, preserve all complete before/after
-  records and require every planned cache to match reopened output. Grouped and
-  repeated ranges retain exact locators and namespaces. A 5,000-formula local
-  replay fell from 19.5s to 0.34s with byte-identical output and full receipts.
-  ODS MCP/evidence/Wiki integration is described above; public 1.4.0, next 1.4.1.
-
-- Store complete native operation receipts as immutable, hash-checked blobs bound
-  to asset/history/revision/parent/operation, keeping the revision index bounded.
-  Read legacy inline results without rewriting them; migrate on successful writes.
-  Existing document reads, conversion provenance and Wiki exports resolve complete
-  receipts through the repository. Verify migration before source writeback and
-  reject missing, corrupt or rebound results. Public **1.4.0**, next consolidated
-  **1.4.1**; no per-feature version bump.
-
-- Began native ODS support with a bounded package/worksheet adapter: compressed
-  ranges, exact typed lexical values, explicit rich-display replacement, checked
-  cell edits/clears and native creation. Preserve styles, source format versions
-  and untouched package bytes. Actual Calc exposed stale formula caches; scoped
-  invalidation now retains expressions/formatting and records affected ranges.
-  Calc rendering and independent odfdo reads pass. Calc 7.3 and 24.2 checks use
-  independently authored expected workbooks, matching exported values/types and
-  complete rendered pages despite version-specific predicate/color encoding.
-  The subsequent MCP/evidence/Wiki integration is described above; no project
-  version bump was made for this adapter.
-
-- Retain complete raster frame/catalog representations and generated PNG recipes
-  across decoder upgrades and process restarts. Pinned historical reads, regions,
-  selections, derivations and native/cross-format Wikis reuse exact evidence;
-  verification distinguishes retained integrity from current reproduction. Missing
-  historical previews require a matching decoder; corruption fails closed and
-  current-decoder mutation guards remain. No project version bump.
-
-- Added standalone raster MCP workflows: complete oriented frame/region evidence,
-  actual color-managed PNG previews, explicit PNG/TIFF derivatives, ordered TIFF
-  composition and guarded exact-candidate frame revisions. Full hash-paged receipts,
-  historical verification, selections, derivations, custom/CSL citations and immutable
-  Wikis retain exact sources and direct operation inputs. Agent reviews meaning,
-  appearance, color/precision and unmodeled metadata/layers.
-- Actual default-model Codex evaluated an EXIF-oriented benchmark PNG derived from
-  a pinned real NIST PDF: 258 successful calls, 15 frame PNGs, one region, three TIFF
-  revisions, six literal cells and three Wikis passed independent checks. The first
-  wrapper's post-run missing-audit-module failure is retained; separate audits pass,
-  and imports now precede model execution. Public **1.4.0**, next consolidated **1.4.1**.
-
-- Added native PDF annotation catalogs/records and guarded create, metadata edit,
-  explicit appearance replacement and deletion for supported annotation kinds.
-  Full references support historical verification, selections, derivations,
-  CSL/custom citations and immutable linked Wiki notes; old page projections stay
-  intact. Actual page/semantic review remains the Agent's responsibility.
-- Fixed annotation body-pixel verification after a Highlight changed MuPDF's
-  compositing even with `annots=False`. Disposable annotation-free reader copies
-  retain exact comparisons; requested output and native graph checks are unchanged.
-  Public1.4.0; next consolidated1.4.1, no per-feature bump.
-
-- Added explicit native note ID remapping with atomic collision checks, complete
-  old/new identity receipts and preserved content, formatting and historical refs.
-  Actual Writer24.2.7 tests caught content misbinding missed by the older renderer;
-  Agent-directed correction aligns IDs with body order and is rechecked visually.
-
-- Added complete native footnote/endnote reads, reference-bound content edits and
-  catalog-bound creation/deletion with exact Unicode body anchors. Preserve native
-  IDs, rich runs, special roles, historical references and complete operation receipts.
-  Note evidence supports selections, derivations, CSL/custom citations and a distinct
-  portable Wiki; documents without notes retain legacy snapshot identity.
-- Fixed new note definition placement after actual Writer tests exposed incorrect
-  displayed content associations when newly inserted notes were appended at the end.
-  Existing IDs and definition order remain intact; Agent reviews actual numbering,
-  placement, fields and meaning. Public1.4.0; next consolidated1.4.1.
-
-- Added Word header/footer definition creation, native cloning, explicit section
-  binding/inheritance, checked deletion and first/even-page options. Clones retain
-  relationship targets and remap supported unique identities; full paged receipts,
-  native preservation and incoming-dependency checks precede atomic commits.
-  Deleted definitions remain historical evidence; Agent reviews actual pages.
-- Fixed growing native contract prose being truncated by MCP transport. Capability
-  indexes retain all enabled flags and format/schema discovery; `contract_details`
-  supplies complete hash-pinned metadata separately from request-schema pages.
-
-- Added complete native Word header/footer discovery from actual content types,
-  relationships and section inheritance. Existing shared definitions support
-  reference-bound text edits and native paragraph/table insertion/deletion with
-  complete receipts and unchanged surrounding XML/parts. New story references
-  integrate verification, selections, derivations and citations; a distinct Wiki
-  projection retains full records and original parts without changing legacy
-  snapshots. Agents review all affected pages and field results. Footnote/endnote
-  operations are described separately above. Public 1.4.0 / 1.4.x.
-
-- Added native Word table pagination controls: contiguous repeated header prefixes,
-  explicit automatic/minimum/exact/inherited row heights and allow/prevent/inherit
-  split policies. Full before/after receipts and native content/property checks
-  support Agent correction of clipped text across actual pages. Historical sources
-  and Wikis stay intact; oversized rows and inherited styles require visual review.
-  Public1.4.0 / Unreleased1.4.x, no per-feature bump.
-
-- Added full revision-bound DOCX table grid reads and atomic row/column
-  insert/delete/resize/merge/split. Explicit merge content policies preserve native
-  paragraphs and nested tables; omitted positions, merged-anchor promotion,
-  package integrity and historical references have mechanical checks. Agents
-  inspect complete paged receipts and actual rendered pages. Long receipts are
-  bounded before commit; recurring file hashes use the latest matching history
-  receipt, and no-op updates add no history entry. Public remains 1.4.0;
-  changes accumulate within 1.4.x without a per-feature version bump.
-
-- Added complete, hash-paged inspection and immutable capture/read/view of legacy
-  PDF ETL span/table/figure evidence. Snapshots retain original source bytes,
-  canonical extraction artifacts and selected images; CSL accepts mixed native
-  and captured ETL references and exports every evidence attachment. Historical
-  reads and actual original-page PNGs survive ETL deletion. Source/hash/locator
-  checks stay in MCP; Agent reviews extraction, semantics and bibliographic truth.
-  Public stays 1.4.0; changes accumulate within 1.4.x without a per-feature bump.
-
-- Added document-context CSL citation rendering through `evidence` with pinned
-  citeproc-js, official APA7/Chicago18/Vancouver-NLM styles and locales. Full
-  hash-paged results retain structured bibliographic data, retroactive citation
-  updates, sorted bibliography mappings and native source references. Optional
-  immutable Wiki snapshots include exact source bytes and a safe typography preview.
-  Local Node.js is optional and required only for CSL rendering; existing custom
-  citation templates remain unchanged. Public1.4.0 / Unreleased1.4.x.
-
-- Added hash-pinned NIST and NASA real PDF corpus tests, independent complete
-  table-string oracles, actual default-model Codex evaluation and SDK2 regressions.
-  Preserve first transcription/workflow failures separately from retries. CI
-  explicitly downloads/verifies the public corpus; ordinary pytest stays offline.
-- Native PDF reads now prove identical duplicate direct stream Length declarations
-  against original dictionaries and raw stream boundaries, retaining source bytes
-  and parser observations. Requested edits/copies record canonicalization repairs;
-  conflicting/indirect lengths and unrelated warnings remain rejected. Real NASA
-  scans exposed this previously unsupported but mechanically resolvable structure.
-
-- Preserve CSV NUL values and exact native offsets across Python3.10/newer runtimes.
-  Reversible parser-only masking avoids legacy csv errors without altering source
-  bytes or dropping characters; regressions include marker/dialect collisions.
-
-- Added native CSV/TSV creation, complete string-field reads, byte-preserving cell
-  and row/column CRUD, dialect-bound evidence, selections, derivations and Wiki.
-  Preserve encoding/BOM/quotes/mixed line endings; record required empty-field and
-  row-separator repairs. Mechanical checks stay in MCP; Agent reviews interpretation.
-  Compact discovery keeps every enabled operation/schema within the response budget.
-  Public remains 1.4.0; changes accumulate on 1.4.x without a per-feature version bump.
-
-- Added revision-bound PDF region reads with actual MCP PNGs, displayed CropBox
-  fraction coordinates, renderer metadata and resolution-independent references.
-  Verification, parsed selections and per-cell derivations retain exact regions;
-  Wiki includes region records, previews, custom citations and original PDFs.
-  External sources never borrow target bibliographic metadata; missing citation
-  fields are reported. Source bytes/history stay intact; Agent reviews OCR/meaning.
-  Public remains 1.4.0; this work accumulates within Unreleased / 1.4.x.
-
-
-- Native worksheet layout read/update pins revisions and exact sheet keys. Set
-  point heights/raw OOXML widths, reset sizes or change visibility; preserve cells,
-  styles, interval metadata and authored object anchor behavior. Complete receipts,
-  cache invalidation and immutable before/after PDF review support Agent correction.
-  Source files/history stay intact; public remains 1.4.0, development stays 1.4.x.
-
-- Immutable workbook PDF renditions: explicit source revision, print/whole-sheet
-  scope and recalculate/prefer-cache policy through optional LibreOffice Calc.
-  Complete `read_rendition` receipts, native PDF page PNGs and Wiki attachments
-  preserve the exact workbook source without resaving it. Hidden/blank pages,
-  stale caches and text clipping are explicit review concerns; agents check
-  semantics, visual layout and formula results. Public remains 1.4.0 / 1.4.x.
-
-- Added `table_update.totals_row` for native Table add/remove/reuse with blank-space
-  checks, explicit clear/keep contents, optional direct cell-style inheritance and
-  retained definitions. Kept formulas freeze only their own Table references;
-  other workbook references remain structured. Detached-row pivot dependencies,
-  original-value receipts and combined public readback remain checked before CAS.
-  Quoted worksheet references after `@` retain exact tokenizer spans. SDK2 and
-  actual Codex fixtures cover lifecycle and historical evidence. Public stays
-  1.4.0, with development Unreleased for 1.4.x.
-
-- Added `add_workbook_table` over exact native worksheet ranges, with typed ordered
-  columns, matching/rich headers or explicit blank-header filling, calculated
-  columns, reserved blank totals rows and built-in/existing Table styles. One CAS
-  preserves ordinary data/styles/history, allocates native package identities and
-  requires complete bounded readback. Empty/disabled workbookProtection is no longer
-  mistaken for an active lock; active/unknown protection remains guarded.
-  Public stays 1.4.0; this work accumulates Unreleased for 1.4.x.
-
-- Native `update_workbook_table` coordinates column names/rich headers, scalar
-  calculated-column formulas and existing totals in one revision-checked commit.
-  Complete Table header cell/shared-string XML supports run-aware inspection.
-  Existing structured references follow column identity; explicit policies handle
-  exceptions and metadata removal. Preserve styles/parts, retain historical
-  evidence, check source schemas and invalidate caches for Agent recalculation
-  and visual review. Public remains 1.4.0; development stays within 1.4.x.
+One consolidated patch release for the native-document and evidence work below.
+MCP checks source versions, native structure and inspectable operation results;
+Agents review semantics, rendered appearance, formula results and corrections.
 
 ### Added
 
-- Explicit native Table edge expansion via insert edit expand_tables with exact
-  part and intermediate expected_ref. Table/filter/sort extents, stable column IDs,
-  unique generated headers and calculated formulas are coordinated. Inserting
-  before totals also includes new rows in the Table filter. read_workbook.tables
-  exposes complete table definitions and original part hashes. A2T native_generated
-  intent resolves only cells generated during that structural operation; snapshots
-  retain input intent and receipts expose resolved values. No version bump/tag.
-
-- Structural A2T application uses stable column/row identities, a complete explicit
-  worksheet_grid plan and one native revision commit. Supported native formulas,
-  rich text and styles survive relocation; final values and unedited representations
-  are read back. Column renames keep identity; recreated rows/columns do not inherit
-  deleted identities. Frozen inputs and source bindings remain historical. Native
-  table-edge expansion uses the explicit options above; specialized table editing
-  and reordering remain separate.
-  Typed JSON column defaults are accepted. Legacy snapshot hashes remain readable;
-  missing legacy creation dates no longer generate a new timestamp on every read.
-  Public remains 1.4.0; these changes are Unreleased for 1.4.x.
-
-- Unreleased `update_worksheet_grid`: revision-checked sequential native row/column
-  insertion/deletion, preserving source XML/styles and relocating modeled formulas,
-  table columns, merges, drawings, notes and views. Complete receipts retain geometry
-  assumptions, deleted-reference errors, cache repairs and required Agent review.
-  Source publication is explicit; A2T correspondence uses a separate explicit plan.
-  Public version stays 1.4.0, with development on the 1.4.x line.
-
-- Native workbook/A2T workspaces: exact range projection, typed cells, complete
-  hash-pinned readback with original cell evidence, guarded application to the
-  source workbook and independent XLSX creation. Applied/exported table inputs
-  remain available as immutable `workspace_reference` snapshots. Cell updates
-  preserve original styles and untouched parts; structural A2T edits use the explicit
-  identity-checked grid plan or independent creation. `table_data.update_cell` accepts typed JSON values.
-  Source bindings do not auto-advance; Agent reviews meaning, formulas and layout.
-  Public version remains 1.4.0; all development stays Unreleased for 1.4.x.
-
-- Native workbook structure CRUD: hash-pinned `read_workbook` JSON, worksheet
-  insertion, renaming, reordering and dependency-checked deletion. Stable sheet
-  identities, explicit local formula/name/chart/pivot references, view indices
-  and scoped names remain consistent; unrelated native parts remain byte-identical.
-  3D membership changes require explicit policy. Detached sheets/calculation chains
-  remain retained; this is not secure erasure. Dynamic references, rendering and
-  formula results require Agent review. Uses openpyxl's tokenizer without resaving
-  source workbooks. Public stays 1.4.0; this work is Unreleased for 1.4.x.
-
-- `read_selection` exposes complete parsed native cell/block/shape/page records
-  or exact JSON values and Unicode text spans, with parent/selector/context hashes.
-  Existing verification and derivation ledgers accept immutable selection refs;
-  Wiki exports retain selected records and native source attachments. Historical
-  evidence never migrates automatically. SDK2 and actual Codex scanned-PDF-to-XLSX
-  evaluation cover literal values, historical selection proofs and wiki separation.
-  Public version remains 1.4.0; development stays Unreleased on the 1.4.x line.
-
-- Opt-in Linux Fontconfig evaluation fixture pins Noto Sans TC downloads, copies
-  and hashes local Liberation fonts, retains licenses and leaves global settings
-  unchanged. Codex MCP and independent replay share the recorded environment;
-  changed fixtures fail audit. Same-source SDK2 tests reproduce missing CJK glyphs
-  and verify corrected images. Nonzero glyph IDs alone cannot certify appearance.
-
-- Optional `render_docx_page` converts exact managed DOCX revisions with LibreOffice
-  Writer and returns actual MCP PNGs, page geometry/count, renderer identity and
-  image/PDF hashes. Whole-document conversion retains blank pages and static form
-  appearances. Resource guards, private macro-disabled profiles, process budgets
-  and source-copy checks protect the operation. Page indices are rendition-local;
-  Agent semantic/visual review and Word fidelity claims remain separate.
-
-- Native DOCX creation and body paragraph/table insertion/deletion, with rich runs,
-  explicit twip grids, merged cells and serialized formatting checks. Structural
-  edits use current full block references and preserve unrelated XML/package bytes.
-  Known section/range/field/embedded dependencies, stale references and CAS conflicts
-  fail before publication. Agents review meaning, pagination and rendered layout.
-  Public version remains 1.4.0; this work accumulates Unreleased for 1.4.x.
-
-- Optional `render_pptx_slide` delivers actual whole-slide PNGs with immutable
-  revision/slide identity, hashes and LibreOffice renderer metadata. Private
-  profiles, timeout cleanup, output checks and hidden-slide page-count checks
-  protect the preview workflow; Agent visual judgments remain separate.
-
-- Native PPTX slide layout discovery, insertion, reordering and deletion preserve
-  stable surviving slide identities and original parts. New slides use explicit
-  destination layouts and empty inherited placeholders with optional rich textboxes.
-  Incoming links/custom shows, sections, index-based ranges, stale/CAS conflicts and
-  malformed layouts fail without partial publication. Slide/notes count properties
-  receive deterministic updates; agents review rendering and remaining viewer caches.
-
-- Native PPTX table merge/split uses an explicit content policy: require empty
-  non-anchor cells or migrate their complete paragraphs in row-major order.
-  Rich text, fields, links and paragraph identity survive; split retains content
-  at the anchor without guessing redistribution. Partial existing-merge overlap,
-  malformed text bodies and stale references fail atomically.
-
-- Native PPTX table grids support sequential row/column insertion, deletion and
-  resizing using complete shape references. Existing cell XML and styles survive;
-  merges expand/shrink, deleted anchors retain their content, and hidden-content
-  conflicts fail without publishing a partial revision. Frame scale, package bytes,
-  surrounding XML and serialized grids are checked; Agents review rendering.
-
-- Native derivation ledgers connect verified file/cell/DOCX/PPTX/PDF references,
-  preserve attributed agent review, and support hash-pinned reads, atomic
-  supersession, retraction and historical verification. Exact source attachments
-  and ledger-pinned wiki snapshots preserve portable provenance without changing
-  source files or treating agent assertions as machine semantic verification.
-- Add native PPTX table insertion with explicit row/column dimensions, rich cell
-  text, direct formatting, destination default style, checked merges and atomic
-  revisions. Existing shape read/edit/delete/evidence/wiki operations apply.
-- Expose native citation display as a typed preset/custom-template union after a
-  real Codex run confused display formatting with source evidence. Valid JSON
-  inputs remain compatible; source proof objects are rejected by the schema.
-- Add actual SDK2 table CRUD/writeback and opt-in Codex scanned PDF to editable
-  PPTX table evaluation, retaining transcription/recovery and independent audits.
-
-- Native-file references identify complete immutable bytes across formats. PPTX
-  picture operations add exact PNG/JPEG assets with explicit contain/cover/stretch
-  fitting, replace one picture while preserving its existing mapping and shared
-  media, deliver bounded embedded-image previews, and extract independent image
-  assets with source lineage. Existing shape evidence, deletion and wiki package
-  attachments remain compatible. Source/version/CAS, image budgets, exact new part
-  bytes, relationships, content types and XML outside the requested edits are checked.
-  Previews do not render the slide's crop/effects/layout; agents complete that review.
-- Native PDF page create/read/render/copy/insert/delete/reorder and rotation/crop
-  edits through pikepdf/QPDF, with bounded PyMuPDF text/render readback. Immutable
-  page references, persisted copy lineage and `pdf-pages-v1` evidence wikis include
-  exact source PDFs, previews and full page JSON. Production operations run in a
-  bounded worker; source writeback retains existing revision/source checks and backups.
-  Encoded-stream graphs, document properties, page dependencies, form registration
-  and unchanged-page pixels are checked. Known copied annotation backreferences
-  receive a deterministic repair followed by graph verification. Encrypted/signed/
-  XFA/repair-dependent files and unsupported cross-document dependencies fail closed.
-  This does not provide arbitrary PDF text editing, OCR or secure redaction.
-- Real SDK2 native PDF integration and an opt-in Codex scanned-PDF evaluation with
-  independent image, page-readback, history, source, pixel, transcription and wiki
-  auditing; regular tests never invoke a model.
-- Native `add_pptx_shapes` inserts typed textboxes in existing slide, notes or
-  nonzero-extent group containers; `delete_pptx_shapes` removes reference-pinned
-  shapes, including group descendants. Revision/hash checks, known connector and
-  timing/build dependencies, exact package inventory, untouched bytes and XML
-  outside requested nodes are checked before committing a managed revision.
-  Relationships and media are retained; deletion is not secure erasure. Agents
-  review layout, semantics and unmodeled dependencies. Source writeback is explicit.
-- `table_cite(operation="read")` returns complete cell/value/citation snapshots in
-  bounded, hash-pinned JSON pages. Stable row identity and current value bind every
-  full locator, quote/hash and annotation; stale or mixed-cell pages are rejected.
-  Existing `get` summaries remain compatible and point to exact readback. Stored
-  content integrity does not establish source validity or semantic support.
-- SDK2 PDF workflows now reconstruct citations through MCP. Opt-in Codex runs
-  additionally require independently audited canonical readbacks for every final
-  Reading cell after the last correction, retaining prior evaluation evidence.
+- Native PDF page creation, copying, insertion, deletion, ordering, crop and
+  rotation; exact page/region references, actual PNG previews and source-attached
+  Wikis. Copy lineage and unchanged native page content remain checkable.
+- Revision-checked PDF annotation CRUD and AcroForm text, choice, checkbox/radio
+  and nested field CRUD. Full references distinguish duplicate names, hidden
+  values and every widget. Explicit appearance policies, complete receipts and
+  historical evidence survive updates, deletion and repeated file bytes.
+- Native DOCX creation and scoped body/block editing; table row/column CRUD,
+  merge/split, dimensions, repeated headers and pagination controls. Header/footer
+  editing and definition creation, cloning, binding and deletion preserve explicit
+  section inheritance. Footnote/endnote CRUD and explicit ID remapping retain
+  definition/reference bindings and historical evidence.
+- Native PPTX slide/layout discovery and slide CRUD, rich textboxes, pictures,
+  editable tables, grid resizing and merge/split. Image extraction preserves exact
+  source lineage; existing run/notes edits retain unrelated package contents.
+- XLSX/XLSM worksheet lifecycle, grid and layout operations; native Excel Table
+  creation, column/header/calculated-formula updates, totals lifecycle and explicit
+  range expansion. Stable A2T row/column identities support checked application
+  to native workbooks and independent XLSX creation with typed values.
+- Native ODS creation, complete compressed-range and exact logical-cell reads,
+  typed value updates/clearing, and dependency-checked worksheet renaming. Full
+  references, receipts, selections, derivations, citations and Wikis preserve the
+  exact original package. Formula caches remain subject to Agent review.
+- Native CSV/TSV creation and literal field/row/column CRUD with explicit dialects,
+  encoding/BOM, quoting and newline preservation. Evidence locators and Wikis bind
+  the resolved dialect and exact source bytes.
+- Standalone raster frame/region reads, oriented PNG previews, PNG/TIFF derivatives,
+  TIFF composition and checked complete candidate versions. Retained representations
+  and cached previews remain identifiable after decoder upgrades; historical
+  integrity and current-decoder reproduction are reported separately.
+- Optional LibreOffice Writer/Impress page/slide previews and Calc PDF renditions
+  from exact managed revisions. Full conversion receipts preserve source identity,
+  scope, cache policy and renderer metadata without resaving original documents.
+- Immutable selections and derivation ledgers with complete hash-paged readback,
+  explicit supersession/retraction and exact historical source attachments.
+  Capture/read/view of legacy ETL evidence survives deletion of the live ETL record.
+- Document-context CSL citations and bibliographies using pinned citeproc-js and
+  APA7, Chicago18 and Vancouver/NLM styles. Optional Node.js rendering retains
+  source references, bibliography mappings and portable Wiki snapshots; existing
+  custom citation templates remain available independently of source verification.
+- Immutable, hash-bound native operation-result blobs preserve full receipts
+  without growing every asset index. Legacy inline receipts remain readable and
+  migrate on a successful write. Backups must retain the complete asset directory.
+- Hash-paged native policies and operation schemas expose complete contracts on
+  both MCP SDK2 tool surfaces. Codex, Cline and Copilot instructions and VSIX bundles
+  describe full readback, revision checks and Agent review responsibilities.
 
 ### Fixed
 
-- Native workbook formula parsing preserves escaped brackets in structured column
-  headers, including header text resembling cell or worksheet references. Worksheet
-  deletion checks both structured range endpoints and respects external workbook
-  qualifier scope.
+- Accept provably identical duplicate direct PDF stream Length declarations while
+  preserving parser observations, original source bytes and recorded canonicalization
+  repairs. Conflicting lengths and unrelated parser warnings remain rejected.
+- Preserve CSV NUL characters and exact offsets across supported Python versions;
+  preserve escaped structured-reference headers and external workbook scope.
+- Resolve A2T operations and citation labels by stable row identity after deletion.
+- Require isolated VSIX installation manifests and exact installed Agent-guide
+  bytes. Reject remote terminal launchers that ignore installation isolation.
+- Correct the Codex field auditor's saved-selection reread handling while retaining
+  complete context/range/hash checks; invalid audits exit with a failure status.
 
-- A2T read/update/delete/clear and citation result labels now identify the resolved
-  stable row and current index, including after earlier-row deletion. A supplied
-  row ID takes precedence over a default or conflicting input index.
+### Verification and scope
 
-Public version remains 1.4.0; these changes accumulate on main for the 1.4.x line.
+- Real SDK2 tests exercise native CRUD, readback, images and historical evidence.
+  Opt-in default Codex evaluations use real NIST/NASA PDFs and an upstream PDF
+  form, with independent source, pixel, literal-value, citation and Wiki audits.
+  Ordinary tests never start a model. Failed attempts and subsequent corrections
+  remain separate evidence; the field trace includes four PDF versions, seventeen
+  complete field records and four inspected page images.
+- Support is operation-specific. Arbitrary PDF body editing, secure redaction,
+  interactive PDF viewer parity, full Office rendering equivalence, and ODS sheet
+  insertion/deletion/reordering or row/column lifecycle are not implemented by this
+  release. Unsupported dependencies, signatures and XFA retain their guards.
+- See [native usage](docs/wiki/Native-File-Assets.md),
+  [evaluation records](docs/wiki/Release-And-Testing.md) and
+  [remaining gaps](docs/agent-asset-gap-analysis.md) for exact boundaries.
 
 ## [1.4.0] - 2026-09-18
 

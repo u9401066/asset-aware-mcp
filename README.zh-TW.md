@@ -1,235 +1,49 @@
 # asset-aware-mcp
 
-ODS 原生支援開發中：第一段底層實作可建立試算表、讀取壓縮儲存格區段、
-修改及清空型別化數值，保留儲存格樣式與未修改的套件內容。已用實際 Calc
-與獨立 odfdo 核對讀回、畫面及公式快取失效處理；MCP、引用與 Wiki 串接仍待完成。
-詳見 [ODS 規格](docs/native-ods-spec.md)。公開版 **1.4.0**，下次整合 **1.4.1**。
-
-Unreleased 已可完整讀取、建立、修改與刪除 Word 註腳／尾註，保留原生 ID、
-正文格式與歷史引用，並匯出可引用的 Wiki；Agent 負責核對實際編號、位置與語意。
-詳見 [Word 註腳與尾註](docs/wiki/Native-File-Assets.md#native-word-footnotes-and-endnotes-unreleased)。
-另提供明確的註解 ID 對應修正，讓 Agent 處理閱讀器的內容錯配，保留完整變更紀錄與歷史引用。
-公開版 **1.4.0**，下次整合 **1.4.1**，不逐功能升版。
-
-Unreleased 已可建立、複製、綁定／解除共用及刪除整份 Word 頁首頁尾定義，
-並保留既有文字與段落／表格編修。明確的繼承範圍與完整操作紀錄，讓 Agent
-獨立修改某節並保留後續節，再核對所有實際頁面；刪除的定義仍可由歷史來源與 Wiki 驗證。
-較長的完整能力說明使用固定雜湊分頁，避免被截短。
-詳見 [Word 頁首頁尾生命週期](docs/wiki/Native-File-Assets.md#native-word-story-lifecycle-unreleased)。
-公開版 **1.4.0**，下次整合發布 **1.4.1**，不逐功能升版。
-
-Unreleased 的 Word 表格排版控制讓 Agent 修正固定列高裁字、設定跨頁標題及列分頁方式；
-保留原生儲存格與樣式，完整讀回修改前後紀錄，再核對實際頁面。
-詳見 [Word 表格分頁](docs/wiki/Native-File-Assets.md#native-word-table-pagination-unreleased)。
-公開版維持 **1.4.0**，功能累積於 **1.4.x**。
-
-Unreleased 的 DOCX 原生表格可完整讀取格網、插刪列欄、調整尺寸及合併／拆分。
-合併須明確指定內容處理方式；既有富文字、巢狀表格、來源檔與歷史引用保留，
-Agent 使用實際頁面預覽核對版面。詳見
-[Word 表格格網](docs/wiki/Native-File-Assets.md#native-word-table-grids-unreleased)。
-公開版仍為 **1.4.0**，變更累積於 **Unreleased／1.4.x**。
-
-Unreleased 已加入完整文稿的 CSL 引用：APA 7、Chicago 18 與 Vancouver／NLM，
-處理同作者年份消歧、重複引用及參考文獻；Wiki 保留精確來源附件與排版預覽，
-原有自訂模板仍可使用。詳見
-[學術引用文稿](docs/wiki/Citation-Provenance.md#csl-citation-documents-unreleased)。
-公開版仍為 **1.4.0**，變更累積於 **1.4.x**。
-
-真實 PDF 回歸已加入 NIST 證書與 Apollo 11 原始掃描報告，固定來源位元組、
-獨立核對完整表格字串，並直接使用 Codex 實測。
-詳見 [真實文件驗證](docs/wiki/Release-And-Testing.md#real-pdf-corpus-unreleased)。
-公開版保持 **1.4.0**，開發累積於 **Unreleased／1.4.x**。
-
-Unreleased 的 CSV／TSV 可獨立建立、完整讀取逐格內容、修改與插刪列欄；
-以原生位元組局部修改，保留未變動內容的編碼、引號與換行。逐格來源引用可連結
-PDF 轉錄及 Wiki 證據。詳見 [CSV／TSV 原生操作](docs/wiki/Native-File-Assets.md#native-csvtsv-files-unreleased)。
-公開版 **1.4.0**，功能累積在 **1.4.x**，不逐項功能跳版。
-
-Unreleased 的 `read_pdf_region` 把掃描表格中的明確區域，連到轉錄後的儲存格：
-回傳實際 PNG、完整頁面／區域引用，並由驗證、轉製帳本與 Wiki 保留精確來源。
-MCP 檢查版本與座標，Agent 核對轉錄及語意。詳見
-[PDF 區域證據](docs/wiki/Native-File-Assets.md#pdf-region-evidence-unreleased)。
-公開版維持 **1.4.0**，累積 **Unreleased／1.4.x**。
-
-
-Unreleased 的工作表尺寸操作讓 Agent 讀取原生欄寬／列高，依實際 PDF 畫面調整後
-重新預覽，保留儲存格內容與格式、歷史 PDF 及證據。詳見
-[工作表版面修正](docs/wiki/Native-File-Assets.md#worksheet-layout-correction-unreleased)。
-公開版維持 **1.4.0**，功能累積於 **Unreleased／1.4.x**。
-
-
-Unreleased 新增 `add_workbook_table`：在既有或獨立建立的 XLSX 指定範圍建立
-原生 Excel Table，包含標題、計算欄、合計列與表格樣式，保留既有資料及儲存格格式。
-讀回完整建立紀錄後，Agent 核對語意、公式結果與實際畫面。詳見
-[原生 Table 建立](docs/wiki/A2T-Tables.md#native-table-creation-unreleased)。
-公開版仍 **1.4.0**，持續累積 **1.4.x**。
-
-Unreleased 新增 `update_workbook_table`：同步修改原生 Table 欄名、富文字標題、
-計算欄與既有總計列，保留欄位 ID／樣式並更新結構化引用。Agent 可完整讀回標題
-XML；計算欄的例外值需明確指定覆寫，公式結果與畫面仍由 Agent 核對。
-公開版維持 **1.4.0**，後續沿用 **1.4.x**。
-
-> 給 AI Agent 使用的 citation-ready 文件基礎設施：把 PDF、DOCX、表格、
-> 圖片與 evidence span 轉成可重用資產，並組成 Foam／LightRAG wiki。
+> 給 AI Agent 使用的文件工作基礎設施：操作原生文件、保存可重用證據，
+> 並組成可攜式 Foam／LightRAG wiki。
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
-原生 Excel Table 可明確擴大範圍，保留欄位 ID 並同步篩選與計算欄；A2T 以 native_generated 指定沿用新生成的標題／公式，完整讀回區分輸入意圖與實際結果。詳見 [Table 擴展流程](docs/wiki/A2T-Tables.md#native-table-expansion-unreleased)。
+## v1.4.1 跨格式文件與證據流程整合
 
-Unreleased 的原生 Excel／A2T 工作區保留資料型別與精確來源引用；在 A2T 修改後，
-可核對表格與檔案版本再套回原工作簿，並保留實際套用的不可變快照。
-`table_grid_apply_enabled` 啟用時，可用明確計畫將 A2T 列欄增刪一次套回原檔；
-欄位改名保留 ID，刪除後重建不重用舊身分。操作搬移整張工作表的列欄，原生 Table
-邊界與尚未支援的表格編輯另有檢查。詳見 [原生表格工作區](docs/wiki/A2T-Tables.md#native-workbook-workspaces-unreleased)。
-公開版仍為 **1.4.0**，後續沿用 **1.4.x**。
+本版整合下列累積功能。版本維持 **1.4.x**，完成一批改動與驗證後才一起發版，
+不逐功能跳版。正式發布狀態見 [GitHub Releases](https://github.com/u9401066/asset-aware-mcp/releases)，
+完整內容見 [變更紀錄](CHANGELOG.md#141---2026-09-22)。
 
-Unreleased 的工作表操作可完整讀取引用清單、新增、改名、重排及刪除工作表；
-`update_worksheet_grid` 可插入／刪除列欄，保留原生內容與樣式，並搬移已支援的
-引用、表格、圖片和註解。請完整讀回操作紀錄；公式結果與版面由 Agent 核對。
-詳見 [列欄操作](docs/wiki/Native-File-Assets.md#worksheet-grid-operations-unreleased)。
-公開版仍為 **1.4.0**，這些變更規劃於 **1.4.x** 發布。
+| 格式 | 已支援的工作流程 |
+|---|---|
+| PDF | 頁面／區域、頁面組合、批註、AcroForm 欄位、實際預覽與歷史證據 |
+| DOCX | 獨立建立、指定正文／表格編輯、格網與排版、頁首頁尾、註腳／尾註 |
+| XLSX／XLSM | 儲存格、工作表／格線／版面、原生 Table、A2T 寫入及獨立 XLSX 建立 |
+| ODS | 建立、精確邏輯儲存格修改／清空、含相依檢查的工作表改名、選用 Calc 預覽 |
+| CSV／TSV | 明確方言、字串欄位與列欄 CRUD，檢查未修改位元組的保留 |
+| PPTX | 投影片、文字、備註、圖片、可編輯表格及選用整頁預覽 |
+| 獨立圖片 | 影格／區域、PNG／TIFF 衍生檔、組合及完整候選版本修改 |
+| 證據／Wiki | 不可變選取與衍生關係、完整操作紀錄、CSL／自訂引用及原始附件 |
 
-Unreleased 的 `read_selection` 可將原生值或文字範圍綁定到來源版本，驗證、
-轉製帳本與 Wiki 附件均保留完整選取證據；更新文件不會自動遷移舊主張。
-詳見 [精確選取引用](docs/wiki/Native-File-Assets.md#native-selections-unreleased)。
-公開版維持 **1.4.0**，後續沿用 **1.4.x**。
-
-Unreleased 新增 DOCX 整頁預覽：另裝 LibreOffice Writer 後，可將固定版本的原始
-文件轉為實際 MCP PNG，讓 Agent 逐頁核對並比較歷史版本。頁碼以每次轉換為準，
-不等於 Microsoft Word 保真驗證。詳見 [DOCX 頁面預覽](docs/wiki/Native-File-Assets.md#docx-page-previews-unreleased)。
-獨立 Linux 字型環境已重現並修正中文字缺字，保留 DOCX 原始位元組；Codex 實際
-看圖與獨立像素比對涵蓋此修正。詳見 [中文字型核對](docs/wiki/Release-And-Testing.md#cjk-font-correction-evaluation-unreleased)。
-
-## v1.4.0 原生簡報協作與規格查詢遷移
-
-Unreleased 新增整張投影片預覽：使用另行安裝的 LibreOffice Impress，回傳固定版本與
-slide ID／part 的實際 MCP 圖片，供 Agent 比較版面、重疊與文字溢出。靜態預覽不代表
-PowerPoint 保真驗證通過。詳見[投影片預覽](docs/wiki/Native-File-Assets.md#pptx-whole-slide-previews-unreleased)。
-
-`main` 開發版新增 `table_cite(operation="read")`，可分頁讀回完整引用並核對
-固定 hash；尚未包含在已發布套件。詳見 [完整引用讀回](docs/wiki/A2T-Tables.md)。
-未發布項目也包含有檢查保護的 PPTX 文字框新增／形狀刪除，以及 A2T 操作結果的
-實際列 ID。詳見 [形狀操作](docs/wiki/Native-File-Assets.md#pptx-shape-operations-unreleased)。
-公開版維持 **1.4.0**，後續開發沿用 **1.4.x**，不因單次功能提交跳版號。
-未發布的圖片操作可將 PNG／JPEG 資產插入、替換到 PPTX，透過 MCP 顯示內嵌
-圖片，再拆出為獨立版本資產。共用圖片不被覆寫，來源引用保留在歷程。
-詳見 [圖片資產操作](docs/wiki/Native-File-Assets.md#pptx-picture-assets-unreleased)。
-
-未發布的投影片操作可探索各母片版型、新增空白繼承預留位置與格式化文字框、
-依固定 ID 重排及檢查相依後刪頁；既有套件內容持續保留。詳見
-[投影片結構操作](docs/wiki/Native-File-Assets.md#pptx-slide-structure-unreleased)。
-
-未發布的表格格網已支援固定版本的列欄插刪與尺寸調整，並檢查合併區擴縮與起點移動。
-合併儲存格須明確選擇「其他格為空」或「依序搬移段落」；拆分保留左上角
-已搬移的內容，文字格式、欄位與連結的段落 XML 持續保留。
-未發布的原生表格可指定列欄尺寸、合併格與文字格式，再沿用讀取／修改／刪除。
-引用顯示的預設／模板也有 typed 規格可查。詳見
-[原生表格](docs/wiki/Native-File-Assets.md#native-pptx-tables-unreleased)。
-
-未發布的轉製來源帳本可連結原生來源與產物的完整版本引用，保留修訂／撤回
-紀錄，並將來源附件帶入證據 Wiki；機械檢查與 Agent 核對聲明各自保存。
-詳見 [跨資產來源關係](docs/wiki/Native-File-Assets.md#native-derivations-unreleased)。
-
-原生 PDF 頁面協作也列於 **Unreleased**：讀取／顯示頁面、建立新 PDF、
-插入／複製／刪除／重排頁面及調整旋轉／裁切，先建立受管理版本。
-頁面證據與 Wiki 預覽保留完整來源附件。詳見
-[PDF 操作與限制](docs/wiki/Native-File-Assets.md#native-pdf-pages-unreleased)。
-MCP 檢查物件圖、來源版本及有限解析度的獨立渲染讀回；
-語意、完整解析度版面與檢視器行為由 Agent 核對。
-
-1.4.0 提供 `contract.for_op` 與 `native-contract-v2`。先查看
-`schema_delivery`，需要分段時沿用 `schema_request` 與 `schema_sha256`，
-客戶端須遷移原本假設完整 schema 永遠內嵌的讀法。詳見
-[查詢與遷移說明](docs/wiki/Native-File-Assets.md#contract-v2-140)。
-原生 PPTX 已可建立、讀取投影片／備註形狀、精確修改文字 run、核對版本引用及
-匯出證據 Wiki。完整形狀 XML 與套件附件會保留；版面、文字溢出與繼承格式
-由 Agent 核對。詳見 [PPTX 操作說明](docs/wiki/Native-File-Assets.md#native-pptx-140)。
-
-PDF 已加入 Codex 實際呼叫 MCP 的掃描／混合頁測試，獨立核對轉錄、引用、
-CRUD、Excel 與資產包，並修正實測發現的旋轉圖片裁切問題。詳見
-[重現驗證流程](docs/wiki/Release-And-Testing.md#codex-pdf-evaluation)；
-合成測資通過不代表通用 OCR 正確率或 PDF 回寫保真。
-
-## v1.3.0 原生 DOCX 版本與元件證據
-
-**1.4.x 未發布工作**新增 `create_docx`，以及主本文段落／可編輯表格的
-`add_docx_blocks`／`delete_docx_blocks`。富文字、合併格與明確欄寬會在儲存後
-讀回檢查；結構操作綁定目前版本的完整區塊引用，分頁與版面由 Agent 核對。
-詳見 [DOCX 建立與結構操作](docs/wiki/Native-File-Assets.md#docx-creation-and-body-structure-unreleased)。
-
-- 讀取固定版本的 DOCX/DFM，檢查編輯後先建立受管理版本，再明確回寫來源。
-- 驗證完整解析區塊的引用；文字分段仍保留完整證據 hash。
-- 匯出區塊筆記、原始 DOCX 與各套件檔案的原始位元組；保留舊快照及連結。
-- MCP 檢查來源與格式，Agent 核對語意、Word 版面、欄位及抽取完整性。
-  後續 Unreleased 已加入指定範圍的結構插刪與文稿 CSL 引用，依目前 contract 使用。
-
-## v1.2.0 原生證據 Wiki 與筆記保護
-
-- 原生儲存格引用可對不可變來源版本驗證，舊版本引用仍可核對。
-- XLSX/XLSM 可匯出為固定版本的 Foam 筆記、原始附件及完整 JSONL 證據；
-  自訂引用顯示與 canonical reference 保持獨立。
-- 保留既有原生快照，PDF bundle 遇到人工修改會拒絕替換；通過核對的更新保留備份，
-  相同內容直接重用。
-- 延續固定資產 ID、XLSX 建立、局部儲存格編輯與 MCP SDK 2.2.0。
-  語意、畫面、公式結果仍由 Agent 核對；文稿 CSL 引用已加入後續 Unreleased。
-
-## v1.0.1 可靠性翻新
-
-- 大型 PDF 文字、表格與圖片結果改用 private、atomic、具大小上限的
-  MessagePack 檔案交接，不再透過 multiprocessing pipe，也不反序列化可執行的
-  pickle。多 MB raster 不會再因 pipe backpressure 卡死；partial、oversized、
-  malformed 或 worker crash 一律 fail closed。
-  Worker timeout 環境值必須是有限數；`NaN`／無限值會回退到安全預設值。
-  有限的 `<=0` 值僅保留為歷史 direct mode 相容開關，managed production
-  launcher 不應使用。
-- Codex managed MCP 設定現在用真實 TOML parser 驗證，會保留 custom 與 unrelated
-  tables，設定 180／900 秒啟動與工具 timeout，且不把 credential value 寫入檔案。
-  隔離的 working directory 加上 `ASSET_AWARE_DISABLE_DOTENV=true`，也避免 server
-  在啟動後又偷偷讀取無關 workspace 的 `.env`。
-- Codex／Cline／Copilot 的全域設定寫入現在受 workspace trust 保護，且只使用
-  extension 精確版本與隔離的 global storage；偽造同名 repository 不能把本地
-  Python 或 `.env` 值持久化進全域 agent launcher。
-- MCP SDK 2 operational log 固定走 stderr；空白或空 ingest request 會在建立 job
-  前拒絕。true-stdio 回歸則實際驗證大型圖片、表格、citation-ready evidence、
-  完整 bundle hash、Foam notes、deterministic re-export，以及來源 PDF 完全不變。
-- GitHub Pages 已換成雙語 responsive Evidence Rail、精確 30-tool explorer、安裝／
-  開發注意事項、生成式文件 reader 與 GitHub／Release／Issue 入口，不再公開過時的
-  raster 架構截圖。
+操作前應讀取安裝版本的完整 contract 與 enabled flags。自 v1.4.0 起，
+`native-contract-v2` 可分頁提供 schema：檢查 `schema_delivery`、指定 `for_op`，
+或依固定雜湊讀完 `schema_request`；政策若有 `contract_request`，也須完整讀取。
 
 ## 🎯 為什麼需要資產感知 MCP？
 
-Agent 需要操作原生文件、可編輯元件與可重用證據，包含獨立建立表格。
-目標是跨格式 CRUD 與格式保留。MCP 提供來源／版本、格式保護及操作結果的必要檢查；
-Agent 負責完整的語意與視覺核對，依據可檢查的結果協調修正。
+摘要與問答可能已能由模型內建文件分析完成。本專案要支援的是持續操作原生文件，
+並留下可核對、可延續的結果：用了哪一版來源、改了哪個元件、其餘內容是否保留，
+以及日後換模型或修改文件後，哪些證據仍支持原來的判斷。
 
-目前 main 已有 PDF 頁面／區域／批註、指定範圍的 DOCX 編輯、試算表與
-CSV／TSV、PPTX 元件、獨立 A2T 表格，以及固定版本的引用與 Wiki。
-這些 Unreleased 能力以實際 contract 為準；公開版 **1.4.0**，下次整合 **1.4.1**。
-獨立圖片已串接影格／區域、實際 PNG 預覽、PNG／TIFF 衍生檔、受檢查的影格
-版本修改及附來源的 Wiki。完整影格／目錄與已產生的預覽會保存，解碼器升級後
-仍可指定歷史表示讀取、核對及匯出；保存完整性與目前解碼器重現分開回報。
-未保存的舊預覽需要相符解碼器，更新操作仍須通過目前表示的檢查。
-實際 Codex 已用真實 PDF 衍生圖片完成操作，通過
-獨立像素／歷史／引用核對；這不等於任意圖片都已證明保真。詳見
-[原生文件用法與限制](docs/wiki/Native-File-Assets.md)及
-[能力缺口與上游參考](docs/agent-asset-gap-analysis.md)。
-更廣泛的原生 CRUD 仍在開發；有轉檔工具不代表保真回寫。詳見
-[規格與 contract](docs/spec.md)及[路線圖](ROADMAP.md)。
+Asset 包含身分、版本、原生定位、表示、關係、可用操作與驗證狀態。
+Wiki 筆記連回這些資產；引用格式可自訂，底層來源證據保持獨立。
+元件修改或刪除後，完整操作紀錄與歷史來源仍可讀取。
 
-Asset 包含身分、版本、原生定位、表示、關係、操作能力與驗證狀態。Wiki 筆記是
-連回資產的文本投影；人類引用格式可擴充，底層證據引用保持獨立。
-
-v1.1.0 已加入引用格式 contract：支援來源標籤、作者／年份、指定編號與自訂範本，
-套用到證據與 Foam 匯出時保留原始來源資訊；main 的 Unreleased 已另提供
-完整文稿的 CSL 引用與參考文獻流程，來源驗證與引用排版維持分開。
-詳見[用法與限制](docs/wiki/LLM-Wiki-Knowledge-Base.md#citation-format-contracts)。
-
-1.2.0 新增原生引用驗證與 `native/export_wiki`：版本固定的筆記、
-原始附件、完整儲存格證據及自訂引用格式。新版本保留舊快照，遇到人工修改會拒絕覆蓋。
-詳見原生文件操作指南。1.2.0 也補上既有 PDF bundle 的清單／hash 核對；人工修改會拒絕替換，通過核對的
-產生內容若需更新則保留舊目錄備份。
+**MCP 提供來源／版本、格式與操作結果的必要檢查；Agent 負責完整語意、視覺核對與修正。**
+靜態預覽不等於互動閱讀器一致或任意文件都能保真回寫。任意 PDF 內文編輯、
+ODS 工作表新增／刪除／排序與格線生命週期仍待完成。詳見
+[原生操作與限制](docs/wiki/Native-File-Assets.md)、
+[能力缺口與上游參考](docs/agent-asset-gap-analysis.md)、
+[實際 Agent 評估](docs/wiki/Release-And-Testing.md)及[規格](docs/spec.md)。
 
 ## ✨ 特色
 

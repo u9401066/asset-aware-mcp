@@ -6,41 +6,30 @@ Asset-Aware MCP 是給 AI agents 使用的 citation-ready 文件工作流伺服�
 PDF、DOCX/DFM、表格、圖片、section、citation index、Foam evidence pack 與選用
 KG/RAG 串成可驗證的文件流程。
 
-章節導覽依任務整理；本份文件對應 `1.4.0`。正式發布狀態以
+章節導覽依任務整理；本份文件對應 `1.4.1`。正式發布狀態以
 [GitHub Releases](https://github.com/u9401066/asset-aware-mcp/releases) 為準。
 
 ## 進行中的產品方向
 
 目標是 Agent 跨格式文件 CRUD、獨立表格創造與 wikilink 證據庫。
 MCP 提供來源／版本、格式與操作結果的必要檢查；Agent 負責完整核對與修正。
-main 的 Unreleased 已包含 PDF、DOCX、試算表、CSV／TSV 與 PPTX 的指定原生
+1.4.1 整合了 PDF、DOCX、試算表、CSV／TSV 與 PPTX 的指定原生
 操作，引用與 Wiki 保留來源版本；獨立圖片亦有影格／區域、衍生檔、候選版本
 修改及 Wiki，並以真實 PDF 衍生圖片完成實際 Codex 核對。
-公開版 **1.4.0**，下次整合 **1.4.1**，不隨單一功能跳版。詳見
+版本維持 **1.4.x**，累積驗證後整合發布，不隨單一功能跳版。詳見
 [能力與缺口分析](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/agent-asset-gap-analysis.md)。
 
-## 1.4.0 highlights
+## 1.4.1 highlights
 
-- 原生 PPTX 建立、形狀／備註讀取與精確文字修改，版本引用與 Wiki 保留完整套件附件。
-- contract 改為可分段規格：先看 schema_delivery，用 for_op 或 hash-pinned schema_request。
-- 舊 XLSX／DOCX 證據不變；Agent 核對語意、版面、繼承格式與溢出。詳見 [Native File Assets](#/native-file-assets)。
-- Codex 實測掃描 PDF → 表格 CRUD／引用／Excel；旋轉裁切有像素回歸，詳見 [Release And Testing](#/release-testing)。
+- PDF 頁面／區域、批註與表單欄位；DOCX 格網、頁首頁尾、註腳／尾註；PPTX 投影片、圖片與表格操作。
+- XLSX／XLSM 工作表、格線、Table 與 A2T；ODS 儲存格及含相依檢查的工作表改名；CSV／TSV 字串與列欄 CRUD。
+- 獨立圖片影格／區域、受檢查的候選版本，以及選用 Office 實際頁面預覽。
+- 完整操作紀錄、不可變證據選取與衍生關係、文稿 CSL／自訂引用及可攜式 Wiki。
+- 支援範圍依完整 runtime contract；任意 PDF 內文編輯及 ODS 工作表／格線生命週期仍待擴充。
 
-## 1.2.0 highlights
-
-- 原生引用驗證與 XLSX/XLSM wiki 快照保留固定版本、完整 cell reference 與來源附件；
-  自訂引用顯示保持獨立，詳見 [Native File Assets](#/native-file-assets)。
-- 原生快照不覆寫既有筆記；PDF bundle 重匯出核對清單與 hash，更新時保留備份。
-  固定資產 ID、獨立 XLSX 建立與局部編輯持續支援；文稿 CSL 引用已加入後續 Unreleased。
-- MCP SDK 2.2.0；必要結構檢查與確定性修復由 MCP 執行，語意、畫面、公式結果由 Agent 核對。
-
-## 1.0.0 foundation
-
-- 官方 MCP Python SDK `>=2,<3` 與 `MCPServer`，30 個 public tools 不外露 runtime context。
-- PDF preflight 在隔離程序判斷 OCR／引擎路線，保留頁碼、座標與來源 SHA-256。
-- 可攜式 agent-asset bundle 保留完整紀錄、圖文表、citation locator 與 Foam notes。
-- 混合文件攝入、結構導覽與 citation audit；PyMuPDF4LLM / Docling 可用，
-  MinerU / Marker 因相依安全限制維持暫停。
+自 1.4.0 起，native-contract-v2 支援完整分頁規格；本版沿用 MCP SDK 2。
+操作、限制與歷史驗證見 [Native File Assets](#/native-file-assets) 及
+[Release And Testing](#/release-testing)；較早版本內容見 GitHub Releases。
 
 <div class="path-grid">
   <section class="path-card">

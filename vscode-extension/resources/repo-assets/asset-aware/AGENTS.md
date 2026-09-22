@@ -1,5 +1,11 @@
 # Asset-Aware MCP Codex Harness
 
+This guide covers the consolidated 1.4.1 operations. Discover the installed
+runtime contract and enabled flags before use; check GitHub Releases for
+publication status. Keep releases on 1.4.x and consolidate verified changes;
+do not bump the version for each feature. MCP provides necessary checks;
+the Agent performs complete semantic/visual review and corrections.
+
 These are workspace instructions for Codex when working with Asset-Aware MCP
 through the VS Code extension, local CLI, or MCP server.
 
@@ -60,7 +66,7 @@ and LightRAG knowledge graph outputs.
   Repeated formulas/objects retain mapping-aware edit guards. Wiki retains exact
   .ods, physical ranges, anchor-only refs, full receipts and exact logical derivation
   endpoints. Historical evidence
-  stays fixed. Public1.4.0; next consolidated1.4.1; no per-feature version bump.
+  stays fixed.
 
 - When ods_table_rename_enabled is advertised, read ALL read_ods_dependencies text
   pages at one asset/revision and text_sha256, using ods_text_sha256 to continue.
@@ -102,8 +108,7 @@ and LightRAG knowledge graph outputs.
   reports current_decoder_reproduction:not_checked. Cached PNGs require the exact
   reference/size/color policy and preserve original renderer metadata. Uncaptured
   historical previews need a matching decoder; never substitute current pixels.
-  Mutation guards still use current records. Public1.4.0; next consolidated1.4.1;
-  no per-feature bump.
+  Mutation guards still use current records.
 
 - When pdf_fields_enabled is advertised, read_pdf_fields/read_pdf_field pin
   asset/revision; single-field reads add the exact pdf_field_locator. Assemble ALL
@@ -132,7 +137,6 @@ and LightRAG knowledge graph outputs.
   pdf-fields-v1 plus receipt hash, retaining exact PDF, all fields/widget pages and
   full receipts, including empty forms and repeated bytes with new history. Old
   snapshots/human notes stay intact. Static previews do not prove viewer parity.
-  Public1.4.0; next consolidated1.4.1; no per-feature version bump.
 
 - When pdf_annotations_enabled is advertised, read_pdf_annotations pins asset/revision;
   read_pdf_annotation also takes pdf_annotation_locator. Assemble ALL annotation
@@ -150,7 +154,6 @@ and LightRAG knowledge graph outputs.
   Old refs/selections/derivations/citations/Wikis remain historical; no secure erasure.
   Without form/widget evidence, annotated PDFs use pdf-annotations-v1 and plain
   pages keep pdf-pages-v1. Form/widget PDFs use the field Wiki with annotations.
-  Public1.4.0;next consolidated1.4.1;no per-feature version bump.
 
 - When docx_notes_enabled is advertised, read_docx_notes pins revision and pages
   full catalog/catalog_sha256/latest operation_result through note. read_docx_note
@@ -170,7 +173,7 @@ and LightRAG knowledge graph outputs.
   Reader-specific misbindings need actual before/after pages; old refs stay tied to
   historical revisions. Existing IDs stay unless explicitly remapped; source/history
   and old references stay intact. docx-notes-v1 Wiki retains full evidence/parts; no-note
-  documents keep their legacy projection. Public1.4.0, next consolidated1.4.1.
+  documents keep their legacy projection.
 
 - Native discovery advertises contract_delivery separately from schema_delivery.
   When paged, assemble ALL contract_request / contract_details pages using one
@@ -187,7 +190,6 @@ and LightRAG knowledge graph outputs.
   Read every receipt/story and actual page. Supported unique identities are remapped;
   range/control/revision/note/embedded cloning dependencies remain explicit limits.
   Deleted parts retain historical refs/Wikis; orphan media is not securely erased.
-  Public1.4.0, next consolidated1.4.1; no per-feature bump.
 
 - When docx_stories_enabled is advertised, read_docx_stories discovers actual
   header/footer definitions, section inheritance and dormant/shared bindings.
@@ -200,7 +202,6 @@ and LightRAG knowledge graph outputs.
   selections/derivations/citations and docx-stories-v1 Wiki retain full evidence.
   Legacy DFM header/footer fields are abbreviated; never infer roles from filenames.
   Definition lifecycle/relinking and note CRUD use their separate operations above.
-  Public1.4.0; next consolidated1.4.1, no per-feature version bump.
 
 - When docx_table_layout_enabled is advertised, update_docx_table_grid accepts
   set_header_rows(count) and set_row_layout(index,count,height,split). Header rows
@@ -210,7 +211,7 @@ and LightRAG knowledge graph outputs.
   operation_result and all current row_layout/native XML pages, then EVERY actual
   Word page PNG. Exact heights can clip; oversized rows can still span pages.
   Inherited styles and Microsoft Word parity require Agent review. Source bytes,
-  historical references and Wikis remain intact. Public1.4.0 / Unreleased1.4.x.
+  historical references and Wikis remain intact.
 
 - When docx_table_grid_enabled is advertised, read_docx_table requires a full
   docx_table_reference, asset_id and revision. Read all grid/native XML chunks at
@@ -224,7 +225,7 @@ and LightRAG knowledge graph outputs.
   Read complete review_request and current references, then all actual Word page
   PNGs. Sources/history/Wiki remain unchanged; table refs are not new cell refs.
   MCP checks native structure/bytes; Agent reviews meaning, inherited styles,
-  repeated headers, nested overflow and page flow. Public1.4.0 / Unreleased1.4.x.
+  repeated headers, nested overflow and page flow.
 
 - For legacy PDF ETL evidence, discover inspect_etl_source/capture_etl_source/
   read_etl_source/view_etl_source through evidence csl_contract. Inspect selectors
@@ -233,7 +234,7 @@ and LightRAG knowledge graph outputs.
   actual captured original PDF pages. Mixed CSL sources accept captured/native
   refs; Wiki retains all snapshot artifacts. ETL deletion cannot change snapshots.
   Hash/locator checks do not prove extraction, semantics or bibliographic truth;
-  Agent reviews those and coordinates corrections. Public1.4.0 / Unreleased1.4.x.
+  Agent reviews those and coordinates corrections.
 
 - For document-context academic citations, discover evidence(op="csl_contract")
   completely, then render_citations with structured CSL-JSON items and ordered
@@ -243,7 +244,6 @@ and LightRAG knowledge graph outputs.
   exports immutable citations, source files and a typography preview; use the
   preview hash as expected_text_sha256. Old refs/snapshots remain historical.
   CSL uses optional local Node.js; existing custom display templates remain.
-  Public1.4.0 / Unreleased1.4.x; no per-feature version bump.
 
 - When delimited_enabled is advertised, create_delimited creates independent CSV/TSV
   string tables. Pin revisions for read_delimited/read_delimited_cell; logical row/
@@ -255,7 +255,7 @@ and LightRAG knowledge graph outputs.
   complete review_request receipt; no-op updates create no history entry. Same file
   SHA may recur with a newer receipt. verify/selections/derivations/Wiki bind exact
   fields/dialects; old refs never migrate. Agent reviews meaning and downstream
-  rendering/formula interpretation. Public1.4.0 / Unreleased1.4.x; no per-feature bump.
+  rendering/formula interpretation.
 
 - PDF listings/page records may include parser_checks for independently proven
   equal, direct duplicate stream Length values. Keep those observations with the
@@ -272,8 +272,7 @@ and LightRAG knowledge graph outputs.
   derivations. verify checks geometry/source only; read_selection selects region JSON.
   Wiki retains region JSON/PNG/render metadata and source PDFs. Missing external
   citation metadata is reported, never borrowed from target authors/year. Historical
-  assertions do not migrate; sources/history stay unchanged. Public1.4.0 / 1.4.x.
-
+  assertions do not migrate; sources/history stay unchanged.
 
 - When worksheet_layout_enabled is advertised, read_worksheet_layout requires
   asset_id/revision/worksheet_key; read every chunk at one text_sha256. Update with
@@ -282,7 +281,7 @@ and LightRAG knowledge graph outputs.
   Native cells/styles stay intact; object anchors follow authored policies and
   recorded metrics. Formula/chart caches invalidate. Read complete review_request,
   render a new recalculated PDF, and inspect actual images/results. No AutoFit or
-  visual verdict is inferred; history/source/evidence stay fixed. Public1.4.0 / 1.4.x.
+  visual verdict is inferred; history/source/evidence stay fixed.
 
 - When workbook_rendering.configured is true, check source_formats for advertised
   xlsx/ods support. create_workbook_rendition pins native asset_id/revision and
@@ -299,8 +298,7 @@ and LightRAG knowledge graph outputs.
   order/count mappings identify source sheets, not native cell locators. Wiki
   retains the full receipt and exact .xlsx/.ods source. Source caches stay unchanged;
   stored PDF reads never recalculate, and later PDF edits do not inherit mappings.
-  Agent owns semantic/visual/result review and corrections. Public1.4.0; next
-  consolidated1.4.1; no per-feature version bump.
+  Agent owns semantic/visual/result review and corrections.
 
 - When table_totals_lifecycle_enabled is advertised, update_workbook_table accepts
   table_update.totals_row with the exact revision, worksheet key, Table part/ref.
@@ -311,7 +309,6 @@ and LightRAG knowledge graph outputs.
   workbook references stay structured. No worksheet rows move. Compose explicit
   grid operations for space, read full receipts/references and review future
   formula membership/results/layout. Historical evidence stays unchanged.
-  Public stays 1.4.0 / Unreleased within 1.4.x.
 
 - When workbook_table_creation_enabled is advertised, add_workbook_table creates
   native Tables over explicit worksheet ranges in existing or independent workbooks.
@@ -323,7 +320,6 @@ and LightRAG knowledge graph outputs.
   Read complete created_table, header_cells and operation_result after one commit.
   Active protection/overlap/source-schema checks remain. Agent checks meaning,
   rendered layout and recalculated results; old references/A2T bindings stay historical.
-  Public stays 1.4.0 / Unreleased within 1.4.x.
 
 - When workbook_table_edit_enabled is advertised, update_workbook_table pins the
   worksheet key, active Table part/ref, file revision and column IDs/expected names.
@@ -335,7 +331,6 @@ and LightRAG knowledge graph outputs.
   editing needs an existing totals row. Read full operation_result and new contents;
   Agent reviews meaning, filters, recalculated results and actual rendering. Source
   schema dependencies retain checks; old evidence/A2T bindings never migrate.
-  Public stays 1.4.0 / Unreleased within 1.4.x.
 
 - When table_expansion_enabled is advertised, complete read_workbook.tables exposes
   exact part/worksheet identity, attributes, column IDs, raw-part SHA and parsed XML.
@@ -347,7 +342,7 @@ and LightRAG knowledge graph outputs.
   Read generated_table_cells, resolved values, full native references and frozen
   intent. Review filter visibility, sorting, formula results and layout separately.
   Existing headers/formulas/totals, mapped sources and identity moves retain checks.
-  Source bindings/evidence never auto-advance. Public remains 1.4.0 / Unreleased 1.4.x.
+  Source bindings/evidence never auto-advance.
 
 - When table_grid_apply_enabled is advertised, read the COMPLETE A2T structural_plan
   after edits and inspect current native references. Pass worksheet_grid explicitly
@@ -361,7 +356,6 @@ and LightRAG knowledge graph outputs.
   and reordering retain their checks. Agent checks table membership, semantics, recalculated results and layout.
   Old bindings/evidence never auto-advance. native contract.for_op accepts native
   operation names only; table_data/table_manage use their exposed MCP tool schemas.
-  Public stays 1.4.0 / Unreleased within 1.4.x.
 
 - When workbook_grid_enabled is advertised, update_worksheet_grid takes an exact
   worksheet_grid.worksheet key and 1..32 sequential row/column insert/delete edits.
@@ -372,8 +366,7 @@ and LightRAG knowledge graph outputs.
   Agent review covers layout, automatic row heights and recalculated results. Old
   references and A2T bindings do not migrate. Source writeback remains explicit.
   Identical bytes can recur at a later history entry; compare the complete current
-  operation receipt as well as file revision. Public stays 1.4.0 / Unreleased 1.4.x.
-
+  operation receipt as well as file revision.
 
 - When advertised, read_workbook returns complete hash-pinned structure/reference JSON.
   Pin revision and workbook_view, assemble text_excerpt pages and verify UTF-8 SHA-256.
@@ -385,8 +378,6 @@ and LightRAG knowledge graph outputs.
   deletion; detached parts remain, not secure erasure. Formula strings/external
   workbooks stay unchanged; Agent reviews dynamic references, results and rendering.
   Original sources and historical evidence remain intact; publication is explicit.
-  Public stays 1.4.0, with new work Unreleased for 1.4.x.
-
 
 - For native workbooks use `document(op="native", native_request={"op":"contract"})`.
   Register an existing file or create XLSX independently; typed cell edits use the
@@ -417,7 +408,6 @@ and LightRAG knowledge graph outputs.
   Known dependencies block deletion; retained media means deletion is not secure
   erasure. Slide structure is described below; arbitrary shape creation remains separate.
 
-
 - When advertised, create_docx creates independent native Word paragraphs and tables.
   add_docx_blocks inserts at start/end or before/after a full current block reference;
   delete_docx_blocks deletes complete body paragraphs/tables with docx_block_refs.
@@ -432,7 +422,7 @@ and LightRAG knowledge graph outputs.
   Optional LibreOffice Writer uses exact source bytes; record renderer, page count
   and limitations. Fresh conversions can repaginate fields; indices belong to that
   rendition. Static previews do not certify Microsoft Word fidelity.
-  Source publication/writeback is explicit; public stays 1.4.0 / Unreleased for 1.4.x.
+  Source publication/writeback is explicit.
 
 - When configured, render_pptx_slide returns a whole-slide MCP PNG using optional
   LibreOffice Impress. Supply an explicit revision and exact pptx_slide_key from
@@ -460,7 +450,7 @@ and LightRAG knowledge graph outputs.
   native-file-ref-v1 verifies immutable whole-file bytes, not meaning or live source
   freshness. Use read_pptx_shape for complete geometry/evidence; Agent reviews slide
   rendering, crop, effects and semantics. Delete via delete_pptx_shapes; retained
-  media is not secure erasure. These operations remain Unreleased on the 1.4.x line.
+  media is not secure erasure.
 
 - When advertised, add_pptx_tables inserts native editable tables into existing
   containers with explicit EMU grids, structured cell runs, formatting and merges.
@@ -470,7 +460,6 @@ and LightRAG knowledge graph outputs.
   comes from the destination; Agent reviews rendered layout and overflow.
   citation_contract is a typed display preset/custom-template union, not a place
   for source references or proof reports. Preserve canonical evidence separately.
-
 
 - When advertised, update_pptx_table_grid applies 1..32 sequential row/column
   insert/delete/resize edits using a full current table reference. Indices address
@@ -503,7 +492,6 @@ and LightRAG knowledge graph outputs.
   MCP checks graphs/versions and bounded unchanged-page rendering; agents review
   semantics, full-resolution layout, forms, scripts, reading order and accessibility.
   Stage managed revisions before explicit writeback with source checks and backups.
-
 
 - When advertised, read_selection accepts full native cell/block/shape/page refs.
   Read the complete parent with an empty selector, then select an actual RFC6901

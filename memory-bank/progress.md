@@ -1,5 +1,40 @@
 # Progress (Updated: 2026-09-22)
 
+## Consolidated 1.4.1 release preparation — version/readme/Agent guides
+
+Goal turn PROGRESS. Prior exact-head gate for 7b32301c9c983eb261ff7fb5bc832184e19561cd
+is COMPLETE: CI35664730510 all10, Pages35664729609 all3, ten deployed files exact.
+Proof: /run/user/1000/asset-aware-pdf-fields-integration-publication-proof-02.json,
+status published_verified. Watcher13503 terminal0; never poll/restart old watchers.
+Successful CI: unit3892pass/1skip, Python3.10 1750pass/4skip, integration212pass;
+Linux/macOS actual extension activation passes; Windows workflow skips activation.
+
+User requires 1.4.x without feature-by-feature bumps. Begin ONE consolidated1.4.1,
+not a new feature. This local segment changes26counted files plus both MEM:
+six version declarations, concise accumulated changelog, English/Traditional Chinese
+READMEs, Home/GettingStarted/generated site data, extension README, five Agent guides
+and five bundled copies. CHANGELOG1.4.0-and-earlier bytes retained exactly.
+Publication status still governed by GitHub Releases; public remains1.4.0 until tag.
+36focused docs/artifact/harness tests, lock check, metadata audit, release harness,
+Cline18skill audit and bundle sync pass. Initial test path typo ran zero cases;
+then Home exceeded90lines: shortened Home and all36passed; failure logs retained.
+No PDF/runtime behavior changes; src version only. Documentation clearly retains
+MCP mechanical vs Agent semantic/visual review, ODS lifecycle/PDF-body/viewer gaps.
+
+Only alternate worktree main is edited; original dirty workspace untouched.
+Author AND committer u9401066 <u9401066@gap.kmu.edu.tw>. No PR/subagents/model overrides.
+Next local segments: technical docs/site status alignment <=30counted each;
+then fresh1.4.1 full tests/security/packaging/install/Docker checks. ONE main push
+only after coherent local preparation; verify exact-head all10CI +3Pages +deployed
+bytes before annotatedv1.4.1 tag/release workflow. Do not claim release complete.
+Broader goal remains active: ODS lifecycle, arbitrary PDF body and other format gaps.
+
+Preserved traces: four old /tmp paths still symlink-staged in own shm, manifests
+root-space-01 and build-space-02; build-space-03 ALL restored. No global cleanup.
+Root~300MB/shm559MB free; check fresh before npm/build. node_modules absent.
+Logs/scripts /run/user/1000/asset-aware-release-141-*; old artifacts remain1.4.0.
+
+
 ## PDF fields publication gate — repair stale GitHub metadata test fixture
 
 Current goal turn: PROGRESS. Published main/origin3c2adcfa11dfe6cce0fdd479d59b50d299774cff

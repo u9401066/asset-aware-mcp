@@ -7,7 +7,7 @@
 若是一般 Codex 使用者，先確認 Releases 已發布對應版本，再加入版本鎖定的 stdio server：
 
 ```bash
-codex mcp add asset-aware-mcp -- uv tool run --python 3.11 --from asset-aware-mcp==1.4.0 asset-aware-mcp
+codex mcp add asset-aware-mcp -- uv tool run --python 3.11 --from asset-aware-mcp==1.4.1 asset-aware-mcp
 ```
 
 以下是 repository 開發模式：
@@ -24,7 +24,7 @@ uv run asset-aware-mcp doctor --json
 uv run asset-aware-mcp list-tools --json
 ```
 
-目前 `1.4.0` 的安全預設是：
+目前 `1.4.1` 的安全預設是：
 
 | 設定 | 預設 | 原因 |
 |---|---|---|
@@ -34,7 +34,7 @@ uv run asset-aware-mcp list-tools --json
 | `OLLAMA_EMBEDDING_MODEL` | `nomic-embed-text` | 只有啟用 LightRAG/KG 時才需要 embedding model |
 | `ENABLE_LIGHTRAG` | `false` | CPU-only 或文件處理情境不會因 KG 沒裝好而失敗 |
 
-`1.4.0` 的 active packaged PDF extras 只有 `[pdf-plus]`（PyMuPDF4LLM）與
+`1.4.1` 的 active packaged PDF extras 只有 `[pdf-plus]`（PyMuPDF4LLM）與
 `[docling]`。MinerU 3.4.4 鎖定 `transformers<5`、Marker PDF 1.10.2 鎖定
 `Pillow<11`，分別與目前 `transformers>=5.5`、`Pillow>=12.2.0` 安全底線
 衝突，因此 `[mineru]` 與 `[marker]` 都是空的 fail-closed security hold，不能

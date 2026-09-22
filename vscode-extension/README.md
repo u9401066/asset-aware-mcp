@@ -6,7 +6,21 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v1.4.0/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v1.4.1/resources/banner.png)
+
+## What's New in v1.4.1
+
+- Consolidated native PDF page/annotation/form, Word table/story/note, spreadsheet,
+  delimited-file, presentation and standalone-image workflows.
+- Complete operation receipts, immutable selections/derivations and source-attached
+  Wikis; document-context CSL and existing custom citation templates.
+- Optional actual Office previews and synchronized Codex, Cline and Copilot guides.
+  MCP checks source versions and native mechanics; Agents review meaning and appearance.
+- Isolated install/update tests now verify the installed manifest and exact bundled
+  guide bytes. Versions stay on 1.4.x and are released as verified batches.
+- Support is operation-specific: arbitrary PDF body editing, interactive viewer parity
+  and ODS worksheet/grid lifecycle remain open. Read the runtime contract and
+  [native guide](https://github.com/u9401066/asset-aware-mcp/blob/main/docs/wiki/Native-File-Assets.md).
 
 ## What's New in v1.4.0
 

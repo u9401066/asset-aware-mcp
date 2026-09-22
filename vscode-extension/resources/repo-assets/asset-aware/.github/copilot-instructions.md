@@ -1,5 +1,11 @@
 # Copilot 自定義指令
 
+This guide covers the consolidated 1.4.1 operations. Discover the installed
+runtime contract and enabled flags before use; check GitHub Releases for
+publication status. Keep releases on 1.4.x and consolidate verified changes;
+do not bump the version for each feature. MCP provides necessary checks;
+the Agent performs complete semantic/visual review and corrections.
+
 > 📌 此檔案為 VS Code GitHub Copilot Agent Mode 與 Claude Code 的統一指引。
 
 ---
@@ -40,7 +46,7 @@
   Repeated formulas/objects retain mapping-aware edit guards. Wiki retains exact
   .ods, physical ranges, anchor-only refs, full receipts and exact logical derivation
   endpoints. Historical evidence
-  stays fixed. Public1.4.0; next consolidated1.4.1; no per-feature version bump.
+  stays fixed.
 
 - When ods_table_rename_enabled is advertised, read ALL read_ods_dependencies text
   pages at one asset/revision and text_sha256, using ods_text_sha256 to continue.
@@ -82,8 +88,7 @@
   reports current_decoder_reproduction:not_checked. Cached PNGs require the exact
   reference/size/color policy and preserve original renderer metadata. Uncaptured
   historical previews need a matching decoder; never substitute current pixels.
-  Mutation guards still use current records. Public1.4.0; next consolidated1.4.1;
-  no per-feature bump.
+  Mutation guards still use current records.
 
 - When pdf_fields_enabled is advertised, read_pdf_fields/read_pdf_field pin
   asset/revision; single-field reads add the exact pdf_field_locator. Assemble ALL
@@ -112,7 +117,6 @@
   pdf-fields-v1 plus receipt hash, retaining exact PDF, all fields/widget pages and
   full receipts, including empty forms and repeated bytes with new history. Old
   snapshots/human notes stay intact. Static previews do not prove viewer parity.
-  Public1.4.0; next consolidated1.4.1; no per-feature version bump.
 
 - When pdf_annotations_enabled is advertised, read_pdf_annotations pins asset/revision;
   read_pdf_annotation also takes pdf_annotation_locator. Assemble ALL annotation
@@ -130,7 +134,6 @@
   Old refs/selections/derivations/citations/Wikis remain historical; no secure erasure.
   Without form/widget evidence, annotated PDFs use pdf-annotations-v1 and plain
   pages keep pdf-pages-v1. Form/widget PDFs use the field Wiki with annotations.
-  Public1.4.0;next consolidated1.4.1;no per-feature version bump.
 
 - When docx_notes_enabled is advertised, read_docx_notes pins revision and pages
   full catalog/catalog_sha256/latest operation_result through note. read_docx_note
@@ -150,7 +153,7 @@
   Reader-specific misbindings need actual before/after pages; old refs stay tied to
   historical revisions. Existing IDs stay unless explicitly remapped; source/history
   and old references stay intact. docx-notes-v1 Wiki retains full evidence/parts; no-note
-  documents keep their legacy projection. Public1.4.0, next consolidated1.4.1.
+  documents keep their legacy projection.
 
 - Native discovery advertises contract_delivery separately from schema_delivery.
   When paged, assemble ALL contract_request / contract_details pages using one
@@ -167,7 +170,6 @@
   Read every receipt/story and actual page. Supported unique identities are remapped;
   range/control/revision/note/embedded cloning dependencies remain explicit limits.
   Deleted parts retain historical refs/Wikis; orphan media is not securely erased.
-  Public1.4.0, next consolidated1.4.1; no per-feature bump.
 
 - When docx_stories_enabled is advertised, read_docx_stories discovers actual
   header/footer definitions, section inheritance and dormant/shared bindings.
@@ -180,7 +182,6 @@
   selections/derivations/citations and docx-stories-v1 Wiki retain full evidence.
   Legacy DFM header/footer fields are abbreviated; never infer roles from filenames.
   Definition lifecycle/relinking and note CRUD use their separate operations above.
-  Public1.4.0; next consolidated1.4.1, no per-feature version bump.
 
 - When docx_table_layout_enabled is advertised, update_docx_table_grid accepts
   set_header_rows(count) and set_row_layout(index,count,height,split). Header rows
@@ -190,7 +191,7 @@
   operation_result and all current row_layout/native XML pages, then EVERY actual
   Word page PNG. Exact heights can clip; oversized rows can still span pages.
   Inherited styles and Microsoft Word parity require Agent review. Source bytes,
-  historical references and Wikis remain intact. Public1.4.0 / Unreleased1.4.x.
+  historical references and Wikis remain intact.
 
 - When docx_table_grid_enabled is advertised, read_docx_table requires a full
   docx_table_reference, asset_id and revision. Read all grid/native XML chunks at
@@ -204,7 +205,7 @@
   Read complete review_request and current references, then all actual Word page
   PNGs. Sources/history/Wiki remain unchanged; table refs are not new cell refs.
   MCP checks native structure/bytes; Agent reviews meaning, inherited styles,
-  repeated headers, nested overflow and page flow. Public1.4.0 / Unreleased1.4.x.
+  repeated headers, nested overflow and page flow.
 
 - For legacy PDF ETL evidence, discover inspect_etl_source/capture_etl_source/
   read_etl_source/view_etl_source through evidence csl_contract. Inspect selectors
@@ -213,7 +214,7 @@
   actual captured original PDF pages. Mixed CSL sources accept captured/native
   refs; Wiki retains all snapshot artifacts. ETL deletion cannot change snapshots.
   Hash/locator checks do not prove extraction, semantics or bibliographic truth;
-  Agent reviews those and coordinates corrections. Public1.4.0 / Unreleased1.4.x.
+  Agent reviews those and coordinates corrections.
 
 - For document-context academic citations, discover evidence(op="csl_contract")
   completely, then render_citations with structured CSL-JSON items and ordered
@@ -223,7 +224,6 @@
   exports immutable citations, source files and a typography preview; use the
   preview hash as expected_text_sha256. Old refs/snapshots remain historical.
   CSL uses optional local Node.js; existing custom display templates remain.
-  Public1.4.0 / Unreleased1.4.x; no per-feature version bump.
 
 - When delimited_enabled is advertised, create_delimited creates independent CSV/TSV
   string tables. Pin revisions for read_delimited/read_delimited_cell; logical row/
@@ -235,7 +235,7 @@
   complete review_request receipt; no-op updates create no history entry. Same file
   SHA may recur with a newer receipt. verify/selections/derivations/Wiki bind exact
   fields/dialects; old refs never migrate. Agent reviews meaning and downstream
-  rendering/formula interpretation. Public1.4.0 / Unreleased1.4.x; no per-feature bump.
+  rendering/formula interpretation.
 
 - PDF listings/page records may include parser_checks for independently proven
   equal, direct duplicate stream Length values. Keep those observations with the
@@ -252,12 +252,11 @@
   derivations. verify checks geometry/source only; read_selection selects region JSON.
   Wiki retains region JSON/PNG/render metadata and source PDFs. Missing external
   citation metadata is reported, never borrowed from target authors/year. Historical
-  assertions do not migrate; sources/history stay unchanged. Public1.4.0 / 1.4.x.
+  assertions do not migrate; sources/history stay unchanged.
 
+- **工作表尺寸修正（1.4.1）** — `read_worksheet_layout` 固定 revision／worksheet_key，完整讀回尺寸；`update_worksheet_layout` 明確指定點數列高、原始 OOXML 欄寬、重設或隱藏。保留儲存格／樣式，物件沿原錨點規則調整；清除公式及圖表快取。完整讀回紀錄，再由 Agent 產生新 PDF 核對畫面與結果，來源及歷史證據保持。
 
-- **工作表尺寸修正（Unreleased／1.4.x）** — `read_worksheet_layout` 固定 revision／worksheet_key，完整讀回尺寸；`update_worksheet_layout` 明確指定點數列高、原始 OOXML 欄寬、重設或隱藏。保留儲存格／樣式，物件沿原錨點規則調整；清除公式及圖表快取。完整讀回紀錄，再由 Agent 產生新 PDF 核對畫面與結果，來源及歷史證據保持；公開版仍 1.4.0。
-
-- **工作簿版面核對（Unreleased／1.4.x）** — 先確認
+- **工作簿版面核對（1.4.1）** — 先確認
   `workbook_rendering.source_formats` 支援的 XLSX／ODS；
   `create_workbook_rendition` 固定原生 asset_id／revision，明確指定
   print／whole_sheet 與 recalculate／prefer_cache，使用選配 Calc 建立獨立 PDF。
@@ -268,19 +267,18 @@
   列印可能省略隱藏／空白表及範圍外內容，整表模式可能裁切溢出文字，須明確回報。
   整表頁面映射不是儲存格定位；Wiki 保留完整紀錄與原始 .xlsx／.ods。
   原檔快取不回存，已存 PDF 不隨讀取重算，後續 PDF 編輯不繼承舊映射。
-  MCP 檢查完整性；Agent 負責語意、畫面、結果核對與修正。公開 1.4.0，
-  下次整合 1.4.1，不逐項升版。
+  MCP 檢查完整性；Agent 負責語意、畫面、結果核對與修正。
 
-- **原生 Table 合計列（Unreleased／1.4.x）** — `table_totals_lifecycle_enabled` 啟用時，以 `table_update.totals_row` 新增、移除或重用合計定義；新增前檢查空白範圍，移除明確選擇 clear／keep_cells。保留公式固定原 Table 範圍，其他引用保持結構化形式。完整讀回操作紀錄，由 Agent 核對公式結果及版面；公開版維持 1.4.0。
+- **原生 Table 合計列（1.4.1）** — `table_totals_lifecycle_enabled` 啟用時，以 `table_update.totals_row` 新增、移除或重用合計定義；新增前檢查空白範圍，移除明確選擇 clear／keep_cells。保留公式固定原 Table 範圍，其他引用保持結構化形式。完整讀回操作紀錄，由 Agent 核對公式結果及版面。
 
-- **原生 Table 建立（main 未發布／1.4.x）** — `workbook_table_creation_enabled` 啟用時，`add_workbook_table` 在固定 worksheet key／ref／revision 建立 Table。可搭配 `create` 獨立建立 XLSX；既有標題須相符或明確填空，合計列須先為空白，計算欄覆寫須明確。保留資料、格式與歷史證據；讀回完整 created_table／header_cells／operation_result，再由 Agent 核對公式結果與畫面。公開版仍 1.4.0。
-- **Table 專用編輯（main 未發布／1.4.x）** — `workbook_table_edit_enabled` 啟用時，以 `update_workbook_table` 同步修改欄名／富文字標題／計算欄／既有總計列。先完整讀取 references 與 header_cells XML，固定版本、Table part／ref 與 column_id／expected_name；header_runs 保留段格式，公式例外值須明確處理。新公式使用新欄名，既有引用依身分更新；Agent 核對語意、公式與畫面，舊證據及 A2T 綁定不遷移。公開版仍為 1.4.0。
+- **原生 Table 建立（1.4.1）** — `workbook_table_creation_enabled` 啟用時，`add_workbook_table` 在固定 worksheet key／ref／revision 建立 Table。可搭配 `create` 獨立建立 XLSX；既有標題須相符或明確填空，合計列須先為空白，計算欄覆寫須明確。保留資料、格式與歷史證據；讀回完整 created_table／header_cells／operation_result，再由 Agent 核對公式結果與畫面。
+- **Table 專用編輯（1.4.1）** — `workbook_table_edit_enabled` 啟用時，以 `update_workbook_table` 同步修改欄名／富文字標題／計算欄／既有總計列。先完整讀取 references 與 header_cells XML，固定版本、Table part／ref 與 column_id／expected_name；header_runs 保留段格式，公式例外值須明確處理。新公式使用新欄名，既有引用依身分更新；Agent 核對語意、公式與畫面，舊證據及 A2T 綁定不遷移。
 
-- **原生 A2T（main 未發布／1.4.x）** — 指定工作簿範圍投影為帶型別的表格，完整讀回固定 hash 與原始格引用。`table_grid_apply_enabled` 啟用時，列欄增刪用 structural_plan 的明確 worksheet_grid 與 table/file revision 一次套回原檔；穩定 column_ids 區分改名與重建。整列欄搬移會影響投影外內容，Table 邊界可用 expand_tables 的 part／當步 expected_ref 明確擴展；native_generated 只保留本次新生成標題／公式。完整 read_workbook.tables 可查原生定義；特殊計算欄編輯與重排另有範圍；Agent 核對語意、公式及版面。完整讀回操作紀錄與不可變快照，來源綁定不自動前進。native contract.for_op 只接受原生操作；table_data/table_manage 使用其 MCP schema。公開版仍 1.4.0。
+- **原生 A2T（1.4.1）** — 指定工作簿範圍投影為帶型別的表格，完整讀回固定 hash 與原始格引用。`table_grid_apply_enabled` 啟用時，列欄增刪用 structural_plan 的明確 worksheet_grid 與 table/file revision 一次套回原檔；穩定 column_ids 區分改名與重建。整列欄搬移會影響投影外內容，Table 邊界可用 expand_tables 的 part／當步 expected_ref 明確擴展；native_generated 只保留本次新生成標題／公式。完整 read_workbook.tables 可查原生定義；特殊計算欄編輯與重排另有範圍；Agent 核對語意、公式及版面。完整讀回操作紀錄與不可變快照，來源綁定不自動前進。native contract.for_op 只接受原生操作；table_data/table_manage 使用其 MCP schema。
 
-- **工作表結構（main 未發布／1.4.x）** — `read_workbook` 完整分頁核對工作表／引用清單；新增、改名、重排、刪除使用 expected_revision 與目前 sheet_id／part。`workbook_grid_enabled` 啟用時，`update_worksheet_grid` 循序插刪列欄；位置從 1 起算，每步依前一步完成後的工作表定位，讀回完整操作紀錄與幾何假設。相依及 3D 範圍變動有檢查，原 parts 與歷史證據保留；Agent 核對動態引用、計算結果與畫面。舊 A2T 綁定不自動搬移；相同檔案 SHA 可再次出現，操作紀錄須依當次歷史核對。公開版仍 1.4.0。
+- **工作表結構（1.4.1）** — `read_workbook` 完整分頁核對工作表／引用清單；新增、改名、重排、刪除使用 expected_revision 與目前 sheet_id／part。`workbook_grid_enabled` 啟用時，`update_worksheet_grid` 循序插刪列欄；位置從 1 起算，每步依前一步完成後的工作表定位，讀回完整操作紀錄與幾何假設。相依及 3D 範圍變動有檢查，原 parts 與歷史證據保留；Agent 核對動態引用、計算結果與畫面。舊 A2T 綁定不自動搬移；相同檔案 SHA 可再次出現，操作紀錄須依當次歷史核對。
 
-- **精確選取（main 未發布／1.4.x）** — `read_selection` 以完整父引用、JSON Pointer 與 Unicode 範圍選取值；分頁核對固定 text_sha256，verify／轉製帳本／Wiki 保留選取證據。範圍對應解析字串，文件更新不自動搬移主張；Agent 核對語意／畫面。
+- **精確選取（1.4.1）** — `read_selection` 以完整父引用、JSON Pointer 與 Unicode 範圍選取值；分頁核對固定 text_sha256，verify／轉製帳本／Wiki 保留選取證據。範圍對應解析字串，文件更新不自動搬移主張；Agent 核對語意／畫面。
 
 - 📄 **PDF ETL** — 多引擎文件拆解成 agent 資產（圖片、表格、章節、公式），`ETL_ENGINE` 可插拔
 - 🩺 **PDF Preflight** — 攝入前唯讀、process-isolated page classification / OCR / engine routing
@@ -289,16 +287,16 @@
 - 📊 **Native files** — `document(op="native")` 支援原生檔案版本、XLSX 建立、XLSX/XLSM cells 讀寫、明確回寫與來源同步；完整語意／視覺／公式核對由 Agent 負責。
 - 📝 **Native DOCX（1.3.0）** — `read_docx`／`update_docx` 將不可變版本接到 DFM 檢查，更新先建立受管理版本，來源回寫仍明確指定；先查安裝版本 contract。元件引用可用 `read_docx_block`／`verify`，Wiki 使用獨立 projection 保留完整區塊與原始 package parts；完整性不代表抽取完整。
 - 📽️ **Native PPTX（1.4.0）** — 原生建立、投影片／備註形狀讀取、精確文字 run 更新、版本引用與完整 package Wiki；先查安裝版本 contract，完整語意／版面／文字溢出由 Agent 核對。`native-contract-v2` 支援 for_op 與 schema_sha256 分段規格。
-- 📽️ **PPTX 形狀操作（main 未發布）** — 先查 contract；`add_pptx_shapes` 新增文字框，`delete_pptx_shapes` 使用目前版本完整引用刪除形狀。已知相依會阻擋刪除，附件仍保留；Agent 核對版面與未涵蓋相依，來源回寫仍明確指定。公開版維持 1.4.0／後續 1.4.x。
-- 🖼️ **DOCX 整頁預覽（main 未發布）** — `render_docx_page` 以明確 revision／零起算 `docx_page_index` 回傳真實 MCP PNG；需另裝 LibreOffice Writer，依 `next_page_index` 看完目前與歷史版本。每次重新轉換，頁碼屬於該次輸出；Agent 核對語意／版面，不能宣稱已驗證 Microsoft Word 保真。
-- 📝 **DOCX 建立與結構（main 未發布）** — `create_docx` 獨立建立段落／表格；`add_docx_blocks`／`delete_docx_blocks` 以目前完整引用操作主本文。合併格、富文字與未修改 parts 會核對；已知範圍／欄位等相依阻擋不支援的刪除，Agent 核對分頁／版面，公開版仍 1.4.0／後續 1.4.x。
-- 📽️ **整張投影片預覽（main 未發布）** — `render_pptx_slide` 使用選配 LibreOffice Impress，以 revision／pptx_slide_key 回傳實際 PNG。Agent 比較遮擋、溢出與版面；回報渲染器與已做核對，不能宣稱 PowerPoint 保真驗證。公開版仍 1.4.0。
-- 📽️ **PPTX 投影片結構（main 未發布）** — `read_pptx_layouts` 探索版型，`add_pptx_slides` 插頁並建立空白繼承預留位置／文字框；重排與刪頁使用目前版本完整 slide_id／part 清單。保留原 parts，檢查相依／章節／播放範圍；Agent 核對畫面與檢視器快取，仍為 1.4.x 開發。
-- 🖼️ **PPTX 圖片（main 未發布）** — `add_pptx_pictures`／`replace_pptx_pictures` 使用版本化 PNG/JPEG 資產，保留共用 media；`read_pptx_picture` 顯示實際內嵌圖片，`extract_pptx_picture` 建立含來源歷程的新資產。`native-file-ref-v1` 只驗證完整不可變位元組。Agent 核對投影片畫面、裁切、效果與語意；公開版仍 1.4.0／後續 1.4.x。
-- 📊 **PPTX 原生表格（main 未發布）** — `add_pptx_tables` 新增明確尺寸、合併與文字格式的表格；讀回／修改 anchor run／刪除／證據與 Wiki 沿用原生操作。目的簡報樣式及溢出由 Agent 核對。`citation_contract` typed schema 僅存引用顯示格式，來源證據另行保存。
-- 📊 **PPTX 格網（main 未發布）** — `update_pptx_table_grid` 使用完整引用依序列欄插刪與調整尺寸；檢查合併區擴縮、起點移動及隱藏內容衝突。合併須明確選擇 require_empty／append_paragraphs；後者依序搬移完整段落，拆分保留起點內容、不自動分回。Agent 核對新版位置、畫面與轉製關係。
-- 🔗 **轉製來源帳本（main 未發布）** — 完整原生引用連結來源與產物；先讀 hash 固定的帳本，再新增／修訂／撤回。MCP 驗證引用，Agent 核對聲明另存；Wiki 保留帳本與活躍關係的來源附件。舊版本主張不會自動繼承。
-- 📄 **Native PDF（main 未發布）** — 頁面建立／讀取／PNG 顯示／複製／插刪／重排／旋轉裁切、版本引用與 Wiki；先查 contract，完整頁面引用必須固定版本。MCP 檢查物件圖與有限解析度讀回，Agent 核對語意／完整畫面／表單行為；不提供任意文字編輯或 secure redaction。公開版仍 1.4.0。
+- 📽️ **PPTX 形狀操作（1.4.1）** — 先查 contract；`add_pptx_shapes` 新增文字框，`delete_pptx_shapes` 使用目前版本完整引用刪除形狀。已知相依會阻擋刪除，附件仍保留；Agent 核對版面與未涵蓋相依，來源回寫仍明確指定。
+- 🖼️ **DOCX 整頁預覽（1.4.1）** — `render_docx_page` 以明確 revision／零起算 `docx_page_index` 回傳真實 MCP PNG；需另裝 LibreOffice Writer，依 `next_page_index` 看完目前與歷史版本。每次重新轉換，頁碼屬於該次輸出；Agent 核對語意／版面，不能宣稱已驗證 Microsoft Word 保真。
+- 📝 **DOCX 建立與結構（1.4.1）** — `create_docx` 獨立建立段落／表格；`add_docx_blocks`／`delete_docx_blocks` 以目前完整引用操作主本文。合併格、富文字與未修改 parts 會核對；已知範圍／欄位等相依阻擋不支援的刪除，Agent 核對分頁／版面，
+- 📽️ **整張投影片預覽（1.4.1）** — `render_pptx_slide` 使用選配 LibreOffice Impress，以 revision／pptx_slide_key 回傳實際 PNG。Agent 比較遮擋、溢出與版面；回報渲染器與已做核對，不能宣稱 PowerPoint 保真驗證。
+- 📽️ **PPTX 投影片結構（1.4.1）** — `read_pptx_layouts` 探索版型，`add_pptx_slides` 插頁並建立空白繼承預留位置／文字框；重排與刪頁使用目前版本完整 slide_id／part 清單。保留原 parts，檢查相依／章節／播放範圍；Agent 核對畫面與檢視器快取。
+- 🖼️ **PPTX 圖片（1.4.1）** — `add_pptx_pictures`／`replace_pptx_pictures` 使用版本化 PNG/JPEG 資產，保留共用 media；`read_pptx_picture` 顯示實際內嵌圖片，`extract_pptx_picture` 建立含來源歷程的新資產。`native-file-ref-v1` 只驗證完整不可變位元組。Agent 核對投影片畫面、裁切、效果與語意；
+- 📊 **PPTX 原生表格（1.4.1）** — `add_pptx_tables` 新增明確尺寸、合併與文字格式的表格；讀回／修改 anchor run／刪除／證據與 Wiki 沿用原生操作。目的簡報樣式及溢出由 Agent 核對。`citation_contract` typed schema 僅存引用顯示格式，來源證據另行保存。
+- 📊 **PPTX 格網（1.4.1）** — `update_pptx_table_grid` 使用完整引用依序列欄插刪與調整尺寸；檢查合併區擴縮、起點移動及隱藏內容衝突。合併須明確選擇 require_empty／append_paragraphs；後者依序搬移完整段落，拆分保留起點內容、不自動分回。Agent 核對新版位置、畫面與轉製關係。
+- 🔗 **轉製來源帳本（1.4.1）** — 完整原生引用連結來源與產物；先讀 hash 固定的帳本，再新增／修訂／撤回。MCP 驗證引用，Agent 核對聲明另存；Wiki 保留帳本與活躍關係的來源附件。舊版本主張不會自動繼承。
+- 📄 **Native PDF（1.4.1）** — 頁面建立／讀取／PNG 顯示／複製／插刪／重排／旋轉裁切、版本引用與 Wiki；先查 contract，完整頁面引用必須固定版本。MCP 檢查物件圖與有限解析度讀回，Agent 核對語意／完整畫面／表單行為；不提供任意文字編輯或 secure redaction。
 - 📊 **A2T** — Anything to Table 表格建立
 - 🧭 **Section Navigation** — 動態層級章節導航（5 Tools）
 - 🔍 **Knowledge Graph** — 跨文獻知識圖譜（LightRAG）
