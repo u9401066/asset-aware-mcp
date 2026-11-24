@@ -3,7 +3,12 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { buildAssetAwareEnv, buildAssetAwareLaunchSpec } from '../../mcpConfigCommon';
+import {
+    buildAssetAwareEnv,
+    buildAssetAwareLaunchSpec,
+    defaultLocalUvCacheDir,
+    isCloudSyncedPath,
+} from '../../mcpConfigCommon';
 import { RUNTIME_PYTHON_VERSION_KEY } from '../../uv';
 import {
     __resetConfiguration,
@@ -167,6 +172,33 @@ describe('mcpConfigCommon', () => {
         const env = buildAssetAwareEnv(context, tempDir);
 
         assert.strictEqual(env.OLLAMA_MODEL, 'operator-config-model');
+    });
+
+    it('keeps the uv cache on a local disk when DATA_DIR is cloud-synced', () => {
+        const cloudDataDir = path.join(tempDir, '我的雲端硬碟', 'project', 'data');
+        fs.writeFileSync(path.join(tempDir, '.env'), `DATA_DIR=${cloudDataDir}\n`);
+        const context = { globalStorageUri: { fsPath: path.join(tempDir, 'global') } } as any;
+
+        const env = buildAssetAwareEnv(context, tempDir);
+
+        assert.strictEqual(env.DATA_DIR, cloudDataDir);
+        assert.strictEqual(env.UV_CACHE_DIR, defaultLocalUvCacheDir());
+        assert.ok(!env.UV_CACHE_DIR.startsWith(cloudDataDir));
+    });
+
+    it('detects common cloud-sync folders without matching ordinary paths', () => {
+        for (const cloudPath of [
+            'G:\\我的雲端硬碟\\proj\\data',
+            'G:\\My Drive\\proj',
+            'C:\\Users\\me\\OneDrive - Contoso\\proj',
+            '/Users/me/Library/CloudStorage/GoogleDrive-me@example.com/My Drive/proj',
+            '/home/me/Dropbox (Personal)/proj',
+        ]) {
+            assert.ok(isCloudSyncedPath(cloudPath), cloudPath);
+        }
+        for (const localPath of ['C:\\work\\drive-tools\\data', '/home/me/projects/onedrivex/data']) {
+            assert.ok(!isCloudSyncedPath(localPath), localPath);
+        }
     });
 
     it('builds local-source env from detected source root', () => {
