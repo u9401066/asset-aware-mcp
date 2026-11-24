@@ -10,6 +10,7 @@ Tests cover:
 
 from __future__ import annotations
 
+import copy
 from datetime import datetime
 from pathlib import Path
 
@@ -1205,6 +1206,56 @@ class TestRoundTrip:
 
         assert parse_result.errors == []
         assert updated.find_block("p001").content == content
+
+    def test_leading_markdown_markers_stay_literal_paragraph_text(
+        self, renderer: DfmRenderer, parser: DfmParser
+    ):
+        contents = {
+            "p001": "# 標題",
+            "p002": "## 小節",
+            "p003": "- 項目",
+            "p004": "1. 步驟",
+            "p005": "  - 縮排項目",
+            "p006": "#hashtag and 5-1. ok",
+        }
+        blocks = [
+            DfmBlock(id=block_id, block_type=DfmBlockType.PARAGRAPH, content=text)
+            for block_id, text in contents.items()
+        ]
+        blocks.append(
+            DfmBlock(
+                id="p007",
+                block_type=DfmBlockType.FORMAT,
+                content="# Bold lead",
+                runs=[FormatRun(text="# "), FormatRun(text="Bold lead", bold=True)],
+            )
+        )
+        contents["p007"] = "# Bold lead"
+
+        def make_ir() -> DocxIR:
+            return DocxIR(
+                doc_id="test_doc_001",
+                source_path="test.docx",
+                source_filename="test.docx",
+                checksum="abc123",
+                created_at=datetime(2025, 1, 1, 12, 0, 0),
+                blocks=[copy.deepcopy(block) for block in blocks],
+            )
+
+        single_result = parser.parse(renderer.render(make_ir()))
+        single_updated = parser.apply_edits(make_ir(), single_result)
+        md_text, yaml_text = renderer.render_split(make_ir())
+        split_result = parser.parse_split(md_text, yaml_text)
+        split_updated = parser.apply_edits(make_ir(), split_result)
+
+        assert single_result.errors == []
+        assert split_result.errors == []
+        single_types = {e.block_id: e.block_type for e in single_result.edits}
+        for block_id in ("p001", "p002", "p003", "p004", "p005", "p006"):
+            assert single_types[block_id] == DfmBlockType.PARAGRAPH
+        for block_id, text in contents.items():
+            assert single_updated.find_block(block_id).content == text
+            assert split_updated.find_block(block_id).content == text
 
     def test_multiline_list_item_roundtrips_in_split_and_single_dfm(
         self, renderer: DfmRenderer, parser: DfmParser
