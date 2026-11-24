@@ -20,6 +20,7 @@ import hashlib
 import logging
 import re
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, ClassVar
 from zipfile import ZipFile
@@ -994,24 +995,15 @@ class DocxValidator:
                 total_checks += 1
                 matches += 1
 
-            for run_index in range(min(len(orig_runs), len(rebuilt_runs))):
-                for attr in self._format_attributes():
-                    orig_val = orig_runs[run_index].get(attr)
-                    rebuilt_val = rebuilt_runs[run_index].get(attr)
-                    if orig_val is not None or rebuilt_val is not None:
-                        total_checks += 1
-                        if orig_val == rebuilt_val:
-                            matches += 1
-                        else:
-                            report.format_diffs.append(
-                                FormatDiff(
-                                    index=i,
-                                    location=f"{location}/run {run_index + 1}",
-                                    attribute=attr,
-                                    original=str(orig_val),
-                                    rebuilt=str(rebuilt_val),
-                                )
-                            )
+            run_checks, run_matches = self._compare_run_formatting(
+                orig_runs,
+                rebuilt_runs,
+                index=i,
+                location=location,
+                report=report,
+            )
+            total_checks += run_checks
+            matches += run_matches
 
         table_checks, table_matches = self._compare_table_cell_formatting(
             orig["tables"],
@@ -1026,6 +1018,73 @@ class DocxValidator:
     @staticmethod
     def _format_attributes() -> tuple[str, ...]:
         return ("bold", "italic", "font_name", "font_size", "color", "underline")
+
+    def _compare_run_formatting(
+        self,
+        orig_runs: list[dict[str, Any]],
+        rebuilt_runs: list[dict[str, Any]],
+        *,
+        index: int,
+        location: str,
+        report: ValidationReport,
+    ) -> tuple[int, int]:
+        """Compare run attributes; realign by shared text when runs were split."""
+        if len(orig_runs) == len(rebuilt_runs):
+            pairs = [(run_index, run_index) for run_index in range(len(orig_runs))]
+        else:
+            pairs = self._aligned_run_pairs(orig_runs, rebuilt_runs)
+
+        total_checks = 0
+        matches = 0
+        for orig_index, rebuilt_index in pairs:
+            for attr in self._format_attributes():
+                orig_val = orig_runs[orig_index].get(attr)
+                rebuilt_val = rebuilt_runs[rebuilt_index].get(attr)
+                if orig_val is None and rebuilt_val is None:
+                    continue
+                total_checks += 1
+                if orig_val == rebuilt_val:
+                    matches += 1
+                else:
+                    report.format_diffs.append(
+                        FormatDiff(
+                            index=index,
+                            location=f"{location}/run {rebuilt_index + 1}",
+                            attribute=attr,
+                            original=str(orig_val),
+                            rebuilt=str(rebuilt_val),
+                        )
+                    )
+        return total_checks, matches
+
+    @staticmethod
+    def _aligned_run_pairs(
+        orig_runs: list[dict[str, Any]],
+        rebuilt_runs: list[dict[str, Any]],
+    ) -> list[tuple[int, int]]:
+        """Pair original and rebuilt runs that carry the same unchanged characters.
+
+        Tracked edits split runs around inserted or deleted text, so positional
+        pairing would compare unrelated runs once the run count changes.
+        """
+
+        def owners(runs: list[dict[str, Any]]) -> list[int]:
+            return [idx for idx, run in enumerate(runs) for _ in str(run["text"])]
+
+        orig_owner = owners(orig_runs)
+        rebuilt_owner = owners(rebuilt_runs)
+        matcher = SequenceMatcher(
+            None,
+            "".join(str(run["text"]) for run in orig_runs),
+            "".join(str(run["text"]) for run in rebuilt_runs),
+            autojunk=False,
+        )
+        pairs: dict[tuple[int, int], None] = {}
+        for block in matcher.get_matching_blocks():
+            for offset in range(block.size):
+                pair = (orig_owner[block.a + offset], rebuilt_owner[block.b + offset])
+                pairs.setdefault(pair, None)
+        return list(pairs)
 
     def _compare_table_cell_formatting(
         self,
@@ -1071,26 +1130,15 @@ class DocxValidator:
                         total_checks += 1
                         matches += 1
 
-                    for run_index in range(min(len(orig_runs), len(rebuilt_runs))):
-                        for attr in self._format_attributes():
-                            orig_val = orig_runs[run_index].get(attr)
-                            rebuilt_val = rebuilt_runs[run_index].get(attr)
-                            if orig_val is not None or rebuilt_val is not None:
-                                total_checks += 1
-                                if orig_val == rebuilt_val:
-                                    matches += 1
-                                else:
-                                    report.format_diffs.append(
-                                        FormatDiff(
-                                            index=t_idx,
-                                            location=(
-                                                f"{location}/run {run_index + 1}"
-                                            ),
-                                            attribute=attr,
-                                            original=str(orig_val),
-                                            rebuilt=str(rebuilt_val),
-                                        )
-                                    )
+                    run_checks, run_matches = self._compare_run_formatting(
+                        orig_runs,
+                        rebuilt_runs,
+                        index=t_idx,
+                        location=location,
+                        report=report,
+                    )
+                    total_checks += run_checks
+                    matches += run_matches
 
         return total_checks, matches
 

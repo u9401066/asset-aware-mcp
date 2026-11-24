@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
@@ -27,6 +28,41 @@ import {
 } from './uv';
 
 export const ASSET_AWARE_SERVER_KEY = 'asset-aware-mcp';
+
+// Folder names used by sync clients (Google Drive, OneDrive, Dropbox, iCloud).
+// uv's cache relies on atomic renames/hardlinks that these virtual drives do
+// not reliably support, so the cache must stay on a local disk.
+const CLOUD_SYNC_SEGMENT_PATTERNS: readonly RegExp[] = [
+    /^google ?drive(?:[\s-].*)?$/i,
+    /^my drive$/i,
+    /^shared drives$/i,
+    /^我的雲端硬碟$/,
+    /^共用雲端硬碟$/,
+    /^我的云端硬盘$/,
+    /^onedrive(?:[\s-].*)?$/i,
+    /^dropbox(?:\s.*)?$/i,
+    /^icloud ?drive$/i,
+    /^mobile documents$/i,
+    /^cloudstorage$/i,
+];
+
+export function isCloudSyncedPath(target: string): boolean {
+    return target
+        .split(/[\\/]+/)
+        .some(segment => CLOUD_SYNC_SEGMENT_PATTERNS.some(pattern => pattern.test(segment.trim())));
+}
+
+export function defaultLocalUvCacheDir(): string {
+    if (process.platform === 'win32') {
+        const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+        return path.join(localAppData, 'asset-aware-mcp', 'uv-cache');
+    }
+    if (process.platform === 'darwin') {
+        return path.join(os.homedir(), 'Library', 'Caches', 'asset-aware-mcp', 'uv-cache');
+    }
+    const cacheHome = process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache');
+    return path.join(cacheHome, 'asset-aware-mcp', 'uv-cache');
+}
 
 export interface AssetAwareLaunchSpec {
     command: string;
@@ -295,7 +331,10 @@ export function buildAssetAwareEnv(
     const dataDir = envVars['DATA_DIR']
         || configuredValue(config, 'dataDir', DEFAULT_DATA_DIR, globalOnly);
     envVars['DATA_DIR'] = path.isAbsolute(dataDir) ? dataDir : path.resolve(baseRoot, dataDir);
-    const uvCacheDir = envVars['UV_CACHE_DIR'] || path.join(envVars['DATA_DIR'], '.uv-cache');
+    const uvCacheDir = envVars['UV_CACHE_DIR']
+        || (isCloudSyncedPath(envVars['DATA_DIR'])
+            ? defaultLocalUvCacheDir()
+            : path.join(envVars['DATA_DIR'], '.uv-cache'));
     envVars['UV_CACHE_DIR'] = path.isAbsolute(uvCacheDir)
         ? uvCacheDir
         : path.resolve(baseRoot, uvCacheDir);

@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 import scripts.install_cline_mcp as install_cline_mcp
 
 
@@ -183,6 +185,35 @@ def test_build_server_config_sets_workspace_data_dir_from_env(tmp_path: Path) ->
     assert config["env"]["ASSET_AWARE_MARKER_OUTPUT_LOG"] == str(
         tmp_path / "custom-data" / "logs" / "marker.log"
     )
+
+
+def test_build_server_config_keeps_uv_cache_off_cloud_synced_data_dir(
+    tmp_path: Path,
+) -> None:
+    cloud_data_dir = tmp_path / "我的雲端硬碟" / "project" / "data"
+    (tmp_path / ".env").write_text(f'DATA_DIR="{cloud_data_dir}"\n', encoding="utf-8")
+
+    config = install_cline_mcp.build_server_config(uv="uv", root=tmp_path)
+
+    assert config["env"]["DATA_DIR"] == str(cloud_data_dir)
+    assert config["env"]["UV_CACHE_DIR"] == str(
+        install_cline_mcp.default_local_uv_cache_dir()
+    )
+
+
+@pytest.mark.parametrize(
+    ("path_value", "expected"),
+    [
+        (r"G:\我的雲端硬碟\proj\data", True),
+        (r"C:\Users\me\OneDrive - Contoso\proj", True),
+        ("/Users/me/Library/CloudStorage/GoogleDrive-me@example.com/My Drive/x", True),
+        ("/home/me/Dropbox (Personal)/proj", True),
+        (r"C:\work\drive-tools\data", False),
+        ("/home/me/projects/onedrivex/data", False),
+    ],
+)
+def test_is_cloud_synced_path(path_value: str, expected: bool) -> None:
+    assert install_cline_mcp.is_cloud_synced_path(path_value) is expected
 
 
 def test_merge_rules_adds_readable_traditional_chinese_triggers() -> None:

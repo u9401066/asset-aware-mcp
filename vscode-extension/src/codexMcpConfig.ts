@@ -185,6 +185,69 @@ function getStringArray(value: unknown): string[] {
     return value.filter((item): item is string => typeof item === 'string');
 }
 
+function isSameFsPath(left: string, right: string): boolean {
+    const normalize = (value: string): string => {
+        const resolved = path.resolve(value);
+        return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+    };
+    return normalize(left) === normalize(right);
+}
+
+function isExtensionUvToolRunArgs(args: string[]): boolean {
+    if (args.length < 3 || args[0] !== 'tool' || args[1] !== 'run'
+        || args[args.length - 1] !== ASSET_AWARE_SERVER_KEY) {
+        return false;
+    }
+    const pinnedPackage = new RegExp(`^${ASSET_AWARE_SERVER_KEY}==[0-9][0-9A-Za-z.+-]*$`, 'u');
+    const lastOptionIndex = args.length - 1;
+    let pinned = false;
+    for (let index = 2; index < lastOptionIndex; index += 1) {
+        const arg = args[index];
+        if (arg === '--upgrade') {
+            continue;
+        }
+        if (arg === '--python' && index + 1 < lastOptionIndex) {
+            index += 1;
+            continue;
+        }
+        if (arg === '--from' && index + 1 < lastOptionIndex && pinnedPackage.test(args[index + 1])) {
+            pinned = true;
+            index += 1;
+            continue;
+        }
+        return false;
+    }
+    return pinned;
+}
+
+// Codex may rewrite config.toml without comments, which drops the ownership
+// marker and would otherwise freeze the extension-written version pin forever.
+// Only a block that matches this extension's exact launch fingerprint is
+// re-adopted; any hand-written same-key entry stays user-owned.
+function isMarkerlessExtensionLaunch(server: UnknownRecord | undefined, expectedCwd: string): boolean {
+    if (!server) {
+        return false;
+    }
+    const command = server['command'];
+    const cwd = server['cwd'];
+    const args = server['args'];
+    if (typeof command !== 'string' || typeof cwd !== 'string' || !Array.isArray(args)
+        || !args.every((item) => typeof item === 'string')) {
+        return false;
+    }
+    const executable = command.split(/[\\/]/u).pop() ?? '';
+    if (!/^uv(?:\.exe)?$/iu.test(executable)) {
+        return false;
+    }
+    if (!isSameFsPath(cwd, expectedCwd)) {
+        return false;
+    }
+    if (getStringRecord(server['env'])[DISABLE_DOTENV_ENV_NAME] !== 'true') {
+        return false;
+    }
+    return isExtensionUvToolRunArgs(args as string[]);
+}
+
 function normalizeBoolean(value: string | undefined): boolean {
     return ['1', 'true', 'yes', 'on'].includes(value?.trim().toLowerCase() ?? '');
 }
@@ -614,7 +677,11 @@ function stripOwnedPrimaryAssignments(body: string): string {
     return preserved;
 }
 
-function findManagedBlockRange(content: string, serverKey: string): ManagedBlockRange | undefined {
+function findManagedBlockRange(
+    content: string,
+    serverKey: string,
+    allowMarkerless: boolean = false,
+): ManagedBlockRange | undefined {
     const lines = splitSourceLines(content);
     const state: TomlLexState = { quote: undefined, squareDepth: 0, braceDepth: 0 };
     let primaryIndex = -1;
@@ -631,6 +698,11 @@ function findManagedBlockRange(content: string, serverKey: string): ManagedBlock
             if (candidate >= 0 && isManagedMarkerLine(lines[candidate].text)) {
                 primaryIndex = index;
                 markerIndex = candidate;
+                break;
+            }
+            if (allowMarkerless) {
+                primaryIndex = index;
+                markerIndex = index;
                 break;
             }
         }
@@ -693,13 +765,21 @@ function hasManagedMarkerBeforeBlock(content: string, serverKey: string): boolea
     return findManagedBlockRange(content, serverKey) !== undefined;
 }
 
-function stripManagedBlock(content: string, serverKey: string): StripResult {
+function stripManagedBlock(
+    content: string,
+    serverKey: string,
+    adoptExtensionCwd?: string,
+): StripResult {
     const parsed = parseTomlConfig(content);
     if (!parsed) {
         return { content, removed: false, blockedByCustom: true };
     }
     const semanticServerExists = hasSemanticServer(parsed, serverKey);
-    const range = findManagedBlockRange(content, serverKey);
+    let range = findManagedBlockRange(content, serverKey);
+    if (semanticServerExists && !range && adoptExtensionCwd !== undefined
+        && isMarkerlessExtensionLaunch(getSemanticServer(parsed, serverKey), adoptExtensionCwd)) {
+        range = findManagedBlockRange(content, serverKey, true);
+    }
     if (semanticServerExists && !range) {
         return { content, removed: false, blockedByCustom: true };
     }
@@ -1013,14 +1093,14 @@ export function installCodexMcpServer(
     }
     const original = content;
     const existingServer = getSemanticServer(parsed, ASSET_AWARE_SERVER_KEY);
-    const stripped = stripManagedBlock(content, ASSET_AWARE_SERVER_KEY);
+    const codexCwd = context.globalStorageUri.fsPath;
+    const stripped = stripManagedBlock(content, ASSET_AWARE_SERVER_KEY, codexCwd);
     if (stripped.blockedByCustom) {
         return false;
     }
 
     const existingEnvVars = getStringArray(existingServer?.['env_vars']);
     const safeEnv = buildCodexSafeEnv(launch.env, existingEnvVars);
-    const codexCwd = context.globalStorageUri.fsPath;
     fs.mkdirSync(codexCwd, { recursive: true });
     const spec: CodexServerSpec = {
         command: launch.command,
@@ -1104,6 +1184,7 @@ export const __test__ = {
     isSafeOpenRouterUrl,
     isLoopbackHostname,
     isManagedMarkerLine,
+    isMarkerlessExtensionLaunch,
     hasManagedMarkerBeforeBlock,
     stripManagedBlock,
     extractManagedBlock,

@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import copy
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from difflib import SequenceMatcher
 from typing import TYPE_CHECKING
 
 from lxml import etree  # type: ignore[import-untyped]
 
 from src.domain.docx_value_objects import DfmBlockType
+from src.domain.revision_diff import (
+    revision_diff_opcodes,
+    tokenize_revision_diff_text,
+)
 from src.infrastructure.dfm_parser import DfmParser
 from src.infrastructure.docx_openxml import (
     HALF_POINTS_TO_PT,
@@ -34,7 +38,7 @@ if TYPE_CHECKING:
 
     from src.domain.docx_entities import DfmBlock, DocxIR, FormatRun
 
-_DIFF_TOKEN_RE = re.compile(r"\s+|\S+")
+_REVISION_WRAPPER_TAGS = frozenset({"ins", "del", "moveFrom", "moveTo"})
 
 
 @dataclass
@@ -552,6 +556,15 @@ class DocxWritebackMixin:
         new_runs: list[FormatRun] | None = None,
     ) -> None:
         """Rewrite a paragraph's textual content as native Word revisions."""
+        if self._has_textual_revision_markup(p_elem):
+            self._apply_tracked_diff_preserving_revisions(
+                p_elem,
+                new_text,
+                revision_context,
+                new_runs=new_runs,
+            )
+            return
+
         old_spans = self._paragraph_run_style_spans(p_elem)
         new_spans = self._format_run_style_spans(new_runs or [])
         target = self._track_change_rewrite_target(p_elem)
@@ -603,6 +616,245 @@ class DocxWritebackMixin:
             )
         ]
 
+    def _has_textual_revision_markup(self, p_elem: etree._Element) -> bool:
+        """Return True when paragraph content already carries Word revisions."""
+        for child in p_elem:
+            if self._local_name(child) == "pPr":
+                continue
+            for elem in child.iter():
+                if self._local_name(elem) in _REVISION_WRAPPER_TAGS:
+                    return True
+        return False
+
+    def _apply_tracked_diff_preserving_revisions(
+        self,
+        p_elem: etree._Element,
+        new_text: str,
+        revision_context: _TrackChangeContext,
+        *,
+        new_runs: list[FormatRun] | None = None,
+    ) -> None:
+        """Emit tracked changes in place so revisions by other authors survive.
+
+        Unchanged runs (including runs inside existing ``w:ins``/``w:moveTo``)
+        are left untouched, existing ``w:del``/``w:moveFrom`` content is never
+        removed, and only the differing text is wrapped in new revisions.
+        """
+        old_spans = self._paragraph_run_style_spans(p_elem)
+        new_spans = self._format_run_style_spans(new_runs or [])
+        old_text = "".join(
+            self._run_visible_text(r_elem) for r_elem in self._iter_text_runs(p_elem)
+        )
+        ops = [op for op in self._diff_text_ops(old_text, new_text) if op[1]]
+        if all(op[0] == "equal" for op in ops):
+            return
+
+        boundaries: set[int] = set()
+        for op, _text, old_start, old_end, _new_start, _new_end in ops:
+            if op == "delete":
+                boundaries.update((old_start, old_end))
+            elif op == "insert":
+                boundaries.add(old_start)
+        positioned = self._split_runs_at_offsets(p_elem, boundaries)
+
+        previous_delete: tuple[int, int] | None = None
+        for op, text, old_start, old_end, new_start, new_end in ops:
+            if op == "delete":
+                self._wrap_runs_in_deletion(
+                    [
+                        r_elem
+                        for r_elem, start, end in positioned
+                        if end > start and start >= old_start and end <= old_end
+                    ],
+                    revision_context,
+                )
+                previous_delete = (old_start, old_end)
+                continue
+            if op == "insert":
+                anchor_offset = old_start
+                if previous_delete is not None and previous_delete[0] == old_start:
+                    anchor_offset = previous_delete[1]
+                spans = new_spans or old_spans
+                span_start = new_start if new_spans else old_start
+                span_end = new_end if new_spans else old_start
+                build_target = self._track_change_rewrite_target(p_elem)
+                self._append_revision_text_with_style_spans(
+                    build_target,
+                    "ins",
+                    text,
+                    revision_context,
+                    spans,
+                    span_start,
+                    span_end,
+                )
+                insertion = build_target[-1]
+                for rpr_change in insertion.findall(f".//{{{NS['w']}}}rPrChange"):
+                    rpr_parent = rpr_change.getparent()
+                    if rpr_parent is not None:
+                        rpr_parent.remove(rpr_change)
+                self._place_tracked_insertion(
+                    p_elem,
+                    positioned,
+                    anchor_offset,
+                    insertion,
+                    revision_context,
+                )
+            previous_delete = None
+
+    def _split_runs_at_offsets(
+        self,
+        p_elem: etree._Element,
+        boundaries: set[int],
+    ) -> list[tuple[etree._Element, int, int]]:
+        """Split visible runs so no run crosses a diff boundary."""
+        positioned: list[tuple[etree._Element, int, int]] = []
+        cursor = 0
+        for r_elem in self._iter_text_runs(p_elem):
+            start = cursor
+            end = cursor + len(self._run_visible_text(r_elem))
+            current = r_elem
+            current_start = start
+            for cut in sorted(b for b in boundaries if start < b < end):
+                tail = self._split_run_at(current, cut - current_start)
+                positioned.append((current, current_start, cut))
+                current = tail
+                current_start = cut
+            positioned.append((current, current_start, end))
+            cursor = end
+        return positioned
+
+    def _split_run_at(self, r_elem: etree._Element, offset: int) -> etree._Element:
+        """Split a run after ``offset`` visible characters; return the tail run."""
+        tail_run = r_elem.makeelement(r_elem.tag, dict(r_elem.attrib))
+        rpr = r_elem.find(f"{{{NS['w']}}}rPr")
+        if rpr is not None:
+            tail_run.append(copy.deepcopy(rpr))
+        cursor = 0
+        moving = False
+        for child in list(r_elem):
+            if self._local_name(child) == "rPr":
+                continue
+            if moving or cursor >= offset:
+                moving = True
+                tail_run.append(child)
+                continue
+            length = self._run_child_visible_length(child)
+            if cursor + length > offset:
+                split_at = offset - cursor
+                text = child.text or ""
+                child.text = text[:split_at]
+                child.set(_XML_SPACE, "preserve")
+                tail_text = child.makeelement(child.tag, dict(child.attrib))
+                tail_text.text = text[split_at:]
+                tail_text.set(_XML_SPACE, "preserve")
+                tail_run.append(tail_text)
+                moving = True
+            cursor += length
+        r_elem.addnext(tail_run)
+        return tail_run
+
+    def _run_child_visible_length(self, child: etree._Element) -> int:
+        tag = self._local_name(child)
+        if tag in {"t", "delText"}:
+            return len(child.text or "")
+        if tag == "tab":
+            return 1
+        if tag == "br" and child.get(f"{{{NS['w']}}}type") != "page":
+            return 1
+        return 0
+
+    def _wrap_runs_in_deletion(
+        self,
+        runs: list[etree._Element],
+        revision_context: _TrackChangeContext,
+    ) -> None:
+        """Wrap runs in ``w:del`` in place; adjacent sibling runs share one wrapper."""
+        current_del: etree._Element | None = None
+        for r_elem in runs:
+            if current_del is None or r_elem.getprevious() is not current_del:
+                current_del = r_elem.makeelement(
+                    f"{{{NS['w']}}}del",
+                    {
+                        f"{{{NS['w']}}}id": revision_context.take_id(),
+                        f"{{{NS['w']}}}author": revision_context.author,
+                        f"{{{NS['w']}}}date": revision_context.date,
+                    },
+                )
+                r_elem.addprevious(current_del)
+            current_del.append(r_elem)
+            for child in r_elem:
+                tag = self._local_name(child)
+                if tag == "t":
+                    child.tag = f"{{{NS['w']}}}delText"
+                elif tag == "instrText":
+                    child.tag = f"{{{NS['w']}}}delInstrText"
+
+    def _place_tracked_insertion(
+        self,
+        p_elem: etree._Element,
+        positioned: list[tuple[etree._Element, int, int]],
+        anchor_offset: int,
+        insertion: etree._Element,
+        revision_context: _TrackChangeContext,
+    ) -> None:
+        """Place a new ``w:ins`` at a visible-text offset without nesting revisions."""
+        visible = [item for item in positioned if item[2] > item[1]]
+        preceding = [item for item in visible if item[2] <= anchor_offset]
+        if preceding:
+            anchor = self._hoist_out_of_revision_wrappers(
+                preceding[-1][0], after=True, revision_context=revision_context
+            )
+            anchor.addnext(insertion)
+            return
+        if visible:
+            anchor = self._hoist_out_of_revision_wrappers(
+                visible[0][0], after=False, revision_context=revision_context
+            )
+            anchor.addprevious(insertion)
+            return
+        self._track_change_rewrite_target(p_elem).append(insertion)
+
+    def _hoist_out_of_revision_wrappers(
+        self,
+        node: etree._Element,
+        *,
+        after: bool,
+        revision_context: _TrackChangeContext,
+    ) -> etree._Element:
+        """Climb out of revision wrappers, splitting them at ``node`` if needed."""
+        while True:
+            parent = node.getparent()
+            if parent is None or self._local_name(parent) not in _REVISION_WRAPPER_TAGS:
+                return node
+            if after:
+                following = node.getnext()
+                if following is not None:
+                    self._split_revision_wrapper(parent, following, revision_context)
+                node = parent
+            elif node.getprevious() is not None:
+                node = self._split_revision_wrapper(parent, node, revision_context)
+            else:
+                node = parent
+
+    def _split_revision_wrapper(
+        self,
+        wrapper: etree._Element,
+        first_moved: etree._Element,
+        revision_context: _TrackChangeContext,
+    ) -> etree._Element:
+        """Move ``first_moved`` and later siblings into a clone of ``wrapper``."""
+        clone = wrapper.makeelement(wrapper.tag, dict(wrapper.attrib))
+        clone.set(f"{{{NS['w']}}}id", revision_context.take_id())
+        moving: list[etree._Element] = []
+        sibling: etree._Element | None = first_moved
+        while sibling is not None:
+            moving.append(sibling)
+            sibling = sibling.getnext()
+        for elem in moving:
+            clone.append(elem)
+        wrapper.addnext(clone)
+        return clone
+
     def _diff_text_ops(
         self, old_text: str, new_text: str
     ) -> list[tuple[str, str, int, int, int, int]]:
@@ -611,10 +863,11 @@ class DocxWritebackMixin:
         new_tokens = self._tokenize_diff_text(new_text)
         old_offsets = self._token_offsets(old_tokens)
         new_offsets = self._token_offsets(new_tokens)
-        matcher = SequenceMatcher(None, old_tokens, new_tokens, autojunk=False)
 
         chunks: list[tuple[str, str, int, int, int, int]] = []
-        for tag, old_start, old_end, new_start, new_end in matcher.get_opcodes():
+        for tag, old_start, old_end, new_start, new_end in revision_diff_opcodes(
+            old_tokens, new_tokens
+        ):
             old_char_start = old_offsets[old_start]
             old_char_end = old_offsets[old_end]
             new_char_start = new_offsets[new_start]
@@ -678,9 +931,7 @@ class DocxWritebackMixin:
     @staticmethod
     def _tokenize_diff_text(text: str) -> list[str]:
         """Tokenize while preserving whitespace so diff chunks quote exactly."""
-        if not text:
-            return []
-        return _DIFF_TOKEN_RE.findall(text)
+        return tokenize_revision_diff_text(text)
 
     @staticmethod
     def _token_offsets(tokens: list[str]) -> list[int]:

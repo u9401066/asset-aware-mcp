@@ -17,6 +17,7 @@ import datetime as dt
 import json
 import os
 import platform
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -27,6 +28,58 @@ DEFAULT_IMAGE_RESPONSE_CHARS = "750000"
 DEFAULT_TABLE_STARTUP_LOAD_MAX_BYTES = str(20 * 1024 * 1024)
 DEFAULT_SECTION_TREE_LOAD_MAX_BYTES = str(20 * 1024 * 1024)
 DEFAULT_SEGMENTATION_SOURCE_LOAD_MAX_BYTES = str(20 * 1024 * 1024)
+
+# Folder names used by sync clients (Google Drive, OneDrive, Dropbox, iCloud).
+# uv's cache relies on atomic renames/hardlinks that these virtual drives do
+# not reliably support, so the cache must stay on a local disk.
+_CLOUD_SYNC_SEGMENT_PATTERNS = tuple(
+    re.compile(pattern, re.IGNORECASE)
+    for pattern in (
+        r"^google ?drive(?:[\s-].*)?$",
+        r"^my drive$",
+        r"^shared drives$",
+        r"^我的雲端硬碟$",
+        r"^共用雲端硬碟$",
+        r"^我的云端硬盘$",
+        r"^onedrive(?:[\s-].*)?$",
+        r"^dropbox(?:\s.*)?$",
+        r"^icloud ?drive$",
+        r"^mobile documents$",
+        r"^cloudstorage$",
+    )
+)
+
+
+def is_cloud_synced_path(path_value: str | Path) -> bool:
+    segments = re.split(r"[\\/]+", str(path_value))
+    return any(
+        pattern.match(segment.strip())
+        for segment in segments
+        for pattern in _CLOUD_SYNC_SEGMENT_PATTERNS
+    )
+
+
+def default_local_uv_cache_dir() -> Path:
+    system = platform.system().lower()
+    if system == "windows":
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        base = (
+            Path(local_app_data)
+            if local_app_data
+            else Path.home() / "AppData" / "Local"
+        )
+    elif system == "darwin":
+        base = Path.home() / "Library" / "Caches"
+    else:
+        xdg_cache = os.environ.get("XDG_CACHE_HOME")
+        base = Path(xdg_cache) if xdg_cache else Path.home() / ".cache"
+    return base / "asset-aware-mcp" / "uv-cache"
+
+
+def resolve_uv_cache_dir(data_dir: Path) -> Path:
+    if is_cloud_synced_path(data_dir):
+        return default_local_uv_cache_dir()
+    return data_dir / ".uv-cache"
 
 
 def repo_root() -> Path:
@@ -165,7 +218,7 @@ def build_server_config(*, uv: str, root: Path) -> dict:
         "env": {
             "DATA_DIR": str(data_dir),
             "ENABLE_LIGHTRAG": "false",
-            "UV_CACHE_DIR": str(data_dir / ".uv-cache"),
+            "UV_CACHE_DIR": str(resolve_uv_cache_dir(data_dir)),
             "ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS": DEFAULT_TEXT_RESPONSE_CHARS,
             "ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS": DEFAULT_IMAGE_RESPONSE_CHARS,
             "ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES": DEFAULT_TABLE_STARTUP_LOAD_MAX_BYTES,

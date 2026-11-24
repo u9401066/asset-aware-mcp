@@ -9,6 +9,7 @@ for elements that cannot be represented in standard Markdown.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 import yaml
@@ -21,6 +22,9 @@ from src.domain.docx_entities import (  # noqa: TC001
 from src.domain.docx_value_objects import DfmBlockType, ImageAnchorType
 
 logger = logging.getLogger(__name__)
+
+# Leading text that the DFM parser would otherwise read as a heading/list marker.
+_BLOCK_START_MARKER_RE = re.compile(r"^(\s*)(?:#|-(?=\s)|\d+(\.)(?=\s))")
 
 
 class DfmRenderer:
@@ -87,7 +91,7 @@ class DfmRenderer:
         marker = f"<!-- @{block.id} -->"
 
         if bt == DfmBlockType.PARAGRAPH:
-            md_text = (
+            md_text = self._escape_block_start(
                 self._runs_to_md(block.runs)
                 if block.runs
                 else self._escape_md(block.content)
@@ -115,7 +119,7 @@ class DfmRenderer:
             )
 
         if bt == DfmBlockType.FORMAT:
-            md_text = (
+            md_text = self._escape_block_start(
                 self._runs_to_md(block.runs)
                 if block.runs
                 else self._escape_md(block.content)
@@ -451,7 +455,7 @@ class DfmRenderer:
         header = f"<!-- @b:{block.id}{style_attr} -->"
 
         # Convert runs to Markdown formatting
-        md_text = (
+        md_text = self._escape_block_start(
             self._runs_to_md(block.runs)
             if block.runs
             else self._escape_md(block.content)
@@ -505,7 +509,7 @@ class DfmRenderer:
         header += f"\n{yaml_str}\n-->"
 
         # Fallback editable text
-        fallback = (
+        fallback = self._escape_block_start(
             self._runs_to_md(block.runs)
             if block.runs
             else self._escape_md(block.content)
@@ -821,6 +825,15 @@ class DfmRenderer:
         text = text.replace("~", "\\~")
         text = text.replace("^", "\\^")
         return text
+
+    @staticmethod
+    def _escape_block_start(md_text: str) -> str:
+        """Escape a leading ``#``/``-``/``1.`` so paragraphs are not re-typed."""
+        match = _BLOCK_START_MARKER_RE.match(md_text)
+        if match is None:
+            return md_text
+        pos = match.start(2) if match.group(2) else match.end(1)
+        return f"{md_text[:pos]}\\{md_text[pos:]}"
 
     @staticmethod
     def _format_list_markdown(md_text: str, indent: str, marker: str) -> str:

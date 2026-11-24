@@ -980,6 +980,9 @@ class DfmParser:
         text = text.replace("\\*", "*")
         text = text.replace("\\~", "~")
         text = text.replace("\\^", "^")
+        text = text.replace("\\#", "#")
+        text = text.replace("\\-", "-")
+        text = text.replace("\\.", ".")
         text = text.replace("\\\\", "\\")
         return text
 
@@ -993,7 +996,7 @@ class DfmParser:
             escaped_tokens[token] = match.group(1)
             return token
 
-        text = re.sub(r"\\([\\*~^])", protect_escaped, text)
+        text = re.sub(r"\\([\\*~^#.\-])", protect_escaped, text)
         # Bold+italic
         text = re.sub(r"(?<!\\)\*{3}(.+?)(?<!\\)\*{3}", r"\1", text)
         # Bold

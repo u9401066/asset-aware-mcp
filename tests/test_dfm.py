@@ -10,6 +10,7 @@ Tests cover:
 
 from __future__ import annotations
 
+import copy
 from datetime import datetime
 from pathlib import Path
 
@@ -660,6 +661,177 @@ class TestDocxAdapterParsing:
         assert delete.find(f".//{{{NS['w']}}}rPr/{{{NS['w']}}}i") is not None
         assert insert.find(f".//{{{NS['w']}}}rPr/{{{NS['w']}}}i") is not None
 
+    _FOREIGN_REVISION_PARAGRAPH = (
+        "<w:p>"
+        '<w:r><w:t xml:space="preserve">Base </w:t></w:r>'
+        '<w:ins w:id="10" w:author="Reviewer A" w:date="2025-01-01T00:00:00Z">'
+        "<w:r><w:t>added by A</w:t></w:r>"
+        "</w:ins>"
+        '<w:del w:id="11" w:author="Reviewer B" w:date="2025-01-01T00:00:00Z">'
+        '<w:r><w:delText xml:space="preserve"> removed by B</w:delText></w:r>'
+        "</w:del>"
+        '<w:r><w:t xml:space="preserve"> tail.</w:t></w:r>'
+        "</w:p>"
+    )
+
+    def _apply_tracked_edit_to_foreign_revisions(self, new_text: str) -> etree._Element:
+        doc_xml = (
+            f'<w:document xmlns:w="{NS["w"]}"><w:body>'
+            f"{self._FOREIGN_REVISION_PARAGRAPH}"
+            "</w:body></w:document>"
+        ).encode()
+
+        def make_ir(content: str) -> DocxIR:
+            return DocxIR(
+                doc_id="test_doc_001",
+                source_path="test.docx",
+                blocks=[
+                    DfmBlock(
+                        id="p001",
+                        block_type=DfmBlockType.PARAGRAPH,
+                        content=content,
+                    )
+                ],
+            )
+
+        updated = DocxAdapter()._apply_text_changes(
+            doc_xml,
+            make_ir(new_text),
+            changed_block_ids={"p001"},
+            original_ir=make_ir("Base added by A tail."),
+            track_changes=True,
+            revision_author="AI Reviewer",
+        )
+        return etree.fromstring(updated)
+
+    @staticmethod
+    def _revisions_by(tree: etree._Element, tag: str, author: str) -> list:
+        return [
+            elem
+            for elem in tree.iter(f"{{{NS['w']}}}{tag}")
+            if elem.get(f"{{{NS['w']}}}author") == author
+        ]
+
+    @staticmethod
+    def _accepted_text(tree: etree._Element) -> str:
+        deleted_tags = {f"{{{NS['w']}}}del", f"{{{NS['w']}}}moveFrom"}
+        parts = []
+        for t_elem in tree.iter(f"{{{NS['w']}}}t"):
+            if any(ancestor.tag in deleted_tags for ancestor in t_elem.iterancestors()):
+                continue
+            parts.append(t_elem.text or "")
+        return "".join(parts)
+
+    @staticmethod
+    def _assert_unique_revision_ids(tree: etree._Element) -> None:
+        ids = [
+            elem.get(f"{{{NS['w']}}}id")
+            for elem in tree.iter(f"{{{NS['w']}}}ins", f"{{{NS['w']}}}del")
+        ]
+        assert len(ids) == len(set(ids))
+
+    def test_dfm_track_changes_preserve_other_authors_revisions(self):
+        tree = self._apply_tracked_edit_to_foreign_revisions(
+            "Base added by A tail. AI sentence."
+        )
+
+        foreign_ins = self._revisions_by(tree, "ins", "Reviewer A")
+        foreign_del = self._revisions_by(tree, "del", "Reviewer B")
+        assert len(foreign_ins) == 1
+        assert foreign_ins[0].findtext(f".//{{{NS['w']}}}t") == "added by A"
+        assert len(foreign_del) == 1
+        assert foreign_del[0].findtext(f".//{{{NS['w']}}}delText") == " removed by B"
+
+        ai_ins = self._revisions_by(tree, "ins", "AI Reviewer")
+        assert self._revisions_by(tree, "del", "AI Reviewer") == []
+        assert len(ai_ins) == 1
+        assert "".join(ai_ins[0].itertext()) == " AI sentence."
+        assert self._accepted_text(tree) == "Base added by A tail. AI sentence."
+        self._assert_unique_revision_ids(tree)
+
+    def test_dfm_track_changes_nest_deletion_inside_foreign_insertion(self):
+        tree = self._apply_tracked_edit_to_foreign_revisions("Base added tail.")
+
+        ai_del = self._revisions_by(tree, "del", "AI Reviewer")
+        nested = [
+            deletion
+            for deletion in ai_del
+            if deletion.getparent().tag == f"{{{NS['w']}}}ins"
+            and deletion.getparent().get(f"{{{NS['w']}}}author") == "Reviewer A"
+        ]
+        assert nested
+        assert "".join(nested[0].itertext()) == "by A"
+        assert "".join("".join(d.itertext()) for d in ai_del) == "by A "
+        assert self._revisions_by(tree, "ins", "AI Reviewer") == []
+        assert len(self._revisions_by(tree, "del", "Reviewer B")) == 1
+        assert self._accepted_text(tree) == "Base added tail."
+        self._assert_unique_revision_ids(tree)
+
+    def test_dfm_track_changes_split_foreign_insertion_for_inner_insert(self):
+        tree = self._apply_tracked_edit_to_foreign_revisions(
+            "Base added clearly by A tail."
+        )
+
+        ai_ins = self._revisions_by(tree, "ins", "AI Reviewer")
+        assert len(ai_ins) == 1
+        assert ai_ins[0].getparent().tag == f"{{{NS['w']}}}p"
+        foreign_ins = self._revisions_by(tree, "ins", "Reviewer A")
+        assert len(foreign_ins) == 2
+        assert "".join("".join(elem.itertext()) for elem in foreign_ins) == "added by A"
+        assert len(self._revisions_by(tree, "del", "Reviewer B")) == 1
+        assert self._accepted_text(tree) == "Base added clearly by A tail."
+        self._assert_unique_revision_ids(tree)
+
+    @pytest.mark.parametrize(
+        "paragraph_xml",
+        [
+            "<w:p><w:r><w:t>定期舉辦神查會議。</w:t></w:r></w:p>",
+            "<w:p><w:r><w:t>定期舉辦神查</w:t></w:r>"
+            '<w:ins w:id="10" w:author="Reviewer A" w:date="2025-01-01T00:00:00Z">'
+            "<w:r><w:t>會議</w:t></w:r></w:ins>"
+            "<w:r><w:t>。</w:t></w:r></w:p>",
+        ],
+        ids=["plain", "with-foreign-insertion"],
+    )
+    def test_dfm_track_changes_diff_cjk_text_per_character(self, paragraph_xml: str):
+        doc_xml = (
+            f'<w:document xmlns:w="{NS["w"]}"><w:body>{paragraph_xml}</w:body></w:document>'
+        ).encode()
+
+        def make_ir(content: str) -> DocxIR:
+            return DocxIR(
+                doc_id="test_doc_001",
+                source_path="test.docx",
+                blocks=[
+                    DfmBlock(
+                        id="p001", block_type=DfmBlockType.PARAGRAPH, content=content
+                    )
+                ],
+            )
+
+        updated = DocxAdapter()._apply_text_changes(
+            doc_xml,
+            make_ir("定期舉辦審查會議。輸出均留存備查。"),
+            changed_block_ids={"p001"},
+            original_ir=make_ir("定期舉辦神查會議。"),
+            track_changes=True,
+            revision_author="AI Reviewer",
+        )
+        tree = etree.fromstring(updated)
+
+        ai_del = self._revisions_by(tree, "del", "AI Reviewer")
+        ai_ins = self._revisions_by(tree, "ins", "AI Reviewer")
+        assert ["".join(elem.itertext()) for elem in ai_del] == ["神"]
+        assert ["".join(elem.itertext()) for elem in ai_ins] == [
+            "審",
+            "輸出均留存備查。",
+        ]
+        assert self._accepted_text(tree) == "定期舉辦審查會議。輸出均留存備查。"
+        if "Reviewer A" in paragraph_xml:
+            foreign_ins = self._revisions_by(tree, "ins", "Reviewer A")
+            assert ["".join(elem.itertext()) for elem in foreign_ins] == ["會議"]
+        self._assert_unique_revision_ids(tree)
+
     def test_dfm_track_changes_enable_word_settings(self):
         settings_xml = f'<w:settings xmlns:w="{NS["w"]}"/>'.encode()
 
@@ -1205,6 +1377,56 @@ class TestRoundTrip:
 
         assert parse_result.errors == []
         assert updated.find_block("p001").content == content
+
+    def test_leading_markdown_markers_stay_literal_paragraph_text(
+        self, renderer: DfmRenderer, parser: DfmParser
+    ):
+        contents = {
+            "p001": "# 標題",
+            "p002": "## 小節",
+            "p003": "- 項目",
+            "p004": "1. 步驟",
+            "p005": "  - 縮排項目",
+            "p006": "#hashtag and 5-1. ok",
+        }
+        blocks = [
+            DfmBlock(id=block_id, block_type=DfmBlockType.PARAGRAPH, content=text)
+            for block_id, text in contents.items()
+        ]
+        blocks.append(
+            DfmBlock(
+                id="p007",
+                block_type=DfmBlockType.FORMAT,
+                content="# Bold lead",
+                runs=[FormatRun(text="# "), FormatRun(text="Bold lead", bold=True)],
+            )
+        )
+        contents["p007"] = "# Bold lead"
+
+        def make_ir() -> DocxIR:
+            return DocxIR(
+                doc_id="test_doc_001",
+                source_path="test.docx",
+                source_filename="test.docx",
+                checksum="abc123",
+                created_at=datetime(2025, 1, 1, 12, 0, 0),
+                blocks=[copy.deepcopy(block) for block in blocks],
+            )
+
+        single_result = parser.parse(renderer.render(make_ir()))
+        single_updated = parser.apply_edits(make_ir(), single_result)
+        md_text, yaml_text = renderer.render_split(make_ir())
+        split_result = parser.parse_split(md_text, yaml_text)
+        split_updated = parser.apply_edits(make_ir(), split_result)
+
+        assert single_result.errors == []
+        assert split_result.errors == []
+        single_types = {e.block_id: e.block_type for e in single_result.edits}
+        for block_id in ("p001", "p002", "p003", "p004", "p005", "p006"):
+            assert single_types[block_id] == DfmBlockType.PARAGRAPH
+        for block_id, text in contents.items():
+            assert single_updated.find_block(block_id).content == text
+            assert split_updated.find_block(block_id).content == text
 
     def test_multiline_list_item_roundtrips_in_split_and_single_dfm(
         self, renderer: DfmRenderer, parser: DfmParser

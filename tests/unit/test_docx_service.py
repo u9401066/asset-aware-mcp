@@ -141,6 +141,23 @@ def test_revision_record_locator_includes_docx_source_metadata(tmp_path: Path):
     assert record["locator"]["source_order"] == 2
 
 
+def test_revision_records_for_cjk_append_quote_only_inserted_text(tmp_path: Path):
+    service = DocxService(repository=MagicMock())
+    ir = DocxIR(doc_id="docx_123", source_path="source.docx", checksum="sha256:x")
+    old_text = "依循負責任人工智慧治理方向。"
+    new_text = f"{old_text}輸出均留存備查。"
+    block = DfmBlock(id="p001", block_type=DfmBlockType.PARAGRAPH, content=new_text)
+
+    records = service._revision_records_for_block(
+        ir, block, old_text, new_text, tmp_path / "out.docx", start_index=0
+    )
+
+    assert [(r["op"], r["old_text"], r["new_text"]) for r in records] == [
+        ("insert", "", "輸出均留存備查。")
+    ]
+    assert records[0]["new_char_range"] == [len(old_text), len(new_text)]
+
+
 @pytest.mark.asyncio
 async def test_convert_to_pdf_success(monkeypatch, tmp_path: Path):
     repository = MagicMock()
