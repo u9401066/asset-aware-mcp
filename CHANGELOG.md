@@ -9,6 +9,22 @@
 
 Changes accumulate on the 1.4.x line; individual features do not trigger releases.
 
+### Fixed
+
+- DOCX tracked-change write-back no longer flattens existing revisions: other
+  authors' `w:ins`/`w:del` stay intact, edits inside a foreign insertion become a
+  nested deletion or split the wrapper, and new revision IDs remain unique.
+- DFM round-trips keep paragraphs that literally start with `#`, `-` or `1.` as
+  paragraph text instead of re-typing them as headings/list items and emitting a
+  spurious tracked deletion of the marker.
+- Revision diffs for DOCX write-back and `revisions.jsonl` now tokenize CJK text
+  per character, so a small edit to a Chinese/Japanese sentence is tracked as
+  that edit instead of deleting and re-inserting the whole sentence (which also
+  erased other authors' revision attribution).
+- VSIX and Cline launch configs keep `UV_CACHE_DIR` on a local disk when
+  `DATA_DIR` sits in a Google Drive/OneDrive/Dropbox/iCloud folder, avoiding uv
+  cache failures on cloud-synced virtual drives. Explicit `UV_CACHE_DIR` wins.
+
 ## [1.4.1] - 2026-09-22
 
 One consolidated patch release for the native-document and evidence work below.
