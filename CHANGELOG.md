@@ -21,6 +21,10 @@ Changes accumulate on the 1.4.x line; individual features do not trigger release
   per character, so a small edit to a Chinese/Japanese sentence is tracked as
   that edit instead of deleting and re-inserting the whole sentence (which also
   erased other authors' revision attribution).
+- The DOCX round-trip validator pairs runs by their shared unchanged text when a
+  tracked edit changes the run count, so a run split by a revision is no longer
+  compared against an unrelated neighbouring run and misreported as a
+  bold/italic loss; formatting lost on unchanged text is still reported.
 - VSIX and Cline launch configs keep `UV_CACHE_DIR` on a local disk when
   `DATA_DIR` sits in a Google Drive/OneDrive/Dropbox/iCloud folder, avoiding uv
   cache failures on cloud-synced virtual drives. Explicit `UV_CACHE_DIR` wins.

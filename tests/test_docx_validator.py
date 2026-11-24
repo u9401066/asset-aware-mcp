@@ -722,6 +722,90 @@ class TestValidateFormattingDiffs:
             for d in report.format_diffs
         )
 
+    @staticmethod
+    def _tracked_split_paragraph(
+        runs: list[dict[str, object]], deleted: str
+    ) -> etree._Element:
+        p = _make_runs_paragraph(runs)
+        deletion = etree.Element(f"{{{NS_W}}}del")
+        run = etree.SubElement(deletion, f"{{{NS_W}}}r")
+        etree.SubElement(run, f"{{{NS_W}}}delText").text = deleted
+        p.insert(0, deletion)
+        return p
+
+    def test_tracked_split_runs_align_formatting_by_text(
+        self, validator: DocxValidator, tmp_docx_dir: Path
+    ):
+        """A CJK tracked edit splits a run without changing its formatting."""
+        original = tmp_docx_dir / "original.docx"
+        modified = tmp_docx_dir / "modified.docx"
+        _create_docx(
+            original,
+            paragraphs=[
+                _make_runs_paragraph(
+                    [
+                        {"text": "原始段落 ", "bold": True},
+                        {"text": "with italic context", "italic": True},
+                    ]
+                )
+            ],
+        )
+        _create_docx(
+            modified,
+            paragraphs=[
+                self._tracked_split_paragraph(
+                    [
+                        {"text": "修訂", "bold": True},
+                        {"text": "段落 ", "bold": True},
+                        {"text": "with italic context", "italic": True},
+                    ],
+                    deleted="原始",
+                )
+            ],
+        )
+
+        report = validator.validate(original, modified)
+
+        assert [d.attribute for d in report.format_diffs] == ["run_count"]
+
+    def test_tracked_split_runs_still_report_lost_formatting(
+        self, validator: DocxValidator, tmp_docx_dir: Path
+    ):
+        """Realignment must not hide formatting lost on unchanged text."""
+        original = tmp_docx_dir / "original.docx"
+        modified = tmp_docx_dir / "modified.docx"
+        _create_docx(
+            original,
+            paragraphs=[
+                _make_runs_paragraph(
+                    [
+                        {"text": "原始段落 ", "bold": True},
+                        {"text": "with italic context", "italic": True},
+                    ]
+                )
+            ],
+        )
+        _create_docx(
+            modified,
+            paragraphs=[
+                self._tracked_split_paragraph(
+                    [
+                        {"text": "修訂", "bold": True},
+                        {"text": "段落 ", "bold": True},
+                        {"text": "with italic context"},
+                    ],
+                    deleted="原始",
+                )
+            ],
+        )
+
+        report = validator.validate(original, modified)
+
+        assert any(
+            d.location == "paragraph 1/run 3" and d.attribute == "italic"
+            for d in report.format_diffs
+        )
+
     def test_table_cell_run_format_difference_fails_strict_gate(
         self, validator: DocxValidator, tmp_docx_dir: Path
     ):
