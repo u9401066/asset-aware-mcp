@@ -661,6 +661,127 @@ class TestDocxAdapterParsing:
         assert delete.find(f".//{{{NS['w']}}}rPr/{{{NS['w']}}}i") is not None
         assert insert.find(f".//{{{NS['w']}}}rPr/{{{NS['w']}}}i") is not None
 
+    _FOREIGN_REVISION_PARAGRAPH = (
+        "<w:p>"
+        '<w:r><w:t xml:space="preserve">Base </w:t></w:r>'
+        '<w:ins w:id="10" w:author="Reviewer A" w:date="2025-01-01T00:00:00Z">'
+        "<w:r><w:t>added by A</w:t></w:r>"
+        "</w:ins>"
+        '<w:del w:id="11" w:author="Reviewer B" w:date="2025-01-01T00:00:00Z">'
+        '<w:r><w:delText xml:space="preserve"> removed by B</w:delText></w:r>'
+        "</w:del>"
+        '<w:r><w:t xml:space="preserve"> tail.</w:t></w:r>'
+        "</w:p>"
+    )
+
+    def _apply_tracked_edit_to_foreign_revisions(self, new_text: str) -> etree._Element:
+        doc_xml = (
+            f'<w:document xmlns:w="{NS["w"]}"><w:body>'
+            f"{self._FOREIGN_REVISION_PARAGRAPH}"
+            "</w:body></w:document>"
+        ).encode()
+
+        def make_ir(content: str) -> DocxIR:
+            return DocxIR(
+                doc_id="test_doc_001",
+                source_path="test.docx",
+                blocks=[
+                    DfmBlock(
+                        id="p001",
+                        block_type=DfmBlockType.PARAGRAPH,
+                        content=content,
+                    )
+                ],
+            )
+
+        updated = DocxAdapter()._apply_text_changes(
+            doc_xml,
+            make_ir(new_text),
+            changed_block_ids={"p001"},
+            original_ir=make_ir("Base added by A tail."),
+            track_changes=True,
+            revision_author="AI Reviewer",
+        )
+        return etree.fromstring(updated)
+
+    @staticmethod
+    def _revisions_by(tree: etree._Element, tag: str, author: str) -> list:
+        return [
+            elem
+            for elem in tree.iter(f"{{{NS['w']}}}{tag}")
+            if elem.get(f"{{{NS['w']}}}author") == author
+        ]
+
+    @staticmethod
+    def _accepted_text(tree: etree._Element) -> str:
+        deleted_tags = {f"{{{NS['w']}}}del", f"{{{NS['w']}}}moveFrom"}
+        parts = []
+        for t_elem in tree.iter(f"{{{NS['w']}}}t"):
+            if any(ancestor.tag in deleted_tags for ancestor in t_elem.iterancestors()):
+                continue
+            parts.append(t_elem.text or "")
+        return "".join(parts)
+
+    @staticmethod
+    def _assert_unique_revision_ids(tree: etree._Element) -> None:
+        ids = [
+            elem.get(f"{{{NS['w']}}}id")
+            for elem in tree.iter(f"{{{NS['w']}}}ins", f"{{{NS['w']}}}del")
+        ]
+        assert len(ids) == len(set(ids))
+
+    def test_dfm_track_changes_preserve_other_authors_revisions(self):
+        tree = self._apply_tracked_edit_to_foreign_revisions(
+            "Base added by A tail. AI sentence."
+        )
+
+        foreign_ins = self._revisions_by(tree, "ins", "Reviewer A")
+        foreign_del = self._revisions_by(tree, "del", "Reviewer B")
+        assert len(foreign_ins) == 1
+        assert foreign_ins[0].findtext(f".//{{{NS['w']}}}t") == "added by A"
+        assert len(foreign_del) == 1
+        assert foreign_del[0].findtext(f".//{{{NS['w']}}}delText") == " removed by B"
+
+        ai_ins = self._revisions_by(tree, "ins", "AI Reviewer")
+        assert self._revisions_by(tree, "del", "AI Reviewer") == []
+        assert len(ai_ins) == 1
+        assert "".join(ai_ins[0].itertext()) == " AI sentence."
+        assert self._accepted_text(tree) == "Base added by A tail. AI sentence."
+        self._assert_unique_revision_ids(tree)
+
+    def test_dfm_track_changes_nest_deletion_inside_foreign_insertion(self):
+        tree = self._apply_tracked_edit_to_foreign_revisions("Base added tail.")
+
+        ai_del = self._revisions_by(tree, "del", "AI Reviewer")
+        nested = [
+            deletion
+            for deletion in ai_del
+            if deletion.getparent().tag == f"{{{NS['w']}}}ins"
+            and deletion.getparent().get(f"{{{NS['w']}}}author") == "Reviewer A"
+        ]
+        assert nested
+        assert "".join(nested[0].itertext()) == "by A"
+        assert "".join("".join(d.itertext()) for d in ai_del) == "by A "
+        assert self._revisions_by(tree, "ins", "AI Reviewer") == []
+        assert len(self._revisions_by(tree, "del", "Reviewer B")) == 1
+        assert self._accepted_text(tree) == "Base added tail."
+        self._assert_unique_revision_ids(tree)
+
+    def test_dfm_track_changes_split_foreign_insertion_for_inner_insert(self):
+        tree = self._apply_tracked_edit_to_foreign_revisions(
+            "Base added clearly by A tail."
+        )
+
+        ai_ins = self._revisions_by(tree, "ins", "AI Reviewer")
+        assert len(ai_ins) == 1
+        assert ai_ins[0].getparent().tag == f"{{{NS['w']}}}p"
+        foreign_ins = self._revisions_by(tree, "ins", "Reviewer A")
+        assert len(foreign_ins) == 2
+        assert "".join("".join(elem.itertext()) for elem in foreign_ins) == "added by A"
+        assert len(self._revisions_by(tree, "del", "Reviewer B")) == 1
+        assert self._accepted_text(tree) == "Base added clearly by A tail."
+        self._assert_unique_revision_ids(tree)
+
     def test_dfm_track_changes_enable_word_settings(self):
         settings_xml = f'<w:settings xmlns:w="{NS["w"]}"/>'.encode()
 
