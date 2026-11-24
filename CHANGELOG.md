@@ -24,6 +24,11 @@ Changes accumulate on the 1.4.x line; individual features do not trigger release
 - VSIX and Cline launch configs keep `UV_CACHE_DIR` on a local disk when
   `DATA_DIR` sits in a Google Drive/OneDrive/Dropbox/iCloud folder, avoiding uv
   cache failures on cloud-synced virtual drives. Explicit `UV_CACHE_DIR` wins.
+- The VSIX re-adopts its own Codex `config.toml` entry after Codex rewrites the
+  file without comments (dropping the ownership marker), so the pinned
+  `asset-aware-mcp==<version>` follows extension upgrades again. Only blocks
+  matching the extension's exact launch fingerprint are re-adopted;
+  hand-written same-key entries stay user-owned.
 
 ## [1.4.1] - 2026-09-22
 

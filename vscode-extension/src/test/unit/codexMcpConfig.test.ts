@@ -421,6 +421,67 @@ describe('codexMcpConfig', () => {
         assert.strictEqual(fs.readFileSync(configPath, 'utf-8'), custom);
     });
 
+    function writeCommentlessManagedConfig(configPath: string): string {
+        assert.strictEqual(installCodexMcpServer(context, '/usr/bin/uv'), true);
+        // Simulate a Codex-side rewrite that serializes config.toml without comments.
+        const commentless = fs.readFileSync(configPath, 'utf-8')
+            .split('\n')
+            .filter((line) => !line.trim().startsWith('#'))
+            .join('\n');
+        fs.writeFileSync(configPath, commentless);
+        assert.strictEqual(__test__.hasManagedMarkerBeforeBlock(commentless, 'asset-aware-mcp'), false);
+        return commentless;
+    }
+
+    it('re-adopts its own block after Codex rewrites config.toml without comments', () => {
+        const configPath = path.join(tempDir, 'config.toml');
+        fs.writeFileSync(configPath, [
+            '[mcp_servers.other]',
+            'command = "node"',
+            'args = ["server.js"]',
+            '',
+        ].join('\n'));
+        writeCommentlessManagedConfig(configPath);
+
+        context.extension.packageJSON.version = '0.7.0';
+        assert.strictEqual(installCodexMcpServer(context, '/usr/bin/uv'), true);
+
+        const content = fs.readFileSync(configPath, 'utf-8');
+        const server = __test__.getSemanticServer(__test__.parseTomlConfig(content)!, 'asset-aware-mcp');
+        assert.ok((server?.args as string[]).includes('asset-aware-mcp==0.7.0'));
+        assert.ok(!content.includes('asset-aware-mcp==0.6.19'));
+        assert.ok(__test__.hasManagedMarkerBeforeBlock(content, 'asset-aware-mcp'));
+        assert.strictEqual((content.match(/\[mcp_servers\.asset-aware-mcp\]/g) ?? []).length, 1);
+        assert.strictEqual((content.match(/\[mcp_servers\.asset-aware-mcp\.env\]/g) ?? []).length, 1);
+        assert.ok(content.includes('[mcp_servers.other]'));
+        assert.strictEqual(installCodexMcpServer(context, '/usr/bin/uv'), false);
+    });
+
+    const markerlessLookAlikes: Array<[string, (block: string) => string]> = [
+        ['a different cwd', (block) => block.replace(/^cwd = .*$/mu, 'cwd = "/somewhere/else"')],
+        ['a non-uv command', (block) => block.replace(/^command = .*$/mu, 'command = "/usr/local/bin/asset-aware-mcp"')],
+        ['an unpinned package', (block) => block.replace(/"--from", "asset-aware-mcp==[^"]+", /u, '')],
+        ['extra launch arguments', (block) => block.replace('"asset-aware-mcp"]', '"asset-aware-mcp", "--debug"]')],
+        ['dotenv loading re-enabled', (block) => block.replace(
+            'ASSET_AWARE_DISABLE_DOTENV = "true"',
+            'ASSET_AWARE_DISABLE_DOTENV = "false"',
+        )],
+    ];
+    for (const [label, mutate] of markerlessLookAlikes) {
+        it(`keeps a marker-less look-alike block with ${label} user-owned`, () => {
+            const configPath = path.join(tempDir, 'config.toml');
+            const commentless = writeCommentlessManagedConfig(configPath);
+            const custom = mutate(commentless);
+            assert.notStrictEqual(custom, commentless);
+            assert.ok(__test__.parseTomlConfig(custom));
+            fs.writeFileSync(configPath, custom);
+
+            context.extension.packageJSON.version = '0.7.0';
+            assert.strictEqual(installCodexMcpServer(context, '/usr/bin/uv'), false);
+            assert.strictEqual(fs.readFileSync(configPath, 'utf-8'), custom);
+        });
+    }
+
     it('removes only the extension-managed block when Codex management is disabled', () => {
         fs.writeFileSync(path.join(tempDir, 'config.toml'), [
             '# user comment',
