@@ -782,6 +782,56 @@ class TestDocxAdapterParsing:
         assert self._accepted_text(tree) == "Base added clearly by A tail."
         self._assert_unique_revision_ids(tree)
 
+    @pytest.mark.parametrize(
+        "paragraph_xml",
+        [
+            "<w:p><w:r><w:t>定期舉辦神查會議。</w:t></w:r></w:p>",
+            "<w:p><w:r><w:t>定期舉辦神查</w:t></w:r>"
+            '<w:ins w:id="10" w:author="Reviewer A" w:date="2025-01-01T00:00:00Z">'
+            "<w:r><w:t>會議</w:t></w:r></w:ins>"
+            "<w:r><w:t>。</w:t></w:r></w:p>",
+        ],
+        ids=["plain", "with-foreign-insertion"],
+    )
+    def test_dfm_track_changes_diff_cjk_text_per_character(self, paragraph_xml: str):
+        doc_xml = (
+            f'<w:document xmlns:w="{NS["w"]}"><w:body>{paragraph_xml}</w:body></w:document>'
+        ).encode()
+
+        def make_ir(content: str) -> DocxIR:
+            return DocxIR(
+                doc_id="test_doc_001",
+                source_path="test.docx",
+                blocks=[
+                    DfmBlock(
+                        id="p001", block_type=DfmBlockType.PARAGRAPH, content=content
+                    )
+                ],
+            )
+
+        updated = DocxAdapter()._apply_text_changes(
+            doc_xml,
+            make_ir("定期舉辦審查會議。輸出均留存備查。"),
+            changed_block_ids={"p001"},
+            original_ir=make_ir("定期舉辦神查會議。"),
+            track_changes=True,
+            revision_author="AI Reviewer",
+        )
+        tree = etree.fromstring(updated)
+
+        ai_del = self._revisions_by(tree, "del", "AI Reviewer")
+        ai_ins = self._revisions_by(tree, "ins", "AI Reviewer")
+        assert ["".join(elem.itertext()) for elem in ai_del] == ["神"]
+        assert ["".join(elem.itertext()) for elem in ai_ins] == [
+            "審",
+            "輸出均留存備查。",
+        ]
+        assert self._accepted_text(tree) == "定期舉辦審查會議。輸出均留存備查。"
+        if "Reviewer A" in paragraph_xml:
+            foreign_ins = self._revisions_by(tree, "ins", "Reviewer A")
+            assert ["".join(elem.itertext()) for elem in foreign_ins] == ["會議"]
+        self._assert_unique_revision_ids(tree)
+
     def test_dfm_track_changes_enable_word_settings(self):
         settings_xml = f'<w:settings xmlns:w="{NS["w"]}"/>'.encode()
 

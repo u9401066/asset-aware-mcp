@@ -6,12 +6,15 @@ import copy
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from difflib import SequenceMatcher
 from typing import TYPE_CHECKING
 
 from lxml import etree  # type: ignore[import-untyped]
 
 from src.domain.docx_value_objects import DfmBlockType
+from src.domain.revision_diff import (
+    revision_diff_opcodes,
+    tokenize_revision_diff_text,
+)
 from src.infrastructure.dfm_parser import DfmParser
 from src.infrastructure.docx_openxml import (
     HALF_POINTS_TO_PT,
@@ -35,7 +38,6 @@ if TYPE_CHECKING:
 
     from src.domain.docx_entities import DfmBlock, DocxIR, FormatRun
 
-_DIFF_TOKEN_RE = re.compile(r"\s+|\S+")
 _REVISION_WRAPPER_TAGS = frozenset({"ins", "del", "moveFrom", "moveTo"})
 
 
@@ -861,10 +863,11 @@ class DocxWritebackMixin:
         new_tokens = self._tokenize_diff_text(new_text)
         old_offsets = self._token_offsets(old_tokens)
         new_offsets = self._token_offsets(new_tokens)
-        matcher = SequenceMatcher(None, old_tokens, new_tokens, autojunk=False)
 
         chunks: list[tuple[str, str, int, int, int, int]] = []
-        for tag, old_start, old_end, new_start, new_end in matcher.get_opcodes():
+        for tag, old_start, old_end, new_start, new_end in revision_diff_opcodes(
+            old_tokens, new_tokens
+        ):
             old_char_start = old_offsets[old_start]
             old_char_end = old_offsets[old_end]
             new_char_start = new_offsets[new_start]
@@ -928,9 +931,7 @@ class DocxWritebackMixin:
     @staticmethod
     def _tokenize_diff_text(text: str) -> list[str]:
         """Tokenize while preserving whitespace so diff chunks quote exactly."""
-        if not text:
-            return []
-        return _DIFF_TOKEN_RE.findall(text)
+        return tokenize_revision_diff_text(text)
 
     @staticmethod
     def _token_offsets(tokens: list[str]) -> list[int]:

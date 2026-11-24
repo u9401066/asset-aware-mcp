@@ -18,7 +18,6 @@ import tempfile
 from copy import deepcopy
 from dataclasses import asdict
 from datetime import datetime
-from difflib import SequenceMatcher
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -26,6 +25,10 @@ from src.application.dfm_integrity import DfmIntegrityChecker, IntegrityIssue
 from src.application.docx_ir_serialization import DocxIrSerializationMixin
 from src.application.output_paths import resolve_document_output_path
 from src.domain.docx_value_objects import DfmBlockType
+from src.domain.revision_diff import (
+    revision_diff_opcodes,
+    tokenize_revision_diff_text,
+)
 from src.infrastructure.dfm_parser import DfmParser
 from src.infrastructure.dfm_renderer import DfmRenderer
 from src.infrastructure.docx_adapter import DocxAdapter
@@ -63,7 +66,6 @@ RESERVED_DOCX_ARTIFACT_NAMES = {
     "original.docx",
     "revisions.jsonl",
 }
-_REVISION_TOKEN_RE = re.compile(r"\s+|\S+")
 
 
 class DocxService(DocxIrSerializationMixin):
@@ -926,13 +928,14 @@ class DocxService(DocxIrSerializationMixin):
         start_index: int,
     ) -> list[dict[str, Any]]:
         records: list[dict[str, Any]] = []
-        old_tokens = _REVISION_TOKEN_RE.findall(old_text)
-        new_tokens = _REVISION_TOKEN_RE.findall(new_text)
+        old_tokens = tokenize_revision_diff_text(old_text)
+        new_tokens = tokenize_revision_diff_text(new_text)
         old_offsets = self._token_offsets(old_tokens)
         new_offsets = self._token_offsets(new_tokens)
-        matcher = SequenceMatcher(None, old_tokens, new_tokens, autojunk=False)
 
-        for tag, old_start, old_end, new_start, new_end in matcher.get_opcodes():
+        for tag, old_start, old_end, new_start, new_end in revision_diff_opcodes(
+            old_tokens, new_tokens
+        ):
             if tag == "equal":
                 continue
             old_char_range = [old_offsets[old_start], old_offsets[old_end]]
