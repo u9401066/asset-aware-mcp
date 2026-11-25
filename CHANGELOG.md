@@ -22,6 +22,10 @@ still carried the 1.4.1 version markers. 1.5.1 contains every 1.5.0 change below
 - CI integration tests run on `ubuntu-latest` (Ubuntu 26.04, LibreOffice 26.2.7.3)
   again, with the DOCX note layout baseline re-recorded for LibreOffice 26.2 (see
   Changed).
+- PDF ingestion on Windows no longer fails when the job runner or antivirus
+  holds the worker's progress file open (WinError 5 on the atomic replace):
+  progress updates are best-effort, and progress and result writes retry a
+  locked replace with a short backoff.
 
 ### Added
 

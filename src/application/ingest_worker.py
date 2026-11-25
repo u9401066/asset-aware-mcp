@@ -31,12 +31,33 @@ def _parse_page_ranges(raw_value: str) -> list[str]:
     return [str(item) for item in value]
 
 
-def _write_json_atomic(path: Path, payload: str) -> None:
+# On Windows, os.replace() fails with PermissionError while another process
+# holds the target open (the job runner polling progress.json, antivirus), so
+# the replace is retried with a short exponential backoff.
+_REPLACE_ATTEMPTS = 8
+_PROGRESS_REPLACE_ATTEMPTS = 4
+_REPLACE_BACKOFF_SECONDS = 0.02
+
+
+def _replace_with_retry(source: Path, target: Path, attempts: int) -> None:
+    for attempt in range(attempts):
+        try:
+            source.replace(target)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(_REPLACE_BACKOFF_SECONDS * (2**attempt))
+
+
+def _write_json_atomic(
+    path: Path, payload: str, *, attempts: int = _REPLACE_ATTEMPTS
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     try:
         tmp_path.write_text(payload, encoding="utf-8")
-        tmp_path.replace(path)
+        _replace_with_retry(tmp_path, path, attempts)
     finally:
         if tmp_path.exists():
             tmp_path.unlink()
@@ -58,7 +79,16 @@ def _make_progress_callback(
             "message": message,
             "ts": time.time(),
         }
-        _write_json_atomic(progress_path, json.dumps(payload, ensure_ascii=False))
+        try:
+            _write_json_atomic(
+                progress_path,
+                json.dumps(payload, ensure_ascii=False),
+                attempts=_PROGRESS_REPLACE_ATTEMPTS,
+            )
+        except OSError:
+            # Progress is advisory: the runner tolerates a missing or stale
+            # progress file, so a locked file must never fail the ingestion.
+            return
 
     return callback
 
