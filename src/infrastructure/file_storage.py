@@ -10,6 +10,7 @@ import json
 import logging
 import re
 import shutil
+import uuid
 from typing import TYPE_CHECKING, Any
 
 from src.domain.citation import EvidenceSpan
@@ -269,11 +270,18 @@ class FileStorage(DocumentRepository):
         if not doc_dir.exists() or not doc_dir.is_dir():
             return False
 
+        # Rename the whole directory away first: the document disappears
+        # atomically (no half-deleted directory if another process still holds
+        # a file open), then the hidden trash copy is removed best effort.
+        trash = doc_dir.with_name(f".deleting-{doc_dir.name}-{uuid.uuid4().hex[:8]}")
         try:
-            shutil.rmtree(doc_dir)
+            doc_dir.rename(trash)
         except OSError:
-            logger.warning("Failed to delete document directory: %s", doc_dir)
+            logger.warning("Failed to delete document directory (in use?): %s", doc_dir)
             return False
+        shutil.rmtree(trash, ignore_errors=True)
+        if trash.exists():
+            logger.warning("Deleted document left a hidden trash directory: %s", trash)
         return not doc_dir.exists()
 
     def list_docx_documents(self) -> list[dict[str, Any]]:
