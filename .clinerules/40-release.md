@@ -20,6 +20,7 @@ paths:
 - Changelog: `CHANGELOG.md` (add a dated section)
 
 ## Minimum Pre-Tag Verification
+- `python scripts/pretest.py` (local CI-parity gate: every ci.yml job + release.yml `test`; all rows PASS, macOS NOT VERIFIED)
 - `uv run ruff check .`
 - `uv run ruff format --check .`
 - `uv run mypy src --ignore-missing-imports`

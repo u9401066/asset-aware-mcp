@@ -2,6 +2,22 @@
 
 Run the full local verification gates for this repo.
 
+## Step 0: CI-parity gate (run first; required before every push)
+`scripts/pretest.py` replays every `.github/workflows/ci.yml` job and the
+release.yml `test` job from the commit under test, with CI's uv/Node/Python
+pins. Linux jobs run in the WSL `Ubuntu-26.04` distro (same image and
+LibreOffice as GitHub `ubuntu-latest`), Windows jobs on the Windows host, and
+macOS is reported as NOT VERIFIED. Wrong tool versions or a missing distro fail
+loudly. Provision once with `python scripts/pretest.py --setup-wsl`.
+<execute_command>
+<command>python scripts/pretest.py</command>
+</execute_command>
+
+The final table maps each CI job to its local result. Any FAIL blocks the push
+(the pre-push hook runs this gate); commit hooks run the offline subset
+`python scripts/pretest.py --quick`. The steps below remain the manual
+breakdown and the release-only checks (Docker, packaging) the gate does not run.
+
 ## Step 1: Python lint/type/test
 <execute_command>
 <command>uv run ruff check .</command>

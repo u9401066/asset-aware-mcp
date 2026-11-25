@@ -562,6 +562,10 @@ The runtime requires the official MCP Python SDK `>=2,<3` and uses
 - Run `npm run sync-assets` in `vscode-extension/` before packaging the VSIX.
 - Keep `vscode-extension/resources/repo-assets/**` synchronized with source
   files via `npm run sync-assets:check`.
+- Before pushing, run `python scripts/pretest.py`: it replays every ci.yml job
+  and the release.yml `test` job locally (Linux jobs in the WSL `Ubuntu-26.04`
+  distro, same LibreOffice as CI) and must be green; `--quick` is the
+  commit-time subset.
 - Preserve custom user MCP settings, Cline `alwaysAllow`, Codex comments, and
   unrelated server entries during extension install/update flows.
 
