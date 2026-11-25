@@ -1,19 +1,22 @@
 # Active Context
 
-## 1.4.2 DOCX cumulative write-back fix — 2026-11-25
+## 1.5.0 release — DOCX write-back safety, block leases, Python 3.11 — 2026-11-25
 
-A user benchmark on a real IRB draft found that `save_docx` patched the pristine
-`original.docx` with only the blocks changed since the previous save, so every
-save after the first silently dropped earlier edits, and a Track Changes re-save
-wrote a byte copy of `original.docx` (0 revisions) while reporting success.
-Fixed on `fix/docx-cumulative-writeback` (3cb1547, 5766cfe): immutable
-`baseline_ir.json`, cumulative net edits applied to `original.docx`, post-save
-verification of every expected diff, `revision_base` original|last_save, and
-verified migration of ≤1.4.1 doc dirs. Released as 1.4.2 (patch) because it is
-a data-loss fix. Open follow-ups: paragraph-index drift when images/page breaks/
-SDT precede an edited paragraph (pre-existing, blocks rather than loses data);
-DATA_DIR differs between workspace mcp.json and Cline/Codex by design (warn in
-status, stop the wizard writing DATA_DIR); Ollama model check uses exact names.
+One release instead of a separate 1.4.2 (maintainer decision): the 1.4.2
+cumulative write-back fix (`fix/docx-cumulative-writeback`), the dependency
+security refresh with Python 3.10 dropped because Pillow/filelock/soupsieve fixes
+no longer support it (`chore/security-refresh`; `uv audit` 0, npm audits 0,
+PyPI security floors raised), and concurrent DFM editing with revisions, 3-way
+merge and block leases (`feature/docx-block-leases`, plus all 16 findings of an
+independent review: idempotent re-ingest with explicit `reset`, split-save base
+revision only from content.md, in-place edits preserved, lock waits off the event
+loop, cloud/network DATA_DIR warning). The maintainer keeps DATA_DIR on Google
+Drive by choice; the lock only coordinates processes on one machine, so use one
+writer per document there. Open follow-ups: `get_docx_content` may return a
+human's unsaved in-place draft when `content.current.dfm` exists; paragraph-index
+drift when images/page breaks/SDT precede an edited paragraph (pre-existing);
+DATA_DIR differs between workspace mcp.json and Cline/Codex by design; Ollama
+model check uses exact names.
 
 ## 1.4.1 formally published and public artifacts verified — 2026-09-22
 
