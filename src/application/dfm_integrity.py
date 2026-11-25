@@ -515,6 +515,8 @@ class DfmIntegrityChecker:
         expected_text_diff_locations: set[str] | None = None,
         expected_table_diff_locations: set[str] | None = None,
         revision_markup_expected: bool = False,
+        revision_markup_locations: set[str] | None = None,
+        revisions_required: bool = False,
     ) -> IntegrityReport:
         """
         Run round-trip validation after saving docx.
@@ -523,8 +525,16 @@ class DfmIntegrityChecker:
 
         When content edits are expected, text/table differences are the intended
         user changes and should not fail the post-save guard by themselves.
-        Structural, media, style, and non-revision formatting regressions still
-        fail closed.
+        Every expected location must also appear, so an edit that was dropped
+        from the output fails the save. Structural, media, style, and
+        non-revision formatting regressions still fail closed.
+
+        ``revision_markup_locations`` adds locations whose run structure may be
+        rewritten by Word revisions without a net text change (for example a
+        tracked revert). ``revisions_required`` fails the check unless the
+        output contains more ``w:ins``/``w:del`` revision elements than the
+        original, so a Track Changes save can never report success with zero
+        new revisions.
         """
         report = IntegrityReport()
 
@@ -540,6 +550,13 @@ class DfmIntegrityChecker:
 
         try:
             from src.infrastructure.docx_validator import DocxValidator
+
+            if revisions_required:
+                self._check_new_revision_markup(
+                    report,
+                    DocxValidator.count_text_revision_marks(original_path),
+                    DocxValidator.count_text_revision_marks(output_path),
+                )
 
             validator = DocxValidator()
             val_report = validator.validate(original_path, output_path)
@@ -567,6 +584,10 @@ class DfmIntegrityChecker:
                             or self._diff_location_allowed(
                                 getattr(diff, "location", ""),
                                 expected_table_diff_locations,
+                            )
+                            or self._diff_location_allowed(
+                                getattr(diff, "location", ""),
+                                revision_markup_locations,
                             )
                         )
                     )
@@ -693,6 +714,45 @@ class DfmIntegrityChecker:
             )
 
         return report
+
+    @staticmethod
+    def _check_new_revision_markup(
+        report: IntegrityReport,
+        original_marks: int,
+        output_marks: int,
+    ) -> None:
+        """Fail when Track Changes was required but no new revisions exist."""
+        if output_marks > original_marks:
+            report.add(
+                IntegrityIssue(
+                    severity="info",
+                    stage="post_save",
+                    message=(
+                        f"Track Changes output contains {output_marks - original_marks} "
+                        "new Word revision elements"
+                    ),
+                    details={
+                        "original_revision_elements": original_marks,
+                        "output_revision_elements": output_marks,
+                    },
+                )
+            )
+            return
+        report.add(
+            IntegrityIssue(
+                severity="error",
+                stage="post_save",
+                message=(
+                    "Track Changes was requested for changed blocks, but the output "
+                    "contains no new Word revisions (w:ins/w:del); refusing to report "
+                    "an untracked or unchanged document as a tracked save"
+                ),
+                details={
+                    "original_revision_elements": original_marks,
+                    "output_revision_elements": output_marks,
+                },
+            )
+        )
 
     @staticmethod
     def _content_diff_scope_issues(

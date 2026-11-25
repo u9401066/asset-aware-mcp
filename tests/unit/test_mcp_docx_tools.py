@@ -268,7 +268,10 @@ class TestDocxTools:
                     "integrity": "OK",
                     "track_changes": True,
                     "revision_author": "AI Reviewer",
-                    "track_change_blocks": 1,
+                    "revision_base": "original",
+                    "track_change_blocks": 3,
+                    "changed_block_ids": ["p001", "p002", "t001"],
+                    "edited_block_ids": ["p002"],
                     "revision_sidecar_path": "/data/doc123/revisions.jsonl",
                     "revision_records": 2,
                 }
@@ -283,11 +286,15 @@ class TestDocxTools:
             )
 
             assert "追蹤修訂" in result
+            assert "3 個區塊" in result
+            assert "base=original" in result
+            assert "相對原始文件的變更區塊**: 3（本次編輯 1）" in result
             assert "revisions.jsonl" in result
             assert "2 records" in result
             call_args = mock_svc.save_docx.await_args
             assert call_args.kwargs["track_changes"] is True
             assert call_args.kwargs["revision_author"] == "AI Reviewer"
+            assert call_args.kwargs["revision_base"] == "original"
 
     async def test_save_docx_merges_inline_dfm_with_pending_table_context(self) -> None:
         """save_docx should merge editor DFM edits with pending TableContext changes."""
@@ -861,6 +868,7 @@ class TestDocxTools:
                 force=True,
                 track_changes=True,
                 revision_author="Reviewer",
+                revision_base="last_save",
             )
 
         assert result == "saved"
@@ -872,6 +880,7 @@ class TestDocxTools:
             force=True,
             track_changes=True,
             revision_author="Reviewer",
+            revision_base="last_save",
             ctx=None,
         )
 

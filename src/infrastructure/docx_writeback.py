@@ -160,13 +160,17 @@ class DocxWritebackMixin:
         original_ir: DocxIR | None = None,
         track_changes: bool = False,
         revision_author: str = "Asset-Aware MCP",
+        accepted_ir: DocxIR | None = None,
+        accepted_block_ids: set[str] | None = None,
     ) -> None:
         """
         Update document.xml within the docx zip with modified text from IR.
 
         Strategy: Parse the existing document.xml, walk paragraphs and tables
         in order, match them 1:1 with IR blocks, and update text content
-        where it has changed.
+        where it has changed. When ``accepted_ir`` is given, its
+        ``accepted_block_ids`` are first written as plain text so that tracked
+        revisions are emitted relative to that accepted state.
         """
         import zipfile
 
@@ -175,6 +179,12 @@ class DocxWritebackMixin:
 
         with zipfile.ZipFile(docx_path, "r") as zin:
             doc_xml = zin.read("word/document.xml")
+            if accepted_ir is not None and accepted_block_ids:
+                doc_xml = self._apply_text_changes(
+                    doc_xml,
+                    accepted_ir,
+                    accepted_block_ids,
+                )
 
             with zipfile.ZipFile(temp_path, "w", zipfile.ZIP_DEFLATED) as zout:
                 for item in zin.infolist():
