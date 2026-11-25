@@ -9,6 +9,42 @@
 
 Changes accumulate on the 1.4.x line; individual features do not trigger releases.
 
+## [1.4.2] - 2026-11-25
+
+Patch release for a silent data-loss bug in DOCX write-back.
+
+### Fixed
+
+- DOCX `save_docx` write-back is now cumulative: every output is `original.docx`
+  plus all edits since ingest. Previously each save after the first silently
+  dropped earlier edits, a Track Changes re-save wrote a plain copy of
+  `original.docx` with zero revisions, and DOCX→PDF/DOC/ODT conversion and
+  `docx_table_from_context` edits could lose changes — all while reporting
+  success. The post-save integrity check now verifies every expected change
+  against `original.docx`, so a lost edit fails the save.
+- Reverting all DFM edits now yields `original.docx` byte-for-byte instead of
+  failing the integrity check.
+- An image block's DFM Markdown projection is no longer applied as an edit.
+
+### Added
+
+- Immutable `baseline_ir.json` ingest snapshot next to `original.docx`.
+- `save_docx`/`docx(op="save")` `revision_base`: `"original"` (default, all
+  edits since ingest) or `"last_save"` (only changes since the previous save).
+  Results add `edited_block_ids`, `tracked_block_ids` and `revision_base`;
+  `revisions.jsonl` records carry `revision_base`.
+
+### Changed
+
+- `changed_block_ids` now lists every block that differs from `original.docx`.
+- A Track Changes save that emits no new `w:ins`/`w:del` fails; edits to block
+  types the writer cannot emit (e.g. footnotes) are reported as warnings.
+- Legacy (≤1.4.1) document directories rebuild the baseline from
+  `original.docx` after checksum and block-structure verification, or refuse
+  the save with re-ingest guidance.
+- Documented that `save_docx` `output_path` must stay inside `data/{doc_id}/`;
+  use the native `writeback` flow to update the source file.
+
 ## [1.4.1] - 2026-09-22
 
 One consolidated patch release for the native-document and evidence work below.

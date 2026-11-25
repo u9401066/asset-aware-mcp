@@ -7,6 +7,16 @@
 
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
+## v1.4.2 DOCX 累積回寫修正
+
+**有用 `save_docx` 編輯 DOCX 的使用者請升級。** 1.4.1 在同一份文件第二次以後的
+存檔會靜默遺失先前的修改；先一般存檔再存追蹤修訂版時，可能輸出原稿複本卻回報成功。
+1.4.2 以不可變的 `baseline_ir.json` 寫出自匯入以來的全部修改，回報成功前逐一驗證
+每處預期變更，並為追蹤修訂新增 `revision_base`（`"original"` 或 `"last_save"`）。
+1.4.1 建立的文件資料夾會在檢查 checksum 與結構後自動遷移；曾用 1.4.1 對同一份
+文件存檔兩次以上的使用者，請重新檢查當時產出的 DOCX。詳見
+[變更紀錄](CHANGELOG.md#142---2026-11-25)。
+
 ## v1.4.1 跨格式文件與證據流程整合
 
 本版整合下列累積功能。版本維持 **1.4.x**，完成一批改動與驗證後才一起發版，
