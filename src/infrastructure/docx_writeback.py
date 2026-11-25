@@ -44,11 +44,23 @@ class _TrackChangeContext:
     author: str
     date: str
     next_id: int = 1
+    # Optional per-block authors (multi-agent leases): block_id -> author.
+    block_authors: dict[str, str] | None = None
+    default_author: str = ""
 
     def take_id(self) -> str:
         revision_id = str(self.next_id)
         self.next_id += 1
         return revision_id
+
+    def use_block(self, block_id: str) -> str:
+        """Switch to the author of ``block_id``; return the previous author."""
+        previous = self.author
+        if self.block_authors is not None:
+            self.author = self.block_authors.get(
+                block_id, self.default_author or previous
+            )
+        return previous
 
 
 @dataclass
@@ -162,6 +174,7 @@ class DocxWritebackMixin:
         revision_author: str = "Asset-Aware MCP",
         accepted_ir: DocxIR | None = None,
         accepted_block_ids: set[str] | None = None,
+        revision_authors: dict[str, str] | None = None,
     ) -> None:
         """
         Update document.xml within the docx zip with modified text from IR.
@@ -197,6 +210,7 @@ class DocxWritebackMixin:
                             original_ir=original_ir,
                             track_changes=track_changes,
                             revision_author=revision_author,
+                            revision_authors=revision_authors,
                         )
                         zout.writestr(item, modified_xml)
                     elif item.filename == "word/settings.xml" and track_changes:
@@ -217,9 +231,14 @@ class DocxWritebackMixin:
         original_ir: DocxIR | None = None,
         track_changes: bool = False,
         revision_author: str = "Asset-Aware MCP",
+        revision_authors: dict[str, str] | None = None,
     ) -> bytes:
         """
         Apply text changes from IR blocks back to document.xml.
+
+        ``revision_authors`` optionally maps block ids to the Track Changes
+        author of that block (e.g. the lease holder that changed it); blocks
+        without an entry use ``revision_author``.
 
         Walks paragraphs and tables in the same order as original parsing,
         matching each to the corresponding IR block by index position.
@@ -237,6 +256,8 @@ class DocxWritebackMixin:
                 author=revision_author or "Asset-Aware MCP",
                 date=self._revision_timestamp(),
                 next_id=self._max_revision_id(tree) + 1,
+                block_authors=dict(revision_authors) if revision_authors else None,
+                default_author=revision_author or "Asset-Aware MCP",
             )
             if track_changes
             else None
@@ -276,6 +297,8 @@ class DocxWritebackMixin:
                         DfmBlockType.FORMAT,
                         DfmBlockType.CAPTION,
                     ) and (changed_block_ids is None or block.id in changed_block_ids):
+                        if revision_context is not None:
+                            revision_context.use_block(block.id)
                         original_block = original_blocks.get(block.id)
                         original_text = (
                             self._block_write_text(original_block)
@@ -380,7 +403,35 @@ class DocxWritebackMixin:
         md_rows = self._parse_md_table(block.content)
         if not md_rows:
             return
+        previous_author = (
+            revision_context.use_block(block.id) if revision_context else None
+        )
+        try:
+            self._update_table_rows(
+                tbl_elem,
+                block,
+                md_rows,
+                nested_blocks_by_parent,
+                changed_block_ids,
+                update_direct_text=update_direct_text,
+                revision_context=revision_context,
+            )
+        finally:
+            if revision_context is not None and previous_author is not None:
+                revision_context.author = previous_author
 
+    def _update_table_rows(
+        self,
+        tbl_elem: etree._Element,
+        block: DfmBlock,
+        md_rows: list[list[str]],
+        nested_blocks_by_parent: dict[str, dict[str, list[DfmBlock]]],
+        changed_block_ids: set[str] | None,
+        *,
+        update_direct_text: bool,
+        revision_context: _TrackChangeContext | None,
+    ) -> None:
+        """Write table cells; nested tables recurse with their own author."""
         xml_rows = tbl_elem.findall(f"{{{NS['w']}}}tr")
 
         for row_idx, (xml_row, md_row) in enumerate(
