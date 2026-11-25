@@ -321,7 +321,7 @@ the Agent performs complete semantic/visual review and corrections.
 | `mineru` | security hold（extra 空） | adapter 保留；MinerU 3.4.4 pin `transformers<5`，而 fixes 需要 `>=5.5` | Apache-2.0 衍生 |
 | `marker` | security hold（extra 空） | marker-pdf 1.10.2 pin Pillow<11 與安全基線衝突 | — |
 
-- Active Docling / PyMuPDF4LLM extras 已驗證可解析 `Pillow>=12.2.0`；不得用 audit ignore 繞過 held backend 的不可解 graph。
+- Active Docling / PyMuPDF4LLM extras 已驗證可解析 `Pillow>=13.0.0`；不得用 audit ignore 繞過 held backend 的不可解 graph。
 - 結構化 adapters（docling/mineru/marker）實作共通 `StructuredPDFExtractor` Protocol，輸出 `MarkerParseResult`，共用 `_ingest_single_with_marker` 資產管線；held backend 未安裝時降級 PyMuPDF。
 - 對應 adapter：`src/infrastructure/{pymupdf4llm,docling,mineru}_adapter.py`；工廠：`extractor_factory.py`。
 
@@ -393,7 +393,7 @@ the Agent performs complete semantic/visual review and corrections.
 uv venv
 uv sync                    # 基本安裝（PyMuPDF 快速引擎）
 
-# Active PDF→資產引擎（可選，皆相容 Pillow>=12.2.0）
+# Active PDF→資產引擎（可選，皆相容 Pillow>=13.0.0）
 uv sync --extra pdf-plus   # pymupdf4llm（輕量版面感知，drop-in）
 uv sync --extra docling    # Docling（MIT：layout+表格+公式+圖表）
 # MinerU / Marker extras 皆暫時為空；只保留 adapters，不安裝已知不安全 graph。
@@ -418,7 +418,7 @@ uv add --dev pytest ruff
   open-PR limits；Python 必須使用官方 `uv` ecosystem，讓 `pyproject.toml` 與
   `uv.lock` 同步更新。
 - MinerU hold：3.4.4 pin `transformers<5`、修補線需 `>=5.5`。Marker hold：
-  marker-pdf 1.10.2 pin `Pillow<11`、專案安全底線為 `Pillow>=12.2.0`。
+  marker-pdf 1.10.2 pin `Pillow<11`、專案安全底線為 `Pillow>=13.0.0`。
 
 ---
 

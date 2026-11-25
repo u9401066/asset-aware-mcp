@@ -781,7 +781,7 @@ async function runInstallMarkerBackendMenu(): Promise<void> {
     const message =
         'Marker backend is currently on security hold.\n\n' +
         MARKER_BACKEND_SECURITY_HOLD_MESSAGE +
-        '\n\nUntil marker-pdf supports Pillow>=12.2.0, Asset-Aware MCP keeps using ' +
+        '\n\nUntil marker-pdf supports Pillow>=13.0.0, Asset-Aware MCP keeps using ' +
         'the PyMuPDF backend (lightweight, no torch/transformers required).';
 
     const choice = await vscode.window.showWarningMessage(

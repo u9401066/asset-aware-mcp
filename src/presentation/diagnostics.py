@@ -106,7 +106,7 @@ def _marker_status() -> dict[str, Any]:
         "security_hold": True,
         "detail": (
             "Marker is on a packaging security hold: marker-pdf 1.10.2 pins "
-            "Pillow<11 while asset-aware-mcp requires Pillow>=12.2.0."
+            "Pillow<11 while asset-aware-mcp requires Pillow>=13.0.0."
         ),
     }
 

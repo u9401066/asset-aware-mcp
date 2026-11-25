@@ -42,7 +42,7 @@ def test_unavailable_mineru_reports_security_hold(
 @pytest.mark.parametrize(
     ("engine", "extractor_type", "expected"),
     [
-        ("marker", MarkerPDFExtractor, "Pillow>=12.2.0"),
+        ("marker", MarkerPDFExtractor, "Pillow>=13.0.0"),
         ("mineru", MinerUExtractor, "transformers>=5.5"),
     ],
 )

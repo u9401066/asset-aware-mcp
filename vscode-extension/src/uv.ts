@@ -12,7 +12,7 @@ export const RUNTIME_PYTHON_VERSION_KEY = 'assetAwareMcp.runtimePythonVersion';
 export const DEFAULT_TORCH_BACKEND = 'cpu';
 export const ASSET_AWARE_RUNTIME_PROBE = "import src.presentation.server; print('asset-aware-mcp runtime ready')";
 export const MARKER_BACKEND_SECURITY_HOLD_MESSAGE =
-    'Marker backend requested but temporarily disabled: marker-pdf pins Pillow<11 while asset-aware-mcp requires Pillow>=12.2.0 for patched image-processing security. Using the secure PyMuPDF runtime until marker-pdf supports patched Pillow.';
+    'Marker backend requested but temporarily disabled: marker-pdf pins Pillow<11 while asset-aware-mcp requires Pillow>=13.0.0 for patched image-processing security. Using the secure PyMuPDF runtime until marker-pdf supports patched Pillow.';
 const UV_INSTALL_URL = 'https://astral.sh/uv/install.ps1';
 
 export interface UvInstallCommand {

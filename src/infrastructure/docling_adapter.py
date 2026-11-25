@@ -11,7 +11,7 @@ Why Docling:
 - MIT licensed (cleanest for this Apache-2.0 project).
 - Page layout + reading order + table structure + formula + figure
   classification in one ``DoclingDocument``.
-- Verified compatible with the secure ``Pillow>=12.2.0`` floor.
+- Verified compatible with the secure ``Pillow>=13.0.0`` floor.
 - Ships the lightweight GraniteDocling VLM, aligned with the granite backend.
 
 The backend is heavy and optional, so every docling import is lazy and guarded;

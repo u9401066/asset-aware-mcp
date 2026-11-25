@@ -7,7 +7,7 @@
 
 > [!CAUTION]
 > 這是 2026-02-09 的歷史設計規格，不是目前可安裝 runtime contract。
-> `marker-pdf` 1.10.2 鎖定 `Pillow<11`，與本專案 `Pillow>=12.2.0` 安全底線
+> `marker-pdf` 1.10.2 鎖定 `Pillow<11`，與本專案 `Pillow>=13.0.0` 安全底線
 > 衝突，因此 `[marker]` extra 為空且 installer 不會安裝或啟用 Marker。
 > 目前 active packaged structured engines 只有 PyMuPDF4LLM（`[pdf-plus]`）與
 > Docling（`[docling]`）；請以

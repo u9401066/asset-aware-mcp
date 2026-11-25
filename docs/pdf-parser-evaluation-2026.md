@@ -193,7 +193,7 @@ Document route 依需求優先序聚合：`docling` > `pymupdf+ocr` > `pymupdf`�
 | Adapter | Extra | Hold reason | Re-enable gate |
 |---|---|---|---|
 | MinerU | `mineru = []` | MinerU 3.4.4 限制 `transformers<5`，而目前 security fixes 要求 `transformers>=5.5` | Upstream 解除 cap；安全 floor 可正常 resolve；isolated smoke/adversarial tests 通過 |
-| Marker | `marker = []` | Marker PDF 1.10.2 限制 `Pillow<11`，而 runtime 要求 `Pillow>=12.2.0` | Upstream 支援 patched Pillow range；artifact、OOM 與 citation regression gates 通過 |
+| Marker | `marker = []` | Marker PDF 1.10.2 限制 `Pillow<11`，而 runtime 要求 `Pillow>=13.0.0` | Upstream 支援 patched Pillow range；artifact、OOM 與 citation regression gates 通過 |
 
 Adapters 可以保留，方便未來重啟或提供明確診斷；但不得把它們寫成 active、recommended install，也不得降級 security floors 來換取 resolver success。
 

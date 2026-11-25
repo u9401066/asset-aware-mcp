@@ -1157,7 +1157,7 @@ lockfiles 或 workflows 的 PR 會觸發，也可手動執行，並在每週一 
 - MinerU adapter 保留，但 `[mineru]` extra 為空；MinerU 3.4.4 pin
   `transformers<5`，而相關 fixes 需要 `transformers>=5.5`。
 - Marker adapter 保留，但 `[marker]` extra 為空；marker-pdf 1.10.2 pin
-  `Pillow<11`，與 `Pillow>=12.2.0` 安全底線衝突。
+  `Pillow<11`，與 `Pillow>=13.0.0` 安全底線衝突。
 
 等待上游解除限制後才恢復 extras，不用 audit ignore 把不可解 graph 假裝成綠燈。
 

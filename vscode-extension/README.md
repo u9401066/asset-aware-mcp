@@ -286,7 +286,7 @@ Runtime note:
 The extension prefers a managed Python 3.11 runtime when launching the MCP server via `uv tool run`, with Python 3.10 fallback for older machines. This avoids package builds on machines without native toolchains, especially macOS systems missing Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
 
 Structured backend note:
-The current packaged extras cannot install MinerU, Marker, or their torch stack. MinerU 3.4.4 pins `transformers<5` while current fixes require `transformers>=5.5`; Marker still requires `Pillow<11` while this runtime requires `Pillow>=12.2.0`. Both extras stay empty and fail closed. Use `ETL_ENGINE=pymupdf4llm` or `docling` for a maintained high-fidelity alternative.
+The current packaged extras cannot install MinerU, Marker, or their torch stack. MinerU 3.4.4 pins `transformers<5` while current fixes require `transformers>=5.5`; Marker still requires `Pillow<11` while this runtime requires `Pillow>=13.0.0`. Both extras stay empty and fail closed. Use `ETL_ENGINE=pymupdf4llm` or `docling` for a maintained high-fidelity alternative.
 
 Installation scope & storage:
 - The VSIX installs as a user/global extension (standard VS Code behavior), so you do not need a separate install per workspace.

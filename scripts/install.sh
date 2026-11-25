@@ -254,7 +254,7 @@ show_help() {
 
 show_marker_security_hold() {
     error "Marker is on a packaging security hold and cannot be installed by this script."
-    error "marker-pdf 1.10.2 pins Pillow<11 while this runtime requires Pillow>=12.2.0."
+    error "marker-pdf 1.10.2 pins Pillow<11 while this runtime requires Pillow>=13.0.0."
     error "Use the default PyMuPDF backend, or install the maintained pdf-plus/docling extra."
 }
 

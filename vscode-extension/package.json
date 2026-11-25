@@ -207,7 +207,7 @@
                 "assetAwareMcp.enableMarkerBackend": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Reserved for the optional Marker backend. Temporarily disabled because marker-pdf pins vulnerable Pillow<11 while asset-aware-mcp requires patched Pillow>=12.2.0."
+                    "description": "Reserved for the optional Marker backend. Temporarily disabled because marker-pdf pins vulnerable Pillow<11 while asset-aware-mcp requires patched Pillow>=13.0.0."
                 },
                 "assetAwareMcp.torchBackend": {
                     "type": "string",
