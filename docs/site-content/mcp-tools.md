@@ -44,10 +44,10 @@ uv run asset-aware-mcp list-tools --json
 
 | Tool | 主要參數 | 功能 |
 |---|---|---|
-| `ingest_docx` | `file_path` | 攝入 `.docx` / `.docm`，也可經 LibreOffice 轉入 `.doc` / `.odt` / `.ods`。 |
+| `ingest_docx` | `file_path`, `reset` | 攝入 `.docx` / `.docm`，也可經 LibreOffice 轉入 `.doc` / `.odt` / `.ods`；已攝入的檔案回傳既有狀態（保留編輯），`reset=true` 才捨棄編輯重建。 |
 | `get_docx_content` | `doc_id`, `block_id` | 讀取 DFM/DOCX 內容或單一 block，保留 locator metadata。 |
 | `save_docx` | `doc_id`, `dfm_content`, `output_path`, `force`, `track_changes`, `revision_author`, `revision_base` | 將 DFM/Markdown 累積寫回 DOCX（每次輸出含自 ingest 以來的所有編輯），保留 stale source 與 validation guard；DFM 基於較舊 `revision` 時做 3-way merge 或回傳 `conflict_block_ids` 拒絕，並拒絕被他人租用的區塊；`output_path` 必須位於 `data/{doc_id}/` 內，回寫來源檔請用 native `writeback`。 |
-| `docx` | `op`, DOCX/DFM parameters, `block_ids`, `holder`, `ttl_seconds`, `lease_token`, `lease_id`, `edits`, `keep_lease` | DOCX facade；支援 ingest/read/save/list/delete/list_blocks/validate，以及多 agent 區塊租約 `checkout` / `commit` / `release` / `renew` / `leases` / `break_lease`（見 [DOCX DFM Workflow](#/docx-dfm-workflow)）。 |
+| `docx` | `op`, DOCX/DFM parameters, `block_ids`, `holder`, `ttl_seconds`, `lease_token`, `lease_id`, `edits`, `keep_lease`, `request_id`, `reset` | DOCX facade；支援 ingest/read/save/list/delete/list_blocks/validate，以及多 agent 區塊租約 `checkout` / `commit` / `release` / `renew` / `leases` / `break_lease`（見 [DOCX DFM Workflow](#/docx-dfm-workflow)）。 |
 | `docx_table_edit_plan` | `doc_id`, `block_id`, `table_id`, target shape options | 先產生 table write-back 風險計畫，再進行 A2T/DOCX table 操作。 |
 | `docx_table` | `op`, DOCX table/chart bridge parameters | DOCX table facade；支援 `to_context`, `from_context`, `chart_data`, `edit_plan`。 |
 
