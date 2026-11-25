@@ -665,10 +665,13 @@ class TestLeaseLifecycle:
         doc_id, _doc_dir = await _ingest(service, source)
         lease = await service.checkout_blocks(doc_id, ["p005"], holder="agent-A")
 
-        refused = await service.ingest_docx(str(source))
+        idempotent = await service.ingest_docx(str(source))
+        refused = await service.ingest_docx(str(source), reset=True)
         await service.release_block_lease(doc_id, lease["lease_token"])
-        accepted = await service.ingest_docx(str(source))
+        accepted = await service.ingest_docx(str(source), reset=True)
 
+        assert idempotent["success"] is True and idempotent["existing"] is True
+        assert idempotent["live_leases"] == 1
         assert refused["success"] is False
         assert "agent-A" in refused["error"]
         assert accepted["success"] is True, accepted
@@ -849,14 +852,21 @@ class TestLegacyDfmWithoutRevision:
         current = await service.get_dfm(doc_id)
         assert current is not None
 
+        # Right after adoption nothing changed, so a revision-less DFM is as
+        # current as any pre-1.5 DFM could prove; after a tracked save it is not.
         legacy = await service.save_docx(
             doc_id, _strip_revision(current).replace(_section(7), EDIT_7)
+        )
+        late_legacy = await service.save_docx(
+            doc_id, _strip_revision(current).replace(_section(8), "late")
         )
         revisioned = await service.save_docx(
             doc_id, current.replace(_section(7), EDIT_7)
         )
 
-        assert legacy["success"] is False
+        assert legacy["success"] is True, legacy
+        assert legacy["revision_merge"]["mode"] == "legacy"
+        assert late_legacy["success"] is False
         assert revisioned["success"] is True, revisioned
         text = _document_text(Path(revisioned["output_path"]))
         assert EDIT_5 in text and EDIT_7 in text

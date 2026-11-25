@@ -1003,7 +1003,12 @@ class TestDocxTools:
         assert commit == {"success": True}
         assert leases["leases"] == []
         mock_svc.checkout_blocks.assert_awaited_once_with(
-            "docx_123", ["p005"], holder="agent-A", ttl_seconds=120, wait=False
+            "docx_123",
+            ["p005"],
+            holder="agent-A",
+            ttl_seconds=120,
+            wait=False,
+            request_id=None,
         )
         commit_call = mock_svc.commit_block_lease.await_args
         assert commit_call.args == ("docx_123", "tok", {"p005": "new"})
