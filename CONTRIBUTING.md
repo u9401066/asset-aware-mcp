@@ -58,8 +58,14 @@ uv／Node／Python 版本：
   Ubuntu 26.04、LibreOffice 26.2.7.3）內執行；每個 job 在 `/home/runner/aam-ci`
   有自己的乾淨 checkout，不會碰到 Windows 工作目錄或 `.venv`。workflow 沒安裝
   LibreOffice 的 job 會看不到 LibreOffice，與乾淨 runner 一致。
-- `windows-latest` 的 job 在本機 Windows 的乾淨 checkout 執行，使用短 ASCII
-  `TEMP` 與 `--basetemp`，以及設定的 Node。
+- `windows-latest` 的 job 在本機 Windows 的乾淨 checkout 執行（預設 `C:\aamg`，
+  可用 `git config pretest.windowsTemp` 改），使用短 ASCII `TEMP` 與 `--basetemp`，
+  以及設定的 Node。GitHub 的 Windows runner 已啟用 Win32 長路徑；本機若
+  `LongPathsEnabled=0`，內容雜湊命名的 Wiki／證據路徑會超過 260 字元，gate 會讓
+  pytest 的 `--basetemp` 使用 `\\?\` 長路徑前綴（只解除 MAX_PATH，全部測試照跑）
+  並在表格註明。以系統管理員執行
+  `reg add HKLM\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /t REG_DWORD /d 1 /f`
+  後就不需要這個前綴。
 - macOS job 無法在本機執行，表格會標示 **NOT VERIFIED** 與原因，不會靜默略過。
 - uv／Node／LibreOffice 版本不符、缺少 WSL distro 或套件時，相關 job 直接
   FAIL 並提示修正方式。

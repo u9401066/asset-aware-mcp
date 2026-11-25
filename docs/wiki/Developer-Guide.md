@@ -34,8 +34,10 @@ python scripts/pretest.py --only integration-tests --skip windows-smoke
 - `ubuntu-latest` job 在 WSL `Ubuntu-26.04`（與 GitHub 相同的 Ubuntu 26.04 與
   LibreOffice 26.2.7.3）的乾淨 checkout 執行；workflow 未安裝 LibreOffice 的 job
   看不到 LibreOffice。
-- `windows-latest` job 在 Windows 主機的乾淨 checkout 以短 ASCII `TEMP`／
-  `--basetemp` 執行。
+- `windows-latest` job 在 Windows 主機的乾淨 checkout（預設 `C:\aamg`）以短
+  ASCII `TEMP`／`--basetemp` 執行；主機未啟用 Win32 長路徑（GitHub runner 已啟用）
+  時，`--basetemp` 改用 `\\?\` 長路徑前綴，讓超過 260 字元的 Wiki／證據路徑仍可
+  測試，並在表格註明。
 - macOS job 標示 **NOT VERIFIED**。工具版本不符或缺少 WSL distro 會直接 FAIL。
 - `uv run pre-commit install --hook-type pre-commit --hook-type pre-push --hook-type commit-msg`
   會在 commit 跑 `--quick`、在 push 跑完整檢查。詳見 `CONTRIBUTING.md`。

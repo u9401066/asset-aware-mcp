@@ -16,7 +16,10 @@ Changes accumulate on the 1.4.x line; individual features do not trigger release
   `run:` steps verbatim with the workflow's uv/Node/Python pins: Ubuntu jobs in
   the WSL `Ubuntu-26.04` distro (same image and LibreOffice as GitHub
   `ubuntu-latest`, LibreOffice hidden from jobs that do not install it),
-  Windows jobs on the Windows host with a short ASCII `TEMP`/`--basetemp`.
+  Windows jobs on the Windows host with a short ASCII `TEMP`/`--basetemp`
+  (on hosts without Win32 long paths, which GitHub's runners enable, the
+  basetemp gets the `\\?\` extended-length prefix so the content-addressed
+  Wiki trees beyond MAX_PATH are still tested, and the row says so).
   macOS is reported as NOT VERIFIED; wrong uv/Node/LibreOffice versions or a
   missing distro fail loudly. `--quick`, `--only`, `--skip`, `--rev`,
   `--list` and `--dry-run` are supported, and the run ends with a CI job →
