@@ -36,6 +36,9 @@ Per-clone settings (``git config --local``; environment variables win):
                               (default %LOCALAPPDATA%\\aam-pretest)
     pretest.windowsTemp       PRETEST_WINDOWS_TEMP    short ASCII root for Windows
                               job checkouts, TEMP and --basetemp (default C:\\aamg)
+    pretest.timeoutScale      PRETEST_TIMEOUT_SCALE   multiply job/step/pytest
+                              timeouts on a host slower than GitHub's runners
+                              (default 1; every run reports a value above 1)
 
 The host side only needs Python >= 3.9 and git; nothing is installed on it.
 """
@@ -97,6 +100,27 @@ NOT_APPLICABLE = {
 NOT_VERIFIED = {
     "macos": "needs a macOS runner; this host cannot provide one",
 }
+# Loaded with `-p` only when pretest.timeoutScale != 1 (a slower host than
+# GitHub's runners). pytest-timeout re-reads _get_item_settings per test.
+TIMEOUT_PLUGIN = "pretest_timeout_scale"
+TIMEOUT_PLUGIN_SOURCE = '''"""pytest plugin injected by scripts/pretest.py: scale pytest-timeout limits."""
+import os
+
+import pytest_timeout
+
+_SCALE = float(os.environ.get("PRETEST_TIMEOUT_SCALE", "1"))
+_original = pytest_timeout._get_item_settings
+
+
+def _scaled(item, marker=None):
+    settings = _original(item, marker)
+    if settings.timeout:
+        return settings._replace(timeout=settings.timeout * _SCALE)
+    return settings
+
+
+pytest_timeout._get_item_settings = _scaled
+'''
 # --quick: offline commit-time subset, run in the working tree. Every command is
 # taken verbatim from a workflow `run:` step (tests/unit/test_pretest_gate.py
 # keeps them in sync). The network-bound `uv audit` waits for the full gate.
@@ -891,9 +915,23 @@ class JobRunner:
             for key, value in scope.items():
                 env[key] = substitute(value, self.contexts(env))
         env.update(self.extra_env)
+        sep = ";" if self.platform == "windows" else ":"
         if self.extra_path:
-            sep = ";" if self.platform == "windows" else ":"
             env["PATH"] = sep.join([*reversed(self.extra_path), env["PATH"]])
+        scale = float(self.payload.get("timeout_scale") or 1)
+        if scale != 1:
+            # Scale pytest-timeout limits (markers and --timeout) by the same
+            # explicit per-host factor as the job/step timeout-minutes.
+            plugin = self.owned_dir(self.temp / "_pretest_plugin")
+            module = plugin / f"{TIMEOUT_PLUGIN}.py"
+            if not module.exists():
+                module.write_text(TIMEOUT_PLUGIN_SOURCE, encoding="utf-8")
+            env["PRETEST_TIMEOUT_SCALE"] = f"{scale:g}"
+            env["PYTHONPATH"] = sep.join(
+                p for p in (str(plugin), env.get("PYTHONPATH", "")) if p
+            )
+            options = env.get("PYTEST_ADDOPTS", "")
+            env["PYTEST_ADDOPTS"] = f"{options} -p {TIMEOUT_PLUGIN}".strip()
         return env
 
     # -- step kinds ---------------------------------------------------------
@@ -1053,7 +1091,13 @@ class JobRunner:
         started = time.monotonic()
         status = "PASS"
         error = ""
-        job_timeout = float(self.job.data.get("timeout-minutes", 360)) * 60
+        scale = float(self.payload.get("timeout_scale") or 1)
+        job_timeout = float(self.job.data.get("timeout-minutes", 360)) * 60 * scale
+        if scale != 1:
+            self.notes.append(
+                f"timeouts x{scale:g} (pretest.timeoutScale): CI budgets are "
+                "calibrated for GitHub's runners, this host is slower"
+            )
         try:
             steps = plan_steps(self.job)
         except GateError as exc:
@@ -1096,7 +1140,7 @@ class JobRunner:
                     remaining = job_timeout - (time.monotonic() - started)
                     step_limit = step.data.get("timeout-minutes")
                     limit = (
-                        min(remaining, float(step_limit) * 60)
+                        min(remaining, float(step_limit) * 60 * scale)
                         if step_limit
                         else remaining
                     )
@@ -1488,6 +1532,12 @@ class Gate:
         self.source_cache: str | None = None
         # Inner runners get the gate code as it was when this run started.
         self.source = Path(__file__).read_bytes()
+        scale = getattr(args, "timeout_scale", None) or git_config(
+            "pretest.timeoutScale", "PRETEST_TIMEOUT_SCALE", "1"
+        )
+        self.timeout_scale = float(scale)
+        if self.timeout_scale < 1:
+            raise GateError("pretest.timeoutScale cannot tighten CI's timeouts")
 
     # -- WSL ----------------------------------------------------------------
     def wsl(self, *args: str, root: bool = True) -> list[str]:
@@ -1833,6 +1883,7 @@ class Gate:
             "platform": job.platform,
             "sha": sha,
             "ref": ref,
+            "timeout_scale": self.timeout_scale,
         }
         if job.platform == "linux" and self.windows:
             payload.update(
@@ -2025,6 +2076,11 @@ def main_gate(args: argparse.Namespace) -> int:
         f"workflows: ci.yml (all jobs), release.yml (test); pins: uv {pins['uv']}, Node {pins['node']}, Python {pins['python']}"
     )
     gate.print(f"logs: {gate.run_dir}")
+    if gate.timeout_scale != 1:
+        gate.print(
+            f"NOTE: job, step and pytest timeouts x{gate.timeout_scale:g} "
+            "(pretest.timeoutScale) - this host is slower than GitHub's runners"
+        )
     outcomes: dict[str, Outcome] = {}
     runnable: list[Job] = []
     for job in jobs:
@@ -2285,6 +2341,12 @@ def main(argv: list[str] | None = None) -> int:
         help="skip these jobs (repeatable, comma-separated)",
     )
     parser.add_argument("--rev", help="gate this commit instead of the working tree")
+    parser.add_argument(
+        "--timeout-scale",
+        type=float,
+        help="multiply job, step and pytest timeouts on a host slower than "
+        "GitHub's runners (default: git config pretest.timeoutScale or 1)",
+    )
     # Each CI job owns a whole runner; more than 3 concurrent heavy jobs made
     # timing-sensitive tests (0.1 s worker deadlines) and the 15-minute unit
     # job budget unreliable on a 12-thread desktop. release:test bounds the

@@ -2,7 +2,9 @@
 
 import argparse
 import importlib.util
+import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -184,3 +186,49 @@ def test_windows_basetemp_is_short_and_lifts_max_path_only_when_needed(
     assert (tmp_path / "aamg" / "b").is_dir() and (
         tmp_path / "aamg" / "t" / "ws"
     ).is_dir()
+
+
+@pytest.mark.parametrize(("scale", "outcome"), [("1", "failed"), ("4", "passed")])
+def test_timeout_scale_plugin_stretches_pytest_timeout_markers(
+    tmp_path, scale, outcome
+):
+    plugin = tmp_path / "plugin"
+    plugin.mkdir()
+    (plugin / f"{gate.TIMEOUT_PLUGIN}.py").write_text(
+        gate.TIMEOUT_PLUGIN_SOURCE, encoding="utf-8"
+    )
+    (tmp_path / "test_slow.py").write_text(
+        "import time\nimport pytest\n\n\n@pytest.mark.timeout(0.5)\n"
+        "def test_slow():\n    time.sleep(1.0)\n",
+        encoding="utf-8",
+    )
+    env = {
+        **os.environ,
+        "PYTHONPATH": str(plugin),
+        "PRETEST_TIMEOUT_SCALE": scale,
+        "PYTEST_ADDOPTS": "",
+    }
+    done = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            "-p",
+            gate.TIMEOUT_PLUGIN,
+            "-p",
+            "no:cacheprovider",
+            str(tmp_path / "test_slow.py"),
+        ],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    output = done.stdout + done.stderr
+    if outcome == "passed":
+        assert done.returncode == 0 and "1 passed" in output, output
+    else:
+        # signal method reports "1 failed"; the Windows thread method exits.
+        assert done.returncode != 0 and "Timeout" in output, output
