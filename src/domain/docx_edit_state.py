@@ -24,7 +24,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
@@ -141,7 +141,7 @@ def lease_id_for_token(token: str) -> str:
 def iso_utc(timestamp: float) -> str:
     """Render a POSIX timestamp as an ISO-8601 UTC string."""
     return (
-        datetime.fromtimestamp(timestamp, tz=timezone.utc)
+        datetime.fromtimestamp(timestamp, tz=UTC)
         .replace(microsecond=0)
         .isoformat()
         .replace("+00:00", "Z")
