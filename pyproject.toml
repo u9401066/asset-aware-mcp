@@ -4,7 +4,7 @@ version = "1.4.2"
 description = "Citation-ready PDF and DOCX workflows that export reusable agent assets and Foam/LightRAG wikis over MCP"
 readme = "README.md"
 license = { text = "Apache-2.0" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "u9401066", email = "u9401066@gap.kmu.edu.tw" }
 ]
@@ -20,7 +20,6 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -80,11 +79,15 @@ lightrag = [
 # Docling (IBM, MIT): page layout + reading order + table structure + formula +
 # figure classification + chart understanding. Ships the lightweight
 # GraniteDocling VLM, aligned with this project's granite Ollama backend.
+# Every entry is gated to Python >= 3.11.5: Docling's HTML/e-mail stack pulls
+# beautifulsoup4 -> soupsieve, and the patched soupsieve releases (>=3.0.2)
+# require 3.11.5. On 3.11.0-3.11.4 the extra stays empty (fail-closed security
+# hold) instead of installing a known-vulnerable soupsieve.
 docling = [
-    "docling>=2.100.0",
+    "docling>=2.100.0; python_full_version >= '3.11.5'",
     # Patched model-loading and chat-template file handling.
-    "accelerate>=1.15.0",
-    "transformers>=5.10.0",
+    "accelerate>=1.15.0; python_full_version >= '3.11.5'",
+    "transformers>=5.10.0; python_full_version >= '3.11.5'",
 ]
 # Reserved for the MinerU structured parsing backend. Temporarily empty:
 # MinerU 3.4.4 pins transformers<5 while the current security fixes require
