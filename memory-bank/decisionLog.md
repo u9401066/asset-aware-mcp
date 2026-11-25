@@ -1,5 +1,33 @@
 # Decision Log
 
+## [2026-11-25] Concurrent DFM editing, review round: no implicit loss paths
+
+An independent review of feature/docx-block-leases found 16 issues; two were
+silent losses of committed edits. Decisions:
+- Split saves take their base revision from content.md only; format.yaml is
+  re-rendered by others and must never vouch for an older content.md.
+- ingest_docx is idempotent for an already ingested source (doc_id = stem +
+  content hash): it returns the existing state (edits, revision, edited block
+  ids, note). Discarding edits needs explicit reset=true (refused with live
+  leases, backed up first). Agents and the maintainer re-ingest the same IRB
+  draft across sessions, so re-ingest must never reset implicitly.
+- Shared content.dfm / content.md+format.yaml are server-owned only when they
+  equal the last server render (hash in edit-state meta), the text a save
+  consumed, or a render of the prior IR. Otherwise they hold unsaved in-place
+  edits: keep them, write the fresh state to *.current.*, warn; the next save
+  of the in-place file 3-way merges. Rejected: overwrite + backup (5 slots
+  rotate away quickly under multi-agent commit rates).
+- Pre-1.5 workspaces: stamp untouched artifacts at adoption; accept a
+  revision-less DFM while the latest revision is the adopted one.
+- Blocking work runs in asyncio.to_thread; SQLite still serializes processes.
+- ir.json is re-hashed before the commit point (lock-less pre-1.5 writers are
+  detected, never overwritten; all clients must be >= 1.5.0). Published-but-
+  uncommitted states report committed:true with the real error.
+- Cloud-synced/network DATA_DIR (the maintainer keeps it on Google Drive):
+  warn in results and doctor, never refuse; the lock is per computer.
+- checkout request_id replays a lease with a rotated token; truncated lease
+  responses always keep the token. force never overrides a checksum mismatch.
+
 ## [2026-11-25] Concurrent DFM editing: content revisions, 3-way merge, block leases
 
 Bug (verified on 1.4.2): two clients read one content.dfm; A saved p005, then B saved

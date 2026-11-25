@@ -11,6 +11,11 @@ per-block Track Changes authors). Native update_docx stays document-revision-onl
 with a stale message pointing to leases. New tests: unit/test_docx_edit_state.py,
 integration/test_docx_block_leases.py (two-process contention and crash recovery).
 Docs: dfm-spec §12, wiki DOCX-DFM-Workflow/MCP-Tools, harness guides + repo-assets.
+Review round (same day): all 16 findings fixed with one regression class each in
+integration/test_docx_concurrency_hardening.py (idempotent ingest + reset=true,
+content.md-only split base revision, in-place edits kept via *.current.*, upgrade
+stamping, off-loop locking, committed:true reporting, lease-aware delete, ir.json
+re-hash, storage warnings, checkout request_id, sidecar content_revision).
 
 ## 1.4.2 DOCX cumulative write-back fix — 2026-11-25
 
