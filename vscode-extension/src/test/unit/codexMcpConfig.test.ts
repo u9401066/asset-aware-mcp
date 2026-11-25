@@ -576,6 +576,28 @@ describe('codexMcpConfig', () => {
         assert.ok(removed.includes('command = "node"'));
     });
 
+    it('reads prototype-free TOML tables without treating inherited names as servers', () => {
+        const parsed = __test__.parseTomlConfig([
+            '[mcp_servers.asset-aware-mcp]',
+            'command = "uv"',
+            'future_policy = { mode = "strict" }',
+            '',
+        ].join('\n'))!;
+        // smol-toml >= 1.9 returns null-prototype tables (prototype-pollution
+        // hardening), so config helpers must only consult own properties.
+        assert.strictEqual(Object.getPrototypeOf(parsed), null);
+        const server = __test__.getSemanticServer(parsed, 'asset-aware-mcp')!;
+        assert.strictEqual(server.command, 'uv');
+        assert.deepStrictEqual(
+            { ...(server.future_policy as Record<string, unknown>) },
+            { mode: 'strict' },
+        );
+        for (const inherited of ['toString', 'constructor', 'hasOwnProperty', '__proto__']) {
+            assert.strictEqual(__test__.hasSemanticServer(parsed, inherited), false);
+            assert.strictEqual(__test__.getSemanticServer(parsed, inherited), undefined);
+        }
+    });
+
     it('preserves a user comment appended after a managed block at EOF', () => {
         const configPath = path.join(tempDir, 'config.toml');
         assert.strictEqual(installCodexMcpServer(context, '/usr/bin/uv'), true);
@@ -702,7 +724,11 @@ describe('codexMcpConfig', () => {
         assert.deepStrictEqual(installedServer.enabled_tools, ['document', 'verify_citation_ref']);
         assert.deepStrictEqual(installedServer.disabled_tools, ['delete_document']);
         assert.strictEqual(installedServer.default_tools_approval_mode, 'prompt');
-        assert.deepStrictEqual(installedServer.future_policy, { mode: 'strict', revision: 2 });
+        // smol-toml tables are prototype-free; compare their own fields only.
+        assert.deepStrictEqual(
+            { ...(installedServer.future_policy as Record<string, unknown>) },
+            { mode: 'strict', revision: 2 },
+        );
         assert.strictEqual(installedServer.future_multiline, 'first line\nsecond line');
         assert.ok(installed.includes(preservedPrimary));
         assert.ok(installed.includes(preservedNested));
