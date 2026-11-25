@@ -15,7 +15,7 @@ $ErrorActionPreference = "Stop"
 
 # --- Configuration ---
 $RequiredPythonMajor = 3
-$RequiredPythonMinor = 10
+$RequiredPythonMinor = 11
 $PreferredRuntimePython = '3.11'
 
 # --- Helpers ---
@@ -156,7 +156,7 @@ function Main {
 
     if ($WithMarker) {
         Write-Err "Marker is on a packaging security hold and cannot be installed by this script."
-        Write-Err "marker-pdf 1.10.2 pins Pillow<11 while this runtime requires Pillow>=12.2.0."
+        Write-Err "marker-pdf 1.10.2 pins Pillow<11 while this runtime requires Pillow>=13.0.0."
         Write-Err "Use the default PyMuPDF backend, or install the maintained pdf-plus/docling extra."
         exit 2
     }

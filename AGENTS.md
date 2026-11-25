@@ -523,7 +523,7 @@ engines lazy-load and gracefully fall back to PyMuPDF when unavailable:
   `[mineru]` extra is an empty security hold while MinerU pins
   `transformers<5` and patched releases require `transformers>=5.5`.
 - `marker` - disabled; marker-pdf pins `Pillow<11`, incompatible with the
-  `Pillow>=12.2.0` security floor.
+  `Pillow>=13.0.0` security floor.
 
 The active packaged structured engines, PyMuPDF4LLM and Docling, resolve the
 current security floors. Structured engines share the `StructuredPDFExtractor`

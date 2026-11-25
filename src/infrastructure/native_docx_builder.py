@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import io
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from docx import Document
@@ -198,7 +198,7 @@ def build_document(request: NativeDocxCreate) -> bytes:
     document.core_properties.title = request.name
     document.core_properties.comments = ""
     document.core_properties.created = document.core_properties.modified = datetime.now(
-        timezone.utc
+        UTC
     )
     populate(document, request.blocks)
     result = io.BytesIO()

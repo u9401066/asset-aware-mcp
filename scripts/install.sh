@@ -12,7 +12,7 @@ set -euo pipefail
 
 # --- Configuration ---
 REQUIRED_PYTHON_MAJOR=3
-REQUIRED_PYTHON_MINOR=10
+REQUIRED_PYTHON_MINOR=11
 PREFERRED_RUNTIME_PYTHON=3.11
 UV_INSTALL_URL="https://astral.sh/uv/install.sh"
 CHECK_MODE=false
@@ -82,7 +82,7 @@ augment_path() {
         fi
 
         # python.org framework installer (creates versioned binaries)
-        for ver in 3.13 3.12 3.11 3.10; do
+        for ver in 3.13 3.12 3.11; do
             local fw="/Library/Frameworks/Python.framework/Versions/$ver/bin"
             if [ -d "$fw" ]; then export PATH="$fw:$PATH"; fi
         done
@@ -254,7 +254,7 @@ show_help() {
 
 show_marker_security_hold() {
     error "Marker is on a packaging security hold and cannot be installed by this script."
-    error "marker-pdf 1.10.2 pins Pillow<11 while this runtime requires Pillow>=12.2.0."
+    error "marker-pdf 1.10.2 pins Pillow<11 while this runtime requires Pillow>=13.0.0."
     error "Use the default PyMuPDF backend, or install the maintained pdf-plus/docling extra."
 }
 
@@ -327,7 +327,7 @@ run_check() {
     # --- Python ---
     info "=== Python (need >= ${REQUIRED_PYTHON_MAJOR}.${REQUIRED_PYTHON_MINOR}) ==="
     local found_any=false
-    for candidate in python3 python python3.13 python3.12 python3.11 python3.10; do
+    for candidate in python3 python python3.13 python3.12 python3.11; do
         if cmd_exists "$candidate"; then
             local cpath cver
             cpath="$(command -v "$candidate")"
@@ -514,7 +514,7 @@ main() {
     local python_ver=""
 
     # Check multiple Python commands in priority order
-    for candidate in python3 python python3.13 python3.12 python3.11 python3.10; do
+    for candidate in python3 python python3.13 python3.12 python3.11; do
         if cmd_exists "$candidate"; then
             python_ver="$(parse_python_version "$candidate")"
             if [ -n "$python_ver" ] && version_ge "$python_ver"; then

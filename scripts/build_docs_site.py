@@ -520,7 +520,7 @@ exact contracts.
 | Item | Current Status |
 |---|---|
 | Latest code version | `{version}` |
-| Runtime | Python `>=3.10`, managed with `uv` |
+| Runtime | Python `>=3.11` (Docling extra `>=3.11.5`), managed with `uv` |
 | MCP endpoints | {tools} public tools and {resources} resources, {endpoints} endpoints total |
 | MCP runtime | Official Python SDK `>=2,<3` with `MCPServer`; SDK v1 is unsupported |
 | PDF backend | PyMuPDF by default, secure optional PyMuPDF4LLM/Docling, and isolated `document(op="preflight")` routing; MinerU/Marker are dependency security holds |

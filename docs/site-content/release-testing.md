@@ -12,7 +12,7 @@
 新增保存證據測試：實際 Pillow 12.2.0 → 12.3.0、SDK2 balanced／compact 服務
 重啟後，完整歷史影格、區域、PNG 與 Wiki 保持一致；未保存的歷史預覽不會
 換成新版解碼結果。回歸案例涵蓋來源／保存檔損壞、symlink、完整目錄、鎖定、
-尺寸／色彩政策、舊引用與目前更新檢查。CI 的 Python3.10 工作另裝隔離舊解碼器。
+尺寸／色彩政策、舊引用與目前更新檢查。CI 的最低版本 Python 3.11 工作另裝隔離舊解碼器。
 
 同一 NIST 測試流程在新實作以預設 Codex 重跑，292.81 秒完成 175 次成功呼叫、
 零工具錯誤，仍有 15 張影格 PNG、一張區域預覽、三個 TIFF 版本、六格字串與
@@ -1002,7 +1002,7 @@ uv run bandit -q -r src -x tests --severity-level medium
 uv run pytest
 python3 scripts/build_docs_site.py --check
 uv lock --check
-uvx --from uv==0.12.3 uv audit --preview-features audit-command --frozen --python-version 3.10
+uvx --from uv==0.12.3 uv audit --preview-features audit-command --frozen --python-version 3.11
 ```
 
 ## Extension Gates
@@ -1112,7 +1112,7 @@ lockfiles 或 workflows 的 PR 會觸發，也可手動執行，並在每週一 
 排程執行。它不會自動寫回 repository：
 
 - `uv lock --check` 防止 `pyproject.toml` 與 `uv.lock` drift。
-- pinned uv 0.12.3 的 `uv audit --frozen --python-version 3.10` 稽核 universal lock，包含所有可解析
+- pinned uv 0.12.3 的 `uv audit --frozen --python-version 3.11` 稽核 universal lock，包含所有可解析
   runtime、dev 與 optional extras；不使用 vulnerability allowlist。
 - `npm audit --package-lock-only --audit-level=low` 稽核 VSIX lockfile。
 - Bandit 阻擋 Python source 的 medium/high security findings。
@@ -1159,7 +1159,7 @@ lockfiles 或 workflows 的 PR 會觸發，也可手動執行，並在每週一 
 - MinerU adapter 保留，但 `[mineru]` extra 為空；MinerU 3.4.4 pin
   `transformers<5`，而相關 fixes 需要 `transformers>=5.5`。
 - Marker adapter 保留，但 `[marker]` extra 為空；marker-pdf 1.10.2 pin
-  `Pillow<11`，與 `Pillow>=12.2.0` 安全底線衝突。
+  `Pillow<11`，與 `Pillow>=13.0.0` 安全底線衝突。
 
 等待上游解除限制後才恢復 extras，不用 audit ignore 把不可解 graph 假裝成綠燈。
 

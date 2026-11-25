@@ -5,7 +5,7 @@ from __future__ import annotations
 MARKER_INSTALL_HINT = (
     "Marker backend is on a production security hold in packaged asset-aware-mcp "
     "because marker-pdf 1.10.2 pins Pillow<11 while the secure runtime "
-    "requires Pillow>=12.2.0. Use the default PyMuPDF path with `use_marker=False` "
+    "requires Pillow>=13.0.0. Use the default PyMuPDF path with `use_marker=False` "
     "until upstream marker-pdf supports patched Pillow."
 )
 MINERU_INSTALL_HINT = (

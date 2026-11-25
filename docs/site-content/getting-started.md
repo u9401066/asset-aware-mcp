@@ -36,7 +36,7 @@ uv run asset-aware-mcp list-tools --json
 
 `1.4.2` 的 active packaged PDF extras 只有 `[pdf-plus]`（PyMuPDF4LLM）與
 `[docling]`。MinerU 3.4.4 鎖定 `transformers<5`、Marker PDF 1.10.2 鎖定
-`Pillow<11`，分別與目前 `transformers>=5.5`、`Pillow>=12.2.0` 安全底線
+`Pillow<11`，分別與目前 `transformers>=5.5`、`Pillow>=13.0.0` 安全底線
 衝突，因此 `[mineru]` 與 `[marker]` 都是空的 fail-closed security hold，不能
 透過 installer 啟用。`use_marker=true` 是為相容舊 client 保留的參數名稱，現在
 表示「要求目前設定的 structured extractor」；請設定 `ETL_ENGINE=docling`，或

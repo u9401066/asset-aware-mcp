@@ -75,7 +75,7 @@ Preflight **不是 PDF sanitizer、malware scanner 或完整格式驗證器**。
 - `pdf-plus`：PyMuPDF4LLM，同生態的 layout-aware drop-in 升級。
 - `docling`：MIT 授權的 structured layout/table/formula/figure engine；安裝方式見 `docs/docling-setup.md`。
 
-`mineru` 與 `marker` adapters 仍保留，但兩個 extras 都是空的 **security hold**，不屬於 active install path。MinerU 3.4.4 的 `transformers<5` 上限與目前 `transformers>=5.5` security floor 衝突；Marker PDF 1.10.2 的 `Pillow<11` 上限則與 `Pillow>=12.2.0` security floor 衝突。不得以放寬 security floor 的方式啟用它們。`pdf` 也是空的相容 placeholder，不是第三個 active engine extra。
+`mineru` 與 `marker` adapters 仍保留，但兩個 extras 都是空的 **security hold**，不屬於 active install path。MinerU 3.4.4 的 `transformers<5` 上限與目前 `transformers>=5.5` security floor 衝突；Marker PDF 1.10.2 的 `Pillow<11` 上限則與 `Pillow>=13.0.0` security floor 衝突。不得以放寬 security floor 的方式啟用它們。`pdf` 也是空的相容 placeholder，不是第三個 active engine extra。
 
 所有 optional adapters 都採 lazy import。`parse_pdf_structure(...)` 是保留舊 command ID 的 configured-structured shortcut；設定 `ETL_ENGINE=docling` 時使用 active Docling，Marker／MinerU security hold 或 backend unavailable 時會在建立 job 前回傳明確診斷。一般 `ingest_documents(use_marker=true)` 只代表偏好 composition root 已配置的結構化引擎，公開工具沒有 `require_marker` 參數，引擎不可用時會走 PyMuPDF 安全流程。
 

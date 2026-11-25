@@ -170,7 +170,7 @@ uv run python -m src.presentation.server
 ```
 
 Runtime 說明：
-VS Code 擴充套件在透過 version-pinned `uv tool run` 啟動 MCP server 時，會優先使用受管理的 Python 3.11 runtime，並在舊機器上 fallback 到 Python 3.10。這可避免終端使用者機器上發生原生套件編譯，特別是未安裝 Xcode Command Line Tools 的 macOS；但專案本身仍保留對較新 Python 版本的相容性。
+VS Code 擴充套件在透過 version-pinned `uv tool run` 啟動 MCP server 時，會優先使用受管理的 Python 3.11 runtime；若無法準備 3.11 runtime 則 fallback 到 Python 3.12（最低支援版本為 Python 3.11）。這可避免終端使用者機器上發生原生套件編譯，特別是未安裝 Xcode Command Line Tools 的 macOS；但專案本身仍保留對較新 Python 版本的相容性。
 
 安裝範圍說明：
 - VSIX 以使用者範圍安裝。trusted workspace 中的 VS Code 原生 MCP provider 可使用
@@ -220,7 +220,7 @@ PDF 稽核注意：
 
 | 類別 | 技術 |
 |----------|------------|
-| 語言 | Python 3.10+ |
+| 語言 | Python 3.11+（Docling extra 需 3.11.5+） |
 | ETL | **PyMuPDF**（預設）+ 安全可選 **PyMuPDF4LLM**／**Docling**；MinerU、Marker adapter 暫時 dependency security hold |
 | RAG | LightRAG (lightrag-hku) |
 | MCP | 官方 Python MCP SDK 2（`MCPServer`）；不支援 SDK v1 |

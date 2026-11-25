@@ -148,6 +148,43 @@ def test_transparent_palette_extraction_retains_alpha_in_both_pixel_policies():
         assert actual.getpixel((1, 0)) == (0, 255, 0, 255)
 
 
+@pytest.mark.parametrize(
+    ("mode", "values", "transparency", "transparent_pixel"),
+    [
+        ("P", [0, 1, 0, 1, 1, 0], b"\x00\x80", (255, 0, 0, 0)),
+        ("L", [10, 200, 10, 200, 200, 10], 10, (10, 10, 10, 0)),
+        ("RGB", [(9, 8, 7), (1, 2, 3)] * 3, (9, 8, 7), (9, 8, 7, 0)),
+    ],
+)
+def test_preserved_png_extraction_carries_transparency_explicitly(
+    mode, values, transparency, transparent_pixel
+):
+    # Pillow >= 13 no longer re-derives palette alpha from conversion side
+    # effects, so extraction must carry tRNS itself for every pixel mode.
+    image = Image.new(mode, (3, 2))
+    image.putdata(values)
+    if mode == "P":
+        image.putpalette([255, 0, 0, 0, 255, 0] + [0] * 762)
+    stream = io.BytesIO()
+    image.save(stream, format="PNG", transparency=transparency)
+    data = stream.getvalue()
+    _, refs = references(data, SOURCE_ID)
+    request = NativeImageExtract(
+        name="alpha.png",
+        reference=refs[0],
+        pixel_policy="preserve_decoded",
+        metadata_policy="pixels_only",
+    )
+    output, _ = NativeImage().extract(data, request)
+    with (
+        Image.open(io.BytesIO(output)) as actual,
+        Image.open(io.BytesIO(data)) as source,
+    ):
+        assert actual.mode == mode
+        assert actual.convert("RGBA").tobytes() == source.convert("RGBA").tobytes()
+        assert actual.convert("RGBA").getpixel((0, 0)) == transparent_pixel
+
+
 def test_lab_tiff_native_samples_and_explicit_icc_projection():
     native = NativeImage()
     image = Image.new("LAB", (4, 3), (180, 130, 140))

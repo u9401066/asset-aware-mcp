@@ -90,7 +90,7 @@ upstream main 的最新 DoS hardening。
 
 | 類別 | 技術 |
 |---|---|
-| Runtime | Python 3.10+、uv universal lock |
+| Runtime | Python 3.11+（Docling extra 3.11.5+）、uv universal lock |
 | MCP | official `mcp` SDK 2.x / `MCPServer` |
 | PDF | PyMuPDF、optional PyMuPDF4LLM／Docling |
 | DOCX | python-docx、DFM／DocxIR reversible pipeline |

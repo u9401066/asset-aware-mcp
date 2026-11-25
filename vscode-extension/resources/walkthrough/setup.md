@@ -6,7 +6,7 @@ Welcome to Asset-Aware MCP! This extension provides a Medical RAG MCP Server for
 
 Before starting, make sure you have:
 
-1. **Python 3.10+** installed
+1. **Python 3.11+** installed
 2. **uv** package manager (recommended) - [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
 3. **Ollama** (optional, for local LLM) - [Download Ollama](https://ollama.com/download)
 

@@ -120,7 +120,7 @@ def load_json(path: Path) -> dict:
 def backup(path: Path) -> None:
     if not path.exists():
         return
-    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stamp = dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
     backup_path = path.with_suffix(path.suffix + f".bak.{stamp}")
     shutil.copy2(path, backup_path)
 

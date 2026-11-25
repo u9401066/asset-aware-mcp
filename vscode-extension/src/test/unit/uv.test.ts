@@ -71,8 +71,8 @@ describe('uv path discovery', () => {
         assert.deepStrictEqual(launch.args, ['tool', 'run', '--python', PREFERRED_RUNTIME_PYTHON]);
     });
 
-    it('keeps Python 3.10 as a runtime fallback for older macOS machines', () => {
-        assert.deepStrictEqual(RUNTIME_PYTHON_CANDIDATES, ['3.11', '3.10']);
+    it('keeps every runtime candidate within the supported Python 3.11+ range', () => {
+        assert.deepStrictEqual(RUNTIME_PYTHON_CANDIDATES, ['3.11', '3.12']);
     });
 
     it('builds uv tool run launch args with preferred python', () => {
