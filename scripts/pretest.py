@@ -1275,11 +1275,15 @@ def inner_sync(payload: dict[str, Any]) -> int:
         if not Path(mirror, "HEAD").exists():
             as_user(["git", "init", "--quiet", "--bare", str(mirror)], user)
         source = payload["source"]
+        # The source is the common git dir (".../.git"); git's ownership check may
+        # look at it or at its working tree, so both are trusted.
+        trusted = [source]
+        if source.endswith("/.git"):
+            trusted.append(source[: -len("/.git")])
         as_user(
             [
                 "git",
-                "-c",
-                f"safe.directory={source}",
+                *(arg for path in trusted for arg in ("-c", f"safe.directory={path}")),
                 "-C",
                 str(mirror),
                 "fetch",
@@ -1536,6 +1540,7 @@ class Gate:
         self.run_dir = self.home / "runs" / time.strftime("%Y%m%d-%H%M%S")
         self.lock = threading.Lock()
         self.source_cache: str | None = None
+        self.git_source_cache: str | None = None
         # Inner runners get the gate code as it was when this run started.
         self.source = Path(__file__).read_bytes()
         scale = getattr(args, "timeout_scale", None) or git_config(
@@ -1597,6 +1602,29 @@ class Gate:
                 raise GateError(f"cannot translate {ROOT} into a WSL path")
             self.source_cache = path
         return self.source_cache
+
+    def wsl_git_source(self) -> str:
+        """WSL path of the repository's common git dir, the fetch source for the mirror.
+
+        In a linked worktree ROOT/.git is a file whose gitdir is a Windows path that
+        WSL git cannot follow, while refs/pretest/snapshot and tags live in the
+        common dir, so the mirror fetches from there (ROOT/.git in a plain clone).
+        """
+        if self.git_source_cache is None:
+            common = Path(
+                git("rev-parse", "--path-format=absolute", "--git-common-dir")
+            )
+            completed = subprocess.run(
+                self.wsl("wslpath", "-a", str(common)),
+                capture_output=True,
+                check=False,
+                cwd=self.ascii_cwd(),
+            )
+            path = completed.stdout.decode("utf-8", "replace").strip()
+            if completed.returncode != 0 or not path.startswith("/"):
+                raise GateError(f"cannot translate {common} into a WSL path")
+            self.git_source_cache = path
+        return self.git_source_cache
 
     def python_payload(self, mode: str, payload: dict[str, Any]) -> list[str]:
         encoded = base64.b64encode(json.dumps(payload).encode()).decode()
@@ -1680,7 +1708,11 @@ class Gate:
                     f"WSL distro {self.distro!r} is missing (found: {', '.join(distros) or 'none'}); "
                     f"install it (wsl --install -d {DEFAULT_DISTRO}) then run python scripts/pretest.py --setup-wsl"
                 ]
-            payload = {"packages": packages, "source": self.wsl_source(), "sha": sha}
+            payload = {
+                "packages": packages,
+                "source": self.wsl_git_source(),
+                "sha": sha,
+            }
             command = self.wsl(
                 "python3", "-", *self.python_payload("--internal-sync", payload)
             )

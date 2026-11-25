@@ -39,7 +39,9 @@ still carried the 1.4.1 version markers. 1.5.1 contains every 1.5.0 change below
   `--list` and `--dry-run` are supported, and the run ends with a CI job →
   local result table. `--timeout-scale` / `pretest.timeoutScale` stretches
   job, step and pytest-timeout limits on hosts slower than GitHub's runners
-  (default 1; any other value is reported in every row).
+  (default 1; any other value is reported in every row). The gate also runs
+  from linked git worktrees: the WSL mirror fetches the snapshot from the
+  repository's common git dir.
 - `scripts/setup_local_ci_wsl.sh` (also `pretest.py --setup-wsl`): idempotent
   provisioning of the WSL distro with exactly the workflows' apt packages,
   the pinned uv, the newest Node of the pinned major and a non-root `runner`

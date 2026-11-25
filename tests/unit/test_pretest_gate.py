@@ -243,3 +243,47 @@ def test_rmtree_removes_trees_deeper_than_max_path(tmp_path):
     assert len(str(deep)) > 300
     gate.rmtree(root)
     assert not root.exists()
+
+
+def _git(cwd, *args):
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid", *args],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+    )
+
+
+@pytest.mark.parametrize("linked_worktree", [False, True])
+def test_wsl_mirror_fetches_from_the_common_git_dir(
+    tmp_path, monkeypatch, linked_worktree
+):
+    """A linked worktree's .git is a file naming a Windows gitdir WSL cannot follow."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "--quiet")
+    (repo / "f.txt").write_text("x", encoding="utf-8")
+    _git(repo, "add", "f.txt")
+    _git(repo, "commit", "--quiet", "-m", "init")
+    root = repo
+    if linked_worktree:
+        root = tmp_path / "wt"
+        _git(repo, "worktree", "add", "--quiet", "-b", "wt", str(root))
+        assert (root / ".git").is_file()
+    monkeypatch.setattr(gate, "ROOT", root)
+    runner = gate.Gate(argparse.Namespace())
+    # Stand-in for `wsl.exe wslpath -a <path>`: echo the path with a POSIX prefix.
+    monkeypatch.setattr(
+        runner,
+        "wsl",
+        lambda *args: [
+            sys.executable,
+            "-c",
+            "import sys; print('/mnt/' + sys.argv[-1].replace(chr(92), '/'))",
+            *args,
+        ],
+    )
+    source = runner.wsl_git_source()
+    expected = (repo / ".git").resolve().as_posix()
+    assert source.lower().endswith(expected.lower())
+    assert "worktrees" not in source
