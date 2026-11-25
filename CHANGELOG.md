@@ -9,6 +9,19 @@
 
 Changes accumulate on the 1.4.x line; individual features do not trigger releases.
 
+## [1.5.1] - 2026-11-25
+
+First published release of the 1.5 line. The `v1.5.0` tag was created but never
+published: its release preflight refused it because the VS Code extension README
+still carried the 1.4.1 version markers. 1.5.1 contains every 1.5.0 change below.
+
+### Fixed
+
+- The VS Code extension README now has its current "What's New" section and a
+  Marketplace banner pinned to the released version.
+- CI integration tests run on the Ubuntu image their LibreOffice layout baselines
+  were recorded on (alignment with LibreOffice 26.2 follows separately).
+
 ## [1.5.0] - 2026-11-25
 
 Data-safety and multi-agent editing release. It fixes silent DOCX edit loss,

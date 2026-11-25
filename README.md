@@ -7,12 +7,13 @@
 
 🌐 [繁體中文](README.zh-TW.md) · [Docs Site](https://u9401066.github.io/asset-aware-mcp/#/overview) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
-## v1.5.0 Safe DOCX edits for one or many agents
+## v1.5.1 Safe DOCX edits for one or many agents
 
 **Upgrade recommended if you edit DOCX files with `save_docx`.** 1.4.1 could
 silently drop earlier edits on the second and later saves, write a plain copy of
 the original for a Track Changes re-save, and let two clients saving from the
-same DFM revert each other — all while reporting success. 1.5.0:
+same DFM revert each other — all while reporting success. 1.5.1 (the first
+published 1.5 release; the v1.5.0 tag was never published):
 
 - writes every edit since ingest from an immutable `baseline_ir.json` and
   verifies each expected change before reporting success;
@@ -27,7 +28,7 @@ same DFM revert each other — all while reporting success. 1.5.0:
 - clears all known dependency advisories and **requires Python 3.11+**.
 
 Re-check DOCX files you produced with 1.4.1 after more than one save. Details:
-[changelog](CHANGELOG.md#150---2026-11-25).
+[changelog](CHANGELOG.md#151---2026-11-25).
 
 ## v1.4.1 Consolidated native-document release
 

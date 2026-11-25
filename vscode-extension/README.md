@@ -6,9 +6,11 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v1.5.0/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v1.5.1/resources/banner.png)
 
-## What's New in v1.5.0
+## What's New in v1.5.1
+
+First published release of the 1.5 line (the v1.5.0 tag was never published).
 
 - **Safe DOCX edits**: `save_docx` now writes every edit since ingest (1.4.1 could
   silently drop earlier edits on later saves) and verifies each change before

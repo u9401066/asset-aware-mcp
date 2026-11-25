@@ -7,11 +7,11 @@
 
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
-## v1.5.0 單一或多個 agent 都能安全編輯 DOCX
+## v1.5.1 單一或多個 agent 都能安全編輯 DOCX
 
 **有用 `save_docx` 編輯 DOCX 的使用者請升級。** 1.4.1 在第二次以後的存檔可能靜默
 遺失先前的修改、存追蹤修訂版時輸出原稿複本，兩個 client 從同一份 DFM 存檔也會互相
-還原，而且都回報成功。1.5.0：
+還原，而且都回報成功。1.5.1（1.5 系列第一個正式發布的版本；v1.5.0 tag 從未發布）：
 
 - 以不可變的 `baseline_ir.json` 寫出自匯入以來的全部修改，回報成功前逐一驗證；
 - 每次存檔都有文件 `revision`，過期的 DFM 會做 3-way merge 或列出衝突區塊後拒絕；
@@ -22,7 +22,7 @@
 - 清除所有已知依賴漏洞，並**改為需要 Python 3.11 以上**。
 
 曾用 1.4.1 對同一份文件存檔兩次以上的使用者，請重新檢查當時產出的 DOCX。詳見
-[變更紀錄](CHANGELOG.md#150---2026-11-25)。
+[變更紀錄](CHANGELOG.md#151---2026-11-25)。
 
 ## v1.4.1 跨格式文件與證據流程整合
 
