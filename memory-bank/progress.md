@@ -1,5 +1,16 @@
 # Progress (Updated: 2026-11-25)
 
+## 1.5.1 published instead of 1.5.0 — 2026-11-25
+
+The v1.5.0 tag (68204e4) failed release preflight: scripts/audit_release_artifacts.py
+--require all needs `## What's New in v<version>` and a v<version> banner in
+vscode-extension/README.md. Nothing was published. Per the maintainer, the failed
+tag stays and 1.5.1 carries all 1.5.0 changes. Lesson: run the release preflight
+(uv build, wheel smoke, npm test:ci, vsce package, audit_release_artifacts --require all)
+locally before tagging. The CI-parity gate (scripts/pretest.py, merged for 1.5.1)
+runs every ci.yml job and the release.yml test job on pre-push; the release-preflight
+artifact audit still has to be run before tagging.
+
 ## 1.5.0 release — DOCX write-back safety, block leases, Python 3.11 — 2026-11-25
 
 One release instead of a separate 1.4.2 (maintainer decision): the 1.4.2
