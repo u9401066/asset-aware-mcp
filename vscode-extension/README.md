@@ -6,7 +6,20 @@
 [![PyPI](https://img.shields.io/pypi/v/asset-aware-mcp)](https://pypi.org/project/asset-aware-mcp/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v1.4.1/resources/banner.png)
+![Asset-Aware MCP marketplace banner](https://raw.githubusercontent.com/u9401066/asset-aware-mcp/v1.5.0/resources/banner.png)
+
+## What's New in v1.5.0
+
+- **Safe DOCX edits**: `save_docx` now writes every edit since ingest (1.4.1 could
+  silently drop earlier edits on later saves) and verifies each change before
+  reporting success; Track Changes can show all edits since ingest or only the latest.
+- **Several agents, one document**: every save carries a `revision`; stale DFMs are
+  3-way merged or refused with the conflicting blocks, and `docx` `checkout` →
+  `commit` → `release` leases let agents edit different blocks with per-agent authors.
+- Re-ingesting the same file keeps your edits (`reset=true` discards them explicitly).
+- A warning appears when the data directory is on a cloud-synced or network drive.
+- All known dependency advisories cleared; **Python 3.11+ is now required** (the
+  extension falls back to Python 3.12 instead of 3.10).
 
 ## What's New in v1.4.1
 
