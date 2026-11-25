@@ -154,7 +154,7 @@ def test_release_script_is_tag_first_and_never_publishes_registries_directly() -
         'DEFAULT_BRANCH" != "main',
         "uv lock --check",
         "uvx --from uv==0.12.3 uv audit",
-        "--preview-features audit-command --frozen --python-version 3.10",
+        "--preview-features audit-command --frozen --python-version 3.11",
         "npm --prefix vscode-extension audit --package-lock-only --audit-level=low",
         "audit_release_artifacts.py --require python",
         "audit_release_artifacts.py --require all",

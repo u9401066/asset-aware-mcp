@@ -46,7 +46,7 @@ Actual cross-version SDK2 coverage is in
 `tests/integration/test_native_image_retention_stdio.py`. Set
 `NATIVE_IMAGE_OLD_PILLOW` to an isolated, interpreter-compatible Pillow 12.2.0 target
 installation to test 12.2.0 -> current locked Pillow. Without it the test still
-checks real process restart. CI Python3.10 explicitly provisions the old target;
+checks real process restart. The CI minimum-version (Python 3.11) job explicitly provisions the old target;
 production dependencies are unchanged. Historical records and cached PNGs must
 remain exact; missing preview recipes must fail after representation drift.
 

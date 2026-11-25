@@ -70,7 +70,7 @@ jobs:
       - name: Verify and audit dependency lock
         run: |
           uv lock --check
-          uv audit --preview-features audit-command --frozen --python-version 3.10
+          uv audit --preview-features audit-command --frozen --python-version 3.11
 
       - name: Install dependencies
         run: uv sync --frozen
@@ -92,12 +92,12 @@ jobs:
         run: uv run bandit -q -r src -x tests --severity-level medium
 
   # ==========================================
-  # Python 3.10 + MCP runtime compatibility
+  # Minimum supported Python (3.11) + MCP runtime compatibility
   # ==========================================
-  python310-mcp-smoke:
-    name: 🐍 Python 3.10 MCP Runtime Smoke
+  python311-mcp-smoke:
+    name: 🐍 Python 3.11 MCP Runtime Smoke
     runs-on: ubuntu-latest
-    # Expanded native unit/stdio coverage needs headroom on slower Python 3.10 runners.
+    # Expanded native unit/stdio coverage needs headroom on the minimum-version runner.
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -116,11 +116,11 @@ jobs:
           version: "0.12.3"
           enable-cache: false
 
-      - name: Set up Python 3.10
-        run: uv python install 3.10
+      - name: Set up Python 3.11
+        run: uv python install 3.11
 
-      - name: Install locked dependencies for Python 3.10
-        run: uv sync --frozen --python 3.10
+      - name: Install locked dependencies for Python 3.11
+        run: uv sync --frozen --python 3.11
 
       - name: Isolate older decoder for persistent image evidence tests
         run: |
@@ -129,7 +129,7 @@ jobs:
 
       - name: Run focused MCP schema and stdio runtime tests
         run: >-
-          uv run --python 3.10 pytest tests/test_mcp_tools.py
+          uv run --python 3.11 pytest tests/test_mcp_tools.py
           tests/unit/test_native_document_assets.py
           tests/unit/test_native_spreadsheet_edges.py
           tests/unit/test_native_delimited.py
@@ -721,7 +721,7 @@ jobs:
     needs:
       - docs-check
       - static-analysis
-      - python310-mcp-smoke
+      - python311-mcp-smoke
       - npm-security
       - macos-smoke
       - windows-smoke
@@ -734,7 +734,7 @@ jobs:
         env:
           DOCS_RESULT: ${{ needs.docs-check.result }}
           STATIC_RESULT: ${{ needs.static-analysis.result }}
-          PYTHON310_MCP_RESULT: ${{ needs.python310-mcp-smoke.result }}
+          PYTHON311_MCP_RESULT: ${{ needs.python311-mcp-smoke.result }}
           NPM_SECURITY_RESULT: ${{ needs.npm-security.result }}
           MACOS_RESULT: ${{ needs.macos-smoke.result }}
           WINDOWS_RESULT: ${{ needs.windows-smoke.result }}
@@ -745,7 +745,7 @@ jobs:
           results=(
             "📚 Documentation|$DOCS_RESULT"
             "🔍 Static Analysis|$STATIC_RESULT"
-            "🐍 Python 3.10 MCP Runtime|$PYTHON310_MCP_RESULT"
+            "🐍 Python 3.11 MCP Runtime|$PYTHON311_MCP_RESULT"
             "🛡️ npm Zero-Vulnerability Audit|$NPM_SECURITY_RESULT"
             "🍎 macOS Smoke Test|$MACOS_RESULT"
             "🪟 Windows Smoke Test|$WINDOWS_RESULT"
