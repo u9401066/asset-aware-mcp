@@ -1378,7 +1378,13 @@ def isolate_absent_packages(job: Job) -> list[str]:
 
 
 def rmtree(path: Path) -> None:
-    if path.exists():
+    if not path.exists():
+        return
+    if os.name == "nt":
+        # A previous \\?\ basetemp leaves trees deeper than MAX_PATH; delete
+        # through the extended-length form so cleanup works without long paths.
+        shutil.rmtree("\\\\?\\" + str(path.resolve()))
+    else:
         shutil.rmtree(path)
 
 
@@ -1873,9 +1879,26 @@ class Gate:
         return "-"
 
     def run_job(self, job: Job, sha: str, ref: str, context: dict[str, Any]) -> Outcome:
+        """Run one job; a gate-side error becomes that job's FAIL row."""
+        started = time.monotonic()
+        try:
+            return self._run_job(job, sha, ref, context, started)
+        except (GateError, OSError, subprocess.SubprocessError, ValueError) as exc:
+            reason = f"gate error before/while running the job: {exc!r}"
+            self.print(f"< {job.qualified}: FAIL - {reason}")
+            label = self.executor_label(job)
+            return Outcome(job, "FAIL", label, time.monotonic() - started, reason)
+
+    def _run_job(
+        self,
+        job: Job,
+        sha: str,
+        ref: str,
+        context: dict[str, Any],
+        started: float,
+    ) -> Outcome:
         label = self.executor_label(job)
         log = self.run_dir / f"{job.qualified.replace(':', '_')}.log"
-        started = time.monotonic()
         self.print(f"> {job.qualified} ({job.runs_on} -> {label}) started")
         payload: dict[str, Any] = {
             "workflow": job.workflow,

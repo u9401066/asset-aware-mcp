@@ -232,3 +232,14 @@ def test_timeout_scale_plugin_stretches_pytest_timeout_markers(
     else:
         # signal method reports "1 failed"; the Windows thread method exits.
         assert done.returncode != 0 and "Timeout" in output, output
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Win32 MAX_PATH only")
+def test_rmtree_removes_trees_deeper_than_max_path(tmp_path):
+    root = tmp_path / "bt"
+    deep = Path(r"\\?" + "\\" + str(root.resolve())).joinpath(*["d" * 60] * 5)
+    deep.mkdir(parents=True)
+    (deep / ("f" * 60 + ".md")).write_text("x", encoding="utf-8")
+    assert len(str(deep)) > 300
+    gate.rmtree(root)
+    assert not root.exists()
