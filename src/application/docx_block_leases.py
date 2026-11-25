@@ -40,11 +40,13 @@ from src.domain.docx_edit_state import (
     REVISION_KIND_COMMIT,
     BlockLease,
     DocxEditStateError,
+    DocxPublishedUncommittedError,
     block_state_hash,
     iso_utc,
     lease_id_for_token,
     lease_token_hash,
     validate_holder,
+    validate_request_id,
     validate_ttl,
 )
 from src.domain.docx_entities import DocxIR
@@ -53,7 +55,6 @@ from src.domain.native_docx import MAX_DFM_BYTES
 from src.infrastructure.encoding_guard import (
     EncodingError,
     normalize_text_input,
-    write_utf8_text_atomic,
 )
 
 if TYPE_CHECKING:
@@ -133,7 +134,9 @@ class DocxBlockLeaseMixin(DocxConcurrencyMixin):
     def _guarded(self, run: Callable[[], dict[str, Any]]) -> dict[str, Any]:
         """Turn failures into results; the edit-state transaction is rolled back."""
         try:
-            return run()
+            result = run()
+        except DocxPublishedUncommittedError as exc:
+            return _error(str(exc), committed=True, revision=exc.revision)
         except DocxEditStateError as exc:
             return _error(str(exc))
         except Exception as exc:
@@ -142,6 +145,10 @@ class DocxBlockLeaseMixin(DocxConcurrencyMixin):
                 f"{exc} (nothing was committed; files, revision and leases are "
                 "unchanged)"
             )
+        warning = self._storage_warning()
+        if warning and isinstance(result, dict):
+            result.setdefault("storage_warning", warning)
+        return result
 
     @staticmethod
     def _normalize_block_ids(block_ids: Iterable[str] | None) -> list[str]:
@@ -174,11 +181,22 @@ class DocxBlockLeaseMixin(DocxConcurrencyMixin):
         token = (lease_token or "").strip()
         if not token:
             return _error("lease_token is required (returned by checkout)")
-        lease = context.session.lease_by_token_hash(lease_token_hash(token))
+        token_hash = lease_token_hash(token)
+        lease = context.session.lease_by_token_hash(token_hash)
         if lease is not None:
             return lease
         lease_id = lease_id_for_token(token)
-        event = context.session.lease_event(lease_id)
+        event = context.session.lease_event_for_token(
+            token_hash
+        ) or context.session.lease_event(lease_id)
+        if event is not None and event.event == "token_rotated":
+            return _error(
+                f"This lease token for {event.lease_id} was replaced: the checkout "
+                "was replayed with the same request_id and returned a new token. "
+                "Use the newest lease_token. Nothing was applied.",
+                lease_id=event.lease_id,
+                lease_event=event.event,
+            )
         if event is None:
             return _error(
                 f"Unknown lease token for {context.ir.doc_id} ({lease_id}); it was "
@@ -213,8 +231,15 @@ class DocxBlockLeaseMixin(DocxConcurrencyMixin):
         holder: str | None,
         ttl_seconds: int | None = None,
         wait: bool = False,
+        request_id: str | None = None,
     ) -> dict[str, Any]:
-        """Lease blocks for exclusive editing; fail fast on conflicts."""
+        """Lease blocks for exclusive editing; fail fast on conflicts.
+
+        ``request_id`` makes a retried checkout idempotent: repeating it (same
+        holder) while the lease is live returns the same lease with a fresh
+        token (the previous token stops working), so a lost response never
+        leaves an orphan lease locked for its whole TTL.
+        """
 
         def run() -> dict[str, Any]:
             if wait:
@@ -226,10 +251,13 @@ class DocxBlockLeaseMixin(DocxConcurrencyMixin):
             name = validate_holder(holder)
             ttl = validate_ttl(ttl_seconds)
             requested = self._normalize_block_ids(block_ids)
+            request = validate_request_id(request_id)
             with self._edit_context(doc_id) as context:
-                return self._checkout_in_context(context, requested, name, ttl)
+                return self._checkout_in_context(
+                    context, requested, name, ttl, request_id=request
+                )
 
-        return self._guarded(run)
+        return await self._off_loop(self._guarded, run)
 
     def _checkout_in_context(
         self,
@@ -237,6 +265,8 @@ class DocxBlockLeaseMixin(DocxConcurrencyMixin):
         requested: list[str],
         holder: str,
         ttl: int,
+        *,
+        request_id: str | None = None,
     ) -> dict[str, Any]:
         ir = context.ir
         now = context.now
@@ -267,6 +297,28 @@ class DocxBlockLeaseMixin(DocxConcurrencyMixin):
                 f"The checkout expands to {len(scope)} blocks (table families are "
                 f"leased whole); a lease covers at most {MAX_LEASE_BLOCKS}."
             )
+
+        if request_id is not None:
+            previous = context.session.lease_by_request(holder, request_id)
+            if previous is not None and previous.is_live(now):
+                if list(previous.block_ids) != scope:
+                    return _error(
+                        f"request_id {request_id!r} was already used by {holder!r} "
+                        f"for lease {previous.lease_id} on "
+                        f"{', '.join(previous.block_ids)}; use a new request_id for "
+                        "a different checkout."
+                    )
+                token = secrets.token_urlsafe(32)
+                context.session.rotate_lease_token(
+                    previous.lease_id, lease_token_hash(token)
+                )
+                return self._checkout_result(
+                    context,
+                    previous,
+                    token,
+                    requested,
+                    replayed=True,
+                )
 
         conflicts: list[dict[str, Any]] = []
         reclaim: list[BlockLease] = []
@@ -309,26 +361,44 @@ class DocxBlockLeaseMixin(DocxConcurrencyMixin):
             ttl_seconds=ttl,
             base_revision=context.revision,
         )
-        context.session.insert_lease(lease, lease_token_hash(token))
+        context.session.insert_lease(
+            lease, lease_token_hash(token), request_id=request_id
+        )
+        result = self._checkout_result(context, lease, token, requested)
+        if reclaim:
+            result["reclaimed_expired_leases"] = [lease.lease_id for lease in reclaim]
+        return result
+
+    def _checkout_result(
+        self,
+        context: DocxEditContext,
+        lease: BlockLease,
+        token: str,
+        requested: list[str],
+        *,
+        replayed: bool = False,
+    ) -> dict[str, Any]:
+        blocks = {block.id: block for block in context.ir.blocks}
+        scope = list(lease.block_ids)
         fragments = [
             {
                 "block_id": bid,
                 "type": blocks[bid].block_type.value,
-                "base_hash": hashes[bid],
+                "base_hash": lease.base_hashes[bid],
                 "dfm": self.renderer.render_block(blocks[bid]) or "",
             }
             for bid in scope
         ]
         result: dict[str, Any] = {
             "success": True,
-            "doc_id": ir.doc_id,
+            "doc_id": context.ir.doc_id,
             "lease_token": token,
             "lease_id": lease.lease_id,
-            "holder": holder,
+            "holder": lease.holder,
             "revision": context.revision,
-            "ttl_seconds": ttl,
+            "ttl_seconds": lease.ttl_seconds,
             "expires_at": iso_utc(lease.expires_at),
-            "block_ids": list(scope),
+            "block_ids": scope,
             "blocks": fragments,
             "wait": False,
             "next": (
@@ -341,8 +411,10 @@ class DocxBlockLeaseMixin(DocxConcurrencyMixin):
         expanded = [bid for bid in scope if bid not in requested]
         if expanded:
             result["expanded_block_ids"] = expanded
-        if reclaim:
-            result["reclaimed_expired_leases"] = [lease.lease_id for lease in reclaim]
+        if replayed:
+            result["replayed"] = True
+        if context.notes:
+            result["warnings"] = list(context.notes)
         return result
 
     # ------------------------------------------------------------------
@@ -387,7 +459,7 @@ class DocxBlockLeaseMixin(DocxConcurrencyMixin):
                     force=force,
                 )
 
-        return self._guarded(run)
+        return await self._off_loop(self._guarded, run)
 
     @staticmethod
     def _validate_edit_payload(
@@ -660,7 +732,7 @@ class DocxBlockLeaseMixin(DocxConcurrencyMixin):
                     "was_expired": not was_live,
                 }
 
-        return self._guarded(run)
+        return await self._off_loop(self._guarded, run)
 
     async def renew_block_lease(
         self, doc_id: str, lease_token: str | None, ttl_seconds: int | None = None
@@ -696,7 +768,7 @@ class DocxBlockLeaseMixin(DocxConcurrencyMixin):
                     "expires_at": iso_utc(expires_at),
                 }
 
-        return self._guarded(run)
+        return await self._off_loop(self._guarded, run)
 
     async def list_block_leases(self, doc_id: str) -> dict[str, Any]:
         """List live and expired leases (never tokens) plus the revision."""
@@ -731,7 +803,7 @@ class DocxBlockLeaseMixin(DocxConcurrencyMixin):
                 "live_leases": sum(1 for lease in leases if lease["status"] == "live"),
             }
 
-        return self._guarded(run)
+        return await self._off_loop(self._guarded, run)
 
     async def break_block_lease(
         self, doc_id: str, lease_id: str | None, *, force: bool = False
@@ -779,7 +851,7 @@ class DocxBlockLeaseMixin(DocxConcurrencyMixin):
                     "was_live": live,
                 }
 
-        return self._guarded(run)
+        return await self._off_loop(self._guarded, run)
 
     # ------------------------------------------------------------------
     # Lease-aware IR-only block updates (docx_table_from_context)
@@ -829,6 +901,7 @@ class DocxBlockLeaseMixin(DocxConcurrencyMixin):
                 ir.dfm_revision = state[0]
                 previous = context.block_hashes
                 changed = [bid for bid, h in state[1] if previous.get(bid) != h]
+                self._assert_ir_file_unchanged(context)
                 revision = self._record_revision_state(
                     context,
                     state,
@@ -839,24 +912,39 @@ class DocxBlockLeaseMixin(DocxConcurrencyMixin):
                 doc_dir = context.doc_dir
                 self._backup_before_overwrite(doc_dir)
                 self._save_ir(ir, doc_dir / "ir.json")
-                written: list[str] = [str(doc_dir / "ir.json")]
-                if write_dfm:
-                    dfm_text = self.renderer.render(ir)
-                    md_text, yaml_text = self.renderer.render_split(ir)
-                    for name, text in (
-                        ("content.dfm", dfm_text),
-                        ("content.md", md_text),
-                        ("format.yaml", yaml_text),
-                    ):
-                        write_utf8_text_atomic(doc_dir / name, text, hint=name)
-                        written.append(str(doc_dir / name))
-                return {
+                context.published_revision = revision
+                result: dict[str, Any] = {
                     "success": True,
                     "doc_id": doc_id,
                     "revision": revision,
                     "previous_revision": context.revision,
                     "changed_block_ids": changed,
-                    "written": written,
+                    "written": [str(doc_dir / "ir.json")],
                 }
+                if not write_dfm:
+                    return result
+                try:
+                    warnings = self._publish_editable_artifacts(
+                        context,
+                        self._render_artifacts(ir),
+                        previous_ir=before,
+                    )
+                except Exception as exc:
+                    logger.exception("DOCX %s: derived artifacts failed", doc_id)
+                    return _error(
+                        f"The update was committed as revision {revision} (ir.json "
+                        f"is written), but writing content.dfm/content.md/"
+                        f"format.yaml failed: {exc}. Re-open the document and save "
+                        "to regenerate them; nothing is lost.",
+                        committed=True,
+                        revision=revision,
+                    )
+                result["written"].extend(
+                    str(doc_dir / name)
+                    for name in ("content.dfm", "content.md", "format.yaml")
+                )
+                if warnings:
+                    result["warnings"] = warnings
+                return result
 
-        return self._guarded(run)
+        return await self._off_loop(self._guarded, run)

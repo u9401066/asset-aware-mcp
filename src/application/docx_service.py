@@ -7,6 +7,7 @@ Orchestrates DocxAdapter, DfmRenderer, and DfmParser.
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import logging
@@ -15,6 +16,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import uuid
 from copy import deepcopy
 from dataclasses import asdict
 from datetime import datetime
@@ -34,6 +36,7 @@ from src.application.output_paths import resolve_document_output_path
 from src.domain.docx_edit_state import (
     REVISION_KIND_SAVE,
     DocxEditStateError,
+    DocxPublishedUncommittedError,
     iso_utc,
 )
 from src.domain.docx_value_objects import DfmBlockType
@@ -75,6 +78,9 @@ RESERVED_DOCX_ARTIFACT_NAMES = {
     BASELINE_IR_FILENAME,
     EDIT_STATE_DB_FILENAME,
     f"{EDIT_STATE_DB_FILENAME}-journal",
+    "content.current.dfm",
+    "content.current.md",
+    "format.current.yaml",
     "content.dfm",
     "content.md",
     "format.yaml",
@@ -135,9 +141,17 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
     # Ingest
     # ========================================================================
 
-    async def ingest_docx(self, file_path: str) -> dict[str, Any]:
+    async def ingest_docx(
+        self, file_path: str, *, reset: bool = False
+    ) -> dict[str, Any]:
         """
         Ingest a .docx file into DFM format.
+
+        Ingest is idempotent: when this source file is already ingested, the
+        existing document state (every saved/committed edit, current revision)
+        is returned instead of re-parsing. ``reset=True`` explicitly discards
+        all edits and rebuilds the document from the source (refused while
+        another agent holds a live lease; artifacts are backed up first).
 
         Creates:
             data/{doc_id}/
@@ -154,6 +168,9 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
         Returns:
             Summary dict with doc_id, block counts, etc.
         """
+        return await self._off_loop(self._ingest_docx_sync, file_path, reset=reset)
+
+    def _ingest_docx_sync(self, file_path: str, *, reset: bool) -> dict[str, Any]:
         path = Path(file_path)
         if not path.exists():
             return {"success": False, "error": f"File not found: {path}"}
@@ -191,13 +208,18 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
             # Generate doc_id from sanitized filename stem + content hash.
             # sanitize_id_stem ensures the id is filesystem-safe even for
             # filenames with CJK/accented/special characters.
-            checksum = _sha256_file(path)[:16]
+            full_checksum = _sha256_file(path)
+            checksum = full_checksum[:16]
             safe_stem = sanitize_id_stem(path.stem)
             doc_id = f"docx_{safe_stem}_{checksum}"
 
             # Set up output directory
             doc_dir = self.repository.get_doc_dir(doc_id)
-            # Re-ingest replaces every artifact, so it runs under the document
+            if not reset:
+                existing = self._existing_ingest(path, doc_id, doc_dir, full_checksum)
+                if existing is not None:
+                    return existing
+            # (Re-)ingest replaces every artifact, so it runs under the document
             # edit lock and never pulls blocks out from under live leases.
             with self._edit_state_store(doc_dir).session() as edit_state:
                 now = self._clock()
@@ -216,13 +238,96 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
                             'commit/release or list them with docx(op="leases").'
                         ),
                     }
+                discarded: list[str] = []
+                if (doc_dir / "ir.json").is_file():
+                    discarded = self._edits_since_ingest(doc_id, doc_dir)
+                    self._backup_before_overwrite(doc_dir)
                 summary = self._ingest_into(path, doc_id, doc_dir)
                 edit_state.reset()
+                self._record_rendered_artifacts(edit_state, doc_dir)
+                for name in ("content.current.dfm", "content.current.md"):
+                    (doc_dir / name).unlink(missing_ok=True)
+                (doc_dir / "format.current.yaml").unlink(missing_ok=True)
+                if reset:
+                    summary["reset"] = True
+                    summary["discarded_block_ids"] = discarded
+                warning = self._storage_warning()
+                if warning:
+                    summary["storage_warning"] = warning
                 return summary
 
         except Exception as e:
             logger.exception("Failed to ingest docx: %s", file_path)
             return {"success": False, "error": str(e)}
+
+    def _edits_since_ingest(self, doc_id: str, doc_dir: Path) -> list[str]:
+        """Blocks whose current state differs from the ingest baseline."""
+        ir = self._load_ir(doc_id)
+        baseline_path = doc_dir / BASELINE_IR_FILENAME
+        if ir is None or not baseline_path.is_file():
+            return []
+        try:
+            baseline = self._dict_to_ir(
+                json.loads(baseline_path.read_text(encoding="utf-8"))
+            )
+        except (OSError, ValueError, KeyError, TypeError):
+            return []
+        base = dict(self._ir_revision_state(baseline)[1])
+        return [
+            block_id
+            for block_id, block_hash in self._ir_revision_state(ir)[1]
+            if base.get(block_id) != block_hash
+        ]
+
+    def _existing_ingest(
+        self, path: Path, doc_id: str, doc_dir: Path, full_checksum: str
+    ) -> dict[str, Any] | None:
+        """Return the existing state of an already ingested source (no re-parse)."""
+        original = doc_dir / "original.docx"
+        if not (doc_dir / "ir.json").is_file() or not original.is_file():
+            return None
+        if _sha256_file(original) != full_checksum:
+            return {
+                "success": False,
+                "error": (
+                    f"{doc_id} already exists but its original.docx differs from "
+                    f"{path}. Pass reset=true to replace it (this discards every "
+                    "edit in the existing document)."
+                ),
+            }
+        with self._edit_context(doc_id) as context:
+            changed = self._edits_since_ingest(doc_id, doc_dir)
+            live = [
+                lease
+                for lease in context.session.leases()
+                if lease.is_live(context.now)
+            ]
+            summary = context.ir.get_summary()
+            summary.update(
+                {
+                    "success": True,
+                    "doc_id": doc_id,
+                    "existing": True,
+                    "dfm_path": str(doc_dir / "content.dfm"),
+                    "md_path": str(doc_dir / "content.md"),
+                    "integrity": "existing document (not re-parsed)",
+                    "revision": context.revision,
+                    "changed_block_ids": changed,
+                    "live_leases": len(live),
+                    "note": (
+                        f"{doc_id} was already ingested: returned the existing "
+                        f"document (revision {context.revision}, {len(changed)} "
+                        "block(s) edited since ingest) instead of re-parsing, so "
+                        "no saved or committed edit is lost. Pass reset=true only "
+                        "to discard every edit and rebuild from the source file."
+                    ),
+                }
+            )
+            if context.notes:
+                summary["warnings"] = list(context.notes)
+            if context.storage_warning:
+                summary["storage_warning"] = context.storage_warning
+            return summary
 
     def _ingest_into(self, path: Path, doc_id: str, doc_dir: Path) -> dict[str, Any]:
         """Write every ingest artifact for ``path`` into ``doc_dir``."""
@@ -486,14 +591,48 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
         """List all ingested DOCX/DFM documents."""
         return self.repository.list_docx_documents()
 
-    async def delete_docx(self, doc_id: str) -> dict[str, Any]:
-        """Delete an ingested DOCX/DFM document and all local artifacts."""
+    async def delete_docx(self, doc_id: str, *, force: bool = False) -> dict[str, Any]:
+        """Delete an ingested DOCX/DFM document and all local artifacts.
+
+        Runs under the document lock and refuses while another agent holds a
+        live lease unless ``force=True``.
+        """
+        return await self._off_loop(self._delete_docx_sync, doc_id, force=force)
+
+    def _delete_docx_sync(self, doc_id: str, *, force: bool) -> dict[str, Any]:
         documents = self.repository.list_docx_documents()
         document = next(
             (item for item in documents if item.get("doc_id") == doc_id), None
         )
         if document is None:
             return {"success": False, "error": f"DOCX document not found: {doc_id}"}
+
+        doc_dir = self.repository.get_doc_dir(doc_id)
+        if isinstance(doc_dir, Path):
+            store = self._edit_state_store(doc_dir)
+            if store.path.exists():
+                try:
+                    with store.session() as session:
+                        now = self._clock()
+                        live = [
+                            lease for lease in session.leases() if lease.is_live(now)
+                        ]
+                except DocxEditStateError as exc:
+                    return {"success": False, "error": str(exc)}
+                if live and not force:
+                    return {
+                        "success": False,
+                        "error": (
+                            f"Cannot delete {doc_id}: blocks are checked out by "
+                            + "; ".join(
+                                f"{lease.holder!r} ({lease.lease_id}, until "
+                                f"{iso_utc(lease.expires_at)})"
+                                for lease in live
+                            )
+                            + ". Wait for commit/release, or pass force=true "
+                            "after confirming the holders are gone."
+                        ),
+                    }
 
         deleted = self.repository.delete_document(doc_id)
         if not deleted:
@@ -578,6 +717,32 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
             ``edited_block_ids`` lists the blocks changed by this request;
             ``revision`` is the new content revision.
         """
+        return await self._off_loop(
+            self._save_docx_sync,
+            doc_id,
+            dfm_text,
+            output_path,
+            from_md=from_md,
+            force=force,
+            track_changes=track_changes,
+            revision_author=revision_author,
+            revision_base=revision_base,
+            allow_external_output=_allow_external_output,
+        )
+
+    def _save_docx_sync(
+        self,
+        doc_id: str,
+        dfm_text: str | None,
+        output_path: str | None,
+        *,
+        from_md: bool,
+        force: bool,
+        track_changes: bool,
+        revision_author: str,
+        revision_base: str,
+        allow_external_output: bool,
+    ) -> dict[str, Any]:
         doc_dir = self.repository.get_doc_dir(doc_id)
 
         if revision_base not in REVISION_BASES:
@@ -593,21 +758,32 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
             return {"success": False, "error": f"IR not found for {doc_id}"}
 
         try:
-            parsed = self._parse_save_input(doc_id, doc_dir, dfm_text, from_md)
-            if isinstance(parsed, dict):
-                return parsed
             with self._edit_context(doc_id) as context:
+                # Parse under the lock: content.md/format.yaml/content.dfm are
+                # never read halfway through another writer's update.
+                parsed = self._parse_save_input(doc_id, doc_dir, dfm_text, from_md)
+                if isinstance(parsed, dict):
+                    return parsed
+                parse_result, consumed = parsed
                 return self._save_in_context(
                     context,
                     doc_id,
-                    parsed,
+                    parse_result,
                     output_path,
                     force=force,
                     track_changes=track_changes,
                     revision_author=revision_author,
                     revision_base=revision_base,
-                    allow_external_output=_allow_external_output,
+                    allow_external_output=allow_external_output,
+                    consumed_artifacts=consumed,
                 )
+        except DocxPublishedUncommittedError as exc:
+            return {
+                "success": False,
+                "committed": True,
+                "revision": exc.revision,
+                "error": str(exc),
+            }
         except DocxEditStateError as exc:
             return {"success": False, "error": str(exc)}
         except Exception as e:
@@ -620,8 +796,13 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
         doc_dir: Path,
         dfm_text: str | None,
         from_md: bool,
-    ) -> DfmParseResult | dict[str, Any]:
-        """Parse the submitted DFM (or on-disk split format) into edits."""
+    ) -> tuple[DfmParseResult, dict[str, str]] | dict[str, Any]:
+        """Parse the submitted DFM (or on-disk split format) into edits.
+
+        Also returns the exact artifact texts this request consumed, so the
+        publish step knows those files hold no other unsaved in-place edits.
+        """
+        consumed: dict[str, str] = {}
         if from_md:
             md_path = doc_dir / "content.md"
             yaml_path = doc_dir / "format.yaml"
@@ -650,6 +831,7 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
                 }
 
             parse_result = self.parser.parse_split(md_content, yaml_content)
+            consumed = {"content.md": md_content, "format.yaml": yaml_content}
         else:
             if dfm_text is None:
                 persisted_dfm = doc_dir / "content.dfm"
@@ -662,6 +844,7 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
             except EncodingError as exc:
                 return {"success": False, "error": str(exc)}
             parse_result = self.parser.parse(dfm_text)
+            consumed = {"content.dfm": dfm_text}
 
         # Abort on format mismatch — prevents silent data loss
         format_errors = [
@@ -691,7 +874,7 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
                 ),
                 "warnings": duplicate_id_errors,
             }
-        return parse_result
+        return parse_result, consumed
 
     def _save_in_context(
         self,
@@ -705,6 +888,7 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
         revision_author: str,
         revision_base: str,
         allow_external_output: bool,
+        consumed_artifacts: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Validate a full-DFM save against the locked current state, then write."""
         ir = context.ir
@@ -753,36 +937,28 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
             }
 
         # Source identity: the DFM must come from an ingest of this package.
+        # The content revision is bound to the checksum, so a mismatching DFM
+        # can never be proven current; force does not apply here.
         if parse_result.checksum != ir.checksum:
             stale_message = (
                 "Stale DFM edit detected: edited DFM checksum "
                 f"{parse_result.checksum} does not match the current IR checksum "
-                f"{ir.checksum}. Re-open the current DFM or re-ingest the document "
-                "before saving; use force=True only when you have manually verified "
-                "the edit is based on the current document."
+                f"{ir.checksum} (the DFM was rendered from a different source "
+                "package, or its front matter was edited). Re-open the current DFM "
+                "or re-ingest the document before saving; force does not override "
+                "a source mismatch."
             )
             logger.warning("%s", stale_message)
-            if not force:
-                return {
-                    "success": False,
-                    "error": stale_message,
-                    "warnings": [
-                        (
-                            "Saving was aborted before applying edits to prevent "
-                            "overwriting a newer DFM/IR session."
-                        )
-                    ],
-                }
-            save_warnings.append(
-                "Forced stale DFM save: edited DFM checksum "
-                f"{parse_result.checksum} did not match current IR checksum "
-                f"{ir.checksum}."
-            )
-            logger.info(
-                "Forced checksum mismatch: DFM=%s, IR=%s",
-                parse_result.checksum,
-                ir.checksum,
-            )
+            return {
+                "success": False,
+                "error": stale_message,
+                "warnings": [
+                    (
+                        "Saving was aborted before applying edits to prevent "
+                        "overwriting a newer DFM/IR session."
+                    )
+                ],
+            }
 
         # Content revision: prove which state the DFM was based on, 3-way merge
         # a stale one, or refuse it (lost-update protection; force never skips).
@@ -809,7 +985,7 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
                 "leased_blocks": conflicts,
             }
 
-        return self._write_back_locked(
+        result = self._write_back_locked(
             context,
             parse_result,
             output_path,
@@ -822,7 +998,20 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
             save_warnings=save_warnings,
             result_extra={"revision_merge": resolution.to_result()},
             allow_external_output=allow_external_output,
+            consumed_artifacts=consumed_artifacts,
         )
+        if result.get("success"):
+            if resolution.buffer_matches_result:
+                # The submitted DFM now equals the saved state: keep editing it
+                # after replacing its `revision:` line with this one.
+                result["revision_front_matter"] = f"revision: {result['revision']}"
+            else:
+                result["reopen_before_next_save"] = True
+                result.setdefault("warnings", []).append(
+                    "Your DFM buffer lacks blocks merged from other agents; re-open "
+                    "the current DFM before editing further."
+                )
+        return result
 
     def _write_back_locked(
         self,
@@ -841,6 +1030,7 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
         on_publish: Callable[[DocxEditContext, str, DocxIR, set[str]], None]
         | None = None,
         allow_external_output: bool = False,
+        consumed_artifacts: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Apply edits to the locked current IR and publish all artifacts.
 
@@ -1007,11 +1197,23 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
                 except ValueError as e:
                     return {"success": False, "error": str(e)}
 
-            # Snapshot old content.md for drift detection
+            # Snapshot old content.md for drift detection. An unsaved in-place
+            # edit is not server state; compare with the last render instead so a
+            # large in-progress draft cannot trip the shrink fail-safe.
             old_md_path = doc_dir / "content.md"
-            old_md_text = (
-                old_md_path.read_text(encoding="utf-8") if old_md_path.exists() else ""
-            )
+            if not old_md_path.exists():
+                old_md_text = ""
+            elif self._artifact_diverged(
+                context,
+                "content.md",
+                previous_ir=pre_edit_ir,
+                consumed=consumed_artifacts,
+            ):
+                rendered_before = copy.copy(pre_edit_ir)
+                rendered_before.dfm_revision = context.revision
+                old_md_text = self.renderer.render_split(rendered_before)[0]
+            else:
+                old_md_text = old_md_path.read_text(encoding="utf-8")
 
             # Render new artifacts before touching disk so fail-safe checks can abort
             # without leaving partially updated DFM state or output files behind.
@@ -1103,7 +1305,11 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
                 revisions_required=bool(track_changes and tracked_ids),
             )
             if not post_report.passed and not force:
-                warnings = list(parse_result.errors) + save_warnings
+                warnings = (
+                    list(parse_result.errors)
+                    + list(getattr(parse_result, "warnings", []))
+                    + save_warnings
+                )
                 for issue in pre_report.issues + post_report.issues:
                     if issue.severity in ("error", "warning"):
                         prefix = "[auto-fixed] " if issue.auto_fixed else ""
@@ -1121,6 +1327,7 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
 
             # --- Publish. Edit-state rows first (same transaction, committed
             # when the session ends); ir.json is the content commit point. ---
+            self._assert_ir_file_unchanged(context)
             new_revision = self._record_revision_state(
                 context,
                 new_state,
@@ -1155,6 +1362,7 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
                 # Content commit point: from here on the new revision is durable.
                 self._save_ir(ir, doc_dir / "ir.json")
                 committed_revision = new_revision
+                context.published_revision = new_revision
             except BaseException:
                 if staged_out is None:  # the new output was already in place
                     if previous_output is not None:
@@ -1167,15 +1375,20 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
                 if previous_output is not None:
                     previous_output.unlink(missing_ok=True)
 
-            write_utf8_text_atomic(
-                doc_dir / "content.dfm", updated_dfm, hint=f"DFM for {doc_id}"
+            # Shared editable artifacts; unsaved in-place edits are preserved.
+            save_warnings.extend(
+                self._publish_editable_artifacts(
+                    context,
+                    {
+                        "content.dfm": updated_dfm,
+                        "content.md": md_text,
+                        "format.yaml": yaml_text,
+                    },
+                    previous_ir=pre_edit_ir,
+                    consumed=consumed_artifacts,
+                )
             )
-            write_utf8_text_atomic(
-                doc_dir / "content.md", md_text, hint=f"Markdown for {doc_id}"
-            )
-            write_utf8_text_atomic(
-                doc_dir / "format.yaml", yaml_text, hint=f"YAML for {doc_id}"
-            )
+            save_warnings.extend(context.notes)
 
             result: dict[str, Any] = {
                 "success": True,
@@ -1189,6 +1402,8 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
             }
             if result_extra:
                 result.update(result_extra)
+            if context.storage_warning:
+                result["storage_warning"] = context.storage_warning
             if baseline.rebuilt:
                 result["baseline_rebuilt"] = True
             if track_changes:
@@ -1207,10 +1422,15 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
                     revision_base=revision_base,
                     revision_authors=revision_authors,
                     default_author=author,
+                    content_revision=new_revision,
                 )
                 result["revision_sidecar_path"] = str(revision_sidecar)
                 result["revision_records"] = revision_count
-            warnings = list(parse_result.errors) + save_warnings
+            warnings = (
+                list(parse_result.errors)
+                + list(getattr(parse_result, "warnings", []))
+                + save_warnings
+            )
             for issue in pre_report.issues + post_report.issues:
                 if issue.severity in ("error", "warning"):
                     prefix = "[auto-fixed] " if issue.auto_fixed else ""
@@ -1275,6 +1495,7 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
         revision_base: str = REVISION_BASE_ORIGINAL,
         revision_authors: dict[str, str] | None = None,
         default_author: str = "Asset-Aware MCP",
+        content_revision: str | None = None,
     ) -> tuple[Path, int]:
         """Write machine-readable DFM edit spans for citation-ready consumers.
 
@@ -1310,6 +1531,10 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
             author = (revision_authors or {}).get(block.id, default_author)
             for record in block_records:
                 record["revision_author"] = author
+                if content_revision:
+                    # The DFM content revision of the output these spans describe
+                    # (source_revision_id stays the source package checksum).
+                    record["content_revision"] = content_revision
             records.extend(block_records)
 
         sidecar_path = doc_dir / "revisions.jsonl"
@@ -2203,9 +2428,11 @@ class DocxService(DocxBlockLeaseMixin, DocxConcurrencyMixin, DocxBaselineMixin):
         backup_dir = doc_dir / ".backups"
         backup_dir.mkdir(exist_ok=True)
 
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        slot = backup_dir / ts
-        slot.mkdir(exist_ok=True)
+        # Unique, chronologically sortable slot names: several saves/commits in
+        # the same second must not overwrite each other's backup.
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        slot = backup_dir / f"{ts}_{os.getpid()}_{uuid.uuid4().hex[:6]}"
+        slot.mkdir()
 
         for name in ("content.md", "content.dfm", "format.yaml", "ir.json"):
             src = doc_dir / name

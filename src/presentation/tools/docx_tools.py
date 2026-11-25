@@ -40,7 +40,6 @@ from src.presentation.markdown_utils import escape_table_cell
 from src.presentation.mcp_app import mcp
 from src.presentation.mcp_context import log_message, report_progress
 from src.presentation.response_limits import (
-    format_limited_json_response,
     format_limited_text_response,
     max_text_response_chars,
     text_exceeds_response_limit,
@@ -218,9 +217,15 @@ def _prepare_merged_save_input(
 
 
 @mcp.tool()
-async def ingest_docx(file_path: str, ctx: Context | None = None) -> str:
+async def ingest_docx(
+    file_path: str, reset: bool = False, ctx: Context | None = None
+) -> str:
     """
     攝入 .docx / .doc 文件，轉換為 DFM (Docx-Flavored Markdown) 格式。
+
+    同一份來源檔若已攝入過，會直接回傳既有文件狀態（保留所有已儲存/已 commit
+    的編輯與目前 revision），不會重新解析；只有 reset=True 才會明確捨棄所有編輯、
+    從來源檔重建（有其他 agent 持有有效租約時拒絕，並先備份）。
 
     將 docx 解析為中間表示 (IR)，再轉換為可在 VS Code 中編輯的 DFM 格式。
     支援複雜元素：合併表格、圖表、頁首頁尾、巨集、目錄等。
@@ -239,13 +244,14 @@ async def ingest_docx(file_path: str, ctx: Context | None = None) -> str:
 
     Args:
         file_path: .docx 或 .doc 檔案的絕對路徑
+        reset: 若為 True，捨棄既有文件的所有編輯並從來源檔重新攝入
 
     Returns:
         攝入結果摘要（doc_id、區塊數量等）
     """
     await log_message(ctx, "info", f"ingest_docx start: {file_path}")
     await report_progress(ctx, 10, message="Preparing DOCX ingest")
-    result = await docx_service.ingest_docx(file_path)
+    result = await docx_service.ingest_docx(file_path, reset=reset)
     logger.info("ingest_docx | file=%s | success=%s", file_path, result.get("success"))
 
     if not result.get("success"):
@@ -255,8 +261,9 @@ async def ingest_docx(file_path: str, ctx: Context | None = None) -> str:
     await report_progress(ctx, 100, message=f"Finished ingesting {file_path}")
     await log_message(ctx, "info", f"ingest_docx complete: {result.get('doc_id', '')}")
 
+    existing = bool(result.get("existing"))
     lines = [
-        "✅ Docx 攝入成功",
+        "✅ 文件已攝入（沿用既有狀態，未重新解析）" if existing else "✅ Docx 攝入成功",
         "",
         f"- **doc_id**: `{result.get('doc_id', '')}`",
         f"- **來源**: {result.get('source', '')}",
@@ -267,6 +274,24 @@ async def ingest_docx(file_path: str, ctx: Context | None = None) -> str:
         f"- **DFM 路徑**: `{result.get('dfm_path', '')}`",
         f"- **完整性**: {result.get('integrity', 'N/A')}",
     ]
+    if result.get("revision"):
+        lines.append(f"- **內容版本 (revision)**: `{result.get('revision')}`")
+    if existing:
+        changed = result.get("changed_block_ids") or []
+        lines.append(
+            f"- **自 ingest 以來已編輯的區塊**: {len(changed)}"
+            + (f"（{', '.join(changed[:20])}）" if changed else "")
+        )
+        lines.append(f"- **說明**: {result.get('note', '')}")
+    if result.get("reset"):
+        discarded = result.get("discarded_block_ids") or []
+        lines.append(
+            f"- **reset**: 已捨棄 {len(discarded)} 個區塊的編輯並重建（備份於 .backups/）"
+        )
+    if result.get("storage_warning"):
+        lines.append(f"- ⚠️ **儲存位置**: {result.get('storage_warning')}")
+    for warning in result.get("warnings", []) or []:
+        lines.append(f"- ⚠️ {warning}")
 
     block_types = result.get("block_types", {})
     if block_types:
@@ -453,6 +478,10 @@ async def save_docx(
     if not result.get("success"):
         await log_message(ctx, "error", f"save_docx failed: {doc_id}")
         lines = [f"❌ 儲存失敗：{result.get('error', '未知錯誤')}"]
+        if result.get("committed"):
+            lines.append(
+                f"- **內容已發布**: revision `{result.get('revision', '')}`（見上方說明）"
+            )
         if result.get("conflict_block_ids"):
             lines.append(
                 "- **衝突區塊**: " + ", ".join(result.get("conflict_block_ids", []))
@@ -482,6 +511,15 @@ async def save_docx(
         lines.append("- **基準**: 已從 original.docx 重建 baseline_ir.json（舊版目錄）")
     if result.get("revision"):
         lines.append(f"- **內容版本 (revision)**: `{result.get('revision')}`")
+    if result.get("revision_front_matter"):
+        lines.append(
+            "- **繼續編輯同一份 DFM 時**: 把 front matter 的 revision 行換成 "
+            f"`{result.get('revision_front_matter')}`（或重新讀取 DFM）"
+        )
+    if result.get("reopen_before_next_save"):
+        lines.append("- **下次編輯前請重新讀取 DFM**（已合併其他 agent 的區塊）")
+    if result.get("storage_warning"):
+        lines.append(f"- ⚠️ **儲存位置**: {result.get('storage_warning')}")
     merge = result.get("revision_merge")
     if isinstance(merge, dict) and merge.get("mode") == "merged":
         lines.append(
@@ -609,13 +647,14 @@ async def list_docx_documents() -> str:
 
 
 @mcp.tool()
-async def delete_docx(doc_id: str) -> str:
+async def delete_docx(doc_id: str, force: bool = False) -> str:
     """
     刪除已攝入的 DOCX/DFM 文件及其本地 artifacts。
 
-    會移除 data/{doc_id}/ 下的 IR、DFM、原始 DOCX、輸出檔與備份。
+    會移除 data/{doc_id}/ 下的 IR、DFM、原始 DOCX、輸出檔與備份。有其他 agent
+    持有有效租約時拒絕；確認 holder 已不存在後才用 force=True。
     """
-    result = await docx_service.delete_docx(doc_id)
+    result = await docx_service.delete_docx(doc_id, force=force)
     if not result.get("success"):
         return f"❌ 刪除失敗：{result.get('error', '未知錯誤')}"
 
@@ -951,13 +990,51 @@ _LEASE_RESULT_GUIDANCE = (
 )
 
 
+_LEASE_ESSENTIAL_KEYS = (
+    "success",
+    "error",
+    "committed",
+    "doc_id",
+    "lease_token",
+    "lease_id",
+    "holder",
+    "revision",
+    "previous_revision",
+    "expires_at",
+    "ttl_seconds",
+    "block_ids",
+    "replayed",
+    "lease_released",
+    "output_path",
+    "integrity",
+    "storage_warning",
+)
+
+
 def _lease_response(title: str, payload: dict[str, Any], max_chars: int | None) -> Any:
-    return format_limited_json_response(
-        title=title,
-        payload=payload,
-        max_chars=max_chars,
-        guidance=_LEASE_RESULT_GUIDANCE,
+    """Bound a lease result without ever dropping the lease token."""
+    text = json.dumps(payload, ensure_ascii=False, default=str, indent=2)
+    if not text_exceeds_response_limit(text, max_chars):
+        return payload
+    summary: dict[str, Any] = {
+        key: payload[key] for key in _LEASE_ESSENTIAL_KEYS if key in payload
+    }
+    if isinstance(payload.get("blocks"), list):
+        summary["blocks"] = [
+            {key: block.get(key) for key in ("block_id", "type", "base_hash")}
+            for block in payload["blocks"]
+            if isinstance(block, dict)
+        ]
+    summary.update(
+        {
+            "response_truncated": True,
+            "content_chars": len(text),
+            "sha256": text_sha256(text),
+            "title": title,
+            "next": _LEASE_RESULT_GUIDANCE,
+        }
     )
+    return summary
 
 
 @mcp.tool()
@@ -983,6 +1060,8 @@ async def docx(
     edits: dict[str, str] | None = None,
     keep_lease: bool = False,
     wait: bool = False,
+    reset: bool = False,
+    request_id: str | None = None,
     ctx: Context | None = None,
 ) -> Any:
     """
@@ -992,19 +1071,24 @@ async def docx(
     and output formats. This wrapper adds an operation-based facade.
 
     Operation -> parameters:
-    - ``ingest``: file_path. ``get``: doc_id (block_id, max_chars optional).
+    - ``ingest``: file_path. An already ingested file returns its existing state
+      (edits kept, current revision); reset=true discards every edit.
+    - ``get``: doc_id (block_id, max_chars optional).
     - ``save``: doc_id, dfm_content (or from_md), output_path, force,
       track_changes, revision_author (default "Asset-Aware MCP"), revision_base.
       A DFM based on an older ``revision`` is 3-way merged or refused with the
       conflicting block ids; blocks leased by another agent are refused.
-    - ``list`` / ``list_blocks`` / ``delete`` / ``validate``: as before.
+    - ``list`` / ``list_blocks`` / ``validate``: as before. ``delete``: doc_id;
+      refused while another agent holds a live lease unless force=true.
 
     Multi-agent block leases (several agents edit one document concurrently):
     - ``checkout``: doc_id, block_ids, holder (agent name), ttl_seconds
-      (default 900, max 3600). Returns lease_token (secret), lease_id, each
-      block's DFM fragment and base_hash, and the document revision. Fails fast
-      if another live lease holds any block (wait=true is not supported).
-      Tables nested in a table are leased with their parent table.
+      (default 900, max 3600), optional request_id (retrying with the same
+      request_id returns the same lease with a fresh token). Returns lease_token
+      (secret, never dropped from the response), lease_id, each block's DFM
+      fragment and base_hash, and the document revision. Fails fast if another
+      live lease holds any block (wait=true is not supported). Tables nested in
+      a table are leased with their parent table.
     - ``commit``: doc_id, lease_token, edits={block_id: edited fragment}; only
       leased blocks, applied on top of the current document (others' commits are
       kept); same cumulative write-back and post-save verification as save;
@@ -1023,6 +1107,8 @@ async def docx(
     if operation in {"ingest", "import"}:
         if not file_path:
             return _missing_docx_param("file_path")
+        if reset:
+            return await ingest_docx(file_path, reset=True, ctx=ctx)
         return await ingest_docx(file_path, ctx=ctx)
     if operation in {"get", "content", "read"}:
         if not doc_id:
@@ -1047,6 +1133,8 @@ async def docx(
     if operation == "delete":
         if not doc_id:
             return _missing_docx_param("doc_id")
+        if force:
+            return await delete_docx(doc_id, force=True)
         return await delete_docx(doc_id)
     if operation in {"list_blocks", "blocks"}:
         if not doc_id:
@@ -1080,6 +1168,7 @@ async def docx(
             keep_lease=keep_lease,
             force=force,
             wait=wait,
+            request_id=request_id,
             max_chars=max_chars,
             ctx=ctx,
         )
@@ -1124,11 +1213,17 @@ async def _docx_lease_op(
     wait: bool,
     max_chars: int | None,
     ctx: Context | None,
+    request_id: str | None = None,
 ) -> Any:
     """Route block-lease operations to the application service."""
     if operation == "checkout":
         result = await docx_service.checkout_blocks(
-            doc_id, block_ids, holder=holder, ttl_seconds=ttl_seconds, wait=wait
+            doc_id,
+            block_ids,
+            holder=holder,
+            ttl_seconds=ttl_seconds,
+            wait=wait,
+            request_id=request_id,
         )
         return _lease_response(f"DOCX checkout: {doc_id}", result, max_chars)
     if operation == "commit":

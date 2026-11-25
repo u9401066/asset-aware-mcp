@@ -9,13 +9,18 @@ and all writes happen. See ``docs/dfm-spec.md`` section 12.
 
 from __future__ import annotations
 
+import asyncio
+import copy
+import hashlib
 import json
 import logging
+import os
 import time
 from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from src.application.docx_baseline import BASELINE_IR_FILENAME
 from src.application.docx_ir_serialization import DocxIrSerializationMixin
@@ -27,6 +32,7 @@ from src.domain.docx_edit_state import (
     BlockLease,
     DocxEditSession,
     DocxEditStateError,
+    DocxPublishedUncommittedError,
     block_state_hash,
     content_revision,
     iso_utc,
@@ -39,21 +45,54 @@ from src.infrastructure.docx_edit_state_store import (
     DEFAULT_LOCK_TIMEOUT_SECONDS,
     SqliteDocxEditStateStore,
 )
+from src.infrastructure.encoding_guard import (
+    normalize_text_input,
+    read_text_file,
+    write_utf8_text_atomic,
+)
+from src.infrastructure.storage_location import describe_storage_risk
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
-    from pathlib import Path
 
     from src.domain.docx_entities import DfmBlock
     from src.infrastructure.dfm_parser import DfmParser
+    from src.infrastructure.dfm_renderer import DfmRenderer
+
+_T = TypeVar("_T")
 
 logger = logging.getLogger(__name__)
 
 _REOPEN_HINT = (
-    'Re-open the current DFM (get_docx_content / docx(op="get")) and re-apply '
-    'your edits, or use docx(op="checkout") / docx(op="commit") to edit only '
-    "the blocks you need while other agents work on the rest."
+    'Re-open the current DFM (get_docx_content / docx(op="get"); if content.dfm '
+    "holds unsaved in-place edits the current state is in content.current.dfm) "
+    'and re-apply your edits, or use docx(op="checkout") / docx(op="commit") to '
+    "edit only the blocks you need while other agents work on the rest."
 )
+
+# Editable artifacts rendered from ir.json. content.md and format.yaml are one
+# unit (split format): both are kept or both are replaced.
+EDITABLE_ARTIFACT_GROUPS: tuple[tuple[str, ...], ...] = (
+    ("content.dfm",),
+    ("content.md", "format.yaml"),
+)
+CURRENT_ARTIFACT_NAMES = {
+    "content.dfm": "content.current.dfm",
+    "content.md": "content.current.md",
+    "format.yaml": "format.current.yaml",
+}
+_RENDER_HASH_KEY = "render_sha256:"
+
+
+def _text_sha256(text: str) -> str:
+    return hashlib.sha256(normalize_text_input(text).encode("utf-8")).hexdigest()
+
+
+def _file_sha256(path: Path) -> str | None:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except FileNotFoundError:
+        return None
 
 
 @dataclass
@@ -68,6 +107,12 @@ class DocxEditContext:
     payloads: dict[str, dict[str, Any]] = field(repr=False)
     now: float
     recorded_external: bool = False
+    # SHA-256 of ir.json as loaded under the lock (None: not on disk).
+    ir_file_sha256: str | None = None
+    # Set once ir.json (the content commit point) has been replaced.
+    published_revision: str | None = None
+    storage_warning: str | None = None
+    notes: list[str] = field(default_factory=list)
 
     @property
     def block_hashes(self) -> dict[str, str]:
@@ -85,6 +130,9 @@ class RevisionResolution:
     theirs_block_ids: tuple[str, ...] = ()
     already_applied_block_ids: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()
+    # True when the saved result equals the submitted DFM, so the caller may
+    # keep editing that buffer with the returned `revision:` line.
+    buffer_matches_result: bool = True
 
     def to_result(self) -> dict[str, Any]:
         info: dict[str, Any] = {"mode": self.mode, "base_revision": self.base_revision}
@@ -105,10 +153,30 @@ class DocxConcurrencyMixin(DocxIrSerializationMixin):
 
     if TYPE_CHECKING:
         parser: DfmParser
+        renderer: DfmRenderer
 
         def _expected_changed_block_ids(
             self, original_ir: DocxIR, parse_result: Any
         ) -> set[str]: ...
+
+    async def _off_loop(
+        self, function: Callable[..., _T], *args: Any, **kwargs: Any
+    ) -> _T:
+        """Run blocking work (lock waits, write-back) off the event loop."""
+        return await asyncio.to_thread(function, *args, **kwargs)
+
+    def _storage_warning(self) -> str | None:
+        """Warn once per data directory when it is cloud-synced or remote."""
+        base = getattr(self.repository, "base_dir", None)
+        if not isinstance(base, str | os.PathLike):
+            return None
+        key = str(base)
+        cache: dict[str, str | None] = self.__dict__.setdefault(
+            "_storage_warning_cache", {}
+        )
+        if key not in cache:
+            cache[key] = describe_storage_risk(Path(base))
+        return cache[key]
 
     # ------------------------------------------------------------------
     # Revision primitives
@@ -166,46 +234,117 @@ class DocxConcurrencyMixin(DocxIrSerializationMixin):
         if not store.path.exists() and self._load_ir(doc_id) is None:
             # Do not create edit state for a document that does not exist.
             raise DocxEditStateError(f"IR not found for {doc_id}")
-        with store.session(write=True) as session:
-            ir = self._load_ir(doc_id)
-            if ir is None:
-                raise DocxEditStateError(f"IR not found for {doc_id}")
-            revision, entries, payloads = self._ir_revision_state(ir)
-            context = DocxEditContext(
-                session=session,
-                doc_dir=doc_dir,
-                ir=ir,
-                revision=revision,
-                entries=entries,
-                payloads=payloads,
-                now=self._clock(),
+        context: DocxEditContext | None = None
+        try:
+            with store.session(write=True) as session:
+                ir_path = doc_dir / "ir.json"
+                before = _file_sha256(ir_path)
+                ir = self._load_ir(doc_id)
+                if ir is None:
+                    raise DocxEditStateError(f"IR not found for {doc_id}")
+                if _file_sha256(ir_path) != before:
+                    raise DocxEditStateError(
+                        "ir.json changed outside the document lock while it was "
+                        "being loaded (a pre-1.5.0 server or a manual edit?). "
+                        "Nothing was changed; retry."
+                    )
+                revision, entries, payloads = self._ir_revision_state(ir)
+                context = DocxEditContext(
+                    session=session,
+                    doc_dir=doc_dir,
+                    ir=ir,
+                    revision=revision,
+                    entries=entries,
+                    payloads=payloads,
+                    now=self._clock(),
+                    ir_file_sha256=before,
+                    storage_warning=self._storage_warning(),
+                )
+                self._ensure_revision_tracking(context)
+                yield context
+        except DocxPublishedUncommittedError:
+            raise
+        except Exception as exc:
+            if context is not None and context.published_revision:
+                raise DocxPublishedUncommittedError(
+                    context.published_revision, exc
+                ) from exc
+            raise
+
+    def _assert_ir_file_unchanged(self, context: DocxEditContext) -> None:
+        """Refuse to publish over an ir.json written by a lock-less writer."""
+        if context.ir_file_sha256 is None:
+            return
+        if _file_sha256(context.doc_dir / "ir.json") != context.ir_file_sha256:
+            raise DocxEditStateError(
+                "ir.json changed outside the document lock while this operation "
+                "was running (a pre-1.5.0 server or a manual edit on the same "
+                "DATA_DIR?). Nothing was written; the other change is kept. "
+                "Re-open the document and retry. Every client editing this "
+                "DATA_DIR must run asset-aware-mcp >= 1.5.0."
             )
-            self._ensure_revision_tracking(context)
-            yield context
 
     def _ensure_revision_tracking(self, context: DocxEditContext) -> None:
         """Create the root lazily and record an untracked current state."""
+        if context.session.root() is None:
+            self._start_revision_tracking(context)
+        else:
+            self._record_untracked_state(context)
+
+    def _start_revision_tracking(self, context: DocxEditContext) -> None:
+        """First tracked session: create the root, adopt and stamp artifacts."""
         session = context.session
-        root = session.root()
-        if root is None:
-            baseline = self._tracking_baseline(context)
-            if baseline is not None:
-                base_revision, base_entries, base_payloads = baseline
-                session.create_root(
-                    base_revision,
-                    REVISION_KIND_INGEST,
-                    base_entries,
-                    base_payloads,
-                    now=context.now,
-                )
-            else:
-                session.create_root(
-                    context.revision,
-                    REVISION_KIND_ADOPTED,
-                    context.entries,
-                    context.payloads,
-                    now=context.now,
-                )
+        baseline = self._tracking_baseline(context)
+        if baseline is not None:
+            base_revision, base_entries, base_payloads = baseline
+            session.create_root(
+                base_revision,
+                REVISION_KIND_INGEST,
+                base_entries,
+                base_payloads,
+                now=context.now,
+            )
+        else:
+            session.create_root(
+                context.revision,
+                REVISION_KIND_ADOPTED,
+                context.entries,
+                context.payloads,
+                now=context.now,
+            )
+        if session.revision(context.revision) is None:
+            latest = session.latest_revision()
+            previous = session.revision_manifest(latest.revision) if latest else None
+            session.record_revision(
+                context.revision,
+                parent=latest.revision if latest else None,
+                kind=REVISION_KIND_ADOPTED,
+                actor=None,
+                changed_block_ids=[
+                    bid
+                    for bid, block_hash in context.entries
+                    if previous is None or previous.get(bid) != block_hash
+                ],
+                entries=context.entries,
+                payloads=context.payloads,
+                now=context.now,
+            )
+        # Pre-1.5 artifacts carry no `revision`; stamp the untouched ones so a
+        # re-opened DFM proves its base. In-place edited ones are kept as-is.
+        stamped = copy.copy(context.ir)
+        stamped.dfm_revision = context.revision
+        notes = self._publish_editable_artifacts(
+            context,
+            self._render_artifacts(stamped),
+            previous_ir=context.ir,
+            create_missing=False,
+            write_current=False,
+        )
+        context.notes.extend(notes)
+
+    def _record_untracked_state(self, context: DocxEditContext) -> None:
+        """Record an ir.json state written outside a tracked operation."""
+        session = context.session
         if session.revision(context.revision) is not None:
             return
         latest = session.latest_revision()
@@ -215,7 +354,7 @@ class DocxConcurrencyMixin(DocxIrSerializationMixin):
             for bid, block_hash in context.entries
             if previous is None or previous.get(bid) != block_hash
         ]
-        kind = REVISION_KIND_ADOPTED if root is None else REVISION_KIND_EXTERNAL
+        kind = REVISION_KIND_EXTERNAL
         recorded = session.record_revision(
             context.revision,
             parent=latest.revision if latest else None,
@@ -226,9 +365,7 @@ class DocxConcurrencyMixin(DocxIrSerializationMixin):
             payloads=context.payloads,
             now=context.now,
         )
-        context.recorded_external = (
-            recorded is not None and kind == REVISION_KIND_EXTERNAL
-        )
+        context.recorded_external = recorded is not None
         if context.recorded_external:
             logger.warning(
                 "DOCX %s: ir.json changed outside a tracked write; recorded "
@@ -257,6 +394,136 @@ class DocxConcurrencyMixin(DocxIrSerializationMixin):
         ):
             return None
         return self._ir_revision_state(baseline)
+
+    # ------------------------------------------------------------------
+    # Editable artifacts (content.dfm / content.md / format.yaml)
+    # ------------------------------------------------------------------
+
+    def _render_artifacts(self, ir: DocxIR) -> dict[str, str]:
+        md_text, yaml_text = self.renderer.render_split(ir)
+        return {
+            "content.dfm": self.renderer.render(ir),
+            "content.md": md_text,
+            "format.yaml": yaml_text,
+        }
+
+    def _artifact_diverged(
+        self,
+        context: DocxEditContext,
+        name: str,
+        *,
+        previous_ir: DocxIR | None,
+        consumed: dict[str, str] | None = None,
+        cache: dict[str, dict[str, str]] | None = None,
+    ) -> bool:
+        """True when the on-disk artifact holds edits no save has consumed.
+
+        A file is server-owned when it equals the last render recorded by this
+        server, the text this request consumed (from_md / on-disk DFM), or a
+        render of the IR it was produced from (stamped or, for pre-1.5 files,
+        unstamped). Anything else is an unsaved in-place edit.
+        """
+        path = context.doc_dir / name
+        if not path.is_file():
+            return False
+        disk = read_text_file(path, hint=str(path))
+        digest = _text_sha256(disk)
+        if digest == context.session.meta_get(_RENDER_HASH_KEY + name):
+            return False
+        if consumed and name in consumed and _text_sha256(consumed[name]) == digest:
+            return False
+        if previous_ir is None:
+            return True
+        renders = cache if cache is not None else {}
+        for stamp in dict.fromkeys((context.revision, previous_ir.dfm_revision, "")):
+            if stamp not in renders:
+                probe = copy.copy(previous_ir)
+                probe.dfm_revision = stamp
+                renders[stamp] = self._render_artifacts(probe)
+            if normalize_text_input(renders[stamp][name]) == disk:
+                return False
+        return True
+
+    def _publish_editable_artifacts(
+        self,
+        context: DocxEditContext,
+        texts: dict[str, str],
+        *,
+        previous_ir: DocxIR | None,
+        consumed: dict[str, str] | None = None,
+        create_missing: bool = True,
+        write_current: bool = True,
+    ) -> list[str]:
+        """Write rendered artifacts without clobbering unsaved in-place edits.
+
+        A group (content.dfm, or content.md + format.yaml) with an in-place
+        edit is kept unchanged; the fresh render goes to its ``*.current.*``
+        sibling instead and a warning explains how to merge it. Returns the
+        warnings.
+        """
+        warnings: list[str] = []
+        cache: dict[str, dict[str, str]] = {}
+        for group in EDITABLE_ARTIFACT_GROUPS:
+            diverged = [
+                name
+                for name in group
+                if self._artifact_diverged(
+                    context,
+                    name,
+                    previous_ir=previous_ir,
+                    consumed=consumed,
+                    cache=cache,
+                )
+            ]
+            if diverged:
+                if write_current:
+                    for name in group:
+                        write_utf8_text_atomic(
+                            context.doc_dir / CURRENT_ARTIFACT_NAMES[name],
+                            texts[name],
+                            hint=CURRENT_ARTIFACT_NAMES[name],
+                        )
+                    how = (
+                        "save_docx(from_md=True)"
+                        if "content.md" in group
+                        else "save_docx without dfm_content"
+                    )
+                    current = ", ".join(CURRENT_ARTIFACT_NAMES[name] for name in group)
+                    warnings.append(
+                        f"{', '.join(diverged)} has unsaved in-place edits; it was "
+                        f"kept unchanged and the current document state was written "
+                        f"to {current}. Run {how} to 3-way merge your in-place "
+                        "edits (they keep their base revision)."
+                    )
+                else:
+                    warnings.append(
+                        f"{', '.join(diverged)} has in-place edits made before "
+                        "revision tracking; kept unchanged."
+                    )
+                continue
+            for name in group:
+                path = context.doc_dir / name
+                if not path.exists() and not create_missing:
+                    continue
+                text = normalize_text_input(texts[name], hint=name)
+                if not path.exists() or read_text_file(path, hint=name) != text:
+                    write_utf8_text_atomic(path, text, hint=name)
+                context.session.meta_set(_RENDER_HASH_KEY + name, _text_sha256(text))
+                (context.doc_dir / CURRENT_ARTIFACT_NAMES[name]).unlink(missing_ok=True)
+        return warnings
+
+    def _record_rendered_artifacts(
+        self, session: DocxEditSession, doc_dir: Path
+    ) -> None:
+        """Remember the artifacts just rendered (e.g. by ingest) as server-owned."""
+        for group in EDITABLE_ARTIFACT_GROUPS:
+            for name in group:
+                path = doc_dir / name
+                if path.is_file():
+                    session.meta_set(
+                        _RENDER_HASH_KEY + name,
+                        _text_sha256(read_text_file(path, hint=name)),
+                    )
 
     # ------------------------------------------------------------------
     # Persisting a new revision
@@ -304,7 +571,7 @@ class DocxConcurrencyMixin(DocxIrSerializationMixin):
             return RevisionResolution(parse_result, "current", current)
 
         if not submitted:
-            reason = self._legacy_dfm_rejection(context)
+            reason, accepted_note = self._legacy_dfm_rejection(context)
             if reason is None:
                 return RevisionResolution(
                     parse_result,
@@ -312,8 +579,8 @@ class DocxConcurrencyMixin(DocxIrSerializationMixin):
                     current,
                     warnings=(
                         "DFM front matter has no `revision` (created before 1.5.0 "
-                        "or hand-built); accepted because the document has not "
-                        "been saved since ingest.",
+                        f"or hand-built); accepted because {accepted_note}. Use "
+                        "the returned `revision` line for further saves.",
                     ),
                 )
             if not self._expected_changed_block_ids(context.ir, parse_result):
@@ -371,11 +638,15 @@ class DocxConcurrencyMixin(DocxIrSerializationMixin):
                 "success": False,
                 "error": (
                     "Stale DFM edit refused: it was based on revision "
-                    f"{submitted}, but block(s) {', '.join(conflicts)} were changed "
-                    "by another save/commit since then (current revision "
-                    f"{current}). Nothing was written. Re-open the current DFM, "
-                    "merge your changes to those blocks by hand and save again; "
-                    "blocks only you changed would have been merged automatically."
+                    f"{submitted}, but block(s) {', '.join(conflicts)} were also "
+                    "changed after that revision -- by another agent's save/commit, "
+                    "or by your own earlier save from this same DFM buffer whose "
+                    f"`revision:` line was not updated (current revision {current}). "
+                    "Nothing was written. If it was your own save, replace the "
+                    "buffer's `revision:` line with the `revision_front_matter` "
+                    "returned by that save; otherwise re-open the current DFM, merge "
+                    "your changes to those blocks by hand and save again. Blocks only "
+                    "you changed are merged automatically."
                 ),
                 "conflict_block_ids": conflicts,
                 "base_revision": submitted,
@@ -387,14 +658,24 @@ class DocxConcurrencyMixin(DocxIrSerializationMixin):
             }
 
         apply_ids = plan.apply_block_ids
+        blocks = {block.id: block for block in context.ir.blocks}
         merged = DfmParseResult(
             doc_id=parse_result.doc_id,
             source=parse_result.source,
             checksum=parse_result.checksum,
             style_info=parse_result.style_info,
-            edits=[edit for edit in parse_result.edits if edit.block_id in apply_ids],
+            # Unknown and protected block edits stay in so the same pre-save
+            # validation as a current-revision save refuses or reports them.
+            edits=[
+                edit
+                for edit in parse_result.edits
+                if edit.block_id in apply_ids
+                or edit.block_id not in blocks
+                or blocks[edit.block_id].is_protected
+            ],
             errors=list(parse_result.errors),
             revision=submitted,
+            warnings=list(parse_result.warnings),
         )
         return RevisionResolution(
             merged,
@@ -403,6 +684,8 @@ class DocxConcurrencyMixin(DocxIrSerializationMixin):
             merged_block_ids=tuple(sorted(apply_ids)),
             theirs_block_ids=tuple(sorted(plan.theirs_block_ids)),
             already_applied_block_ids=tuple(sorted(plan.already_applied_block_ids)),
+            buffer_matches_result=plan.theirs_block_ids
+            <= plan.already_applied_block_ids,
             warnings=(
                 f"DFM was based on revision {submitted}; merged onto current "
                 f"revision {current}: applied {len(apply_ids)} block(s) you changed "
@@ -423,18 +706,33 @@ class DocxConcurrencyMixin(DocxIrSerializationMixin):
             ],
         }
 
-    def _legacy_dfm_rejection(self, context: DocxEditContext) -> str | None:
-        """Why a DFM without ``revision`` cannot be trusted (None = accept)."""
+    def _legacy_dfm_rejection(self, context: DocxEditContext) -> tuple[str | None, str]:
+        """Why a DFM without ``revision`` cannot be trusted.
+
+        Returns ``(None, why_accepted)`` when it can.
+        """
         session = context.session
         root = session.root()
+        latest = session.latest_revision()
+        if (
+            latest is not None
+            and latest.kind == REVISION_KIND_ADOPTED
+            and latest.revision == context.revision
+        ):
+            # Upgraded pre-1.5 workspace: nothing changed since tracking began,
+            # so the DFM is as current as any pre-1.5 DFM could prove.
+            return None, (
+                "nothing changed since revision tracking began for this pre-1.5 "
+                "workspace"
+            )
         if session.revision_count() > 1:
-            return "the document has been saved since ingest"
+            return "the document has been saved since ingest", ""
         if root is None or root.revision != context.revision:
-            return "the document content differs from its ingest state"
+            return "the document content differs from its ingest state", ""
         backups = context.doc_dir / ".backups"
         if backups.is_dir() and any(backups.iterdir()):
-            return "earlier saves were recorded under .backups/"
-        return None
+            return "earlier saves were recorded under .backups/", ""
+        return None, "the document has not been saved since ingest"
 
     def _ir_at_revision(self, context: DocxEditContext, revision: str) -> DocxIR | None:
         """Reconstruct a retained revision's IR from the current skeleton."""
