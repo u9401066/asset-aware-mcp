@@ -179,7 +179,7 @@ uv run python -m src.presentation.server
 ```
 
 Runtime note:
-The VS Code extension prefers a managed Python 3.11 runtime when launching the MCP server via version-pinned `uv tool run`, with Python 3.10 fallback for older machines. This avoids native package builds on end-user machines, especially macOS systems without Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
+The VS Code extension prefers a managed Python 3.11 runtime when launching the MCP server via version-pinned `uv tool run`, with a Python 3.12 fallback when a 3.11 runtime cannot be prepared (Python 3.11 is the minimum supported version). This avoids native package builds on end-user machines, especially macOS systems without Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
 
 Installation scope note:
 - The VS Code extension installs once per user. In a trusted workspace, the native VS Code MCP provider may use workspace-scoped `DATA_DIR`, cache, settings, and `.env`; local source is accepted only in Extension Development/Test mode (or a future explicit opt-in).
@@ -223,7 +223,7 @@ The audit reports are inspired by OpenDataloader-style artifact workflows, but t
 
 | Category | Technology |
 |----------|------------|
-| Language | Python 3.10+ |
+| Language | Python 3.11+ (Docling extra: 3.11.5+) |
 | Package Manager | **uv** (all pip/setup-python removed) |
 | ETL | **PyMuPDF** (default) + secure optional **PyMuPDF4LLM** / **Docling** engines; MinerU and Marker adapters are on dependency security hold |
 | RAG | LightRAG (lightrag-hku) |

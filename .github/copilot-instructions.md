@@ -16,7 +16,7 @@ the Agent performs complete semantic/visual review and corrections.
 
 | 項目 | 說明 |
 |------|------|
-| 語言 | Python 3.10+ |
+| 語言 | Python 3.11+（Docling extra 需 3.11.5+） |
 | 框架 | 官方 MCP Python SDK 2 `MCPServer`、LightRAG、PyMuPDF；active optional engines 為 Docling / PyMuPDF4LLM |
 | 策略 | 文件→可重用 agent assets；`ETL_ENGINE` active paths 為 pymupdf（快速預設）/ pymupdf4llm（版面感知）/ docling，MinerU/Marker adapter 目前 security hold |
 
@@ -406,7 +406,7 @@ uv add --dev pytest ruff
 ### Dependency / Security automation
 
 - `uv lock --check` 驗證 manifest/lock 一致性；
-  `uvx --from uv==0.12.3 uv audit --preview-features audit-command --frozen --python-version 3.10`
+  `uvx --from uv==0.12.3 uv audit --preview-features audit-command --frozen --python-version 3.11`
   必須對 universal lock 零漏洞，不使用 allowlist。
 - `npm --prefix vscode-extension audit --package-lock-only --audit-level=low`
   稽核 VSIX lockfile。

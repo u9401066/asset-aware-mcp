@@ -868,7 +868,7 @@ must not claim successful publication. Source-overlap protections remain enforce
 
 | Category | Technology | Purpose |
 | -------- | ---------- | ------- |
-| Language | Python 3.10+ | Core runtime |
+| Language | Python 3.11+ | Core runtime (Docling extra: 3.11.5+) |
 | MCP | official `mcp>=2,<3` Python SDK | MCPServer; SDK v1 unsupported |
 | ETL | **PyMuPDF** | Primary PDF decomposition & Table recognition |
 | RAG | LightRAG (`lightrag-hku`) | Knowledge Graph & Vector Index |
@@ -994,7 +994,7 @@ commit, not flattened or dropped. Encrypted/signed/repaired inputs require expli
 unsupported diagnostics rather than implicit protection removal or repair.
 
 All operations use bounded schemas/pages and explicit preservation/review scopes.
-Pikepdf compatibility, universal lock security, Python 3.10 and SDK2 transport must
+Pikepdf compatibility, universal lock security, Python 3.11 (minimum) and SDK2 transport must
 be tested before enabling the adapter. Required tests include positive mixed
 content CRUD, rendering/text preservation, internal links/forms/page labels,
 negative corruption/dependency/stale writes, prior evidence/wiki stability, and

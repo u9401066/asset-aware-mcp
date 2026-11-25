@@ -317,7 +317,7 @@ values or infer a native Boolean from a comparison formula; explicitly authored
 Boolean cells still require Boolean read-back. Exported font metadata is checked
 against that independent control and the actual red PDF glyphs; a specific RGB
 storage field is not required. CI installs Calc and requires these tests;
-Python 3.10 also runs the kernel tests.
+The minimum-version Python 3.11 job also runs the kernel tests.
 
 `tests/integration/test_native_ods_odfdo.py` is an optional independent reader
 check with `NATIVE_ODS_ODFDO_TEST=1`; odfdo 3.25.0 was isolated outside the runtime
