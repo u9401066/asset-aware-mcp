@@ -154,6 +154,7 @@ class DocxAdapter(DocxWritebackMixin):
         revision_author: str = "Asset-Aware MCP",
         accepted_ir: DocxIR | None = None,
         accepted_block_ids: set[str] | None = None,
+        revision_authors: dict[str, str] | None = None,
     ) -> Path:
         """
         Rebuild a .docx file from a DocxIR.
@@ -180,6 +181,9 @@ class DocxAdapter(DocxWritebackMixin):
                 the latest session's edits
             accepted_block_ids: Block ids of ``accepted_ir`` to write as plain
                 text before revisions are emitted
+            revision_authors: Optional ``block_id -> author`` map so tracked
+                revisions of each block carry the agent/lease holder that
+                changed it; other blocks use ``revision_author``
 
         Returns:
             Path to the generated .docx file
@@ -201,6 +205,7 @@ class DocxAdapter(DocxWritebackMixin):
             revision_author=revision_author,
             accepted_ir=accepted_ir,
             accepted_block_ids=accepted_block_ids,
+            revision_authors=revision_authors,
         )
 
         return output_path

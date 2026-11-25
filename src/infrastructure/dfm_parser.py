@@ -54,6 +54,10 @@ class DfmParseResult:
     style_info: DocxStyleInfo | None = None
     edits: list[BlockEdit] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    # Content revision the DFM was rendered from ("" for pre-1.5 DFMs).
+    revision: str = ""
+    # Non-fatal findings, e.g. text outside any block marker that was ignored.
+    warnings: list[str] = field(default_factory=list)
 
 
 # ============================================================================
@@ -128,6 +132,9 @@ class DfmParser:
             result.doc_id = fmt.get("doc_id", "")
             result.source = fmt.get("source", "")
             result.checksum = fmt.get("checksum", "")
+            # The base revision of a split save comes from content.md only (the
+            # edited file); format.yaml is re-rendered by other agents' saves and
+            # must never vouch for an older content.md.
             styles_data = fmt.get("styles")
             if styles_data:
                 result.style_info = DocxStyleInfo.from_dict(styles_data)
@@ -144,6 +151,10 @@ class DfmParser:
                 fm_data = yaml.safe_load(fm_match.group(1))
                 if fm_data and fm_data.get("doc_id") and not result.doc_id:
                     result.doc_id = fm_data["doc_id"]
+                if isinstance(fm_data, dict) and "revision" in fm_data:
+                    # content.md is the edited file, so its revision is the base
+                    # of the submitted text (format.yaml may be newer).
+                    result.revision = str(fm_data.get("revision") or "")
             except yaml.YAMLError:
                 pass
 
@@ -409,6 +420,7 @@ class DfmParser:
             result.doc_id = data.get("doc_id", "")
             result.source = data.get("source", "")
             result.checksum = data.get("checksum", "")
+            result.revision = str(data.get("revision") or "")
         except yaml.YAMLError as e:
             result.errors.append(f"Invalid frontmatter YAML: {e}")
 
@@ -436,6 +448,8 @@ class DfmParser:
         lines = text.split("\n")
         i = 0
         n = len(lines)
+        unmarked: list[str] = []
+        in_comment = False
 
         while i < n:
             line = lines[i]
@@ -478,6 +492,8 @@ class DfmParser:
                         block_type=DfmBlockType.BREAK,
                     )
                 )
+                # A multi-line break header continues until its "-->".
+                in_comment = not line.strip().endswith("-->")
                 i += 1
                 continue
 
@@ -499,7 +515,21 @@ class DfmParser:
                 i = self._parse_simple_block(lines, i, sm, result)
                 continue
 
+            # Anything else belongs to no block and is ignored; remember real
+            # text so the caller is told instead of losing it silently.
+            stripped = line.strip()
+            if in_comment or stripped.startswith("<!--"):
+                in_comment = "-->" not in stripped
+            elif stripped and stripped != "---":
+                unmarked.append(stripped)
             i += 1
+
+        if unmarked:
+            result.warnings.append(
+                f"UNMARKED_TEXT: {len(unmarked)} line(s) outside any "
+                "<!-- @b:ID --> block were ignored (DFM cannot add new blocks; put "
+                f"the text inside an existing block). First: {unmarked[0][:80]!r}"
+            )
 
     def _parse_simple_block(
         self,

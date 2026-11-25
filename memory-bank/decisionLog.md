@@ -1,5 +1,77 @@
 # Decision Log
 
+## [2026-11-25] Concurrent DFM editing, review round: no implicit loss paths
+
+An independent review of feature/docx-block-leases found 16 issues; two were
+silent losses of committed edits. Decisions:
+- Split saves take their base revision from content.md only; format.yaml is
+  re-rendered by others and must never vouch for an older content.md.
+- ingest_docx is idempotent for an already ingested source (doc_id = stem +
+  content hash): it returns the existing state (edits, revision, edited block
+  ids, note). Discarding edits needs explicit reset=true (refused with live
+  leases, backed up first). Agents and the maintainer re-ingest the same IRB
+  draft across sessions, so re-ingest must never reset implicitly.
+- Shared content.dfm / content.md+format.yaml are server-owned only when they
+  equal the last server render (hash in edit-state meta), the text a save
+  consumed, or a render of the prior IR. Otherwise they hold unsaved in-place
+  edits: keep them, write the fresh state to *.current.*, warn; the next save
+  of the in-place file 3-way merges. Rejected: overwrite + backup (5 slots
+  rotate away quickly under multi-agent commit rates).
+- Pre-1.5 workspaces: stamp untouched artifacts at adoption; accept a
+  revision-less DFM while the latest revision is the adopted one.
+- Blocking work runs in asyncio.to_thread; SQLite still serializes processes.
+- ir.json is re-hashed before the commit point (lock-less pre-1.5 writers are
+  detected, never overwritten; all clients must be >= 1.5.0). Published-but-
+  uncommitted states report committed:true with the real error.
+- Cloud-synced/network DATA_DIR (the maintainer keeps it on Google Drive):
+  warn in results and doctor, never refuse; the lock is per computer.
+- checkout request_id replays a lease with a rotated token; truncated lease
+  responses always keep the token. force never overrides a checksum mismatch.
+
+## [2026-11-25] Concurrent DFM editing: content revisions, 3-way merge, block leases
+
+Bug (verified on 1.4.2): two clients read one content.dfm; A saved p005, then B saved
+p007 from its stale copy. Both reported success and B's output silently reverted
+A's edit, because the stale check compared the DFM `checksum` (original file
+SHA-256, never changes) with ir.checksum. Native update_docx serialized every
+writer by document revision, and no block lock existed although the maintainer
+intended "take the chunk you edit, lock that block" from the start.
+
+Decision (branch feature/docx-block-leases, planned 1.5.0):
+- Content revision = "rev-" + sha256(checksum + ordered (block_id, block-record
+  hash))[:32], recomputed from ir.json (crash-safe, no current pointer), stamped
+  as `revision:` in DFM front matter and format.yaml; `checksum` keeps its
+  source-identity meaning.
+- save_docx resolves the submitted revision: current -> save; older retained
+  revision -> 3-way merge (base = reconstructed revision IR, ours = DFM,
+  theirs = current IR): apply only blocks ours changed; any block changed by
+  both is a conflict (refused with conflict_block_ids) unless ours reproduces
+  the current block (retry = already applied). Unknown/pruned -> refused.
+  No `revision` (legacy) -> accepted only when never saved since ingest (only
+  the root revision, content == root, empty .backups) or when it changes nothing.
+  force never bypasses revision or lease checks.
+- Leases: docx(op=checkout/commit/release/renew/leases/break_lease). Checkout
+  fails fast (no blocking waits), leases table families whole, returns a secret
+  token (only its SHA-256 is stored), DFM fragments and base hashes. Commit
+  accepts only leased blocks with their own marker, verifies base hashes,
+  rebases onto the current IR and reuses the 1.4.2 cumulative write-back and
+  post-save verification; Track Changes author defaults to the holder and is
+  kept per block (block_authors) so Word shows which agent changed what.
+  Full-DFM saves, docx_table_from_context and re-ingest respect live leases.
+  Expired leases do not block and are reclaimed; break of a live lease needs force.
+- Storage: per-document edit_state.sqlite3. Every write runs in BEGIN IMMEDIATE
+  (cross-process, 30 s busy timeout). Revisions are deltas vs. the root (normally
+  the ingest baseline) with content-addressed zlib payloads; newest 50 + root
+  retained, unreferenced payloads GC'd. Publish order: stage DB rows -> backup ->
+  output -> ir.json (commit point; previous output restored on failure) ->
+  atomic dfm/md/yaml -> COMMIT. A crash after ir.json is recovered as an
+  `external` revision; a retried commit is already applied.
+Rejected: blocking waits (deadlock/idle-holder risk in agent loops); leases on
+native revisions (block IDs are revision-scoped, native stays expected_revision
+only, its stale error now points to the lease workflow); forcing through
+conflicts (would reintroduce the lost update); a separate lock file (SQLite
+already gives crash-released cross-process locks plus transactional state).
+
 ## [2026-11-25] DFM save_docx: cumulative write-back against an immutable ingest baseline
 
 Bug: save_docx diffed the edited DFM against the current ir.json but always patched

@@ -10,11 +10,33 @@ from src.application.native_docx_records import docx_block_excerpt
 from src.application.native_docx_table_operations import NativeDocxTableOperations
 from src.domain.native_docx_structure import DOCX_MEDIA_TYPE
 
+# Native DOCX revisions are immutable, content-addressed files and their block
+# IDs are scoped to one revision, so concurrent writers are serialized by the
+# document-level expected_revision. Block leases live in the DFM workflow.
+DOCX_STALE_REVISION_HINT = (
+    "Native DOCX edits are serialized per document revision: re-read the current "
+    "revision with read_docx and re-apply your edit. For several agents editing "
+    "different blocks of one document at the same time, ingest it with "
+    'docx(op="ingest") and use block leases instead: docx(op="checkout") -> '
+    'docx(op="commit") -> docx(op="release") (native block IDs are '
+    "revision-scoped, so native revisions do not offer leases)."
+)
+
+
+def _stale_docx_error(expected: str, current: str) -> ValueError:
+    return ValueError(
+        "Archived or stale native asset: expected revision "
+        f"{expected}, current {current}. {DOCX_STALE_REVISION_HINT}"
+    )
+
+
 if TYPE_CHECKING:
     from src.domain.native_assets import (
         NativeAssetRepository,
         NativeDocumentRequest,
         NativeDocxBlockReference,
+        NativeEditResult,
+        NativeFileAsset,
     )
     from src.domain.native_docx import NativeDocxAdapter
     from src.domain.native_docx_structure import NativeDocxStructureAdapter
@@ -156,14 +178,12 @@ class NativeDocxOperations:
             raise ValueError("Native DOCX structure adapter is not configured")
         assert request.asset_id is not None and request.expected_revision is not None
         asset = self.repository.load(request.asset_id)
-        if (
-            asset.format != "docx"
-            or asset.archived
-            or asset.revision != request.expected_revision
-        ):
+        if asset.format != "docx" or asset.archived:
             raise ValueError(
                 "Wrong format, archived or stale native DOCX; inspect before editing"
             )
+        if asset.revision != request.expected_revision:
+            raise _stale_docx_error(request.expected_revision, asset.revision)
         data = self.repository.read(asset.asset_id, request.expected_revision)
         if request.op == "add_docx_blocks":
             assert request.docx_insert is not None
@@ -182,7 +202,7 @@ class NativeDocxOperations:
                 data, asset.asset_id, asset.revision, request.docx_block_refs
             )
             updated, checks = self.structure.delete(data, positions)
-        committed = self.repository.commit(
+        committed = self._commit(
             asset.asset_id, request.expected_revision, updated, checks
         )
         return {
@@ -196,6 +216,25 @@ class NativeDocxOperations:
                 "revision": committed.revision,
             },
         }
+
+    def _commit(
+        self,
+        asset_id: str,
+        expected_revision: str,
+        data: bytes,
+        checks: NativeEditResult,
+    ) -> NativeFileAsset:
+        """Commit, explaining a revision race the same way as the pre-check."""
+        try:
+            return self.repository.commit(asset_id, expected_revision, data, checks)
+        except ValueError as exc:
+            if str(exc).startswith("Stale native revision"):
+                current = self.repository.load(asset_id).revision
+                raise ValueError(
+                    f"{exc} (expected revision {expected_revision}, current "
+                    f"{current}). {DOCX_STALE_REVISION_HINT}"
+                ) from exc
+            raise
 
     def _read_block(self, request: NativeDocumentRequest) -> dict[str, Any]:
         assert request.asset_id is not None and request.block_id is not None
@@ -266,13 +305,15 @@ class NativeDocxOperations:
         asset = self.repository.load(request.asset_id)
         if asset.format != "docx" or self.docx is None:
             raise ValueError("This format has no configured native DOCX bridge")
-        if asset.archived or asset.revision != request.expected_revision:
+        if asset.archived:
             raise ValueError("Archived or stale native asset; inspect before editing")
+        if asset.revision != request.expected_revision:
+            raise _stale_docx_error(request.expected_revision, asset.revision)
         data = self.repository.read(asset.asset_id, request.expected_revision)
         updated, checks, warnings = self.docx.edit(
             data, asset.asset_id, request.expected_revision, request.docx_edit
         )
-        committed = self.repository.commit(
+        committed = self._commit(
             asset.asset_id, request.expected_revision, updated, checks
         )
         return {

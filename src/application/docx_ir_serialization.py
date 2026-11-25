@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import tempfile
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -52,8 +54,18 @@ class DocxIrSerializationMixin:
             ) as tmp:
                 tmp.write(payload)
                 tmp.write("\n")
+                tmp.flush()
+                os.fsync(tmp.fileno())
                 tmp_path = Path(tmp.name)
-            tmp_path.replace(path)
+            # A concurrent reader on Windows can briefly block the rename.
+            for attempt in range(5):
+                try:
+                    tmp_path.replace(path)
+                    break
+                except PermissionError:
+                    if attempt == 4:
+                        raise
+                    time.sleep(0.05 * (attempt + 1))
         finally:
             if tmp_path is not None and tmp_path.exists():
                 tmp_path.unlink()

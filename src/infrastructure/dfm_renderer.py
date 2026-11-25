@@ -47,6 +47,10 @@ class DfmRenderer:
             "format_file": "format.yaml",
             "doc_id": ir.doc_id,
         }
+        if ir.dfm_revision:
+            # The edited Markdown proves its own base revision; format.yaml can
+            # be re-rendered by another agent's save while content.md is open.
+            fm["revision"] = ir.dfm_revision
         fm_yaml = yaml.dump(fm, default_flow_style=False, allow_unicode=True).strip()
         md_lines.append(f"---\n{fm_yaml}\n---")
         md_lines.append("")
@@ -69,9 +73,11 @@ class DfmRenderer:
             "source": ir.source_filename,
             "checksum": ir.checksum,
             "created": ir.created_at.isoformat(),
-            "styles": ir.style_info.to_dict(),
-            "blocks": block_meta,
         }
+        if ir.dfm_revision:
+            format_data["revision"] = ir.dfm_revision
+        format_data["styles"] = ir.style_info.to_dict()
+        format_data["blocks"] = block_meta
         yaml_content = yaml.dump(
             format_data,
             default_flow_style=False,
@@ -394,6 +400,10 @@ class DfmRenderer:
             "created": ir.created_at.isoformat(),
             "checksum": ir.checksum,
         }
+        if ir.dfm_revision:
+            # Content revision this DFM shows; save_docx uses it to detect and
+            # 3-way merge stale saves (see docs/dfm-spec.md section 12).
+            fm["revision"] = ir.dfm_revision
         yaml_str = yaml.dump(fm, default_flow_style=False, allow_unicode=True).strip()
         return f"---\n{yaml_str}\n---"
 
@@ -412,6 +422,14 @@ class DfmRenderer:
     # ========================================================================
     # Block dispatch
     # ========================================================================
+
+    def render_block(self, block: DfmBlock) -> str | None:
+        """Render one block's DFM fragment (marker line included).
+
+        Used by block checkout: the fragment is exactly what ``render`` emits
+        for the block, so it can be edited and committed back on its own.
+        """
+        return self._render_block(block)
 
     def _render_block(self, block: DfmBlock) -> str | None:
         """Render a single block to DFM text."""

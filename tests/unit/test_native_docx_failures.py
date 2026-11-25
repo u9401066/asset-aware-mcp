@@ -62,6 +62,38 @@ def test_existing_dfm_integrity_failure_prevents_commit_and_cleans_workspace(
     assert list(private.iterdir()) == []
 
 
+def test_stale_native_docx_edit_points_to_block_lease_workflow(native_docx) -> None:
+    """Native DOCX stays document-revision-only; the error names the lease path."""
+    service, asset, _ = native_docx
+    text = read_dfm(service, asset)
+    first = call(
+        service,
+        op="update_docx",
+        asset_id=asset["asset_id"],
+        expected_revision=asset["revision"],
+        docx_edit={"dfm_text": text.replace("原始段落", "第一位作者")},
+    )
+    assert first["success"] is True
+
+    with pytest.raises(ValueError) as stale:
+        call(
+            service,
+            op="update_docx",
+            asset_id=asset["asset_id"],
+            expected_revision=asset["revision"],
+            docx_edit={"dfm_text": text.replace("原始段落", "第二位作者")},
+        )
+
+    message = str(stale.value)
+    assert message.startswith("Archived or stale native asset")
+    assert asset["revision"] in message
+    assert first["asset"]["revision"] in message
+    assert 'docx(op="checkout")' in message
+    assert "read_docx" in message
+    current = dict(asset, revision=first["asset"]["revision"])
+    assert "第一位作者" in read_dfm(service, current)
+
+
 def test_concurrent_managed_edit_cannot_be_overwritten_after_dfm_validation(
     native_docx, monkeypatch
 ) -> None:

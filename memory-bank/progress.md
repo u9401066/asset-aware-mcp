@@ -1,5 +1,22 @@
 # Progress (Updated: 2026-11-25)
 
+## 1.5.0 candidate: concurrent DFM editing (revisions + block leases) — 2026-11-25
+
+Branch `feature/docx-block-leases` (not merged/pushed/tagged; no version bump).
+Fixes the verified stale full-DFM lost update (checksum never changes) with
+content revisions in DFM front matter, 3-way merge or conflict refusal, and adds
+docx(op=checkout/commit/release/renew/leases/break_lease) backed by a per-doc
+SQLite edit-state DB (BEGIN IMMEDIATE cross-process lock, capped history,
+per-block Track Changes authors). Native update_docx stays document-revision-only
+with a stale message pointing to leases. New tests: unit/test_docx_edit_state.py,
+integration/test_docx_block_leases.py (two-process contention and crash recovery).
+Docs: dfm-spec §12, wiki DOCX-DFM-Workflow/MCP-Tools, harness guides + repo-assets.
+Review round (same day): all 16 findings fixed with one regression class each in
+integration/test_docx_concurrency_hardening.py (idempotent ingest + reset=true,
+content.md-only split base revision, in-place edits kept via *.current.*, upgrade
+stamping, off-loop locking, committed:true reporting, lease-aware delete, ir.json
+re-hash, storage warnings, checkout request_id, sidecar content_revision).
+
 ## 1.4.2 DOCX cumulative write-back fix — 2026-11-25
 
 A user benchmark on a real IRB draft found that `save_docx` patched the pristine

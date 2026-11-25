@@ -26,12 +26,12 @@ Not in scope
 
 from __future__ import annotations
 
+import os
 import re
+import tempfile
+import time
 import unicodedata
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from pathlib import Path
 
 # ============================================================================
 # Constants
@@ -244,6 +244,37 @@ def write_utf8_text(path: Path, text: str, *, hint: str | None = None) -> None:
     cleaned = normalize_text_input(text, hint=hint or str(path))
     with path.open("w", encoding="utf-8", newline="\n") as handle:
         handle.write(cleaned)
+
+
+def write_utf8_text_atomic(
+    path: Path, text: str, *, hint: str | None = None, attempts: int = 5
+) -> None:
+    """Like :func:`write_utf8_text`, but readers never see a partial file.
+
+    The text is written to a same-directory temporary file, flushed to disk and
+    renamed over ``path``. On Windows a concurrent reader can briefly block the
+    rename (sharing violation); it is retried a few times before failing.
+    """
+    cleaned = normalize_text_input(text, hint=hint or str(path))
+    descriptor, temporary = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    stage = Path(temporary)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(cleaned)
+            handle.flush()
+            os.fsync(handle.fileno())
+        for attempt in range(attempts):
+            try:
+                stage.replace(path)
+                break
+            except PermissionError:
+                if attempt == attempts - 1:
+                    raise
+                time.sleep(0.05 * (attempt + 1))
+    finally:
+        stage.unlink(missing_ok=True)
 
 
 def validate_docx_structure(path: Path) -> None:
