@@ -21,7 +21,13 @@ def _save_checked(image: Image.Image, format_name: str) -> bytes:
     expected_mode, expected_size = image.mode, image.size
     expected_pixels = hashlib.sha256(image.tobytes()).hexdigest()
     expected_rgba = rgba_hash(image)
+    # Transparency defines decoded display colors, so it is not droppable
+    # metadata. Pillow < 13 only kept palette alpha through a side effect of
+    # the RGBA conversion above; carry it explicitly instead.
+    transparency = image.info.get("transparency")
     image.info.clear()
+    if transparency is not None:
+        image.info["transparency"] = transparency
     output = io.BytesIO()
     try:
         image.save(
