@@ -23,7 +23,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from src.application.dfm_integrity import DfmIntegrityChecker, IntegrityIssue
-from src.application.docx_ir_serialization import DocxIrSerializationMixin
+from src.application.docx_baseline import (
+    BASELINE_IR_FILENAME,
+    DocxBaselineError,
+    DocxBaselineMixin,
+)
 from src.application.output_paths import resolve_document_output_path
 from src.domain.docx_value_objects import DfmBlockType
 from src.infrastructure.dfm_parser import DfmParser
@@ -56,6 +60,7 @@ def _sha256_file(path: Path) -> str:
 
 
 RESERVED_DOCX_ARTIFACT_NAMES = {
+    BASELINE_IR_FILENAME,
     "content.dfm",
     "content.md",
     "format.yaml",
@@ -64,16 +69,32 @@ RESERVED_DOCX_ARTIFACT_NAMES = {
     "revisions.jsonl",
 }
 _REVISION_TOKEN_RE = re.compile(r"\s+|\S+")
+REVISION_BASE_ORIGINAL = "original"
+REVISION_BASE_LAST_SAVE = "last_save"
+REVISION_BASES = frozenset({REVISION_BASE_ORIGINAL, REVISION_BASE_LAST_SAVE})
+# Block types that save_docx writes into word/document.xml.
+_DOCX_WRITABLE_BLOCK_TYPES = frozenset(
+    {
+        DfmBlockType.PARAGRAPH,
+        DfmBlockType.HEADING,
+        DfmBlockType.LIST_ITEM,
+        DfmBlockType.FORMAT,
+        DfmBlockType.CAPTION,
+        DfmBlockType.TABLE,
+    }
+)
 
 
-class DocxService(DocxIrSerializationMixin):
+class DocxService(DocxBaselineMixin):
     """
     Application service for docx ↔ DFM operations.
 
     Orchestrates:
-    1. ingest_docx: .docx → DocxIR → content.dfm + ir.json + preserved parts
+    1. ingest_docx: .docx → DocxIR → content.dfm + ir.json + baseline_ir.json
+       + preserved parts
     2. get_dfm: Read the editable DFM content
-    3. save_docx: Edited DFM → parse edits → merge with IR → rebuild .docx
+    3. save_docx: Edited DFM → parse edits → merge with IR → rebuild .docx from
+       original.docx with every edit since ingest (cumulative write-back)
     4. list_blocks: Summary of all blocks in the document
     """
 
@@ -104,8 +125,9 @@ class DocxService(DocxIrSerializationMixin):
         Creates:
             data/{doc_id}/
             ├── content.dfm          # Editable markdown+YAML
-            ├── ir.json              # Serialized IR for round-trip
-            ├── original.docx        # Copy of original file
+            ├── ir.json              # Current IR (updated by every save)
+            ├── baseline_ir.json     # Immutable ingest IR of original.docx
+            ├── original.docx        # Copy of original file (never modified)
             ├── parts/               # Preserved XML parts
             └── assets/              # Images and binary assets
 
@@ -181,8 +203,10 @@ class DocxService(DocxIrSerializationMixin):
             yaml_path = doc_dir / "format.yaml"
             write_utf8_text(yaml_path, yaml_text, hint=str(yaml_path))
 
-            # Save IR as JSON for round-trip
+            # Save IR as JSON for round-trip, plus the immutable ingest baseline
+            # that every later save diffs against (cumulative write-back).
             self._save_ir(ir, doc_dir / "ir.json")
+            self._save_baseline_ir(ir, doc_dir)
 
             # --- Post-ingest integrity check ---
             ingest_report = self.integrity.check_ingest(ir, md_text, yaml_text)
@@ -454,6 +478,7 @@ class DocxService(DocxIrSerializationMixin):
         force: bool = False,
         track_changes: bool = False,
         revision_author: str = "Asset-Aware MCP",
+        revision_base: str = REVISION_BASE_ORIGINAL,
         _allow_external_output: bool = False,
     ) -> dict[str, Any]:
         """
@@ -463,20 +488,52 @@ class DocxService(DocxIrSerializationMixin):
         - DFM mode (default): pass dfm_text with the full .dfm content
         - MD mode (from_md=True): reads content.md + format.yaml from disk
 
+        Write-back is cumulative: the output is always ``original.docx`` patched
+        with every block that differs from the immutable ingest baseline
+        (``baseline_ir.json``), i.e. all edits since ingest, not only the edits
+        of this request. Unedited blocks and package parts stay byte-preserved.
+        The post-save integrity check verifies every expected change against
+        ``original.docx``, so a dropped edit fails the save.
+
         Args:
             doc_id: Document ID
             dfm_text: Edited DFM content (ignored if from_md=True)
-            output_path: Output .docx path (default: data/{doc_id}/output.docx)
+            output_path: Output .docx path. Defaults to
+                ``data/{doc_id}/output.docx``; relative paths resolve inside the
+                document directory and absolute paths must also stay inside it
+                (reserved artifacts such as ``original.docx`` are rejected). To
+                write back to the user's source file, use the native document
+                workflow instead: ``document(op="native")`` ``register`` the
+                source, ``read_docx``/``update_docx``, then ``writeback`` with
+                ``expected_revision`` and ``expected_source_sha256`` (stale
+                source hash/stat checks, backup retained) or ``publish`` to a new
+                file.
             from_md: If True, read content.md + format.yaml instead of dfm_text
-            track_changes: If True, emit DFM edits as native Word revisions
+            track_changes: If True, emit edits as native Word revisions
             revision_author: Author recorded on generated Word revisions
+            revision_base: Revision base used with ``track_changes``.
+                ``"original"`` (default) shows every edit since ingest relative
+                to ``original.docx``; ``"last_save"`` writes earlier edits as
+                accepted text and tracks only the changes against the
+                previously saved state (the IR before this request).
 
         Returns:
-            Result dict with output path and any errors.
+            Result dict with output path and any errors. ``changed_block_ids``
+            lists every block that differs from ``original.docx`` in the output;
+            ``edited_block_ids`` lists the blocks changed by this request.
         """
         doc_dir = self.repository.get_doc_dir(doc_id)
         staged_out: Path | None = None
         save_warnings: list[str] = []
+
+        if revision_base not in REVISION_BASES:
+            return {
+                "success": False,
+                "error": (
+                    f"Unsupported revision_base {revision_base!r}; use one of: "
+                    + ", ".join(sorted(REVISION_BASES))
+                ),
+            }
 
         # Load original IR
         ir = self._load_ir(doc_id)
@@ -678,25 +735,15 @@ class DocxService(DocxIrSerializationMixin):
             if pre_report.issues:
                 logger.info("Pre-save check: %s", pre_report.to_summary())
 
-            original_ir = deepcopy(ir)
+            pre_edit_ir = deepcopy(ir)
 
             # Apply edits to IR
             ir = self.parser.apply_edits(ir, parse_result)
 
-            expected_changed_ids = self._expected_changed_block_ids(
-                original_ir, parse_result
-            )
-            expected_diff_locations = self._expected_content_diff_locations(
-                original_ir,
-                parse_result,
-                expected_changed_ids,
-            )
-            expected_diff_counts = {
-                "text": len(expected_diff_locations["text"]),
-                "table": len(expected_diff_locations["table"]),
-            }
+            # Blocks changed by this request (edited DFM vs. current IR).
+            edited_ids = self._expected_changed_block_ids(pre_edit_ir, parse_result)
             unexpected_mutations = self._detect_unedited_block_mutations(
-                original_ir, ir, expected_changed_ids
+                pre_edit_ir, ir, edited_ids
             )
             if unexpected_mutations:
                 return {
@@ -707,6 +754,67 @@ class DocxService(DocxIrSerializationMixin):
                     ),
                     "warnings": unexpected_mutations,
                 }
+
+            # --- Cumulative write-back against the immutable ingest baseline ---
+            # The writer always patches original.docx, so the blocks to rewrite
+            # and the post-save expectations must be diffed against the IR of
+            # that same package, not against the already-edited ir.json.
+            try:
+                baseline = self._load_save_baseline(doc_dir, pre_edit_ir)
+            except DocxBaselineError as exc:
+                return {"success": False, "error": str(exc)}
+            baseline_ir = baseline.ir
+            changed_ids, net_edits = self._changed_since_baseline(baseline_ir, ir)
+            expected_diff_locations = self._expected_content_diff_locations(
+                baseline_ir,
+                net_edits,
+                changed_ids,
+            )
+            expected_diff_counts = {
+                "text": len(expected_diff_locations["text"]),
+                "table": len(expected_diff_locations["table"]),
+            }
+
+            track_last_save = track_changes and revision_base == REVISION_BASE_LAST_SAVE
+            prior_ids: set[str] = set()
+            if baseline.rebuilt or track_last_save:
+                prior_ids, _ = self._changed_since_baseline(baseline_ir, pre_edit_ir)
+            if baseline.rebuilt:
+                save_warnings.append(self._legacy_baseline_warning(prior_ids))
+
+            if track_last_save:
+                revision_base_ir = pre_edit_ir
+                tracked_ids = set(edited_ids)
+                accepted_ids = prior_ids
+                revision_locations = self._expected_content_diff_locations(
+                    pre_edit_ir,
+                    parse_result,
+                    edited_ids,
+                )
+            else:
+                revision_base_ir = baseline_ir
+                tracked_ids = set(changed_ids) if track_changes else set()
+                accepted_ids = set()
+                revision_locations = expected_diff_locations
+            write_ids = changed_ids | tracked_ids
+
+            unwritable = sorted(
+                block.id
+                for block in ir.blocks
+                if block.id in changed_ids
+                and block.block_type not in _DOCX_WRITABLE_BLOCK_TYPES
+            )
+            if unwritable:
+                save_warnings.append(
+                    "Edits to these blocks are kept in content.dfm/ir.json but "
+                    "save_docx cannot write their block type into the DOCX: "
+                    + ", ".join(unwritable)
+                )
+            if track_changes and not tracked_ids:
+                save_warnings.append(
+                    "Track Changes requested, but the content matches the revision "
+                    f"base ({revision_base}); no Word revisions were written."
+                )
 
             if _allow_external_output and output_path is not None:
                 out = Path(output_path)
@@ -765,21 +873,30 @@ class DocxService(DocxIrSerializationMixin):
 
             original_path = doc_dir / "original.docx"
             staged_out = self._staged_docx_output_path(out)
-            if not expected_changed_ids:
+            if not write_ids:
+                # The IR equals the ingest baseline, so original.docx is exact.
                 shutil.copy2(original_path, staged_out)
                 result_path = staged_out
             else:
                 adapter_kwargs: dict[str, Any] = {
-                    "changed_block_ids": expected_changed_ids,
+                    "changed_block_ids": changed_ids,
                 }
                 if track_changes:
                     adapter_kwargs.update(
                         {
-                            "original_ir": original_ir,
+                            "changed_block_ids": tracked_ids,
+                            "original_ir": revision_base_ir,
                             "track_changes": True,
                             "revision_author": revision_author or "Asset-Aware MCP",
                         }
                     )
+                    if accepted_ids:
+                        adapter_kwargs.update(
+                            {
+                                "accepted_ir": pre_edit_ir,
+                                "accepted_block_ids": accepted_ids,
+                            }
+                        )
                 result_path = self.adapter.ir_to_docx(
                     ir,
                     doc_dir,
@@ -788,15 +905,23 @@ class DocxService(DocxIrSerializationMixin):
                 )
 
             # --- Post-save integrity check before touching user-visible files ---
+            # Always compared with original.docx using the cumulative expected
+            # diffs, so an edit missing from the output fails the save.
             post_report = self.integrity.check_post_save(
                 original_path,
                 result_path,
-                content_edits_expected=bool(expected_changed_ids),
+                content_edits_expected=bool(write_ids),
                 expected_text_diffs=expected_diff_counts["text"],
                 expected_table_diffs=expected_diff_counts["table"],
                 expected_text_diff_locations=expected_diff_locations["text"],
                 expected_table_diff_locations=expected_diff_locations["table"],
                 revision_markup_expected=track_changes,
+                revision_markup_locations=(
+                    revision_locations["text"] | revision_locations["table"]
+                    if track_changes
+                    else set()
+                ),
+                revisions_required=bool(track_changes and tracked_ids),
             )
             if not post_report.passed and not force:
                 warnings = list(parse_result.errors) + save_warnings
@@ -821,6 +946,10 @@ class DocxService(DocxIrSerializationMixin):
             # --- Auto-backup before overwriting DFM state ---
             self._backup_before_overwrite(doc_dir)
 
+            if baseline.rebuilt:
+                # Legacy workspace migration: persist the verified snapshot once.
+                self._save_baseline_ir(baseline_ir, doc_dir)
+
             staged_out.replace(out)
             result_path = out
             staged_out = None
@@ -841,18 +970,24 @@ class DocxService(DocxIrSerializationMixin):
                 "success": True,
                 "output_path": str(result_path),
                 "integrity": post_report.to_summary(),
-                "changed_block_ids": sorted(expected_changed_ids),
+                "changed_block_ids": sorted(changed_ids),
+                "edited_block_ids": sorted(edited_ids),
                 "track_changes": track_changes,
             }
+            if baseline.rebuilt:
+                result["baseline_rebuilt"] = True
             if track_changes:
                 result["revision_author"] = revision_author or "Asset-Aware MCP"
-                result["track_change_blocks"] = len(expected_changed_ids)
+                result["revision_base"] = revision_base
+                result["track_change_blocks"] = len(tracked_ids)
+                result["tracked_block_ids"] = sorted(tracked_ids)
                 revision_sidecar, revision_count = self._write_revision_sidecar(
                     doc_dir,
-                    original_ir,
+                    revision_base_ir,
                     ir,
-                    expected_changed_ids,
+                    tracked_ids,
                     result_path,
+                    revision_base=revision_base,
                 )
                 result["revision_sidecar_path"] = str(revision_sidecar)
                 result["revision_records"] = revision_count
@@ -874,6 +1009,22 @@ class DocxService(DocxIrSerializationMixin):
             logger.exception("Failed to save docx: %s", doc_id)
             return {"success": False, "error": str(e)}
 
+    @staticmethod
+    def _legacy_baseline_warning(prior_ids: set[str]) -> str:
+        """Explain a legacy-workspace baseline migration to the caller."""
+        message = (
+            f"Migrated legacy DOCX workspace: rebuilt {BASELINE_IR_FILENAME} from "
+            "original.docx (no ingest baseline existed)."
+        )
+        if prior_ids:
+            message += (
+                f" {len(prior_ids)} block(s) already differed from the original "
+                f"before this save ({', '.join(sorted(prior_ids))}); DOCX files "
+                "written by earlier saves may lack those edits. This output "
+                "includes every edit since ingest."
+            )
+        return message
+
     def _write_revision_sidecar(
         self,
         doc_dir: Path,
@@ -881,8 +1032,15 @@ class DocxService(DocxIrSerializationMixin):
         updated_ir: DocxIR,
         changed_block_ids: set[str],
         output_docx: Path,
+        *,
+        revision_base: str = REVISION_BASE_ORIGINAL,
     ) -> tuple[Path, int]:
-        """Write machine-readable DFM edit spans for citation-ready consumers."""
+        """Write machine-readable DFM edit spans for citation-ready consumers.
+
+        ``original_ir`` is the revision base: the ingest baseline for
+        ``revision_base="original"`` or the previously saved IR for
+        ``"last_save"``.
+        """
         original_blocks = {block.id: block for block in original_ir.blocks}
         records: list[dict[str, Any]] = []
 
@@ -906,6 +1064,7 @@ class DocxService(DocxIrSerializationMixin):
                     new_text,
                     output_docx,
                     start_index=len(records),
+                    revision_base=revision_base,
                 )
             )
 
@@ -924,6 +1083,7 @@ class DocxService(DocxIrSerializationMixin):
         output_docx: Path,
         *,
         start_index: int,
+        revision_base: str = REVISION_BASE_ORIGINAL,
     ) -> list[dict[str, Any]]:
         records: list[dict[str, Any]] = []
         old_tokens = _REVISION_TOKEN_RE.findall(old_text)
@@ -949,6 +1109,7 @@ class DocxService(DocxIrSerializationMixin):
                         old_char_range=old_char_range,
                         new_char_range=[new_char_range[0], new_char_range[0]],
                         index=start_index + len(records) + 1,
+                        revision_base=revision_base,
                     )
                 )
             if tag in {"insert", "replace"} and new_char_range[0] != new_char_range[1]:
@@ -963,6 +1124,7 @@ class DocxService(DocxIrSerializationMixin):
                         old_char_range=[old_char_range[0], old_char_range[0]],
                         new_char_range=new_char_range,
                         index=start_index + len(records) + 1,
+                        revision_base=revision_base,
                     )
                 )
         return records
@@ -979,6 +1141,7 @@ class DocxService(DocxIrSerializationMixin):
         old_char_range: list[int],
         new_char_range: list[int],
         index: int,
+        revision_base: str = REVISION_BASE_ORIGINAL,
     ) -> dict[str, Any]:
         old_quote = old_text[old_char_range[0] : old_char_range[1]]
         new_quote = new_text[new_char_range[0] : new_char_range[1]]
@@ -1009,6 +1172,7 @@ class DocxService(DocxIrSerializationMixin):
             "doc_id": ir.doc_id,
             "source_revision_id": ir.checksum,
             "revision_id": f"{block.id}:rev{index:04d}",
+            "revision_base": revision_base,
             "block_id": block.id,
             "block_type": block.block_type.value,
             "op": op,
@@ -1420,9 +1584,10 @@ class DocxService(DocxIrSerializationMixin):
     ) -> set[str]:
         """Determine which block IDs are expected to change based on parsed edits."""
         changed_ids: set[str] = set()
+        blocks_by_id = {block.id: block for block in original_ir.blocks}
 
         for edit in parse_result.edits:
-            block = original_ir.find_block(edit.block_id)
+            block = blocks_by_id.get(edit.block_id)
             if block is None or block.is_protected:
                 continue
 
@@ -1450,6 +1615,8 @@ class DocxService(DocxIrSerializationMixin):
                 continue
 
             current_text = block.plain_text if block.runs else block.content
+            if self.parser.is_unchanged_image_markdown(block, edit.new_content):
+                continue
             if edit.new_content != current_text and not self._same_visible_text(
                 edit.new_content,
                 current_text,
@@ -1499,11 +1666,12 @@ class DocxService(DocxIrSerializationMixin):
 
         text_locations: set[str] = set()
         table_cell_locations: set[str] = set()
+        blocks_by_id = {block.id: block for block in original_ir.blocks}
         for edit in parse_result.edits:
             if edit.block_id not in expected_changed_ids:
                 continue
 
-            edited_block = original_ir.find_block(edit.block_id)
+            edited_block = blocks_by_id.get(edit.block_id)
             if edited_block is None:
                 continue
 

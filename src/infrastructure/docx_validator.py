@@ -410,6 +410,20 @@ class DocxValidator:
 
         return report
 
+    @staticmethod
+    def count_text_revision_marks(docx_path: Path) -> int:
+        """Count ``w:ins``/``w:del`` revision elements in ``word/document.xml``.
+
+        Used to prove that a Track Changes save actually emitted native Word
+        revisions instead of silently writing plain text or a copy of the base.
+        """
+        with ZipFile(docx_path, "r") as zf:
+            if "word/document.xml" not in zf.namelist():
+                return 0
+            tree = etree.fromstring(zf.read("word/document.xml"))
+        revision_tags = {f"{{{NS['w']}}}ins", f"{{{NS['w']}}}del"}
+        return sum(1 for elem in tree.iter() if elem.tag in revision_tags)
+
     def _apply_strict_policy(self, report: ValidationReport) -> None:
         """Apply fail-closed criteria for strict round-trip validation."""
         failures: list[str] = []

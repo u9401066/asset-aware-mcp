@@ -424,6 +424,12 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
   update_docx are advertised, assemble DFM chunks at one revision, retain native
   frontmatter/block markers, and keep managed updates separate from source writeback.
   The agent reviews rendered Word layout and meaning; MCP performs DFM/package checks.
+- Legacy DFM save_docx is cumulative: every output is original.docx plus all
+  edits since ingest (baseline_ir.json), never only the latest session. Track
+  Changes defaults to revision_base:original (all edits since ingest); last_save
+  tracks only changes since the previous save. A tracked save without new w:ins/
+  w:del fails. Reported legacy-directory migrations and refusals need user review.
+  output_path stays inside data/{doc_id}/; source writeback uses native writeback.
 - When the installed contract advertises read_docx_block, use its revision-pinned
   evidence with native verify. DOCX export_wiki retains full parsed blocks and exact
   package parts in a distinct projection. Preserve old snapshots; extraction coverage

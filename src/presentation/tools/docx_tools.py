@@ -218,9 +218,10 @@ async def ingest_docx(file_path: str, ctx: Context | None = None) -> str:
     輸出目錄結構：
     ```
     data/{doc_id}/
-    ├── content.dfm     # 可編輯的 Markdown + YAML 標注
-    ├── ir.json          # IR 快照（用於回寫）
-    ├── original.docx    # 原始檔案備份
+    ├── content.dfm      # 可編輯的 Markdown + YAML 標注
+    ├── ir.json          # 目前 IR（每次 save_docx 更新）
+    ├── baseline_ir.json # ingest 時的不可變 IR（累積回寫的比對基準）
+    ├── original.docx    # 原始檔案備份（永不修改）
     ├── parts/           # 保留的 XML 零件
     └── assets/          # 圖片和二進位資產
     ```
@@ -343,6 +344,7 @@ async def save_docx(
     force: bool = False,
     track_changes: bool = False,
     revision_author: str = "Asset-Aware MCP",
+    revision_base: str = "original",
     ctx: Context | None = None,
 ) -> str:
     """
@@ -353,25 +355,47 @@ async def save_docx(
     - MD 模式（from_md=True）：從磁碟讀取 content.md + format.yaml
 
     回寫流程：
-    1. 解析 DFM/MD → 提取修改
-    2. 載入原始 IR
-    3. 合併修改（格式合併策略）
-    4. 重建 .docx
+    1. 解析 DFM/MD → 提取修改，套用到目前 IR（ir.json）
+    2. 與 ingest 時的不可變基準（baseline_ir.json）比對，取得「自 ingest
+       以來」所有變更區塊（累積回寫）
+    3. 以 original.docx 為底，只改寫這些區塊；未編輯區塊與其他 package
+       parts 保持位元組不變
+    4. Post-save 完整性檢查逐一確認每個預期變更都出現在輸出中；
+       若有任何先前的編輯遺失，儲存會失敗而不是回報成功
+
+    每次儲存都包含先前所有儲存過的編輯（不需要重新套用）。由 v1.4.1
+    以前建立、沒有 baseline_ir.json 的文件目錄，會自動從 original.docx
+    重建基準（並在警告中列出先前已存在的編輯）；無法驗證時拒絕儲存。
 
     安全機制：若內容萎縮 > 50%，預設拒絕輸出（疑似資料遺失）。
     使用 force=True 強制輸出。
 
-    若 track_changes=True，會將 DFM 中的文字修改以真正 Word Track
-    Changes (`w:del`/`w:ins`) 寫回，供使用者在 Word 中逐項審查。
+    若 track_changes=True，會將修改以真正 Word Track Changes
+    (`w:del`/`w:ins`) 寫回，供使用者在 Word 中逐項審查：
+    - revision_base="original"（預設）：顯示自 ingest 以來「所有」編輯，
+      相對於原始文件（IRB/PI 審查通常需要的版本）。
+    - revision_base="last_save"：先前儲存的編輯以已接受的純文字寫入，
+      只把本次相對於上次儲存狀態的變更標成修訂。
+    要求追蹤修訂但輸出沒有新增任何 w:ins/w:del 時，儲存會失敗。
+
+    output_path 只能位於文件目錄（data/{doc_id}/）內；目錄外的路徑會回傳
+    「Output path must stay within document directory」錯誤。要寫回使用者
+    的原始檔案，請改用 document(op="native")：register 來源檔 →
+    read_docx / update_docx → writeback（需 expected_revision 與
+    expected_source_sha256，會檢查來源 hash/stat 是否過期並保留備份），
+    或用 publish 建立新的外部檔案。
 
     Args:
         doc_id: 文件 ID
         dfm_content: 編輯後的 DFM 全文（from_md=True 時可省略）
-        output_path: 輸出路徑（預設為 data/{doc_id}/output.docx）
+        output_path: 輸出路徑（預設為 data/{doc_id}/output.docx；必須位於
+            data/{doc_id}/ 內，不可覆寫 original.docx 等保留檔）
         from_md: 若為 True，從磁碟讀取 content.md + format.yaml 而非使用 dfm_content
         force: 若為 True，即使偵測到嚴重內容萎縮仍強制輸出
         track_changes: 若為 True，以 Word Track Changes 寫入文字 diff
         revision_author: 產生追蹤修訂時使用的作者名稱
+        revision_base: 追蹤修訂的比較基準："original"（預設，相對原始文件）
+            或 "last_save"（相對上次儲存狀態）
 
     Returns:
         儲存結果
@@ -398,6 +422,7 @@ async def save_docx(
         force=force,
         track_changes=track_changes,
         revision_author=revision_author,
+        revision_base=revision_base,
     )
     logger.info(
         "save_docx done | doc_id=%s | success=%s | integrity=%s",
@@ -424,6 +449,14 @@ async def save_docx(
         f"- **輸出路徑**: `{result.get('output_path', '')}`",
         f"- **完整性**: {result.get('integrity', 'N/A')}",
     ]
+    if "changed_block_ids" in result:
+        changed = result.get("changed_block_ids") or []
+        edited = result.get("edited_block_ids") or []
+        lines.append(
+            f"- **相對原始文件的變更區塊**: {len(changed)}（本次編輯 {len(edited)}）"
+        )
+    if result.get("baseline_rebuilt"):
+        lines.append("- **基準**: 已從 original.docx 重建 baseline_ir.json（舊版目錄）")
 
     if synced_table_ids:
         lines.append(
@@ -434,6 +467,7 @@ async def save_docx(
         lines.append(
             "- **追蹤修訂**: 已寫入 Word Track Changes "
             f"({result.get('track_change_blocks', 0)} 個區塊, "
+            f"base={result.get('revision_base', revision_base)}, "
             f"author={result.get('revision_author', revision_author)})"
         )
         if result.get("revision_sidecar_path"):
@@ -889,6 +923,7 @@ async def docx(
     force: bool = False,
     track_changes: bool = False,
     revision_author: str = "Asset-Aware MCP",
+    revision_base: str = "original",
     strict: bool = False,
     max_chars: int | None = None,
     ctx: Context | None = None,
@@ -919,6 +954,7 @@ async def docx(
             force=force,
             track_changes=track_changes,
             revision_author=revision_author,
+            revision_base=revision_base,
             ctx=ctx,
         )
     if operation in {"list", "list_documents"}:

@@ -1,5 +1,23 @@
 # Decision Log
 
+## [2026-11-25] DFM save_docx: cumulative write-back against an immutable ingest baseline
+
+Bug: save_docx diffed the edited DFM against the current ir.json but always patched
+the pristine original.docx, so every save after the first dropped earlier edits and
+a Track Changes re-save wrote a plain copy of original.docx with zero revisions,
+while integrity reported PASS (expected diffs came from the same wrong baseline).
+
+Decision: keep original.docx immutable and add baseline_ir.json, the ingest IR of
+that exact package. Each save diffs the full current IR against baseline_ir.json
+(net edit set reusing the existing change/location detection), patches
+original.docx once and verifies every expected location against original.docx.
+Rejected: a rolling current-base package (serialization drift, cannot express
+revisions relative to the original). Track Changes defaults to
+revision_base=original; last_save writes earlier edits as accepted text first.
+A tracked save must add w:ins/w:del. Legacy dirs rebuild the baseline only after
+original.docx SHA-256 equals the IR checksum and block structure matches; otherwise
+the save is refused with re-ingest guidance. Image Markdown projections are not edits.
+
 ## Native ODS adapter (Unreleased / 1.4.x; MCP integration pending)
 
 Domain native_ods defines zero-based table/name/row/column locators and explicit

@@ -343,6 +343,12 @@ citation-ready provenance.
 
 - Use the Asset-Aware MCP tools for document ingestion, asset lookup, DFM/DOCX
   conversion, table rendering, section navigation, and LightRAG retrieval.
+- Legacy DFM save_docx is cumulative: every output is original.docx plus all
+  edits since ingest (baseline_ir.json), never only the latest session. Track
+  Changes defaults to revision_base:original (all edits since ingest); last_save
+  tracks only changes since the previous save. A tracked save without new w:ins/
+  w:del fails. Reported legacy-directory migrations and refusals need user review.
+  output_path stays inside data/{doc_id}/; source writeback uses native writeback.
 - Keep evidence traceable to concrete document spans whenever possible.
 - Prefer exact locators, hashes, and surrounding context over broad page-level
   citations.

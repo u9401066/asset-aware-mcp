@@ -94,6 +94,8 @@ docx_validate_roundtrip(doc_id="docx_...", strict=true)
 
 DOCX pipeline 會保留 DFM block identity、格式 metadata、表格、圖片、header/footer/footnote story parts，並在 strict validation 中檢查 round-trip 風險。
 
+`save_docx` 是累積寫回：每次輸出都包含自 ingest 以來的所有編輯；`track_changes=true` 預設相對原始文件標示全部修訂（`revision_base="last_save"` 只標示本次變更）。輸出固定寫在 `data/{doc_id}/` 內，要回寫原始檔請使用 `document(op="native")` 的 `writeback`。
+
 ## VS Code Extension
 
 Extension 會提供：

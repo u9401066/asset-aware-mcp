@@ -14,7 +14,9 @@ DFM 是 Docx-Flavored Markdown，用於讓 LLM 或 agent 編輯 Word 文件時�
 
 輸出包含：
 
-- `DocxIR`
+- `DocxIR`（`ir.json`，每次 `save_docx` 更新為目前狀態）
+- `baseline_ir.json`（ingest 時的不可變 IR，描述 `original.docx`）
+- `original.docx`（原始 package，永不修改）
 - `content.dfm`
 - `content.md`
 - `format.yaml`
@@ -51,9 +53,57 @@ save_docx(
 
 `save_docx` 會在 pre-save、write、post-save 階段執行 DFM integrity checks。安全寫回主要支援文字與既有 table cell 內容更新，並保留現有 table shape；結構性表格修改會 fail closed。`force=true` 只會略過部分 stale/drift safeguards，不會讓不支援的結構改寫變成安全操作。
 
+### 累積寫回（cumulative write-back）
+
+每次 `save_docx` 都以 `original.docx` 為底，寫入「自 ingest 以來」所有與
+`baseline_ir.json` 不同的區塊，而不只是本次 DFM 的修改：
+
+- 第二次、第三次儲存會保留先前儲存過的編輯，不需要重新套用。
+- 重新儲存未修改的 DFM（no-op save）仍會輸出含全部編輯的文件；
+  只有內容與原始文件完全相同時，輸出才會是 `original.docx` 的位元組複本。
+- `docx_table_from_context` 等只更新 `ir.json` 的操作，也會在下一次儲存寫入。
+- 未編輯的區塊與其他 package parts 保持位元組不變。
+- Post-save integrity check 以 `original.docx` 為比較基準，逐一確認每個預期
+  變更都出現在輸出中；任何編輯遺失都會讓儲存失敗，而不是回報成功。
+- 回傳的 `changed_block_ids` 是輸出相對原始文件的所有變更區塊，
+  `edited_block_ids` 是本次請求修改的區塊。
+
+v1.4.1 以前建立的文件目錄沒有 `baseline_ir.json`。下一次儲存會先驗證
+`original.docx` 的 SHA-256 與 ingest checksum 相符，再從 `original.docx`
+重建基準並檢查 block 結構與 `ir.json` 一致；成功時寫入 `baseline_ir.json`，
+並在 warnings 列出先前已存在、舊版輸出可能遺漏的編輯。無法驗證時（原始檔被
+替換、結構不符、基準檔損毀）會拒絕儲存且不寫入任何檔案，請重新 ingest 並從
+`content.dfm`（或 `.backups/`）重新套用編輯。
+
+### 輸出位置
+
+`output_path` 預設為 `data/{doc_id}/output.docx`。相對路徑會解析到文件目錄內，
+絕對路徑也必須位於 `data/{doc_id}/` 內，否則回傳
+`Output path must stay within document directory`；`original.docx`、`ir.json`、
+`baseline_ir.json` 等保留檔不可覆寫。`save_docx` 不會改寫使用者的來源檔案。
+
+要寫回使用者原本的位置，請用 native file asset 流程：
+`document(op="native")` 的 `register` 登記來源檔 → `read_docx` /
+`update_docx` 建立新版本 → `writeback`（需要 `expected_revision` 與
+`expected_source_sha256`，會檢查來源檔 hash/stat 是否已被外部修改並保留備份），
+或用 `publish` 建立新的外部檔案。詳見 [Native File Assets](#/native-file-assets)。
+
 ## Track Changes
 
-`save_docx(track_changes=true)` 會輸出 Word 原生 `w:del` / `w:ins` revisions，並產生 `revisions.jsonl` sidecar。每筆 revision 會包含：
+`save_docx(track_changes=true)` 會輸出 Word 原生 `w:del` / `w:ins` revisions，並產生 `revisions.jsonl` sidecar。
+
+修訂的比較基準由 `revision_base` 決定：
+
+| `revision_base` | 輸出 |
+|---|---|
+| `original`（預設） | 自 ingest 以來的所有編輯都標成修訂，相對於原始文件；適合 IRB/PI 審查 |
+| `last_save` | 先前儲存過的編輯以已接受的純文字寫入，只把本次相對於上次儲存狀態（本次請求前的 `ir.json`）的變更標成修訂；適合多輪審查 |
+
+要求 Track Changes 但輸出沒有新增任何 `w:ins` / `w:del` 時，儲存會失敗；
+內容與修訂基準相同時會成功但回傳「no Word revisions were written」警告，
+不會把原始文件的複本當成已追蹤修訂的結果。
+
+每筆 revision 會包含：
 
 - block id
 - old/new text hash
@@ -61,6 +111,7 @@ save_docx(
 - context
 - locator metadata
 - author/time metadata
+- `revision_base`
 
 locator metadata 會帶回原始 Word part，例如 `word/document.xml`、
 `word/header*.xml`、`word/footer*.xml` 或 `word/footnotes.xml`，並在可用時

@@ -1,9 +1,11 @@
+from copy import deepcopy
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.application.dfm_integrity import IntegrityIssue, IntegrityReport
+from src.application.docx_baseline import DocxSaveBaseline
 from src.application.docx_service import DocxService
 from src.domain.docx_entities import DfmBlock, DocxIR
 from src.domain.docx_value_objects import DfmBlockType
@@ -631,6 +633,11 @@ async def test_save_docx_does_not_overwrite_artifacts_when_post_save_fails(
     post_save_calls = []
 
     monkeypatch.setattr(service, "_load_ir", lambda doc_id: ir)
+    monkeypatch.setattr(
+        service,
+        "_load_save_baseline",
+        lambda doc_dir, current_ir: DocxSaveBaseline(ir=deepcopy(current_ir)),
+    )
     monkeypatch.setattr(service.parser, "parse", lambda dfm_text: parse_result)
     monkeypatch.setattr(
         service.integrity,
@@ -675,6 +682,8 @@ async def test_save_docx_does_not_overwrite_artifacts_when_post_save_fails(
             "expected_text_diff_locations": {"paragraph 1"},
             "expected_table_diff_locations": set(),
             "revision_markup_expected": False,
+            "revision_markup_locations": set(),
+            "revisions_required": False,
         }
     ]
     assert output.read_bytes() == b"previous-output"

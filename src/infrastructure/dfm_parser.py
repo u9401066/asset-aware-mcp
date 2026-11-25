@@ -15,6 +15,7 @@ from typing import Any
 import yaml
 
 from src.domain.docx_entities import (
+    DfmBlock,
     DocxIR,
     DocxStyleInfo,
     FormatRun,
@@ -372,6 +373,10 @@ class DfmParser:
                         continue
                     block.runs = edit.updated_runs
                     block.content = runs_text
+            elif self.is_unchanged_image_markdown(block, new_content):
+                # The DFM body of an image block is its Markdown projection, not
+                # its IR content; re-saving it unchanged is not an edit.
+                continue
             elif block.runs:
                 if new_content == old_content or self._same_except_trailing_linebreaks(
                     new_content, old_content
@@ -879,6 +884,19 @@ class DfmParser:
         if not rows:
             return []
         return [[cell.strip() for cell in row] for row in rows]
+
+    @staticmethod
+    def image_markdown(block: DfmBlock) -> str:
+        """Return the Markdown projection DfmRenderer emits for an image block."""
+        return f"![{block.image_alt or block.content}]({block.image_path or ''})"
+
+    @classmethod
+    def is_unchanged_image_markdown(cls, block: DfmBlock, new_content: str) -> bool:
+        """Return True when an image block's DFM text is its unchanged projection."""
+        return (
+            block.block_type == DfmBlockType.IMAGE
+            and new_content.strip() == cls.image_markdown(block)
+        )
 
     @staticmethod
     def _same_except_trailing_linebreaks(left: str, right: str) -> bool:

@@ -152,23 +152,34 @@ class DocxAdapter(DocxWritebackMixin):
         original_ir: DocxIR | None = None,
         track_changes: bool = False,
         revision_author: str = "Asset-Aware MCP",
+        accepted_ir: DocxIR | None = None,
+        accepted_block_ids: set[str] | None = None,
     ) -> Path:
         """
         Rebuild a .docx file from a DocxIR.
 
-        Uses the original.docx as base and replaces text content
-        according to the modified IR blocks. When ``track_changes`` is enabled,
-        changed text is emitted as Word revisions (``w:del``/``w:ins``) by
-        diffing ``original_ir`` against ``ir``.
+        Uses the pristine original.docx as base and replaces text content
+        according to the modified IR blocks. Callers must therefore pass every
+        block that differs from ``original.docx`` in ``changed_block_ids`` (the
+        cumulative edit set since ingest), not only the blocks edited in the
+        latest DFM session. When ``track_changes`` is enabled, changed text is
+        emitted as Word revisions (``w:del``/``w:ins``) by diffing
+        ``original_ir`` against ``ir``.
 
         Args:
             ir: The (possibly modified) intermediate representation
             data_dir: Directory containing original.docx, parts/, assets/
             output_path: Where to write the output .docx
             changed_block_ids: Optional set of block ids that may be written
-            original_ir: Original IR before edits, required for precise diffs
+            original_ir: IR describing the revision base, required for precise
+                diffs when ``track_changes`` is enabled
             track_changes: If True, write textual edits as Word Track Changes
             revision_author: Author recorded on generated revision elements
+            accepted_ir: Optional IR written first as plain (accepted) text,
+                e.g. the previously saved state when revisions should only show
+                the latest session's edits
+            accepted_block_ids: Block ids of ``accepted_ir`` to write as plain
+                text before revisions are emitted
 
         Returns:
             Path to the generated .docx file
@@ -188,6 +199,8 @@ class DocxAdapter(DocxWritebackMixin):
             original_ir=original_ir,
             track_changes=track_changes,
             revision_author=revision_author,
+            accepted_ir=accepted_ir,
+            accepted_block_ids=accepted_block_ids,
         )
 
         return output_path
