@@ -15,6 +15,8 @@ Drive by choice; the lock only coordinates processes on one machine, so use one
 writer per document there. Open follow-ups: `get_docx_content` may return a
 human's unsaved in-place draft when `content.current.dfm` exists; paragraph-index
 drift when images/page breaks/SDT precede an edited paragraph (pre-existing);
+CI integration tests pinned to ubuntu-24.04 because LibreOffice 26.2 (ubuntu-26.04) lays
+out DOCX endnotes continuously — re-baseline the layout tests before unpinning;
 DATA_DIR differs between workspace mcp.json and Cline/Codex by design; Ollama
 model check uses exact names.
 
