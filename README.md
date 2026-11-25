@@ -7,17 +7,27 @@
 
 🌐 [繁體中文](README.zh-TW.md) · [Docs Site](https://u9401066.github.io/asset-aware-mcp/#/overview) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
-## v1.4.2 DOCX cumulative write-back fix
+## v1.5.0 Safe DOCX edits for one or many agents
 
-**Upgrade recommended if you edit DOCX files with `save_docx`.** In 1.4.1, every
-save after the first silently dropped earlier edits, and a Track Changes re-save
-could write a plain copy of the original while reporting success. 1.4.2 writes
-every edit since ingest from an immutable `baseline_ir.json`, verifies each
-expected change before reporting success, and adds `revision_base`
-(`"original"` or `"last_save"`) for Track Changes. Document directories created
-by 1.4.1 are migrated after checksum and structure verification; re-check DOCX
-files you produced with 1.4.1 after more than one save. Details:
-[changelog](CHANGELOG.md#142---2026-11-25).
+**Upgrade recommended if you edit DOCX files with `save_docx`.** 1.4.1 could
+silently drop earlier edits on the second and later saves, write a plain copy of
+the original for a Track Changes re-save, and let two clients saving from the
+same DFM revert each other — all while reporting success. 1.5.0:
+
+- writes every edit since ingest from an immutable `baseline_ir.json` and
+  verifies each expected change before reporting success;
+- gives every save a document `revision`, 3-way merges stale DFMs or refuses
+  them with the conflicting block ids, and makes re-ingest of the same file keep
+  your edits (`reset=true` discards them explicitly);
+- adds block checkout/lease editing (`docx` `checkout` → `commit` → `release`)
+  so several agents can edit different parts of one document, with Track Changes
+  attributed per agent;
+- warns when DATA_DIR is on a cloud-synced or network drive, where the edit lock
+  cannot coordinate across machines;
+- clears all known dependency advisories and **requires Python 3.11+**.
+
+Re-check DOCX files you produced with 1.4.1 after more than one save. Details:
+[changelog](CHANGELOG.md#150---2026-11-25).
 
 ## v1.4.1 Consolidated native-document release
 

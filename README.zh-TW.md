@@ -7,15 +7,22 @@
 
 🌐 [English](README.md) · [文件網站](https://u9401066.github.io/asset-aware-mcp/#/overview-zh) · [GitHub Wiki](https://github.com/u9401066/asset-aware-mcp/wiki)
 
-## v1.4.2 DOCX 累積回寫修正
+## v1.5.0 單一或多個 agent 都能安全編輯 DOCX
 
-**有用 `save_docx` 編輯 DOCX 的使用者請升級。** 1.4.1 在同一份文件第二次以後的
-存檔會靜默遺失先前的修改；先一般存檔再存追蹤修訂版時，可能輸出原稿複本卻回報成功。
-1.4.2 以不可變的 `baseline_ir.json` 寫出自匯入以來的全部修改，回報成功前逐一驗證
-每處預期變更，並為追蹤修訂新增 `revision_base`（`"original"` 或 `"last_save"`）。
-1.4.1 建立的文件資料夾會在檢查 checksum 與結構後自動遷移；曾用 1.4.1 對同一份
-文件存檔兩次以上的使用者，請重新檢查當時產出的 DOCX。詳見
-[變更紀錄](CHANGELOG.md#142---2026-11-25)。
+**有用 `save_docx` 編輯 DOCX 的使用者請升級。** 1.4.1 在第二次以後的存檔可能靜默
+遺失先前的修改、存追蹤修訂版時輸出原稿複本，兩個 client 從同一份 DFM 存檔也會互相
+還原，而且都回報成功。1.5.0：
+
+- 以不可變的 `baseline_ir.json` 寫出自匯入以來的全部修改，回報成功前逐一驗證；
+- 每次存檔都有文件 `revision`，過期的 DFM 會做 3-way merge 或列出衝突區塊後拒絕；
+  再匯入同一份檔案會保留修改（要捨棄請明確帶 `reset=true`）；
+- 新增區塊 checkout／lease 編輯（`docx` 的 `checkout` → `commit` → `release`），
+  多個 agent 可分頭編輯同一份文件的不同段落，追蹤修訂依 agent 標示作者；
+- DATA_DIR 位在雲端同步或網路磁碟時發出警告（編輯鎖無法跨機器協調）；
+- 清除所有已知依賴漏洞，並**改為需要 Python 3.11 以上**。
+
+曾用 1.4.1 對同一份文件存檔兩次以上的使用者，請重新檢查當時產出的 DOCX。詳見
+[變更紀錄](CHANGELOG.md#150---2026-11-25)。
 
 ## v1.4.1 跨格式文件與證據流程整合
 

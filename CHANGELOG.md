@@ -9,41 +9,90 @@
 
 Changes accumulate on the 1.4.x line; individual features do not trigger releases.
 
-## [1.4.2] - 2026-11-25
+## [1.5.0] - 2026-11-25
 
-Patch release for a silent data-loss bug in DOCX write-back.
+Data-safety and multi-agent editing release. It fixes silent DOCX edit loss,
+lets several agents edit one document safely, clears all known dependency
+advisories, and raises the minimum Python version to 3.11.
+
+### Security
+
+- Refreshed the Python lock and the VSIX npm lockfile for advisories published
+  after 1.4.1 (aiohttp 3.14.5, Pillow 13.0.0, PyJWT 2.15.1, pyasn1 0.6.5,
+  urllib3 2.8.0, msgpack 1.2.4, multidict 6.9.1, certifi 2026.11.20,
+  opentelemetry-api 1.45.2, filelock 4.3.1, soupsieve 4.1.3, virtualenv
+  21.15.13, Docling 2.142.1, mail-parser 4.11.0, setuptools 84.2.1;
+  @azure/msal-node 7.2.3, undici 7.30.2, markdown-it 14.3.3, smol-toml 1.9.1,
+  eslint 10.15.0, typescript-eslint 8.74.0 and glob/minimatch overrides).
+  `uv audit` and both npm audits report zero known vulnerabilities without
+  allowlists.
+- Raised PyPI security floors: Pillow>=13.0.0, aiohttp>=3.14.4, PyJWT>=2.15.0,
+  pyasn1>=0.6.5, urllib3>=2.8.0, msgpack>=1.2.3, and docling>=2.142.0 for the
+  `docling` extra.
 
 ### Fixed
 
-- DOCX `save_docx` write-back is now cumulative: every output is `original.docx`
-  plus all edits since ingest. Previously each save after the first silently
-  dropped earlier edits, a Track Changes re-save wrote a plain copy of
-  `original.docx` with zero revisions, and DOCX→PDF/DOC/ODT conversion and
-  `docx_table_from_context` edits could lose changes — all while reporting
-  success. The post-save integrity check now verifies every expected change
-  against `original.docx`, so a lost edit fails the save.
-- Reverting all DFM edits now yields `original.docx` byte-for-byte instead of
-  failing the integrity check.
-- An image block's DFM Markdown projection is no longer applied as an edit.
+- DOCX `save_docx` write-back is now cumulative: every output is
+  `original.docx` plus all edits since ingest. Previously each save after the
+  first silently dropped earlier edits, a Track Changes re-save wrote a plain
+  copy of `original.docx` with zero revisions, and DOCX→PDF/DOC/ODT conversion
+  and `docx_table_from_context` edits could lose changes — all while reporting
+  success. The post-save integrity check verifies every expected change against
+  `original.docx`, so a lost edit fails the save.
+- Two clients saving from the same DFM no longer silently revert each other:
+  every save carries a document `revision`; a stale DFM is 3-way merged or
+  refused with `conflict_block_ids`. A `content.md` without its own revision no
+  longer inherits a newer `format.yaml` revision.
+- Re-ingesting the same source no longer discards committed edits (ingest is
+  idempotent; pass `reset=true` to discard them explicitly).
+- Unsaved in-place edits to `content.md` / `content.dfm` / `format.yaml` are
+  preserved instead of being overwritten by another save (the latest state is
+  written to `content.current.*` with a warning); merged saves keep pre-save
+  validation; same-second backups no longer overwrite each other.
+- Waiting for the edit lock no longer blocks the server's event loop; a save
+  whose content was published before a SQLite failure reports `committed: true`;
+  deleting a document respects live leases and never leaves a half-deleted
+  directory; writers that bypass the lock are detected before the commit point.
+- Reverting all DFM edits yields `original.docx` byte-for-byte; an image block's
+  DFM Markdown projection is no longer applied as an edit.
+- Extracting transparent palette, L or RGB PNGs with `preserve_decoded` works on
+  Pillow 13 (transparency is carried explicitly through checked saves).
 
 ### Added
 
-- Immutable `baseline_ir.json` ingest snapshot next to `original.docx`.
-- `save_docx`/`docx(op="save")` `revision_base`: `"original"` (default, all
-  edits since ingest) or `"last_save"` (only changes since the previous save).
-  Results add `edited_block_ids`, `tracked_block_ids` and `revision_base`;
-  `revisions.jsonl` records carry `revision_base`.
+- Block checkout/lease editing on the `docx` facade (`checkout`, `commit`,
+  `release`, `renew`, `leases`, `break_lease`): an agent takes the blocks it will
+  edit, other agents cannot modify them, and commits apply only leased blocks on
+  top of the current document. Leases live in `edit_state.sqlite3`, safe across
+  processes; `checkout` accepts `request_id` for idempotent retries. Track
+  Changes attribute each block to its lease holder.
+- Immutable `baseline_ir.json` ingest snapshot; `save_docx`/`docx(op="save")`
+  `revision_base` (`"original"` or `"last_save"`); results add
+  `edited_block_ids`, `tracked_block_ids`, `revision`, `previous_revision`,
+  `revision_merge`, `revision_front_matter`; `revisions.jsonl` records carry
+  `revision_base`, `revision_author` and `content_revision`.
+- `storage_warning` and a doctor `DATA_DIR WARNING` when DATA_DIR is on a
+  cloud-synced or network location (Google Drive, OneDrive, Dropbox, iCloud,
+  UNC/mapped drives): the edit lock only coordinates processes on one machine.
+- `UNMARKED_TEXT` warning for DFM text outside any block marker.
 
 ### Changed
 
-- `changed_block_ids` now lists every block that differs from `original.docx`.
-- A Track Changes save that emits no new `w:ins`/`w:del` fails; edits to block
-  types the writer cannot emit (e.g. footnotes) are reported as warnings.
-- Legacy (≤1.4.1) document directories rebuild the baseline from
-  `original.docx` after checksum and block-structure verification, or refuse
-  the save with re-ingest guidance.
+- **BREAKING:** Python 3.11 is now the minimum supported version. The `docling`
+  extra requires Python 3.11.5+ and installs nothing on 3.11.0–3.11.4.
+- `changed_block_ids` lists every block that differs from `original.docx`; a
+  Track Changes save that emits no new `w:ins`/`w:del` fails.
+- `force` no longer bypasses revision, lease or checksum checks.
+- Legacy (≤1.4.1) document directories are verified and adopted on first use.
+- The VS Code extension falls back to Python 3.12 (instead of 3.10) when a 3.11
+  runtime cannot be prepared; a stale 3.10 runtime preference is ignored.
 - Documented that `save_docx` `output_path` must stay inside `data/{doc_id}/`;
   use the native `writeback` flow to update the source file.
+
+### Removed
+
+- Python 3.10 support: classifier, CI job, installer probes and the extension's
+  3.10 runtime fallback.
 
 ## [1.4.1] - 2026-09-22
 
