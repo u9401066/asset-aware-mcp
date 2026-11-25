@@ -626,7 +626,10 @@ jobs:
   # ==========================================
   integration-tests:
     name: 🔗 Integration Tests
-    runs-on: ubuntu-latest
+    # Pinned: the LibreOffice layout tests are byte/page exact. ubuntu-latest moved to
+    # 26.04 (LibreOffice 26.2), which lays out DOCX endnotes continuously instead of on
+    # their own page. Re-baseline those tests before moving this job to a newer image.
+    runs-on: ubuntu-24.04
     needs: unit-tests
     timeout-minutes: 15
     steps:
