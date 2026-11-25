@@ -77,7 +77,8 @@ wsl --install -d Ubuntu-26.04                    # 若尚未安裝
 python scripts/pretest.py --setup-wsl            # 冪等；安裝 CI 用的 apt 套件、uv、Node
 git config --local pretest.windowsNode "C:\path\to\node22"   # 預設 PATH 的 Node 太舊時
 git config --local pretest.windowsNodeMajor 22   # 明確接受 Windows 端比 CI（24）舊的 Node
-uvx --from uv==0.12.3 uv run --frozen pre-commit install --hook-type pre-commit --hook-type pre-push --hook-type commit-msg
+git config --local pretest.timeoutScale 2        # 本機比 GitHub runner 慢時放寬 timeout（每次執行都會標示）
+uvx --from uv==0.12.3 uv run --frozen --no-sync pre-commit install --hook-type pre-commit --hook-type pre-push --hook-type commit-msg
 ```
 
 日常使用：

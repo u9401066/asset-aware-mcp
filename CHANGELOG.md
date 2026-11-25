@@ -23,7 +23,9 @@ Changes accumulate on the 1.4.x line; individual features do not trigger release
   macOS is reported as NOT VERIFIED; wrong uv/Node/LibreOffice versions or a
   missing distro fail loudly. `--quick`, `--only`, `--skip`, `--rev`,
   `--list` and `--dry-run` are supported, and the run ends with a CI job →
-  local result table.
+  local result table. `--timeout-scale` / `pretest.timeoutScale` stretches
+  job, step and pytest-timeout limits on hosts slower than GitHub's runners
+  (default 1; any other value is reported in every row).
 - `scripts/setup_local_ci_wsl.sh` (also `pretest.py --setup-wsl`): idempotent
   provisioning of the WSL distro with exactly the workflows' apt packages,
   the pinned uv, the newest Node of the pinned major and a non-root `runner`
