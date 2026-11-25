@@ -403,6 +403,20 @@ and LightRAG knowledge graph outputs.
   tracks only changes since the previous save. A tracked save without new w:ins/
   w:del fails. Reported legacy-directory migrations and refusals need user review.
   output_path stays inside data/{doc_id}/; source writeback uses native writeback.
+- Multi-agent DFM editing (1.5.0): content.dfm front matter carries `revision`
+  (content version) beside `checksum` (source identity). save_docx 3-way merges a
+  DFM from an older retained revision (applies only blocks you changed) and
+  refuses blocks someone else changed since (conflict_block_ids); re-open the
+  current DFM instead of retrying, force never bypasses this. To share one
+  document with other agents: docx(op="checkout", doc_id, block_ids, holder) ->
+  edit only the returned fragments, keeping each marker line -> docx(op="commit",
+  doc_id, lease_token, edits={block_id: fragment}) -> docx(op="release") if you
+  abandon. Checkout fails fast on live leases (no waiting); full-DFM saves refuse
+  leased blocks. Never hold leases while idle: commit or release promptly, renew
+  only while editing (TTL default 900s, max 3600s). Tracked commits author each
+  block with its holder. break_lease is administrative: expired leases only unless
+  force=true after the user confirms the holder is gone. Native update_docx stays
+  document-revision-only; its stale error points to this lease workflow.
 
 - Since 1.4.0, native-contract-v2 supports for_op and hash-pinned
   schema pages. Check schema_delivery and preserve schema_sha256 while assembling.

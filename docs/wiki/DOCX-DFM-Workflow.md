@@ -14,6 +14,7 @@ DFM 是 Docx-Flavored Markdown，用於讓 LLM 或 agent 編輯 Word 文件時�
 
 - `DocxIR`（`ir.json`，每次 `save_docx` 更新為目前狀態）
 - `baseline_ir.json`（ingest 時的不可變 IR，描述 `original.docx`）
+- `edit_state.sqlite3`（內容 revision 歷史、區塊租約、修訂作者；見下方多 agent 編輯）
 - `original.docx`（原始 package，永不修改）
 - `content.dfm`
 - `content.md`
@@ -49,7 +50,7 @@ save_docx(
 )
 ```
 
-`save_docx` 會在 pre-save、write、post-save 階段執行 DFM integrity checks。安全寫回主要支援文字與既有 table cell 內容更新，並保留現有 table shape；結構性表格修改會 fail closed。`force=true` 只會略過部分 stale/drift safeguards，不會讓不支援的結構改寫變成安全操作。
+`save_docx` 會在 pre-save、write、post-save 階段執行 DFM integrity checks。安全寫回主要支援文字與既有 table cell 內容更新，並保留現有 table shape；結構性表格修改會 fail closed。`force=true` 只會略過內容縮減 fail-safe、post-save integrity 失敗與來源 checksum 不符，不會讓不支援的結構改寫變成安全操作，也**不會**略過 revision 衝突或區塊租約。
 
 ### 累積寫回（cumulative write-back）
 
@@ -72,6 +73,49 @@ v1.4.1 以前建立的文件目錄沒有 `baseline_ir.json`。下一次儲存會
 並在 warnings 列出先前已存在、舊版輸出可能遺漏的編輯。無法驗證時（原始檔被
 替換、結構不符、基準檔損毀）會拒絕儲存且不寫入任何檔案，請重新 ingest 並從
 `content.dfm`（或 `.backups/`）重新套用編輯。
+
+### 多 agent 併發編輯：revision 與區塊租約（1.5.0）
+
+`content.dfm` front matter 的 `checksum` 是原始檔的 SHA-256（來源身分），
+ingest 後永不改變；`revision` 則是**內容版本**，每次成功儲存都會改變。1.5.0 以前
+兩個 client 讀同一份 DFM、先後儲存不同段落時，後者會默默還原前者的編輯；現在：
+
+- 每個寫入操作都在文件鎖（`edit_state.sqlite3` 的 `BEGIN IMMEDIATE`，跨 process
+  有效）中執行。
+- `save_docx` 收到較舊 `revision` 的 DFM 時做 **3-way merge**：只套用你相對於
+  base 改過的區塊，保留別人在之後改過的區塊（回傳 `revision_merge.mode="merged"`）；
+  若同一區塊兩邊都改過，拒絕並回傳 `conflict_block_ids`，不寫入任何檔案。
+- 沒有 `revision` 的舊 DFM 只在 ingest 後從未儲存時接受。
+- 保留最新 50 個 revision；更舊的 DFM 需重新開啟。
+
+讓多個 agent（Claude Code subagents、Copilot、Cline、Codex）同時編輯不同區塊，
+建議使用區塊租約：
+
+```text
+docx(op="list_blocks", doc_id="...")                      # 找出要改的區塊
+docx(op="checkout", doc_id="...", block_ids=["p005"],
+     holder="claude-methods", ttl_seconds=900)            # 取得 lease_token + 片段
+# 只編輯回傳的片段（保留 marker 行）
+docx(op="commit", doc_id="...", lease_token="...",
+     edits={"p005": "<!-- @b:p005 -->\n新的段落文字"},
+     track_changes=true)                                  # 套用到最新文件並釋放
+docx(op="release", doc_id="...", lease_token="...")       # 放棄時歸還
+docx(op="leases", doc_id="...")                           # 查看誰持有哪些區塊
+```
+
+- checkout 遇到他人有效租約立即失敗（回報 holder 與到期時間），不會阻塞等待；
+  巢狀表格與父表格一起租用。
+- commit 只接受租約內區塊，套用在**目前**文件上（保留他人已 commit 的區塊），
+  走相同的累積寫回與 post-save 驗證；`track_changes=true` 時作者預設為 holder，
+  Word 會顯示哪個 agent 改了哪一段。
+- 全文 `save_docx` 與 `docx_table_from_context` 會拒絕修改被他人租用的區塊。
+- 租約預設 900 秒、上限 3600 秒；不要在閒置期間持有租約，編輯完立即 commit，
+  需要更久時用 `renew`。過期租約可被他人回收，或用 `break_lease` 清除（有效租約需
+  `force=true`，屬管理操作）。
+- Native `update_docx` 仍以文件層級 `expected_revision` 序列化（native block ID 只在
+  單一 revision 有效）；過期錯誤會提示改用上述租約流程。
+
+完整規格見 `docs/dfm-spec.md` §12。
 
 ### 輸出位置
 
@@ -110,6 +154,7 @@ v1.4.1 以前建立的文件目錄沒有 `baseline_ir.json`。下一次儲存會
 - locator metadata
 - author/time metadata
 - `revision_base`
+- `revision_author`（每個區塊的修訂作者；多 agent 時為 lease holder）
 
 locator metadata 會帶回原始 Word part，例如 `word/document.xml`、
 `word/header*.xml`、`word/footer*.xml` 或 `word/footnotes.xml`，並在可用時
