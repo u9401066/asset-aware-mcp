@@ -32,7 +32,10 @@ Per-clone settings (``git config --local``; environment variables win):
     pretest.windowsNode       PRETEST_WINDOWS_NODE    dir containing node.exe
     pretest.windowsNodeMajor  PRETEST_WINDOWS_NODE_MAJOR  lowest accepted Node
                               major for Windows jobs (default: NODE_VERSION)
-    pretest.home              PRETEST_HOME            work dir (logs, checkouts)
+    pretest.home              PRETEST_HOME            logs, quick venv, tool copies
+                              (default %LOCALAPPDATA%\\aam-pretest)
+    pretest.windowsTemp       PRETEST_WINDOWS_TEMP    short ASCII root for Windows
+                              job checkouts, TEMP and --basetemp (default C:\\aamg)
 
 The host side only needs Python >= 3.9 and git; nothing is installed on it.
 """
@@ -45,6 +48,7 @@ import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -93,7 +97,6 @@ NOT_APPLICABLE = {
 NOT_VERIFIED = {
     "macos": "needs a macOS runner; this host cannot provide one",
 }
-
 # --quick: offline commit-time subset, run in the working tree. Every command is
 # taken verbatim from a workflow `run:` step (tests/unit/test_pretest_gate.py
 # keeps them in sync). The network-bound `uv audit` waits for the full gate.
@@ -587,18 +590,25 @@ def load_jobs(read: Any) -> list[Job]:
 _APT_LINE = re.compile(r"^(?:sudo\s+)?apt-get\s+(update|install\s+(?P<args>.+))$")
 
 
-def apt_packages(script: str) -> list[str] | None:
-    """Packages of a step that only runs apt-get update/install, else None."""
-    packages: list[str] = []
+def apt_installs(script: str) -> list[list[str]] | None:
+    """`apt-get install` arguments of a step that only runs apt-get, else None."""
+    installs: list[list[str]] = []
     commands = [c.strip() for line in script.splitlines() for c in line.split("&&")]
     for command in filter(None, commands):
         match = _APT_LINE.match(command)
         if not match:
             return None
-        packages.extend(
-            t for t in (match.group("args") or "").split() if not t.startswith("-")
-        )
-    return packages
+        if match.group("args"):
+            installs.append(match.group("args").split())
+    return installs
+
+
+def apt_packages(script: str) -> list[str] | None:
+    """Packages of a step that only runs apt-get update/install, else None."""
+    installs = apt_installs(script)
+    if installs is None:
+        return None
+    return [t for args in installs for t in args if not t.startswith("-")]
 
 
 def plan_steps(job: Job) -> list[Step]:
@@ -658,10 +668,12 @@ def plan_steps(job: Job) -> list[Step]:
                 )
             )
         elif re.search(r"\bapt-get\b", script):
-            packages = apt_packages(script)
-            if packages is None:
+            installs = apt_installs(script)
+            if installs is None:
                 raise GateError(f"step {name!r}: apt-get mixed with other commands")
-            steps.append(Step(index, name, "apt", data, detail={"packages": packages}))
+            packages = [t for args in installs for t in args if not t.startswith("-")]
+            detail = {"packages": packages, "installs": installs}
+            steps.append(Step(index, name, "apt", data, detail=detail))
         else:
             steps.append(Step(index, name, "run", data, script))
     return steps
@@ -838,6 +850,10 @@ class JobRunner:
                 "LANG": "C.UTF-8",
                 "PATH": LINUX_PATH,
                 "DEBIAN_FRONTEND": "noninteractive",
+                # VS Code's Linux `bin/code` prompts on WSL kernels and the
+                # install smoke then sees no --user-data-dir support; GitHub
+                # runners are not WSL, so suppress the WSL-only prompt.
+                "DONT_PROMPT_WSL_INSTALL": "1",
                 **(self.payload.get("linux_env") or {}),
                 "TMPDIR": str(self.owned_dir(self.temp / "tmp")),
             }
@@ -927,24 +943,38 @@ class JobRunner:
     def check_apt(self, step: Step, env: dict[str, str]) -> str:
         if self.platform != "linux":
             raise GateError("apt-get step outside Linux")
-        missing, versions = [], {}
+        # Replay CI's own install line in simulate mode: it resolves virtual
+        # packages (libgtk-3-0 -> libgtk-3-0t64) and reports anything CI would
+        # install or upgrade from the archive today.
+        plain = {**env, "LANG": "C", "LC_ALL": "C"}
+        pending: list[str] = []
+        for args in step.detail["installs"]:
+            command = ["apt-get", "install", "--simulate", *args]
+            code, text = run_process(
+                command, cwd="/", env=plain, capture=True, timeout=300
+            )
+            if code != 0:
+                raise GateError(f"{' '.join(command)} failed: {text.strip()[-500:]}")
+            pending += [
+                line.split()[1]
+                for line in text.splitlines()
+                if line.startswith("Inst ")
+            ]
+        if pending:
+            raise GateError(
+                f"CI would install or upgrade: {' '.join(pending)}; run python scripts/pretest.py --setup-wsl"
+            )
+        versions = {}
         for package in step.detail["packages"]:
             code, text = run_process(
-                ["dpkg-query", "-W", "-f=${Status}\t${Version}", package],
+                ["dpkg-query", "-W", "-f=${Version}", package],
                 cwd="/",
-                env=env,
+                env=plain,
                 capture=True,
                 timeout=60,
             )
-            status, _, version = text.partition("\t")
-            if code != 0 or status.strip() != "install ok installed":
-                missing.append(package)
-            else:
-                versions[package] = version.strip()
-        if missing:
-            raise GateError(
-                f"apt packages missing: {' '.join(missing)}; run python scripts/pretest.py --setup-wsl"
-            )
+            if code == 0 and text.strip():
+                versions[package] = text.strip()
         office = {p: v for p, v in versions.items() if p.startswith("libreoffice-")}
         for package, version in office.items():
             if _version_tuple(version) < LIBREOFFICE_MIN:
@@ -956,7 +986,8 @@ class JobRunner:
             note = f"LibreOffice {next(iter(office.values()))}"
             if note not in self.notes:
                 self.notes.append(note)
-        return f"verified {len(versions)} apt packages (installed by setup_local_ci_wsl.sh)"
+        count = len(step.detail["packages"])
+        return f"apt-get install --simulate: all {count} packages present at the archive version"
 
     def run_script(
         self, step: Step, env: dict[str, str], script: str, timeout: float | None
@@ -1139,6 +1170,22 @@ def as_user(command: list[str], user: tuple[int, int] | None, cwd: str = "/") ->
 def inner_sync(payload: dict[str, Any]) -> int:
     """Inside WSL: preflight facts and fetch the snapshot into the mirror."""
     facts: dict[str, Any] = {"errors": []}
+    # A cold-booted WSL distro answers DNS only after its network settles;
+    # GitHub runners start with a working network, so wait instead of letting
+    # the first `npm audit`/`uv audit` fail with EAI_AGAIN.
+    started, streak = time.monotonic(), 0
+    while streak < 3:
+        try:
+            for host in ("github.com", "pypi.org", "registry.npmjs.org"):
+                socket.getaddrinfo(host, 443)
+            streak += 1
+        except OSError:
+            streak = 0
+            if time.monotonic() - started > 120:
+                facts["errors"].append("WSL DNS did not answer for 120s")
+                break
+        time.sleep(1)
+    facts["network_wait_seconds"] = round(time.monotonic() - started, 1)
     os_release = Path("/etc/os-release").read_text(encoding="utf-8")
     version = re.search(r'^VERSION_ID="?([^"\n]+)', os_release, re.M)
     facts["ubuntu"] = version.group(1) if version else "unknown"
@@ -1336,7 +1383,7 @@ def inner_job(payload: dict[str, Any]) -> int:
         )
         return 1
     runner = JobRunner(job, payload)
-    runner.notes.extend(notes)
+    runner.notes.extend([*payload.get("host_notes", []), *notes])
     result = runner.run()
     return 0 if result["status"] == "PASS" else 1
 
@@ -1567,7 +1614,7 @@ class Gate:
     def linux_preflight(
         self, jobs: list[Job], sha: str, pins: dict[str, str]
     ) -> list[str]:
-        packages: list[str] = []
+        packages: list[str] = ["libreoffice-writer"]
         for job in jobs:
             packages.extend(p for p in job_apt_packages(job) if p not in packages)
         if self.windows:
@@ -1633,14 +1680,13 @@ class Gate:
             problems.append(
                 f"Node {pins['node']}.x required, found {node or 'none'}; {hint}"
             )
-        missing = [p for p, v in facts.get("packages", {}).items() if not v]
-        if missing:
-            problems.append(f"apt packages missing: {' '.join(missing)}; {hint}")
+        # apt packages are verified by each job's own apt step, so a missing
+        # VSIX library only fails the jobs that install it.
         office = facts.get("packages", {}).get("libreoffice-writer")
-        if office and _version_tuple(office) < LIBREOFFICE_MIN:
-            problems.append(
-                f"LibreOffice {office} < CI baseline {'.'.join(map(str, LIBREOFFICE_MIN))}; {hint}"
-            )
+        self.print(
+            f"Linux executor: Ubuntu {facts.get('ubuntu')}, {facts.get('uv')}, "
+            f"Node {facts.get('node')}, LibreOffice {office or 'not installed'}"
+        )
         age = facts.get("apt_index_age_days")
         if age is not None and age > 7:
             self.print(
@@ -1722,14 +1768,47 @@ class Gate:
             problems.append("PowerShell 7 (pwsh) is required for `shell: pwsh` steps")
         return prefix, minimum, problems
 
-    def windows_env(self, job: Job, prefix: list[str]) -> dict[str, str]:
+    def windows_short_root(self) -> Path:
+        """Short ASCII root for Windows checkouts, TEMP and pytest basetemp.
+
+        Keeps paths at or below the runner's (D:\\a\\<repo>\\<repo>, short TEMP)
+        and away from CJK or deep profile directories.
+        """
+        drive = os.environ.get("SYSTEMDRIVE", "C:")
+        root = git_config(
+            "pretest.windowsTemp", "PRETEST_WINDOWS_TEMP", drive + "\\aamg"
+        )
+        if not root.isascii():
+            raise GateError(f"pretest.windowsTemp must be an ASCII path: {root}")
+        return Path(root)
+
+    def windows_env(
+        self, job: Job, prefix: list[str], notes: list[str]
+    ) -> dict[str, str]:
         env = self.job_env()
-        short = self.home / "t" / job.key
-        temp, basetemp = short / "tmp", short / "bt"
-        rmtree(short)
+        abbreviation = "".join(part[0] for part in job.key.split("-"))
+        temp = self.windows_short_root() / "t" / abbreviation
+        basetemp = self.windows_short_root() / "b" / abbreviation
+        for path in (temp, basetemp):
+            rmtree(path)
         temp.mkdir(parents=True)
+        basetemp.parent.mkdir(parents=True, exist_ok=True)  # pytest won't
         env["TEMP"] = env["TMP"] = str(temp)
-        env["PYTEST_ADDOPTS"] = f"--basetemp={basetemp}"
+        # pytest splits PYTEST_ADDOPTS with POSIX shlex, which would eat the
+        # backslashes of C:\aamg\b\ws and yield a long relative basetemp.
+        location = basetemp.as_posix()
+        if not windows_long_paths():
+            # GitHub's Windows runners enable Win32 long paths; the content-
+            # addressed Wiki/evidence trees under tmp_path exceed MAX_PATH even
+            # from a 12-character basetemp. The extended-length prefix lifts
+            # only that limit for the test tree, so every test still runs.
+            location = "//?/" + location
+            notes.append(
+                "LongPathsEnabled=0 on this host (GitHub runners enable Win32 long "
+                "paths): pytest --basetemp uses the \\\\?\\ extended-length prefix; "
+                "enable long paths (admin) to drop it"
+            )
+        env["PYTEST_ADDOPTS"] = f"--basetemp={location}"
         env["PATH"] = os.pathsep.join([*prefix, env.get("PATH", "")])
         return env
 
@@ -1782,12 +1861,14 @@ class Gate:
                 *self.python_payload("--internal-job", payload),
             ]
         else:
-            env = self.windows_env(job, context["windows_prefix"])
+            host_notes: list[str] = []
+            env = self.windows_env(job, context["windows_prefix"], host_notes)
             payload.update(
                 source=str(ROOT),
-                workspace=str(self.home / "ws" / job.key),
-                runner_temp=str(self.home / "t" / job.key / "rt"),
+                workspace=str(self.windows_short_root() / "w" / job.key),
+                runner_temp=str(self.windows_short_root() / "r" / job.key),
                 host_env=env,
+                host_notes=host_notes,
                 node_major_min=context["windows_node_major"],
                 git_bash=git_bash(),
             )
@@ -1798,6 +1879,15 @@ class Gate:
             ]
         result = self.run_inner(command, log, job.key)
         seconds = time.monotonic() - started
+        current = ("ubuntu-latest", f"ubuntu-{UBUNTU_LATEST}")
+        if (
+            result is not None
+            and job.platform == "linux"
+            and job.runs_on not in current
+        ):
+            result.setdefault("notes", []).append(
+                f"CI pins {job.runs_on}; the local executor is Ubuntu {UBUNTU_LATEST}"
+            )
         if result is None:
             outcome = Outcome(
                 job, "FAIL", label, seconds, "job runner crashed; see log", log=log
@@ -1822,6 +1912,19 @@ class Gate:
                 "\n".join(f"    | {line}" for line in tail if not line.startswith(MARK))
             )
         return outcome
+
+
+def windows_long_paths() -> bool:
+    """Whether Win32 long paths are enabled (they are on GitHub's runners)."""
+    try:
+        import winreg  # type: ignore[import-not-found]
+
+        with winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\FileSystem"
+        ) as key:
+            return winreg.QueryValueEx(key, "LongPathsEnabled")[0] == 1
+    except (ImportError, OSError):
+        return False
 
 
 def git_bash() -> str:
@@ -2056,15 +2159,16 @@ def main_gate(args: argparse.Namespace) -> int:
         encoding="utf-8",
     )
     failed = [o for o in ordered if o.status == "FAIL"]
-    unverified = [o for o in ordered if o.status == "NOT VERIFIED"]
+    unverified = [o.job.qualified for o in ordered if o.status == "NOT VERIFIED"]
+    skipped = [o.job.qualified for o in ordered if o.status == "not selected"]
     if failed:
         gate.print(
             f"\nGATE FAILED: {', '.join(o.job.qualified for o in failed)} (logs in {gate.run_dir})"
         )
         return 1
-    gate.print(
-        f"\nGATE PASSED{' (NOT VERIFIED: ' + ', '.join(o.job.qualified for o in unverified) + ')' if unverified else ''}"
-    )
+    extra = [f"NOT VERIFIED: {', '.join(unverified)}"] if unverified else []
+    extra += [f"PARTIAL RUN, not selected: {', '.join(skipped)}"] if skipped else []
+    gate.print("\nGATE PASSED" + (f" ({'; '.join(extra)})" if extra else ""))
     return 0
 
 
@@ -2181,8 +2285,12 @@ def main(argv: list[str] | None = None) -> int:
         help="skip these jobs (repeatable, comma-separated)",
     )
     parser.add_argument("--rev", help="gate this commit instead of the working tree")
+    # Each CI job owns a whole runner; more than 3 concurrent heavy jobs made
+    # timing-sensitive tests (0.1 s worker deadlines) and the 15-minute unit
+    # job budget unreliable on a 12-thread desktop. release:test bounds the
+    # wall time anyway.
     parser.add_argument(
-        "--jobs", type=int, default=4, help="jobs to run in parallel (default 4)"
+        "--jobs", type=int, default=3, help="jobs to run in parallel (default 3)"
     )
     parser.add_argument(
         "--list", action="store_true", help="print the CI job -> local executor mapping"

@@ -1,5 +1,6 @@
 """The local CI-parity gate must read the workflows exactly like GitHub does."""
 
+import argparse
 import importlib.util
 import re
 import sys
@@ -150,8 +151,36 @@ def test_apt_steps_and_file_commands(tmp_path):
         "sudo apt-get update && sudo apt-get install -y --no-install-recommends a b"
     ) == ["a", "b"]
     assert gate.apt_packages("sudo apt-get update\nmake") is None
+    # The gate replays CI's exact install arguments with --simulate.
+    assert gate.apt_installs(
+        "sudo apt-get update\nsudo apt-get install -y xvfb libgtk-3-0"
+    ) == [["-y", "xvfb", "libgtk-3-0"]]
+    jobs = {job.qualified: job for job in _jobs()}
+    apt = next(
+        s for s in gate.plan_steps(jobs["ci:integration-tests"]) if s.kind == "apt"
+    )
+    assert apt.detail["installs"][0][:2] == ["-y", "--no-install-recommends"]
     commands = tmp_path / "env"
     commands.write_text("A=1\nB<<EOF\nx\ny\nEOF\nC=a=b\n", encoding="utf-8")
     assert gate._read_env_file(commands) == {"A": "1", "B": "x\ny", "C": "a=b"}
     assert gate._version_tuple("4:26.2.7.3-0ubuntu0.26.04.1") == (26, 2, 7, 3)
     assert gate._version_tuple("4:26.2.7.3-0ubuntu0.26.04.1") >= gate.LIBREOFFICE_MIN
+
+
+@pytest.mark.parametrize("long_paths", [True, False])
+def test_windows_basetemp_is_short_and_lifts_max_path_only_when_needed(
+    tmp_path, monkeypatch, long_paths
+):
+    monkeypatch.setenv("PRETEST_WINDOWS_TEMP", str(tmp_path / "aamg"))
+    monkeypatch.setattr(gate, "windows_long_paths", lambda: long_paths)
+    job = next(job for job in _jobs() if job.key == "windows-smoke")
+    notes = []
+    env = gate.Gate(argparse.Namespace()).windows_env(job, [], notes)
+    option = env["PYTEST_ADDOPTS"]
+    # pytest shlex-splits PYTEST_ADDOPTS: backslashes would be swallowed.
+    assert "\\" not in option and option.endswith("/b/ws")
+    assert option.startswith("--basetemp=//?/") is not long_paths
+    assert bool(notes) is not long_paths
+    assert (tmp_path / "aamg" / "b").is_dir() and (
+        tmp_path / "aamg" / "t" / "ws"
+    ).is_dir()
