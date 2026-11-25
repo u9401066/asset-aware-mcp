@@ -5,3 +5,6 @@ src/infrastructure/csl_worker.cjs -text
 # These unmodified upstream files contain intentional whitespace in the release.
 src/infrastructure/csl_resources/citeproc.js -whitespace
 src/infrastructure/csl_resources/citeproc-CPAL -whitespace
+
+# Shell scripts run inside WSL/Linux straight from Windows checkouts.
+*.sh text eol=lf

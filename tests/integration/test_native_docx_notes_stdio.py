@@ -215,8 +215,12 @@ async def test_note_lifecycle_over_sdk2(tmp_path, render):
                     (initial["revision"], original, False),
                     (asset["revision"], final, True),
                 ]:
-                    inspect_pages(data, final=is_final)
-                    for index in range(3):
+                    # The independent Writer replay fixes the expected pagination
+                    # (3 pages up to LibreOffice 24.2, 2 from 26.2); the server
+                    # preview must agree page for page and pixel for pixel.
+                    _, texts = inspect_pages(data, final=is_final)
+                    pages = len(texts)
+                    for index in range(pages + 1):
                         response = await client.call_tool(
                             "document",
                             {
@@ -236,12 +240,17 @@ async def test_note_lifecycle_over_sdk2(tmp_path, render):
                             )
                         )
                         metadata = metadata.get("result", metadata)
+                        if index == pages:
+                            assert not metadata["success"], metadata
+                            assert "outside rendered page count" in metadata["error"]
+                            continue
                         assert metadata["success"], metadata
-                        assert metadata["page_count"] == 3
+                        assert metadata["page_count"] == pages
                         png = base64.b64decode(
                             next(b.data for b in response.content if b.type == "image")
                         )
-                        _, width, height, pixels = replay(data, index, 900)
+                        count, width, height, pixels = replay(data, index, 900)
+                        assert count == pages
                         with Image.open(io.BytesIO(png)) as actual:
                             assert (
                                 actual.size == (width, height)

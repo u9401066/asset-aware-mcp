@@ -24,6 +24,7 @@ verification.
 
 ## Canonical Commands
 
+- CI-parity gate (before every push): `python scripts/pretest.py` (every CI job; Linux jobs in WSL `Ubuntu-26.04`; `--quick` at commit time; provision once with `--setup-wsl`)
 - Python checks: `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy src --ignore-missing-imports`, `uv run pytest`
 - Extension checks: `cd vscode-extension && npm run test:ci`
 - Assistant asset sync: `cd vscode-extension && npm run sync-assets:check`

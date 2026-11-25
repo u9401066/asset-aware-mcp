@@ -24,6 +24,7 @@ Use this skill when working in this repo with Cline and you want a reliable, pro
   - If any `.claude/skills` instruction conflicts with current repo behavior, treat `.clinerules/` as the source of truth.
 
 ## Canonical Commands
+- CI-parity gate (before every push): `python scripts/pretest.py` (every CI job; Linux jobs in WSL `Ubuntu-26.04`; `--quick` at commit time; provision once with `--setup-wsl`)
 - Python: `uv run ruff check .`, `uv run mypy src --ignore-missing-imports`, `uv run pytest`
 - Extension (in `vscode-extension/`): `npm run test:ci`
 - Docker smoke: `docker build -t asset-aware-mcp:smoke .` then `docker run --rm --entrypoint python asset-aware-mcp:smoke -c "import src.presentation.server"`

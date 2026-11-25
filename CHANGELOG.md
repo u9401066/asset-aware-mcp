@@ -19,8 +19,49 @@ still carried the 1.4.1 version markers. 1.5.1 contains every 1.5.0 change below
 
 - The VS Code extension README now has its current "What's New" section and a
   Marketplace banner pinned to the released version.
-- CI integration tests run on the Ubuntu image their LibreOffice layout baselines
-  were recorded on (alignment with LibreOffice 26.2 follows separately).
+- CI integration tests run on `ubuntu-latest` (Ubuntu 26.04, LibreOffice 26.2.7.3)
+  again, with the DOCX note layout baseline re-recorded for LibreOffice 26.2 (see
+  Changed).
+
+### Added
+
+- `scripts/pretest.py`, a local CI-parity gate. It reads `ci.yml` (every job)
+  and the release.yml `test` job from the commit under test and runs their
+  `run:` steps verbatim with the workflow's uv/Node/Python pins: Ubuntu jobs in
+  the WSL `Ubuntu-26.04` distro (same image and LibreOffice as GitHub
+  `ubuntu-latest`, LibreOffice hidden from jobs that do not install it),
+  Windows jobs on the Windows host with a short ASCII `TEMP`/`--basetemp`
+  (on hosts without Win32 long paths, which GitHub's runners enable, the
+  basetemp gets the `\\?\` extended-length prefix so the content-addressed
+  Wiki trees beyond MAX_PATH are still tested, and the row says so).
+  macOS is reported as NOT VERIFIED; wrong uv/Node/LibreOffice versions or a
+  missing distro fail loudly. `--quick`, `--only`, `--skip`, `--rev`,
+  `--list` and `--dry-run` are supported, and the run ends with a CI job →
+  local result table. `--timeout-scale` / `pretest.timeoutScale` stretches
+  job, step and pytest-timeout limits on hosts slower than GitHub's runners
+  (default 1; any other value is reported in every row).
+- `scripts/setup_local_ci_wsl.sh` (also `pretest.py --setup-wsl`): idempotent
+  provisioning of the WSL distro with exactly the workflows' apt packages,
+  the pinned uv, the newest Node of the pinned major and a non-root `runner`
+  user. Stock Ubuntu mirrors are switched to HTTPS because some networks reset
+  plain-HTTP APT requests, which left LibreOffice behind CI.
+
+### Changed
+
+- The DOCX note lifecycle render test is re-baselined for LibreOffice
+  26.2.7.3 (ubuntu-26.04), which lays out DOCX endnotes continuously after the
+  last body line: 2 pages instead of a separate third endnote page. The layout
+  is chosen from the independent replay's PDF producer (7.3/24.2 keep the
+  3-page baseline; unrecorded Writer lines fail), the new checks pin endnote
+  placement above the footnote area and the 1/2 vs i/ii numbering, and the
+  server preview must match the replay page count and pixels and reject the
+  page after the last one.
+- The integration job runs on `ubuntu-latest` again (reverts the temporary
+  `ubuntu-24.04` pin).
+- Pre-commit: commit time runs `pretest.py --quick` with the uv.lock versions
+  of ruff, mypy and bandit (the ruff 0.9.7, mypy 1.15.0 and bandit 1.8.3 mirror
+  hooks drifted from CI and are removed); push time runs the full gate instead
+  of the unit-test smoke. Shell scripts are checked out with LF endings.
 
 ## [1.5.0] - 2026-11-25
 

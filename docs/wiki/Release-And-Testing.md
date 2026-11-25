@@ -3,6 +3,26 @@
 以下保存納入 **1.4.1** 的實際評估與限制；各次測試保留原始範圍、失敗與修正。
 測試成功不等於任意文件保真，正式發布狀態以 GitHub Releases 為準。
 
+<a id="libreoffice-26-2-rebaseline-unreleased"></a>
+
+## LibreOffice 26.2 re-baseline and local CI parity (Unreleased)
+
+GitHub `ubuntu-latest` 改為 Ubuntu 26.04 後，CI 安裝 LibreOffice 26.2.7.3。212 項
+整合測試只有註解生命週期的 Writer 版面案例失敗：26.2 依 Word 方式把 DOCX 尾註
+接在最後一行正文之後，文件由「兩頁正文＋一頁尾註」變成兩頁。原失敗保留；
+暫時固定 `ubuntu-24.04` 的做法已撤回，整合工作回到 `ubuntu-latest`。
+
+測試依獨立重播 PDF 的 producer 選擇已記錄的版面：7.3／24.2 維持三頁，
+26.2.7.3 為兩頁；未記錄的 Writer 版本直接失敗，不猜測。26.2 版另外核對尾註
+位於正文下方、註腳區上方，註腳 1／2 與尾註 i／ii 在正文標記與註解區一致，
+伺服器預覽頁數與每頁像素必須等於獨立重播，並拒絕最後一頁之後的頁碼。
+修正前的 ID 錯配（註解區依定義順序編號）在 26.2.7.3 仍與 24.2.7.2 相同。
+
+新增 `scripts/pretest.py` 在 push 前於本機重跑 `ci.yml` 全部工作與 `release.yml`
+的 `test`：Linux 工作在 WSL Ubuntu 26.04（LibreOffice 26.2.7.3，與 CI 相同），
+Windows 工作在本機，macOS 標示 NOT VERIFIED。它能在本機重現本次兩個 main 失敗：
+1.4.2 的 `uv audit`／npm 稽核問題，以及 1.5.0 的 Writer 26.2 版面失敗。
+
 <a id="native-raster-evaluation-unreleased"></a>
 
 ## Native raster evaluation (1.4.1)

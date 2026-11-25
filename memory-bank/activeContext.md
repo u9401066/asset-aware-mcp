@@ -1,5 +1,19 @@
 # Active Context
 
+## Local CI parity gate + LibreOffice 26.2 re-baseline — 2026-11-25 (`chore/local-ci-parity`)
+
+Maintainer direction: align with the newest external packages (LibreOffice)
+instead of pinning CI images, and catch CI failures locally before paying for
+GitHub Actions minutes. `scripts/pretest.py` replays every ci.yml job plus the
+release.yml `test` job from the commit under test (Linux jobs in WSL
+`Ubuntu-26.04`, provisioned by `scripts/setup_local_ci_wsl.sh`; Windows jobs on
+the host; macOS NOT VERIFIED). The note lifecycle render test now picks its
+baseline from the replay's PDF producer: LibreOffice 26.2.7.3 = 2 pages with
+continuous endnotes, 7.3/24.2 = 3 pages. The integration job is back on
+`ubuntu-latest`. Pre-commit: `--quick` at commit, full gate at push. Separate
+finding: the scheduled Project Hygiene run on 60d84ec fails because
+vscode-extension/README.md lacks the v1.5.0 "What's New" and banner markers.
+
 ## 1.5.0 release — DOCX write-back safety, block leases, Python 3.11 — 2026-11-25
 
 One release instead of a separate 1.4.2 (maintainer decision): the 1.4.2
@@ -15,9 +29,8 @@ Drive by choice; the lock only coordinates processes on one machine, so use one
 writer per document there. Open follow-ups: `get_docx_content` may return a
 human's unsaved in-place draft when `content.current.dfm` exists; paragraph-index
 drift when images/page breaks/SDT precede an edited paragraph (pre-existing);
-CI integration tests pinned to ubuntu-24.04 because LibreOffice 26.2 (ubuntu-26.04) lays
-out DOCX endnotes continuously — re-baseline the layout tests before unpinning;
-DATA_DIR differs between workspace mcp.json and Cline/Codex by design; Ollama
+(resolved on `chore/local-ci-parity`: LibreOffice 26.2 layout re-baselined,
+integration job back on ubuntu-latest); DATA_DIR differs between workspace mcp.json and Cline/Codex by design; Ollama
 model check uses exact names.
 
 ## 1.4.1 formally published and public artifacts verified — 2026-09-22

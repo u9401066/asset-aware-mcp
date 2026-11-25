@@ -1,7 +1,14 @@
 # Pre-commit hooks for asset-aware-mcp
-# Install: uv run pre-commit install
+# Install: uv run pre-commit install --hook-type pre-commit --hook-type pre-push --hook-type commit-msg
 # Run all: uv run pre-commit run --all-files
 # Update:  uv run pre-commit autoupdate
+#
+# Python lint/format/type/security checks run through scripts/pretest.py with
+# the uv.lock versions CI uses (ruff, mypy, bandit), not pinned mirror repos
+# that drift from CI. Commit time runs `pretest.py --quick` (offline, working
+# tree); push time runs the full CI-parity gate (every ci.yml job plus the
+# release.yml `test` job; Linux jobs in the Ubuntu WSL distro). See
+# CONTRIBUTING.md "本機 CI 對等檢查".
 
 default_language_version:
   python: python3
@@ -27,38 +34,6 @@ repos:
       - id: detect-private-key
       - id: mixed-line-ending
         args: [--fix=lf]
-
-  # ── Python: Ruff (lint + format) ────────────────────────────
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.7
-    hooks:
-      - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
-        types_or: [python, pyi]
-      - id: ruff-format
-        types_or: [python, pyi]
-
-  # ── Python: MyPy type checking ──────────────────────────────
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
-    hooks:
-      - id: mypy
-        args: [--ignore-missing-imports]
-        additional_dependencies:
-          - pydantic>=2.0.0
-          - types-PyYAML>=6.0.0
-        pass_filenames: false
-        entry: mypy src
-        types: [python]
-
-  # ── Security: Bandit ────────────────────────────────────────
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.8.3
-    hooks:
-      - id: bandit
-        args: [-c, pyproject.toml, -r]
-        additional_dependencies: ["bandit[toml]"]
-        files: ^src/
 
   # ── Commit message: Conventional Commits ────────────────────
   - repo: https://github.com/compilerla/conventional-pre-commit
@@ -98,16 +73,6 @@ repos:
         files: ^vscode-extension/src/.*\.tsx?$
         pass_filenames: false
 
-      # Mocha unit tests (vscode-extension)
-      - id: mocha-vsx
-        name: mocha unit tests (vscode-extension)
-        entry: cmd /c "cd vscode-extension && npm run test:unit"
-        language: system
-        files: ^vscode-extension/src/.*\.tsx?$
-        pass_filenames: false
-        stages: [pre-push]
-        verbose: true
-
   # ── Local hooks ─────────────────────────────────────────────
   - repo: local
     hooks:
@@ -120,11 +85,23 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
-      # Quick pytest smoke (unit tests only, skip slow)
-      - id: pytest-smoke
-        name: pytest-smoke (unit tests)
-        entry: uv run pytest tests/unit -x -q --timeout=30 --no-header
-        language: system
+      # CI-parity quick gate: ruff, ruff format, mypy, bandit, zizmor, uv lock,
+      # docs payload, release harness and VSIX asset sync with CI's versions.
+      - id: ci-parity-quick
+        name: ci-parity quick gate (scripts/pretest.py --quick)
+        entry: python scripts/pretest.py --quick
+        language: python
+        always_run: true
+        pass_filenames: false
+        stages: [pre-commit]
+
+      # Full CI-parity gate on the commit being pushed: every ci.yml job and
+      # release.yml `test` (uv audit, npm audits, unit, LibreOffice integration,
+      # Python 3.11 smoke, VSIX smokes, Windows smoke). macOS is NOT VERIFIED.
+      - id: ci-parity-gate
+        name: ci-parity gate (scripts/pretest.py, all CI jobs)
+        entry: python scripts/pretest.py
+        language: python
         always_run: true
         pass_filenames: false
         stages: [pre-push]
