@@ -59,8 +59,11 @@ revision: "rev-..."        # 這份 DFM 呈現的內容版本；每次成功儲�
 
 `checksum` 只證明 DFM 來自同一份來源 `.docx`；它在儲存後不會改變，因此
 不能偵測「別人已經存過」。`revision` 才是內容版本：`save_docx` 用它判斷這份
-DFM 是否基於最新狀態，必要時做 3-way merge 或拒絕（見 §12）。`format.yaml`
-（split 格式）也帶同一個 `revision` 欄位。
+DFM 是否基於最新狀態，必要時做 3-way merge 或拒絕（見 §12）。split 格式的
+`content.md` front matter 與 `format.yaml` 也帶同一個 `revision`；`from_md` 儲存
+以 `content.md` 的值為準（它是被編輯的檔案，`format.yaml` 可能已被其他 agent 的
+儲存重新產生）。若較舊的 `content.md` 對上別人改過的混合格式（`dfm:format`）
+區塊，會保守地視為衝突。
 
 ### 4.2 樣式定義區塊
 
