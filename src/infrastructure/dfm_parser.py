@@ -147,6 +147,10 @@ class DfmParser:
                 fm_data = yaml.safe_load(fm_match.group(1))
                 if fm_data and fm_data.get("doc_id") and not result.doc_id:
                     result.doc_id = fm_data["doc_id"]
+                if isinstance(fm_data, dict) and "revision" in fm_data:
+                    # content.md is the edited file, so its revision is the base
+                    # of the submitted text (format.yaml may be newer).
+                    result.revision = str(fm_data.get("revision") or "")
             except yaml.YAMLError:
                 pass
 

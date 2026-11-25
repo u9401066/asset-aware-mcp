@@ -291,6 +291,44 @@ class TestStaleFullDfmSaves:
         assert "retained revision history" in result["error"]
 
     @pytest.mark.asyncio
+    async def test_split_markdown_edited_from_an_older_revision_is_merged(
+        self, lease_env
+    ) -> None:
+        """content.md keeps its base revision even when format.yaml is re-rendered."""
+        service, source = lease_env
+        doc_id, doc_dir = await _ingest(service, source)
+        md_path = doc_dir / "content.md"
+        human_copy = md_path.read_text(encoding="utf-8")
+        assert "revision: rev-" in human_copy.split("---")[1]
+        lease = await service.checkout_blocks(doc_id, ["p005"], holder="agent-A")
+        commit = await service.commit_block_lease(
+            doc_id, lease["lease_token"], {"p005": EDIT_5}
+        )
+        assert commit["success"] is True, commit
+        # The human's editor writes its older buffer over the re-rendered file.
+        md_path.write_text(human_copy.replace(_section(7), EDIT_7), encoding="utf-8")
+
+        result = await service.save_docx(doc_id, from_md=True)
+
+        assert result["success"] is True, result
+        assert result["revision_merge"]["mode"] == "merged"
+        text = _document_text(Path(result["output_path"]))
+        assert EDIT_5 in text, "the agent's commit was reverted by content.md"
+        assert EDIT_7 in text
+
+    @pytest.mark.asyncio
+    async def test_lease_ops_on_unknown_documents_leave_no_state(
+        self, lease_env, temp_dir: Path
+    ) -> None:
+        service, _source = lease_env
+
+        result = await service.checkout_blocks("docx_missing", ["p001"], holder="a")
+
+        assert result["success"] is False
+        assert "IR not found" in result["error"]
+        assert not list((temp_dir / "data").rglob(EDIT_STATE_DB_FILENAME))
+
+    @pytest.mark.asyncio
     async def test_revision_history_is_capped_and_pruned(self, lease_env) -> None:
         service, source = lease_env
         service._revision_history_limit = 3

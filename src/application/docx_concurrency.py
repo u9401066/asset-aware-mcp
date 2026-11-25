@@ -163,6 +163,9 @@ class DocxConcurrencyMixin(DocxIrSerializationMixin):
         """
         doc_dir = self.repository.get_doc_dir(doc_id)
         store = self._edit_state_store(doc_dir)
+        if not store.path.exists() and self._load_ir(doc_id) is None:
+            # Do not create edit state for a document that does not exist.
+            raise DocxEditStateError(f"IR not found for {doc_id}")
         with store.session(write=True) as session:
             ir = self._load_ir(doc_id)
             if ir is None:

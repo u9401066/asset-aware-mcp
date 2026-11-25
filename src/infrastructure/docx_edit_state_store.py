@@ -185,8 +185,10 @@ class SqliteDocxEditStateStore:
                 connection.execute("ROLLBACK")
                 if _is_busy(exc):
                     raise DocxDocumentBusyError(
-                        "Document is busy: could not commit the edit state; retry. "
-                        "Nothing was changed."
+                        "Document is busy: the edit-state commit timed out. Any "
+                        "content already written is recorded as an external "
+                        "revision by the next operation; retry (a retried commit "
+                        "is recognised as already applied)."
                     ) from exc
                 raise
         finally:

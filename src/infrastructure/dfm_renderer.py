@@ -47,6 +47,10 @@ class DfmRenderer:
             "format_file": "format.yaml",
             "doc_id": ir.doc_id,
         }
+        if ir.dfm_revision:
+            # The edited Markdown proves its own base revision; format.yaml can
+            # be re-rendered by another agent's save while content.md is open.
+            fm["revision"] = ir.dfm_revision
         fm_yaml = yaml.dump(fm, default_flow_style=False, allow_unicode=True).strip()
         md_lines.append(f"---\n{fm_yaml}\n---")
         md_lines.append("")
