@@ -14,6 +14,8 @@ Docx Tools - Docx ↔ DFM 雙向轉換 + Table Bridge MCP 工具
 - docx_table_to_context: 將 DFM 表格區塊轉為 TableContext（可用 table_manage/table_data 編輯）
 - docx_table_from_context: 將 TableContext 寫回 DFM 表格區塊
 - docx_chart_data: 提取圖表的底層資料為表格格式
+- docx(op="checkout"/"commit"/"release"/"renew"/"leases"/"break_lease"):
+  區塊租約（lease），讓多個 agent 同時編輯同一份文件的不同區塊
 """
 
 from __future__ import annotations
@@ -26,7 +28,7 @@ from typing import TYPE_CHECKING, Any, cast
 from mcp.server.mcpserver import Context  # noqa: TC002 - runtime injection marker
 
 from src.application.output_paths import resolve_document_output_path
-from src.infrastructure.encoding_guard import read_text_file, write_utf8_text
+from src.infrastructure.encoding_guard import read_text_file
 from src.presentation.dependencies import (
     dfm_table_bridge,
     docx_service,
@@ -38,6 +40,7 @@ from src.presentation.markdown_utils import escape_table_cell
 from src.presentation.mcp_app import mcp
 from src.presentation.mcp_context import log_message, report_progress
 from src.presentation.response_limits import (
+    format_limited_json_response,
     format_limited_text_response,
     max_text_response_chars,
     text_exceeds_response_limit,
@@ -148,6 +151,9 @@ def _prepare_merged_save_input(
 
     working_ir = deepcopy(ir)
     doc_dir = docx_service.repository.get_doc_dir(doc_id)
+    # The merged DFM must keep the revision its edits were based on, so a
+    # stale editor DFM is still 3-way merged (never stamped as current).
+    base_revision: object = ""
 
     if from_md:
         md_path = doc_dir / "content.md"
@@ -164,6 +170,7 @@ def _prepare_merged_save_input(
             return dfm_content, from_md, [], []
 
         parse_result = docx_service.parser.parse_split(md_content, yaml_content)
+        base_revision = getattr(parse_result, "revision", "")
         working_ir = docx_service.parser.apply_edits(working_ir, parse_result)
     elif dfm_content is not None:
         parse_result = docx_service.parser.parse(dfm_content)
@@ -174,7 +181,10 @@ def _prepare_merged_save_input(
         ]
         if fatal_errors:
             return dfm_content, from_md, [], []
+        base_revision = getattr(parse_result, "revision", "")
         working_ir = docx_service.parser.apply_edits(working_ir, parse_result)
+    else:
+        base_revision = docx_service.ir_revision(ir)
 
     synced_table_ids: list[str] = []
     merge_warnings: list[str] = []
@@ -202,6 +212,7 @@ def _prepare_merged_save_input(
     if not synced_table_ids:
         return dfm_content, from_md, [], merge_warnings
 
+    working_ir.dfm_revision = base_revision if isinstance(base_revision, str) else ""
     merged_dfm = docx_service.renderer.render(working_ir)
     return merged_dfm, False, synced_table_ids, merge_warnings
 
@@ -367,6 +378,13 @@ async def save_docx(
     以前建立、沒有 baseline_ir.json 的文件目錄，會自動從 original.docx
     重建基準（並在警告中列出先前已存在的編輯）；無法驗證時拒絕儲存。
 
+    多 agent 併發安全：DFM front matter 的 `revision` 證明這份 DFM based on
+    哪個內容版本。若期間有人已儲存，save_docx 會做 3-way merge：只套用你
+    相對於 base 改過的區塊；若同一區塊也被別人改過，拒絕並列出衝突區塊 id，
+    絕不默默覆蓋別人的編輯。被其他 agent 以 docx(op="checkout") 租用的區塊
+    也會被拒絕。沒有 `revision` 的舊 DFM 只在 ingest 後從未儲存時接受。
+    force=True 不會略過 revision 或 lease 檢查。
+
     安全機制：若內容萎縮 > 50%，預設拒絕輸出（疑似資料遺失）。
     使用 force=True 強制輸出。
 
@@ -391,7 +409,8 @@ async def save_docx(
         output_path: 輸出路徑（預設為 data/{doc_id}/output.docx；必須位於
             data/{doc_id}/ 內，不可覆寫 original.docx 等保留檔）
         from_md: 若為 True，從磁碟讀取 content.md + format.yaml 而非使用 dfm_content
-        force: 若為 True，即使偵測到嚴重內容萎縮仍強制輸出
+        force: 若為 True，即使偵測到嚴重內容萎縮或 post-save 檢查失敗仍強制
+            輸出（不會略過 revision 衝突與 lease）
         track_changes: 若為 True，以 Word Track Changes 寫入文字 diff
         revision_author: 產生追蹤修訂時使用的作者名稱
         revision_base: 追蹤修訂的比較基準："original"（預設，相對原始文件）
@@ -434,6 +453,10 @@ async def save_docx(
     if not result.get("success"):
         await log_message(ctx, "error", f"save_docx failed: {doc_id}")
         lines = [f"❌ 儲存失敗：{result.get('error', '未知錯誤')}"]
+        if result.get("conflict_block_ids"):
+            lines.append(
+                "- **衝突區塊**: " + ", ".join(result.get("conflict_block_ids", []))
+            )
         warnings = [*merge_warnings, *result.get("warnings", [])]
         if warnings:
             lines.append("")
@@ -457,6 +480,17 @@ async def save_docx(
         )
     if result.get("baseline_rebuilt"):
         lines.append("- **基準**: 已從 original.docx 重建 baseline_ir.json（舊版目錄）")
+    if result.get("revision"):
+        lines.append(f"- **內容版本 (revision)**: `{result.get('revision')}`")
+    merge = result.get("revision_merge")
+    if isinstance(merge, dict) and merge.get("mode") == "merged":
+        lines.append(
+            "- **3-way merge**: 以 "
+            f"`{merge.get('base_revision')}` 為基準合併；套用你改的區塊 "
+            f"{', '.join(merge.get('merged_block_ids') or []) or '（無）'}，"
+            f"保留他人已改的區塊 "
+            f"{', '.join(merge.get('preserved_block_ids') or []) or '（無）'}"
+        )
 
     if synced_table_ids:
         lines.append(
@@ -911,6 +945,21 @@ async def docx_validate_roundtrip(
     )
 
 
+_LEASE_RESULT_GUIDANCE = (
+    "Check out fewer blocks (or read one with docx(op='get', block_id=...)); the "
+    "lease_token is kept in this summary so you can still commit or release."
+)
+
+
+def _lease_response(title: str, payload: dict[str, Any], max_chars: int | None) -> Any:
+    return format_limited_json_response(
+        title=title,
+        payload=payload,
+        max_chars=max_chars,
+        guidance=_LEASE_RESULT_GUIDANCE,
+    )
+
+
 @mcp.tool()
 async def docx(
     op: str,
@@ -922,17 +971,53 @@ async def docx(
     from_md: bool = False,
     force: bool = False,
     track_changes: bool = False,
-    revision_author: str = "Asset-Aware MCP",
+    revision_author: str | None = None,
     revision_base: str = "original",
     strict: bool = False,
     max_chars: int | None = None,
+    block_ids: list[str] | None = None,
+    holder: str | None = None,
+    ttl_seconds: int | None = None,
+    lease_token: str | None = None,
+    lease_id: str | None = None,
+    edits: dict[str, str] | None = None,
+    keep_lease: bool = False,
+    wait: bool = False,
     ctx: Context | None = None,
 ) -> Any:
     """
     Consolidated DOCX/DFM entrypoint.
 
     The legacy DOCX tools remain registered and keep their original parameters
-    and output formats. This wrapper only adds an operation-based facade.
+    and output formats. This wrapper adds an operation-based facade.
+
+    Operation -> parameters:
+    - ``ingest``: file_path. ``get``: doc_id (block_id, max_chars optional).
+    - ``save``: doc_id, dfm_content (or from_md), output_path, force,
+      track_changes, revision_author (default "Asset-Aware MCP"), revision_base.
+      A DFM based on an older ``revision`` is 3-way merged or refused with the
+      conflicting block ids; blocks leased by another agent are refused.
+    - ``list`` / ``list_blocks`` / ``delete`` / ``validate``: as before.
+
+    Multi-agent block leases (several agents edit one document concurrently):
+    - ``checkout``: doc_id, block_ids, holder (agent name), ttl_seconds
+      (default 900, max 3600). Returns lease_token (secret), lease_id, each
+      block's DFM fragment and base_hash, and the document revision. Fails fast
+      if another live lease holds any block (wait=true is not supported).
+      Tables nested in a table are leased with their parent table.
+    - ``commit``: doc_id, lease_token, edits={block_id: edited fragment}; only
+      leased blocks, applied on top of the current document (others' commits are
+      kept); same cumulative write-back and post-save verification as save;
+      optional output_path, track_changes, revision_author (default: holder, so
+      Word shows which agent changed which block), revision_base, keep_lease,
+      force (content-shrink/post-save override only).
+    - ``release``: doc_id, lease_token. ``renew``: doc_id, lease_token,
+      ttl_seconds. ``leases``: doc_id (holders, blocks, expiry; never tokens).
+    - ``break_lease``: doc_id, lease_id; expired leases only unless force=true
+      (administrative; the holder's pending commit will fail).
+
+    Do not hold leases while idle: commit or release promptly and renew only
+    while actively editing.
     """
     operation = _normalize_op(op)
     if operation in {"ingest", "import"}:
@@ -953,7 +1038,7 @@ async def docx(
             from_md=from_md,
             force=force,
             track_changes=track_changes,
-            revision_author=revision_author,
+            revision_author=revision_author or "Asset-Aware MCP",
             revision_base=revision_base,
             ctx=ctx,
         )
@@ -976,12 +1061,110 @@ async def docx(
             strict=strict,
             ctx=ctx,
         )
+    if operation in _LEASE_OPS:
+        if not doc_id:
+            return _missing_docx_param("doc_id")
+        return await _docx_lease_op(
+            operation,
+            doc_id,
+            block_ids=block_ids,
+            holder=holder,
+            ttl_seconds=ttl_seconds,
+            lease_token=lease_token,
+            lease_id=lease_id,
+            edits=edits,
+            output_path=output_path,
+            track_changes=track_changes,
+            revision_author=revision_author,
+            revision_base=revision_base,
+            keep_lease=keep_lease,
+            force=force,
+            wait=wait,
+            max_chars=max_chars,
+            ctx=ctx,
+        )
 
     return _unsupported_docx_op(
         "docx",
         op,
-        {"delete", "get", "ingest", "list", "list_blocks", "save", "validate"},
+        {
+            "delete",
+            "get",
+            "ingest",
+            "list",
+            "list_blocks",
+            "save",
+            "validate",
+            *_LEASE_OPS,
+        },
     )
+
+
+_LEASE_OPS = frozenset(
+    {"checkout", "commit", "release", "renew", "leases", "break_lease"}
+)
+
+
+async def _docx_lease_op(
+    operation: str,
+    doc_id: str,
+    *,
+    block_ids: list[str] | None,
+    holder: str | None,
+    ttl_seconds: int | None,
+    lease_token: str | None,
+    lease_id: str | None,
+    edits: dict[str, str] | None,
+    output_path: str | None,
+    track_changes: bool,
+    revision_author: str | None,
+    revision_base: str,
+    keep_lease: bool,
+    force: bool,
+    wait: bool,
+    max_chars: int | None,
+    ctx: Context | None,
+) -> Any:
+    """Route block-lease operations to the application service."""
+    if operation == "checkout":
+        result = await docx_service.checkout_blocks(
+            doc_id, block_ids, holder=holder, ttl_seconds=ttl_seconds, wait=wait
+        )
+        return _lease_response(f"DOCX checkout: {doc_id}", result, max_chars)
+    if operation == "commit":
+        if not lease_token:
+            return _missing_docx_param("lease_token")
+        await log_message(ctx, "info", f"docx commit start: {doc_id}")
+        result = await docx_service.commit_block_lease(
+            doc_id,
+            lease_token,
+            edits,
+            output_path=output_path,
+            track_changes=track_changes,
+            revision_author=revision_author,
+            revision_base=revision_base,
+            keep_lease=keep_lease,
+            force=force,
+        )
+        if result.get("success"):
+            await log_message(ctx, "info", f"docx commit done: {doc_id}")
+        else:
+            await log_message(ctx, "error", f"docx commit failed: {doc_id}")
+        return _lease_response(f"DOCX commit: {doc_id}", result, max_chars)
+    if operation == "release":
+        if not lease_token:
+            return _missing_docx_param("lease_token")
+        return await docx_service.release_block_lease(doc_id, lease_token)
+    if operation == "renew":
+        if not lease_token:
+            return _missing_docx_param("lease_token")
+        return await docx_service.renew_block_lease(doc_id, lease_token, ttl_seconds)
+    if operation == "leases":
+        result = await docx_service.list_block_leases(doc_id)
+        return _lease_response(f"DOCX leases: {doc_id}", result, max_chars)
+    if not lease_id:
+        return _missing_docx_param("lease_id")
+    return await docx_service.break_block_lease(doc_id, lease_id, force=force)
 
 
 # ============================================================================
@@ -1116,48 +1299,52 @@ async def docx_table_from_context(
             f"`{tc.source_block_id}`，不能寫入 `{block_id}`。"
         )
 
-    ir = docx_service._load_ir(doc_id)
-    if ir is None:
+    if docx_service._load_ir(doc_id) is None:
         return f"❌ 找不到文件 {doc_id}"
 
-    try:
+    def apply_table(ir: Any) -> None:
         dfm_table_bridge.apply_table_context_to_ir(ir, block_id, tc)
-    except ValueError as e:
-        return f"❌ 寫回失敗：{e}"
-
-    # --- Post-write validation: verify cell content survived serialization ---
-    block_after = ir.find_block(block_id)
-    if block_after and block_after.content:
+        # --- Post-write validation: verify cell content survived serialization ---
+        block_after = ir.find_block(block_id)
+        if not (block_after and block_after.content):
+            return
         from src.application.dfm_table_bridge import _parse_md_table
 
         written_rows = _parse_md_table(block_after.content)
-        if written_rows is not None:
-            # Skip header row (index 0) — compare data rows only
-            written_data = written_rows[1:]
-            source_nonempty = sum(
-                1
-                for row in tc.rows
-                for c in tc.column_names
-                if str(row.get(c, "")).strip()
+        if written_rows is None:
+            return
+        # Skip header row (index 0) — compare data rows only
+        written_data = written_rows[1:]
+        source_nonempty = sum(
+            1 for row in tc.rows for c in tc.column_names if str(row.get(c, "")).strip()
+        )
+        written_nonempty = sum(
+            1 for row in written_data for cell in row if cell.strip()
+        )
+        if source_nonempty > 0 and written_nonempty == 0:
+            raise ValueError(
+                f"TableContext 有 {source_nonempty} 個非空 cell，"
+                f"但序列化後全部遺失。請檢查 cell 內容格式。"
             )
-            written_nonempty = sum(
-                1 for row in written_data for cell in row if cell.strip()
+        if source_nonempty > 0 and written_nonempty < source_nonempty * 0.5:
+            raise ValueError(
+                f"TableContext 有 {source_nonempty} 個非空 cell，"
+                f"但序列化後僅剩 {written_nonempty} 個。疑似資料遺失。"
             )
-            if source_nonempty > 0 and written_nonempty == 0:
-                return (
-                    f"❌ 寫回失敗：TableContext 有 {source_nonempty} 個非空 cell，"
-                    f"但序列化後全部遺失。請檢查 cell 內容格式。"
-                )
-            if source_nonempty > 0 and written_nonempty < source_nonempty * 0.5:
-                return (
-                    f"❌ 寫回失敗：TableContext 有 {source_nonempty} 個非空 cell，"
-                    f"但序列化後僅剩 {written_nonempty} 個。疑似資料遺失。"
-                )
+
+    # Runs under the cross-process document lock, refuses blocks leased by
+    # another agent and records a new content revision.
+    update = await docx_service.update_ir_blocks(
+        doc_id,
+        [block_id],
+        apply_table,
+        actor=f"TableContext {table_id}",
+        write_dfm=save_dfm,
+    )
+    if not update.get("success"):
+        return f"❌ 寫回失敗：{update.get('error', '未知錯誤')}"
 
     doc_dir = docx_service.repository.get_doc_dir(doc_id)
-    docx_service._backup_before_overwrite(doc_dir)
-    docx_service._save_ir(ir, doc_dir / "ir.json")
-
     result_lines = [
         "✅ TableContext 已寫回 DFM 表格區塊",
         "",
@@ -1166,22 +1353,13 @@ async def docx_table_from_context(
         f"- **表格**: `{table_id}`",
         f"- **行數**: {tc.row_count}",
     ]
+    if update.get("revision"):
+        result_lines.append(f"- **內容版本 (revision)**: `{update.get('revision')}`")
 
     if save_dfm:
-        from src.infrastructure.dfm_renderer import DfmRenderer
-
-        renderer = DfmRenderer()
-        dfm_text = renderer.render(ir)
-        md_text, yaml_text = renderer.render_split(ir)
-        dfm_path = doc_dir / "content.dfm"
-        md_path = doc_dir / "content.md"
-        yaml_path = doc_dir / "format.yaml"
-        write_utf8_text(dfm_path, dfm_text, hint=str(dfm_path))
-        write_utf8_text(md_path, md_text, hint=str(md_path))
-        write_utf8_text(yaml_path, yaml_text, hint=str(yaml_path))
-        result_lines.append(f"- **DFM 已更新**: `{dfm_path}`")
-        result_lines.append(f"- **Split Markdown 已更新**: `{md_path}`")
-        result_lines.append(f"- **Format YAML 已更新**: `{yaml_path}`")
+        result_lines.append(f"- **DFM 已更新**: `{doc_dir / 'content.dfm'}`")
+        result_lines.append(f"- **Split Markdown 已更新**: `{doc_dir / 'content.md'}`")
+        result_lines.append(f"- **Format YAML 已更新**: `{doc_dir / 'format.yaml'}`")
 
     result_lines.append("")
     result_lines.append(

@@ -800,12 +800,16 @@ class TestDocxTools:
     async def test_docx_table_from_context_updates_all_dfm_artifacts(
         self, tmp_path: Path
     ) -> None:
-        """docx_table_from_context keeps content.dfm/content.md/format.yaml in sync."""
+        """docx_table_from_context writes through the locked, lease-aware path.
+
+        The service call updates ir.json + content.dfm/content.md/format.yaml
+        together and records a revision (see the integration test
+        ``test_docx_block_leases.py::TestTableContextWrites``).
+        """
         with (
             patch("src.presentation.tools.docx_tools.docx_service") as mock_svc,
             patch("src.presentation.tools.docx_tools.table_service") as mock_table_svc,
             patch("src.presentation.tools.docx_tools.dfm_table_bridge") as mock_bridge,
-            patch("src.infrastructure.dfm_renderer.DfmRenderer") as mock_renderer_cls,
         ):
             doc_dir = tmp_path / "docx_123"
             doc_dir.mkdir()
@@ -835,20 +839,75 @@ class TestDocxTools:
                 return ir_obj
 
             mock_bridge.apply_table_context_to_ir.side_effect = apply_table
-            renderer = mock_renderer_cls.return_value
-            renderer.render.return_value = "dfm text"
-            renderer.render_split.return_value = ("md text", "yaml text")
+
+            async def update_ir_blocks(doc_id, block_ids, mutate, *, actor, write_dfm):
+                mutate(ir)
+                return {"success": True, "revision": "rev-new", "written": []}
+
+            mock_svc.update_ir_blocks = AsyncMock(side_effect=update_ir_blocks)
 
             from src.presentation.tools.docx_tools import docx_table_from_context
 
             result = await docx_table_from_context("docx_123", "t001", tc.id)
 
             assert "✅" in result
-            assert (doc_dir / "content.dfm").read_text(encoding="utf-8") == "dfm text"
-            assert (doc_dir / "content.md").read_text(encoding="utf-8") == "md text"
-            assert (doc_dir / "format.yaml").read_text(encoding="utf-8") == "yaml text"
-            mock_svc._backup_before_overwrite.assert_called_once_with(doc_dir)
-            mock_svc._save_ir.assert_called_once_with(ir, doc_dir / "ir.json")
+            assert "rev-new" in result
+            for name in ("content.dfm", "content.md", "format.yaml"):
+                assert name in result
+            assert ir.find_block("t001").content == "| A |\n| --- |\n| new |"
+            call = mock_svc.update_ir_blocks.await_args
+            assert call.args[:2] == ("docx_123", ["t001"])
+            assert call.kwargs["write_dfm"] is True
+            assert "tbl_ctx" in call.kwargs["actor"]
+
+    async def test_docx_table_from_context_reports_refused_update(self) -> None:
+        """Lease refusals and lossy serialization surface as write-back failures."""
+        with (
+            patch("src.presentation.tools.docx_tools.docx_service") as mock_svc,
+            patch("src.presentation.tools.docx_tools.table_service") as mock_table_svc,
+            patch("src.presentation.tools.docx_tools.dfm_table_bridge") as mock_bridge,
+        ):
+            ir = DocxIR(doc_id="docx_123", source_path="workspace/test.docx")
+            ir.add_block(
+                DfmBlock(
+                    id="t001",
+                    block_type=DfmBlockType.TABLE,
+                    content="| A |\n| --- |\n| old |",
+                )
+            )
+            tc = TableContext(
+                id="tbl_ctx",
+                intent="summary",
+                title="T",
+                columns=[ColumnDef(name="A", type="text")],
+                rows=[{"A": "new"}],
+                source_doc_id="docx_123",
+                source_block_id="t001",
+            )
+            mock_table_svc._tables = {tc.id: tc}
+            mock_svc._load_ir.return_value = ir
+
+            def lossy(ir_obj, block_id, _table_ctx):
+                ir_obj.find_block(block_id).content = "| A |\n| --- |\n|  |"
+                return ir_obj
+
+            mock_bridge.apply_table_context_to_ir.side_effect = lossy
+
+            async def update_ir_blocks(doc_id, block_ids, mutate, *, actor, write_dfm):
+                try:
+                    mutate(ir)
+                except ValueError as exc:
+                    return {"success": False, "error": str(exc)}
+                return {"success": True}
+
+            mock_svc.update_ir_blocks = AsyncMock(side_effect=update_ir_blocks)
+
+            from src.presentation.tools.docx_tools import docx_table_from_context
+
+            result = await docx_table_from_context("docx_123", "t001", tc.id)
+
+            assert result.startswith("❌ 寫回失敗：")
+            assert "全部遺失" in result
 
     async def test_docx_op_routes_save(self) -> None:
         """docx(op='save') keeps the existing save_docx contract as its backend."""
@@ -891,6 +950,131 @@ class TestDocxTools:
         result = await docx("get")
 
         assert "doc_id is required" in result
+
+    async def test_docx_op_save_defaults_revision_author(self) -> None:
+        """The facade keeps save's historical default author."""
+        with patch(
+            "src.presentation.tools.docx_tools.save_docx",
+            new_callable=AsyncMock,
+        ) as mock_save:
+            mock_save.return_value = "saved"
+            from src.presentation.tools.docx_tools import docx
+
+            await docx("save", doc_id="docx_123")
+
+        assert mock_save.await_args.kwargs["revision_author"] == "Asset-Aware MCP"
+
+    async def test_docx_op_routes_block_lease_operations(self) -> None:
+        """checkout/commit/release/renew/leases/break_lease reach the service."""
+        with patch("src.presentation.tools.docx_tools.docx_service") as mock_svc:
+            mock_svc.checkout_blocks = AsyncMock(
+                return_value={"success": True, "lease_token": "tok", "blocks": []}
+            )
+            mock_svc.commit_block_lease = AsyncMock(return_value={"success": True})
+            mock_svc.release_block_lease = AsyncMock(return_value={"success": True})
+            mock_svc.renew_block_lease = AsyncMock(return_value={"success": True})
+            mock_svc.list_block_leases = AsyncMock(
+                return_value={"success": True, "leases": []}
+            )
+            mock_svc.break_block_lease = AsyncMock(return_value={"success": True})
+            from src.presentation.tools.docx_tools import docx
+
+            checkout = await docx(
+                "checkout",
+                doc_id="docx_123",
+                block_ids=["p005"],
+                holder="agent-A",
+                ttl_seconds=120,
+            )
+            commit = await docx(
+                "commit",
+                doc_id="docx_123",
+                lease_token="tok",
+                edits={"p005": "new"},
+                track_changes=True,
+                keep_lease=True,
+            )
+            await docx("release", doc_id="docx_123", lease_token="tok")
+            await docx("renew", doc_id="docx_123", lease_token="tok", ttl_seconds=60)
+            leases = await docx("leases", doc_id="docx_123")
+            await docx("break_lease", doc_id="docx_123", lease_id="lease-x", force=True)
+
+        assert checkout["lease_token"] == "tok"  # noqa: S105 - test token
+        assert commit == {"success": True}
+        assert leases["leases"] == []
+        mock_svc.checkout_blocks.assert_awaited_once_with(
+            "docx_123", ["p005"], holder="agent-A", ttl_seconds=120, wait=False
+        )
+        commit_call = mock_svc.commit_block_lease.await_args
+        assert commit_call.args == ("docx_123", "tok", {"p005": "new"})
+        assert commit_call.kwargs["track_changes"] is True
+        assert commit_call.kwargs["keep_lease"] is True
+        # Commit authors default to the lease holder (resolved by the service).
+        assert commit_call.kwargs["revision_author"] is None
+        mock_svc.release_block_lease.assert_awaited_once_with("docx_123", "tok")
+        mock_svc.renew_block_lease.assert_awaited_once_with("docx_123", "tok", 60)
+        mock_svc.break_block_lease.assert_awaited_once_with(
+            "docx_123", "lease-x", force=True
+        )
+
+    async def test_docx_lease_ops_validate_required_parameters(self) -> None:
+        from src.presentation.tools.docx_tools import docx
+
+        assert "doc_id is required" in await docx("checkout")
+        assert "lease_token is required" in await docx("commit", doc_id="d")
+        assert "lease_token is required" in await docx("release", doc_id="d")
+        assert "lease_id is required" in await docx("break_lease", doc_id="d")
+        unsupported = await docx("lock", doc_id="d")
+        for op in ("checkout", "commit", "release", "renew", "leases", "break_lease"):
+            assert op in unsupported
+
+    async def test_merged_save_keeps_the_submitted_dfm_revision(self) -> None:
+        """Pending TableContext merges must not re-stamp a stale DFM as current."""
+        with (
+            patch("src.presentation.tools.docx_tools.docx_service") as mock_svc,
+            patch("src.presentation.tools.docx_tools.table_service") as mock_table_svc,
+            patch("src.presentation.tools.docx_tools.dfm_table_bridge") as mock_bridge,
+        ):
+            ir = DocxIR(doc_id="doc123", source_path="workspace/test.docx")
+            ir.add_block(
+                DfmBlock(
+                    id="t001",
+                    block_type=DfmBlockType.TABLE,
+                    content="| A |\n| --- |\n| old |",
+                )
+            )
+            tc = TableContext(
+                id="tbl_ctx",
+                intent="summary",
+                title="T",
+                columns=[ColumnDef(name="A", type="text")],
+                rows=[{"A": "new"}],
+                source_doc_id="doc123",
+                source_block_id="t001",
+            )
+            mock_table_svc._tables = {tc.id: tc}
+            mock_svc._load_ir.return_value = ir
+            mock_svc.parser.parse.return_value = MagicMock(
+                errors=[], revision="rev-stale"
+            )
+            mock_svc.parser.apply_edits.side_effect = lambda ir_obj, _parsed: ir_obj
+            mock_bridge.apply_table_context_to_ir.side_effect = (
+                lambda ir_obj, _block_id, _tc: ir_obj
+            )
+            stamped: list[str] = []
+            mock_svc.renderer.render.side_effect = lambda ir_obj: (
+                stamped.append(ir_obj.dfm_revision) or "merged dfm"
+            )
+            mock_svc.save_docx = AsyncMock(
+                return_value={"success": True, "output_path": "/o.docx"}
+            )
+
+            from src.presentation.tools.docx_tools import save_docx
+
+            await save_docx("doc123", "stale editor dfm")
+
+        assert stamped == ["rev-stale"]
+        assert mock_svc.save_docx.await_args.args[1] == "merged dfm"
 
     async def test_docx_table_op_routes_chart_data(self) -> None:
         """docx_table(op='chart_data') exposes chart extraction via one entrypoint."""

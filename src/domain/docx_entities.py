@@ -448,6 +448,12 @@ class DocxIR:
     # Block ID counters (for generating unique IDs)
     _id_counters: dict[str, int] = field(default_factory=dict)
 
+    # Content revision stamped into rendered DFM front matter (``revision:``).
+    # Computed by the application layer from the persisted block state right
+    # before rendering; never persisted in ir.json (the revision is recomputed
+    # from ir.json, so it cannot drift from the content it identifies).
+    dfm_revision: str = ""
+
     def next_block_id(self, block_type: DfmBlockType) -> str:
         """Generate the next sequential block ID for a given type."""
         prefix = BLOCK_ID_PREFIXES.get(block_type, "x")

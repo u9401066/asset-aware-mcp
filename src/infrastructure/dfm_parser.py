@@ -54,6 +54,8 @@ class DfmParseResult:
     style_info: DocxStyleInfo | None = None
     edits: list[BlockEdit] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    # Content revision the DFM was rendered from ("" for pre-1.5 DFMs).
+    revision: str = ""
 
 
 # ============================================================================
@@ -128,6 +130,7 @@ class DfmParser:
             result.doc_id = fmt.get("doc_id", "")
             result.source = fmt.get("source", "")
             result.checksum = fmt.get("checksum", "")
+            result.revision = str(fmt.get("revision") or "")
             styles_data = fmt.get("styles")
             if styles_data:
                 result.style_info = DocxStyleInfo.from_dict(styles_data)
@@ -409,6 +412,7 @@ class DfmParser:
             result.doc_id = data.get("doc_id", "")
             result.source = data.get("source", "")
             result.checksum = data.get("checksum", "")
+            result.revision = str(data.get("revision") or "")
         except yaml.YAMLError as e:
             result.errors.append(f"Invalid frontmatter YAML: {e}")
 
