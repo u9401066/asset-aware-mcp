@@ -6,7 +6,9 @@ import { promisify } from 'util';
 const execFileAsync = promisify(execFile);
 
 export const PREFERRED_RUNTIME_PYTHON = '3.11';
-export const FALLBACK_RUNTIME_PYTHONS = ['3.10'] as const;
+// Python 3.11 is the minimum supported runtime; retry with 3.12 when a 3.11
+// runtime cannot be prepared on this machine.
+export const FALLBACK_RUNTIME_PYTHONS = ['3.12'] as const;
 export const RUNTIME_PYTHON_CANDIDATES = [PREFERRED_RUNTIME_PYTHON, ...FALLBACK_RUNTIME_PYTHONS];
 export const RUNTIME_PYTHON_VERSION_KEY = 'assetAwareMcp.runtimePythonVersion';
 export const DEFAULT_TORCH_BACKEND = 'cpu';

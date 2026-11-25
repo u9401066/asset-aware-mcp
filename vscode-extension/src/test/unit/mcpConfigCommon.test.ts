@@ -209,12 +209,24 @@ describe('mcpConfigCommon', () => {
         const context = {
             globalStorageUri: { fsPath: path.join(tempDir, 'global') },
             extension: { packageJSON: { version: '0.6.19' } },
+            globalState: { get: (key: string) => key === RUNTIME_PYTHON_VERSION_KEY ? '3.12' : undefined },
+        } as any;
+
+        const launch = buildAssetAwareLaunchSpec(context, 'uv', { workspaceRoot: tempDir });
+
+        assert.deepStrictEqual(launch.args.slice(0, 4), ['tool', 'run', '--python', '3.12']);
+    });
+
+    it('falls back to the preferred runtime when an unsupported Python 3.10 was recorded', () => {
+        const context = {
+            globalStorageUri: { fsPath: path.join(tempDir, 'global') },
+            extension: { packageJSON: { version: '0.6.19' } },
             globalState: { get: (key: string) => key === RUNTIME_PYTHON_VERSION_KEY ? '3.10' : undefined },
         } as any;
 
         const launch = buildAssetAwareLaunchSpec(context, 'uv', { workspaceRoot: tempDir });
 
-        assert.deepStrictEqual(launch.args.slice(0, 4), ['tool', 'run', '--python', '3.10']);
+        assert.deepStrictEqual(launch.args.slice(0, 4), ['tool', 'run', '--python', '3.11']);
     });
 
     it('uses the prepared runtime Python version in local-source launch specs', () => {
@@ -225,13 +237,13 @@ describe('mcpConfigCommon', () => {
         (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];
         const context = {
             globalStorageUri: { fsPath: path.join(tempDir, 'global') },
-            globalState: { get: (key: string) => key === RUNTIME_PYTHON_VERSION_KEY ? '3.10' : undefined },
+            globalState: { get: (key: string) => key === RUNTIME_PYTHON_VERSION_KEY ? '3.12' : undefined },
             extensionMode: vscode.ExtensionMode.Development,
         } as any;
 
         const launch = buildAssetAwareLaunchSpec(context, 'uv', { workspaceRoot: tempDir });
 
-        assert.deepStrictEqual(launch.args.slice(0, 5), ['run', '--python', '3.10', '--directory', sourceRoot]);
+        assert.deepStrictEqual(launch.args.slice(0, 5), ['run', '--python', '3.12', '--directory', sourceRoot]);
     });
 
     it('ignores a production lookalike checkout and its workspace env', () => {

@@ -660,7 +660,10 @@ function buildRuntimePrepareSpec(
 
 function getRuntimePreparePythonCandidates(context: vscode.ExtensionContext): string[] {
     const stored = context.globalState?.get<string>(RUNTIME_PYTHON_VERSION_KEY);
-    return Array.from(new Set([stored, ...RUNTIME_PYTHON_CANDIDATES].filter(Boolean) as string[]));
+    // Older releases may have recorded a runtime that is no longer supported
+    // (for example Python 3.10); never try it before the supported candidates.
+    const supportedStored = stored && RUNTIME_PYTHON_CANDIDATES.includes(stored) ? stored : undefined;
+    return Array.from(new Set([supportedStored, ...RUNTIME_PYTHON_CANDIDATES].filter(Boolean) as string[]));
 }
 
 function buildRuntimePrepareSpecs(

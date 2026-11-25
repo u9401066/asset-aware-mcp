@@ -88,7 +88,7 @@
 - **Structural pointer workflows**: `document(op="pointer_index")`, `document(op="structural_retrieve")`, and `document(op="compare")` add section-level retrieval and comparison with locator/hash provenance without increasing the public tool count.
 - **A2T large-table hardening**: stable row IDs, row search/filter/paging, citation coverage, artifact-only Markdown/HTML render, and actionable skipped-large-table UX make big tables safer for Cline/Codex/Copilot.
 - **Accessibility readiness**: PDF audit/readiness now includes `accessibility_report.json` alongside safety, native structure, and segmentation coverage artifacts.
-- **Runtime prepare portability**: managed runtime preparation uses version-pinned `uv tool run`, handles Windows paths with spaces, and falls back across Python 3.11 / 3.10 for older machines.
+- **Runtime prepare portability**: managed runtime preparation uses version-pinned `uv tool run`, handles Windows paths with spaces, and falls back from Python 3.11 to 3.12 (Python 3.11 is the minimum supported runtime).
 - **Better diagnostics**: dependency checks now report preferred Python, platform tags, and native import status for Pillow, lxml, pydantic-core, and the MCP SDK.
 - **A2T table hardening**: row/cell validation, citation cleanup, duplicate-column protection, draft timestamp loading, and table-history shortcut ergonomics are tightened.
 - **PDF audit artifacts**: the existing `document` facade can write AI safety, native structure, segmentation coverage, accessibility readiness, and structural pointer artifacts for ingested PDFs without adding public tools.
@@ -283,7 +283,7 @@ The agent retrieves exactly what it needs:
 | `assetAwareMcp.torchBackend` | `cpu` | Reserved torch backend setting for Marker after its Pillow dependency supports the secure runtime |
 
 Runtime note:
-The extension prefers a managed Python 3.11 runtime when launching the MCP server via `uv tool run`, with Python 3.10 fallback for older machines. This avoids package builds on machines without native toolchains, especially macOS systems missing Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
+The extension prefers a managed Python 3.11 runtime when launching the MCP server via `uv tool run`, with a Python 3.12 fallback when a 3.11 runtime cannot be prepared (Python 3.11 is the minimum supported version). This avoids package builds on machines without native toolchains, especially macOS systems missing Xcode Command Line Tools, while keeping the project itself compatible with newer Python versions.
 
 Structured backend note:
 The current packaged extras cannot install MinerU, Marker, or their torch stack. MinerU 3.4.4 pins `transformers<5` while current fixes require `transformers>=5.5`; Marker still requires `Pillow<11` while this runtime requires `Pillow>=13.0.0`. Both extras stay empty and fail closed. Use `ETL_ENGINE=pymupdf4llm` or `docling` for a maintained high-fidelity alternative.

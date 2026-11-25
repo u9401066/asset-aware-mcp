@@ -14,6 +14,7 @@ import {
     __registerMcpServerProviderForTests,
     __resetMcpServerProviderRegistrationForTests,
 } from '../../extension';
+import { RUNTIME_PYTHON_VERSION_KEY } from '../../uv';
 import { __resetConfiguration, __setConfigurationValue } from './mock-vscode';
 
 describe('extension MCP provider registration', () => {
@@ -226,7 +227,7 @@ describe('extension MCP provider registration', () => {
         }
     });
 
-    it('builds runtime prepare specs with a Python 3.10 fallback for older macOS', () => {
+    it('builds runtime prepare specs with a Python 3.12 fallback', () => {
         const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'asset aware runtime fallback-'));
         try {
             (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];
@@ -239,9 +240,28 @@ describe('extension MCP provider registration', () => {
 
             assert.strictEqual(specs.length, 2);
             assert.deepStrictEqual(specs[0].args.slice(0, 4), ['tool', 'run', '--python', '3.11']);
-            assert.deepStrictEqual(specs[1].args.slice(0, 4), ['tool', 'run', '--python', '3.10']);
+            assert.deepStrictEqual(specs[1].args.slice(0, 4), ['tool', 'run', '--python', '3.12']);
             assert.strictEqual(specs[0].pythonVersion, '3.11');
-            assert.strictEqual(specs[1].pythonVersion, '3.10');
+            assert.strictEqual(specs[1].pythonVersion, '3.12');
+        } finally {
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        }
+    });
+
+    it('never retries a Python 3.10 runtime recorded by an older release', () => {
+        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'asset aware runtime stale-'));
+        try {
+            (vscode.workspace as any).workspaceFolders = [{ uri: { fsPath: tempDir } }];
+            const context = {
+                globalStorageUri: { fsPath: path.join(tempDir, 'global storage') },
+                extension: { packageJSON: { version: '0.6.19' } },
+                globalState: { get: (key: string) => key === RUNTIME_PYTHON_VERSION_KEY ? '3.10' : undefined },
+            } as any;
+
+            const specs = __buildRuntimePrepareSpecsForTests(context, 'uv', false);
+
+            assert.deepStrictEqual(specs.map((spec) => spec.pythonVersion), ['3.11', '3.12']);
+            assert.ok(specs.every((spec) => !spec.args.includes('3.10')));
         } finally {
             fs.rmSync(tempDir, { recursive: true, force: true });
         }
