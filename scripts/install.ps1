@@ -15,7 +15,7 @@ $ErrorActionPreference = "Stop"
 
 # --- Configuration ---
 $RequiredPythonMajor = 3
-$RequiredPythonMinor = 10
+$RequiredPythonMinor = 11
 $PreferredRuntimePython = '3.11'
 
 # --- Helpers ---

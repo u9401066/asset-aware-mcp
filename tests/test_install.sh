@@ -105,21 +105,21 @@ assert_eq "detect_os returns 'unknown' for FreeBSD" "unknown" "$result"
 echo ""
 echo "=== Test: version_ge ==="
 
-# >= 3.10 should pass
-for ver in "3.10" "3.11" "3.12" "3.13" "4.0"; do
+# >= 3.11 should pass
+for ver in "3.11" "3.12" "3.13" "4.0"; do
     if source_helpers version_ge "$ver"; then
-        pass "version_ge: $ver >= 3.10"
+        pass "version_ge: $ver >= 3.11"
     else
-        fail "version_ge: $ver >= 3.10" "returned false"
+        fail "version_ge: $ver >= 3.11" "returned false"
     fi
 done
 
-# < 3.10 should fail
-for ver in "3.9" "3.8" "3.7" "2.7"; do
+# < 3.11 should fail
+for ver in "3.10" "3.9" "3.8" "3.7" "2.7"; do
     if source_helpers version_ge "$ver"; then
-        fail "version_ge: $ver < 3.10" "returned true"
+        fail "version_ge: $ver < 3.11" "returned true"
     else
-        pass "version_ge: $ver < 3.10"
+        pass "version_ge: $ver < 3.11"
     fi
 done
 

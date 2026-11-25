@@ -41,7 +41,9 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_VENV = PROJECT_ROOT / ".venv-docling"
-PREFERRED_PYTHONS = ("3.12", "3.13", "3.11", "3.10")
+PREFERRED_PYTHONS = ("3.12", "3.13", "3.11")
+# Docling's patched soupsieve dependency (>=3.0.2) requires CPython 3.11.5.
+MIN_DOCLING_PYTHON = (3, 11, 5)
 CPU_TORCH_INDEX = "https://download.pytorch.org/whl/cpu"
 IS_WINDOWS = os.name == "nt"
 
@@ -109,26 +111,31 @@ def _uv_path() -> str | None:
     return shutil.which("uv")
 
 
-def _interpreter_version(python: str) -> tuple[int, int] | None:
+def _interpreter_version(python: str) -> tuple[int, int, int] | None:
     proc = _run(
         [
             python,
             "-c",
-            "import sys;print(f'{sys.version_info[0]}.{sys.version_info[1]}')",
+            "import sys;print('.'.join(map(str, sys.version_info[:3])))",
         ],
         quiet=True,
     )
     if proc.returncode != 0:
         return None
     try:
-        major, minor = proc.stdout.strip().split(".")[:2]
-        return int(major), int(minor)
+        major, minor, micro = proc.stdout.strip().split(".")[:3]
+        return int(major), int(minor), int(micro)
     except (ValueError, IndexError):
         return None
 
 
+def _is_supported(python: str) -> bool:
+    ver = _interpreter_version(python)
+    return ver is not None and ver[0] == 3 and ver >= MIN_DOCLING_PYTHON
+
+
 def find_stable_python() -> str | None:
-    """Find a stable CPython >= 3.10 that has torch wheels.
+    """Find a stable CPython >= 3.11.5 that has torch wheels.
 
     Order: uv-managed 3.12 -> system pythonX.Y -> Windows ``py -3.X`` launcher.
     """
@@ -137,7 +144,12 @@ def find_stable_python() -> str | None:
         for ver in PREFERRED_PYTHONS:
             proc = _run([uv, "python", "find", ver], quiet=True)
             candidate = proc.stdout.strip()
-            if proc.returncode == 0 and candidate and Path(candidate).exists():
+            if (
+                proc.returncode == 0
+                and candidate
+                and Path(candidate).exists()
+                and _is_supported(candidate)
+            ):
                 ok(f"Found uv-managed Python {ver}: {candidate}")
                 return candidate
 
@@ -150,8 +162,8 @@ def find_stable_python() -> str | None:
         if not found:
             continue
         ver = _interpreter_version(found)
-        if ver and ver >= (3, 10) and ver[0] == 3:
-            ok(f"Found system Python {ver[0]}.{ver[1]}: {found}")
+        if ver and ver[0] == 3 and ver >= MIN_DOCLING_PYTHON:
+            ok(f"Found system Python {ver[0]}.{ver[1]}.{ver[2]}: {found}")
             return found
 
     if IS_WINDOWS:
@@ -163,7 +175,7 @@ def find_stable_python() -> str | None:
                     quiet=True,
                 )
                 candidate = launcher.stdout.strip()
-                if candidate:
+                if candidate and _is_supported(candidate):
                     ok(f"Found Windows py launcher {ver}: {candidate}")
                     return candidate
     return None
@@ -304,7 +316,7 @@ def main(argv: list[str] | None = None) -> int:
     base_python = find_stable_python()
     if not base_python:
         err(
-            "No stable Python (>=3.10) found. Install Python 3.12 from "
+            "No stable Python (>=3.11.5) found. Install Python 3.12 from "
             "python.org, or install uv (https://astral.sh/uv), then re-run."
         )
         return 2
