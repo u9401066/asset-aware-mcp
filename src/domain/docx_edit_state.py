@@ -66,6 +66,43 @@ class DocxDocumentBusyError(DocxEditStateError):
     """Another save/commit/checkout holds the document write lock too long."""
 
 
+class DocxPublishedUncommittedError(DocxEditStateError):
+    """Content was published (ir.json written) but the edit state did not commit.
+
+    The document content is durable; the revision/lease bookkeeping of this
+    operation was rolled back. The next locked operation records the published
+    state as an ``external`` revision, and a retried lease commit is recognised
+    as already applied.
+    """
+
+    def __init__(self, revision: str, cause: BaseException):
+        self.revision = revision
+        super().__init__(
+            f"{cause} -- the edit was already published as revision {revision} "
+            "(ir.json and the output DOCX are written), but the edit-state "
+            "transaction failed and was rolled back. The next operation records "
+            "this state as an `external` revision; retry a lease commit (it is "
+            "recognised as already applied) or release the lease."
+        )
+
+
+MAX_REQUEST_ID_CHARS = 200
+
+
+def validate_request_id(request_id: str | None) -> str | None:
+    """Optional idempotency key for checkout retries."""
+    if request_id is None:
+        return None
+    value = request_id.strip()
+    if not value:
+        return None
+    if len(value) > MAX_REQUEST_ID_CHARS or any(ord(char) < 32 for char in value):
+        raise DocxEditStateError(
+            f"request_id must be at most {MAX_REQUEST_ID_CHARS} printable characters"
+        )
+    return value
+
+
 def canonical_json(value: Any) -> str:
     """Deterministic JSON used for every revision/block hash."""
     return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
@@ -274,6 +311,10 @@ class DocxEditSession(Protocol):
 
     history_limit: int
 
+    def meta_get(self, key: str) -> str | None: ...
+
+    def meta_set(self, key: str, value: str) -> None: ...
+
     # -- revisions ---------------------------------------------------------
     def root(self) -> RevisionRecord | None: ...
 
@@ -321,7 +362,15 @@ class DocxEditSession(Protocol):
 
     def leases_covering(self, block_ids: Iterable[str]) -> list[BlockLease]: ...
 
-    def insert_lease(self, lease: BlockLease, token_hash: str) -> None: ...
+    def insert_lease(
+        self, lease: BlockLease, token_hash: str, *, request_id: str | None = None
+    ) -> None: ...
+
+    def lease_by_request(self, holder: str, request_id: str) -> BlockLease | None: ...
+
+    def rotate_lease_token(self, lease_id: str, token_hash: str) -> None: ...
+
+    def lease_event_for_token(self, token_hash: str) -> LeaseEvent | None: ...
 
     def update_lease(
         self,

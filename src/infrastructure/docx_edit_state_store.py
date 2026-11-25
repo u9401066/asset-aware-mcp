@@ -82,7 +82,8 @@ _SCHEMA = (
         created_at REAL NOT NULL,
         expires_at REAL NOT NULL,
         ttl_seconds INTEGER NOT NULL,
-        base_revision TEXT NOT NULL
+        base_revision TEXT NOT NULL,
+        request_id TEXT
     )
     """,
     """
@@ -100,7 +101,8 @@ _SCHEMA = (
         holder TEXT NOT NULL,
         event TEXT NOT NULL,
         at REAL NOT NULL,
-        detail TEXT NOT NULL
+        detail TEXT NOT NULL,
+        token_sha256 TEXT
     )
     """,
     "CREATE INDEX IF NOT EXISTS lease_events_lease ON lease_events(lease_id)",
@@ -136,6 +138,19 @@ _RESET_STATEMENTS = (
     "DELETE FROM leases",
     "DELETE FROM meta WHERE key='root_revision'",
 )
+# Columns added after the first branch builds; created on demand.
+_ADDED_COLUMNS = (
+    ("leases", "request_id", "ALTER TABLE leases ADD COLUMN request_id TEXT"),
+    (
+        "lease_events",
+        "token_sha256",
+        "ALTER TABLE lease_events ADD COLUMN token_sha256 TEXT",
+    ),
+)
+_TABLE_COLUMNS = {
+    "leases": "PRAGMA table_info(leases)",
+    "lease_events": "PRAGMA table_info(lease_events)",
+}
 _LEASE_COLUMNS = (
     "SELECT lease_id, holder, created_at, expires_at, ttl_seconds, base_revision "
     "FROM leases"
@@ -145,6 +160,10 @@ _LEASE_QUERIES = {
     "lease_id": _LEASE_COLUMNS + " WHERE lease_id=?",
     "token": _LEASE_COLUMNS + " WHERE token_sha256=?",
 }
+_LEASE_BY_REQUEST = (
+    "SELECT lease_id FROM leases WHERE holder=? AND request_id=? "
+    "ORDER BY created_at DESC LIMIT 1"
+)
 
 
 def _compress(value: Any) -> bytes:
@@ -199,12 +218,12 @@ class SqliteDocxEditStateStore:
                     session.read_only_empty = True
                 yield session
             except BaseException:
-                connection.execute("ROLLBACK")
+                _rollback_quietly(connection)
                 raise
             try:
                 connection.execute("COMMIT")
             except sqlite3.OperationalError as exc:
-                connection.execute("ROLLBACK")
+                _rollback_quietly(connection)
                 if _is_busy(exc):
                     raise DocxDocumentBusyError(
                         "Document is busy: the edit-state commit timed out. Any "
@@ -215,6 +234,19 @@ class SqliteDocxEditStateStore:
                 raise
         finally:
             connection.close()
+
+
+def _rollback_quietly(connection: sqlite3.Connection) -> None:
+    """Roll back if a transaction is still open; never mask the original error.
+
+    SQLite may already have rolled back (e.g. after SQLITE_FULL/IOERR), in which
+    case a second ROLLBACK raises "no transaction is active".
+    """
+    try:
+        if connection.in_transaction:
+            connection.execute("ROLLBACK")
+    except sqlite3.Error:
+        pass
 
 
 def _is_busy(exc: sqlite3.OperationalError) -> bool:
@@ -243,6 +275,12 @@ class SqliteDocxEditSession:
     def ensure_schema(self) -> None:
         for statement in _SCHEMA:
             self.connection.execute(statement)
+        for table, column, statement in _ADDED_COLUMNS:
+            existing = {
+                row[1] for row in self.connection.execute(_TABLE_COLUMNS[table])
+            }
+            if column not in existing:
+                self.connection.execute(statement)
         row = self.connection.execute(
             "SELECT value FROM meta WHERE key='schema_version'"
         ).fetchone()
@@ -257,6 +295,19 @@ class SqliteDocxEditSession:
                 f"supports {EDIT_STATE_SCHEMA_VERSION!r}. Upgrade asset-aware-mcp "
                 "on every client that edits this document."
             )
+
+    def meta_get(self, key: str) -> str | None:
+        if self.read_only_empty:
+            return None
+        row = self.connection.execute(
+            "SELECT value FROM meta WHERE key=?", (key,)
+        ).fetchone()
+        return str(row[0]) if row else None
+
+    def meta_set(self, key: str, value: str) -> None:
+        self.connection.execute(
+            "INSERT OR REPLACE INTO meta(key, value) VALUES(?, ?)", (key, value)
+        )
 
     # ------------------------------------------------------------------
     # Revisions
@@ -531,10 +582,13 @@ class SqliteDocxEditSession:
         }
         return [lease for lease in self.leases() if lease.lease_id in lease_ids]
 
-    def insert_lease(self, lease: BlockLease, token_hash: str) -> None:
+    def insert_lease(
+        self, lease: BlockLease, token_hash: str, *, request_id: str | None = None
+    ) -> None:
         self.connection.execute(
             "INSERT INTO leases(lease_id, token_sha256, holder, created_at, "
-            "expires_at, ttl_seconds, base_revision) VALUES(?, ?, ?, ?, ?, ?, ?)",
+            "expires_at, ttl_seconds, base_revision, request_id) "
+            "VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 lease.lease_id,
                 token_hash,
@@ -543,6 +597,7 @@ class SqliteDocxEditSession:
                 lease.expires_at,
                 lease.ttl_seconds,
                 lease.base_revision,
+                request_id,
             ),
         )
         self.connection.executemany(
@@ -574,26 +629,69 @@ class SqliteDocxEditSession:
                 [(h, lease_id, bid) for bid, h in base_hashes.items()],
             )
 
+    def lease_by_request(self, holder: str, request_id: str) -> BlockLease | None:
+        row = self.connection.execute(
+            _LEASE_BY_REQUEST, (holder, request_id)
+        ).fetchone()
+        return self.lease(row[0]) if row else None
+
+    def rotate_lease_token(self, lease_id: str, token_hash: str) -> None:
+        """Replace a lease's token (idempotent checkout replay); old token dies."""
+        old = self.connection.execute(
+            "SELECT holder, token_sha256 FROM leases WHERE lease_id=?", (lease_id,)
+        ).fetchone()
+        self.connection.execute(
+            "UPDATE leases SET token_sha256=? WHERE lease_id=?", (token_hash, lease_id)
+        )
+        if old is not None:
+            self.connection.execute(
+                "INSERT INTO lease_events(lease_id, holder, event, at, detail, "
+                "token_sha256) VALUES(?, ?, 'token_rotated', 0, "
+                "'checkout replayed with the same request_id', ?)",
+                (lease_id, old[0], old[1]),
+            )
+
     def delete_lease(
         self, lease_id: str, *, event: str, detail: str, now: float
     ) -> None:
         lease = self.lease(lease_id)
         if lease is None:
             return
+        token_row = self.connection.execute(
+            "SELECT token_sha256 FROM leases WHERE lease_id=?", (lease_id,)
+        ).fetchone()
         self.connection.execute(
             "DELETE FROM lease_blocks WHERE lease_id=?", (lease_id,)
         )
         self.connection.execute("DELETE FROM leases WHERE lease_id=?", (lease_id,))
         self.connection.execute(
-            "INSERT INTO lease_events(lease_id, holder, event, at, detail) "
-            "VALUES(?, ?, ?, ?, ?)",
-            (lease_id, lease.holder, event, now, detail),
+            "INSERT INTO lease_events(lease_id, holder, event, at, detail, "
+            "token_sha256) VALUES(?, ?, ?, ?, ?, ?)",
+            (
+                lease_id,
+                lease.holder,
+                event,
+                now,
+                detail,
+                token_row[0] if token_row else None,
+            ),
         )
         self.connection.execute(
             "DELETE FROM lease_events WHERE id NOT IN "
             "(SELECT id FROM lease_events ORDER BY id DESC LIMIT ?)",
             (MAX_LEASE_EVENTS,),
         )
+
+    def lease_event_for_token(self, token_hash: str) -> LeaseEvent | None:
+        """Latest tombstone recorded for a (possibly rotated) token hash."""
+        if self.read_only_empty:
+            return None
+        row = self.connection.execute(
+            "SELECT lease_id, holder, event, at, detail FROM lease_events "
+            "WHERE token_sha256=? ORDER BY id DESC LIMIT 1",
+            (token_hash,),
+        ).fetchone()
+        return LeaseEvent(*row) if row else None
 
     def lease_event(self, lease_id: str) -> LeaseEvent | None:
         if self.read_only_empty:
