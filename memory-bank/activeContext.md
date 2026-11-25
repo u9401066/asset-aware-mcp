@@ -1,5 +1,20 @@
 # Active Context
 
+## 1.4.2 DOCX cumulative write-back fix — 2026-11-25
+
+A user benchmark on a real IRB draft found that `save_docx` patched the pristine
+`original.docx` with only the blocks changed since the previous save, so every
+save after the first silently dropped earlier edits, and a Track Changes re-save
+wrote a byte copy of `original.docx` (0 revisions) while reporting success.
+Fixed on `fix/docx-cumulative-writeback` (3cb1547, 5766cfe): immutable
+`baseline_ir.json`, cumulative net edits applied to `original.docx`, post-save
+verification of every expected diff, `revision_base` original|last_save, and
+verified migration of ≤1.4.1 doc dirs. Released as 1.4.2 (patch) because it is
+a data-loss fix. Open follow-ups: paragraph-index drift when images/page breaks/
+SDT precede an edited paragraph (pre-existing, blocks rather than loses data);
+DATA_DIR differs between workspace mcp.json and Cline/Codex by design (warn in
+status, stop the wizard writing DATA_DIR); Ollama model check uses exact names.
+
 ## 1.4.1 formally published and public artifacts verified — 2026-09-22
 
 Goal PROGRESS, not complete. The user explicitly requested formal publication.
