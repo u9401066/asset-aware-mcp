@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 from src.infrastructure.config import Settings
+from src.infrastructure.storage_location import describe_storage_risk
 
 PREFERRED_RUNTIME_PYTHON = "3.11"
 
@@ -152,7 +153,12 @@ def collect_runtime_status() -> dict[str, Any]:
             "mcp": _import_status("mcp", "mcp"),
         },
         "paths": {
-            "data_dir": _path_status(settings.data_dir),
+            "data_dir": {
+                **_path_status(settings.data_dir),
+                # Cloud-synced or network DATA_DIR: works, but the DOCX edit lock
+                # only serializes writers on this computer.
+                "storage_warning": describe_storage_risk(settings.data_dir),
+            },
             "table_output_dir": _path_status(settings.table_output_dir),
         },
         "features": {
@@ -212,6 +218,8 @@ def format_runtime_status(status: dict[str, Any]) -> str:
         f"LLM model: {ollama['model']}",
         f"Embedding model: {ollama['embedding_model']}",
     ]
+    if data_dir.get("storage_warning"):
+        lines.append(f"DATA_DIR WARNING: {data_dir['storage_warning']}")
     if marker.get("security_hold"):
         lines.append(
             "Recommended action: use PyMuPDF, PyMuPDF4LLM, or Docling; do not "
