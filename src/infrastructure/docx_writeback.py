@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from difflib import SequenceMatcher
 from typing import TYPE_CHECKING
 
@@ -999,10 +999,7 @@ class DocxWritebackMixin:
     def _revision_timestamp() -> str:
         """Return an OOXML-compatible UTC timestamp."""
         return (
-            datetime.now(timezone.utc)
-            .replace(microsecond=0)
-            .isoformat()
-            .replace("+00:00", "Z")
+            datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
         )
 
     def _max_revision_id(self, tree: etree._Element) -> int:

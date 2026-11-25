@@ -134,7 +134,7 @@ include = [
 ]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 88
 extend-exclude = ["*.md"]
 
@@ -166,6 +166,7 @@ ignore = [
     "RUF003", # ambiguous unicode char in comment (CJK false positives)
     "PERF203", # try-except in loop ??unavoidable for per-item error recovery
     "PERF401", # list.append in loop ??sometimes more readable than extend
+    "UP042",  # keep (str, Enum): StrEnum changes str()/format() of serialized values
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -176,7 +177,7 @@ ignore = [
 known-first-party = ["src"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = true
 disallow_untyped_defs = true
 plugins = ["pydantic.mypy"]
