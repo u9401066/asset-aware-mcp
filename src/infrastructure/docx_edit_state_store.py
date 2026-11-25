@@ -114,6 +114,28 @@ _SCHEMA = (
 )
 
 
+_REVISION_BY_ID = (
+    "SELECT revision, seq, parent, kind, actor, created_at, changed_blocks "
+    "FROM revisions WHERE revision=?"
+)
+_ROOT_REVISION = (
+    "SELECT revision, seq, parent, kind, actor, created_at, changed_blocks "
+    "FROM revisions WHERE revision="
+    "(SELECT value FROM meta WHERE key='root_revision')"
+)
+_LATEST_REVISION = (
+    "SELECT revision, seq, parent, kind, actor, created_at, changed_blocks "
+    "FROM revisions ORDER BY seq DESC LIMIT 1"
+)
+_RESET_STATEMENTS = (
+    "DELETE FROM revisions",
+    "DELETE FROM root_manifest",
+    "DELETE FROM block_payloads",
+    "DELETE FROM block_authors",
+    "DELETE FROM lease_blocks",
+    "DELETE FROM leases",
+    "DELETE FROM meta WHERE key='root_revision'",
+)
 _LEASE_COLUMNS = (
     "SELECT lease_id, holder, created_at, expires_at, ttl_seconds, base_revision "
     "FROM leases"
@@ -252,15 +274,10 @@ class SqliteDocxEditSession:
             changed_block_ids=tuple(json.loads(row[6])),
         )
 
-    _RECORD_COLUMNS = "revision, seq, parent, kind, actor, created_at, changed_blocks"
-
     def root(self) -> RevisionRecord | None:
         if self.read_only_empty:
             return None
-        row = self.connection.execute(
-            f"SELECT {self._RECORD_COLUMNS} FROM revisions "  # noqa: S608
-            "WHERE revision=(SELECT value FROM meta WHERE key='root_revision')"
-        ).fetchone()
+        row = self.connection.execute(_ROOT_REVISION).fetchone()
         return self._record(row) if row else None
 
     def create_root(
@@ -296,7 +313,7 @@ class SqliteDocxEditSession:
         if self.read_only_empty:
             return None
         row = self.connection.execute(
-            f"SELECT {self._RECORD_COLUMNS} FROM revisions WHERE revision=?",  # noqa: S608
+            _REVISION_BY_ID,
             (revision,),
         ).fetchone()
         return self._record(row) if row else None
@@ -304,10 +321,7 @@ class SqliteDocxEditSession:
     def latest_revision(self) -> RevisionRecord | None:
         if self.read_only_empty:
             return None
-        row = self.connection.execute(
-            f"SELECT {self._RECORD_COLUMNS} FROM revisions "  # noqa: S608
-            "ORDER BY seq DESC LIMIT 1"
-        ).fetchone()
+        row = self.connection.execute(_LATEST_REVISION).fetchone()
         return self._record(row) if row else None
 
     def revision_count(self) -> int:
@@ -459,16 +473,8 @@ class SqliteDocxEditSession:
 
     def reset(self) -> None:
         """Forget all revisions and attribution (re-ingest). Leases must be gone."""
-        for table in (
-            "revisions",
-            "root_manifest",
-            "block_payloads",
-            "block_authors",
-            "lease_blocks",
-            "leases",
-        ):
-            self.connection.execute(f"DELETE FROM {table}")  # noqa: S608
-        self.connection.execute("DELETE FROM meta WHERE key='root_revision'")
+        for statement in _RESET_STATEMENTS:
+            self.connection.execute(statement)
 
     # ------------------------------------------------------------------
     # Leases
@@ -515,18 +521,14 @@ class SqliteDocxEditSession:
     def leases_covering(self, block_ids: Iterable[str]) -> list[BlockLease]:
         if self.read_only_empty:
             return []
-        wanted = sorted(set(block_ids))
-        lease_ids: set[str] = set()
-        for start in range(0, len(wanted), 500):
-            chunk = wanted[start : start + 500]
-            marks = ",".join("?" for _ in chunk)
-            lease_ids.update(
-                row[0]
-                for row in self.connection.execute(
-                    f"SELECT DISTINCT lease_id FROM lease_blocks WHERE block_id IN ({marks})",  # noqa: S608
-                    chunk,
-                )
+        wanted = set(block_ids)
+        lease_ids = {
+            row[1]
+            for row in self.connection.execute(
+                "SELECT block_id, lease_id FROM lease_blocks"
             )
+            if row[0] in wanted
+        }
         return [lease for lease in self.leases() if lease.lease_id in lease_ids]
 
     def insert_lease(self, lease: BlockLease, token_hash: str) -> None:
