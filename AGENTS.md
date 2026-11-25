@@ -397,6 +397,12 @@ and LightRAG knowledge graph outputs.
   When advertised, read_docx_block returns revision-pinned native references; verify
   checks the parsed representation. DOCX wiki snapshots retain exact package parts;
   extraction completeness, meaning and rendered layout require agent review.
+- Legacy DFM save_docx is cumulative: every output is original.docx plus all
+  edits since ingest (baseline_ir.json), never only the latest session. Track
+  Changes defaults to revision_base:original (all edits since ingest); last_save
+  tracks only changes since the previous save. A tracked save without new w:ins/
+  w:del fails. Reported legacy-directory migrations and refusals need user review.
+  output_path stays inside data/{doc_id}/; source writeback uses native writeback.
 
 - Since 1.4.0, native-contract-v2 supports for_op and hash-pinned
   schema pages. Check schema_delivery and preserve schema_sha256 while assembling.

@@ -44,7 +44,7 @@ uv run asset-aware-mcp list-tools --json
 |---|---|---|
 | `ingest_docx` | `file_path` | 攝入 `.docx` / `.docm`，也可經 LibreOffice 轉入 `.doc` / `.odt` / `.ods`。 |
 | `get_docx_content` | `doc_id`, `block_id` | 讀取 DFM/DOCX 內容或單一 block，保留 locator metadata。 |
-| `save_docx` | `doc_id`, `dfm_content`, `output_path`, `force`, Track Changes options | 將 DFM/Markdown 寫回 DOCX，保留 stale source 與 validation guard。 |
+| `save_docx` | `doc_id`, `dfm_content`, `output_path`, `force`, `track_changes`, `revision_author`, `revision_base` | 將 DFM/Markdown 累積寫回 DOCX（每次輸出含自 ingest 以來的所有編輯），保留 stale source 與 validation guard；`output_path` 必須位於 `data/{doc_id}/` 內，回寫來源檔請用 native `writeback`。 |
 | `docx` | `op`, DOCX/DFM parameters | DOCX facade；支援 ingest/read/save/list/delete/list_blocks/validate。 |
 | `docx_table_edit_plan` | `doc_id`, `block_id`, `table_id`, target shape options | 先產生 table write-back 風險計畫，再進行 A2T/DOCX table 操作。 |
 | `docx_table` | `op`, DOCX table/chart bridge parameters | DOCX table facade；支援 `to_context`, `from_context`, `chart_data`, `edit_plan`。 |

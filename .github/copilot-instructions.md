@@ -286,6 +286,7 @@ the Agent performs complete semantic/visual review and corrections.
 - 🧩 **Segmentation Export** — 統一 segmentation schema（reading order + line span）
 - 📊 **Native files** — `document(op="native")` 支援原生檔案版本、XLSX 建立、XLSX/XLSM cells 讀寫、明確回寫與來源同步；完整語意／視覺／公式核對由 Agent 負責。
 - 📝 **Native DOCX（1.3.0）** — `read_docx`／`update_docx` 將不可變版本接到 DFM 檢查，更新先建立受管理版本，來源回寫仍明確指定；先查安裝版本 contract。元件引用可用 `read_docx_block`／`verify`，Wiki 使用獨立 projection 保留完整區塊與原始 package parts；完整性不代表抽取完整。
+- 💾 **DFM `save_docx` 累積寫回** — 每次輸出都是 `original.docx` 加上自 ingest（`baseline_ir.json`）以來的所有編輯，不會只寫最後一次；Track Changes 預設 `revision_base="original"` 標示全部編輯，`"last_save"` 只標示本次變更；要求追蹤修訂卻沒有新的 `w:ins`/`w:del` 會失敗。`output_path` 只能在 `data/{doc_id}/` 內，回寫來源檔請用 native `writeback`。
 - 📽️ **Native PPTX（1.4.0）** — 原生建立、投影片／備註形狀讀取、精確文字 run 更新、版本引用與完整 package Wiki；先查安裝版本 contract，完整語意／版面／文字溢出由 Agent 核對。`native-contract-v2` 支援 for_op 與 schema_sha256 分段規格。
 - 📽️ **PPTX 形狀操作（1.4.1）** — 先查 contract；`add_pptx_shapes` 新增文字框，`delete_pptx_shapes` 使用目前版本完整引用刪除形狀。已知相依會阻擋刪除，附件仍保留；Agent 核對版面與未涵蓋相依，來源回寫仍明確指定。
 - 🖼️ **DOCX 整頁預覽（1.4.1）** — `render_docx_page` 以明確 revision／零起算 `docx_page_index` 回傳真實 MCP PNG；需另裝 LibreOffice Writer，依 `next_page_index` 看完目前與歷史版本。每次重新轉換，頁碼屬於該次輸出；Agent 核對語意／版面，不能宣稱已驗證 Microsoft Word 保真。
